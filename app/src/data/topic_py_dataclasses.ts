@@ -1261,7 +1261,7 @@ print(a.years)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define a `Version` dataclass (`major`, `minor`, `patch` ints) that is BOTH immutable AND sortable. Build `v1 = Version(1, 2, 3)`, `v2 = Version(1, 3, 0)`, then print `v1 < v2`. Then build a set `s = {v1, v2, Version(1, 2, 3)}` and print `len(s)` — duplicates collapse because frozen dataclasses are hashable by value.',
+        'Define a `Version` dataclass with integer fields `major`, `minor`, and `patch`. It must be both immutable and sortable. Create two instances representing versions 1.2.3 and 1.3.0, print whether the first is less than the second, and print the size of a set containing these instances and a duplicate of the first (demonstrating value-based hashability).',
       starterCode: `from dataclasses import dataclass
   `,
       testCases: [

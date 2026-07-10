@@ -140,4 +140,39 @@ export const dj_custom_managers_questions: Question[] = [
       tags: ['django', 'managers', 'orm', 'queryset', 'basics'],
       concepts: ['dj-orm-query-construction'],
     },
+  {
+    id: 'dj-custom-managers-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_CUSTOM_MANAGERS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete the definition of a custom manager that filters QuerySet results to only return objects with `active=True`.',
+    template: `from django.db import models
+
+class ActiveManager(models.Manager):
+    def get_queryset(self):
+        return super().___(active=True)
+
+class Account(models.Model):
+    active = models.BooleanField(default=True)
+    ___ = ActiveManager()`,
+    blanks: ['get_queryset().filter', 'objects'],
+    solution: `from django.db import models
+
+class ActiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(active=True)
+
+class Account(models.Model):
+    active = models.BooleanField(default=True)
+    objects = ActiveManager()`,
+    explanation: 'To filter the base query results of a custom manager, you override `get_queryset` and call `super().get_queryset().filter(...)`. Then, you assign the manager class instance to the model attribute `objects` to replace the default manager.',
+    hints: [
+      'Override get_queryset and call super() to obtain the base QuerySet, then chain filter()',
+      'Assign the manager instance to objects on the model class to override the default manager',
+    ],
+    tags: ['django', 'managers', 'custom-manager', 'orm', 'cloze'],
+    concepts: ['dj-model-manager-vs-queryset'],
+  },
 ];

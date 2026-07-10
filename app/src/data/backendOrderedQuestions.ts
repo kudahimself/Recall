@@ -167,19 +167,22 @@ export const backendOrderedQuestions: Question[] = [
   q('pe1-m3-8'), q('pe1-m3-10'), q('pe1-m3-11'), q('pe1-m3-12'),
   q('pe1-builtins-1'), q('pe1-builtins-2'), q('pe1-builtins-4'), q('pe1-format-1'),
   q('pe1-idioms-1'), q('pe1-idioms-2'), q('py-basic-1'), q('be-sql-4'),
-  q('py-basics-predict-1'), q('py-basics-predict-10'), q('py-basics-predict-2'), q('py-basics-predict-3'),
-  q('py-basics-predict-4'), q('py-basics-predict-5'), q('py-basics-predict-6'), q('py-basics-predict-7'),
-  q('py-basics-predict-8'), q('py-basics-predict-9'), q('py-basics-parsons-1'), q('py-basics-parsons-10'),
-  q('py-basics-parsons-2'), q('py-basics-parsons-3'), q('py-basics-parsons-4'), q('py-basics-parsons-5'),
-  q('py-basics-parsons-6'), q('py-basics-parsons-7'), q('py-basics-parsons-8'), q('py-basics-parsons-9'),
-  q('py-basics-cloze-1'), q('py-basics-cloze-10'), q('py-basics-cloze-2'), q('py-basics-cloze-3'),
-  q('py-basics-cloze-4'), q('py-basics-cloze-5'), q('py-basics-cloze-6'), q('py-basics-cloze-7'),
-  q('py-basics-cloze-8'), q('py-basics-cloze-9'), q('pe1-m1-4'), q('pe1-m2-6'),
-  q('pe1-m2-7'), q('pe1-m2-11'), q('pe1-m2-16'), q('pe1-m3-4'),
-  q('pe1-m3-7'), q('pe1-m3-9'), q('pe1-m3-13'), q('pe1-m3-14'),
-  q('pe1-builtins-3'), q('pe1-builtins-5'), q('pe1-format-2'), q('pe1-idioms-3'),
-  q('pe1-idioms-4'), q('py-basic-2'), q('py-basic-3'), q('py-basic-4'),
-  q('be-sql-1'), q('be-sql-3'), q('be-sql-2'),
+  q('py-basics-misc-mcq-1'), q('py-basics-misc-mcq-2'), q('py-basics-misc-mcq-3'), q('py-basics-misc-mcq-4'),
+  q('py-basics-misc-mcq-5'), q('py-basics-misc-mcq-6'), q('py-basics-misc-mcq-7'), q('py-basics-misc-mcq-8'),
+  q('py-basics-misc-mcq-9'), q('py-basics-misc-mcq-10'), q('py-basics-predict-1'), q('py-basics-predict-10'),
+  q('py-basics-predict-2'), q('py-basics-predict-3'), q('py-basics-predict-4'), q('py-basics-predict-5'),
+  q('py-basics-predict-6'), q('py-basics-predict-7'), q('py-basics-predict-8'), q('py-basics-predict-9'),
+  q('py-basics-parsons-1'), q('py-basics-parsons-10'), q('py-basics-parsons-2'), q('py-basics-parsons-3'),
+  q('py-basics-parsons-4'), q('py-basics-parsons-5'), q('py-basics-parsons-6'), q('py-basics-parsons-7'),
+  q('py-basics-parsons-8'), q('py-basics-parsons-9'), q('py-basics-cloze-1'), q('py-basics-cloze-10'),
+  q('py-basics-cloze-2'), q('py-basics-cloze-3'), q('py-basics-cloze-4'), q('py-basics-cloze-5'),
+  q('py-basics-cloze-6'), q('py-basics-cloze-7'), q('py-basics-cloze-8'), q('py-basics-cloze-9'),
+  q('pe1-m1-4'), q('pe1-m2-6'), q('pe1-m2-7'), q('pe1-m2-11'),
+  q('pe1-m2-16'), q('pe1-m3-4'), q('pe1-m3-7'), q('pe1-m3-9'),
+  q('pe1-m3-13'), q('pe1-m3-14'), q('pe1-builtins-3'), q('pe1-builtins-5'),
+  q('pe1-format-2'), q('pe1-idioms-3'), q('pe1-idioms-4'), q('py-basic-2'),
+  q('py-basic-3'), q('py-basic-4'), q('be-sql-1'), q('be-sql-3'),
+  q('be-sql-2'),
 
   // ===== Topic.PY_DATA_STRUCTURES =====
   q('pe1-m3-15'), q('pe1-m3-16'), q('pe1-m3-17'), q('pe1-m3-19'),
@@ -198,15 +201,15 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.PY_FUNCTIONS =====
   q('pe1-m4-1'), q('pe1-m4-2'), q('pe1-m4-3'), q('pe1-m4-5'),
-  q('pe1-closure-1'), q('py-gap-functions-1'), q('py-functions-predict-3'), q('py-functions-parsons-1'),
-  q('py-functions-parsons-2'), q('py-functions-parsons-4'), q('py-functions-parsons-6'), q('py-functions-cloze-1'),
-  q('py-functions-cloze-3'), q('py-functions-cloze-4'), q('py-functions-cloze-5'), q('py-functions-cloze-6'),
-  q('py-functions-cloze-7'), q('py-functions-cloze-8'), q('pe1-m4-4'), q('pe1-closure-2'),
-  q('py-gap-functions-2'), q('pcpp-args-1'), q('pcpp-args-3'), q('py-functions-predict-1'),
-  q('py-functions-predict-10'), q('py-functions-predict-4'), q('py-functions-predict-6'), q('py-functions-predict-7'),
-  q('py-functions-predict-9'), q('py-functions-parsons-10'), q('py-functions-parsons-8'), q('py-functions-cloze-2'),
-  q('py-fn-1'), q('py-fn-2'), q('py-fn-3'), q('pcpp-args-2'),
-  q('py-functions-predict-2'), q('py-functions-predict-5'), q('py-functions-predict-8'), q('py-functions-parsons-3'),
+  q('pe1-closure-1'), q('py-gap-functions-1'), q('py-functions-predict-3'), q('py-functions-predict-8'),
+  q('py-functions-parsons-1'), q('py-functions-parsons-2'), q('py-functions-parsons-4'), q('py-functions-parsons-6'),
+  q('py-functions-cloze-1'), q('py-functions-cloze-3'), q('py-functions-cloze-4'), q('py-functions-cloze-5'),
+  q('py-functions-cloze-6'), q('py-functions-cloze-7'), q('py-functions-cloze-8'), q('pe1-m4-4'),
+  q('pe1-closure-2'), q('py-gap-functions-2'), q('pcpp-args-1'), q('pcpp-args-3'),
+  q('py-functions-predict-1'), q('py-functions-predict-10'), q('py-functions-predict-4'), q('py-functions-predict-6'),
+  q('py-functions-predict-7'), q('py-functions-predict-9'), q('py-functions-parsons-10'), q('py-functions-parsons-8'),
+  q('py-functions-cloze-2'), q('py-fn-1'), q('py-fn-2'), q('py-fn-3'),
+  q('pcpp-args-2'), q('py-functions-predict-2'), q('py-functions-predict-5'), q('py-functions-parsons-3'),
   q('py-functions-parsons-5'), q('py-functions-parsons-7'), q('py-functions-parsons-9'), q('py-functions-cloze-10'),
   q('py-functions-cloze-9'),
 
@@ -255,10 +258,10 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.PY_DECORATORS =====
   q('py-dec-beg-1'), q('py-dec-beg-3'), q('py-gap-decorators-1'), q('py-decorators-parsons-5'),
-  q('py-decorators-cloze-2'), q('py-decorators-cloze-5'), q('py-decorators-cloze-6'), q('py-gap-decorators-2'),
-  q('pcpp-dec-1'), q('py-decorators-predict-1'), q('py-decorators-predict-2'), q('py-decorators-predict-3'),
-  q('py-decorators-predict-4'), q('py-decorators-predict-7'), q('py-decorators-predict-8'), q('py-decorators-predict-9'),
-  q('py-decorators-parsons-1'), q('py-decorators-parsons-10'), q('py-decorators-parsons-2'), q('py-decorators-parsons-6'),
+  q('py-decorators-parsons-1'), q('py-decorators-cloze-2'), q('py-decorators-cloze-5'), q('py-decorators-cloze-6'),
+  q('py-gap-decorators-2'), q('pcpp-dec-1'), q('py-decorators-predict-1'), q('py-decorators-predict-2'),
+  q('py-decorators-predict-3'), q('py-decorators-predict-4'), q('py-decorators-predict-7'), q('py-decorators-predict-8'),
+  q('py-decorators-predict-9'), q('py-decorators-parsons-10'), q('py-decorators-parsons-2'), q('py-decorators-parsons-6'),
   q('py-decorators-parsons-8'), q('py-decorators-parsons-4'), q('py-decorators-cloze-1'), q('py-decorators-cloze-10'),
   q('py-decorators-cloze-3'), q('py-decorators-cloze-9'), q('pcpp-dec-2'), q('pcpp-dec-3'),
   q('py-decorators-predict-10'), q('py-decorators-predict-5'), q('py-decorators-predict-6'), q('py-decorators-parsons-3'),
@@ -279,14 +282,14 @@ export const backendOrderedQuestions: Question[] = [
   q('py-dataclasses-cloze-10'), q('py-dataclasses-cloze-2'), q('py-dataclasses-cloze-3'), q('py-dataclasses-cloze-6'),
   q('py-dc-simple'), q('py-dc-field-factory'), q('py-dc-frozen-basic'), q('py-dc-post-init-basic'),
   q('py-dc-repr-false'), q('py-dc-order-sortable'), q('py-dc-slots'), q('py-dc-asdict'),
-  q('py-dc-inheritance'), q('py-gap-dataclasses-2'), q('py-dc-vs-others'), q('py-dataclasses-predict-1'),
-  q('py-dataclasses-predict-2'), q('py-dataclasses-predict-3'), q('py-dataclasses-predict-6'), q('py-dataclasses-predict-7'),
-  q('py-dataclasses-predict-9'), q('py-dataclasses-parsons-1'), q('py-dataclasses-parsons-2'), q('py-dataclasses-parsons-3'),
-  q('py-dataclasses-parsons-8'), q('py-dataclasses-parsons-9'), q('py-dataclasses-cloze-4'), q('py-dataclasses-cloze-7'),
-  q('py-dc-init-false'), q('py-dc-frozen-order'), q('py-dataclasses-predict-10'), q('py-dataclasses-predict-4'),
-  q('py-dataclasses-predict-5'), q('py-dataclasses-predict-8'), q('py-dataclasses-parsons-10'), q('py-dataclasses-parsons-4'),
-  q('py-dataclasses-parsons-5'), q('py-dataclasses-parsons-7'), q('py-dataclasses-cloze-5'), q('py-dataclasses-cloze-8'),
-  q('py-dataclasses-cloze-9'),
+  q('py-dc-inheritance'), q('py-gap-dataclasses-2'), q('py-dc-vs-others'), q('py-adv-dc-3'),
+  q('py-dataclasses-predict-1'), q('py-dataclasses-predict-2'), q('py-dataclasses-predict-3'), q('py-dataclasses-predict-6'),
+  q('py-dataclasses-predict-7'), q('py-dataclasses-predict-9'), q('py-dataclasses-parsons-1'), q('py-dataclasses-parsons-2'),
+  q('py-dataclasses-parsons-3'), q('py-dataclasses-parsons-8'), q('py-dataclasses-parsons-9'), q('py-dataclasses-cloze-4'),
+  q('py-dataclasses-cloze-7'), q('py-dc-init-false'), q('py-dc-frozen-order'), q('py-dataclasses-predict-10'),
+  q('py-dataclasses-predict-4'), q('py-dataclasses-predict-5'), q('py-dataclasses-predict-8'), q('py-dataclasses-parsons-10'),
+  q('py-dataclasses-parsons-4'), q('py-dataclasses-parsons-5'), q('py-dataclasses-parsons-7'), q('py-dataclasses-cloze-5'),
+  q('py-dataclasses-cloze-8'), q('py-dataclasses-cloze-9'),
 
   // ===== Topic.PY_COMPREHENSIONS =====
   q('py-comp-what-is'), q('py-gap-comprehensions-1'), q('py-comprehensions-predict-1'), q('py-comprehensions-predict-10'),
@@ -296,11 +299,11 @@ export const backendOrderedQuestions: Question[] = [
   q('py-comprehensions-parsons-4'), q('py-comprehensions-cloze-5'), q('py-comprehensions-cloze-9'), q('py-comprehensions-cloze-6'),
   q('py-comp-squared-evens'), q('py-comp-dict-doubled'), q('py-comp-set-unique-words'), q('py-comp-nested-matrix'),
   q('py-comp-flatten'), q('py-comp-ternary'), q('py-comp-genexp-sum'), q('py-comp-invert-dict'),
-  q('py-gap-comprehensions-2'), q('py-comp-genexp-vs-list'), q('py-comprehensions-cloze-1'), q('py-comprehensions-cloze-2'),
-  q('py-comprehensions-cloze-3'), q('py-comprehensions-cloze-4'), q('py-comprehensions-cloze-8'), q('py-comp-int-dict-filter'),
-  q('py-comprehensions-predict-5'), q('py-comprehensions-predict-6'), q('py-comprehensions-predict-7'), q('py-comprehensions-parsons-8'),
-  q('py-comprehensions-parsons-9'), q('py-comprehensions-cloze-10'), q('py-comprehensions-cloze-7'), q('py-adv-comp-1'),
-  q('py-adv-comp-2'),
+  q('py-gap-comprehensions-2'), q('py-comp-genexp-vs-list'), q('py-adv-comp-3'), q('py-comprehensions-cloze-1'),
+  q('py-comprehensions-cloze-2'), q('py-comprehensions-cloze-3'), q('py-comprehensions-cloze-4'), q('py-comprehensions-cloze-8'),
+  q('py-comp-int-dict-filter'), q('py-comprehensions-predict-5'), q('py-comprehensions-predict-6'), q('py-comprehensions-predict-7'),
+  q('py-comprehensions-parsons-8'), q('py-comprehensions-parsons-9'), q('py-comprehensions-cloze-10'), q('py-comprehensions-cloze-7'),
+  q('py-adv-comp-1'), q('py-adv-comp-2'),
 
   // ===== Topic.PY_GENERATORS =====
   q('pe1-gen-1'), q('py-gen-memory-mcq'), q('py-gen-predict-lazy'), q('py-gen-predict-stopiteration'),
@@ -350,13 +353,13 @@ export const backendOrderedQuestions: Question[] = [
   q('py-context-managers-cloze-6'), q('py-context-managers-cloze-8'), q('py-context-managers-cloze-1'), q('py-ctx-file'),
   q('py-ctx-custom-class'), q('py-ctx-contextmanager-decorator'), q('py-ctx-multiple'), q('py-ctx-suppress'),
   q('py-ctx-exitstack'), q('py-ctx-exit-suppress-exc'), q('py-gap-contextmgr-2'), q('py-ctx-exitstack-vs-comma'),
-  q('py-ctx-vs-try-finally'), q('py-context-managers-predict-1'), q('py-context-managers-predict-2'), q('py-context-managers-predict-3'),
-  q('py-context-managers-predict-7'), q('py-context-managers-predict-8'), q('py-context-managers-predict-9'), q('py-context-managers-parsons-1'),
-  q('py-context-managers-parsons-10'), q('py-context-managers-parsons-4'), q('py-context-managers-cloze-2'), q('py-context-managers-cloze-9'),
-  q('py-ctx-reentrant'), q('py-context-managers-predict-10'), q('py-context-managers-predict-4'), q('py-context-managers-predict-5'),
-  q('py-context-managers-predict-6'), q('py-context-managers-parsons-3'), q('py-context-managers-parsons-5'), q('py-context-managers-parsons-8'),
-  q('py-context-managers-parsons-9'), q('py-context-managers-cloze-10'), q('py-context-managers-cloze-5'), q('py-context-managers-cloze-7'),
-  q('py-adv-ctx-1'),
+  q('py-ctx-vs-try-finally'), q('py-adv-ctx-3'), q('py-context-managers-predict-1'), q('py-context-managers-predict-2'),
+  q('py-context-managers-predict-3'), q('py-context-managers-predict-7'), q('py-context-managers-predict-8'), q('py-context-managers-predict-9'),
+  q('py-context-managers-parsons-1'), q('py-context-managers-parsons-10'), q('py-context-managers-parsons-4'), q('py-context-managers-cloze-2'),
+  q('py-context-managers-cloze-9'), q('py-ctx-reentrant'), q('py-context-managers-predict-10'), q('py-context-managers-predict-4'),
+  q('py-context-managers-predict-5'), q('py-context-managers-predict-6'), q('py-context-managers-parsons-3'), q('py-context-managers-parsons-5'),
+  q('py-context-managers-parsons-8'), q('py-context-managers-parsons-9'), q('py-context-managers-cloze-10'), q('py-context-managers-cloze-5'),
+  q('py-context-managers-cloze-7'), q('py-adv-ctx-1'),
 
   // ===== Topic.PY_MAGIC_METHODS =====
   q('py-gap-magic-1'), q('py-magic-methods-parsons-10'), q('py-magic-methods-parsons-6'), q('py-magic-methods-cloze-1'),
@@ -550,10 +553,10 @@ export const backendOrderedQuestions: Question[] = [
   q('py-oopadv-beg-5'), q('py-oop-parsons-10'), q('pcpp-inherit-1'), q('pcpp-encap-1'),
   q('pcpp-compose-1'), q('pcpp-builtin-1'), q('pcpp-abc-1'), q('pcpp-copy-1'),
   q('pcpp-prop-1'), q('py-oop-parsons-4'), q('py-oop-parsons-6'), q('py-oop-cloze-5'),
-  q('py-oop-cloze-6'), q('pcpp-encap-2'), q('pcpp-compose-2'), q('pcpp-builtin-2'),
-  q('pcpp-abc-2'), q('pcpp-copy-2'), q('pcpp-prop-2'), q('py-dec-5'),
-  q('py-oop-predict-2'), q('py-oop-predict-8'), q('py-oop-predict-9'), q('py-oop-cloze-9'),
-  q('py-oop-cloze-11'), q('py-oop-3'),
+  q('py-oop-cloze-6'), q('py-oop-cloze-11'), q('pcpp-encap-2'), q('pcpp-compose-2'),
+  q('pcpp-builtin-2'), q('pcpp-abc-2'), q('pcpp-copy-2'), q('pcpp-prop-2'),
+  q('py-dec-5'), q('py-oop-predict-2'), q('py-oop-predict-8'), q('py-oop-predict-9'),
+  q('py-oop-cloze-9'), q('py-oop-3'),
 
   // ===== Topic.PY_METACLASSES =====
   q('py-meta-beg-1'), q('py-meta-beg-2'), q('py-meta-beg-4'), q('py-meta-beg-3'),
@@ -597,17 +600,17 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-cbv-beg-whatis'), q('dj-cbv-beg-generic'), q('dj-cbv-beg-asview'), q('dj-cbv-beg-which'),
   q('dj4e-cbv-1'), q('dj4e-cbv-5'), q('dj4e-cbv-7'), q('dj-cbv-int-userpasses'),
   q('dj-cbv-context-mcq-1'), q('dj-cbv-template-mcq-1'), q('dj-cbv-slug-mcq-1'), q('dj-cbv-httpmethods-mcq-1'),
-  q('dj-cbv-formview-mcq-1'), q('dj-views-parsons-2'), q('dj-views-cloze-2'), q('dj-cbv-context-cloze-1'),
-  q('dj-cbv-template-cloze-1'), q('dj-cbv-slug-cloze-1'), q('dj-cbv-formview-cloze-1'), q('be-dj-cbv-1'),
-  q('dj4e-cbv-2'), q('dj4e-cbv-3'), q('dj4e-cbv-4'), q('dj4e-cbv-6'),
-  q('dj4e-cbv-8'), q('dj-cbv-context-1'), q('dj-views-adv-5'), q('dj-views-adv-3'),
+  q('dj-cbv-formview-mcq-1'), q('dj-views-parsons-2'), q('dj-views-adv-3'), q('dj-views-cloze-2'),
+  q('dj-cbv-context-cloze-1'), q('dj-cbv-template-cloze-1'), q('dj-cbv-slug-cloze-1'), q('dj-cbv-formview-cloze-1'),
+  q('be-dj-cbv-1'), q('dj4e-cbv-2'), q('dj4e-cbv-3'), q('dj4e-cbv-4'),
+  q('dj4e-cbv-6'), q('dj4e-cbv-8'), q('dj-cbv-context-1'), q('dj-views-adv-5'),
   q('dj-views-adv-1'), q('dj-views-adv-2'), q('dj-cbv-formview-1'),
 
   // ===== Topic.DJ_TEMPLATES =====
   q('py-dj-tpl-context-processors'), q('dj4e-tmpl-1'), q('dj4e-tmpl-2'), q('py-dj-tpl-parsons-1'),
   q('py-dj-tpl-parsons-2'), q('py-dj-tpl-cloze-1'), q('py-dj-tpl-cloze-2'), q('py-dj-tpl-cloze-3'),
   q('dj-tmpl-1'), q('py-dj-tpl-url-tag'), q('dj-tmpl-3'), q('dj-tmpl-4'),
-  q('py-dj-tpl-inheritance'), q('py-dj-tpl-include'), q('py-dj-tpl-custom-filter'),
+  q('py-dj-tpl-inheritance'), q('py-dj-tpl-include'), q('dj-templates-custom-filter-cloze-1'), q('py-dj-tpl-custom-filter'),
 
   // ===== Topic.DJ_URLS =====
   q('dj-url-4'), q('py-dj-urls-parsons-1'), q('py-dj-urls-parsons-2'), q('py-dj-urls-cloze-1'),
@@ -666,12 +669,12 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-drf-getserializer-1'),
 
   // ===== Topic.DJ_PAGINATION_GENERICS =====
-  q('dj-pagination-gap-1'), q('dj-pagination-gap-2'), q('celery-drf-17'), q('celery-drf-13'),
-  q('celery-drf-14'), q('celery-drf-16'),
+  q('dj-pagination-gap-1'), q('dj-pagination-gap-2'), q('celery-drf-17'), q('dj-pagination-generics-cloze-1'),
+  q('celery-drf-13'), q('celery-drf-14'), q('celery-drf-16'),
 
   // ===== Topic.DJ_CUSTOM_MANAGERS =====
-  q('dj-custom-managers-gap-1'), q('celery-drf-22'), q('celery-drf-24'), q('celery-drf-25'),
-  q('celery-drf-23'),
+  q('dj-custom-managers-gap-1'), q('dj-custom-managers-cloze-1'), q('celery-drf-22'), q('celery-drf-24'),
+  q('celery-drf-25'), q('celery-drf-23'),
 
   // ===== Topic.DJ_SIGNALS_MW =====
   q('dj-signals-mw-gap-1'), q('dj-signals-mw-gap-2'), q('py-dj-mw-what'), q('dj-sigmw-3'),
@@ -695,7 +698,8 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-management-cloze-1'), q('dj-mgmt-django-setup-cloze-1'), q('dj-mgmt-call-command-cloze-1'),
 
   // ===== Topic.DJ_SERVICE_LAYER =====
-  q('dj-service-layer-gap-1'), q('be-infra-service-2'), q('be-infra-service-1'), q('be-infra-service-3'),
+  q('dj-service-layer-gap-1'), q('be-infra-service-2'), q('dj-service-layer-cloze-1'), q('be-infra-service-1'),
+  q('be-infra-service-3'),
 
   // ===== Topic.DJ_ORM_MASTERY =====
   q('dj-orm-mastery-window-mcq-1'), q('dj-orm-mastery-lock-mcq-1'), q('dj-orm-mastery-nplus1-mcq-1'), q('dj-orm-mastery-perf-mcq-1'),
@@ -755,7 +759,7 @@ export const backendOrderedQuestions: Question[] = [
   q('be-infra-nginx-3'), q('be-infra-nginx-1'), q('be-infra-nginx-2'),
 
   // ===== Topic.DJ_SETTINGS =====
-  q('be-infra-settings-2'), q('be-infra-settings-3'), q('be-infra-settings-1'),
+  q('be-infra-settings-2'), q('be-infra-settings-3'), q('dj-settings-cloze-1'), q('be-infra-settings-1'),
 
   // ===== Topic.DJ_FILE_UPLOADS =====
   q('be-infra-uploads-3'), q('be-infra-uploads-1'), q('be-infra-uploads-2'),
@@ -767,7 +771,8 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-postgres-adv-1'), q('dj-postgres-adv-2'),
 
   // ===== Topic.DJ_API_DOCS =====
-  q('celery-drf-19'), q('celery-drf-21'), q('celery-drf-18'), q('celery-drf-20'),
+  q('celery-drf-19'), q('celery-drf-21'), q('dj-api-docs-cloze-1'), q('celery-drf-18'),
+  q('celery-drf-20'),
 
   // ===== Topic.DJ_CELERY =====
   q('celery-drf-4'), q('celery-drf-7'), q('dj-celery-gap-1'), q('dj-celery-gap-2'),
@@ -779,8 +784,8 @@ export const backendOrderedQuestions: Question[] = [
   q('celery-drf-9'), q('celery-drf-11'), q('dj-redis-gap-1'),
 
   // ===== Topic.DJ_CHANNELS =====
-  q('be-infra-channels-1'), q('dj-channels-gap-1'), q('be-infra-channels-3'), q('be-infra-channels-4'),
-  q('be-infra-channels-2'),
+  q('be-infra-channels-1'), q('dj-channels-gap-1'), q('dj-channels-cloze-1'), q('be-infra-channels-3'),
+  q('be-infra-channels-4'), q('be-infra-channels-2'),
 
   // ===== Topic.DJ_MONITORING =====
   q('be-infra-monitoring-3'), q('be-infra-monitoring-1'), q('be-infra-monitoring-2'),

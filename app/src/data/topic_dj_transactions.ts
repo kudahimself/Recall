@@ -143,7 +143,7 @@ def transfer_funds(from_id, to_id, amount):
       topic: Topic.DJ_TRANSACTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Wrap a view in a transaction using `@transaction.atomic`. Import `transaction` (and `models`) from `django.db`. Define a view `checkout` taking a request and decorate it with `@transaction.atomic`. Inside the view, create an `Order` for the current user, then decrement the `count` column on the matching `Inventory` row by one using an `F` expression in a filtered update. If either write raises, both roll back — you never ship an order without decrementing inventory.',
+      question: 'Ensure that all database writes inside a view function named `checkout` execute within a single transaction, so they either all succeed or all roll back. Define this view taking a `request`, create a new `Order` for the current user, and decrement the `count` column of the matching `Inventory` item by one using an `F` expression. Import `transaction` and `models` from `django.db` and use the view decorator approach to enforce the transaction.',
       starterCode: `# Write checkout(request) decorated with @transaction.atomic:
 # create an Order for request.user, then decrement the matching
 # Inventory row's count by 1 with an F() update. Both writes commit
@@ -181,7 +181,7 @@ def checkout(request):
       topic: Topic.DJ_TRANSACTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use `transaction.atomic()` as a context manager to scope a transaction to PART of a function. Import `transaction`. In `def process()`: do non-transactional prep, then inside `with transaction.atomic():` do two related updates (`a.save()` and `b.save()`), then do non-transactional follow-up. Exceptions inside the `with` roll back only those two saves; prep/follow-up remain.',
+      question: 'Scope a transaction block to only cover the save operations within a function named `process(a, b)`. Perform non-transactional prep (`a.normalize()` and `b.normalize()`), execute a transactional block enclosing `a.save()` and `b.save()`, and finish with a non-transactional follow-up (`notify(a, b)`). Ensure that any exception raised during the saves rolls back only those modifications.',
       starterCode: `# Write process(a, b): do non-transactional prep, then open a
 # transaction.atomic() block scoping ONLY two related saves
 # (a.save(), b.save()), then do non-transactional follow-up.

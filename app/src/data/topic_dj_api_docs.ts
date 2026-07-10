@@ -99,8 +99,41 @@ export const dj_api_docs_questions: Question[] = [
         { id: 'c', text: 'Auto-generated docs only pay off for small projects -- large APIs overwhelm the generator and the schema becomes unusably slow', isCorrect: false },
         { id: 'd', text: 'They stay in sync with code (types come from serializers) and clients can generate SDKs from the schema; manual docs go stale immediately', isCorrect: true },
       ],
-      explanation: 'The biggest problem with manual API docs is drift -- code changes but docs do not get updated. Auto-generated docs solve this because the schema is derived from your actual serializers, views, and URL patterns. When you add a field to a serializer, the docs update automatically. Additionally, the OpenAPI schema enables tooling: frontend teams can generate TypeScript types, mobile teams can generate API clients, and QA can generate test cases -- all from the same source of truth. Use @extend_schema for the 20% of cases where auto-detection is not enough.',
+    explanation: 'The biggest problem with manual API docs is drift -- code changes but docs do not get updated. Auto-generated docs solve this because the schema is derived from your actual serializers, views, and URL patterns. When you add a field to a serializer, the docs update automatically. Additionally, the OpenAPI schema enables tooling: frontend teams can generate TypeScript types, mobile teams can generate API clients, and QA can generate test cases -- all from the same source of truth. Use @extend_schema for the 20% of cases where auto-detection is not enough.',
       tags: ['api-docs', 'openapi', 'documentation', 'developer-experience'],
       concepts: ['dj-api-docs'],
     },
+  {
+    id: 'dj-api-docs-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_API_DOCS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Configure Django settings to use drf-spectacular for OpenAPI generation.',
+    template: `INSTALLED_APPS = [
+    # ...
+    "___",
+]
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "___",
+}`,
+    blanks: ['drf_spectacular', 'drf_spectacular.openapi.AutoSchema'],
+    solution: `INSTALLED_APPS = [
+    # ...
+    "drf_spectacular",
+]
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}`,
+    explanation: 'To set up `drf-spectacular`, you must register it in `INSTALLED_APPS` and configure the default schema class `drf_spectacular.openapi.AutoSchema` inside the `REST_FRAMEWORK` settings dictionary.',
+    hints: [
+      'Register drf_spectacular in installed apps',
+      'The schema class is AutoSchema from drf_spectacular.openapi',
+    ],
+    tags: ['drf-spectacular', 'openapi', 'configuration', 'cloze'],
+    concepts: ['dj-api-docs'],
+  },
 ];

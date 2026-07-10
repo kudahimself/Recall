@@ -37,20 +37,26 @@ export const py_modern_questions: Question[] = [
       topic: Topic.PY_MODERN,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use Enum for type-safe constants. Define an OrderStatus enum with states PENDING, PROCESSING, SHIPPED, and DELIVERED. Use it in a Django model with the choices parameter, and write a function that uses pattern matching (match/case) to determine the next valid status transition.',
+      question: 'Use Enum and structural pattern matching for type-safe constants and transitions. Define an `OrderStatus` string enum with states: `PENDING = "pending"`, `PROCESSING = "processing"`, `SHIPPED = "shipped"`, `DELIVERED = "delivered"`, and `CANCELLED = "cancelled"`. Then write a function `get_next_status(current: OrderStatus) -> OrderStatus` that uses a Python 3.10+ `match/case` statement to determine the next valid status: `PENDING` transitions to `PROCESSING`, `PROCESSING` to `SHIPPED`, `SHIPPED` to `DELIVERED`. If `DELIVERED` or `CANCELLED` are passed, raise `InvalidTransitionError` (which you should define). For any other value, raise `ValueError`.',
       starterCode: `from enum import Enum
 
-# Define OrderStatus enum, use in a model, and add transition logic
+class InvalidTransitionError(Exception):
+    pass
+
+# Define OrderStatus string Enum and get_next_status(current) function
 `,
       testCases: [
         {
-          input: 'OrderStatus enum with Django model and transitions',
-          expectedOutput: 'Enum definition, model with choices, transition function',
-          description: 'Should define Enum and use in Django model with match/case',
+          input: 'OrderStatus enum and match/case transitions',
+          expectedOutput: 'Enum definition, InvalidTransitionError definition, and transition function',
+          description: 'Should define Enum and transition logic using match/case',
         },
       ],
       solution: `from enum import Enum
-from django.db import models
+
+
+class InvalidTransitionError(Exception):
+    pass
 
 
 class OrderStatus(str, Enum):
@@ -59,23 +65,6 @@ class OrderStatus(str, Enum):
     SHIPPED = "shipped"
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
-
-
-class Order(models.Model):
-    status = models.CharField(
-        max_length=20,
-        choices=[(s.value, s.name.title()) for s in OrderStatus],
-        default=OrderStatus.PENDING.value,
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Order {self.id} - {self.status}"
-
-
-class InvalidTransitionError(Exception):
-    pass
 
 
 def get_next_status(current: OrderStatus) -> OrderStatus:
@@ -92,31 +81,14 @@ def get_next_status(current: OrderStatus) -> OrderStatus:
         case OrderStatus.CANCELLED:
             raise InvalidTransitionError("Cannot transition from cancelled")
         case _:
-            raise ValueError(f"Unknown status: {current}")
-
-
-def transition_order(order, target_status):
-    """Validate and apply a status transition."""
-    current = OrderStatus(order.status)
-    valid_next = get_next_status(current)
-
-    if target_status != valid_next:
-        raise InvalidTransitionError(
-            f"Cannot go from {current.value} to {target_status.value}. "
-            f"Next valid status is {valid_next.value}."
-        )
-
-    order.status = target_status.value
-    order.save(update_fields=["status", "updated_at"])
-    return order`,
-      explanation: 'Enums prevent invalid values — OrderStatus.INVALID would raise an error, unlike a plain string. Inheriting from str makes the enum JSON-serializable and compatible with Django\'s CharField choices. The match/case on enum values is exhaustive and readable — each status maps clearly to its successor. The transition function enforces valid state changes, preventing an order from jumping from PENDING to DELIVERED. Using Enum instead of string constants means typos are caught at definition time, not at runtime in production.',
+            raise ValueError(f"Unknown status: {current}")`,
+      explanation: 'Using Enums prevents typo-based errors (like passing "processin" instead of "processing"). Structural pattern matching (`match/case`) provides a clean, declarative syntax for checking values and executing conditional branches.',
       hints: [
-        'class OrderStatus(str, Enum) makes values string-compatible',
-        'choices=[(s.value, s.name.title()) for s in OrderStatus] auto-generates choices',
-        'match/case on Enum values is cleaner than if/elif chains',
-        'OrderStatus("pending") converts a string back to the enum member',
+        'Inherit from (str, Enum) to create a string-based Enum',
+        'Use match current: followed by case OrderStatus.VALUE:',
+        'The wildcard case _: acts as the default case to match any other values',
       ],
-      tags: ['enum', 'pattern-matching', 'django-model', 'type-safety'],
+      tags: ['enum', 'pattern-matching', 'type-safety', 'match-case'],
       concepts: ['py-modern-syntax'],
     },
   {

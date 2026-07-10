@@ -20,19 +20,21 @@ export const dj_service_layer_questions: Question[] = [
       topic: Topic.DJ_SERVICE_LAYER,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Implement a service layer for order creation. Create services/order_service.py with a create_order(user, items) function that validates stock availability, creates the Order and OrderItem records, sends a confirmation email via Celery, and returns the order. Show how the view calls the service.',
-      starterCode: `# services/order_service.py
-# Write the service function and the view that calls it
+      question: 'Implement a service layer for order creation. Write the function `create_order(user, items)` (with `items` as a list of dicts like `{"product_id": int, "quantity": int}`). It should validate stock availability for each product and raise `InsufficientStockError` if stock is too low. If validation passes, create the `Order` and associated `OrderItem` objects atomically inside a transaction (use `select_for_update()` to lock product rows). Finally, trigger an async confirmation email by calling `send_order_confirmation_email.delay(order.id)` and return the created `Order`. Also define the `InsufficientStockError` custom exception.',
+      starterCode: `from django.db import transaction
+from myapp.models import Order, OrderItem, Product
+from myapp.tasks import send_order_confirmation_email
+
+# Define InsufficientStockError and write create_order(user, items)
 `,
       testCases: [
         {
           input: 'Order service with validation, creation, and async email',
-          expectedOutput: 'Service function with business logic, view that delegates to service',
-          description: 'Should separate business logic from HTTP handling',
+          expectedOutput: 'Service function with business logic',
+          description: 'Should implement a service function separating business logic from HTTP views',
         },
       ],
-      solution: `# services/order_service.py
-from django.db import transaction
+      solution: `from django.db import transaction
 from myapp.models import Order, OrderItem, Product
 from myapp.tasks import send_order_confirmation_email
 
@@ -76,28 +78,11 @@ def create_order(user, items):
     # 3. Send confirmation email asynchronously
     send_order_confirmation_email.delay(order.id)
 
-    return order
-
-
-# views.py
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from myapp.services.order_service import create_order, InsufficientStockError
-
-
-class CreateOrderView(APIView):
-    def post(self, request):
-        try:
-            order = create_order(user=request.user, items=request.data["items"])
-            return Response({"order_id": order.id}, status=status.HTTP_201_CREATED)
-        except InsufficientStockError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)`,
-      explanation: 'The service layer separates what happens (business logic) from how it is triggered (HTTP). The view only parses the request and returns a response — all validation, database operations, and side effects live in the service. This makes the business logic testable without HTTP (just call create_order directly), reusable from management commands or Celery tasks, and easier to reason about. The transaction.atomic() ensures that if any step fails, all database changes are rolled back. select_for_update() prevents race conditions where two orders claim the same stock.',
+    return order`,
+      explanation: 'The service layer separates what happens (business logic) from how it is triggered (HTTP). All validation, database operations, and side effects live in the service. This makes the business logic testable without HTTP (just call create_order directly). The transaction.atomic() ensures that if any step fails, all database changes are rolled back. select_for_update() prevents race conditions where two orders claim the same stock.',
       hints: [
         'transaction.atomic() rolls back everything if an exception occurs',
         'select_for_update() locks the row to prevent race conditions',
-        'The service raises domain exceptions, the view converts them to HTTP responses',
         'Celery task is called after the transaction commits',
       ],
       tags: ['service-layer', 'architecture', 'transactions', 'celery'],
@@ -174,4 +159,43 @@ class CreateOrderView(APIView):
       tags: ['django', 'service-layer', 'architecture', 'separation-of-concerns', 'basics'],
       concepts: ['dj-service-layer'],
     },
+  {
+    id: 'dj-service-layer-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_SERVICE_LAYER,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete this service layer function to register a new user and trigger a notification, keeping the business logic out of the view.',
+    template: `from django.contrib.auth.models import User
+from .tasks import send_welcome_email
+
+def register_user(username, email, password):
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password
+    )
+    send_welcome_email.___(___)
+    return user`,
+    blanks: ['delay', 'user.id'],
+    solution: `from django.contrib.auth.models import User
+from .tasks import send_welcome_email
+
+def register_user(username, email, password):
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password
+    )
+    send_welcome_email.delay(user.id)
+    return user`,
+    explanation: 'In a service function, we implement the business logic (creating the user model and dispatching background tasks via Celery `.delay()`) separate from the HTTP view layer.',
+    hints: [
+      'Trigger the Celery task asynchronously using .delay()',
+      'Pass the user ID to the Celery task so the worker can fetch the user',
+    ],
+    tags: ['django', 'service-layer', 'celery', 'cloze'],
+    concepts: ['dj-service-layer'],
+  },
 ];

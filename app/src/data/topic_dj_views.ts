@@ -45,7 +45,7 @@ def hello(request):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define a Django view `greet(request)` that renders the template `"greet.html"` with a context dict containing `name="Alice"` and `count=3`, using the Django shortcut that loads the template, substitutes context, and returns an `HttpResponse` in one call. The template can then reference `{{ name }}` and `{{ count }}` as variables.',
+      question: 'Define a Django view `greet(request)` that loads and renders a template named `"greet.html"`. Pass a context dict containing `name` set to `"Alice"` and `count` set to `3`.',
       starterCode: `from django.shortcuts import render
   `,
       testCases: [

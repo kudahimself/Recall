@@ -157,7 +157,7 @@ class ArticleAdmin(admin.ModelAdmin):
       topic: Topic.DJ_ADMIN,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Register a `Post` model with the Django admin. Two options shown in the solution: the decorator form `@admin.register(Post)` on a `ModelAdmin` class, and the functional `admin.site.register(Post)`. Both make the model appear in `/admin/`. Use the decorator form.',
+      question: 'Register the `Post` model with the Django admin. Use the idiomatic class decorator approach to register a custom admin class `PostAdmin` that extends the default admin configuration (initially without any custom fields or behaviors).',
       starterCode: `# blog/admin.py
 # Import admin and Post, then register a (bare) PostAdmin
 # using the decorator form.

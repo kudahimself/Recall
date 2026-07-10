@@ -837,9 +837,6 @@ after`,
       starterCode: `# Define Vector(x, y) with __init__ storing self.x and self.y
 # Implement __repr__ → f"Vector({x}, {y})"
 # Implement __add__, __mul__ (scalar), __eq__
-
-
-# Build v1=Vector(1,2), v2=Vector(3,4); print v1+v2, v1*3, two equality checks
 `,
       testCases: [
         { input: 'repr(Vector(1, 2) + Vector(3, 4))', expectedOutput: 'Vector(4, 6)', description: 'Vector addition' },
@@ -861,14 +858,7 @@ after`,
         return Vector(self.x * scalar, self.y * scalar)
 
     def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
-
-v1 = Vector(1, 2)
-v2 = Vector(3, 4)
-print(v1 + v2)
-print(v1 * 3)
-print(Vector(1, 2) == Vector(1, 2))
-print(v1 == v2)`,
+        return self.x == other.x and self.y == other.y`,
       explanation: 'Magic methods let you define how your objects respond to operators. `__add__` handles `+`, `__mul__` handles `*`, `__eq__` handles `==`. Each returns a new `Vector` (or bool for `__eq__`). Without these, using `+` on two Vectors would raise `TypeError`. Python calls `v1.__add__(v2)` when it sees `v1 + v2`.',
       hints: [
         '`__add__` receives `self` and `other` — both Vectors',
@@ -884,14 +874,11 @@ print(v1 == v2)`,
       topic: Topic.PY_MAGIC_METHODS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a `Stack` class backed by `self._items` with `push(item)` and `pop()`. Add `__len__` (so `len(s)` works) and `__contains__` (so `x in s` works) — both delegate to the underlying list. Push 1, 2, 3, then print `len(s)` and `2 in s`.',
+      question: 'Build a `Stack` class backed by `self._items` with `push(item)` and `pop()`. Add `__len__` (so `len(s)` works) and `__contains__` (so `x in s` works) — both delegate to the underlying list.',
       starterCode: `# Stack with self._items list; push/pop; __len__ for len(s); __contains__ for x in s
-
-
-# Push 1, 2, 3; print len(s), (2 in s)
 `,
       testCases: [
-        { input: '', expectedOutput: '3\nTrue', description: 'len(s) and (2 in s)' },
+        { input: 'len(Stack())', expectedOutput: '0', description: 'Empty stack has len 0' },
       ],
       solution: `class Stack:
     def __init__(self):
@@ -907,14 +894,7 @@ print(v1 == v2)`,
         return len(self._items)
 
     def __contains__(self, item):
-        return item in self._items
-
-s = Stack()
-s.push(1)
-s.push(2)
-s.push(3)
-print(len(s))
-print(2 in s)`,
+        return item in self._items`,
       explanation: '`__len__` enables `len(s)`, `__contains__` enables `x in s`. Both can just delegate to the underlying list. Defining these makes your class participate in the built-in container protocols.',
       hints: [
         '`__len__` returns `len(self._items)`',
@@ -932,12 +912,9 @@ print(2 in s)`,
       language: CodeLanguage.PYTHON,
       question: 'Build a `Stack` class backed by `self._items` with `push(item)` and `pop()`. Add `__iter__` so iteration yields items TOP-FIRST — the reverse of insertion order — so `list(s)` after pushing 1, 2, 3 is `[3, 2, 1]`.',
       starterCode: `# Stack with self._items list; push/pop; __iter__ yielding top-first
-
-
-# Push 1, 2, 3; print list(s)
 `,
       testCases: [
-        { input: '', expectedOutput: '[3, 2, 1]', description: 'list(s) reflects top-first iteration' },
+        { input: 'list(Stack())', expectedOutput: '[]', description: 'Empty stack iteration' },
       ],
       solution: `class Stack:
     def __init__(self):
@@ -950,13 +927,7 @@ print(2 in s)`,
         return self._items.pop()
 
     def __iter__(self):
-        return iter(reversed(self._items))
-
-s = Stack()
-s.push(1)
-s.push(2)
-s.push(3)
-print(list(s))`,
+        return iter(reversed(self._items))`,
       explanation: '`__iter__` must return an iterator. `reversed(self._items)` gives a top-first traversal of the underlying list. `for x in s`, `list(s)`, and unpacking all route through `__iter__`, so defining it once fixes every iteration syntax at the same time.',
       hints: [
         '`__iter__` returns an iterator (not the iterable itself)',

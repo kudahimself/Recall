@@ -37,19 +37,20 @@ export const dj_channels_questions: Question[] = [
       topic: Topic.DJ_CHANNELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a Django Channels WebSocket consumer for a chat room. Create an AsyncWebSocketConsumer with connect, disconnect, and receive methods. Users should join a room group on connect, leave on disconnect, and broadcast messages to all room members. Show the consumer and routing.py with URLRouter.',
-      starterCode: `# consumers.py and routing.py
-# Write the WebSocket consumer and URL routing
+      question: 'Write a Django Channels WebSocket consumer for a chat room. Create an `AsyncWebSocketConsumer` subclass named `ChatConsumer` with `connect`, `disconnect`, and `receive` methods. The room name should be extracted from the URL route scope (`room_name`). On connection, accept it and join a room group (named `chat_<room_name>`); on disconnect, leave the room group; on receiving a JSON message, broadcast it to the room group; and implement the broadcast handler to send the message back to the client socket.',
+      starterCode: `import json
+from channels.generic.websocket import AsyncWebSocketConsumer
+
+# Write the ChatConsumer WebSocket consumer
 `,
       testCases: [
         {
-          input: 'Chat consumer and routing',
+          input: 'Chat consumer',
           expectedOutput: 'AsyncWebSocketConsumer with group_add, group_discard, group_send',
           description: 'Should implement a WebSocket chat consumer with room groups',
         },
       ],
-      solution: `# consumers.py
-import json
+      solution: `import json
 from channels.generic.websocket import AsyncWebSocketConsumer
 
 
@@ -68,16 +69,6 @@ class ChatConsumer(AsyncWebSocketConsumer):
         # Accept the WebSocket connection
         await self.accept()
 
-        # Notify room that user joined
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "chat.message",
-                "message": f"A user has joined the room.",
-                "sender": "system",
-            },
-        )
-
     async def disconnect(self, close_code):
         # Leave the room group
         await self.channel_layer.group_discard(
@@ -89,7 +80,6 @@ class ChatConsumer(AsyncWebSocketConsumer):
         # Parse incoming message
         data = json.loads(text_data)
         message = data["message"]
-        sender = data.get("sender", "anonymous")
 
         # Broadcast to room group
         await self.channel_layer.group_send(
@@ -97,7 +87,6 @@ class ChatConsumer(AsyncWebSocketConsumer):
             {
                 "type": "chat.message",
                 "message": message,
-                "sender": sender,
             },
         )
 
@@ -105,35 +94,12 @@ class ChatConsumer(AsyncWebSocketConsumer):
         # Send message to WebSocket client
         await self.send(text_data=json.dumps({
             "message": event["message"],
-            "sender": event["sender"],
-        }))
-
-
-# routing.py
-from django.urls import re_path
-from . import consumers
-
-websocket_urlpatterns = [
-    re_path(r"ws/chat/(?P<room_name>\\w+)/$", consumers.ChatConsumer.as_asgi()),
-]
-
-
-# asgi.py (project-level)
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
-from chat import routing
-
-application = ProtocolTypeRouter({
-    "websocket": AuthMiddlewareStack(
-        URLRouter(routing.websocket_urlpatterns)
-    ),
-})`,
+        }))`,
       explanation: 'The consumer lifecycle mirrors WebSocket events: connect() is called when a client opens a connection, receive() when they send a message, and disconnect() when they leave. channel_layer.group_add() subscribes this consumer to a named group (the chat room). group_send() broadcasts a message to all consumers in that group. The "type" field in group_send maps to a method name: "chat.message" calls chat_message() on each consumer. This decoupling means the sender does not need to know about individual recipients. AuthMiddlewareStack adds the user to self.scope so you can access the authenticated user.',
       hints: [
         'self.scope["url_route"]["kwargs"] gives URL parameters like views',
         'group_send "type" maps to a method: "chat.message" → chat_message()',
         'self.channel_name is unique per connection — assigned by Channels',
-        'AuthMiddlewareStack adds self.scope["user"] for authentication',
       ],
       tags: ['channels', 'websocket', 'consumer', 'chat', 'async'],
       concepts: ['py-async-coroutines'],
@@ -209,4 +175,42 @@ application = ProtocolTypeRouter({
       tags: ['django', 'channels', 'websockets', 'real-time', 'basics'],
       concepts: ['dj-channels-realtime'],
     },
+  {
+    id: 'dj-channels-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_CHANNELS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete this basic WebSocket consumer structure to accept the connection and join a channel group.',
+    template: `from channels.generic.websocket import AsyncWebSocketConsumer
+
+class NotificationConsumer(AsyncWebSocketConsumer):
+    async def connect(self):
+        self.group_name = "global_notifications"
+        await self.channel_layer.___(
+            self.group_name,
+            self.___
+        )
+        await self.___()`,
+    blanks: ['group_add', 'channel_name', 'accept'],
+    solution: `from channels.generic.websocket import AsyncWebSocketConsumer
+
+class NotificationConsumer(AsyncWebSocketConsumer):
+    async def connect(self):
+        self.group_name = "global_notifications"
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name
+        )
+        await self.accept()`,
+    explanation: 'In a Channels consumer, `self.channel_layer.group_add` takes the group name and `self.channel_name` (which represents this client socket connection) to subscribe it. Finally, `await self.accept()` accepts the handshake connection.',
+    hints: [
+      'Use group_add to join the room group',
+      'self.channel_name is the current connection name',
+      'accept() accepts the connection',
+    ],
+    tags: ['channels', 'websocket', 'consumer', 'async', 'cloze'],
+    concepts: ['dj-channels-realtime'],
+  },
 ];

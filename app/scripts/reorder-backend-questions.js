@@ -75,6 +75,7 @@ console.log(`Found ${orderedIds.length} question IDs in ordered bank.`);
 // Step 3: Group by topic, keeping the first occurrence order of each topic
 const topicOrder = [];
 const questionsByTopic = {};
+const seenIds = new Set();
 
 for (const id of orderedIds) {
   const meta = questionMeta[id];
@@ -88,6 +89,23 @@ for (const id of orderedIds) {
     topicOrder.push(t);
   }
   questionsByTopic[t].push(meta);
+  seenIds.add(id);
+}
+
+// Automatically add new questions from topic files not present in the ordered list
+for (const [id, meta] of Object.entries(questionMeta)) {
+  if (!seenIds.has(id)) {
+    // Avoid registration of option IDs like 'a', 'b', 'c', 'd'
+    if (id.length <= 1) continue;
+    
+    const t = meta.topic;
+    if (!questionsByTopic[t]) {
+      questionsByTopic[t] = [];
+      topicOrder.push(t);
+    }
+    questionsByTopic[t].push(meta);
+    console.log(`Discovered new question ${id} for topic ${t}, adding to bank.`);
+  }
 }
 
 // Step 4: Sort questions within each topic

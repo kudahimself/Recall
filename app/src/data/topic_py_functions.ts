@@ -750,7 +750,7 @@ Hi, Bob!`,
   {
       id: 'py-functions-predict-8',
       type: QuestionType.PREDICT_OUTPUT,
-      difficulty: Difficulty.ADVANCED,
+      difficulty: Difficulty.BEGINNER,
       topic: Topic.PY_FUNCTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,

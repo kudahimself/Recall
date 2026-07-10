@@ -1090,54 +1090,31 @@ async def fetch_all(urls: list[str]) -> list[str]:
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a coroutine `process_with_timeout` that takes a `name` string, a `seconds` float (how long the work takes), and a `timeout` float (deadline). It runs a long job alongside a background heartbeat. Also define the two helpers it calls: `worker` takes `name` and `seconds`, sleeps (async) for that many seconds, and returns the name followed by the text `" completed"`; `monitor` takes a `name` and LOOPS FOREVER printing `"[monitor] "` + name + `" still running..."` every 0.5 seconds. Behaviour of `process_with_timeout`:\n\n- Start the monitor so it runs CONCURRENTLY with the worker.\n- Enforce the deadline on the worker: if it runs longer than `timeout` seconds, raise a plain `TimeoutError` whose message is the name followed by `" exceeded "` + timeout + `"s timeout"`.\n- No matter how the function exits (success, timeout, other exception), the background monitor must be stopped cleanly before returning or propagating the exception — the caller should never see a `CancelledError` leaking out.\n- On success, return the worker\'s result.',
+      question: 'Write a coroutine `fetch_with_timeout(url, timeout)` that runs the pre-defined coroutine `fetch_data(url)` (which returns a string) with a timeout using `asyncio.wait_for`. If the operation exceeds `timeout` seconds, catch the timeout exception and raise a `TimeoutError("Request timed out")`. Otherwise, return the fetched string.',
       starterCode: `import asyncio
-  `,
+
+# fetch_data(url) is a pre-defined coroutine returning a string.
+`,
       testCases: [
         {
-          input: 'process_with_timeout("job1", 2.0, 5.0)',
-          expectedOutput: 'Returns worker result, monitor is cancelled after worker completes',
-          description: 'Should use create_task and cancel monitor on completion',
+          input: 'fetch_with_timeout("http://example.com", 1.0)',
+          expectedOutput: 'data from http://example.com',
+          description: 'Should fetch successfully within timeout',
         },
       ],
       solution: `import asyncio
 
-async def worker(name: str, seconds: float) -> str:
-    """Simulate work that takes 'seconds' to complete."""
-    await asyncio.sleep(seconds)
-    return f"{name} completed"
-
-async def monitor(name: str) -> None:
-    """Print status every 0.5s until cancelled."""
+async def fetch_with_timeout(url: str, timeout: float) -> str:
     try:
-        while True:
-            print(f"[monitor] {name} still running...")
-            await asyncio.sleep(0.5)
-    except asyncio.CancelledError:
-        print(f"[monitor] {name} monitor stopped")
-
-async def process_with_timeout(name: str, seconds: float, timeout: float) -> str:
-    """Run worker with a monitor, enforce timeout, clean up."""
-    monitor_task = asyncio.create_task(monitor(name))
-    try:
-        result = await asyncio.wait_for(worker(name, seconds), timeout=timeout)
-        return result
+        return await asyncio.wait_for(fetch_data(url), timeout=timeout)
     except asyncio.TimeoutError:
-        raise TimeoutError(f"{name} exceeded {timeout}s timeout")
-    finally:
-        monitor_task.cancel()
-        try:
-            await monitor_task
-        except asyncio.CancelledError:
-            pass
-`,
-      explanation: 'asyncio.create_task schedules a coroutine to run in the background — it starts immediately without being awaited. This is useful for "fire-and-forget" tasks like monitoring. The key pattern is using try/finally to ensure the monitor task is always cancelled and awaited (to suppress the CancelledError). asyncio.wait_for wraps a coroutine with a timeout, raising TimeoutError if it exceeds the limit.',
+        raise TimeoutError("Request timed out")`,
+      explanation: 'asyncio.wait_for wraps a coroutine with a timeout, raising asyncio.TimeoutError if it exceeds the limit. We catch it and raise a custom TimeoutError with the required message.',
       hints: [
-        'asyncio.create_task starts the monitor without awaiting it',
-        'Use try/finally to always cancel the monitor',
-        'await the cancelled task to handle CancelledError cleanly',
+        'Use `await asyncio.wait_for(fetch_data(url), timeout=timeout)`',
+        'Catch `asyncio.TimeoutError` and raise `TimeoutError("Request timed out")`',
       ],
-      tags: ['async', 'create_task', 'cancel', 'wait_for', 'timeout'],
+      tags: ['async', 'wait_for', 'timeout'],
       concepts: ['py-async-coroutines'],
     },
   {

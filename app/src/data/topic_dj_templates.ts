@@ -369,4 +369,35 @@ def currency(value):
       tags: ['django', 'templates', 'variables', 'syntax'],
       concepts: ['dj-templates'],
     },
+  {
+    id: 'dj-templates-custom-filter-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DJ_TEMPLATES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete the definition of a custom template filter `lower_case` that registers a filter converting its value to lowercase.',
+    template: `from django import template
+
+___ = template.Library()
+
+@register.___
+def lower_case(value):
+    return value.lower()`,
+    blanks: ['register', 'filter'],
+    solution: `from django import template
+
+register = template.Library()
+
+@register.filter
+def lower_case(value):
+    return value.lower()`,
+    explanation: 'To define custom filters/tags in Django, you must instantiate `register = template.Library()` at the module level, and then decorate the filter function using `@register.filter`. The module must reside in a `templatetags` directory within a registered app.',
+    hints: [
+      'The module level library instance must be named register',
+      'The decorator to register a filter is @register.filter',
+    ],
+    tags: ['django', 'templates', 'custom-filter', 'cloze'],
+    concepts: ['dj-templates'],
+  },
 ];

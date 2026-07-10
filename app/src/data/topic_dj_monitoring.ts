@@ -37,69 +37,27 @@ export const dj_monitoring_questions: Question[] = [
       topic: Topic.DJ_MONITORING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Set up Django logging configuration. Define a LOGGING dict with formatters (verbose and simple), handlers (console and file), and loggers (django and myapp). Then show how to use logger.info() and logger.error() with extra context in a view.',
-      starterCode: `# settings.py LOGGING config and usage example
-  `,
-      testCases: [
-        {
-          input: 'Django LOGGING configuration',
-          expectedOutput: 'LOGGING dict with formatters, handlers, loggers + usage in views',
-          description: 'Should define complete logging config and demonstrate usage',
-        },
-      ],
-      solution: `# settings.py
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
-        },
-        "json": {
-            "format": "{asctime} {levelname} {name} {message}",
-            "style": "{",
-        },
-    },
-    "handlers": {
-        "console": {
-            "level": "DEBUG",
-            "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "level": "WARNING",
-            "class": "logging.FileHandler",
-            "filename": BASE_DIR / "logs" / "django.log",
-            "formatter": "verbose",
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": True,
-        },
-        "myapp": {
-            "handlers": ["console", "file"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
-    },
-}
-
-
-# views.py — Using the logger
-import logging
+      question: 'Write a Django REST Framework API view `OrderView` that uses a configured logger named `"myapp"` to record messages. Inside the `post` method, log an `"Order creation started"` info message with `extra` parameters for `user_id` (from `request.user.id`) and `items_count` (the length of the items list in request data). Then try to call `create_order(request.user, request.data["items"])`. If it succeeds, log an `"Order created successfully"` info message with the `order_id` in `extra` and return a 201 response. If any exception is raised, log an `"Order creation failed"` error message with `user_id` and the exception string in `extra`, ensuring the full stack trace is included (`exc_info=True`), and return a 400 response.',
+      starterCode: `import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 logger = logging.getLogger("myapp")
 
+# Implement OrderView with logging extra details
+`,
+      testCases: [
+        {
+          input: 'OrderView logging',
+          expectedOutput: 'API view post method with info/error logging and extra parameters',
+          description: 'Should demonstrate using a logger inside a view with extra context and exc_info',
+        },
+      ],
+      solution: `import logging
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+logger = logging.getLogger("myapp")
 
 class OrderView(APIView):
     def post(self, request):
@@ -123,12 +81,10 @@ class OrderView(APIView):
                 exc_info=True,  # includes full stack trace
             )
             return Response({"error": "Order failed"}, status=400)`,
-      explanation: 'Django\'s LOGGING dict configures Python\'s built-in logging module. Formatters define how messages look. Handlers define where messages go — StreamHandler for console, FileHandler for disk, and you can add SMTPHandler for email alerts or SentryHandler for error tracking. Loggers are named hierarchies — "myapp.views" inherits settings from "myapp" (unless propagate=False). The "extra" dict in logger calls adds context that appears in the formatted output. exc_info=True captures the full stack trace, which is critical for debugging production errors.',
+      explanation: 'Django\'s LOGGING dict configures Python\'s built-in logging module. The "extra" dict in logger calls adds context that appears in the formatted output. exc_info=True captures the full stack trace, which is critical for debugging production errors.',
       hints: [
-        'logging.getLogger("myapp") gets the logger configured in LOGGING',
+        'logging.getLogger("myapp") gets the logger configured in settings',
         'exc_info=True includes the stack trace in the log entry',
-        'propagate=False prevents messages from bubbling to the root logger',
-        'Create the logs/ directory or use RotatingFileHandler to manage size',
       ],
       tags: ['logging', 'django', 'monitoring', 'error-handling'],
       concepts: ['py-logging-config', 'dj-monitoring', 'py-exception-hierarchy'],

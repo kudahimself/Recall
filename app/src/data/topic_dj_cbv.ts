@@ -461,7 +461,7 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
 {
       id: 'dj-views-adv-3',
       type: QuestionType.PARSONS,
-      difficulty: Difficulty.ADVANCED,
+      difficulty: Difficulty.INTERMEDIATE,
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,

@@ -887,15 +887,12 @@ print(car.make)`,
       topic: Topic.PY_OOP,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a `Temperature` class that takes a `celsius` value on construction and stores it as `self.celsius`. Add an ALTERNATIVE CONSTRUCTOR (the method-decorator variant that receives the class itself as its first argument) named `from_fahrenheit` that takes a Fahrenheit value, converts it using `(F - 32) * 5/9`, and returns a new instance. Also add a UTILITY function (the method-decorator variant that takes no `self`/`cls` and is callable on the class or instances) named `is_freezing` that takes a celsius value and returns `True` when it is 0 or below. Also add a developer-representation hook returning the string `"Temperature("` + celsius formatted to one decimal + `"°C)"`. Create one instance from 32°F, print its celsius attribute (expect `0.0`), then print the freezing check for `-5` (expect `True`) and `20` (expect `False`).',
+      question: 'Build a `Temperature` class that takes a `celsius` value on construction and stores it as `self.celsius`. Add an ALTERNATIVE CONSTRUCTOR named `from_fahrenheit` (using `@classmethod`) that takes a Fahrenheit value, converts it to Celsius using `(F - 32) * 5/9`, and returns a new instance. Also add a UTILITY function named `is_freezing` (using `@staticmethod`) that takes a celsius value and returns `True` when it is 0 or below. Also add a developer-representation hook (`__repr__`) returning the string `"Temperature({celsius:.1f}°C)"`.',
       starterCode: `# Define Temperature with:
 #   - __init__(self, celsius)
 #   - @classmethod from_fahrenheit(cls, fahrenheit)  — formula: (F - 32) * 5/9
 #   - @staticmethod is_freezing(celsius)
 #   - __repr__ returning f"Temperature({celsius:.1f}°C)"
-
-
-# Create one from F, print its celsius, and print is_freezing for -5 and 20
 `,
       testCases: [
         { input: 'Temperature.from_fahrenheit(32).celsius', expectedOutput: '0.0', description: '32°F = 0°C' },
@@ -916,13 +913,7 @@ print(car.make)`,
         return celsius <= 0
 
     def __repr__(self):
-        return f"Temperature({self.celsius:.1f}°C)"
-
-t1 = Temperature(100)
-t2 = Temperature.from_fahrenheit(32)
-print(t2.celsius)
-print(Temperature.is_freezing(-5))
-print(Temperature.is_freezing(20))`,
+        return f"Temperature({self.celsius:.1f}°C)"`,
       explanation: '`from_fahrenheit` is an alternative constructor — it converts the input and calls `cls(celsius)` to create a new instance. Using `cls` instead of `Temperature` means subclasses work correctly. `is_freezing` is a utility — it needs no class or instance context, just the value itself.',
       hints: [
         'Use `return cls(celsius)` in the classmethod — not `Temperature(...)`',

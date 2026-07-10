@@ -179,4 +179,35 @@ export const dj_pagination_generics_questions: Question[] = [
       tags: ['django', 'drf', 'generic-views', 'crud', 'basics'],
       concepts: ['dj-view-patterns'],
     },
+  {
+    id: 'dj-pagination-generics-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_PAGINATION_GENERICS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete this generic API view to list all articles, ordered by created_at, using DRF generic views.',
+    template: `from rest_framework import generics
+from .models import Article
+from .serializers import ArticleSerializer
+
+class ArticleListView(generics.___):
+    queryset = Article.objects.all().order_by("-created_at")
+    serializer_class = ___`,
+    blanks: ['ListAPIView', 'ArticleSerializer'],
+    solution: `from rest_framework import generics
+from .models import Article
+from .serializers import ArticleSerializer
+
+class ArticleListView(generics.ListAPIView):
+    queryset = Article.objects.all().order_by("-created_at")
+    serializer_class = ArticleSerializer`,
+    explanation: '`generics.ListAPIView` is the standard generic view for a read-only list endpoint. You only need to define `queryset` and `serializer_class` attributes.',
+    hints: [
+      'Use ListAPIView for listing models',
+      'Assign the serializer class to serializer_class',
+    ],
+    tags: ['drf', 'generic-views', 'queryset', 'cloze'],
+    concepts: ['dj-view-patterns'],
+  },
 ];

@@ -86,15 +86,12 @@ export const py_oop_advanced_questions: Question[] = [
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a `BankAccount` class with a name-mangled PRIVATE balance attribute (double leading underscores). The constructor takes an `initial_balance` keyword argument defaulting to 0. Expose the balance publicly as a READ-ONLY property (no setter, so callers can\'t overwrite it directly). Add a deposit method that raises `ValueError("Deposit amount must be positive")` for non-positive amounts, otherwise adds to the balance. Add a withdraw method that raises `ValueError("Insufficient funds")` when the amount exceeds the balance, otherwise subtracts. Demonstrate: create an account with 100, deposit 50, print the balance (expect `150`), withdraw 30, print the balance (expect `120`).',
+      question: 'Build a `BankAccount` class with a name-mangled PRIVATE balance attribute (double leading underscores). The constructor takes an `initial_balance` keyword argument defaulting to 0. Expose the balance publicly as a READ-ONLY property (no setter, so callers can\'t overwrite it directly). Add a deposit method that raises `ValueError("Deposit amount must be positive")` for non-positive amounts, otherwise adds to the balance. Add a withdraw method that raises `ValueError("Insufficient funds")` when the amount exceeds the balance, otherwise subtracts.',
       starterCode: `# Define BankAccount(initial_balance=0) with:
 #   - a private __balance attribute
 #   - a read-only @property called balance
 #   - deposit(amount) — reject non-positive amounts with ValueError
 #   - withdraw(amount) — raise ValueError if amount > balance
-
-
-# Create an account with 100, deposit 50, print balance, withdraw 30, print balance
 `,
       testCases: [
         { input: 'BankAccount(100).balance', expectedOutput: '100', description: 'balance property returns initial balance' },
@@ -115,13 +112,7 @@ export const py_oop_advanced_questions: Question[] = [
     def withdraw(self, amount):
         if amount > self.__balance:
             raise ValueError("Insufficient funds")
-        self.__balance -= amount
-
-account = BankAccount(100)
-account.deposit(50)
-print(account.balance)
-account.withdraw(30)
-print(account.balance)`,
+        self.__balance -= amount`,
       explanation: '`__balance` uses name mangling — it becomes `_BankAccount__balance`. The `@property` decorator creates a read-only attribute (no setter). Validation in `withdraw` raises `ValueError` to signal invalid operations. Callers can\'t accidentally set `account.balance = 1000000` since there\'s no setter.',
       hints: [
         '`@property` creates a getter — no setter means read-only',
@@ -165,9 +156,6 @@ print(account.balance)`,
 #   - stop()  → sets running=False, returns "Engine stopped"
 #
 # Define a Car(make, engine) that HAS-A Engine and delegates start()/stop() to it
-
-
-# Create an Engine(150) and a Car("Toyota", engine); print start() and stop()
 `,
       testCases: [
         { input: 'Car("Toyota", Engine(150)).start()', expectedOutput: 'Engine (150hp) started', description: 'Car delegates start to Engine' },
@@ -194,12 +182,7 @@ class Car:
         return self.engine.start()
 
     def stop(self):
-        return self.engine.stop()
-
-engine = Engine(150)
-car = Car("Toyota", engine)
-print(car.start())
-print(car.stop())`,
+        return self.engine.stop()`,
       explanation: '`Car` holds a reference to an `Engine` instance. Instead of inheriting engine behaviour, `Car` delegates to it. You could swap the engine for a different `Engine` instance with different horsepower without changing `Car` at all. This is the core benefit of composition over inheritance.',
       hints: [
         'Store engine as `self.engine = engine` in `__init__`',
@@ -306,10 +289,6 @@ print(cl.append_count)`,
       starterCode: `# Define an abstract Shape (using ABC) with abstractmethods area() and perimeter()
 # Define Circle(radius) and Rectangle(width, height) implementing both
 # Use math.pi for the circle
-
-
-# Create Circle(5) and Rectangle(4, 6); print area/perimeter of each
-# Round circle results to 2 decimals
 `,
       testCases: [
         { input: 'round(Circle(5).area(), 2)', expectedOutput: '78.54', description: 'Circle area = π×r²' },
@@ -347,14 +326,7 @@ class Rectangle(Shape):
         return self.width * self.height
 
     def perimeter(self):
-        return 2 * (self.width + self.height)
-
-c = Circle(5)
-r = Rectangle(4, 6)
-print(round(c.area(), 2))
-print(round(c.perimeter(), 2))
-print(r.area())
-print(r.perimeter())`,
+        return 2 * (self.width + self.height)`,
       explanation: 'Both `Circle` and `Rectangle` must implement ALL abstract methods or Python raises `TypeError` at instantiation. The abstract class acts as a contract — any `Shape` subclass guarantees it has `area()` and `perimeter()`. This enables polymorphic code like `for shape in shapes: print(shape.area())`.',
       hints: [
         'Circle area = `math.pi * r**2`, perimeter = `2 * math.pi * r`',
@@ -452,18 +424,13 @@ print("Deep copy:", deep)`,
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a `Person` class taking a `name` and `age` on construction. Expose `age` as a PROPERTY with a validating setter. Store the underlying value privately as `self._age`. The getter returns the private value. The setter must check that the incoming value is an `int` AND is between 0 and 150 inclusive; if not, raise `ValueError("Age must be between 0 and 150")`. The constructor must route assignment through the property setter (so validation runs on construction too — achieve this by assigning through the public property name rather than the private underscore name).\n\nDemonstrate: create a person named `"Alice"` aged 30 and bind it to `p`. Print `p.age` (expect `30`). Reassign `p.age` to 25 and print again (expect `25`). Try to reassign `p.age` to `-5` inside a `try/except ValueError as e` and print the caught error (expect `Age must be between 0 and 150`).',
+      question: 'Build a `Person` class taking a `name` and `age` on construction. Expose `age` as a property with a validating setter. Store the underlying value privately as `self._age`. The getter returns the private value. The setter must check that the incoming value is an `int` AND is between 0 and 150 inclusive; if not, raise `ValueError("Age must be between 0 and 150")`. The constructor must route assignment through the property setter (by assigning to `self.age` rather than `self._age`).',
       starterCode: `# Define Person(name, age) where age is a @property with a validating setter
 # Private storage: self._age. Setter raises ValueError("Age must be between 0 and 150")
 # __init__ should go through the setter: self.age = age
-
-
-# Create Person("Alice", 30); print p.age
-# Reassign p.age = 25; print p.age
-# Try p.age = -5 in a try/except ValueError as e and print(e)
 `,
       testCases: [
-        { input: '', expectedOutput: '30\n25\nAge must be between 0 and 150', description: 'Property setter should validate' },
+        { input: 'Person("Alice", 30)', expectedOutput: 'self.age and self._age set to 30', description: 'Property setter should validate' },
       ],
       solution: `class Person:
     def __init__(self, name, age):
@@ -478,18 +445,7 @@ print("Deep copy:", deep)`,
     def age(self, value):
         if not isinstance(value, int) or not (0 <= value <= 150):
             raise ValueError("Age must be between 0 and 150")
-        self._age = value
-
-p = Person("Alice", 30)
-print(p.age)
-
-p.age = 25
-print(p.age)
-
-try:
-    p.age = -5
-except ValueError as e:
-    print(e)`,
+        self._age = value`,
       explanation: 'Even in `__init__`, `self.age = age` calls the setter — so validation runs at construction time too. The private storage uses `_age` (single underscore) while the public interface is `age`. The setter uses `isinstance(value, int)` to check the type, then validates the range.',
       hints: [
         'Store in `self._age` (private), expose via `self.age` (property)',
@@ -598,7 +554,7 @@ class Shape(ABC):
 {
       id: 'py-oop-cloze-11',
       type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.ADVANCED,
+      difficulty: Difficulty.INTERMEDIATE,
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,

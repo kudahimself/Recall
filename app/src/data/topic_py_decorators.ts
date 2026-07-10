@@ -347,7 +347,7 @@ def go():
   {
       id: 'py-decorators-parsons-1',
       type: QuestionType.PARSONS,
-      difficulty: Difficulty.INTERMEDIATE,
+      difficulty: Difficulty.BEGINNER,
       topic: Topic.PY_DECORATORS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,

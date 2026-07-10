@@ -142,4 +142,47 @@ SECURE_CONTENT_TYPE_NOSNIFF = True`,
       tags: ['security', 'settings', 'production', 'ssl', 'hsts'],
       concepts: ['py-security-primitives'],
     },
+  {
+    id: 'dj-settings-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_SETTINGS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete the setup of `django-environ` in settings.py to load `.env` file variables and read a database URL.',
+    template: `import environ
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+# Read the .env file
+environ.Env.___(BASE_DIR / ".env")
+
+# Parse database configuration from DATABASE_URL env var
+DATABASES = {
+    "default": env.___("DATABASE_URL")
+}`,
+    blanks: ['read_env', 'db'],
+    solution: `import environ
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+# Read the .env file
+environ.Env.read_env(BASE_DIR / ".env")
+
+# Parse database configuration from DATABASE_URL env var
+DATABASES = {
+    "default": env.db("DATABASE_URL")
+}`,
+    explanation: '`environ.Env.read_env` loads environment variables from a `.env` file. `env.db("DATABASE_URL")` is a helper that parses a PostgreSQL/MySQL connection string into Django\'s `DATABASES` configuration format.',
+    hints: [
+      'Use read_env to parse .env file',
+      'The helper for database connection strings is env.db()',
+    ],
+    tags: ['django', 'settings', 'django-environ', 'cloze'],
+    concepts: ['py-security-primitives'],
+  },
 ];

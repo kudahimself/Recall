@@ -279,7 +279,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Wire ViewSet URLs with a DRF `DefaultRouter`. Import `DefaultRouter` from `rest_framework.routers` and `ArticleViewSet` from `.views`. Build `router = DefaultRouter()`, register `router.register(r"articles", ArticleViewSet, basename="article")`. Set `urlpatterns = router.urls`. The router generates `/articles/`, `/articles/<pk>/`, plus a browsable-API root.',
+      question: 'Wire up the `ArticleViewSet` under the URL path `"articles"` (with the URL name basename `"article"`) using the standard REST framework router class. Expose the router\'s generated URLs as the module\'s `urlpatterns` list. Imports should include the router class from `rest_framework.routers` and `ArticleViewSet` from `.views`.',
       starterCode: `# Build a DefaultRouter, register ArticleViewSet under "articles" with
 # basename "article", and expose router.urls as urlpatterns.
 `,
