@@ -1,46 +1,135 @@
-# Getting Started with Create React App
+# Databricks Learning Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+An interactive learning platform for mastering Databricks, PySpark, and Spark SQL through spaced repetition and progressive difficulty.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Spaced Repetition Learning**: Questions repeat at optimal intervals based on your performance
+- **Progressive Difficulty**: Start with beginner concepts and advance to expert-level topics
+- **Dual Question Types**:
+  - Multiple choice questions for conceptual knowledge
+  - Coding challenges with Monaco editor for hands-on practice
+- **Comprehensive Coverage**: 294 questions covering:
+  - Databricks fundamentals
+  - PySpark basics and DataFrames
+  - Transformations and Actions
+  - Spark SQL queries
+  - Advanced topics (window functions, optimization, caching)
+- **Progress Tracking**: Detailed statistics by topic and difficulty level
+- **Persistent Progress**: Your learning progress is automatically saved
+- **Smart Validation**: Client-side code validation that catches common PySpark/SQL mistakes
+- **No Backend Required**: Fully runs in the browser
 
-### `npm start`
+## Getting Started
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Installation and Running
 
-### `npm test`
+```bash
+# Install dependencies (if not already installed)
+npm install
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# Start the development server
+npm start
+```
 
-### `npm run build`
+The application will open in your browser at `http://localhost:3000`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Other Available Scripts
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+#### `npm test`
+Launches the test runner in the interactive watch mode.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+#### `npm run build`
+Builds the app for production to the `build` folder.
 
-### `npm run eject`
+## Usage
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+1. **Home Page**: View your overall progress and learning statistics
+2. **Practice Mode**: Answer questions selected by the spaced repetition algorithm
+3. **Progress View**: Track your performance across topics and difficulty levels
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Tips for Learning
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+- Answer questions honestly - the algorithm adapts to your actual knowledge
+- Review explanations carefully, even for correct answers
+- Use hints sparingly to challenge yourself
+- Practice regularly - the spaced repetition works best with consistent sessions
+- Focus on understanding concepts, not just memorizing answers
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Project Structure
 
-## Learn More
+```
+src/
+├── components/          # React components
+│   ├── MultipleChoiceQuestion.tsx
+│   ├── CodingQuestion.tsx
+│   └── ProgressTracker.tsx
+├── data/               # Question bank
+│   └── questions.ts
+├── types/              # TypeScript type definitions
+│   └── index.ts
+├── utils/              # Utility functions
+│   └── spacedRepetition.ts
+├── App.tsx             # Main application component
+└── App.css             # Application styles
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Technologies
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- React 18 with TypeScript
+- Monaco Editor for code editing
+- Local Storage for progress persistence
+- CSS3 for styling
+
+## Smart Code Validation
+
+The app uses sophisticated client-side validation to check your code without needing a backend:
+
+**Pattern Matching:**
+- Validates code structure and method chains
+- Normalizes whitespace, quotes, and formatting differences
+
+**Error Detection:**
+- Catches `.then()` instead of PySpark's `.otherwise()`
+- Detects `.else()` instead of `.otherwise()`
+- Identifies incorrect `when()` usage with string literals
+- Validates SQL keyword presence and structure
+
+**Semantic Analysis:**
+- Accepts semantically equivalent solutions (e.g., `filter()` vs `where()`)
+- Compares method chains and parameters
+- Provides helpful, actionable error messages
+
+## Spaced Repetition Algorithm
+
+The platform uses an intelligent spaced repetition system that:
+- Prioritizes new questions you haven't seen
+- Repeats incorrect answers more frequently
+- Spaces out correctly answered questions (1, 3, 7, 14, 30 days)
+- Adapts to your performance in real-time
+
+## Contributing
+
+To add new questions, edit `src/data/questions.ts` following the existing format:
+
+```typescript
+{
+  id: 'unique-id',
+  type: QuestionType.MULTIPLE_CHOICE, // or CODING
+  difficulty: Difficulty.BEGINNER, // or INTERMEDIATE, ADVANCED
+  topic: Topic.PYSPARK_BASICS,
+  question: 'Your question here',
+  // ... additional fields based on question type
+}
+```
+
+## Support
+
+For issues or questions, please refer to the Databricks documentation:
+- [Databricks Documentation](https://docs.databricks.com/)
+- [PySpark Documentation](https://spark.apache.org/docs/latest/api/python/)
+- [Spark SQL Guide](https://spark.apache.org/docs/latest/sql-programming-guide.html)

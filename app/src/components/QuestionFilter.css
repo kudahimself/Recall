@@ -1,0 +1,314 @@
+.question-filter {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px 18px;
+  margin-bottom: 0;
+  animation: fadeInUp 200ms ease both;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.reset-filters-btn {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: all 150ms ease;
+}
+
+.reset-filters-btn:hover {
+  background: var(--error-soft);
+}
+
+.filter-section {
+  margin-bottom: 12px;
+}
+
+.filter-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.filter-section-header h4 {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.select-all-btn {
+  background: transparent;
+  color: var(--primary-hover);
+  border: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: background 150ms ease;
+}
+
+.select-all-btn:hover {
+  background: var(--primary-soft);
+}
+
+/* Exam section groups — mirrors ProgressTracker */
+.filter-exam-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.filter-section-group {
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-section-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.filter-section-expand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+  transition: background 150ms ease;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  /* Rendered as a <button> for keyboard operability — reset UA button styles. */
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.filter-section-expand:hover {
+  background: var(--bg-elevated);
+}
+
+.filter-section-expand .category-icon {
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  min-width: 12px;
+}
+
+.filter-section-name {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.filter-weight-badge {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+.filter-section-toggle {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.filter-section-toggle:hover {
+  border-color: var(--primary);
+}
+
+.filter-section-toggle.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.filter-section-toggle.partial {
+  border-color: var(--primary);
+  color: var(--primary-hover);
+}
+
+/* Sub-topics inside a section */
+.filter-section-topics {
+  padding: 0 0 6px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.filter-topic-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background 150ms ease;
+  /* Rendered as a <button> for keyboard operability — reset UA button styles
+     (border:none must precede border-left so the accent edge survives). */
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  width: 100%;
+  font: inherit;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.filter-topic-item:hover {
+  background: var(--bg-elevated);
+}
+
+.filter-topic-item.active {
+  color: var(--text);
+  border-left-color: var(--primary);
+}
+
+.filter-topic-item.partial {
+  color: var(--text);
+  border-left-color: var(--primary);
+  opacity: 0.7;
+}
+
+.filter-topic-check {
+  min-width: 14px;
+  font-size: var(--fs-xs);
+  color: var(--primary-hover);
+  text-align: center;
+}
+
+.filter-topic-name {
+  font-size: var(--fs-base);
+  font-weight: 400;
+}
+
+/* Difficulty & Question Type row */
+.filter-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 4px;
+}
+
+.filter-inline {
+  margin-bottom: 0;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 150ms ease;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.filter-chip:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+}
+
+.filter-chip.active {
+  background: var(--primary-soft);
+  border-color: var(--primary-ring);
+  color: var(--primary-hover);
+}
+
+.chip-label {
+  white-space: nowrap;
+}
+
+/* Difficulty-specific colors */
+.filter-chip.difficulty-beginner.active {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.filter-chip.difficulty-intermediate.active {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.filter-chip.difficulty-advanced.active {
+  border-color: rgba(244, 63, 94, 0.4);
+  color: var(--error);
+  background: var(--error-soft);
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .filter-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .filter-chips {
+    gap: 4px;
+  }
+
+  .filter-chip {
+    font-size: var(--fs-xs);
+    padding: 3px 10px;
+  }
+}

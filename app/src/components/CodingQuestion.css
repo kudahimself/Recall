@@ -1,0 +1,316 @@
+.coding-question {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  animation: fadeInUp 240ms ease both;
+  /* As the flex-1 child of .quiz-view, fill the vertical budget. The editor
+     flexes to fill the common case; if revealing the solution/explanation
+     pushes content past the viewport, the whole card scrolls rather than
+     clipping its bottom (graceful fallback — nothing is ever unreachable). */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.coding-question::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--primary);
+  opacity: 0.8;
+  z-index: 1;
+}
+
+.coding-question .question-text {
+  padding: 16px 24px;
+  font-size: var(--fs-lg);
+  line-height: 1.65;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+  margin: 0;
+  font-weight: 450;
+  letter-spacing: -0.005em;
+  /* Long prompts must not shove the editor off-screen — cap and scroll. */
+  max-height: 25vh;
+  overflow-y: auto;
+  flex: 0 0 auto;
+}
+
+.coding-question .badges {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  margin: 0;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.hint {
+  padding: 12px 24px;
+  background: var(--warning-soft);
+  border-top: 1px solid rgba(245, 158, 11, 0.25);
+  margin: 0;
+  border-radius: 0;
+  border-left: none;
+  flex: 0 0 auto;
+}
+
+.hint strong {
+  color: var(--warning);
+  font-size: var(--fs-base);
+}
+
+.hint-text,
+.hint {
+  font-size: var(--fs-base);
+  color: var(--warning);
+  font-style: normal;
+  line-height: 1.6;
+}
+
+.results {
+  padding: 12px 24px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.results h4 {
+  color: var(--text);
+  margin: 0 0 8px 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.test-pass,
+.test-fail,
+.test-uncertain {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-base);
+  font-family: var(--font-mono);
+}
+
+.test-pass {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-left: 3px solid var(--success);
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.test-fail {
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  border-left: 3px solid var(--error);
+  color: var(--error);
+  background: var(--error-soft);
+}
+
+.test-uncertain {
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left: 3px solid var(--warning);
+  color: var(--warning);
+  background: var(--warning-soft);
+  align-items: flex-start;
+}
+
+.test-uncertain .test-error {
+  color: var(--warning);
+}
+
+/* Self-grade prompt — shown when validator returns 'uncertain'. */
+.self-grade-prompt {
+  margin: 12px 24px;
+  padding: 14px 16px;
+  background: var(--warning-soft);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-md);
+}
+
+.self-grade-prompt h4 {
+  margin: 0 0 6px 0;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--warning);
+}
+
+.self-grade-prompt p {
+  margin: 0 0 10px 0;
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.self-grade-reference {
+  margin: 0 0 12px 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.self-grade-reference-label {
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.self-grade-reference-code {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.self-grade-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.test-icon {
+  font-size: var(--fs-md);
+  font-weight: bold;
+}
+
+.test-error {
+  font-size: var(--fs-base);
+  color: var(--error);
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+.test-output {
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+.explanation {
+  padding: 16px 24px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  border-left: none;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.explanation h4 {
+  margin: 0 0 10px 0;
+  color: var(--primary-hover);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.explanation p {
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+  font-size: var(--fs-base);
+  letter-spacing: 0;
+}
+
+.solution {
+  padding: 14px 24px;
+  background: var(--success-soft);
+  border-top: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 0;
+  border-left: none;
+  margin: 0;
+  /* Section sizes to its content (h4 + fixed-height editor wrapper). The
+     answer editor above keeps flex: 1, so revealing the solution shrinks
+     the answer area by exactly the solution's content height. */
+  flex: 0 0 auto;
+}
+
+.solution h4 {
+  margin: 0 0 8px 0;
+  color: var(--success);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* The answer editor flexes to fill the budget left after the fixed-size
+   siblings; min-height keeps Monaco usable once the card starts to scroll. */
+.answer-editor-wrapper {
+  flex: 1 1 auto;
+  min-height: 400px;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  position: relative;
+  z-index: 1;
+  pointer-events: auto !important;
+}
+
+/* Solution editor uses an explicit height so Monaco can measure its parent
+   reliably the moment it mounts (flex-resolution timing left the wrapper at
+   zero height on reveal, blanking the editor). The card scrolls if the
+   revealed solution pushes the total past the viewport. */
+.solution-editor-wrapper {
+  height: clamp(180px, 32vh, 340px);
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-sm);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 24px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.tag {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0;
+}

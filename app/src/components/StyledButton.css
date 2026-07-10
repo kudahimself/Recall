@@ -1,0 +1,157 @@
+.styled-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  position: relative;
+  user-select: none;
+}
+
+.styled-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.styled-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Size variants */
+.styled-button-xs {
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+}
+
+.styled-button-sm {
+  padding: 6px 14px;
+  font-size: var(--fs-sm);
+}
+
+.styled-button-md {
+  padding: 9px 18px;
+  font-size: var(--fs-base);
+}
+
+.styled-button-lg {
+  padding: 12px 24px;
+  font-size: var(--fs-md);
+}
+
+/* Primary - Solid primary color */
+.styled-button-primary {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.styled-button-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Secondary - Transparent with border */
+.styled-button-secondary {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-dim);
+}
+
+.styled-button-secondary:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Ghost - No border, quiet */
+.styled-button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+}
+
+.styled-button-ghost:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+/* Warning - Amber outline */
+.styled-button-warning {
+  background: transparent;
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.styled-button-warning:hover:not(:disabled) {
+  background: var(--warning-soft);
+}
+
+/* Danger - Red outline */
+.styled-button-danger {
+  background: transparent;
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.styled-button-danger:hover:not(:disabled) {
+  background: var(--error-soft);
+}
+
+/* Loading state */
+.styled-button-loading {
+  pointer-events: none;
+}
+
+.button-spinner {
+  display: inline-flex;
+  animation: rotate 0.8s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Icon spacing */
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-content {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Keyboard shortcut hint */
+.button-shortcut {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  margin-left: var(--space-sm);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.styled-button-primary .button-shortcut {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+}

@@ -1,0 +1,110 @@
+
+=== PY_ASYNC Questions in Presentation Order ===
+
+Total questions in order: 61
+
+  1. [B] MULTIPLE_CHOICE    py-gap-async-1                      What is asynchronous programming?
+  2. [B] MULTIPLE_CHOICE    py-gap-async-2                      What is the difference between synchronous and asynchronous code?
+  3. [B] PREDICT_OUTPUT     py-async-predict-1                  What does this code print?
+  4. [B] PREDICT_OUTPUT     py-async-predict-7                  What does this code print?
+  5. [B] PARSONS            py-async-parsons-3                  Build an async generator yielding 0, 1, 2 with a 0.1s pause between each, and co
+  6. [B] PARSONS            py-async-parsons-6                  Use a TaskGroup (Python 3.11+) to run two coroutines concurrently with structure
+  7. [B] CLOZE_CODE         py-async-cloze-2                    Fill in the asyncio entrypoint that starts the event loop with main() as the top
+  8. [B] CLOZE_CODE         py-async-cloze-3                    Fill in the asyncio function that runs multiple coroutines concurrently and coll
+  9. [B] CLOZE_CODE         py-async-cloze-4                    Fill in the loop construct used to iterate an async generator.
+ 10. [B] CLOZE_CODE         py-async-cloze-5                    Fill in the construct used to enter an async context manager.
+ 11. [B] CLOZE_CODE         py-async-cloze-6                    Fill in the asyncio function that schedules a coroutine to run in the background
+ 12. [B] CLOZE_CODE         py-async-cloze-8                    Fill in the modern (3.11+) structured-concurrency construct that replaces gather
+ 13. [B] CLOZE_CODE         py-async-cloze-9                    Fill in the exception type raised when a task is cancelled via task.cancel().
+ 14. [B] CLOZE_CODE         py-async-cloze-10                   Fill in the async-native primitive for producer/consumer communication.
+ 15. [B] CODING             py-async-beg-1                      Define the simplest possible coroutine `greet` (no parameters) that returns the 
+ 16. [B] CODING             py-async-beg-2                      Define a coroutine `step` that takes a `name` string, briefly yields to the even
+ 17. [B] PARSONS            py-async-httpx-parsons-1            Make ONE asynchronous GET request with httpx and print the response JSON\
+ 18. [B] CLOZE_CODE         py-async-httpx-cloze-1              Fill in the async httpx client class and the keyword that suspends on the reques
+ 19. [B] CODING             py-async-httpx-1                    Make a single asynchronous HTTP request with `httpx`. Write an async coroutine `
+
+--- INTERMEDIATE TIER (1) ---
+
+ 20. [I] MULTIPLE_CHOICE    py-async-mcq-taskgroup-vs-gather    When should you prefer `asyncio.TaskGroup` (3.11+) over `asyncio.gather`?
+ 21. [I] MULTIPLE_CHOICE    py-async-mcq-event-loop             How does the asyncio event loop actually run your coroutines concurrently on a s
+ 22. [I] PREDICT_OUTPUT     py-async-predict-2                  What does this code print?
+ 23. [I] PREDICT_OUTPUT     py-async-predict-3                  What does this code print?
+ 24. [I] PREDICT_OUTPUT     py-async-predict-4                  What does this code print?
+ 25. [I] PARSONS            py-async-parsons-1                  Define an async function fetch() that awaits asyncio.sleep(1) and returns "done"
+ 26. [I] PARSONS            py-async-parsons-2                  Run two fetch() coroutines concurrently with asyncio.gather and print both resul
+ 27. [I] PARSONS            py-async-parsons-4                  Apply a 1s timeout to a slow_op() call using asyncio.timeout (Python 3.11+). Cat
+ 28. [I] PARSONS            py-async-parsons-5                  Schedule a coroutine as a Task that runs in the background, then await its resul
+ 29. [I] PARSONS            py-async-parsons-7                  Race two coroutines: take whichever finishes first using asyncio.wait with FIRST
+ 30. [I] PARSONS            py-async-parsons-8                  Build a simple async producer/consumer using asyncio.Queue. Producer puts 3 item
+ 31. [I] PARSONS            py-async-parsons-10                 Cancel a long-running task after creating it. Catch the cancellation in the task
+ 32. [I] PARSONS            py-async-parsons-11                 Cap concurrency to 3 at a time using a shared asyncio.Semaphore, running six wor
+ 33. [I] CLOZE_CODE         py-async-cloze-1                    Fill in the keyword that declares a coroutine and the keyword that suspends unti
+ 34. [I] CLOZE_CODE         py-async-cloze-11                   Fill in the asyncio primitive that caps concurrent holders, and the keyword that
+ 35. [I] CODING             py-gap-async-3                      Write an async function called `delayed_greeting` that awaits a 1-second `asynci
+ 36. [I] CODING             py-adv-async-bridge-1               Define a coroutine `fetch_value` taking an integer `n`. It briefly yields to the
+ 37. [I] CODING             py-adv-async-bridge-3               Define a coroutine `background_work` (no parameters) that sleeps 50 ms (async sl
+ 38. [I] CODING             py-async-int-gen-1                  Write an ASYNC GENERATOR `numbers_up_to` that takes an integer `n`, loops `0..n-
+ 39. [I] CODING             py-async-int-asyncwith              Build a simple async context manager class `AsyncSession` by implementing the tw
+ 40. [I] CODING             py-async-int-waitfor                Define a slow coroutine `slow` that sleeps 1 second then returns `"done"`. In `m
+ 41. [I] CODING             py-adv-async-bridge-2               Define a coroutine `slow_task` that takes a `name` string and a `seconds` durati
+ 42. [I] CODING             py-async-int-gather-errors          Define a coroutine `risky` taking an integer `n`. It briefly yields to the event
+ 43. [I] CODING             py-async-int-queue-1                Build an async producer/consumer using the `asyncio` FIFO queue class. Define a 
+ 44. [I] CODING             py-async-int-semaphore              Cap concurrency so that no more than 3 of 6 tasks run simultaneously (e.g. to re
+ 45. [I] CODING             py-async-int-waitfor-gather         Put a SINGLE timeout around a whole BATCH of concurrent tasks by composing the `
+ 46. [I] CODING             py-async-int-asyncgen-queue         Bridge an async generator into an `asyncio` queue so producer and consumer run a
+ 47. [I] CODING             py-adv-async-3                      Write an async context manager class `AsyncDatabasePool` that simulates a connec
+
+--- ADVANCED TIER (2) ---
+
+ 48. [A] MULTIPLE_CHOICE    py-adv-async-4                      What is the role of the event loop in Python\
+ 49. [A] MULTIPLE_CHOICE    py-adv-async-5                      When should you use asyncio vs threading vs multiprocessing in Python?
+ 50. [A] PREDICT_OUTPUT     py-async-predict-5                  What does this code print?
+ 51. [A] PREDICT_OUTPUT     py-async-predict-6                  What does this code print?
+ 52. [A] PREDICT_OUTPUT     py-async-predict-8                  What does this code print?
+ 53. [A] PREDICT_OUTPUT     py-async-predict-9                  What does this code print?
+ 54. [A] PREDICT_OUTPUT     py-async-predict-10                 What does this code print?
+ 55. [A] PARSONS            py-async-parsons-9                  Build an async context manager class with __aenter__ and __aexit__ that prints "
+ 56. [A] CLOZE_CODE         py-async-cloze-7                    Fill in the dunder methods that make Block an async context manager.
+ 57. [A] CODING             py-async-adv-tothread               Define a PLAIN (synchronous) function `blocking_hash` that takes a string `s`, c
+ 58. [A] CODING             py-async-adv-taskgroup              Define a coroutine `work(n)` that briefly sleeps then returns `n * 10`. In `main
+ 59. [A] CODING             py-adv-async-1                      Write a coroutine `fetch_all` that takes a list of URL strings and returns a lis
+ 60. [A] CODING             py-adv-async-2                      Write a coroutine `process_with_timeout` that takes a `name` string, a `seconds`
+ 61. [A] CODING             py-async-adv-rate-limited-fetcher   Build a concurrent batch fetcher that mirrors a real production constraint. A he
+
+
+=== Summary by Difficulty ===
+
+BEGINNER:
+  MULTIPLE_CHOICE   : 2
+  PREDICT_OUTPUT    : 2
+  PARSONS           : 3
+  CLOZE_CODE        : 9
+  CODING            : 3
+  Total: 19
+
+INTERMEDIATE:
+  MULTIPLE_CHOICE   : 2
+  PREDICT_OUTPUT    : 3
+  PARSONS           : 8
+  CLOZE_CODE        : 2
+  CODING            : 13
+  Total: 28
+
+ADVANCED:
+  MULTIPLE_CHOICE   : 2
+  PREDICT_OUTPUT    : 5
+  PARSONS           : 1
+  CLOZE_CODE        : 1
+  CODING            : 5
+  Total: 14
+
+Grand total: 61
+
+=== Type Order Validation ===
+
+✗ Type ordering violations found:
+  Position 17 (BEGINNER): py-async-httpx-parsons-1
+    Got undefined after CODING
+  Position 18 (BEGINNER): py-async-httpx-cloze-1
+    Got undefined after CODING
+

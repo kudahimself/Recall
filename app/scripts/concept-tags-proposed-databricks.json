@@ -1,0 +1,8239 @@
+{
+  "summary": {
+    "filesScanned": 7,
+    "totalQuestions": 372,
+    "byConfidence": {
+      "HIGH": 371,
+      "LOW": 1,
+      "NONE": 0
+    },
+    "conceptHistogram": {
+      "stream-readstream-writestream": 29,
+      "dbx-architecture": 16,
+      "stream-output-modes": 2,
+      "delta-acid": 38,
+      "stream-checkpoint": 4,
+      "stream-triggers": 4,
+      "stream-watermarks": 8,
+      "ps-io-json": 4,
+      "ps-dataframe-create": 39,
+      "stream-autoloader": 11,
+      "stream-schema-evolution": 1,
+      "dlt-pipeline-basics": 15,
+      "ps-io-csv": 15,
+      "ucat-lineage": 3,
+      "medallion-architecture": 15,
+      "ps-actions-vs-transforms": 14,
+      "ps-distinct-drop-dup": 10,
+      "ps-groupby-agg": 21,
+      "ucat-grants": 16,
+      "delta-cdf": 8,
+      "delta-table-properties": 2,
+      "delta-merge": 12,
+      "sql-temp-views": 5,
+      "dbx-workflows": 14,
+      "dlt-expectations": 6,
+      "dlt-pipeline-modes": 1,
+      "dbx-cluster-config": 6,
+      "dbx-widgets": 6,
+      "dbx-utilities": 23,
+      "ucat-namespaces": 12,
+      "ucat-managed-vs-external": 1,
+      "dbx-repos": 3,
+      "ps-broadcast-join": 2,
+      "sql-joins-inner-outer": 19,
+      "ps-cache-persist": 26,
+      "ps-execution-plans": 9,
+      "ps-partitioning": 10,
+      "ps-null-handling": 15,
+      "ps-aqe": 2,
+      "ps-partition-pruning": 1,
+      "ps-write-modes": 8,
+      "ps-udf-pandas-udf": 5,
+      "ps-shuffle": 5,
+      "ps-narrow-vs-wide": 1,
+      "ps-io-parquet": 9,
+      "dim-star-schema": 4,
+      "dim-snowflake-schema": 1,
+      "dim-grain": 3,
+      "dim-surrogate-key": 2,
+      "dim-scd-type2": 6,
+      "dim-additivity": 2,
+      "dim-conformed-dims": 1,
+      "dim-scd-type1": 2,
+      "dim-idempotency": 4,
+      "dim-delivery-semantics": 1,
+      "dim-late-arrivals": 1,
+      "dim-backfill": 1,
+      "dim-data-contracts": 1,
+      "ps-string-fns": 13,
+      "ps-with-column": 3,
+      "ps-collection-fns": 10,
+      "ps-regex-fns": 7,
+      "ps-datetime-fns": 13,
+      "ps-cast-types": 5,
+      "ps-select-filter": 13,
+      "ps-math-fns": 6,
+      "sql-window-ranking": 19,
+      "sql-window-offset": 5,
+      "ps-aggregate-fns": 14,
+      "sql-window-frame": 5,
+      "delta-time-travel": 5,
+      "delta-optimize": 5,
+      "delta-zorder": 3,
+      "sql-joins-cross-self": 3,
+      "ps-session-init": 11,
+      "sql-grouping-rollup": 3,
+      "dbx-dbfs": 11,
+      "dbx-secrets": 4,
+      "delta-clone": 4,
+      "delta-vacuum": 3,
+      "ps-when-otherwise": 5,
+      "sql-case-expr": 3,
+      "sql-cte": 3,
+      "sql-subqueries": 9,
+      "sql-set-operations": 5,
+      "sql-joins-semi-anti": 5,
+      "ps-pivot-unpivot": 6,
+      "delta-constraints": 4,
+      "stream-stateful-aggs": 4,
+      "stream-stream-join": 3,
+      "ps-orderby-sort": 4,
+      "sql-where-having": 3
+    }
+  },
+  "proposals": [
+    {
+      "id": "sql-misc-mcq-7",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "quoting",
+        "identifiers",
+        "literals"
+      ],
+      "suggestedConcepts": [],
+      "matchedTags": [],
+      "unmatchedTags": [
+        "quoting",
+        "identifiers",
+        "literals"
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "streaming-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "fundamentals"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "streaming",
+        "fundamentals"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "output-modes"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-output-modes"
+      ],
+      "matchedTags": [
+        "streaming",
+        "output-modes"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "delta",
+        "readStream"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "streaming",
+        "delta",
+        "readStream"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "writeStream",
+        "checkpoint"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-checkpoint"
+      ],
+      "matchedTags": [
+        "streaming",
+        "writeStream",
+        "checkpoint"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "checkpoint",
+        "fault-tolerance"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-checkpoint"
+      ],
+      "matchedTags": [
+        "streaming",
+        "checkpoint",
+        "fault-tolerance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "trigger"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-triggers"
+      ],
+      "matchedTags": [
+        "streaming",
+        "trigger"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "trigger",
+        "processingTime"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-triggers"
+      ],
+      "matchedTags": [
+        "streaming",
+        "trigger",
+        "processingTime"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "trigger",
+        "availableNow"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-triggers"
+      ],
+      "matchedTags": [
+        "streaming",
+        "trigger",
+        "availableNow"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-9",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "watermark",
+        "late-data"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-watermarks"
+      ],
+      "matchedTags": [
+        "streaming",
+        "watermark",
+        "late-data"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-10",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "watermark"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-watermarks"
+      ],
+      "matchedTags": [
+        "streaming",
+        "watermark"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-11",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "output-modes",
+        "complete"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-output-modes"
+      ],
+      "matchedTags": [
+        "streaming",
+        "output-modes",
+        "complete"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-12",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "json",
+        "schema"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "ps-io-json",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "streaming",
+        "json",
+        "schema"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "streaming-13",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "fault-tolerance",
+        "exactly-once"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-checkpoint"
+      ],
+      "matchedTags": [
+        "streaming",
+        "fault-tolerance",
+        "exactly-once"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "ingestion",
+        "cloudFiles"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader"
+      ],
+      "matchedTags": [
+        "autoloader",
+        "ingestion",
+        "cloudFiles"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "cloudFiles",
+        "json"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader",
+        "ps-io-json"
+      ],
+      "matchedTags": [
+        "autoloader",
+        "cloudFiles",
+        "json"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "file-detection"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader"
+      ],
+      "matchedTags": [
+        "autoloader",
+        "file-detection"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "schema-evolution"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader",
+        "stream-schema-evolution"
+      ],
+      "matchedTags": [
+        "autoloader",
+        "schema-evolution"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "pipeline",
+        "csv",
+        "delta"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader",
+        "dlt-pipeline-basics",
+        "ps-io-csv",
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "autoloader",
+        "pipeline",
+        "csv",
+        "delta"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "advantages"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader"
+      ],
+      "matchedTags": [
+        "autoloader"
+      ],
+      "unmatchedTags": [
+        "advantages"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "autoloader-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "AUTO_LOADER",
+      "currentTags": [
+        "autoloader",
+        "metadata",
+        "lineage"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader",
+        "ps-dataframe-create",
+        "ucat-lineage"
+      ],
+      "matchedTags": [
+        "autoloader",
+        "metadata",
+        "lineage"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "architecture",
+        "bronze",
+        "silver",
+        "gold"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "medallion",
+        "architecture",
+        "bronze",
+        "silver",
+        "gold"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "bronze"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture"
+      ],
+      "matchedTags": [
+        "medallion",
+        "bronze"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "silver",
+        "transformation"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "medallion",
+        "silver",
+        "transformation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "gold",
+        "analytics"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture"
+      ],
+      "matchedTags": [
+        "medallion",
+        "gold"
+      ],
+      "unmatchedTags": [
+        "analytics"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "silver",
+        "deduplication"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "ps-distinct-drop-dup"
+      ],
+      "matchedTags": [
+        "medallion",
+        "silver",
+        "deduplication"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "gold",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "medallion",
+        "gold",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "governance"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "medallion",
+        "governance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "autoloader",
+        "bronze"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "stream-autoloader"
+      ],
+      "matchedTags": [
+        "medallion",
+        "autoloader",
+        "bronze"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-9",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "bronze",
+        "autoloader",
+        "pipeline"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "stream-autoloader",
+        "dlt-pipeline-basics"
+      ],
+      "matchedTags": [
+        "medallion",
+        "bronze",
+        "autoloader",
+        "pipeline"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "medallion-10",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "MEDALLION_ARCHITECTURE",
+      "currentTags": [
+        "medallion",
+        "silver",
+        "streaming",
+        "pipeline"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "stream-readstream-writestream",
+        "dlt-pipeline-basics"
+      ],
+      "matchedTags": [
+        "medallion",
+        "silver",
+        "streaming",
+        "pipeline"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "fundamentals"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "cdc",
+        "fundamentals"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "delta",
+        "change-data-feed"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "cdc",
+        "delta",
+        "change-data-feed"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "enable",
+        "tblproperties"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "delta-table-properties"
+      ],
+      "matchedTags": [
+        "cdc",
+        "tblproperties"
+      ],
+      "unmatchedTags": [
+        "enable"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "table_changes",
+        "read"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "cdc",
+        "table_changes",
+        "read"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "streaming",
+        "readChangeFeed"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "stream-readstream-writestream"
+      ],
+      "matchedTags": [
+        "cdc",
+        "streaming",
+        "readChangeFeed"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "change-types"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf"
+      ],
+      "matchedTags": [
+        "cdc",
+        "change-types"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "merge",
+        "upsert"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "cdc",
+        "merge",
+        "upsert"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cdc-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "CHANGE_DATA_CAPTURE",
+      "currentTags": [
+        "cdc",
+        "create-table",
+        "tblproperties"
+      ],
+      "suggestedConcepts": [
+        "delta-cdf",
+        "ps-dataframe-create",
+        "delta-table-properties"
+      ],
+      "matchedTags": [
+        "cdc",
+        "create-table",
+        "tblproperties"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "fundamentals"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "dlt",
+        "fundamentals"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "table",
+        "view"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "sql-temp-views"
+      ],
+      "matchedTags": [
+        "dlt",
+        "view"
+      ],
+      "unmatchedTags": [
+        "table"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "bronze",
+        "streaming",
+        "cloud_files"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "medallion-architecture",
+        "stream-readstream-writestream",
+        "stream-autoloader"
+      ],
+      "matchedTags": [
+        "dlt",
+        "bronze",
+        "streaming",
+        "cloud_files"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "python",
+        "decorator",
+        "bronze"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "medallion-architecture"
+      ],
+      "matchedTags": [
+        "dlt",
+        "bronze"
+      ],
+      "unmatchedTags": [
+        "python",
+        "decorator"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "silver",
+        "streaming",
+        "dependencies"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "medallion-architecture",
+        "stream-readstream-writestream",
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "dlt",
+        "silver",
+        "streaming",
+        "dependencies"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "expectations",
+        "data-quality"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "dlt-expectations"
+      ],
+      "matchedTags": [
+        "dlt",
+        "expectations",
+        "data-quality"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "expectations",
+        "violation-actions"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "dlt-expectations"
+      ],
+      "matchedTags": [
+        "dlt",
+        "expectations",
+        "violation-actions"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "python",
+        "expectations",
+        "expect_or_drop"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "dlt-expectations"
+      ],
+      "matchedTags": [
+        "dlt",
+        "expectations",
+        "expect_or_drop"
+      ],
+      "unmatchedTags": [
+        "python"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-9",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "streaming-table",
+        "materialized-view"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics"
+      ],
+      "matchedTags": [
+        "dlt",
+        "streaming-table",
+        "materialized-view"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-10",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "gold",
+        "materialized-view",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "medallion-architecture",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "dlt",
+        "gold",
+        "materialized-view",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-11",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "pipeline-mode",
+        "continuous",
+        "triggered"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "dlt-pipeline-modes"
+      ],
+      "matchedTags": [
+        "dlt",
+        "pipeline-mode",
+        "continuous",
+        "triggered"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dlt-12",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DELTA_LIVE_TABLES",
+      "currentTags": [
+        "dlt",
+        "dependencies",
+        "dag"
+      ],
+      "suggestedConcepts": [
+        "dlt-pipeline-basics",
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "dlt",
+        "dependencies",
+        "dag"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "jobs",
+        "orchestration"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "jobs",
+        "orchestration"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "task-types"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "task-types"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "dependencies",
+        "dag"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "dependencies",
+        "dag"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "failure-handling",
+        "retry"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "failure-handling",
+        "retry"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "scheduling",
+        "triggers"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows",
+        "stream-triggers"
+      ],
+      "matchedTags": [
+        "workflows",
+        "scheduling",
+        "triggers"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "clusters",
+        "job-cluster"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows",
+        "dbx-cluster-config"
+      ],
+      "matchedTags": [
+        "workflows",
+        "clusters",
+        "job-cluster"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "parameters",
+        "widgets"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows",
+        "dbx-widgets"
+      ],
+      "matchedTags": [
+        "workflows",
+        "parameters",
+        "widgets"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "notebook-exit",
+        "task-values"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows",
+        "dbx-utilities"
+      ],
+      "matchedTags": [
+        "workflows",
+        "notebook-exit",
+        "task-values"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-9",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "task-values",
+        "inter-task"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "task-values",
+        "inter-task"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-10",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "taskValues",
+        "set"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "taskValues"
+      ],
+      "unmatchedTags": [
+        "set"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "workflow-11",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_WORKFLOWS",
+      "currentTags": [
+        "workflows",
+        "repair-run",
+        "failure-recovery"
+      ],
+      "suggestedConcepts": [
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "workflows",
+        "repair-run",
+        "failure-recovery"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "unity-catalog",
+        "governance"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "governance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "unity-catalog",
+        "namespace"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "namespace"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "grant",
+        "permissions"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "governance",
+        "grant",
+        "permissions"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "grant",
+        "schema",
+        "all-privileges"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "governance",
+        "grant",
+        "schema",
+        "all-privileges"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "revoke",
+        "permissions"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "governance",
+        "revoke",
+        "permissions"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "show-grants",
+        "audit"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ucat-lineage"
+      ],
+      "matchedTags": [
+        "governance",
+        "show-grants",
+        "audit"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "catalog",
+        "create"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ucat-namespaces",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "governance",
+        "catalog",
+        "create"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "schema",
+        "create"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "governance",
+        "schema",
+        "create"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-9",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "managed-table",
+        "external-table"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ucat-managed-vs-external"
+      ],
+      "matchedTags": [
+        "governance",
+        "managed-table",
+        "external-table"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-10",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "lineage",
+        "audit"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ucat-lineage"
+      ],
+      "matchedTags": [
+        "governance",
+        "lineage",
+        "audit"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-11",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "grant",
+        "create-table",
+        "use-schema"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ps-dataframe-create",
+        "ucat-namespaces"
+      ],
+      "matchedTags": [
+        "governance",
+        "grant",
+        "create-table",
+        "use-schema"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "governance-12",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATA_GOVERNANCE",
+      "currentTags": [
+        "governance",
+        "use-catalog",
+        "permissions"
+      ],
+      "suggestedConcepts": [
+        "ucat-grants",
+        "ucat-namespaces"
+      ],
+      "matchedTags": [
+        "governance",
+        "use-catalog",
+        "permissions"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-repos-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "repos",
+        "git",
+        "version-control"
+      ],
+      "suggestedConcepts": [
+        "dbx-repos"
+      ],
+      "matchedTags": [
+        "repos",
+        "git",
+        "version-control"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-repos-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "repos",
+        "git-operations"
+      ],
+      "suggestedConcepts": [
+        "dbx-repos"
+      ],
+      "matchedTags": [
+        "repos",
+        "git-operations"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-repos-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "repos",
+        "file-types"
+      ],
+      "suggestedConcepts": [
+        "dbx-repos"
+      ],
+      "matchedTags": [
+        "repos"
+      ],
+      "unmatchedTags": [
+        "file-types"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-cluster-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "clusters",
+        "all-purpose",
+        "job-cluster"
+      ],
+      "suggestedConcepts": [
+        "dbx-cluster-config"
+      ],
+      "matchedTags": [
+        "clusters",
+        "all-purpose",
+        "job-cluster"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-cluster-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "clusters",
+        "auto-scaling"
+      ],
+      "suggestedConcepts": [
+        "dbx-cluster-config"
+      ],
+      "matchedTags": [
+        "clusters",
+        "auto-scaling"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-cluster-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "clusters",
+        "auto-termination",
+        "cost"
+      ],
+      "suggestedConcepts": [
+        "dbx-cluster-config"
+      ],
+      "matchedTags": [
+        "clusters",
+        "auto-termination",
+        "cost"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-cluster-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "clusters",
+        "policies",
+        "governance"
+      ],
+      "suggestedConcepts": [
+        "dbx-cluster-config",
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "clusters",
+        "policies",
+        "governance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-sql-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "sql",
+        "describe",
+        "metadata"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "describe",
+        "metadata"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-sql-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "sql",
+        "show-tables",
+        "metadata"
+      ],
+      "suggestedConcepts": [
+        "sql-temp-views",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "show-tables",
+        "metadata"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "platform-sql-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "sql",
+        "temp-view",
+        "views"
+      ],
+      "suggestedConcepts": [
+        "sql-temp-views"
+      ],
+      "matchedTags": [
+        "temp-view",
+        "views"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-1",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "broadcast",
+        "join",
+        "performance",
+        "optimization"
+      ],
+      "suggestedConcepts": [
+        "ps-broadcast-join",
+        "sql-joins-inner-outer",
+        "ps-cache-persist",
+        "ps-execution-plans"
+      ],
+      "matchedTags": [
+        "broadcast",
+        "join",
+        "performance",
+        "optimization"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-2",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "broadcast",
+        "join",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-broadcast-join",
+        "sql-joins-inner-outer",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "broadcast",
+        "join",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-3",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "repartition",
+        "coalesce",
+        "partitioning",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-partitioning",
+        "ps-null-handling",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "repartition",
+        "coalesce",
+        "partitioning",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-4",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "coalesce",
+        "partitioning",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling",
+        "ps-partitioning",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "coalesce",
+        "partitioning",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-5",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "repartition",
+        "partitioning",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-partitioning",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "repartition",
+        "partitioning",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-6",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "aqe",
+        "adaptive",
+        "optimization",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-aqe",
+        "ps-execution-plans",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "aqe",
+        "adaptive",
+        "optimization",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-7",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "skew",
+        "partitioning",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-aqe",
+        "ps-partitioning",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "skew",
+        "partitioning",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-8",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "cache",
+        "persist",
+        "storage-level",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "cache",
+        "persist",
+        "storage-level",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-9",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "cache",
+        "lazy",
+        "materialization",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-cache-persist",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "cache",
+        "lazy",
+        "materialization",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-10",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "unpersist",
+        "cache",
+        "memory",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "unpersist",
+        "cache",
+        "memory",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-11",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "partition-pruning",
+        "partitioning",
+        "optimization"
+      ],
+      "suggestedConcepts": [
+        "ps-partition-pruning",
+        "ps-partitioning",
+        "ps-execution-plans"
+      ],
+      "matchedTags": [
+        "partition-pruning",
+        "partitioning",
+        "optimization"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-12",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "partitionBy",
+        "write",
+        "delta",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-partitioning",
+        "ps-write-modes",
+        "delta-acid",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "partitionBy",
+        "write",
+        "delta",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-13",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "udf",
+        "python",
+        "performance",
+        "optimization"
+      ],
+      "suggestedConcepts": [
+        "ps-udf-pandas-udf",
+        "ps-cache-persist",
+        "ps-execution-plans"
+      ],
+      "matchedTags": [
+        "udf",
+        "performance",
+        "optimization"
+      ],
+      "unmatchedTags": [
+        "python"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-14",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "shuffle-partitions",
+        "configuration",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-shuffle",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "shuffle-partitions",
+        "performance"
+      ],
+      "unmatchedTags": [
+        "configuration"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-15",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "shuffle-partitions",
+        "conf",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-shuffle",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "shuffle-partitions",
+        "performance"
+      ],
+      "unmatchedTags": [
+        "conf"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-16",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "shuffle",
+        "wide-narrow",
+        "transformations",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-shuffle",
+        "ps-narrow-vs-wide",
+        "ps-actions-vs-transforms",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "shuffle",
+        "wide-narrow",
+        "transformations",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-17",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "spark-ui",
+        "monitoring",
+        "debugging",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-execution-plans",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "spark-ui",
+        "monitoring",
+        "debugging",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-18",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "explain",
+        "execution-plan",
+        "debugging",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-execution-plans",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "explain",
+        "execution-plan",
+        "debugging",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-19",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "predicate-pushdown",
+        "optimization",
+        "io",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "ps-execution-plans",
+        "ps-io-csv",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "predicate-pushdown",
+        "optimization",
+        "io",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "perf-20",
+      "sourceFile": "certificationQuestions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "parquet",
+        "comparison",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "ps-io-parquet",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "delta",
+        "parquet",
+        "performance"
+      ],
+      "unmatchedTags": [
+        "comparison"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "dimensional-modeling",
+        "fact",
+        "dimension"
+      ],
+      "suggestedConcepts": [
+        "dim-star-schema"
+      ],
+      "matchedTags": [
+        "dimensional-modeling",
+        "fact",
+        "dimension"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-2",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "star-schema",
+        "snowflake-schema",
+        "normalization"
+      ],
+      "suggestedConcepts": [
+        "dim-star-schema",
+        "dim-snowflake-schema"
+      ],
+      "matchedTags": [
+        "star-schema",
+        "snowflake-schema",
+        "normalization"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-3",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "grain",
+        "dimensional-modeling"
+      ],
+      "suggestedConcepts": [
+        "dim-grain",
+        "dim-star-schema"
+      ],
+      "matchedTags": [
+        "grain",
+        "dimensional-modeling"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-4",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "surrogate-keys",
+        "natural-keys",
+        "scd"
+      ],
+      "suggestedConcepts": [
+        "dim-surrogate-key",
+        "dim-scd-type2"
+      ],
+      "matchedTags": [
+        "surrogate-keys",
+        "natural-keys",
+        "scd"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-5",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "measures",
+        "additivity",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "dim-additivity",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "measures",
+        "additivity",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-6",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "conformed-dimensions",
+        "enterprise",
+        "bus-matrix"
+      ],
+      "suggestedConcepts": [
+        "dim-conformed-dims"
+      ],
+      "matchedTags": [
+        "conformed-dimensions",
+        "enterprise",
+        "bus-matrix"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-mcq-7",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "lakehouse",
+        "data-warehouse",
+        "data-lake",
+        "architecture"
+      ],
+      "suggestedConcepts": [
+        "medallion-architecture",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "lakehouse",
+        "architecture"
+      ],
+      "unmatchedTags": [
+        "data-warehouse",
+        "data-lake"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dm-coding-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "DATA_MODELING",
+      "currentTags": [
+        "star-schema",
+        "create-table",
+        "delta"
+      ],
+      "suggestedConcepts": [
+        "dim-star-schema",
+        "ps-dataframe-create",
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "star-schema",
+        "create-table",
+        "delta"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "scd-mcq-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "SCD_PATTERNS",
+      "currentTags": [
+        "scd",
+        "type-1",
+        "type-2"
+      ],
+      "suggestedConcepts": [
+        "dim-scd-type2",
+        "dim-scd-type1"
+      ],
+      "matchedTags": [
+        "scd",
+        "type-1",
+        "type-2"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "scd-mcq-2",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "SCD_PATTERNS",
+      "currentTags": [
+        "scd",
+        "design-decision"
+      ],
+      "suggestedConcepts": [
+        "dim-scd-type2"
+      ],
+      "matchedTags": [
+        "scd"
+      ],
+      "unmatchedTags": [
+        "design-decision"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "scd-coding-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "SCD_PATTERNS",
+      "currentTags": [
+        "scd-1",
+        "merge",
+        "upsert"
+      ],
+      "suggestedConcepts": [
+        "dim-scd-type1",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "scd-1",
+        "merge",
+        "upsert"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "scd-coding-2",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "SCD_PATTERNS",
+      "currentTags": [
+        "scd-2",
+        "merge",
+        "effective-dating"
+      ],
+      "suggestedConcepts": [
+        "dim-scd-type2",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "scd-2",
+        "merge",
+        "effective-dating"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "scd-mcq-3",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "SCD_PATTERNS",
+      "currentTags": [
+        "scd-2",
+        "surrogate-key",
+        "fact-loading"
+      ],
+      "suggestedConcepts": [
+        "dim-scd-type2",
+        "dim-surrogate-key",
+        "dim-additivity"
+      ],
+      "matchedTags": [
+        "scd-2",
+        "surrogate-key",
+        "fact-loading"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "scd-parsons-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "SCD_PATTERNS",
+      "currentTags": [
+        "scd-2",
+        "merge",
+        "parsons"
+      ],
+      "suggestedConcepts": [
+        "dim-scd-type2",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "scd-2",
+        "merge"
+      ],
+      "unmatchedTags": [
+        "parsons"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pd-mcq-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "PIPELINE_DESIGN",
+      "currentTags": [
+        "idempotency",
+        "pipeline-design"
+      ],
+      "suggestedConcepts": [
+        "dim-idempotency"
+      ],
+      "matchedTags": [
+        "idempotency",
+        "pipeline-design"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pd-mcq-2",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "PIPELINE_DESIGN",
+      "currentTags": [
+        "streaming",
+        "delivery-semantics",
+        "idempotency"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "dim-delivery-semantics",
+        "dim-idempotency"
+      ],
+      "matchedTags": [
+        "streaming",
+        "delivery-semantics",
+        "idempotency"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pd-mcq-3",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "PIPELINE_DESIGN",
+      "currentTags": [
+        "late-arriving-data",
+        "watermark",
+        "streaming"
+      ],
+      "suggestedConcepts": [
+        "dim-late-arrivals",
+        "stream-watermarks",
+        "stream-readstream-writestream"
+      ],
+      "matchedTags": [
+        "late-arriving-data",
+        "watermark",
+        "streaming"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pd-mcq-4",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "PIPELINE_DESIGN",
+      "currentTags": [
+        "backfill",
+        "partitioning",
+        "idempotency"
+      ],
+      "suggestedConcepts": [
+        "dim-backfill",
+        "ps-partitioning",
+        "dim-idempotency"
+      ],
+      "matchedTags": [
+        "backfill",
+        "partitioning",
+        "idempotency"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pd-coding-1",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "PIPELINE_DESIGN",
+      "currentTags": [
+        "idempotency",
+        "merge",
+        "append"
+      ],
+      "suggestedConcepts": [
+        "dim-idempotency",
+        "delta-merge",
+        "ps-write-modes"
+      ],
+      "matchedTags": [
+        "idempotency",
+        "merge",
+        "append"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pd-mcq-5",
+      "sourceFile": "dataModelingQuestions.ts",
+      "topic": "PIPELINE_DESIGN",
+      "currentTags": [
+        "data-contracts",
+        "schema",
+        "governance"
+      ],
+      "suggestedConcepts": [
+        "dim-data-contracts",
+        "ps-dataframe-create",
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "data-contracts",
+        "schema",
+        "governance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "lower",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "lower"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "upper",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "upper"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "concat",
+        "lit",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns",
+        "ps-with-column"
+      ],
+      "matchedTags": [
+        "string",
+        "concat",
+        "lit"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "concat_ws",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "concat_ws"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "substring",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "substring"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "trim",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "trim"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "split",
+        "array",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns",
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "split",
+        "array"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-8",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "regexp_replace",
+        "regex",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns",
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "regexp_replace",
+        "regex"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-9",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "regexp_replace",
+        "regex",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns",
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "regexp_replace",
+        "regex"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-10",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "regexp_extract",
+        "regex",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns",
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "regexp_extract",
+        "regex"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "string-11",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "STRING_FUNCTIONS",
+      "currentTags": [
+        "string",
+        "length",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "string",
+        "length"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "current_date",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "current_date"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "current_timestamp",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "current_timestamp"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "to_date",
+        "conversion",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns",
+        "ps-cast-types"
+      ],
+      "matchedTags": [
+        "datetime",
+        "to_date",
+        "conversion"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "to_timestamp",
+        "conversion",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns",
+        "ps-cast-types"
+      ],
+      "matchedTags": [
+        "datetime",
+        "to_timestamp",
+        "conversion"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "date_add",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "date_add"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "date_sub",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "date_sub"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "datediff",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "datediff"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-8",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "year",
+        "extract",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns",
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "year",
+        "extract"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-9",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "month",
+        "extract",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns",
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "month",
+        "extract"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-10",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "dayofmonth",
+        "extract",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns",
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "dayofmonth",
+        "extract"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "datetime-11",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATETIME_FUNCTIONS",
+      "currentTags": [
+        "datetime",
+        "date_format",
+        "formatting",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-datetime-fns",
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "datetime",
+        "date_format",
+        "formatting"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "explode",
+        "array",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "explode",
+        "array"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "explode_outer",
+        "array",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "explode_outer",
+        "array"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "array_contains",
+        "array",
+        "filter",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "collection",
+        "array_contains",
+        "array",
+        "filter"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "array",
+        "create",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "collection",
+        "array",
+        "create"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "array_sort",
+        "array",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "array_sort",
+        "array"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "size",
+        "array",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "size",
+        "array"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "concat",
+        "array",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns",
+        "ps-string-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "concat",
+        "array"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-8",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "flatten",
+        "array",
+        "nested",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "flatten",
+        "array",
+        "nested"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "collection-9",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "COLLECTION_FUNCTIONS",
+      "currentTags": [
+        "collection",
+        "struct",
+        "array",
+        "comparison",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-collection-fns"
+      ],
+      "matchedTags": [
+        "collection",
+        "struct",
+        "array"
+      ],
+      "unmatchedTags": [
+        "comparison",
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "math-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "MATH_FUNCTIONS",
+      "currentTags": [
+        "math",
+        "round",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-math-fns"
+      ],
+      "matchedTags": [
+        "math",
+        "round"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "math-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "MATH_FUNCTIONS",
+      "currentTags": [
+        "math",
+        "ceil",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-math-fns"
+      ],
+      "matchedTags": [
+        "math",
+        "ceil"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "math-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "MATH_FUNCTIONS",
+      "currentTags": [
+        "math",
+        "abs",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-math-fns"
+      ],
+      "matchedTags": [
+        "math",
+        "abs"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "math-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "MATH_FUNCTIONS",
+      "currentTags": [
+        "math",
+        "sqrt",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-math-fns"
+      ],
+      "matchedTags": [
+        "math",
+        "sqrt"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "math-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "MATH_FUNCTIONS",
+      "currentTags": [
+        "math",
+        "pow",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-math-fns"
+      ],
+      "matchedTags": [
+        "math",
+        "pow"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "math-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "MATH_FUNCTIONS",
+      "currentTags": [
+        "math",
+        "greatest",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-math-fns"
+      ],
+      "matchedTags": [
+        "math",
+        "greatest"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window",
+        "row_number",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "window",
+        "row_number"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window",
+        "dense_rank",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "window",
+        "dense_rank"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window",
+        "lag",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "sql-window-offset"
+      ],
+      "matchedTags": [
+        "window",
+        "lag"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window",
+        "lead",
+        "lag",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "sql-window-offset"
+      ],
+      "matchedTags": [
+        "window",
+        "lead",
+        "lag"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window",
+        "sum",
+        "running-total",
+        "frame",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "ps-aggregate-fns",
+        "sql-window-frame"
+      ],
+      "matchedTags": [
+        "window",
+        "sum",
+        "running-total",
+        "frame"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window",
+        "ntile",
+        "percentile",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "window",
+        "ntile",
+        "percentile"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_LAKE_BASICS",
+      "currentTags": [
+        "delta",
+        "read",
+        "delta-lake"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "delta",
+        "read",
+        "delta-lake"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_LAKE_BASICS",
+      "currentTags": [
+        "delta",
+        "write",
+        "delta-lake"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "ps-write-modes"
+      ],
+      "matchedTags": [
+        "delta",
+        "write",
+        "delta-lake"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "update",
+        "delta-lake",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "delta",
+        "update",
+        "delta-lake"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "delete",
+        "delta-lake",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "delta",
+        "delete",
+        "delta-lake"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "merge",
+        "upsert",
+        "delta-lake",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "delta",
+        "merge",
+        "upsert",
+        "delta-lake"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_TIME_TRAVEL",
+      "currentTags": [
+        "delta",
+        "time-travel",
+        "delta-lake",
+        "versioning"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-time-travel"
+      ],
+      "matchedTags": [
+        "delta",
+        "time-travel",
+        "delta-lake",
+        "versioning"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_TIME_TRAVEL",
+      "currentTags": [
+        "delta",
+        "time-travel",
+        "delta-lake",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-time-travel"
+      ],
+      "matchedTags": [
+        "delta",
+        "time-travel",
+        "delta-lake"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-8",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "optimize",
+        "delta-lake",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-optimize",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "delta",
+        "optimize",
+        "delta-lake",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-9",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "optimize",
+        "zorder",
+        "delta-lake",
+        "performance"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-optimize",
+        "delta-zorder",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "delta",
+        "optimize",
+        "zorder",
+        "delta-lake",
+        "performance"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-join-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "sql",
+        "join",
+        "inner-join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "join",
+        "inner-join"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-join-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "sql",
+        "join",
+        "left-join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "join",
+        "left-join"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-join-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "sql",
+        "join",
+        "right-join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "join",
+        "right-join"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-join-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "sql",
+        "join",
+        "full-outer-join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "join",
+        "full-outer-join"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-join-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "sql",
+        "join",
+        "self-join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer",
+        "sql-joins-cross-self"
+      ],
+      "matchedTags": [
+        "join",
+        "self-join"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-join-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "pyspark",
+        "join",
+        "left-join",
+        "dataframe"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init",
+        "sql-joins-inner-outer",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "pyspark",
+        "join",
+        "left-join",
+        "dataframe"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "sql",
+        "groupby",
+        "rollup",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "sql-grouping-rollup"
+      ],
+      "matchedTags": [
+        "groupby",
+        "rollup",
+        "aggregation"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "sql",
+        "groupby",
+        "cube",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "sql-grouping-rollup"
+      ],
+      "matchedTags": [
+        "groupby",
+        "cube",
+        "aggregation"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "sql",
+        "groupby",
+        "grouping-sets",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "sql-grouping-rollup"
+      ],
+      "matchedTags": [
+        "groupby",
+        "grouping-sets",
+        "aggregation"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "sql",
+        "groupby",
+        "multiple-columns"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "groupby"
+      ],
+      "unmatchedTags": [
+        "sql",
+        "multiple-columns"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "pyspark",
+        "groupby",
+        "agg",
+        "multiple-aggregations"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init",
+        "ps-groupby-agg",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "pyspark",
+        "groupby",
+        "agg",
+        "multiple-aggregations"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "pyspark",
+        "groupby",
+        "collect_list",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init",
+        "ps-groupby-agg",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "pyspark",
+        "groupby",
+        "collect_list",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "grouping-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "pyspark",
+        "groupby",
+        "collect_set",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init",
+        "ps-groupby-agg",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "pyspark",
+        "groupby",
+        "collect_set",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-adv-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_WINDOW_FUNCTIONS",
+      "currentTags": [
+        "sql",
+        "window",
+        "row_number"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "window",
+        "row_number"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-adv-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_WINDOW_FUNCTIONS",
+      "currentTags": [
+        "sql",
+        "window",
+        "running-total",
+        "sum"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "sql-window-frame",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "window",
+        "running-total",
+        "sum"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-adv-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "SQL_WINDOW_FUNCTIONS",
+      "currentTags": [
+        "sql",
+        "window",
+        "lag"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "sql-window-offset"
+      ],
+      "matchedTags": [
+        "window",
+        "lag"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-adv-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "pyspark",
+        "window",
+        "lag",
+        "null",
+        "calculation"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init",
+        "sql-window-ranking",
+        "sql-window-offset",
+        "ps-null-handling"
+      ],
+      "matchedTags": [
+        "pyspark",
+        "window",
+        "lag",
+        "null"
+      ],
+      "unmatchedTags": [
+        "calculation"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "window-adv-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "pyspark",
+        "window",
+        "max",
+        "groupby",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init",
+        "sql-window-ranking",
+        "ps-aggregate-fns",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "pyspark",
+        "window",
+        "max",
+        "groupby",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "governance",
+        "databricks"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "ucat-grants",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "governance",
+        "databricks"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "namespace",
+        "databricks"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "namespace",
+        "databricks"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "create",
+        "catalog"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "create",
+        "catalog"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "create",
+        "schema"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "create",
+        "schema"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "namespace",
+        "select"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "namespace",
+        "select"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "grant",
+        "permissions"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces",
+        "ucat-grants"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "grant",
+        "permissions"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "catalog-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_PLATFORM",
+      "currentTags": [
+        "unity-catalog",
+        "use",
+        "catalog"
+      ],
+      "suggestedConcepts": [
+        "ucat-namespaces"
+      ],
+      "matchedTags": [
+        "unity-catalog",
+        "catalog"
+      ],
+      "unmatchedTags": [
+        "use"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "null-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "NULL_HANDLING",
+      "currentTags": [
+        "null-handling",
+        "coalesce",
+        "functions"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling"
+      ],
+      "matchedTags": [
+        "null-handling",
+        "coalesce"
+      ],
+      "unmatchedTags": [
+        "functions"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "null-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "NULL_HANDLING",
+      "currentTags": [
+        "null-handling",
+        "filter",
+        "isnull"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "null-handling",
+        "filter",
+        "isnull"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "null-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "NULL_HANDLING",
+      "currentTags": [
+        "null-handling",
+        "filter",
+        "isnotnull"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "null-handling",
+        "filter",
+        "isnotnull"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "null-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "NULL_HANDLING",
+      "currentTags": [
+        "null-handling",
+        "drop",
+        "na"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling",
+        "ps-distinct-drop-dup"
+      ],
+      "matchedTags": [
+        "null-handling",
+        "drop",
+        "na"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "null-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "NULL_HANDLING",
+      "currentTags": [
+        "null-handling",
+        "drop",
+        "na"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling",
+        "ps-distinct-drop-dup"
+      ],
+      "matchedTags": [
+        "null-handling",
+        "drop",
+        "na"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "databricks",
+        "utilities"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "databricks",
+        "utilities"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "list-files"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "list-files"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "copy"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs"
+      ],
+      "unmatchedTags": [
+        "copy"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "move"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs"
+      ],
+      "unmatchedTags": [
+        "move"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-5",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "delete"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "delete"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-6",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "mkdir"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "mkdir"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-7",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "read"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs",
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "read"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-8",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "write"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs",
+        "ps-write-modes"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "write"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-9",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "mount",
+        "azure"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "mount"
+      ],
+      "unmatchedTags": [
+        "azure"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-10",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "notebook",
+        "workflow"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-architecture",
+        "dbx-workflows"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "notebook",
+        "workflow"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-11",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "notebook",
+        "parameters"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-architecture",
+        "dbx-widgets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "notebook",
+        "parameters"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-12",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "notebook",
+        "exit"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "notebook",
+        "exit"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-13",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "widgets",
+        "input"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-widgets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "widgets"
+      ],
+      "unmatchedTags": [
+        "input"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-14",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "widgets",
+        "dropdown"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-widgets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "widgets",
+        "dropdown"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-15",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "widgets",
+        "get"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-widgets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "widgets"
+      ],
+      "unmatchedTags": [
+        "get"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-16",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "widgets",
+        "remove"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-widgets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "widgets"
+      ],
+      "unmatchedTags": [
+        "remove"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-17",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "secrets",
+        "security"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-secrets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "secrets"
+      ],
+      "unmatchedTags": [
+        "security"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-18",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "secrets",
+        "security"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-secrets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "secrets"
+      ],
+      "unmatchedTags": [
+        "security"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-19",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "secrets",
+        "list"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-secrets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "secrets"
+      ],
+      "unmatchedTags": [
+        "list"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-20",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "secrets",
+        "list"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-secrets"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "secrets"
+      ],
+      "unmatchedTags": [
+        "list"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-clone-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "clone",
+        "shallow",
+        "deep"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-clone"
+      ],
+      "matchedTags": [
+        "delta",
+        "clone",
+        "shallow",
+        "deep"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-clone-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "clone",
+        "deep"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-clone"
+      ],
+      "matchedTags": [
+        "delta",
+        "clone",
+        "deep"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-clone-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "clone",
+        "shallow"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-clone"
+      ],
+      "matchedTags": [
+        "delta",
+        "clone",
+        "shallow"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-clone-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "clone",
+        "shallow",
+        "use-case"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-clone"
+      ],
+      "matchedTags": [
+        "delta",
+        "clone",
+        "shallow"
+      ],
+      "unmatchedTags": [
+        "use-case"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-merge-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "merge",
+        "upsert"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-merge"
+      ],
+      "matchedTags": [
+        "delta",
+        "merge",
+        "upsert"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-merge-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "merge",
+        "upsert",
+        "update",
+        "insert"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-merge",
+        "ps-write-modes"
+      ],
+      "matchedTags": [
+        "delta",
+        "merge",
+        "upsert",
+        "update",
+        "insert"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-optimize-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "optimize",
+        "compaction"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-optimize"
+      ],
+      "matchedTags": [
+        "delta",
+        "optimize",
+        "compaction"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-optimize-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "optimize"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-optimize"
+      ],
+      "matchedTags": [
+        "delta",
+        "optimize"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-optimize-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "optimize",
+        "zorder"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-optimize",
+        "delta-zorder"
+      ],
+      "matchedTags": [
+        "delta",
+        "optimize",
+        "zorder"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-optimize-4",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPTIMIZATION",
+      "currentTags": [
+        "delta",
+        "zorder",
+        "optimization"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-zorder",
+        "ps-execution-plans"
+      ],
+      "matchedTags": [
+        "delta",
+        "zorder",
+        "optimization"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-vacuum-1",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "vacuum",
+        "cleanup"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-vacuum"
+      ],
+      "matchedTags": [
+        "delta",
+        "vacuum",
+        "cleanup"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-vacuum-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "vacuum"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-vacuum"
+      ],
+      "matchedTags": [
+        "delta",
+        "vacuum"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "delta-vacuum-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "delta",
+        "vacuum",
+        "retention"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "delta-vacuum"
+      ],
+      "matchedTags": [
+        "delta",
+        "vacuum",
+        "retention"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-mount-2",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "mounts",
+        "list"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "mounts"
+      ],
+      "unmatchedTags": [
+        "list"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "dbutils-mount-3",
+      "sourceFile": "expandedQuestions.ts",
+      "topic": "DATABRICKS_UTILITIES",
+      "currentTags": [
+        "dbutils",
+        "fs",
+        "unmount"
+      ],
+      "suggestedConcepts": [
+        "dbx-utilities",
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbutils",
+        "fs",
+        "unmount"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "csv",
+        "read",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "ps-io-csv",
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "csv",
+        "read",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "parquet",
+        "write",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "ps-io-parquet",
+        "ps-write-modes",
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "parquet",
+        "write",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "json",
+        "read",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "ps-io-json",
+        "ps-io-csv",
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "json",
+        "read",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "delta",
+        "read",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "ps-io-csv",
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "delta",
+        "read",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "delta",
+        "write",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "delta-acid",
+        "ps-write-modes",
+        "ps-io-csv",
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "delta",
+        "write",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-6",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "write-modes",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "ps-write-modes",
+        "ps-io-csv",
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "write-modes",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-7",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "parquet",
+        "file-formats",
+        "columnar"
+      ],
+      "suggestedConcepts": [
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "parquet",
+        "file-formats",
+        "columnar"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-8",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "csv",
+        "delimiter",
+        "io",
+        "file-formats"
+      ],
+      "suggestedConcepts": [
+        "ps-io-csv",
+        "ps-io-parquet"
+      ],
+      "matchedTags": [
+        "csv",
+        "delimiter",
+        "io",
+        "file-formats"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "io-9",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "sql",
+        "create-table",
+        "csv",
+        "io"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "create-table",
+        "csv",
+        "io"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "schema-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "schema",
+        "structtype",
+        "structfield",
+        "types"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "schema",
+        "structtype",
+        "structfield"
+      ],
+      "unmatchedTags": [
+        "types"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "schema-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "schema",
+        "read",
+        "csv",
+        "structtype"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "schema",
+        "read",
+        "csv",
+        "structtype"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "schema-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "schema",
+        "ddl",
+        "types"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "schema",
+        "ddl"
+      ],
+      "unmatchedTags": [
+        "types"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "schema-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "schema",
+        "printSchema",
+        "inspect"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "schema",
+        "printSchema",
+        "inspect"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "casewhen-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "when",
+        "otherwise",
+        "conditional",
+        "case"
+      ],
+      "suggestedConcepts": [
+        "ps-when-otherwise",
+        "sql-case-expr"
+      ],
+      "matchedTags": [
+        "when",
+        "otherwise",
+        "conditional",
+        "case"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "casewhen-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "case",
+        "when",
+        "sql",
+        "conditional"
+      ],
+      "suggestedConcepts": [
+        "sql-case-expr",
+        "ps-when-otherwise"
+      ],
+      "matchedTags": [
+        "case",
+        "when",
+        "conditional"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "casewhen-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "when",
+        "otherwise",
+        "conditional"
+      ],
+      "suggestedConcepts": [
+        "ps-when-otherwise"
+      ],
+      "matchedTags": [
+        "when",
+        "otherwise",
+        "conditional"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "casewhen-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "case",
+        "when",
+        "calculation",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-case-expr",
+        "ps-when-otherwise"
+      ],
+      "matchedTags": [
+        "case",
+        "when"
+      ],
+      "unmatchedTags": [
+        "calculation",
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cte-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "cte",
+        "with",
+        "sql",
+        "subquery"
+      ],
+      "suggestedConcepts": [
+        "sql-cte",
+        "sql-subqueries"
+      ],
+      "matchedTags": [
+        "cte",
+        "with",
+        "subquery"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cte-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "cte",
+        "with",
+        "multiple",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-cte"
+      ],
+      "matchedTags": [
+        "cte",
+        "with"
+      ],
+      "unmatchedTags": [
+        "multiple",
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cte-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "cte",
+        "with",
+        "advantages",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-cte"
+      ],
+      "matchedTags": [
+        "cte",
+        "with"
+      ],
+      "unmatchedTags": [
+        "advantages",
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "udf-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "udf",
+        "python",
+        "custom-function"
+      ],
+      "suggestedConcepts": [
+        "ps-udf-pandas-udf"
+      ],
+      "matchedTags": [
+        "udf",
+        "custom-function"
+      ],
+      "unmatchedTags": [
+        "python"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "udf-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "udf",
+        "register",
+        "sql",
+        "custom-function"
+      ],
+      "suggestedConcepts": [
+        "ps-udf-pandas-udf",
+        "sql-temp-views"
+      ],
+      "matchedTags": [
+        "udf",
+        "register",
+        "custom-function"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "udf-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "pandas-udf",
+        "vectorized",
+        "performance",
+        "arrow"
+      ],
+      "suggestedConcepts": [
+        "ps-udf-pandas-udf",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "pandas-udf",
+        "vectorized",
+        "performance",
+        "arrow"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "udf-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "pandas-udf",
+        "vectorized",
+        "decorator"
+      ],
+      "suggestedConcepts": [
+        "ps-udf-pandas-udf"
+      ],
+      "matchedTags": [
+        "pandas-udf",
+        "vectorized"
+      ],
+      "unmatchedTags": [
+        "decorator"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "setop-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SET_OPERATIONS",
+      "currentTags": [
+        "union",
+        "set-operations",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-set-operations"
+      ],
+      "matchedTags": [
+        "union",
+        "set-operations"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "setop-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SET_OPERATIONS",
+      "currentTags": [
+        "union-all",
+        "set-operations",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-set-operations"
+      ],
+      "matchedTags": [
+        "union-all",
+        "set-operations"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "setop-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SET_OPERATIONS",
+      "currentTags": [
+        "intersect",
+        "set-operations",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-set-operations"
+      ],
+      "matchedTags": [
+        "intersect",
+        "set-operations"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "setop-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SET_OPERATIONS",
+      "currentTags": [
+        "except",
+        "minus",
+        "set-operations",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-set-operations"
+      ],
+      "matchedTags": [
+        "except",
+        "minus",
+        "set-operations"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "setop-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SET_OPERATIONS",
+      "currentTags": [
+        "union",
+        "distinct",
+        "pyspark",
+        "set-operations"
+      ],
+      "suggestedConcepts": [
+        "sql-set-operations",
+        "ps-distinct-drop-dup",
+        "ps-session-init"
+      ],
+      "matchedTags": [
+        "union",
+        "distinct",
+        "pyspark",
+        "set-operations"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "semijoin-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "semi-join",
+        "anti-join",
+        "join-types"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-semi-anti",
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "semi-join",
+        "anti-join",
+        "join-types"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "semijoin-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "semi-join",
+        "left-semi",
+        "join",
+        "pyspark"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-semi-anti",
+        "sql-joins-inner-outer",
+        "ps-session-init"
+      ],
+      "matchedTags": [
+        "semi-join",
+        "left-semi",
+        "join",
+        "pyspark"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "semijoin-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "anti-join",
+        "left-anti",
+        "join",
+        "pyspark"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-semi-anti",
+        "sql-joins-inner-outer",
+        "ps-session-init"
+      ],
+      "matchedTags": [
+        "anti-join",
+        "left-anti",
+        "join",
+        "pyspark"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "semijoin-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "exists",
+        "semi-join",
+        "sql",
+        "subquery"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries",
+        "sql-joins-semi-anti"
+      ],
+      "matchedTags": [
+        "exists",
+        "semi-join",
+        "subquery"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pivot-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "pivot",
+        "reshape",
+        "wide-format"
+      ],
+      "suggestedConcepts": [
+        "ps-pivot-unpivot"
+      ],
+      "matchedTags": [
+        "pivot",
+        "reshape",
+        "wide-format"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pivot-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "pivot",
+        "sql",
+        "reshape"
+      ],
+      "suggestedConcepts": [
+        "ps-pivot-unpivot"
+      ],
+      "matchedTags": [
+        "pivot",
+        "reshape"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pivot-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "unpivot",
+        "stack",
+        "reshape",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "ps-pivot-unpivot"
+      ],
+      "matchedTags": [
+        "unpivot",
+        "stack",
+        "reshape"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pivot-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "pivot",
+        "performance",
+        "reshape",
+        "wide-format"
+      ],
+      "suggestedConcepts": [
+        "ps-pivot-unpivot",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "pivot",
+        "performance",
+        "reshape",
+        "wide-format"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pivot-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "unpivot",
+        "stack",
+        "reshape",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "ps-pivot-unpivot"
+      ],
+      "matchedTags": [
+        "unpivot",
+        "stack",
+        "reshape"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "pivot-6",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "pivot",
+        "sql",
+        "reshape",
+        "survey"
+      ],
+      "suggestedConcepts": [
+        "ps-pivot-unpivot"
+      ],
+      "matchedTags": [
+        "pivot",
+        "reshape"
+      ],
+      "unmatchedTags": [
+        "sql",
+        "survey"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cast-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "cast",
+        "type-conversion",
+        "double"
+      ],
+      "suggestedConcepts": [
+        "ps-cast-types"
+      ],
+      "matchedTags": [
+        "cast",
+        "type-conversion"
+      ],
+      "unmatchedTags": [
+        "double"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cast-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "cast",
+        "sql",
+        "type-conversion"
+      ],
+      "suggestedConcepts": [
+        "ps-cast-types"
+      ],
+      "matchedTags": [
+        "cast",
+        "type-conversion"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "cast-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "cast",
+        "date",
+        "type-conversion"
+      ],
+      "suggestedConcepts": [
+        "ps-cast-types",
+        "ps-datetime-fns"
+      ],
+      "matchedTags": [
+        "cast",
+        "date",
+        "type-conversion"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "action-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_ACTIONS",
+      "currentTags": [
+        "lazy",
+        "transformation",
+        "action",
+        "fundamentals"
+      ],
+      "suggestedConcepts": [
+        "ps-actions-vs-transforms",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "lazy",
+        "transformation",
+        "action",
+        "fundamentals"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "action-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_ACTIONS",
+      "currentTags": [
+        "action",
+        "transformation",
+        "lazy",
+        "fundamentals"
+      ],
+      "suggestedConcepts": [
+        "ps-actions-vs-transforms",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "action",
+        "transformation",
+        "lazy",
+        "fundamentals"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "action-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_ACTIONS",
+      "currentTags": [
+        "collect",
+        "driver",
+        "memory",
+        "action"
+      ],
+      "suggestedConcepts": [
+        "ps-actions-vs-transforms",
+        "dbx-architecture",
+        "ps-cache-persist"
+      ],
+      "matchedTags": [
+        "collect",
+        "driver",
+        "memory",
+        "action"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "action-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_ACTIONS",
+      "currentTags": [
+        "show",
+        "count",
+        "action",
+        "basics"
+      ],
+      "suggestedConcepts": [
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "show",
+        "count",
+        "action"
+      ],
+      "unmatchedTags": [
+        "basics"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "action-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_ACTIONS",
+      "currentTags": [
+        "first",
+        "take",
+        "head",
+        "action"
+      ],
+      "suggestedConcepts": [
+        "ps-aggregate-fns",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "first",
+        "take",
+        "head",
+        "action"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "restore-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_TIME_TRAVEL",
+      "currentTags": [
+        "restore",
+        "delta",
+        "time-travel",
+        "recovery"
+      ],
+      "suggestedConcepts": [
+        "delta-time-travel",
+        "delta-acid",
+        "stream-checkpoint"
+      ],
+      "matchedTags": [
+        "restore",
+        "delta",
+        "time-travel",
+        "recovery"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "restore-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_TIME_TRAVEL",
+      "currentTags": [
+        "restore",
+        "timestamp",
+        "delta",
+        "time-travel"
+      ],
+      "suggestedConcepts": [
+        "delta-time-travel",
+        "ps-datetime-fns",
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "restore",
+        "timestamp",
+        "delta",
+        "time-travel"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "restore-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_TIME_TRAVEL",
+      "currentTags": [
+        "history",
+        "delta",
+        "time-travel",
+        "describe"
+      ],
+      "suggestedConcepts": [
+        "delta-time-travel",
+        "delta-acid",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "history",
+        "delta",
+        "time-travel",
+        "describe"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "constraint-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "constraint",
+        "check",
+        "delta",
+        "data-quality"
+      ],
+      "suggestedConcepts": [
+        "delta-constraints",
+        "delta-acid",
+        "dlt-expectations"
+      ],
+      "matchedTags": [
+        "constraint",
+        "check",
+        "delta",
+        "data-quality"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "constraint-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "constraint",
+        "not-null",
+        "delta",
+        "data-quality"
+      ],
+      "suggestedConcepts": [
+        "delta-constraints",
+        "delta-acid",
+        "dlt-expectations"
+      ],
+      "matchedTags": [
+        "constraint",
+        "not-null",
+        "delta",
+        "data-quality"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "constraint-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "constraint",
+        "drop",
+        "delta"
+      ],
+      "suggestedConcepts": [
+        "delta-constraints",
+        "ps-distinct-drop-dup",
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "constraint",
+        "drop",
+        "delta"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "constraint-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "DELTA_OPERATIONS",
+      "currentTags": [
+        "constraint",
+        "types",
+        "delta",
+        "data-quality"
+      ],
+      "suggestedConcepts": [
+        "delta-constraints",
+        "delta-acid",
+        "dlt-expectations"
+      ],
+      "matchedTags": [
+        "constraint",
+        "delta",
+        "data-quality"
+      ],
+      "unmatchedTags": [
+        "types"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "subq-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SUBQUERIES",
+      "currentTags": [
+        "subquery",
+        "scalar",
+        "where",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "subquery",
+        "scalar",
+        "where"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "subq-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SUBQUERIES",
+      "currentTags": [
+        "subquery",
+        "correlated",
+        "sql",
+        "advanced"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries"
+      ],
+      "matchedTags": [
+        "subquery",
+        "correlated"
+      ],
+      "unmatchedTags": [
+        "sql",
+        "advanced"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "subq-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SUBQUERIES",
+      "currentTags": [
+        "subquery",
+        "in",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries"
+      ],
+      "matchedTags": [
+        "subquery",
+        "in"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "subq-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SUBQUERIES",
+      "currentTags": [
+        "subquery",
+        "not-in",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries"
+      ],
+      "matchedTags": [
+        "subquery",
+        "not-in"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "subq-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SUBQUERIES",
+      "currentTags": [
+        "subquery",
+        "not-exists",
+        "anti-join",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries",
+        "sql-joins-semi-anti"
+      ],
+      "matchedTags": [
+        "subquery",
+        "not-exists",
+        "anti-join"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "subq-6",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_SUBQUERIES",
+      "currentTags": [
+        "subquery",
+        "derived-table",
+        "row-number",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries",
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "subquery",
+        "derived-table",
+        "row-number"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "crossjoin-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "cross-join",
+        "cartesian",
+        "join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-cross-self",
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "cross-join",
+        "cartesian",
+        "join"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "crossjoin-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "cross-join",
+        "sql",
+        "cartesian"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-cross-self"
+      ],
+      "matchedTags": [
+        "cross-join",
+        "cartesian"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "repart-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "repartition",
+        "coalesce",
+        "partitioning"
+      ],
+      "suggestedConcepts": [
+        "ps-partitioning",
+        "ps-null-handling"
+      ],
+      "matchedTags": [
+        "repartition",
+        "coalesce",
+        "partitioning"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "repart-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "repartition",
+        "partitioning",
+        "parallelism"
+      ],
+      "suggestedConcepts": [
+        "ps-partitioning",
+        "ps-shuffle"
+      ],
+      "matchedTags": [
+        "repartition",
+        "partitioning",
+        "parallelism"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "winfn-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "rank",
+        "dense-rank",
+        "row-number",
+        "window",
+        "comparison"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "rank",
+        "dense-rank",
+        "row-number",
+        "window"
+      ],
+      "unmatchedTags": [
+        "comparison"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "winfn-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "percent-rank",
+        "window",
+        "percentile"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "percent-rank",
+        "window",
+        "percentile"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "winfn-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window-frame",
+        "rows-between",
+        "moving-average",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-window-frame"
+      ],
+      "matchedTags": [
+        "window-frame",
+        "rows-between",
+        "moving-average"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "winfn-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "SQL_WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window-frame",
+        "cumulative",
+        "running-total",
+        "sql"
+      ],
+      "suggestedConcepts": [
+        "sql-window-frame"
+      ],
+      "matchedTags": [
+        "window-frame",
+        "cumulative",
+        "running-total"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "winfn-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "window-frame",
+        "rows",
+        "range",
+        "window"
+      ],
+      "suggestedConcepts": [
+        "sql-window-frame",
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "window-frame",
+        "rows",
+        "window"
+      ],
+      "unmatchedTags": [
+        "range"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "winfn-6",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "WINDOW_FUNCTIONS",
+      "currentTags": [
+        "first",
+        "last",
+        "window",
+        "aggregate"
+      ],
+      "suggestedConcepts": [
+        "ps-aggregate-fns",
+        "sql-window-offset",
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "first",
+        "last",
+        "window",
+        "aggregate"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-1",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "stateful",
+        "state-management"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-stateful-aggs"
+      ],
+      "matchedTags": [
+        "streaming",
+        "stateful",
+        "state-management"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-2",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "watermark",
+        "state",
+        "event-time"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-watermarks",
+        "stream-stateful-aggs"
+      ],
+      "matchedTags": [
+        "streaming",
+        "watermark",
+        "state",
+        "event-time"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-3",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "window",
+        "watermark",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "sql-window-ranking",
+        "stream-watermarks",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "streaming",
+        "window",
+        "watermark",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-4",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "dedup",
+        "watermark",
+        "stateful"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "ps-distinct-drop-dup",
+        "stream-watermarks",
+        "stream-stateful-aggs"
+      ],
+      "matchedTags": [
+        "streaming",
+        "dedup",
+        "watermark",
+        "stateful"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-5",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "error-handling",
+        "corrupt-records",
+        "parse-mode"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "ps-io-json"
+      ],
+      "matchedTags": [
+        "streaming",
+        "corrupt-records",
+        "parse-mode"
+      ],
+      "unmatchedTags": [
+        "error-handling"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-6",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "stream-stream-join",
+        "watermark",
+        "stateful"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-stream-join",
+        "stream-watermarks",
+        "stream-stateful-aggs"
+      ],
+      "matchedTags": [
+        "streaming",
+        "stream-stream-join",
+        "watermark",
+        "stateful"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-7",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "stream-stream-join",
+        "time-constraint"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-stream-join"
+      ],
+      "matchedTags": [
+        "streaming",
+        "stream-stream-join",
+        "time-constraint"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "stream-adv-8",
+      "sourceFile": "masteryQuestions.ts",
+      "topic": "STRUCTURED_STREAMING",
+      "currentTags": [
+        "streaming",
+        "stream-static",
+        "stream-stream",
+        "join"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "stream-stream-join",
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "streaming",
+        "stream-static",
+        "stream-stream",
+        "join"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "db-basic-1",
+      "sourceFile": "questions.ts",
+      "topic": "DATABRICKS_BASICS",
+      "currentTags": [
+        "fundamentals",
+        "architecture"
+      ],
+      "suggestedConcepts": [
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "fundamentals",
+        "architecture"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "db-basic-2",
+      "sourceFile": "questions.ts",
+      "topic": "DATABRICKS_BASICS",
+      "currentTags": [
+        "cluster",
+        "execution"
+      ],
+      "suggestedConcepts": [
+        "dbx-cluster-config",
+        "dbx-architecture"
+      ],
+      "matchedTags": [
+        "cluster",
+        "execution"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "db-basic-3",
+      "sourceFile": "questions.ts",
+      "topic": "DATABRICKS_BASICS",
+      "currentTags": [
+        "storage",
+        "dbfs"
+      ],
+      "suggestedConcepts": [
+        "dbx-dbfs"
+      ],
+      "matchedTags": [
+        "dbfs"
+      ],
+      "unmatchedTags": [
+        "storage"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-basic-1",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "spark-session",
+        "entry-point"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init"
+      ],
+      "matchedTags": [
+        "spark-session",
+        "entry-point"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-basic-2",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "spark-session",
+        "initialization"
+      ],
+      "suggestedConcepts": [
+        "ps-session-init"
+      ],
+      "matchedTags": [
+        "spark-session",
+        "initialization"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-basic-3",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "dataframe",
+        "creation"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "creation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-1",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "display"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "display"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-2",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "select",
+        "columns"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "select",
+        "columns"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-3",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "filter",
+        "where"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "filter",
+        "where"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-4",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "withColumn",
+        "when",
+        "conditional"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-with-column",
+        "ps-when-otherwise"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "withColumn",
+        "when",
+        "conditional"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-5",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "groupBy",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "groupBy",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-transform-1",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "transformations",
+        "actions",
+        "lazy-evaluation"
+      ],
+      "suggestedConcepts": [
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "transformations",
+        "actions",
+        "lazy-evaluation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-transform-2",
+      "sourceFile": "questions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "dataframe",
+        "join",
+        "transformation"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "sql-joins-inner-outer",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "join",
+        "transformation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-transform-3",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "dataframe",
+        "distinct",
+        "deduplication"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-distinct-drop-dup"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "distinct",
+        "deduplication"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-transform-4",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_TRANSFORMATIONS",
+      "currentTags": [
+        "dataframe",
+        "orderBy",
+        "sort"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-orderby-sort"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "orderBy",
+        "sort"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-1",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "select",
+        "where"
+      ],
+      "suggestedConcepts": [
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "select",
+        "where"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-2",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "temp-view",
+        "dataframe"
+      ],
+      "suggestedConcepts": [
+        "sql-temp-views",
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "temp-view",
+        "dataframe"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-3",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "groupby",
+        "aggregate",
+        "orderby"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "ps-aggregate-fns",
+        "ps-orderby-sort"
+      ],
+      "matchedTags": [
+        "groupby",
+        "aggregate",
+        "orderby"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-4",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "subquery",
+        "aggregate"
+      ],
+      "suggestedConcepts": [
+        "sql-subqueries",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "subquery",
+        "aggregate"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-advanced-1",
+      "sourceFile": "questions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "shuffle",
+        "performance",
+        "partitioning"
+      ],
+      "suggestedConcepts": [
+        "ps-shuffle",
+        "ps-cache-persist",
+        "ps-partitioning"
+      ],
+      "matchedTags": [
+        "shuffle",
+        "performance",
+        "partitioning"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-advanced-2",
+      "sourceFile": "questions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "window-functions",
+        "rank",
+        "advanced"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "window-functions",
+        "rank"
+      ],
+      "unmatchedTags": [
+        "advanced"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-advanced-3",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_OPTIMIZATION",
+      "currentTags": [
+        "caching",
+        "performance",
+        "optimization"
+      ],
+      "suggestedConcepts": [
+        "ps-cache-persist",
+        "ps-execution-plans"
+      ],
+      "matchedTags": [
+        "caching",
+        "performance",
+        "optimization"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-advanced-4",
+      "sourceFile": "questions.ts",
+      "topic": "ADVANCED_TOPICS",
+      "currentTags": [
+        "streaming",
+        "join",
+        "watermark",
+        "structured-streaming"
+      ],
+      "suggestedConcepts": [
+        "stream-readstream-writestream",
+        "sql-joins-inner-outer",
+        "stream-watermarks"
+      ],
+      "matchedTags": [
+        "streaming",
+        "join",
+        "watermark",
+        "structured-streaming"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-basic-4",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_BASICS",
+      "currentTags": [
+        "io",
+        "csv",
+        "read"
+      ],
+      "suggestedConcepts": [
+        "ps-io-csv"
+      ],
+      "matchedTags": [
+        "io",
+        "csv",
+        "read"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-6",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "schema"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "schema"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-7",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "count",
+        "action"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "count",
+        "action"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-8",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "rename",
+        "columns"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-with-column",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "rename",
+        "columns"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-9",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "drop",
+        "columns"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-distinct-drop-dup",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "drop",
+        "columns"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-10",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "distinct",
+        "select"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-distinct-drop-dup",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "distinct",
+        "select"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-5",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "orderby",
+        "limit"
+      ],
+      "suggestedConcepts": [
+        "ps-orderby-sort"
+      ],
+      "matchedTags": [
+        "orderby",
+        "limit"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-6",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "groupby",
+        "having",
+        "aggregate"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "sql-where-having",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "groupby",
+        "having",
+        "aggregate"
+      ],
+      "unmatchedTags": [
+        "sql"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-7",
+      "sourceFile": "questions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "sql",
+        "window-functions",
+        "advanced"
+      ],
+      "suggestedConcepts": [
+        "sql-window-ranking"
+      ],
+      "matchedTags": [
+        "window-functions"
+      ],
+      "unmatchedTags": [
+        "sql",
+        "advanced"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "db-basic-4",
+      "sourceFile": "questions.ts",
+      "topic": "DATABRICKS_BASICS",
+      "currentTags": [
+        "delta-lake",
+        "storage",
+        "acid"
+      ],
+      "suggestedConcepts": [
+        "delta-acid"
+      ],
+      "matchedTags": [
+        "delta-lake",
+        "acid"
+      ],
+      "unmatchedTags": [
+        "storage"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "db-basic-5",
+      "sourceFile": "questions.ts",
+      "topic": "DATABRICKS_BASICS",
+      "currentTags": [
+        "auto-loader",
+        "streaming",
+        "incremental"
+      ],
+      "suggestedConcepts": [
+        "stream-autoloader",
+        "stream-readstream-writestream"
+      ],
+      "matchedTags": [
+        "auto-loader",
+        "streaming",
+        "incremental"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-transform-5",
+      "sourceFile": "questions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "dataframe",
+        "join",
+        "left-join"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "join",
+        "left-join"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-11",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "aggregate",
+        "sum"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-aggregate-fns"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "aggregate",
+        "sum"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "ps-df-12",
+      "sourceFile": "questions.ts",
+      "topic": "PYSPARK_DATAFRAMES",
+      "currentTags": [
+        "dataframe",
+        "null-handling",
+        "fillna"
+      ],
+      "suggestedConcepts": [
+        "ps-dataframe-create",
+        "ps-null-handling"
+      ],
+      "matchedTags": [
+        "dataframe",
+        "null-handling",
+        "fillna"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-1",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "null",
+        "where",
+        "three-valued-logic"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "null",
+        "where",
+        "three-valued-logic"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-2",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "count",
+        "null",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-actions-vs-transforms",
+        "ps-null-handling",
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "count",
+        "null",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-3",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "join",
+        "inner-join",
+        "cardinality"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer",
+        "dim-grain"
+      ],
+      "matchedTags": [
+        "join",
+        "inner-join",
+        "cardinality"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-4",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "join",
+        "left-join",
+        "cardinality"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer",
+        "dim-grain"
+      ],
+      "matchedTags": [
+        "join",
+        "left-join",
+        "cardinality"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-5",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "group-by",
+        "having",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "sql-where-having"
+      ],
+      "matchedTags": [
+        "group-by",
+        "having",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-6",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "null",
+        "arithmetic"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling"
+      ],
+      "matchedTags": [
+        "null"
+      ],
+      "unmatchedTags": [
+        "arithmetic"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-7",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "like",
+        "pattern-matching"
+      ],
+      "suggestedConcepts": [
+        "ps-regex-fns"
+      ],
+      "matchedTags": [
+        "like",
+        "pattern-matching"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-8",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "aggregation",
+        "no-group-by"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "aggregation"
+      ],
+      "unmatchedTags": [
+        "no-group-by"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-9",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "distinct",
+        "deduplication"
+      ],
+      "suggestedConcepts": [
+        "ps-distinct-drop-dup"
+      ],
+      "matchedTags": [
+        "distinct",
+        "deduplication"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-predict-10",
+      "sourceFile": "sparkSqlPredictOutputQuestions.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "limit",
+        "order-by"
+      ],
+      "suggestedConcepts": [
+        "ps-orderby-sort"
+      ],
+      "matchedTags": [
+        "limit",
+        "order-by"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-misc-mcq-1",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "null",
+        "three-valued-logic"
+      ],
+      "suggestedConcepts": [
+        "ps-null-handling"
+      ],
+      "matchedTags": [
+        "null",
+        "three-valued-logic"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-misc-mcq-2",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "aggregation",
+        "null",
+        "count"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "ps-null-handling",
+        "ps-actions-vs-transforms"
+      ],
+      "matchedTags": [
+        "aggregation",
+        "null",
+        "count"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-misc-mcq-3",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "group-by",
+        "having",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg",
+        "sql-where-having"
+      ],
+      "matchedTags": [
+        "group-by",
+        "having",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-misc-mcq-4",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SQL_AGGREGATIONS",
+      "currentTags": [
+        "group-by",
+        "aggregation"
+      ],
+      "suggestedConcepts": [
+        "ps-groupby-agg"
+      ],
+      "matchedTags": [
+        "group-by",
+        "aggregation"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-misc-mcq-5",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SQL_JOINS",
+      "currentTags": [
+        "join",
+        "inner-join",
+        "left-join"
+      ],
+      "suggestedConcepts": [
+        "sql-joins-inner-outer"
+      ],
+      "matchedTags": [
+        "join",
+        "inner-join",
+        "left-join"
+      ],
+      "unmatchedTags": [],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "sql-misc-mcq-6",
+      "sourceFile": "sqlMisconceptionMCQs.ts",
+      "topic": "SPARK_SQL",
+      "currentTags": [
+        "update",
+        "where",
+        "safety"
+      ],
+      "suggestedConcepts": [
+        "delta-merge",
+        "ps-select-filter"
+      ],
+      "matchedTags": [
+        "update",
+        "where"
+      ],
+      "unmatchedTags": [
+        "safety"
+      ],
+      "confidence": "HIGH"
+    }
+  ]
+}

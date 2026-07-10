@@ -1,0 +1,679 @@
+
+==============================================================================
+dj_admin   (10 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      py-dj-admin-what
+   2. PREDICT  dj-admin-predict-1
+   3. CLOZE    dj-admin-cloze-1
+   4. CODING   py-dj-admin-register
+   5. CODING   py-dj-admin-list-display
+   6. CODING   py-dj-admin-inline
+   7. CODING   py-dj-admin-action
+   8. CODING   py-dj-admin-readonly-fieldsets
+  --- INTERMEDIATE ---
+   9. MCQ      py-dj-admin-prod-risk
+  --- ADVANCED ---
+  10. CODING   dj-admin-adv-1
+  composition: {"BEGINNER":{"MCQ":1,"PREDICT":1,"CLOZE":1,"CODING":5},"INTERMEDIATE":{"MCQ":1},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: dj-admin-predict-1
+
+==============================================================================
+dj_api_docs   (4 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      celery-drf-19
+   2. MCQ      celery-drf-21
+   3. CODING   celery-drf-18
+   4. CODING   celery-drf-20
+  composition: {"BEGINNER":{"MCQ":2,"CODING":2}}
+  FLAGS:
+    [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+==============================================================================
+dj_auth   (26 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-auth-4
+   2. MCQ      py-dj-auth-user-model
+   3. MCQ      py-dj-auth-login-required
+   4. PARSONS  py-dj-auth-parsons-1
+   5. PARSONS  py-dj-auth-parsons-2
+   6. CLOZE    py-dj-auth-cloze-1
+   7. CLOZE    py-dj-auth-cloze-2
+   8. CLOZE    py-dj-auth-cloze-3
+   9. CODING   be-auth-2
+  10. CODING   py-dj-auth-password-hashing
+  11. CODING   py-dj-auth-authenticate-login
+  12. CODING   py-dj-auth-permission-required
+  13. CODING   py-dj-auth-custom-user
+  --- INTERMEDIATE ---
+  14. MCQ      py-dj-auth-session-vs-token
+  15. MCQ      dj4e-owned-1
+  16. PREDICT  py-dj-auth-predict-1
+  17. PARSONS  py-dj-auth-parsons-3
+  18. CLOZE    py-dj-auth-cloze-4
+  19. CODING   be-auth-3
+  20. CODING   py-dj-auth-register-view
+  21. CODING   dj4e-owned-2
+  22. CODING   dj4e-owned-3
+  --- ADVANCED ---
+  23. PARSONS  dj-views-adv-4
+  24. CODING   dj-auth-adv-1
+  25. CODING   dj-auth-adv-2
+  26. CODING   dj-auth-adv-3
+  composition: {"BEGINNER":{"MCQ":3,"PARSONS":2,"CLOZE":3,"CODING":5},"INTERMEDIATE":{"MCQ":2,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":4},"ADVANCED":{"PARSONS":1,"CODING":3}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: py-dj-auth-predict-1
+
+==============================================================================
+dj_caching   (12 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      py-dj-cache-why
+   2. MCQ      dj-caching-gap-1
+   3. CODING   py-dj-cache-get-set
+   4. CODING   py-dj-cache-page
+   5. CODING   py-dj-cache-getorset
+  --- INTERMEDIATE ---
+   6. MCQ      py-dj-cache-backends
+   7. MCQ      dj-caching-gap-2
+   8. PREDICT  dj-caching-predict-1
+   9. PARSONS  dj-caching-parsons-1
+  10. CLOZE    dj-caching-cloze-1
+  11. CODING   py-dj-cache-invalidate
+  --- ADVANCED ---
+  12. CODING   dj-cache-2
+  composition: {"BEGINNER":{"MCQ":2,"CODING":3},"INTERMEDIATE":{"MCQ":2,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":1},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: dj-caching-predict-1
+
+==============================================================================
+dj_cbv   (20 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-cbv-beg-whatis
+   2. MCQ      dj-cbv-beg-generic
+   3. MCQ      dj-cbv-beg-asview
+   4. MCQ      dj-cbv-beg-which
+  --- INTERMEDIATE ---
+   5. MCQ      dj4e-cbv-1
+   6. MCQ      dj4e-cbv-5
+   7. MCQ      dj4e-cbv-7
+   8. MCQ      dj-cbv-int-userpasses
+   9. PARSONS  dj-views-parsons-2
+  10. CLOZE    dj-views-cloze-2
+  11. CODING   be-dj-cbv-1
+  12. CODING   dj4e-cbv-2
+  13. CODING   dj4e-cbv-3
+  14. CODING   dj4e-cbv-4
+  15. CODING   dj4e-cbv-6
+  16. CODING   dj4e-cbv-8
+  --- ADVANCED ---
+  17. PREDICT  dj-views-adv-5
+  18. PARSONS  dj-views-adv-3
+  19. CODING   dj-views-adv-1
+  20. CODING   dj-views-adv-2
+  composition: {"BEGINNER":{"MCQ":4},"INTERMEDIATE":{"MCQ":4,"PARSONS":1,"CLOZE":1,"CODING":6},"ADVANCED":{"PREDICT":1,"PARSONS":1,"CODING":2}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: dj-views-adv-5
+
+==============================================================================
+dj_celery   (14 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      celery-drf-4
+   2. MCQ      celery-drf-7
+   3. MCQ      dj-celery-gap-1
+   4. MCQ      dj-celery-gap-2
+   5. CODING   celery-drf-1
+   6. CODING   celery-drf-2
+  --- INTERMEDIATE ---
+   7. MCQ      celery-drf-3
+   8. MCQ      celery-drf-6
+   9. PREDICT  dj-celery-predict-1
+  10. PARSONS  dj-celery-parsons-1
+  11. CLOZE    dj-celery-cloze-1
+  12. CODING   celery-drf-5
+  13. CODING   celery-drf-8
+  --- ADVANCED ---
+  14. CODING   dj-celery-adv-1
+  composition: {"BEGINNER":{"MCQ":4,"CODING":2},"INTERMEDIATE":{"MCQ":2,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":2},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: dj-celery-predict-1
+
+==============================================================================
+dj_channels   (5 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-channels-1
+   2. MCQ      dj-channels-gap-1
+  --- INTERMEDIATE ---
+   3. MCQ      be-infra-channels-3
+   4. MCQ      be-infra-channels-4
+  --- ADVANCED ---
+   5. CODING   be-infra-channels-2
+  composition: {"BEGINNER":{"MCQ":2},"INTERMEDIATE":{"MCQ":2},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+==============================================================================
+dj_cicd   (7 questions)   [no-faded by design]
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      py-dj-cicd-what
+   2. CODING   py-dj-cicd-gha-tests
+   3. CODING   py-dj-cicd-gha-matrix
+   4. CODING   py-dj-cicd-gha-cache
+   5. CODING   py-dj-cicd-secrets
+  --- INTERMEDIATE ---
+   6. PARSONS  dj-cicd-parsons-1
+   7. CODING   py-dj-cicd-deploy-step
+  composition: {"BEGINNER":{"MCQ":1,"CODING":4},"INTERMEDIATE":{"PARSONS":1,"CODING":1}}
+
+==============================================================================
+dj_custom_managers   (5 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-custom-managers-gap-1
+   2. CODING   celery-drf-22
+  --- INTERMEDIATE ---
+   3. MCQ      celery-drf-24
+   4. MCQ      celery-drf-25
+  --- ADVANCED ---
+   5. CODING   celery-drf-23
+  composition: {"BEGINNER":{"MCQ":1,"CODING":1},"INTERMEDIATE":{"MCQ":2},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+==============================================================================
+dj_deployment   (12 questions)   [no-faded by design]
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-docker-1
+   2. MCQ      py-dj-deploy-debug
+   3. MCQ      py-dj-deploy-12factor
+   4. CODING   be-docker-2
+   5. CODING   py-dj-deploy-allowed-hosts
+   6. CODING   py-dj-deploy-collectstatic
+   7. CODING   py-dj-deploy-gunicorn
+   8. CODING   py-dj-deploy-whitenoise
+  --- INTERMEDIATE ---
+   9. MCQ      dj-deploy-1
+  10. MCQ      dj-deploy-3
+  11. CODING   be-docker-3
+  --- ADVANCED ---
+  12. CODING   dj-deploy-2
+  composition: {"BEGINNER":{"MCQ":3,"CODING":5},"INTERMEDIATE":{"MCQ":2,"CODING":1},"ADVANCED":{"CODING":1}}
+
+==============================================================================
+dj_factory_boy   (7 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      py-dj-factory-what
+   2. CODING   py-dj-factory-userfactory
+   3. CODING   py-dj-factory-subfactory
+   4. CODING   py-dj-factory-traits
+   5. CODING   py-dj-factory-usage-test
+  --- INTERMEDIATE ---
+   6. MCQ      py-dj-factory-vs-fixture
+   7. CLOZE    dj-factoryboy-cloze-1
+  composition: {"BEGINNER":{"MCQ":1,"CODING":4},"INTERMEDIATE":{"MCQ":1,"CLOZE":1}}
+
+==============================================================================
+dj_file_uploads   (3 questions)   [no-faded by design]
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-uploads-3
+   2. CODING   be-infra-uploads-1
+  --- INTERMEDIATE ---
+   3. MCQ      be-infra-uploads-2
+  composition: {"BEGINNER":{"MCQ":1,"CODING":1},"INTERMEDIATE":{"MCQ":1}}
+
+==============================================================================
+dj_forms   (22 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-forms-gap-1
+   2. PREDICT  dj-forms-predict-1
+   3. PARSONS  dj-forms-parsons-1
+   4. CLOZE    dj-forms-cloze-1
+   5. CODING   dj-form-3
+   6. CODING   py-dj-form-modelform
+   7. CODING   py-dj-form-clean-field
+   8. CODING   py-dj-form-clean-cross-field
+   9. CODING   py-dj-form-widgets
+  10. CODING   dj-forms-gap-2
+  --- INTERMEDIATE ---
+  11. MCQ      py-dj-form-vs-modelform
+  12. MCQ      dj4e-forms-1
+  13. PREDICT  dj-forms-predict-2
+  14. PREDICT  dj-forms-predict-3
+  15. PARSONS  dj-forms-parsons-2
+  16. PARSONS  dj-forms-parsons-3
+  17. CLOZE    dj-forms-cloze-2
+  18. CLOZE    dj-forms-cloze-3
+  19. CODING   py-dj-form-cleaneddata
+  20. CODING   dj4e-forms-2
+  --- ADVANCED ---
+  21. PARSONS  dj-forms-adv-2
+  22. CODING   dj-forms-adv-1
+  composition: {"BEGINNER":{"MCQ":1,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":6},"INTERMEDIATE":{"MCQ":2,"PREDICT":2,"PARSONS":2,"CLOZE":2,"CODING":2},"ADVANCED":{"PARSONS":1,"CODING":1}}
+  FLAGS:
+    [PREDICT x3] verify each is deterministic stdout: dj-forms-predict-1, dj-forms-predict-2, dj-forms-predict-3
+
+==============================================================================
+dj_management   (5 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-management-gap-1
+   2. CODING   dj-mgmt-1
+  --- INTERMEDIATE ---
+   3. MCQ      dj-mgmt-2
+   4. PARSONS  dj-management-parsons-1
+   5. CLOZE    dj-management-cloze-1
+  composition: {"BEGINNER":{"MCQ":1,"CODING":1},"INTERMEDIATE":{"MCQ":1,"PARSONS":1,"CLOZE":1}}
+
+==============================================================================
+dj_models   (26 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj4e-fk-1
+   2. MCQ      dj4e-fk-2
+   3. MCQ      dj4e-m2m-1
+   4. PREDICT  dj-models-predict-1
+   5. PARSONS  dj-models-parsons-1
+   6. CLOZE    dj-models-cloze-1
+   7. CODING   dj-model-1
+   8. CODING   dj-model-2
+   9. CODING   dj-model-str
+  10. CODING   dj-model-meta
+  --- INTERMEDIATE ---
+  11. MCQ      dj4e-fk-3
+  12. MCQ      dj4e-fk-5
+  13. MCQ      dj4e-m2m-3
+  14. MCQ      dj4e-m2m-5
+  15. PREDICT  dj-models-predict-2
+  16. PREDICT  dj-models-predict-3
+  17. PARSONS  dj-models-parsons-2
+  18. PARSONS  dj-models-parsons-3
+  19. CLOZE    dj-models-cloze-2
+  20. CLOZE    dj-models-cloze-3
+  21. CODING   dj4e-fk-4
+  22. CODING   dj4e-fk-6
+  23. CODING   dj4e-m2m-2
+  24. CODING   dj4e-m2m-4
+  --- ADVANCED ---
+  25. CODING   dj-models-adv-1
+  26. CODING   dj-models-adv-2
+  composition: {"BEGINNER":{"MCQ":3,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":4},"INTERMEDIATE":{"MCQ":4,"PREDICT":2,"PARSONS":2,"CLOZE":2,"CODING":4},"ADVANCED":{"CODING":2}}
+  FLAGS:
+    [PREDICT x3] verify each is deterministic stdout: dj-models-predict-1, dj-models-predict-2, dj-models-predict-3
+
+==============================================================================
+dj_monitoring   (3 questions)   [no-faded by design]
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-monitoring-1
+   2. MCQ      be-infra-monitoring-3
+   3. CODING   be-infra-monitoring-2
+  composition: {"BEGINNER":{"MCQ":2,"CODING":1}}
+
+==============================================================================
+dj_nginx   (3 questions)   [no-faded by design]
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-nginx-3
+   2. CODING   be-infra-nginx-1
+  --- INTERMEDIATE ---
+   3. MCQ      be-infra-nginx-2
+  composition: {"BEGINNER":{"MCQ":1,"CODING":1},"INTERMEDIATE":{"MCQ":1}}
+
+==============================================================================
+dj_orm   (28 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-orm-gap-1
+   2. PARSONS  dj-orm-parsons-1
+   3. PARSONS  dj-orm-parsons-4
+   4. PARSONS  dj-orm-parsons-5
+   5. CLOZE    dj-orm-cloze-1
+   6. CLOZE    dj-orm-cloze-4
+   7. CLOZE    dj-orm-cloze-5
+   8. CLOZE    dj-orm-cloze-6
+   9. CODING   dj-orm-1
+  10. CODING   dj-orm-2
+  11. CODING   py-dj-orm-select-related
+  12. CODING   py-dj-orm-prefetch
+  13. CODING   py-dj-orm-f
+  14. CODING   py-dj-orm-q
+  15. CODING   py-dj-orm-aggregate-annotate
+  16. CODING   dj-orm-gap-2
+  --- INTERMEDIATE ---
+  17. MCQ      dj-orm-6
+  18. MCQ      py-dj-orm-select-vs-prefetch
+  19. PREDICT  dj-orm-predict-1
+  20. PREDICT  dj-orm-predict-2
+  21. PREDICT  dj-orm-predict-3
+  22. PARSONS  dj-orm-parsons-2
+  23. PARSONS  dj-orm-parsons-3
+  24. CLOZE    dj-orm-cloze-2
+  25. CLOZE    dj-orm-cloze-3
+  --- ADVANCED ---
+  26. CODING   dj-orm-3
+  27. CODING   dj-orm-adv-1
+  28. CODING   dj-orm-adv-2
+  composition: {"BEGINNER":{"MCQ":1,"PARSONS":3,"CLOZE":4,"CODING":8},"INTERMEDIATE":{"MCQ":2,"PREDICT":3,"PARSONS":2,"CLOZE":2},"ADVANCED":{"CODING":3}}
+  FLAGS:
+    [PREDICT x3] verify each is deterministic stdout: dj-orm-predict-1, dj-orm-predict-2, dj-orm-predict-3
+
+==============================================================================
+dj_pagination_generics   (6 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      celery-drf-17
+   2. MCQ      dj-pagination-gap-1
+   3. MCQ      dj-pagination-gap-2
+   4. CODING   celery-drf-13
+  --- INTERMEDIATE ---
+   5. MCQ      celery-drf-14
+   6. CODING   celery-drf-16
+  composition: {"BEGINNER":{"MCQ":3,"CODING":1},"INTERMEDIATE":{"MCQ":1,"CODING":1}}
+  FLAGS:
+    [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+==============================================================================
+dj_postgres   (14 questions)   [no-faded by design]
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-postgres-2
+   2. MCQ      be-infra-dbperf-4
+   3. MCQ      dj-postgres-gap-1
+   4. MCQ      dj-postgres-gap-2
+   5. CODING   be-infra-postgres-1
+  --- INTERMEDIATE ---
+   6. MCQ      be-infra-postgres-4
+   7. MCQ      be-infra-dbperf-3
+   8. PREDICT  dj-postgres-predict-1
+   9. CLOZE    dj-postgres-cloze-1
+  10. CODING   be-infra-postgres-3
+  11. CODING   be-infra-dbperf-1
+  12. CODING   be-infra-dbperf-2
+  --- ADVANCED ---
+  13. CODING   dj-postgres-adv-1
+  14. CODING   dj-postgres-adv-2
+  composition: {"BEGINNER":{"MCQ":4,"CODING":1},"INTERMEDIATE":{"MCQ":2,"PREDICT":1,"CLOZE":1,"CODING":3},"ADVANCED":{"CODING":2}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: dj-postgres-predict-1
+
+==============================================================================
+dj_redis   (3 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      celery-drf-9
+   2. MCQ      celery-drf-11
+   3. MCQ      dj-redis-gap-1
+  composition: {"BEGINNER":{"MCQ":3}}
+
+==============================================================================
+dj_rest   (25 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-rest-gap-1
+   2. PREDICT  dj-drf-predict-1
+   3. PARSONS  dj-drf-parsons-1
+   4. CLOZE    dj-drf-cloze-1
+   5. CODING   dj-rest-5
+   6. CODING   dj-rest-1
+   7. CODING   dj-rest-2
+   8. CODING   py-drf-modelviewset
+   9. CODING   py-drf-router
+  10. CODING   py-drf-serializer-validator
+  11. CODING   py-drf-method-field
+  12. CODING   py-drf-permission-class
+  13. CODING   py-drf-pagination
+  14. CODING   py-drf-nested-serializer
+  15. CODING   dj-rest-gap-2
+  --- INTERMEDIATE ---
+  16. MCQ      py-drf-apiview-vs-viewset
+  17. PREDICT  dj-drf-predict-2
+  18. PREDICT  dj-drf-predict-3
+  19. PARSONS  dj-drf-parsons-2
+  20. PARSONS  dj-drf-parsons-3
+  21. CLOZE    dj-drf-cloze-2
+  22. CLOZE    dj-drf-cloze-3
+  --- ADVANCED ---
+  23. CODING   dj-rest-4
+  24. CODING   dj-drf-adv-1
+  25. CODING   dj-drf-adv-2
+  composition: {"BEGINNER":{"MCQ":1,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":11},"INTERMEDIATE":{"MCQ":1,"PREDICT":2,"PARSONS":2,"CLOZE":2},"ADVANCED":{"CODING":3}}
+  FLAGS:
+    [PREDICT x3] verify each is deterministic stdout: dj-drf-predict-1, dj-drf-predict-2, dj-drf-predict-3
+
+==============================================================================
+dj_service_layer   (4 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-service-2
+   2. MCQ      dj-service-layer-gap-1
+   3. CODING   be-infra-service-1
+  --- INTERMEDIATE ---
+   4. MCQ      be-infra-service-3
+  composition: {"BEGINNER":{"MCQ":2,"CODING":1},"INTERMEDIATE":{"MCQ":1}}
+  FLAGS:
+    [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+==============================================================================
+dj_settings   (3 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      be-infra-settings-2
+   2. MCQ      be-infra-settings-3
+   3. CODING   be-infra-settings-1
+  composition: {"BEGINNER":{"MCQ":2,"CODING":1}}
+  FLAGS:
+    [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+==============================================================================
+dj_setup   (13 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-setup-1
+   2. MCQ      py-dj-setup-what-is-app
+   3. MCQ      py-dj-setup-manage-commands
+   4. PARSONS  py-dj-setup-parsons-1
+   5. PARSONS  py-dj-setup-parsons-2
+   6. CLOZE    py-dj-setup-cloze-1
+   7. CLOZE    py-dj-setup-cloze-2
+   8. CODING   py-dj-setup-startproject
+   9. CODING   py-dj-setup-installed-apps
+  10. CODING   py-dj-setup-migrations
+  --- INTERMEDIATE ---
+  11. MCQ      py-dj-setup-settings-structure
+  12. MCQ      dj-setup-gap-1
+  13. CODING   dj-setup-gap-2
+  composition: {"BEGINNER":{"MCQ":3,"PARSONS":2,"CLOZE":2,"CODING":3},"INTERMEDIATE":{"MCQ":2,"CODING":1}}
+
+==============================================================================
+dj_signals_mw   (12 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-sigmw-3
+   2. MCQ      py-dj-mw-what
+   3. MCQ      dj-signals-mw-gap-1
+   4. MCQ      dj-signals-mw-gap-2
+   5. CODING   py-dj-signal-post-save-profile
+   6. CODING   py-dj-signal-register-ready
+   7. CODING   py-dj-mw-custom
+  --- INTERMEDIATE ---
+   8. MCQ      dj-sigmw-2
+   9. MCQ      py-dj-mw-order
+  10. PARSONS  dj-middleware-parsons-1
+  11. CLOZE    dj-signals-cloze-1
+  --- ADVANCED ---
+  12. CODING   dj-signals-mw-adv-1
+  composition: {"BEGINNER":{"MCQ":4,"CODING":3},"INTERMEDIATE":{"MCQ":2,"PARSONS":1,"CLOZE":1},"ADVANCED":{"CODING":1}}
+
+==============================================================================
+dj_templates   (15 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      py-dj-tpl-context-processors
+   2. MCQ      dj4e-tmpl-1
+   3. MCQ      dj4e-tmpl-2
+   4. PARSONS  py-dj-tpl-parsons-1
+   5. PARSONS  py-dj-tpl-parsons-2
+   6. CLOZE    py-dj-tpl-cloze-1
+   7. CLOZE    py-dj-tpl-cloze-2
+   8. CLOZE    py-dj-tpl-cloze-3
+   9. CODING   dj-tmpl-1
+  10. CODING   dj-tmpl-3
+  11. CODING   dj-tmpl-4
+  12. CODING   py-dj-tpl-url-tag
+  13. CODING   py-dj-tpl-inheritance
+  14. CODING   py-dj-tpl-include
+  --- INTERMEDIATE ---
+  15. CODING   py-dj-tpl-custom-filter
+  composition: {"BEGINNER":{"MCQ":3,"PARSONS":2,"CLOZE":3,"CODING":6},"INTERMEDIATE":{"CODING":1}}
+  FLAGS:
+    [COLD INTERMEDIATE TIER] only CODING in this tier — no MCQ/faded on-ramp
+
+==============================================================================
+dj_transactions   (11 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      py-dj-tx-what
+   2. MCQ      dj-transactions-gap-1
+   3. CODING   py-dj-tx-atomic-decorator
+   4. CODING   py-dj-tx-atomic-block
+   5. CODING   py-dj-tx-select-for-update
+   6. CODING   py-dj-tx-savepoint
+  --- INTERMEDIATE ---
+   7. MCQ      py-dj-tx-atomic-requests
+   8. MCQ      dj-transactions-gap-2
+   9. PREDICT  dj-transactions-predict-1
+  10. PARSONS  dj-transactions-parsons-1
+  --- ADVANCED ---
+  11. CODING   dj-tx-1
+  composition: {"BEGINNER":{"MCQ":2,"CODING":4},"INTERMEDIATE":{"MCQ":2,"PREDICT":1,"PARSONS":1},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [PREDICT x1] verify each is deterministic stdout: dj-transactions-predict-1
+
+==============================================================================
+dj_urls   (12 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj-url-4
+   2. PARSONS  py-dj-urls-parsons-1
+   3. PARSONS  py-dj-urls-parsons-2
+   4. CLOZE    py-dj-urls-cloze-1
+   5. CLOZE    py-dj-urls-cloze-2
+   6. CLOZE    py-dj-urls-cloze-3
+   7. CODING   py-dj-urls-path-basic
+   8. CODING   py-dj-urls-converters
+   9. CODING   py-dj-urls-include
+  10. CODING   py-dj-urls-namespace
+  11. CODING   py-dj-urls-re-path
+  --- INTERMEDIATE ---
+  12. MCQ      py-dj-urls-reverse
+  composition: {"BEGINNER":{"MCQ":1,"PARSONS":2,"CLOZE":3,"CODING":5},"INTERMEDIATE":{"MCQ":1}}
+
+==============================================================================
+dj_views   (27 questions)
+==============================================================================
+  --- BEGINNER ---
+   1. MCQ      dj4e-http-1
+   2. MCQ      dj4e-http-2
+   3. MCQ      dj4e-http-3
+   4. MCQ      dj4e-http-4
+   5. MCQ      dj4e-mvc-1
+   6. MCQ      dj4e-mvc-2
+   7. MCQ      dj4e-session-1
+   8. MCQ      dj4e-session-2
+   9. MCQ      dj-views-gap-1
+  10. PREDICT  dj-views-predict-1
+  11. PARSONS  dj-views-parsons-1
+  12. CLOZE    dj-views-cloze-1
+  13. CODING   dj-view-httpresponse
+  14. CODING   dj-view-render
+  15. CODING   dj-view-param
+  16. CODING   dj-view-404
+  17. CODING   dj-view-post
+  18. CODING   dj-views-gap-2
+  --- INTERMEDIATE ---
+  19. MCQ      dj4e-session-5
+  20. MCQ      dj4e-csrf-1
+  21. MCQ      dj4e-urls-1
+  22. MCQ      dj4e-urls-2
+  23. PREDICT  dj-views-predict-2
+  24. CODING   dj-view-1
+  25. CODING   dj4e-session-3
+  26. CODING   dj4e-session-4
+  --- ADVANCED ---
+  27. CODING   dj-views-adv-6
+  composition: {"BEGINNER":{"MCQ":9,"PREDICT":1,"PARSONS":1,"CLOZE":1,"CODING":6},"INTERMEDIATE":{"MCQ":4,"PREDICT":1,"CODING":3},"ADVANCED":{"CODING":1}}
+  FLAGS:
+    [PREDICT x2] verify each is deterministic stdout: dj-views-predict-1, dj-views-predict-2
+
+##############################################################################
+SUMMARY: 30 Django topics, 357 questions
+##############################################################################
+
+dj_admin:
+  [PREDICT x1] verify each is deterministic stdout: dj-admin-predict-1
+
+dj_api_docs:
+  [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+dj_auth:
+  [PREDICT x1] verify each is deterministic stdout: py-dj-auth-predict-1
+
+dj_caching:
+  [PREDICT x1] verify each is deterministic stdout: dj-caching-predict-1
+
+dj_cbv:
+  [PREDICT x1] verify each is deterministic stdout: dj-views-adv-5
+
+dj_celery:
+  [PREDICT x1] verify each is deterministic stdout: dj-celery-predict-1
+
+dj_channels:
+  [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+dj_custom_managers:
+  [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+dj_forms:
+  [PREDICT x3] verify each is deterministic stdout: dj-forms-predict-1, dj-forms-predict-2, dj-forms-predict-3
+
+dj_models:
+  [PREDICT x3] verify each is deterministic stdout: dj-models-predict-1, dj-models-predict-2, dj-models-predict-3
+
+dj_orm:
+  [PREDICT x3] verify each is deterministic stdout: dj-orm-predict-1, dj-orm-predict-2, dj-orm-predict-3
+
+dj_pagination_generics:
+  [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+dj_postgres:
+  [PREDICT x1] verify each is deterministic stdout: dj-postgres-predict-1
+
+dj_rest:
+  [PREDICT x3] verify each is deterministic stdout: dj-drf-predict-1, dj-drf-predict-2, dj-drf-predict-3
+
+dj_service_layer:
+  [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+dj_settings:
+  [NO FADED ON-RAMP] topic has CODING but zero PARSONS/CLOZE scaffolds
+
+dj_templates:
+  [COLD INTERMEDIATE TIER] only CODING in this tier — no MCQ/faded on-ramp
+
+dj_transactions:
+  [PREDICT x1] verify each is deterministic stdout: dj-transactions-predict-1
+
+dj_views:
+  [PREDICT x2] verify each is deterministic stdout: dj-views-predict-1, dj-views-predict-2
+

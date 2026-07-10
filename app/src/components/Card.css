@@ -1,0 +1,51 @@
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Default variant */
+.card-default {
+  box-shadow: var(--shadow-md);
+}
+
+/* Elevated variant - floating effect */
+.card-elevated {
+  box-shadow: var(--shadow-float);
+}
+
+.card-elevated:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Outline variant - subtle border */
+.card-outline {
+  box-shadow: none;
+  border-color: var(--border-strong);
+}
+
+.card-outline:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Accent bar - 2px primary border on top */
+.card-accent-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  opacity: 0.8;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Clickable cards */
+.card[onclick] {
+  cursor: pointer;
+}

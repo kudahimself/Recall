@@ -1,0 +1,100 @@
+/**
+ * Topic.TSQL_MPP_MODEL — SQL for Data Engineering (T-SQL).
+ * Pillar 8 (Cloud Warehouse): MPP / columnar mental model, data distribution,
+ * separation of storage & compute, cost models.
+ */
+import {
+  Question,
+  QuestionType,
+  Difficulty,
+  Topic,
+  Course,
+} from '../types';
+
+export const tsql_mpp_model_questions: Question[] = [
+  {
+    id: 'tsql-mpp-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_MPP_MODEL,
+    course: Course.SQL,
+    question: 'What does "MPP" (Massively Parallel Processing) mean for how a cloud warehouse runs a query?',
+    options: [
+      { id: 'a', text: 'The data is spread across many compute nodes and each node processes its own slice in parallel; results are then combined — so work scales out across nodes rather than running on one machine.', isCorrect: true },
+      { id: 'b', text: 'A single very fast CPU runs the whole query sequentially, just with more RAM.', isCorrect: false },
+      { id: 'c', text: 'Every query is run many times in parallel and the fastest result is kept.', isCorrect: false },
+      { id: 'd', text: 'The query is split across many databases on the same disk, each scanned one after another.', isCorrect: false },
+    ],
+    explanation: 'MPP shards data across nodes (each with its own CPU/memory/storage slice) and runs the same operation on every shard simultaneously, then merges the partial results. This scale-out model is why warehouses like Synapse, Snowflake and BigQuery handle huge facts — but it also means data movement between nodes can dominate cost.',
+    hints: ['Data split across nodes, each works its slice in parallel', 'Scale out, not scale up'],
+    tags: ['tsql', 'mpp', 'cloud-warehouse'],
+  },
+  {
+    id: 'tsql-mpp-mcq-2',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_MPP_MODEL,
+    course: Course.SQL,
+    question: 'In an MPP warehouse, why is "data movement" (shuffle) the thing to minimise?',
+    options: [
+      { id: 'a', text: 'When a join/aggregation needs rows that live on different nodes, the engine must redistribute data across the network between nodes — often the dominant cost of a query.', isCorrect: true },
+      { id: 'b', text: 'Data movement refers to backing up the database nightly, which slows the morning queries.', isCorrect: false },
+      { id: 'c', text: 'It means physically relocating disks between data centres during a query.', isCorrect: false },
+      { id: 'd', text: 'It is the time spent moving the result set to the client, which dominates every query.', isCorrect: false },
+    ],
+    explanation: 'Each node can only work on its local data. If a join key isn\'t co-located, the engine shuffles rows across nodes over the network to bring matching rows together — expensive at scale. Distribution design (hashing big tables on common join keys, replicating small ones) is all about avoiding shuffles.',
+    hints: ['Shuffle = redistributing rows across nodes for a join/agg', 'Network movement often dominates query cost'],
+    tags: ['tsql', 'mpp', 'data-movement', 'shuffle'],
+  },
+  {
+    id: 'tsql-mpp-mcq-3',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_MPP_MODEL,
+    course: Course.SQL,
+    question: 'What does "separation of storage and compute" enable in a modern cloud warehouse?',
+    options: [
+      { id: 'a', text: 'Storage and compute scale and bill independently — you can resize or pause compute without touching the data, and multiple compute clusters can read the same stored data.', isCorrect: true },
+      { id: 'b', text: 'Data and queries must always run on the same fixed-size server, billed as one unit.', isCorrect: false },
+      { id: 'c', text: 'Storage is free as long as you never run any compute against it.', isCorrect: false },
+      { id: 'd', text: 'Compute can only ever access storage that is physically attached to the same node.', isCorrect: false },
+    ],
+    explanation: 'Decoupling storage from compute (Snowflake virtual warehouses, Synapse serverless, BigQuery slots) lets you scale compute up for a heavy load and down/off when idle without moving data, pay for each separately, and run several independent compute clusters over one copy of the data. It is the defining architecture shift from on-prem MPP.',
+    hints: ['Scale/bill/pause compute independently of data', 'Many compute clusters over one stored copy'],
+    tags: ['tsql', 'mpp', 'storage-compute-separation'],
+  },
+  {
+    id: 'tsql-mpp-mcq-4',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_MPP_MODEL,
+    course: Course.SQL,
+    question: 'Cloud warehouses bill in different ways. Which pairing is correct?',
+    options: [
+      { id: 'a', text: 'BigQuery (on-demand) charges by bytes scanned per query; Snowflake charges by compute (warehouse) time while running; Synapse Dedicated Pools charge by provisioned capacity (DWU) over time.', isCorrect: true },
+      { id: 'b', text: 'All three charge purely by the number of rows returned to the client.', isCorrect: false },
+      { id: 'c', text: 'All three charge a flat monthly fee regardless of usage.', isCorrect: false },
+      { id: 'd', text: 'BigQuery charges by warehouse uptime; Snowflake charges by bytes scanned; neither bills for compute.', isCorrect: false },
+    ],
+    explanation: 'Cost models drive design. BigQuery on-demand bills bytes scanned — so partitioning, clustering and avoiding `SELECT *` cut the bill directly. Snowflake bills running compute time per virtual warehouse — so you suspend idle warehouses. Synapse Dedicated bills provisioned DWUs over time — so you pause/scale the pool. Knowing the model tells you what to optimise.',
+    hints: ['BigQuery → bytes scanned', 'Snowflake → compute time; Synapse Dedicated → provisioned DWU'],
+    tags: ['tsql', 'mpp', 'cost-model'],
+  },
+  {
+    id: 'tsql-mpp-mcq-5',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_MPP_MODEL,
+    course: Course.SQL,
+    question: 'Why do MPP/columnar warehouses generally discourage frequent small singleton INSERTs (one row at a time)?',
+    options: [
+      { id: 'a', text: 'They are optimised for large bulk/batch loads into compressed columnar segments; trickle single-row inserts create tiny, poorly-compressed segments and high per-statement overhead.', isCorrect: true },
+      { id: 'b', text: 'Single-row inserts are blocked entirely by every cloud warehouse.', isCorrect: false },
+      { id: 'c', text: 'They corrupt the distribution key and force a full table rebuild each time.', isCorrect: false },
+      { id: 'd', text: 'They are actually the recommended loading method for maximum throughput.', isCorrect: false },
+    ],
+    explanation: 'Columnar MPP storage shines when data lands in big batches that fill well-compressed segments/rowgroups. A stream of singleton inserts produces many tiny, inefficient segments and pays fixed per-statement overhead each time — so the pattern is micro-batch or bulk-load (COPY/CTAS/PolyBase), not row-at-a-time DML.',
+    hints: ['Built for bulk/batch loads into columnar segments', 'Singletons → tiny segments + high overhead'],
+    tags: ['tsql', 'mpp', 'bulk-load'],
+  },
+];

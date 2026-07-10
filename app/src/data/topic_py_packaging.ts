@@ -1,0 +1,147 @@
+/**
+ * Topic.PY_PACKAGING — all question types for this topic.
+ * Auto-consolidated by scripts/consolidate-by-topic.js from:
+ *   pythonMasteryTier2Questions.ts (6)
+ */
+import {
+  Question,
+  QuestionType,
+  Difficulty,
+  Topic,
+  Course,
+} from '../types';
+
+export const py_packaging_questions: Question[] = [
+  {
+      id: 'py-packaging-1',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      question: 'Why use a virtual environment (venv) per project instead of installing everything into the system Python?',
+      options: [
+        { id: 'a', text: 'Venvs make Python run faster', isCorrect: false },
+        { id: 'b', text: 'Each venv has its own isolated `site-packages`, so Project A can depend on `django==3.2` while Project B uses `django==5.0` without conflict. System Python should stay pristine to avoid breaking OS tools that depend on specific library versions.', isCorrect: true },
+        { id: 'c', text: 'Venvs are required by the Python interpreter', isCorrect: false },
+        { id: 'd', text: 'Only needed in production', isCorrect: false },
+      ],
+      explanation: 'Every modern Python workflow uses isolated environments: `python -m venv .venv && source .venv/bin/activate` at minimum, or a tool that manages them for you (`poetry env use`, `uv venv`, `pipenv`, conda). Never `pip install` into system Python on macOS/Linux — PEP 668 now actively refuses on many distros. On Windows the conflict is less visible but just as real.',
+      hints: [
+        'python -m venv .venv; source .venv/bin/activate',
+        'Per-project isolation of dependencies',
+        'Modern distros block system pip installs (PEP 668)',
+      ],
+      tags: ['packaging', 'venv', 'virtualenv'],
+      concepts: ['py-packaging-tools'],
+    },
+  {
+      id: 'py-packaging-2',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      question: 'What is `pyproject.toml` and why has it replaced `setup.py` and `requirements.txt` in modern Python projects?',
+      options: [
+        { id: 'a', text: 'It is a replacement for venv', isCorrect: false },
+        { id: 'b', text: 'A standardised TOML config file (PEP 518/517/621) that declares project metadata, dependencies, build backend, and tool config all in one place. Replaces `setup.py` (executable → security/reproducibility issues), `setup.cfg`, and scattered `requirements*.txt`. Tools like Poetry, Hatch, uv, Flit, and setuptools all read it.', isCorrect: true },
+        { id: 'c', text: 'A proprietary format for conda', isCorrect: false },
+        { id: 'd', text: 'Only needed if you publish to PyPI', isCorrect: false },
+      ],
+      explanation: 'PEP 621 standardised the `[project]` table: `name`, `version`, `dependencies`, `requires-python`, `authors`, `scripts` (entry points). PEP 517/518 standardised the build backend declaration. Benefits: one file, declarative, tool-agnostic, no executable setup.py. Put tool config (ruff, mypy, pytest, coverage) in `[tool.*]` sections. The `requirements.txt` pattern is still fine for Docker layers, but not for source-of-truth.',
+      hints: [
+        '[project] table — PEP 621 metadata',
+        '[build-system] — PEP 517 backend declaration',
+        '[tool.<name>] — per-tool config (ruff, mypy, etc.)',
+      ],
+      tags: ['packaging', 'pyproject', 'PEP-621'],
+      concepts: ['py-packaging-tools'],
+    },
+  {
+      id: 'py-packaging-3',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      question: 'You want to develop a library while another project uses it. How do you set it up so that changes to the library are picked up immediately in the consumer without reinstalling?',
+      options: [
+        { id: 'a', text: 'Copy the library source into the consumer project', isCorrect: false },
+        { id: 'b', text: 'Run `pip install -e path/to/library` (editable install). pip installs a `.pth` file pointing at the library source — imports load the live files, so edits are reflected without reinstalling. Essential for local development across multiple packages.', isCorrect: true },
+        { id: 'c', text: 'Publish a new version to PyPI for every change', isCorrect: false },
+        { id: 'd', text: 'Add it to `sys.path` manually at runtime', isCorrect: false },
+      ],
+      explanation: '`pip install -e .` (inside the library) or `pip install -e ../mylib` (inside the consumer) does an editable install. The library must have a valid `pyproject.toml` (or `setup.py`). Changes to `.py` files are live; changes to metadata, entry_points, or package layout still need `pip install -e .` again. This is the standard monorepo / multi-repo local-dev pattern.',
+      hints: [
+        'pip install -e path/to/library',
+        'Editable = live-reload Python source, no reinstall per change',
+        'Still need reinstall for metadata / entry_point changes',
+      ],
+      tags: ['packaging', 'pip', 'editable-install'],
+      concepts: ['py-packaging-tools'],
+    },
+  {
+      id: 'py-packaging-4',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      question: 'What is `uv` and why is it getting adopted quickly?',
+      options: [
+        { id: 'a', text: 'A new Python interpreter', isCorrect: false },
+        { id: 'b', text: 'A Rust-written, drop-in replacement for `pip`, `pip-tools`, `virtualenv` and a faster `poetry` alternative — 10–100× faster install/resolve, with a lockfile, venv management, and Python-version management (via `uv python install`). One tool, minimal config, extreme speed.', isCorrect: true },
+        { id: 'c', text: 'An ORM for SQL databases', isCorrect: false },
+        { id: 'd', text: 'A VSCode plugin', isCorrect: false },
+      ],
+      explanation: '`uv` (from Astral, makers of Ruff) replaces most of the ecosystem\'s fragmented tooling with one fast binary: `uv venv`, `uv pip install`, `uv sync`, `uv add`, `uv run`, `uv python install 3.13`. Lockfile is `uv.lock`. Still interoperates with `pyproject.toml`. If you\'re starting a new project in 2024/2025, `uv` is the low-risk default. Poetry is still fine if you\'re on it already.',
+      hints: [
+        'uv pip install, uv venv, uv sync — one binary replaces most tools',
+        'Lockfile: uv.lock; manages interpreter versions too',
+        'Rust-based → 10-100× faster than pip',
+      ],
+      tags: ['packaging', 'uv', 'pip', 'modern'],
+      concepts: ['py-modern-syntax'],
+    },
+  {
+      id: 'py-packaging-5',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      question: 'What is the difference between pinning dependencies in `pyproject.toml` vs in a lockfile (`poetry.lock` / `uv.lock` / `requirements.txt` with hashes)?',
+      options: [
+        { id: 'a', text: 'Lockfiles are deprecated', isCorrect: false },
+        { id: 'b', text: '`pyproject.toml` declares ranges ("my app works with `django>=4.2,<5.0`") — the contract for consumers of your lib. Lockfiles pin EXACT resolved versions of every transitive dependency for reproducible installs — the contract for deployments. Commit lockfiles for applications; usually not for libraries.', isCorrect: true },
+        { id: 'c', text: 'They are the same file', isCorrect: false },
+        { id: 'd', text: 'Lockfiles only contain test dependencies', isCorrect: false },
+      ],
+      explanation: 'App: you want the EXACT same versions in CI as in prod — commit the lockfile. Library: you want callers to have flexibility — declare ranges, don\'t ship a lockfile (it can still exist locally to aid your own development). `pip install -r requirements.txt` is fine but can drift if you don\'t freeze transitive deps; modern lockfiles (`poetry.lock`, `uv.lock`) always capture the full graph with hashes.',
+      hints: [
+        'pyproject = ranges (contract); lockfile = exact versions (install plan)',
+        'Commit lockfile for apps; often not for libs',
+        'Lockfiles include transitive deps and hashes for reproducibility',
+      ],
+      tags: ['packaging', 'lockfile', 'versioning'],
+      concepts: ['py-packaging-tools'],
+    },
+  {
+      id: 'py-packaging-6',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      question: 'Your `pyproject.toml` has `[project.scripts]` with `mytool = "mytool.cli:main"`. What does this give you after `pip install`?',
+      options: [
+        { id: 'a', text: 'Nothing — that section is ignored', isCorrect: false },
+        { id: 'b', text: 'A `mytool` executable on `PATH`. Running `mytool` from the shell imports `mytool.cli` and calls `main()`. This is how every `pip install`-able CLI (ruff, black, mypy, django-admin) works — they all declare entry points.', isCorrect: true },
+        { id: 'c', text: 'An alias for `python -m mytool`', isCorrect: false },
+        { id: 'd', text: 'A shortcut only inside your venv; does not work system-wide', isCorrect: false },
+      ],
+      explanation: 'Entry points are how Python packaging creates shell commands. When pip installs your package, it generates a thin launcher script in the venv\'s `bin/` (or `Scripts\\`) directory. That launcher sets up sys.path, imports your module, and calls the named function. Also used for plugin discovery (e.g. pytest plugins register under `[project.entry-points."pytest11"]`). No `__main__.py` hackery needed.',
+      hints: [
+        '[project.scripts] key-name = "module.submod:callable"',
+        'pip install creates the shell-callable script',
+        'Also enables plugin systems via entry_points groups',
+      ],
+      tags: ['packaging', 'entry-points', 'scripts', 'CLI'],
+      concepts: ['py-packaging-tools', 'py-cli-tools'],
+    },
+];

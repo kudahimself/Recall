@@ -1,0 +1,86 @@
+.heatmap-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.heatmap-grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding: var(--space-sm);
+}
+
+.heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heatmap-day {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.heatmap-day:hover {
+  transform: scale(1.2);
+  border: 1px solid var(--border-strong);
+}
+
+/* Intensity levels - GitHub style with our primary color */
+.heatmap-day.intensity-0 {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-day.intensity-1 {
+  background: rgba(14, 165, 233, 0.2);
+}
+
+.heatmap-day.intensity-2 {
+  background: rgba(14, 165, 233, 0.4);
+}
+
+.heatmap-day.intensity-3 {
+  background: rgba(14, 165, 233, 0.6);
+}
+
+.heatmap-day.intensity-4 {
+  background: rgba(14, 165, 233, 0.9);
+}
+
+/* Legend */
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.heatmap-legend > div {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+.legend-label {
+  margin: 0 4px;
+}
+
+/* Scrollbar styling */
+.heatmap-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.heatmap-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.heatmap-grid::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
