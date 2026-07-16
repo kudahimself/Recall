@@ -31,6 +31,57 @@ export const tsql_joins_questions: Question[] = [
     tags: ['tsql', 'joins', 'inner-join', 'left-join'],
   },
   {
+    id: 'tsql-joins-mcq-2',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_JOINS,
+    course: Course.SQL,
+    question: 'What does a FULL OUTER JOIN return?',
+    options: [
+      { id: 'a', text: 'Every row from both tables - matched rows combined, and unmatched rows from either side padded with NULL on the missing side.', isCorrect: true },
+      { id: 'b', text: 'Only rows that match in both tables, same result as an INNER JOIN.', isCorrect: false },
+      { id: 'c', text: 'Every row from the right table only, matched against the left where possible.', isCorrect: false },
+      { id: 'd', text: 'The Cartesian product of both tables - every combination of rows.', isCorrect: false },
+    ],
+    explanation: 'FULL OUTER JOIN is the union of LEFT and RIGHT: it keeps every row from both tables, filling in NULL on whichever side has no match. INNER JOIN would drop unmatched rows entirely, and a Cartesian product is what CROSS JOIN produces.',
+    hints: ['FULL OUTER = union of LEFT and RIGHT', 'unmatched rows on either side get NULL padding'],
+    tags: ['tsql', 'joins', 'full-join'],
+  },
+  {
+    id: 'tsql-joins-right-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_JOINS,
+    course: Course.SQL,
+    question: 'How does RIGHT JOIN differ from LEFT JOIN?',
+    options: [
+      { id: 'a', text: 'RIGHT JOIN keeps every row from the right-hand table, filling unmatched left-side columns with NULL - the mirror image of LEFT JOIN.', isCorrect: true },
+      { id: 'b', text: 'RIGHT JOIN keeps every row from the left-hand table, identical to LEFT JOIN, just sorted in reverse.', isCorrect: false },
+      { id: 'c', text: 'RIGHT JOIN only returns rows matching in both tables, identical to INNER JOIN.', isCorrect: false },
+      { id: 'd', text: 'RIGHT JOIN is not valid T-SQL syntax; the tables must be swapped and written as LEFT JOIN instead.', isCorrect: false },
+    ],
+    explanation: 'RIGHT JOIN is LEFT JOIN with the preserved side flipped - it keeps every row of the right-hand table. It is valid, standard T-SQL, but rarely used in practice since swapping the table order in a LEFT JOIN reads more naturally and achieves the same result.',
+    hints: ['RIGHT JOIN = LEFT JOIN with sides swapped', 'keeps all rows from the right table'],
+    tags: ['tsql', 'joins', 'right-join'],
+  },
+  {
+    id: 'tsql-joins-cross-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_JOINS,
+    course: Course.SQL,
+    question: "What does `SELECT * FROM dbo.DimColor CROSS JOIN dbo.DimSize` return, given DimColor has 4 rows and DimSize has 3 rows?",
+    options: [
+      { id: 'a', text: '12 rows - every combination of a color and a size (the Cartesian product).', isCorrect: true },
+      { id: 'b', text: '7 rows - the two tables stacked on top of each other.', isCorrect: false },
+      { id: 'c', text: '3 rows - one per DimSize row, matched arbitrarily to a color.', isCorrect: false },
+      { id: 'd', text: '0 rows - CROSS JOIN requires an ON clause or it returns nothing.', isCorrect: false },
+    ],
+    explanation: 'CROSS JOIN (no ON clause, no shared key needed) produces the Cartesian product: every row of the first table paired with every row of the second, so 4 x 3 = 12 rows. It is often used deliberately to generate combinations, like a color/size matrix for products.',
+    hints: ['No ON clause - every row pairs with every row', '4 colors x 3 sizes = 12 combinations'],
+    tags: ['tsql', 'joins', 'cross-join'],
+  },
+  {
     id: 'tsql-joins-predict-1',
     type: QuestionType.PREDICT_OUTPUT,
     difficulty: Difficulty.BEGINNER,
@@ -163,5 +214,32 @@ WHERE NOT EXISTS (
     explanation: 'Two idiomatic anti-joins: a LEFT JOIN keeping only rows where the right side is NULL, or `NOT EXISTS` with a correlated subquery. Both return customers with zero orders; `NOT EXISTS` is often the clearer intent and handles NULLs safely.',
     hints: ['LEFT JOIN then WHERE o.OrderId IS NULL', 'or NOT EXISTS (correlated subquery)'],
     tags: ['tsql', 'joins', 'left-join', 'anti-join'],
+  },
+  {
+    id: 'tsql-joins-3',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_JOINS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Join `dbo.FactOrders o` (CustomerKey, ProductKey, Amount) to both `dbo.DimCustomer c` (CustomerKey, FullName, Country) and `dbo.DimProduct p` (ProductKey, ProductName, Category). Return FullName, ProductName, and Amount for orders where the customer's Country is 'NO' and the product's Category is 'Books', ordered by Amount descending.",
+    starterCode: `-- join across three tables
+`,
+    testCases: [
+      {
+        input: "3-table INNER JOIN, WHERE c.Country='NO' AND p.Category='Books', ORDER BY Amount DESC",
+        expectedOutput: 'FullName + ProductName + Amount for matching orders',
+        description: 'Multi-table join with cross-table filter',
+      },
+    ],
+    solution: `SELECT c.FullName, p.ProductName, o.Amount
+FROM dbo.FactOrders o
+INNER JOIN dbo.DimCustomer c ON c.CustomerKey = o.CustomerKey
+INNER JOIN dbo.DimProduct p ON p.ProductKey = o.ProductKey
+WHERE c.Country = 'NO' AND p.Category = 'Books'
+ORDER BY o.Amount DESC;`,
+    explanation: 'A fact table commonly joins to several dimension tables at once - here FactOrders joins to both DimCustomer and DimProduct on their respective keys. Once joined, the WHERE clause can filter on columns from either dimension, and ORDER BY sorts the combined result.',
+    hints: ['Two INNER JOINs, one per dimension table', 'Filter on columns from both joined tables', 'ORDER BY Amount DESC'],
+    tags: ['tsql', 'joins', 'multi-table-join', 'inner-join'],
   },
 ];

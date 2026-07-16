@@ -90,6 +90,23 @@ COMMIT;`,
     tags: ['tsql', 'transactions', 'xact-abort'],
   },
   {
+    id: 'tsql-tran-trancount-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_TRANSACTIONS,
+    course: Course.SQL,
+    question: 'What does `@@TRANCOUNT` return, and why do procedures often check it before opening a transaction?',
+    options: [
+      { id: 'a', text: 'The number of currently open (nested) transactions on the connection; checking it lets a procedure avoid opening a redundant nested transaction when the caller already has one open.', isCorrect: true },
+      { id: 'b', text: 'The total number of rows modified since the connection began; it resets to 0 after every COMMIT.', isCorrect: false },
+      { id: 'c', text: 'A boolean flag indicating whether the last statement succeeded.', isCorrect: false },
+      { id: 'd', text: 'The number of active connections to the database from any session.', isCorrect: false },
+    ],
+    explanation: '`@@TRANCOUNT` is the nesting depth of open transactions on the current connection - 0 means none is open. A procedure that might run standalone or be called from inside a caller\'s transaction often checks it (e.g. only opening its own transaction when `@@TRANCOUNT = 0`) so a ROLLBACK inside doesn\'t unexpectedly undo the caller\'s work too.',
+    hints: ['@@TRANCOUNT = nesting depth of open transactions', 'Guards against opening a redundant nested transaction'],
+    tags: ['tsql', 'transactions', 'trancount'],
+  },
+  {
     id: 'tsql-tran-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -113,5 +130,30 @@ COMMIT;`,
     explanation: 'The two updates are a single logical operation (a transfer), so they must succeed or fail together. `BEGIN TRAN` opens the transaction and `COMMIT` makes both updates permanent at once — there is never a moment where the money has left one account but not arrived in the other.',
     hints: ['BEGIN TRAN around both updates', 'COMMIT at the end'],
     tags: ['tsql', 'transactions', 'begin-tran'],
+  },
+  {
+    id: 'tsql-tran-savetran-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_TRANSACTIONS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the statement that marks a savepoint, and the clause that rolls back only to it (undoing the bad update but keeping the first one and the open transaction).',
+    template: `BEGIN TRAN;
+    UPDATE dbo.Account SET Balance = Balance - 50 WHERE AccountId = 1;
+    ___ TRAN BeforeBonus;
+    UPDATE dbo.Account SET Balance = Balance + 1000000 WHERE AccountId = 1; -- wrong amount
+    ROLLBACK TRAN ___;
+COMMIT;`,
+    blanks: ['SAVE', 'BeforeBonus'],
+    solution: `BEGIN TRAN;
+    UPDATE dbo.Account SET Balance = Balance - 50 WHERE AccountId = 1;
+    SAVE TRAN BeforeBonus;
+    UPDATE dbo.Account SET Balance = Balance + 1000000 WHERE AccountId = 1; -- wrong amount
+    ROLLBACK TRAN BeforeBonus;
+COMMIT;`,
+    explanation: '`SAVE TRAN <name>` marks a savepoint inside an open transaction. `ROLLBACK TRAN <name>` (naming the savepoint, not a bare ROLLBACK) undoes only the work done since that point - the bad bonus update - while the first UPDATE and the transaction itself stay open, ready to COMMIT.',
+    hints: ['Mark a savepoint with SAVE TRAN <name>', 'Roll back to it by naming it in ROLLBACK TRAN'],
+    tags: ['tsql', 'transactions', 'save-tran', 'savepoint', 'cloze'],
   },
 ];

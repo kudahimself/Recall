@@ -104,9 +104,30 @@ export const tsql_constraints_questions: Question[] = [
     tags: ['tsql', 'constraints', 'check', 'cloze'],
   },
   {
+    id: 'tsql-constraints-unique-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_CONSTRAINTS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the constraint that forbids duplicate OrderRef values (but still allows one NULL).',
+    template: `CREATE TABLE dbo.FactOrders (
+    OrderId  INT PRIMARY KEY,
+    OrderRef NVARCHAR(40) ___
+);`,
+    blanks: ['UNIQUE'],
+    solution: `CREATE TABLE dbo.FactOrders (
+    OrderId  INT PRIMARY KEY,
+    OrderRef NVARCHAR(40) UNIQUE
+);`,
+    explanation: '`UNIQUE` forbids duplicate values on the column (unlike PRIMARY KEY, a table can have several), and SQL Server permits one NULL through it since NULL is never considered equal to another NULL.',
+    hints: ['No-duplicates constraint, distinct from PRIMARY KEY'],
+    tags: ['tsql', 'constraints', 'unique', 'cloze'],
+  },
+  {
     id: 'tsql-constraints-1',
     type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
+    difficulty: Difficulty.ADVANCED,
     topic: Topic.TSQL_CONSTRAINTS,
     course: Course.SQL,
     language: CodeLanguage.SQL,

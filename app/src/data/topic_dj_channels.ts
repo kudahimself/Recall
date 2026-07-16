@@ -31,6 +31,30 @@ export const dj_channels_questions: Question[] = [
       concepts: ['inf-wsgi-vs-asgi'],
     },
   {
+      id: 'dj-channels-groupsend-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_CHANNELS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the broadcast call and the handler it dispatches to. The "type" key\'s dots become underscores in the method name.',
+      template: `class NotificationConsumer(AsyncWebSocketConsumer):
+    async def receive(self, text_data):
+        await self.channel_layer.___(
+            self.group_name,
+            {"type": "notify.message", "text": text_data},
+        )
+
+    async def ___(self, event):
+        await self.send(text_data=event["text"])`,
+      blanks: ['group_send', 'notify_message'],
+      solution: 'class NotificationConsumer(AsyncWebSocketConsumer):\n    async def receive(self, text_data):\n        await self.channel_layer.group_send(\n            self.group_name,\n            {"type": "notify.message", "text": text_data},\n        )\n\n    async def notify_message(self, event):\n        await self.send(text_data=event["text"])',
+      explanation: '`group_send(group_name, event)` broadcasts `event` to every consumer in the group. The `"type"` value is translated dot-to-underscore into a method name Channels calls on each consumer — `"notify.message"` calls `notify_message(self, event)`. That handler is where you actually `self.send(...)` to the client socket.',
+      hints: ['Broadcast method on channel_layer', 'Method name = type value with dots replaced by underscores'],
+      tags: ['channels', 'websocket', 'group_send', 'cloze'],
+      concepts: ['dj-channels-realtime'],
+    },
+  {
       id: 'be-infra-channels-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,

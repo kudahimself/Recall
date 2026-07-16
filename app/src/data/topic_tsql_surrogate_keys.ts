@@ -71,6 +71,27 @@ export const tsql_surrogate_keys_questions: Question[] = [
     tags: ['tsql', 'surrogate-keys', 'identity', 'cloze'],
   },
   {
+    id: 'tsql-surr-sequence-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_SURROGATE_KEYS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the object type that defines a standalone key generator, and the expression that fetches its next value.',
+    template: `CREATE ___ dbo.OrderKeySeq AS INT START WITH 1 INCREMENT BY 1;
+
+INSERT INTO dbo.FactOrders (OrderKey, Amount)
+VALUES (NEXT VALUE ___ dbo.OrderKeySeq, 100);`,
+    blanks: ['SEQUENCE', 'FOR'],
+    solution: `CREATE SEQUENCE dbo.OrderKeySeq AS INT START WITH 1 INCREMENT BY 1;
+
+INSERT INTO dbo.FactOrders (OrderKey, Amount)
+VALUES (NEXT VALUE FOR dbo.OrderKeySeq, 100);`,
+    explanation: '`CREATE SEQUENCE` defines a standalone number generator, unlike `IDENTITY` it is not tied to one column or table. `NEXT VALUE FOR <sequence>` fetches the next value - you can grab it before the INSERT, which is handy when a parent and child row both need the same generated key.',
+    hints: ['Standalone generator object, not a column property', 'NEXT VALUE FOR <sequence name>'],
+    tags: ['tsql', 'surrogate-keys', 'sequence', 'cloze'],
+  },
+  {
     id: 'tsql-surr-mcq-3',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,

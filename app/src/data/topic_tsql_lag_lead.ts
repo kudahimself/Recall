@@ -68,6 +68,41 @@ FROM dbo.FactOrders;`,
     tags: ['tsql', 'lag-lead', 'lag', 'partition-by', 'cloze'],
   },
   {
+    id: 'tsql-laglead-lead-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_LAG_LEAD,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'What does this query output (one value per line)?',
+    code: `SELECT LEAD(v.amt, 1, 0) OVER (ORDER BY v.d) AS next_amt
+FROM (VALUES (1, 10), (2, 25), (3, 20)) AS v(d, amt)
+ORDER BY v.d;`,
+    expectedOutput: `25
+20
+0`,
+    explanation: 'LEAD(amt, 1, 0) looks one row AHEAD in date order: row 1 sees row 2\'s amount (25), row 2 sees row 3\'s (20), and row 3 has no following row so it falls back to the default 0. LEAD is the mirror of LAG - forward instead of backward.',
+    hints: ['LEAD reads the NEXT row, not the previous one', 'the last row has no following row - falls back to the default'],
+    tags: ['tsql', 'lag-lead', 'lead', 'predict'],
+  },
+  {
+    id: 'tsql-laglead-firstvalue-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_LAG_LEAD,
+    course: Course.SQL,
+    question: 'What does `FIRST_VALUE(Amount) OVER (PARTITION BY CustomerKey ORDER BY OrderDate)` return for each row?',
+    options: [
+      { id: 'a', text: "That customer's earliest order's Amount, repeated on every row of the partition - a fixed reference value rather than a changing one like LAG.", isCorrect: true },
+      { id: 'b', text: "The current row's own Amount, unchanged - FIRST_VALUE is a no-op alias for the column itself.", isCorrect: false },
+      { id: 'c', text: 'NULL on every row until the partition has at least two orders.', isCorrect: false },
+      { id: 'd', text: "The average of the customer's first and last order Amounts.", isCorrect: false },
+    ],
+    explanation: '`FIRST_VALUE` returns the value from the first row of the ordered window frame - here, each customer\'s earliest order by date - and repeats it on every row of that partition. Unlike LAG, which looks one row back, FIRST_VALUE anchors to a fixed point (the start), which is handy for "compare to the original" style calculations.',
+    hints: ['Returns the first row of the ordered partition, repeated', 'A fixed anchor value, not a shifting lookback'],
+    tags: ['tsql', 'lag-lead', 'first-value'],
+  },
+  {
     id: 'tsql-laglead-mcq-2',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,

@@ -35,9 +35,9 @@ class ArticleFactory(factory.django.___):
       solution: 'import factory\nfrom articles.models import Article\n\nclass ArticleFactory(factory.django.DjangoModelFactory):\n    class Meta:\n        model = Article\n\n    title = factory.Sequence(lambda n: f"Article {n}")\n    body = factory.Faker("paragraph")\n    author = factory.SubFactory(UserFactory)',
       explanation: '`DjangoModelFactory` uses `Meta.model` and saves to the DB by default. `Sequence` produces unique deterministic values keyed off an incrementing `n`. `Faker` generates plausible random data. `SubFactory` builds related instances on demand — eliminating manual FK setup in tests.',
       hints: ['DjangoModelFactory for Django models', 'Sequence(lambda n: ...) for uniqueness', 'SubFactory for FK relations'],
-      tags: ['django', 'factory_boy', 'testing', 'cloze'],
+      tags: ['django', 'factory_boy', 'testing', 'cloze', 'Sequence', 'Faker', 'SubFactory'],
       concepts: ['py-test-isolation'],
-    },
+    },
   {
       id: 'py-dj-factory-what',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -136,6 +136,27 @@ class PostFactory(factory.django.DjangoModelFactory):
       concepts: ['dj-test-fixtures'],
     },
   {
+      id: 'dj-factoryboy-trait-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FACTORY_BOY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the inner class that groups named variations and the helper that bundles field overrides under one name.',
+      template: `class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+
+    class ___:
+        admin = factory.___(is_staff=True, is_superuser=True)`,
+      blanks: ['Params', 'Trait'],
+      solution: 'class UserFactory(factory.django.DjangoModelFactory):\n    class Meta:\n        model = User\n\n    class Params:\n        admin = factory.Trait(is_staff=True, is_superuser=True)',
+      explanation: '`class Params:` is the inner class that holds trait declarations. `factory.Trait(...)` bundles a set of field overrides under one name — activate it with `UserFactory(admin=True)`.',
+      hints: ['Inner class name for trait declarations', 'Helper that bundles field overrides'],
+      tags: ['django', 'factory_boy', 'Trait', 'cloze'],
+      concepts: ['dj-test-fixtures'],
+    },
+  {
       id: 'py-dj-factory-traits',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -172,6 +193,23 @@ class UserFactory(factory.django.DjangoModelFactory):
         'Subclass when the structure differs, not just field values',
       ],
       tags: ['django', 'factory_boy', 'Trait'],
+      concepts: ['dj-test-fixtures'],
+    },
+  {
+      id: 'dj-factoryboy-batch-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FACTORY_BOY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the factory method that creates several instances at once, with per-batch field overrides.',
+      template: `published = PostFactory.___(3, is_published=True)
+drafts = PostFactory.___(2, is_published=False)`,
+      blanks: ['create_batch', 'create_batch'],
+      solution: 'published = PostFactory.create_batch(3, is_published=True)\ndrafts = PostFactory.create_batch(2, is_published=False)',
+      explanation: '`create_batch(N, **overrides)` calls `.create()` N times, applying the same overrides to each. Different calls can pass different overrides, letting one arrange step build several distinct groups of test data.',
+      hints: ['Factory method name: create + batch'],
+      tags: ['django', 'factory_boy', 'create_batch', 'cloze'],
       concepts: ['dj-test-fixtures'],
     },
   {

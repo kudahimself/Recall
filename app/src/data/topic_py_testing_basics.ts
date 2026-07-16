@@ -356,6 +356,34 @@ def test_add(a, b, expected):
     concepts: ['py-test-isolation'],
   },
   {
+    id: 'py-testing-skipmarker-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PY_TESTING_BASICS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question:
+      'Fill in the marker that always skips a test, and the one that skips only when a condition holds.',
+    template: `import sys
+import pytest
+
+@pytest.mark.___(reason="not ready")
+def test_a():
+    assert True
+
+@pytest.mark.___(sys.platform.startswith("win"), reason="POSIX only")
+def test_b():
+    assert True`,
+    blanks: ['skip', 'skipif'],
+    solution:
+      'import sys\nimport pytest\n\n@pytest.mark.skip(reason="not ready")\ndef test_a():\n    assert True\n\n@pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX only")\ndef test_b():\n    assert True',
+    explanation:
+      '@pytest.mark.skip(reason=...) always skips. @pytest.mark.skipif(condition, reason=...) skips only when the condition is True at collection time — for platform, version, or missing-dependency checks. Both live under pytest.mark, same as parametrize.',
+    hints: ['skip = unconditional; skipif = conditional, takes a bool first arg.'],
+    tags: ['pytest', 'markers', 'skip', 'skipif'],
+    concepts: ['py-test-isolation'],
+  },
+  {
     id: 'py-ptest-markers-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,

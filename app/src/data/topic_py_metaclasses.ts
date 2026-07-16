@@ -30,6 +30,24 @@ export const py_metaclasses_questions: Question[] = [
       concepts: ['py-metaclass'],
     },
 {
+      id: 'py-meta-typector-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.PY_METACLASSES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the three-argument form of type() that dynamically builds a class: name, bases tuple, namespace dict.',
+      template: `Point = ___("Point", (object,), {"x": 0})
+p = Point()
+print(p.x)`,
+      blanks: ['type'],
+      solution: `Point = type("Point", (object,), {"x": 0})\np = Point()\nprint(p.x)`,
+      explanation: 'type(name, bases, namespace) is the three-argument form: name is the class name string, bases is a tuple of base classes, namespace is a dict of class-body attributes/methods. This is what "class Point: x = 0" desugars to internally.',
+      hints: ['Same builtin as the one-argument type(obj) form, called with 3 args instead.'],
+      tags: ['metaprogramming', 'type', 'dynamic-class'],
+      concepts: ['py-metaclass'],
+    },
+{
       id: 'pcpp-meta-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,
@@ -80,6 +98,28 @@ print(Point.dimensions)`,
         'The default metaclass is `type` — the class of all classes',
       ],
       tags: ['metaprogramming', 'metaclass', 'type', 'advanced', 'class-creation'],
+      concepts: ['py-metaclass'],
+    },
+{
+      id: 'py-meta-newoverride-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.PY_METACLASSES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class a metaclass inherits from, and the method it overrides to hook class creation.',
+      template: `class LoudMeta(___):
+    def ___(mcs, name, bases, namespace):
+        print(f"creating {name}")
+        return super().___(mcs, name, bases, namespace)
+
+class Widget(metaclass=LoudMeta):
+    pass`,
+      blanks: ['type', '__new__', '__new__'],
+      solution: `class LoudMeta(type):\n    def __new__(mcs, name, bases, namespace):\n        print(f"creating {name}")\n        return super().__new__(mcs, name, bases, namespace)\n\nclass Widget(metaclass=LoudMeta):\n    pass`,
+      explanation: 'A metaclass subclasses type. Overriding __new__ intercepts class creation itself — it receives the metaclass, the new class\'s name, its bases tuple, and its namespace dict, and must forward to super().__new__() to actually build the class.',
+      hints: ['Metaclasses subclass type; __new__ is the hook called at class-creation time.'],
+      tags: ['metaprogramming', 'metaclass', '__new__', 'namespace'],
       concepts: ['py-metaclass'],
     },
 {
@@ -137,6 +177,26 @@ print(Config.VERSION)`,
         '`__bases__` is a tuple — use `[0]` to get the first parent',
       ],
       tags: ['metaprogramming', '__name__', '__module__', '__bases__', 'introspection'],
+      concepts: ['py-metaclass'],
+    },
+{
+      id: 'py-meta-introspect-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_METACLASSES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the special attributes: the class name string, and the tuple of direct base classes.',
+      template: `class Dog:
+    pass
+
+print(Dog.___)    # 'Dog'
+print(Dog.___)    # (<class 'object'>,)`,
+      blanks: ['__name__', '__bases__'],
+      solution: `class Dog:\n    pass\n\nprint(Dog.__name__)    # 'Dog'\nprint(Dog.__bases__)    # (<class 'object'>,)`,
+      explanation: '__name__ gives the class name as a string. __bases__ is a tuple of the class\'s direct parents. Both are set automatically by the metaclass (type by default) when the class is created.',
+      hints: ['Both are dunder attributes every class carries.'],
+      tags: ['metaprogramming', '__name__', '__bases__', 'introspection'],
       concepts: ['py-metaclass'],
     },
 {

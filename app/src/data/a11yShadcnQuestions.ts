@@ -163,6 +163,34 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
     concepts: ['a11y-aria-roles'],
   },
 
+  // -- Visually-Hidden-Until-Focused CSS (Cloze fade for skip-nav) --
+
+  {
+    id: 'a11y-visually-hidden-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.CSS,
+    question: 'Fill in (1) the property that pushes the element off-screen so sighted users never see it, and (2) the pseudo-class that should reveal it again for keyboard users.',
+    template: `.visually-hidden {
+  position: absolute;
+  ___: -9999px;
+}
+
+.visually-hidden:___ {
+  position: fixed;
+  left: 0;
+  top: 0;
+}`,
+    blanks: ['left', 'focus'],
+    solution: '.visually-hidden {\n  position: absolute;\n  left: -9999px;\n}\n\n.visually-hidden:focus {\n  position: fixed;\n  left: 0;\n  top: 0;\n}',
+    explanation: 'Pushing an element far off-screen with a large negative `left` hides it visually without `display: none` (which would also remove it from the accessibility tree and tab order). The `:focus` rule resets `left`/`position` so the element snaps back into view the moment a keyboard user tabs to it — this is the trick behind skip-navigation links and other "visually hidden until focused" patterns.',
+    hints: ['Same axis as the offset you would use to hide a sidebar off-canvas.', 'Pseudo-class that matches while an element has keyboard focus.'],
+    tags: ['visually-hidden', 'keyboard', 'focus', 'accessibility', 'cloze'],
+    concepts: ['a11y-keyboard-nav'],
+  },
+
   // -- Skip Navigation Link (Coding #2) --
 
   {
@@ -720,6 +748,232 @@ function AccessibleDropdown({ options, value, onChange, label }) {
   },
 
   // =====================================================================
+  // ACCESSIBILITY — PERCEPTION-SIDE WCAG CRITERIA (7 questions)
+  // Closes the doc's flagged gap: the existing set is interaction-heavy
+  // (modal/dropdown/focus-trap). These cover the perception criteria:
+  // contrast, alt-text, heading structure, live regions, tabindex
+  // values, and accessible-name computation.
+  // =====================================================================
+
+  // -- Color contrast ratios (BEGINNER MCQ, correct at a) --
+
+  {
+    id: 'a11y-contrast-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    question:
+      'What are the WCAG 2.2 Level AA contrast ratio requirements, and which text qualifies for the lower threshold?',
+    options: [
+      { id: 'a', text: 'Normal text needs a 4.5:1 contrast ratio against its background; large text (18pt+/24px+, or 14pt+/18.66px+ bold) and UI components/graphical objects need only 3:1', isCorrect: true },
+      { id: 'b', text: 'Normal text needs 3:1 contrast and large text needs 4.5:1 - bigger text needs MORE contrast because it covers more of the visual field and draws the eye more strongly', isCorrect: false },
+      { id: 'c', text: 'Every element on the page needs a flat 7:1 contrast ratio at Level AA - the 4.5:1 and 3:1 numbers belong to Level A, the lower conformance tier, not AA', isCorrect: false },
+      { id: 'd', text: 'Contrast is computed from font-weight alone - any bold text automatically passes regardless of the actual foreground and background color values chosen', isCorrect: false },
+    ],
+    explanation:
+      'WCAG 2.2 Level AA sets 4.5:1 as the minimum contrast ratio for normal-size text against its background. Large text - 18pt+ (24px), or 14pt+ (18.66px) if bold - gets a relaxed 3:1 minimum because bigger glyphs are legible at lower contrast. UI components (button borders, form field outlines) and meaningful graphical objects (icons conveying information) also use the 3:1 threshold. 7:1 is the Level AAA number for normal text, not AA.',
+    hints: [
+      'The two numbers to memorize are 4.5:1 and 3:1',
+      'Large text gets the relaxed ratio, not the stricter one',
+    ],
+    tags: ['contrast', 'WCAG', 'AA', 'accessibility'],
+    concepts: ['a11y-contrast'],
+  },
+
+  // -- alt-text decisions (BEGINNER MCQ, correct at a) --
+
+  {
+    id: 'a11y-alt-text-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    question:
+      'A product page has a purely decorative divider icon between sections, and a product photo that is the only way to see the item for sale. How should each image\'s alt attribute be written?',
+    options: [
+      { id: 'a', text: 'The decorative divider gets alt="" (empty, but present) so screen readers skip it silently; the product photo gets a descriptive alt like alt="Red leather wallet, folded, showing the front snap closure"', isCorrect: true },
+      { id: 'b', text: 'Both images should omit the alt attribute entirely, since screen readers already announce the filename of any img element that has no alt at all', isCorrect: false },
+      { id: 'c', text: 'The decorative divider needs a descriptive alt so screen reader users know a visual separator exists there; the product photo can safely use alt="" since sighted users can already see it', isCorrect: false },
+      { id: 'd', text: 'Both images should use alt="image" as a generic placeholder - screen readers only care whether the attribute is present, not what text it contains', isCorrect: false },
+    ],
+    explanation:
+      'Decorative images that add no information get alt="" (present but empty) so assistive tech skips them entirely instead of announcing something meaningless like "divider.png". Informational images - especially ones that are the ONLY way to perceive content, like a product photo - need a description of what they actually show. Omitting alt entirely (option b) makes some screen readers fall back to reading the filename or URL, which is worse than an empty alt.',
+    hints: [
+      'Empty alt="" is a deliberate signal meaning "skip me", not a mistake',
+      'Ask: does this image convey information nothing else on the page conveys?',
+    ],
+    tags: ['alt-text', 'images', 'decorative', 'accessibility'],
+    concepts: ['a11y-alt-text'],
+  },
+
+  // -- Heading structure as navigation (BEGINNER MCQ, correct at c) --
+
+  {
+    id: 'a11y-heading-structure-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    question:
+      'Why do screen reader users care about heading structure (h1-h6), and what is the rule for using heading levels correctly?',
+    options: [
+      { id: 'a', text: 'Screen readers only read h1 elements aloud - h2 through h6 exist purely for visual CSS styling and carry no meaning to assistive technology', isCorrect: false },
+      { id: 'b', text: 'Heading levels control font size only - as long as the text looks like a heading visually, the specific level number chosen makes no difference to any user', isCorrect: false },
+      { id: 'c', text: 'Screen readers let users jump between headings like a table of contents, so a page needs exactly one h1 and must not skip levels (e.g. h2 straight to h4) - the hierarchy should mirror the page\'s actual content outline', isCorrect: true },
+      { id: 'd', text: 'Heading levels are assigned automatically by the browser based on an element\'s position in the DOM tree, so authors never need to choose h1 through h6 themselves', isCorrect: false },
+    ],
+    explanation:
+      'Screen readers expose a headings list that lets users navigate a page the way a sighted user scans a table of contents - jumping straight to the section they want. This only works if the hierarchy is logical: one h1 per page (the main title), and no skipped levels (an h2 followed directly by an h4 suggests a missing h3, which breaks the outline a screen reader user is relying on to understand the page structure).',
+    hints: [
+      'Screen readers expose headings as a jump-to list, similar to a table of contents',
+      'Skipping a level (h2 to h4) breaks the outline someone is navigating by',
+    ],
+    tags: ['headings', 'h1', 'navigation', 'accessibility'],
+    concepts: ['a11y-heading-structure'],
+  },
+
+  // -- aria-live regions: polite vs assertive (INTERMEDIATE MCQ, correct at c) --
+
+  {
+    id: 'a11y-aria-live-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    question:
+      'A search page needs to announce "12 results found" after the user types a filter, and a form needs to announce a validation error immediately. What is the difference between aria-live="polite" and aria-live="assertive"?',
+    options: [
+      { id: 'a', text: 'aria-live="polite" only works inside a <form> element, while aria-live="assertive" only works inside a <main> element - the value required depends on the surrounding container', isCorrect: false },
+      { id: 'b', text: 'aria-live="polite" repeats the announcement three times to make sure it was heard, while aria-live="assertive" announces it only once and then removes the region from the DOM', isCorrect: false },
+      { id: 'c', text: 'aria-live="polite" waits for the screen reader to finish its current announcement before speaking the update (good for result counts); aria-live="assertive" interrupts immediately (good for urgent errors) - role="alert" implies assertive automatically', isCorrect: true },
+      { id: 'd', text: 'aria-live="polite" is for visible text updates and aria-live="assertive" is for updates hidden with display: none - the CSS visibility of the region determines which value to use', isCorrect: false },
+    ],
+    explanation:
+      '"polite" queues the announcement politely, waiting for the current speech to finish - the right choice for non-urgent updates like a result count, since it won\'t talk over whatever the user was already doing. "assertive" interrupts immediately, appropriate for time-sensitive information like a form validation error the user needs to hear right now. role="alert" is a shortcut that implies aria-live="assertive" plus aria-atomic="true" without setting them explicitly.',
+    hints: [
+      'One waits its turn; the other interrupts',
+      'role="alert" is shorthand for one of these two values',
+    ],
+    tags: ['aria-live', 'polite', 'assertive', 'accessibility'],
+    concepts: ['a11y-live-regions'],
+  },
+
+  // -- aria-live region: result-count announcement (INTERMEDIATE Coding) --
+
+  {
+    id: 'a11y-aria-live-coding-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question:
+      'A SearchResults component receives a count prop (the number of filtered results). Render a visually-hidden live region that announces "{count} results found" politely whenever count changes, without interrupting whatever the screen reader is currently saying.',
+    starterCode: `function SearchResults({ count, results }) {\n  return (\n    <div>\n      {/* announce the count here */}\n      <ul>{results.map((r) => <li key={r.id}>{r.name}</li>)}</ul>\n    </div>\n  );\n}`,
+    testCases: [
+      {
+        input: 'count = 12',
+        expectedOutput: 'a visually-hidden div with aria-live="polite" containing "12 results found"',
+        description: 'Should render a polite live region announcing the result count',
+      },
+    ],
+    solution: `function SearchResults({ count, results }) {
+  return (
+    <div>
+      <div aria-live="polite" aria-atomic="true" className="visually-hidden">
+        {count} results found
+      </div>
+      <ul>{results.map((r) => <li key={r.id}>{r.name}</li>)}</ul>
+    </div>
+  );
+}`,
+    explanation:
+      'aria-live="polite" on the announcing div means updates are queued and spoken once the screen reader finishes its current sentence - correct for a non-urgent count update. aria-atomic="true" tells the screen reader to re-read the whole region\'s text on any change, not just the part that changed (without it, some screen readers might only announce a changed word fragment). The visually-hidden class keeps the text out of the sighted layout while it stays in the accessibility tree - unlike display: none, which would remove it from both.',
+    hints: [
+      'aria-live="polite" is right for a non-urgent count, not "assertive"',
+      'aria-atomic="true" re-reads the whole updated text, not just the changed part',
+      'Use the visually-hidden pattern, not display: none, so it stays announceable',
+    ],
+    tags: ['aria-live', 'live-region', 'screen-reader', 'accessibility', 'react'],
+    concepts: ['a11y-live-regions'],
+  },
+
+  // -- tabindex values: 0 vs -1 vs positive (INTERMEDIATE Coding) --
+
+  {
+    id: 'a11y-tabindex-coding-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question:
+      'A CardList renders custom, non-native "card" divs that need to be keyboard-focusable in normal document order, and a hidden CardDetails panel that should only receive focus programmatically (never via Tab). Write the tabindex values for each, and explain in a comment why a positive tabindex value should never be used.',
+    starterCode: `function Card({ title }) {\n  // your code here\n}\n\nfunction CardDetails({ detailsRef, children }) {\n  // your code here\n}`,
+    testCases: [
+      {
+        input: 'Card and CardDetails',
+        expectedOutput: 'Card uses tabIndex={0}, CardDetails uses tabIndex={-1}, with a comment explaining positive tabindex is never used',
+        description: 'Should assign the correct tabindex values for natural vs programmatic-only focus',
+      },
+    ],
+    solution: `function Card({ title }) {
+  // tabIndex={0} inserts this div into the natural tab order,
+  // right where it sits in the DOM - the same position a native
+  // focusable element would occupy.
+  return <div tabIndex={0}>{title}</div>;
+}
+
+function CardDetails({ detailsRef, children }) {
+  // tabIndex={-1} makes this div focusable ONLY via detailsRef.current.focus()
+  // in JavaScript (e.g. after opening it) - it is skipped entirely by Tab.
+  return <div ref={detailsRef} tabIndex={-1}>{children}</div>;
+}
+
+// A positive tabindex (tabIndex={1}, {2}, ...) is never used because it
+// creates a SECOND tab order that runs before tabIndex={0}/native elements,
+// regardless of where those positive-tabindex elements sit in the DOM.
+// This produces a confusing, hard-to-maintain focus order that no longer
+// matches the visual/document layout.`,
+    explanation:
+      'tabIndex={0} adds an element to the natural tab order at its DOM position - the standard way to make a custom widget keyboard-focusable. tabIndex={-1} removes an element from the Tab sequence entirely while still allowing element.focus() to target it programmatically (used for focus-trap targets, panels opened via JS, and skip-link destinations). A positive tabIndex value creates a separate, DOM-position-independent tab order that overrides the natural one - this is the universally cited anti-pattern, because it decouples keyboard order from visual/DOM order and becomes unmaintainable as the page changes.',
+    hints: [
+      'Natural tab order: tabIndex={0}',
+      'Programmatic-focus-only, skipped by Tab: tabIndex={-1}',
+      'Positive values (1, 2, ...) override natural order - this is why they are avoided',
+    ],
+    tags: ['tabindex', 'keyboard', 'focus', 'accessibility', 'react'],
+    concepts: ['a11y-tabindex'],
+  },
+
+  // -- Accessible name computation precedence (ADVANCED MCQ, correct at d) --
+
+  {
+    id: 'a11y-accessible-name-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    question:
+      'A button has aria-labelledby pointing to a heading, an aria-label string, visible text content, and a title attribute - all with different wording. Which one does a screen reader announce as the button\'s accessible name, and why does the order matter?',
+    options: [
+      { id: 'a', text: 'The title attribute always wins, since it is the oldest and most universally supported way to label an element across every browser and assistive technology combination', isCorrect: false },
+      { id: 'b', text: 'The browser picks whichever string is alphabetically first among the four candidates, since there is no defined precedence order in the accessible name computation spec', isCorrect: false },
+      { id: 'c', text: 'All four are concatenated together into one long announcement, so a screen reader user hears every candidate string back to back in DOM order', isCorrect: false },
+      { id: 'd', text: 'aria-labelledby wins first, then aria-label, then the visible text content, and title is the last resort - each step is used only when everything higher in the chain is absent, so authoring several at once with different wording just makes the lower ones dead code', isCorrect: true },
+    ],
+    explanation:
+      'The accessible name computation algorithm has a strict precedence: aria-labelledby (references another element\'s text) overrides everything if present; if absent, aria-label (an explicit string) is used; if that is also absent, the element\'s own visible text content (or an associated <label>) is used; title is the last resort, used only as a fallback and also rendered as a mouse-hover tooltip. Authoring multiple candidates with conflicting text is a common bug - only the highest-precedence one is ever announced, so the others silently do nothing for screen reader users while still showing up in tooltips or visible text.',
+    hints: [
+      'aria-labelledby sits at the top of the precedence chain',
+      'title is the fallback of last resort, not a competitor to the others',
+    ],
+    tags: ['accessible-name', 'aria-labelledby', 'aria-label', 'title', 'accessibility'],
+    concepts: ['a11y-accessible-name'],
+  },
+
+  // =====================================================================
   // NEXT_SHADCN (5 questions)
   // =====================================================================
 
@@ -1027,5 +1281,312 @@ export function cn(...inputs: ClassValue[]) {
     ],
     tags: ['shadcn', 'customization', 'components', 'css-variables'],
     concepts: ['shadcn-radix-primitives'],
+  },
+
+  // =====================================================================
+  // NEXT_SHADCN — CVA + asChild (7 questions)
+  // Closes the doc's flagged gap: every shadcn component is built on
+  // class-variance-authority, and asChild/Slot is the composition
+  // pattern used throughout - neither had any coverage yet.
+  // =====================================================================
+
+  // -- cva() call signature (INTERMEDIATE Cloze, faded before the coding Q) --
+
+  {
+    id: 'shadcn-cva-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Complete this cva() call: the first argument is the base classes every variant shares, and the second argument object holds the variant option groups plus the fallback variants used when none are passed.',
+    template: `import { cva } from "class-variance-authority";
+
+const buttonVariants = cva(
+  "___",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground",
+        outline: "border border-input bg-background",
+      },
+    },
+    ___: {
+      variant: "default",
+    },
+  }
+);`,
+    blanks: ['inline-flex items-center justify-center rounded-md font-medium', 'defaultVariants'],
+    solution: `import { cva } from "class-variance-authority";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md font-medium",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground",
+        outline: "border border-input bg-background",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+);`,
+    explanation:
+      'cva() takes the classes shared by every variant as its first argument (base layout/shape classes that never change), and a config object as its second: variants groups each option axis (variant, size, ...) with its class strings, and defaultVariants supplies the fallback used when a caller does not pass that prop at all.',
+    hints: [
+      'The first argument is a plain string of always-applied classes',
+      'The property naming the fallback options is defaultVariants',
+    ],
+    tags: ['cva', 'class-variance-authority', 'variants', 'cloze', 'shadcn'],
+    concepts: ['shadcn-cva'],
+  },
+
+  // -- Build button variants with cva (INTERMEDIATE Coding) --
+
+  {
+    id: 'shadcn-cva-coding-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Using cva from class-variance-authority, build buttonVariants with a variant axis ("default" | "destructive") and a size axis ("default" | "sm"), defaulting to variant "default" and size "default". Base classes: "inline-flex items-center justify-center rounded-md".',
+    starterCode: `import { cva } from "class-variance-authority";\n\nexport const buttonVariants = cva(\n`,
+    testCases: [
+      {
+        input: 'buttonVariants({ variant: "destructive", size: "sm" })',
+        expectedOutput: 'a class string combining the base classes with the destructive and sm variant classes',
+        description: 'Should return the correct combined class string for the given variant/size',
+      },
+    ],
+    solution: `import { cva } from "class-variance-authority";
+
+export const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 px-3",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
+
+// buttonVariants({ variant: "destructive", size: "sm" })
+//   -> "inline-flex items-center justify-center rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9 px-3"`,
+    explanation:
+      'cva() generates a function that takes an options object matching the variants config and returns the base classes plus whichever variant classes were selected (or the defaultVariants classes for any option left unspecified). This is the pattern every shadcn/ui component (Button, Badge, Alert) is built on: one cva() call defines every visual permutation as a single typed function call instead of manual string concatenation or a lookup object.',
+    hints: [
+      'variants groups each axis (variant, size) with its named class strings',
+      'defaultVariants supplies the classes used when a caller omits that prop',
+      'The generated function returns the base classes plus the resolved variant classes',
+    ],
+    tags: ['cva', 'class-variance-authority', 'variants', 'shadcn'],
+    concepts: ['shadcn-cva'],
+  },
+
+  // -- asChild + Radix Slot (INTERMEDIATE MCQ, correct at b) --
+
+  {
+    id: 'shadcn-aschild-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    question:
+      'A shadcn Button component accepts an asChild prop. What does asChild do, and what problem does it solve when you want a Next.js <Link> to look exactly like a Button?',
+    options: [
+      { id: 'a', text: 'asChild renders the Button\'s own <button> element as usual, then nests the Link inside it - producing a <button><a>...</a></button> structure so the Link still receives the Button\'s styling', isCorrect: false },
+      { id: 'b', text: 'asChild uses Radix\'s Slot component to merge the Button\'s props (className, onClick, ARIA attributes) onto its single child instead of rendering its own DOM element - so <Button asChild><Link href="/about">About</Link></Button> renders one real <a>, styled like a button, with no wrapper element', isCorrect: true },
+      { id: 'c', text: 'asChild is a CSS-only prop that copies the parent element\'s computed styles onto whichever child is passed, without touching props, event handlers, or ARIA attributes at all', isCorrect: false },
+      { id: 'd', text: 'asChild tells React to skip hydration for that component entirely, rendering it as static server HTML with no client-side interactivity attached', isCorrect: false },
+    ],
+    explanation:
+      'Slot (from @radix-ui/react-slot) is a component that, instead of rendering its own DOM node, clones its single child and merges the parent\'s props onto it - className gets combined, event handlers get chained, ARIA attributes pass through. Button\'s asChild prop swaps its rendered element from "button" to Slot when true, so <Button asChild><Link href="/about">About</Link></Button> produces exactly one <a> tag carrying the button\'s classes, with no extra wrapping <button> or <div> polluting the DOM - important both semantically (a link should be an <a>, not a button wrapping an <a>) and for CSS layout (no extra box in the tree).',
+    hints: [
+      'Nesting a real <button> around a real <a> would be invalid, non-semantic HTML',
+      'Slot merges props onto its child rather than rendering a wrapper element',
+    ],
+    tags: ['asChild', 'radix-slot', 'composition', 'shadcn'],
+    concepts: ['shadcn-aschild'],
+  },
+
+  // -- Render a Link styled as a Button via asChild (INTERMEDIATE Coding) --
+
+  {
+    id: 'shadcn-aschild-coding-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Add asChild support to this Button component using Radix\'s Slot, then use it to render a Next.js Link that looks like a Button, without wrapping the Link in an extra <button> element.',
+    starterCode: `import { Link } from "next/link";\nimport { cn } from "@/lib/utils";\nimport { buttonVariants } from "./button-variants";\n\nfunction Button({ asChild, className, variant, size, ...props }) {\n  // your code here\n}\n\n// Render a Link styled as a Button, with no wrapper element\n`,
+    testCases: [
+      {
+        input: '<Button asChild><Link href="/about">About</Link></Button>',
+        expectedOutput: 'renders a single <a> element with the Button\'s classes, no wrapping <button>',
+        description: 'Should compose Button styling onto the Link with no extra DOM element',
+      },
+    ],
+    solution: `import { Slot } from "@radix-ui/react-slot";
+import { Link } from "next/link";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "./button-variants";
+
+function Button({ asChild, className, variant, size, ...props }) {
+  const Comp = asChild ? Slot : "button";
+  return <Comp className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+}
+
+// Render a Link styled as a Button, with no wrapper element:
+// <Button asChild variant="outline">
+//   <Link href="/about">About</Link>
+// </Button>
+// -> renders a single <a href="/about" class="...button classes..."> element`,
+    explanation:
+      'Comp switches from the literal string "button" to Slot when asChild is true. Slot does not render its own element - it clones the single child it receives (the Link) and merges the incoming className and props onto it. The result is one <a> tag carrying the button\'s Tailwind classes, exactly matching how the button would look, with the semantics of a real link and no wrapper element in the DOM.',
+    hints: [
+      'Comp is a ternary: asChild ? Slot : "button"',
+      'Slot comes from @radix-ui/react-slot',
+      'Slot merges props onto its child instead of rendering its own element',
+    ],
+    tags: ['asChild', 'radix-slot', 'composition', 'shadcn', 'next-link'],
+    concepts: ['shadcn-aschild'],
+  },
+
+  // -- Theming via CSS variables (INTERMEDIATE Coding) --
+
+  {
+    id: 'shadcn-theming-coding-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.CSS,
+    question:
+      'Add a new "brand" color to the theme: define --brand as HSL channel values (no hsl() wrapper) in :root and .dark with different lightness for each mode, then map it into Tailwind config as a usable color under theme.extend.colors.',
+    starterCode: `/* globals.css */\n@layer base {\n  :root {\n    --background: 0 0% 100%;\n  }\n  .dark {\n    --background: 222 47% 11%;\n  }\n}\n\n/* tailwind.config.js */\n`,
+    testCases: [
+      {
+        input: 'bg-brand utility class',
+        expectedOutput: '--brand defined as raw HSL channels in :root and .dark, mapped via hsl(var(--brand)) in tailwind.config.js',
+        description: 'Should define and wire up a theme-aware brand color using CSS variables',
+      },
+    ],
+    solution: `/* globals.css */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --brand: 262 83% 58%;
+  }
+  .dark {
+    --background: 222 47% 11%;
+    --brand: 262 83% 70%;
+  }
+}
+
+/* tailwind.config.js */
+/* module.exports = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        background: "hsl(var(--background))",
+        brand: "hsl(var(--brand))",
+      },
+    },
+  },
+}; */
+
+// Usage: className="bg-brand text-white" now resolves to the light-mode
+// --brand value normally, and the .dark override automatically once the
+// "dark" class is present on <html>.`,
+    explanation:
+      'shadcn\'s theming convention stores each color as raw HSL channel values ("262 83% 58%", no hsl() wrapper) so Tailwind can wrap it with hsl(var(--brand)) and still apply opacity modifiers like bg-brand/50. Defining the same variable name in both :root and .dark with different lightness values means one Tailwind class (bg-brand) automatically resolves to the right shade for whichever mode is active - no dark: prefix needed on every usage, because the swap happens at the CSS variable level, not the class level.',
+    hints: [
+      'Store the value as raw HSL channels, not wrapped in hsl(...)',
+      'Same variable name in :root and .dark, different lightness',
+      'Tailwind config wraps it as hsl(var(--brand)) so opacity modifiers still work',
+    ],
+    tags: ['theming', 'css-variables', 'dark-mode', 'tailwind', 'shadcn'],
+    concepts: ['web-tailwind-utility'],
+  },
+
+  // -- VariantProps<typeof buttonVariants> typing (ADVANCED Coding) --
+
+  {
+    id: 'shadcn-variantprops-coding-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'buttonVariants is already defined elsewhere via cva() with a "variant" and a "size" axis, and VariantProps, ButtonHTMLAttributes, and buttonVariants are already imported. Type ButtonProps so it accepts every native <button> attribute PLUS whichever variant/size options buttonVariants defines - without manually re-declaring "variant" and "size" as separate props that could drift out of sync with the cva() config.',
+    starterCode: `interface ButtonProps {\n  // your code here\n}`,
+    testCases: [
+      {
+        input: '<Button variant="outline" size="sm" onClick={fn} />',
+        expectedOutput: 'ButtonProps accepts variant, size, onClick, and every other native button attribute, all fully typed',
+        description: 'Should type ButtonProps by extending both native attributes and VariantProps',
+      },
+    ],
+    solution: `import { type VariantProps } from "class-variance-authority";
+import { ButtonHTMLAttributes } from "react";
+import { buttonVariants } from "./button-variants";
+
+interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}`,
+    explanation:
+      'VariantProps<typeof buttonVariants> extracts a props type with one property per variants axis (variant, size), typed as a union of that axis\'s option keys. Extending both ButtonHTMLAttributes<HTMLButtonElement> and VariantProps<typeof buttonVariants> gives ButtonProps every native button attribute (onClick, disabled, type, ...) plus variant/size typed directly from the cva() config - so the two can never drift apart the way manually re-declared variant?: "default" | "outline" props could if someone added a variant to cva() but forgot to update the interface.',
+    hints: [
+      'VariantProps<typeof buttonVariants> derives variant/size types from the cva config itself',
+      'Extend BOTH ButtonHTMLAttributes<HTMLButtonElement> and VariantProps<typeof buttonVariants>',
+      'This avoids hand-typing variant/size unions that could drift from the cva() source of truth',
+    ],
+    tags: ['VariantProps', 'cva', 'typescript', 'shadcn'],
+    concepts: ['shadcn-cva'],
+  },
+
+  // -- shadcn Form field pattern (ADVANCED MCQ, correct at d) --
+
+  {
+    id: 'shadcn-form-pattern-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    question:
+      'shadcn\'s <Form>, <FormField>, <FormItem>, <FormLabel>, and <FormMessage> components wrap a form built with react-hook-form. What is actually happening underneath FormField, and what does it give you for free?',
+    options: [
+      { id: 'a', text: 'FormField is a plain wrapper <div> with no logic of its own - all the validation and error handling still has to be written by hand inside every individual field, identically to a bare react-hook-form setup', isCorrect: false },
+      { id: 'b', text: 'FormField replaces react-hook-form entirely with its own internal state management, so react-hook-form\'s useForm, register, and handleSubmit are never used once the shadcn Form components are adopted', isCorrect: false },
+      { id: 'c', text: 'FormField is a server-only component that validates form data on the server before the page even renders, so no client-side validation logic runs in the browser at all', isCorrect: false },
+      { id: 'd', text: 'FormField renders react-hook-form\'s Controller under the hood, and the surrounding Form* components wire up the generated ids so FormLabel, the field input, and FormMessage are automatically connected via aria-describedby and htmlFor - giving you an accessible, wired-up field without writing that boilerplate by hand', isCorrect: true },
+    ],
+    explanation:
+      'Under shadcn\'s Form pattern, <FormField> renders react-hook-form\'s <Controller> to bridge a controlled component into RHF\'s registration system, while a React context (FormFieldContext/FormItemContext) generates and shares a unique id across FormLabel (htmlFor), the input (id, aria-describedby, aria-invalid), and FormMessage (the id aria-describedby points to). The payoff is that every field gets correct label association and error announcement automatically, instead of an author hand-wiring htmlFor/id/aria-describedby on every field in every form.',
+    hints: [
+      'react-hook-form is still doing the actual form state management underneath',
+      'The wiring being automated is the label/input/error-message ARIA relationship',
+    ],
+    tags: ['shadcn', 'form', 'react-hook-form', 'Controller', 'accessibility'],
+    concepts: ['shadcn-form-pattern', 'a11y-aria-roles'],
   },
 ];

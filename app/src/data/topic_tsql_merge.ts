@@ -98,6 +98,62 @@ WHEN MATCHED AND tgt.City <> src.City THEN
     tags: ['tsql', 'merge', 'change-detection', 'cloze'],
   },
   {
+    id: 'tsql-merge-bysource-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_MERGE,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the branch that fires for target rows no longer present in the source, and the action that removes them.',
+    template: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN MATCHED THEN
+    UPDATE SET tgt.ProductName = src.ProductName
+WHEN NOT MATCHED ___ THEN
+    ___;`,
+    blanks: ['BY SOURCE', 'DELETE'],
+    solution: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN MATCHED THEN
+    UPDATE SET tgt.ProductName = src.ProductName
+WHEN NOT MATCHED BY SOURCE THEN
+    DELETE;`,
+    explanation: '`WHEN NOT MATCHED BY SOURCE` fires for target rows that have no match in the source - they have disappeared upstream. `DELETE` removes them, completing a full three-way sync: matched rows update, source-only rows insert, target-only rows delete.',
+    hints: ['The branch for target-only rows, not source-only', 'The action that removes a row'],
+    tags: ['tsql', 'merge', 'not-matched-by-source', 'delete', 'cloze'],
+  },
+  {
+    id: 'tsql-merge-output-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_MERGE,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the clause and the pseudo-column that report which action MERGE took for each row.",
+    template: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN MATCHED THEN
+    UPDATE SET tgt.ProductName = src.ProductName
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (ProductCode, ProductName) VALUES (src.ProductCode, src.ProductName)
+___ ___, inserted.ProductCode, deleted.ProductCode INTO @Changes;`,
+    blanks: ['OUTPUT', '$action'],
+    solution: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN MATCHED THEN
+    UPDATE SET tgt.ProductName = src.ProductName
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (ProductCode, ProductName) VALUES (src.ProductCode, src.ProductName)
+OUTPUT $action, inserted.ProductCode, deleted.ProductCode INTO @Changes;`,
+    explanation: 'Added after all the WHEN clauses (still before the terminating semicolon), `OUTPUT` on a MERGE exposes `$action` - the literal text \'INSERT\', \'UPDATE\', or \'DELETE\' - alongside the usual `inserted`/`deleted` pseudo-tables, so you can audit exactly what the statement did to each row.',
+    hints: ['OUTPUT goes after the last WHEN clause', '$action reports INSERT/UPDATE/DELETE per row'],
+    tags: ['tsql', 'merge', 'output-clause', 'cloze'],
+  },
+  {
     id: 'tsql-merge-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,

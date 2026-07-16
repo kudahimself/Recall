@@ -48,6 +48,25 @@ export const tsql_incremental_questions: Question[] = [
     tags: ['tsql', 'incremental', 'late-arriving-data'],
   },
   {
+    id: 'tsql-incr-lookback-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_INCREMENTAL,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the function that pulls the watermark back by 4 hours, widening the filter into a lookback window.',
+    template: `SELECT OrderId, Amount, UpdatedAt
+FROM stg.Sales
+WHERE UpdatedAt > ___(HOUR, -4, @lastLoaded);`,
+    blanks: ['DATEADD'],
+    solution: `SELECT OrderId, Amount, UpdatedAt
+FROM stg.Sales
+WHERE UpdatedAt > DATEADD(HOUR, -4, @lastLoaded);`,
+    explanation: '`DATEADD(HOUR, -4, @lastLoaded)` shifts the filter boundary 4 hours earlier, re-scanning a lookback window so rows whose event time is before the watermark - but which only staged afterward - are not silently missed. In production this SELECT would feed a MERGE (or a dedup step), not a plain INSERT, since rows already loaded last run reappear in the overlap and would otherwise duplicate.',
+    hints: ['Widen the boundary, do not just compare against it directly', 'DATEADD(unit, negative-offset, date)'],
+    tags: ['tsql', 'incremental', 'late-arriving-data', 'dateadd', 'cloze'],
+  },
+  {
     id: 'tsql-incr-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.INTERMEDIATE,

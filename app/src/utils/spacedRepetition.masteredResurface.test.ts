@@ -277,19 +277,21 @@ describe('selectNextQuestion — due-driven resurface + onboarding gate', () => 
    * (firstUnlockedNew !== null) new content dominates and mastered review is
    * reduced — but NOT off (it still surfaces). No covered topic is below mastery
    * here, so the resurface isn't deferred — this isolates the gate alone.
+   * NON-drain cards only (beginner/intermediate MCQs): a due DRAIN card would
+   * now hard-gate new content instead (see the mid-topic hard-gate test below).
    */
   test('caught up drains due review every slot; onboarding reduces it (not off)', () => {
     const mastered = [
       makeQ('m-beg', Topic.PY_BASICS, Difficulty.BEGINNER),
       makeQ('m-int', Topic.PY_BASICS, Difficulty.INTERMEDIATE),
-      makeQ('m-adv', Topic.PY_BASICS, Difficulty.ADVANCED),
+      makeQ('m-int2', Topic.PY_BASICS, Difficulty.INTERMEDIATE),
     ];
 
     function seed(): UserProgress {
       const p = emptyProgress();
       recordAttempt(p, 'm-beg', true, 5 * DAY);
       recordAttempt(p, 'm-int', true, 5 * DAY);
-      recordAttempt(p, 'm-adv', true, 5 * DAY); // M mastered + due
+      recordAttempt(p, 'm-int2', true, 5 * DAY); // M mastered + due (all non-drain)
       // Recent m-beg reviews → active topic = PY_BASICS (mastered), cooldown = m-beg.
       recordAttempt(p, 'm-beg', true, 3 * 60_000);
       recordAttempt(p, 'm-beg', true, 2 * 60_000);
@@ -434,6 +436,53 @@ describe('selectNextQuestion — due-driven resurface + onboarding gate', () => 
   });
 
   /**
+   * Reviews-first MID-TOPIC hard gate: a due drain card in an earlier mastered
+   * topic blocks new content even while the active topic is only partially
+   * covered (previously the gate only fired once the frontier topic hit 100%
+   * seen). A due NON-drain card alone does NOT block — once the drain card is
+   * refreshed, the in-progress topic resumes.
+   */
+  test('a due drain card hard-gates new content MID-TOPIC; a due beginner MCQ alone does not', () => {
+    const mAdv = makeQ('m-adv', Topic.PY_BASICS, Difficulty.ADVANCED);  // drain card
+    const mBeg = makeQ('m-beg', Topic.PY_BASICS, Difficulty.BEGINNER);  // non-drain
+    // Active topic mid-learning: n0 seen, n1..n5 unseen → frontier NOT covered.
+    const newQs = Array.from({ length: 6 }, (_, i) =>
+      makeQ(`n${i}`, Topic.PY_DECORATORS, Difficulty.BEGINNER));
+    const pool = [mAdv, mBeg, ...newQs];
+
+    const seed = (advMsAgo: number): UserProgress => {
+      const p = emptyProgress();
+      recordAttempt(p, 'm-adv', true, advMsAgo);
+      recordAttempt(p, 'm-beg', true, 5 * DAY); // PY_BASICS mastered; m-beg due (non-drain)
+      recordAttempt(p, 'n0', true, 60_000);     // PY_DECORATORS started, mid-topic
+      return p;
+    };
+
+    // (a) m-adv due → hard gate mid-topic: zero new picks, the drain card is served.
+    const gated = seed(5 * DAY);
+    let newPicks = 0, advPicks = 0;
+    const N = 800;
+    for (let i = 0; i < N; i++) {
+      const q = SpacedRepetitionSystem.selectNextQuestion(pool, gated, undefined, backendPolicy);
+      if (!q) continue;
+      if (q.topic === Topic.PY_DECORATORS && q.id !== 'n0') newPicks++;
+      if (q.id === 'm-adv') advPicks++;
+    }
+    expect(newPicks).toBe(0);                  // reviews-first: no new content mid-topic
+    expect(advPicks / N).toBeGreaterThan(0.3); // the due drain card is actively drained
+
+    // (b) m-adv refreshed (not due); m-beg still due but non-drain → gate open,
+    // the in-progress topic flows again.
+    const open = seed(60_000);
+    let newPicks2 = 0;
+    for (let i = 0; i < N; i++) {
+      const q = SpacedRepetitionSystem.selectNextQuestion(pool, open, undefined, backendPolicy);
+      if (q && q.topic === Topic.PY_DECORATORS && q.id !== 'n0') newPicks2++;
+    }
+    expect(newPicks2 / N).toBeGreaterThan(0.5); // a due MCQ alone never blocks new content
+  });
+
+  /**
    * Strictly-due drain: while draining, only drain cards PAST their interval are
    * served — a not-yet-due coding/advanced card is held back, so each served card
    * leaves the due count and the visible counter falls by exactly one.
@@ -541,16 +590,28 @@ describe('getReviewStatus (mode indicator)', () => {
     expect(s.drainQueueCount).toBe(1);
   });
 
-  test('mode = new while mid-topic, still reporting the pending drain count', () => {
+  test('mode = drain MID-TOPIC: a pending drain backlog supersedes the in-progress topic', () => {
     const cliSeen = makeQ('cli-seen', Topic.PY_CLI, Difficulty.BEGINNER);
     const cliUnseen = makeQ('cli-unseen', Topic.PY_CLI, Difficulty.BEGINNER);
     const mAdv = makeQ('m-adv', Topic.PY_BASICS, Difficulty.ADVANCED);
     const p = emptyProgress();
     recordAttempt(p, 'm-adv', true, 5 * DAY);   // PY_BASICS mastered + due drain card (pending)
-    recordAttempt(p, 'cli-seen', true, 60_000); // PY_CLI started but NOT covered (frontier, not finished)
+    recordAttempt(p, 'cli-seen', true, 60_000); // PY_CLI started but NOT covered (mid-topic)
     const s = SpacedRepetitionSystem.getReviewStatus([cliSeen, cliUnseen, mAdv], p, backendPolicy);
-    expect(s.mode).toBe('new');
+    expect(s.mode).toBe('drain'); // reviews-first: recall beats new material
     expect(s.drainQueueCount).toBe(1);
+  });
+
+  test('mode = new mid-topic when only NON-drain cards are due (MCQs never trip the gate)', () => {
+    const cliSeen = makeQ('cli-seen', Topic.PY_CLI, Difficulty.BEGINNER);
+    const cliUnseen = makeQ('cli-unseen', Topic.PY_CLI, Difficulty.BEGINNER);
+    const mBeg = makeQ('m-beg', Topic.PY_BASICS, Difficulty.BEGINNER);
+    const p = emptyProgress();
+    recordAttempt(p, 'm-beg', true, 5 * DAY);   // PY_BASICS mastered + due, but NOT a drain card
+    recordAttempt(p, 'cli-seen', true, 60_000); // PY_CLI mid-topic
+    const s = SpacedRepetitionSystem.getReviewStatus([cliSeen, cliUnseen, mBeg], p, backendPolicy);
+    expect(s.mode).toBe('new');
+    expect(s.drainQueueCount).toBe(0);
   });
 
   test('mode = review when caught up with no due drain backlog', () => {
@@ -573,11 +634,65 @@ describe('getReviewStatus (mode indicator)', () => {
     expect(SpacedRepetitionSystem.getReviewStatus([a1, a2], p, backendPolicy).drainQueueCount).toBe(1);
   });
 
+  test('a fresh miss HOLDS the count even when it demotes its own topic (same-topic case)', () => {
+    // All three cards in ONE topic: missing a1 drops PY_BASICS latest-correct to
+    // 66% (< 95). Without the treatCorrectId hold, a2/a3 would fall out of the
+    // mastered&&due set and the count would collapse 3 → 1 on the miss.
+    const a1 = makeQ('a1', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const a2 = makeQ('a2', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const a3 = makeQ('a3', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const pool = [a1, a2, a3];
+    const topicToQs = new Map<string, Question[]>([[Topic.PY_BASICS, pool]]);
+    const parity = (p: UserProgress) => {
+      const s = SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy);
+      // Gate and pill share countPendingDrain — they can never disagree.
+      expect(SpacedRepetitionSystem.hasPendingDrain(pool, topicToQs, p)).toBe(s.drainQueueCount > 0);
+      return s;
+    };
+
+    const p = emptyProgress();
+    recordAttempt(p, 'a1', true, 5 * DAY);
+    recordAttempt(p, 'a2', true, 5 * DAY);
+    recordAttempt(p, 'a3', true, 5 * DAY); // mastered, all three due
+    expect(parity(p)).toEqual({ mode: 'drain', drainQueueCount: 3 });
+
+    // Miss a1: it stays (retry card) AND a2/a3 stay (mastery held) → count holds
+    // at 3 and the mode stays drain.
+    recordAttempt(p, 'a1', false, 60_000);
+    expect(parity(p)).toEqual({ mode: 'drain', drainQueueCount: 3 });
+
+    // Retry a1 correctly → it leaves (not due, not last-wrong), topic genuinely
+    // mastered again → clean countdown to 2.
+    recordAttempt(p, 'a1', true, 0);
+    expect(parity(p)).toEqual({ mode: 'drain', drainQueueCount: 2 });
+  });
+
+  test('an OLD failure (not the latest attempt) still excludes its topic — consolidation blocker, not drain', () => {
+    // a2 failed and was never retried, then the user moved on (latest attempt is
+    // a correct a3). The topic is genuinely below mastery with no retry in
+    // flight, so its due card a1 is a consolidation blocker the drain never
+    // serves — count 0, gate open.
+    const a1 = makeQ('a1', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const a2 = makeQ('a2', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const a3 = makeQ('a3', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const pool = [a1, a2, a3];
+    const topicToQs = new Map<string, Question[]>([[Topic.PY_BASICS, pool]]);
+    const p = emptyProgress();
+    recordAttempt(p, 'a1', true, 5 * DAY);  // due, but topic not mastered
+    recordAttempt(p, 'a2', false, 2 * DAY); // old failure (not the latest attempt)
+    recordAttempt(p, 'a3', true, 60_000);   // latest attempt, correct
+    const s = SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy);
+    expect(s.drainQueueCount).toBe(0);
+    expect(SpacedRepetitionSystem.hasPendingDrain(pool, topicToQs, p)).toBe(false);
+  });
+
   test('a WRONG answer keeps the card in the count (still in review), then clears on a correct one', () => {
-    // a1 and a2 in DIFFERENT mastered topics, so missing a1 (which drops PY_BASICS
+    // a1 and a2 in DIFFERENT mastered topics, so missing a1 (which drops PY_LOGGING
     // below mastery) doesn't perturb a2's mastered&&due count. Real topics are
     // large and don't demote on a single miss; this keeps the unit isolated.
-    const a1 = makeQ('a1', Topic.PY_BASICS, Difficulty.ADVANCED);
+    // Both topics live in Python Advanced (no supersession between them) so the
+    // fundamentals drain retirement doesn't remove a1 from the queue.
+    const a1 = makeQ('a1', Topic.PY_LOGGING, Difficulty.ADVANCED);
     const a2 = makeQ('a2', Topic.PY_REGEX, Difficulty.ADVANCED);
     const p = emptyProgress();
     recordAttempt(p, 'a1', true, 5 * DAY); // PY_BASICS mastered + due
@@ -591,5 +706,62 @@ describe('getReviewStatus (mode indicator)', () => {
     // leaves the queue → count falls to 1 (just a2).
     recordAttempt(p, 'a1', true, 0);
     expect(SpacedRepetitionSystem.getReviewStatus([a1, a2], p, backendPolicy).drainQueueCount).toBe(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+describe('drain supersession retirement (DRAIN_SUPERSEDED_SECTIONS)', () => {
+  // Python Fundamentals is superseded by Python Advanced: once every question
+  // in the Python Advanced section (scoped to topics present in the pool) has
+  // been attempted, fundamentals cards leave the drain queue — their
+  // primitives are re-exercised by py_advanced's own coding/advanced cards.
+
+  test('a due fundamentals drain card is RETIRED once the superseding section is finished', () => {
+    const basicsAdv = makeQ('basics-adv', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const thSeen = makeQ('th-seen', Topic.PY_TYPE_HINTS, Difficulty.BEGINNER);
+    const p = emptyProgress();
+    recordAttempt(p, 'basics-adv', true, 5 * DAY); // PY_BASICS mastered + due drain card
+    recordAttempt(p, 'th-seen', true, 60_000);     // Python Advanced (pool-scoped) fully attempted
+    const s = SpacedRepetitionSystem.getReviewStatus([basicsAdv, thSeen], p, backendPolicy);
+    expect(s.drainQueueCount).toBe(0); // retired — never hard-gates again
+    expect(s.mode).toBe('review');
+  });
+
+  test('the same card still drains while the superseding section is UNFINISHED', () => {
+    const basicsAdv = makeQ('basics-adv', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const thSeen = makeQ('th-seen', Topic.PY_TYPE_HINTS, Difficulty.BEGINNER);
+    const thUnseen = makeQ('th-unseen', Topic.PY_TYPE_HINTS, Difficulty.BEGINNER);
+    const p = emptyProgress();
+    recordAttempt(p, 'basics-adv', true, 5 * DAY); // PY_BASICS mastered + due drain card
+    recordAttempt(p, 'th-seen', true, 60_000);     // py_advanced started but NOT finished
+    const s = SpacedRepetitionSystem.getReviewStatus([basicsAdv, thSeen, thUnseen], p, backendPolicy);
+    expect(s.drainQueueCount).toBe(1); // still the normal reviews-first drain
+    expect(s.mode).toBe('drain');
+  });
+
+  test('a retired topic stays eligible for the normal (non-gating) due resurface', () => {
+    // Caught up (no unseen), nothing draining: the due fundamentals card should
+    // still surface through the regular due-driven resurface path.
+    const basicsAdv = makeQ('basics-adv', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const thSeen = makeQ('th-seen', Topic.PY_TYPE_HINTS, Difficulty.BEGINNER);
+    const pool = [basicsAdv, thSeen];
+    const p = emptyProgress();
+    recordAttempt(p, 'basics-adv', true, 5 * DAY); // mastered + due, retired from drain
+    recordAttempt(p, 'th-seen', true, 60_000);     // superseding section finished, not due
+    const q = SpacedRepetitionSystem.selectNextQuestion(pool, p, undefined, backendPolicy);
+    expect(q?.id).toBe('basics-adv');
+  });
+
+  test('drain retirement does not affect other mastered topics in the queue', () => {
+    // A due REGEX drain card (Python Advanced itself) keeps draining even while
+    // the fundamentals card beside it is retired.
+    const basicsAdv = makeQ('basics-adv', Topic.PY_BASICS, Difficulty.ADVANCED);
+    const regexAdv = makeQ('regex-adv', Topic.PY_REGEX, Difficulty.ADVANCED);
+    const p = emptyProgress();
+    recordAttempt(p, 'basics-adv', true, 5 * DAY); // retired (superseding finished below)
+    recordAttempt(p, 'regex-adv', true, 5 * DAY);  // PY_REGEX is in Python Advanced — fully attempted AND due
+    const s = SpacedRepetitionSystem.getReviewStatus([basicsAdv, regexAdv], p, backendPolicy);
+    expect(s.drainQueueCount).toBe(1); // only the regex card counts
+    expect(s.mode).toBe('drain');
   });
 });

@@ -189,7 +189,35 @@ def above_average_articles():
       concepts: ['dj-orm-query-construction'],
     },
   {
-      id: 'dj-models-adv-1',
+      id: 'dj-orm-queryset-manager-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Give `Product` a chainable custom filter: `Product.objects.in_stock().cheap()` should both work. Fill in the base class the custom QuerySet extends, and the classmethod call that turns it into the model\'s manager.',
+      template: `class ProductQuerySet(models.___):
+    def in_stock(self):
+        return self.filter(in_stock=True)
+
+    def cheap(self):
+        return self.filter(price__lt=10)
+
+class Product(models.Model):
+    name = models.CharField(max_length=200)
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+    in_stock = models.BooleanField(default=True)
+
+    objects = ProductQuerySet.___()`,
+      blanks: ['QuerySet', 'as_manager'],
+      solution: 'class ProductQuerySet(models.QuerySet):\n    def in_stock(self):\n        return self.filter(in_stock=True)\n\n    def cheap(self):\n        return self.filter(price__lt=10)\n\nclass Product(models.Model):\n    name = models.CharField(max_length=200)\n    price = models.DecimalField(max_digits=6, decimal_places=2)\n    in_stock = models.BooleanField(default=True)\n\n    objects = ProductQuerySet.as_manager()',
+      explanation: 'Subclassing `models.QuerySet` and exposing it via `SubclassedQuerySet.as_manager()` is what makes custom filter methods chainable: `Product.objects.in_stock().cheap()`. Defining the same methods on a `Manager` subclass instead would break chaining — a `Manager` method doesn\'t return another `Manager`, so `.in_stock()` would return a plain QuerySet with no `.cheap()` on it. `as_manager()` builds a manager class from the QuerySet automatically, keeping every method chainable all the way down.',
+      hints: ['Custom QuerySets subclass models.QuerySet', 'as_manager() turns the QuerySet class into a chainable manager'],
+      tags: ['django', 'orm', 'QuerySet', 'as_manager', 'cloze'],
+      concepts: ['dj-orm-query-construction'],
+    },
+  {
+      id: 'dj-orm-adv-3',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,
       topic: Topic.DJ_ORM,
@@ -523,7 +551,7 @@ Article.objects.filter(pk=pk).update(view_count=___("view_count") + 1)`,
         },
         {
           id: 'd',
-          text: 'Object-Relational Mapping — lets you talk to the database in Python instead of SQL: model classes map to tables, instances to rows, attributes to columns',
+          text: 'Object-Relational Mapping — Python code talks to the database instead of raw SQL',
           isCorrect: true,
         },
       ],
@@ -1101,7 +1129,7 @@ def ensure_tag(label):
         'create() inserts when the guard says it is absent',
         'get_or_create is the production shortcut',
       ],
-      tags: ['django', 'orm', 'exists', 'create', 'advanced'],
+      tags: ['django', 'orm', 'exists', 'create'],
       concepts: ['dj-orm-query-construction'],
     },
   // only / defer — column deferral
@@ -1235,7 +1263,7 @@ def import_titles(titles):
         'bulk_create returns the list of created objects',
         'len() of that list is the row count',
       ],
-      tags: ['django', 'orm', 'bulk_create', 'advanced'],
+      tags: ['django', 'orm', 'bulk_create'],
       concepts: ['dj-orm-query-construction'],
     },
   // values / values_list — projection

@@ -564,38 +564,6 @@ def get_theme(request):
       concepts: ['dj-view-patterns'],
     },
 {
-      id: 'dj-views-gap-2',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.DJ_VIEWS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Write the simplest possible Django view: a function called `hello` that takes a request and returns an HttpResponse with the text "Hello, World!". Include the necessary import.',
-      starterCode: `# views.py
-# Import HttpResponse from the correct module, then write the view function
-
-`,
-      testCases: [
-        {
-          input: 'Simple view function',
-          expectedOutput: 'Function that imports HttpResponse and returns HttpResponse("Hello, World!")',
-          description: 'Should define a view function returning HttpResponse',
-        },
-      ],
-      solution: `# views.py
-from django.http import HttpResponse
-
-def hello(request):
-    return HttpResponse("Hello, World!")`,
-      explanation: 'This is the minimal Django view. HttpResponse is imported from django.http. The function takes `request` (an HttpRequest object that Django passes automatically) and returns an HttpResponse containing the text "Hello, World!". In a real app, you would connect this view to a URL pattern in urls.py so Django knows when to call it.',
-      hints: [
-        'HttpResponse lives in django.http',
-        'The first parameter of every view function is the request object',
-      ],
-      tags: ['django', 'views', 'http-response', 'basics'],
-      concepts: ['dj-view-patterns'],
-    },
-{
       id: 'dj-views-parsons-1',
       type: QuestionType.PARSONS,
       difficulty: Difficulty.BEGINNER,
@@ -672,6 +640,28 @@ list`,
       explanation: 'Function-based views typically dispatch on `request.method`. Django does not automatically reject methods — the `else` branch would handle PUT/DELETE/etc unless you add `@require_GET` or similar. `HttpResponse.content` is bytes; `.decode()` gives the string body.',
       hints: ['No auto method-restriction without @require_*', 'response.content is bytes'],
       tags: ['django', 'views', 'request.method', 'predict'],
+      concepts: ['dj-view-patterns'],
+    },
+{
+      id: 'dj-views-paginator-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_VIEWS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'List Comments 10 per page. Fill in the class that paginates a queryset, and the method that safely returns a page for a possibly out-of-range or non-numeric page number without raising.',
+      template: `from django.core.paginator import ___
+
+def comment_list(request):
+    qs = Comment.objects.order_by("-created_at")
+    paginator = Paginator(qs, 10)
+    page_obj = paginator.___(request.GET.get("page", 1))
+    return render(request, "comments.html", {"page_obj": page_obj})`,
+      blanks: ['Paginator', 'get_page'],
+      solution: 'from django.core.paginator import Paginator\n\ndef comment_list(request):\n    qs = Comment.objects.order_by("-created_at")\n    paginator = Paginator(qs, 10)\n    page_obj = paginator.get_page(request.GET.get("page", 1))\n    return render(request, "comments.html", {"page_obj": page_obj})',
+      explanation: '`Paginator(queryset, per_page)` slices a queryset into fixed-size pages. `.get_page(n)` is the forgiving fetch — an out-of-range or non-numeric page number falls back to the first/last valid page instead of raising, so the raw `request.GET` value can be passed straight in. The stricter `.page(n)` raises `PageNotAnInteger` / `EmptyPage`, which you would have to catch yourself.',
+      hints: ['Paginator(queryset, per_page) builds the pages', 'get_page is forgiving of bad input; page() raises'],
+      tags: ['django', 'views', 'Paginator', 'get_page', 'cloze'],
       concepts: ['dj-view-patterns'],
     },
 {

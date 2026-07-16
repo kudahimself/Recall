@@ -99,6 +99,23 @@ WHERE EXISTS (
     tags: ['tsql', 'subqueries', 'exists', 'correlated', 'cloze'],
   },
   {
+    id: 'tsql-subq-recursive-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_SUBQUERIES_CTE,
+    course: Course.SQL,
+    question: 'How does a recursive CTE work?',
+    options: [
+      { id: 'a', text: "It has an anchor query (the starting rows) UNION ALL'd with a recursive query that references the CTE's own name; SQL Server repeats the recursive part until it returns no more rows.", isCorrect: true },
+      { id: 'b', text: 'It re-runs the entire CTE body twice in a row, with no other change in behavior.', isCorrect: false },
+      { id: 'c', text: 'It calls a stored procedure once per row of the base table, recursively.', isCorrect: false },
+      { id: 'd', text: 'It is just a naming convention - "recursive" has no effect on how the query executes.', isCorrect: false },
+    ],
+    explanation: "A recursive CTE unions an anchor member (the base case) with a recursive member that joins back to the CTE's own name. SQL Server re-executes the recursive member against only the rows produced in the previous step, accumulating results until a step produces zero rows - the classic pattern for walking a hierarchy (e.g. an employee/manager chain).",
+    hints: ['Anchor UNION ALL recursive member', 'Recursive member references the CTE by name'],
+    tags: ['tsql', 'subqueries', 'cte', 'recursive-cte'],
+  },
+  {
     id: 'tsql-subq-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -126,6 +143,39 @@ WHERE Total >= 500;`,
     explanation: 'The CTE computes per-customer totals once; the outer query then filters them with a simple `WHERE Total >= 500`. This is cleaner than repeating the aggregate, and you can reference `Total` directly because the CTE already named it.',
     hints: ['Define the rollup in WITH … AS ( … )', 'Filter the CTE in the outer query'],
     tags: ['tsql', 'subqueries', 'cte', 'aggregation'],
+  },
+  {
+    id: 'tsql-subq-recursive-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_SUBQUERIES_CTE,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the operator joining anchor and recursive members, and the join that walks each employee back to their manager.',
+    template: `WITH EmpChain AS (
+    SELECT EmployeeId, ManagerId, 0 AS Lvl
+    FROM dbo.Employee
+    WHERE ManagerId IS NULL
+    ___ ___
+    SELECT e.EmployeeId, e.ManagerId, c.Lvl + 1
+    FROM dbo.Employee e
+    ___ EmpChain c ON e.ManagerId = c.EmployeeId
+)
+SELECT * FROM EmpChain;`,
+    blanks: ['UNION', 'ALL', 'JOIN'],
+    solution: `WITH EmpChain AS (
+    SELECT EmployeeId, ManagerId, 0 AS Lvl
+    FROM dbo.Employee
+    WHERE ManagerId IS NULL
+    UNION ALL
+    SELECT e.EmployeeId, e.ManagerId, c.Lvl + 1
+    FROM dbo.Employee e
+    JOIN EmpChain c ON e.ManagerId = c.EmployeeId
+)
+SELECT * FROM EmpChain;`,
+    explanation: 'The anchor member picks top-level employees (no manager); `UNION ALL` combines it with the recursive member, which joins the base table back to the CTE\'s own name (`EmpChain c`) to pull in the next level down. SQL Server repeats the recursive member against the newest rows until a pass produces none.',
+    hints: ['Combine anchor and recursive members with UNION ALL', 'Recursive member joins the base table to the CTE by name'],
+    tags: ['tsql', 'subqueries', 'cte', 'recursive-cte', 'cloze'],
   },
   {
     id: 'tsql-subq-2',

@@ -113,6 +113,14 @@
   min-height: 0;
 }
 
+/* Live render of the filled-in template (HTML/CSS questions). Explicit height -
+   the iframe must never derive from an unsized flex chain. */
+.cloze-preview-wrapper {
+  margin: 12px 24px 0 24px;
+  height: clamp(160px, 26vh, 300px);
+  flex: 0 0 auto;
+}
+
 .cloze-block-header {
   font-size: var(--fs-xs);
   font-family: var(--font-mono);

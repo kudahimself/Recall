@@ -1060,6 +1060,35 @@ print(parsed.order_id)`,
       concepts: ['py-pydantic-validation', 'py-json-serialization'],
     },
   {
+      id: 'py-pydantic-nested-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_PYDANTIC,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the field type so User.address nests an Address model, then build one from a plain dict.',
+      template: `from pydantic import BaseModel
+
+class Address(BaseModel):
+    city: str
+
+class User(BaseModel):
+    name: str
+    address: ___
+
+u = User(name="Alice", address={"city": "Dublin"})
+print(u.address.city)`,
+      blanks: ['Address'],
+      solution:
+        'from pydantic import BaseModel\n\nclass Address(BaseModel):\n    city: str\n\nclass User(BaseModel):\n    name: str\n    address: Address\n\nu = User(name="Alice", address={"city": "Dublin"})\nprint(u.address.city)',
+      explanation:
+        'When a field\'s type is another BaseModel, pydantic accepts either an instance or a plain dict and auto-constructs the inner model, validating recursively. This is how nested JSON payloads become fully typed object graphs with zero manual parsing.',
+      hints: ['The field type is just the nested model\'s class name.'],
+      tags: ['pydantic', 'nested-models', 'composition'],
+      concepts: ['py-pydantic-validation'],
+    },
+  {
       id: 'py-pydantic-6',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,

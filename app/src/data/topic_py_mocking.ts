@@ -166,6 +166,29 @@ with pytest.raises(ValueError):
     concepts: ['py-test-isolation'],
   },
   {
+    id: 'py-mock-assertcalled-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.PY_MOCKING,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the assertions: one that checks the mock was called exactly once, one that checks the args of its last call.',
+    template: `from unittest.mock import MagicMock
+
+m = MagicMock()
+m.send("hi")
+m.send.___()
+m.send.___("hi")`,
+    blanks: ['assert_called_once', 'assert_called_with'],
+    solution:
+      'from unittest.mock import MagicMock\n\nm = MagicMock()\nm.send("hi")\nm.send.assert_called_once()\nm.send.assert_called_with("hi")',
+    explanation:
+      'assert_called_once() fails unless the mock was called exactly once. assert_called_with(*args, **kwargs) checks the LAST call\'s arguments matched. Both raise AssertionError with a clear diff on mismatch.',
+    hints: ['Both start with "assert_called"; one adds "_once", the other adds "_with".'],
+    tags: ['mock', 'assert_called', 'interaction-testing'],
+    concepts: ['py-test-isolation'],
+  },
+  {
     id: 'py-mock-6',
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
@@ -333,6 +356,30 @@ def test_api_key(monkeypatch):
     concepts: ['py-test-isolation'],
   },
   {
+    id: 'py-mock-anycall-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PY_MOCKING,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the assertion that checks a call happened ANYWHERE in the history, and the attribute listing every recorded call.',
+    template: `from unittest.mock import MagicMock
+
+m = MagicMock()
+m("a")
+m("b")
+m.___("a")
+print(len(m.___))`,
+    blanks: ['assert_any_call', 'call_args_list'],
+    solution:
+      'from unittest.mock import MagicMock\n\nm = MagicMock()\nm("a")\nm("b")\nm.assert_any_call("a")\nprint(len(m.call_args_list))',
+    explanation:
+      'assert_called_with only checks the LAST call. assert_any_call(*args) passes if ANY recorded call matches. call_args_list is the ordered list of every call the mock received — its length equals call_count.',
+    hints: ['"assert_any_call" for anywhere-in-history; "call_args_list" for the full history.'],
+    tags: ['mock', 'call_args_list', 'assert_any_call', 'interaction-testing'],
+    concepts: ['py-test-isolation'],
+  },
+  {
     id: 'py-mock-8',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -399,9 +446,17 @@ print(len(log.call_args_list))`,
     topic: Topic.PY_MOCKING,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Practise the most common mock.patch gotcha: patching the name where it is USED, not where it is defined. Assume a module `myapp.api` did `from requests import get` at import time, and defines `fetch_json(url)` that calls `get(url).json()`. In the test, open a `patch` context manager targeting the string `"myapp.api.get"` (NOT `"requests.get"`), bind the mock as `mock_get`, configure the chained attribute so the mock\'s `.json()` returns `{"ok": True}`, call `fetch_json("http://x")`, and assert the result equals `{"ok": True}`. Reason: `myapp.api` holds its own reference to `get` from the `from ... import` line — that local reference is what must be replaced.',
+    question: 'The starter shows `myapp/api.py`: it did `from requests import get` at import time, and `fetch_json(url)` returns `get(url).json()`. Write a test that runs `fetch_json("http://x")` with no real HTTP call: open a `patch` context manager on the right target string, bind the mock as `mock_get`, configure the chained attribute so the mocked `get(url).json()` returns `{"ok": True}`, and assert the result equals `{"ok": True}`. Choose the patch target carefully: patch the name where it is looked up, not where it is defined.',
     starterCode: `from unittest.mock import patch
-  `,
+
+# myapp/api.py (already importable):
+#   from requests import get
+#
+#   def fetch_json(url):
+#       return get(url).json()
+
+from myapp.api import fetch_json
+`,
     testCases: [
       {
         input: 'patch where used',
@@ -411,14 +466,16 @@ print(len(log.call_args_list))`,
     ],
     solution: `from unittest.mock import patch
 
-# In myapp/api.py:
+# myapp/api.py (already importable):
 #   from requests import get
+#
 #   def fetch_json(url):
 #       return get(url).json()
 
+from myapp.api import fetch_json
+
 with patch("myapp.api.get") as mock_get:
     mock_get.return_value.json.return_value = {"ok": True}
-    from myapp.api import fetch_json
     result = fetch_json("http://x")
     assert result == {"ok": True}`,
     explanation: 'When `myapp.api` did `from requests import get`, it bound its own module-level name `get` to the function. Patching `requests.get` modifies the original — but `myapp.api.get` still points at the saved reference. Patch at the USE site: `myapp.api.get`. Same rule for `from ... import ...` anywhere. Using `import requests; requests.get(...)` avoids the issue — then patching `requests.get` works.',
@@ -480,6 +537,30 @@ with patch("myapp.api.get") as mock_get:
       'autospec also checks call signatures',
     ],
     tags: ['mock', 'spec', 'autospec'],
+    concepts: ['py-test-isolation'],
+  },
+  {
+    id: 'py-mock-mockcalls-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.PY_MOCKING,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the attribute that records calls to a mock AND its child methods in order, and the helper used to build expected entries.',
+    template: `from unittest.mock import MagicMock, call
+
+client = MagicMock()
+client.connect()
+client.close()
+
+assert client.___ == [___.connect(), call.close()]`,
+    blanks: ['mock_calls', 'call'],
+    solution:
+      'from unittest.mock import MagicMock, call\n\nclient = MagicMock()\nclient.connect()\nclient.close()\n\nassert client.mock_calls == [call.connect(), call.close()]',
+    explanation:
+      'mock_calls records every call to the mock AND its child attributes, in order — unlike call_args_list, which only tracks the mock\'s own direct calls. Build expected entries with call.method(args) for comparison.',
+    hints: ['mock_calls tracks children too; call.method(...) builds one expected entry.'],
+    tags: ['mock', 'mock_calls', 'call', 'ordering'],
     concepts: ['py-test-isolation'],
   },
   {

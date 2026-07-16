@@ -34,7 +34,7 @@ export const dj_cbv_questions: Question[] = [
       concepts: ['dj-view-patterns', 'dj-pagination-strategy'],
     },
 {
-      id: 'dj-views-cloze-2',
+      id: 'dj-cbv-listview-cloze-1',
       type: QuestionType.CLOZE_CODE,
       difficulty: Difficulty.INTERMEDIATE,
       topic: Topic.DJ_CBV,
@@ -106,6 +106,30 @@ class ArticleListView(ListView):
         'Use `as_view()` in urls.py: `ArticleListView.as_view()`',
       ],
       tags: ['django', 'CBV', 'ListView', 'generic-views', 'class-based-views'],
+      concepts: ['dj-view-patterns'],
+    },
+{
+      id: 'dj-cbv-createview-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_CBV,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Require login on a CreateView for Article. Fill the mixin and the lazy URL resolver.',
+      template: `from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic.edit import CreateView
+from django.urls import reverse_lazy
+
+class ArticleCreateView(___, CreateView):
+    model = Article
+    fields = ["title", "body"]
+    template_name = "articles/create.html"
+    success_url = ___("article-list")`,
+      blanks: ['LoginRequiredMixin', 'reverse_lazy'],
+      solution: 'from django.contrib.auth.mixins import LoginRequiredMixin\nfrom django.views.generic.edit import CreateView\nfrom django.urls import reverse_lazy\n\nclass ArticleCreateView(LoginRequiredMixin, CreateView):\n    model = Article\n    fields = ["title", "body"]\n    template_name = "articles/create.html"\n    success_url = reverse_lazy("article-list")',
+      explanation: '`LoginRequiredMixin` must come BEFORE `CreateView` in the inheritance list — mixins run first in the MRO, so its `dispatch()` override checks authentication before the view proceeds. `reverse_lazy` (not `reverse`) is required here because `success_url` is evaluated at class-definition time, before `urls.py` has finished loading.',
+      hints: ['LoginRequiredMixin goes first, before CreateView', 'reverse_lazy, not reverse, for class-level attributes'],
+      tags: ['django', 'CBV', 'CreateView', 'LoginRequiredMixin', 'reverse_lazy', 'cloze'],
       concepts: ['dj-view-patterns'],
     },
 {
@@ -301,7 +325,7 @@ urlpatterns = [
       concepts: ['dj-view-patterns'],
     },
 {
-      id: 'dj-views-parsons-2',
+      id: 'dj-cbv-listview-parsons-1',
       type: QuestionType.PARSONS,
       difficulty: Difficulty.INTERMEDIATE,
       topic: Topic.DJ_CBV,
@@ -332,7 +356,7 @@ urlpatterns = [
       concepts: ['dj-view-patterns'],
     },
 {
-      id: 'dj-views-adv-1',
+      id: 'dj-cbv-adv-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,
       topic: Topic.DJ_CBV,
@@ -386,7 +410,7 @@ class PublishedArticlesView(LoginRequiredMixin, ListView):
       concepts: ['dj-view-patterns', 'dj-select-related-vs-prefetch', 'dj-pagination-strategy'],
     },
 {
-      id: 'dj-views-adv-2',
+      id: 'dj-cbv-adv-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,
       topic: Topic.DJ_CBV,
@@ -455,13 +479,17 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
         { id: 'd', text: 'AccessMixin — override its has_access(request, pk) hook to compare the author field against the user', isCorrect: false },
       ],
       explanation: 'UserPassesTestMixin runs your `test_func` before the view dispatches; returning False yields a redirect to login (or 403 with `raise_exception = True`). Model permissions (`PermissionRequiredMixin`) are table-wide — having `change_article` lets you edit EVERY article, so they can\'t express row ownership. LoginRequiredMixin only checks authentication; it never filters rows. AccessMixin is the shared base class the other mixins build on — it has no `has_access` hook. In the class declaration the order is auth mixin → test mixin → generic view.',
+      hints: [
+        'test_func(self) returns True/False for the current user',
+        'PermissionRequiredMixin checks a table-wide permission, not row ownership',
+      ],
       tags: ['django', 'views', 'UserPassesTestMixin', 'mixins', 'ownership'],
       concepts: ['dj-view-patterns'],
     },
 {
-      id: 'dj-views-adv-3',
+      id: 'dj-cbv-adv-3',
       type: QuestionType.PARSONS,
-      difficulty: Difficulty.INTERMEDIATE,
+      difficulty: Difficulty.ADVANCED,
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
@@ -504,7 +532,7 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
       concepts: ['dj-view-patterns'],
     },
 {
-      id: 'dj-views-adv-5',
+      id: 'dj-cbv-adv-4',
       type: QuestionType.PREDICT_OUTPUT,
       difficulty: Difficulty.ADVANCED,
       topic: Topic.DJ_CBV,
@@ -565,6 +593,10 @@ PermMixin
         { id: 'd', text: 'A model method that returns its rows formatted as an HTTP response automatically.', isCorrect: false },
       ],
       explanation: 'A CBV is a view implemented as a class instead of a function. Django routes each HTTP verb to a same-named method — a GET request calls `get()`, a POST calls `post()`. Generic CBVs (ListView, DetailView, …) build on this to supply common behaviour for free.',
+      hints: [
+        'HTTP verbs map to methods: get(), post(), etc.',
+        'Generic CBVs (ListView, DetailView, ...) build on this',
+      ],
       tags: ['django', 'CBV', 'class-based-views', 'beginner'],
       concepts: ['dj-view-patterns'],
     },
@@ -582,6 +614,10 @@ PermMixin
         { id: 'd', text: 'A way to define URL patterns without ever editing the urls.py file.', isCorrect: false },
       ],
       explanation: 'Generic CBVs implement the common list/detail/create/update/delete patterns. You usually just set `model`, `template_name`, and a couple of other attributes; the view handles querying, pagination, form handling, and redirects. That is the main payoff over hand-writing a function-based view.',
+      hints: [
+        'Set a few attributes instead of writing the CRUD logic',
+        'model, template_name, and similar class attributes',
+      ],
       tags: ['django', 'CBV', 'generic-views', 'beginner'],
       concepts: ['dj-view-patterns'],
     },
@@ -599,6 +635,10 @@ PermMixin
         { id: 'd', text: 'It registers the view with the admin site so it shows up on the dashboard.', isCorrect: false },
       ],
       explanation: '`path()` expects a callable that takes a request and returns a response. A class is not that, so `.as_view()` returns a small function that, per request, instantiates the class and dispatches to the right method. Forgetting `.as_view()` (passing the class itself) is a common error.',
+      hints: [
+        '.as_view() returns a callable function, not the class itself',
+        'path() needs something callable per request',
+      ],
       tags: ['django', 'CBV', 'as_view', 'urls', 'beginner'],
       concepts: ['dj-view-patterns'],
     },
@@ -616,6 +656,10 @@ PermMixin
         { id: 'd', text: 'ListView for both pages, switching behaviour based on the URL query string.', isCorrect: false },
       ],
       explanation: '`ListView` renders a collection (it calls `Model.objects.all()` and exposes `object_list`). `DetailView` renders one object looked up by `pk` or `slug` from the URL. They are the two read-only generic views; `CreateView`/`UpdateView`/`DeleteView` handle writes.',
+      hints: [
+        'ListView = a collection of objects',
+        'DetailView = one object, looked up by pk or slug',
+      ],
       tags: ['django', 'CBV', 'ListView', 'DetailView', 'beginner'],
       concepts: ['dj-view-patterns'],
     },

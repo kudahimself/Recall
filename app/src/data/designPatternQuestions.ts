@@ -464,6 +464,28 @@ def fetch_users():
     concepts: ['pattern-structural'],
   },
 
+  {
+    id: 'dp-struct-9',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PATTERNS_STRUCTURAL,
+    course: Course.WEB_DEV,
+    question: `Checkout requires calling three separate subsystems in the right order: charge the payment gateway, decrement inventory, and queue a shipping confirmation email. Callers currently duplicate this three-step sequence at every call site. You want one method, checkout.complete(order), that hides the subsystem calls behind a single simple interface. Which pattern is this?`,
+    options: [
+      { id: 'a', text: 'Facade — a single class exposes one simplified method that internally coordinates the payment, inventory, and shipping subsystems', isCorrect: true },
+      { id: 'b', text: 'Adapter — convert one subsystem\'s interface into the shape another subsystem expects', isCorrect: false },
+      { id: 'c', text: 'Proxy — control access to a single subsystem by standing in front of it', isCorrect: false },
+      { id: 'd', text: 'Mediator — let the three subsystems talk to each other directly through a shared coordinator object', isCorrect: false },
+    ],
+    explanation: `Facade provides a single, simplified entry point over a set of complex subsystems, without changing any of the subsystems' own interfaces. Here checkout.complete(order) hides the payment/inventory/shipping orchestration behind one call. Adapter is about interface mismatch between two things, Proxy is about controlling access to one thing, and Mediator centralizes communication BETWEEN peer objects rather than simplifying a call for external callers.`,
+    hints: [
+      'One simplified method standing in front of several subsystems',
+      'The subsystems themselves are not being adapted or wrapped individually - just fronted by one entry point',
+    ],
+    tags: ['facade', 'structural', 'subsystem', 'simplification'],
+    concepts: ['pattern-structural'],
+  },
+
   // =====================================================================
   // PATTERNS_BEHAVIORAL (4 questions)
   // =====================================================================
@@ -1253,6 +1275,28 @@ function createNotFoundError(resource: string, id: string): ApiError {
     concepts: ['api-rest-conventions'],
   },
 
+  {
+    id: 'dp-api-10',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.API_DESIGN,
+    course: Course.WEB_DEV,
+    question: `A React form already checks that "email" looks like an email before the Zod schema even lets the user submit. A teammate asks whether the API also needs to validate the email field on the server. Why does the API still need its own validation?`,
+    options: [
+      { id: 'a', text: 'The server must independently validate every field, because clients (browser devtools, curl, a mobile app, another service) can send any request directly to the API, bypassing the frontend entirely', isCorrect: true },
+      { id: 'b', text: 'It does not - once the frontend form validates a field, the API can trust that field on every request that reaches it', isCorrect: false },
+      { id: 'c', text: 'Server validation is only needed for numeric fields, since string formats like email are a purely visual concern', isCorrect: false },
+      { id: 'd', text: 'Server validation should be skipped to save CPU time, since the database column type already rejects bad data', isCorrect: false },
+    ],
+    explanation: `Frontend validation is a UX convenience - it gives the user instant feedback without a round trip. It is not a security or data-integrity boundary, because nothing forces a request to come from that form: an attacker (or a bug, or a legitimate non-browser client) can call the API directly with whatever body they want, skipping the client-side checks entirely. The API is the actual trust boundary, so it must re-validate every field itself (the same Zod schema can often be reused server-side in a full-stack Next.js app, which is precisely why "define the schema once, use it on both sides" is a common pattern) rather than assume the frontend already did the job. A database column type catches gross type mismatches at best, not business rules like "must look like an email" or "must be under 500 characters."`,
+    hints: [
+      'Anyone can send an HTTP request straight to the API, with or without your React form',
+      'Client-side validation is about user experience, not security',
+    ],
+    tags: ['validation', 'zod', 'security', 'api-design', 'trust-boundary'],
+    concepts: ['api-rest-conventions'],
+  },
+
   // =====================================================================
   // DB_DESIGN (4 questions)
   // =====================================================================
@@ -1530,5 +1574,27 @@ def get_books_right():
     ],
     tags: ['primary-keys', 'uuid', 'auto-increment', 'database-design', 'sharding'],
     concepts: ['db-indexing'],
+  },
+
+  {
+    id: 'dp-db-11',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DB_DESIGN,
+    course: Course.WEB_DEV,
+    question: `A "posts" table needs a way to remove a post from every user-facing view (feed, search, profile) while keeping it available for moderation review and audit history. Which deletion strategy fits, and what does it cost?`,
+    options: [
+      { id: 'a', text: 'Soft delete: add a deleted_at (nullable timestamp) column, filter WHERE deleted_at IS NULL everywhere, and treat a non-null value as deleted', isCorrect: true },
+      { id: 'b', text: 'Hard delete: run DELETE FROM posts WHERE id = ?, since the row is no longer needed once it is hidden from users', isCorrect: false },
+      { id: 'c', text: 'Rename the row\'s title to "[deleted]" so it visually looks removed while every column stays queryable as before', isCorrect: false },
+      { id: 'd', text: 'Move the row to a separate deleted_posts table with a different schema so the original id can be reused for a new post', isCorrect: false },
+    ],
+    explanation: `Soft delete (a nullable deleted_at, or a boolean is_deleted) keeps the row physically present but marks it hidden, so moderation and audit tooling can still read it while every normal query adds a deleted_at IS NULL filter (or a default-scoped view/manager does it for you). The cost: every query on that table must remember the filter (easy to forget and leak "deleted" rows back into a feed), indexes should lead with deleted_at to keep the filter cheap, and foreign keys pointing at soft-deleted rows still resolve since the row never left. Hard delete is simpler but destroys the audit trail the requirement explicitly needs. A separate table (option d) works for true archival but complicates foreign keys and id reuse, and is unnecessary machinery when a nullable column does the job.`,
+    hints: [
+      'The requirement needs the row to still exist somewhere for moderation/audit',
+      'A nullable timestamp column can mean both "not deleted" (null) and "deleted at this time"',
+    ],
+    tags: ['soft-delete', 'hard-delete', 'database-design', 'audit-trail'],
+    concepts: ['db-normalization'],
   },
 ];

@@ -58,6 +58,30 @@ export const dj_api_docs_questions: Question[] = [
       tags: ['openapi', 'swagger', 'redoc', 'api-documentation', 'standards'],
       concepts: ['dj-api-docs'],
     },
+  {
+      id: 'dj-api-docs-extendschema-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_API_DOCS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the decorator that customizes an endpoint\'s generated docs, and its kwarg that maps a status code to the response serializer.',
+      template: `from drf_spectacular.utils import extend_schema
+
+@___(
+    description="Publish an article.",
+    ___={200: ArticleSerializer},
+)
+@action(detail=True, methods=["post"])
+def publish(self, request, pk=None):
+    ...`,
+      blanks: ['extend_schema', 'responses'],
+      solution: 'from drf_spectacular.utils import extend_schema\n\n@extend_schema(\n    description="Publish an article.",\n    responses={200: ArticleSerializer},\n)\n@action(detail=True, methods=["post"])\ndef publish(self, request, pk=None):\n    ...',
+      explanation: '`@extend_schema(...)` overrides what drf-spectacular infers for one endpoint. `description` overrides the docstring; `responses={status_code: Serializer}` documents the response shape per status code — essential for `@action` methods, where auto-detection often cannot infer the schema on its own.',
+      hints: ['Decorator from drf_spectacular.utils', 'Kwarg mapping status code -> serializer'],
+      tags: ['drf-spectacular', 'extend_schema', 'cloze'],
+      concepts: ['dj-api-docs'],
+    },
     // 3. Coding: @extend_schema decorator
   {
       id: 'celery-drf-20',
@@ -134,6 +158,28 @@ REST_FRAMEWORK = {
       'The schema class is AutoSchema from drf_spectacular.openapi',
     ],
     tags: ['drf-spectacular', 'openapi', 'configuration', 'cloze'],
+    concepts: ['dj-api-docs'],
+  },
+  {
+    id: 'dj-api-docs-urls-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_API_DOCS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the views that serve the raw OpenAPI schema and the interactive Swagger UI.',
+    template: `from django.urls import path
+from drf_spectacular.views import ___, ___
+
+urlpatterns = [
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+]`,
+    blanks: ['SpectacularAPIView', 'SpectacularSwaggerView'],
+    solution: `from django.urls import path\nfrom drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView\n\nurlpatterns = [\n    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),\n    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),\n]`,
+    explanation: '`SpectacularAPIView` serves the raw OpenAPI schema (JSON/YAML) used by tooling and client generators. `SpectacularSwaggerView` renders it as an interactive page -- it needs `url_name="schema"` to know where to fetch the schema from.',
+    hints: ['View that serves the raw schema JSON/YAML', 'View that renders the interactive Swagger page'],
+    tags: ['drf-spectacular', 'SpectacularAPIView', 'SpectacularSwaggerView', 'urls', 'cloze'],
     concepts: ['dj-api-docs'],
   },
 ];

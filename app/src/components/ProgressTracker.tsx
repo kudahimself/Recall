@@ -7,9 +7,9 @@ import {
   UNLOCK_COVERAGE_PCT,
   UNLOCK_ACCURACY_PCT,
   RECENT_WINDOW,
-  WEAK_AREA_PCT,
   STRONG_AREA_PCT,
   MIN_ATTEMPTS_FOR_STATS,
+  WEAK_AREAS_MAX,
   BAR_GOOD_PCT,
   BAR_OK_PCT,
   pct,
@@ -25,6 +25,9 @@ interface Props {
   course: Course;
   // Optional. When omitted, the misconception panel is hidden.
   misconceptions?: MisconceptionStore;
+  // Optional. When provided, weak-area rows get a Review button that filters
+  // question mode down to that category's topics.
+  onReviewTopic?: (topicKeys: string[]) => void;
 }
 
 interface TopicAnalysis {
@@ -46,7 +49,7 @@ interface TopicAnalysis {
   avgAttemptsToPass: number;
 }
 
-export const ProgressTracker: React.FC<Props> = ({ progress, questions, course, misconceptions }) => {
+export const ProgressTracker: React.FC<Props> = ({ progress, questions, course, misconceptions, onReviewTopic }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const toggleCategory = (category: string) => {
@@ -286,19 +289,25 @@ export const ProgressTracker: React.FC<Props> = ({ progress, questions, course, 
     };
   };
 
+  // Only topics whose recent accuracy sits below the unlock bar are weak -
+  // a topic at UNLOCK_ACCURACY_PCT or better is doing fine and flagging it
+  // is noise. Ranked worst-first, capped at WEAK_AREAS_MAX.
   const weakAreas = useMemo(() => {
-    const weak: { category: string; pct: number; struggles: number }[] = [];
+    const weak: { category: string; pct: number; struggles: number; slipped: boolean }[] = [];
     for (const category of Object.keys(topicCategories)) {
       const stats = getCategoryAnalysis(category);
-      if (stats.recentTotal >= MIN_ATTEMPTS_FOR_STATS && stats.recentPct < WEAK_AREA_PCT) {
+      if (stats.recentTotal >= MIN_ATTEMPTS_FOR_STATS && stats.recentPct < UNLOCK_ACCURACY_PCT) {
         weak.push({
           category,
           pct: stats.recentPct,
           struggles: stats.struggleQuestions,
+          // Fully covered but recent accuracy has slipped below the unlock
+          // bar - a "mastered" topic that needs a refresher.
+          slipped: stats.coveragePct === 100,
         });
       }
     }
-    return weak.sort((a, b) => a.pct - b.pct);
+    return weak.sort((a, b) => a.pct - b.pct).slice(0, WEAK_AREAS_MAX);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicAnalysis]);
 
@@ -579,27 +588,33 @@ export const ProgressTracker: React.FC<Props> = ({ progress, questions, course, 
           <h3>Areas to Focus On</h3>
           <div className="weak-areas-list">
             {weakAreas.map(w => (
-              <div key={w.category} className="weak-area-item">
-                <span className="weak-area-name">{w.category}</span>
-                <span className="weak-area-stat">
-                  {w.pct.toFixed(0)}% recent
-                  {w.struggles > 0 && ` | ${w.struggles} struggled`}
+              <div key={w.category} className={`weak-area-item${w.slipped ? ' weak-area-slipped' : ''}`}>
+                <span className="weak-area-name">
+                  {w.category}
+                  {w.slipped && (
+                    <span
+                      className="weak-area-badge"
+                      title={`Fully covered topic whose recent accuracy has dropped below ${UNLOCK_ACCURACY_PCT}%`}
+                    >
+                      slipped
+                    </span>
+                  )}
                 </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Strong areas callout */}
-      {strongAreas.length > 0 && (
-        <div className="strong-areas-section">
-          <h3>Your Strengths</h3>
-          <div className="strong-areas-list">
-            {strongAreas.map(s => (
-              <div key={s.category} className="strong-area-item">
-                <span className="strong-area-name">{s.category}</span>
-                <span className="strong-area-stat">{s.pct.toFixed(0)}% recent</span>
+                <span className="weak-area-actions">
+                  <span className="weak-area-stat">
+                    {w.pct.toFixed(0)}% recent
+                    {w.struggles > 0 && ` | ${w.struggles} struggled`}
+                  </span>
+                  {onReviewTopic && (
+                    <button
+                      className="weak-area-review-btn"
+                      onClick={() => onReviewTopic(topicCategories[w.category] || [])}
+                      title={`Practice only ${w.category} questions`}
+                    >
+                      Review
+                    </button>
+                  )}
+                </span>
               </div>
             ))}
           </div>

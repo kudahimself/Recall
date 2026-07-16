@@ -320,6 +320,27 @@ async function createUserWithPost() {
     concepts: ['prisma-schema-relations'],
   },
 
+  // 4b. Cloze fade: $transaction array form
+  {
+    id: 'prisma-transaction-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Fill in the Prisma Client method that runs an array of operations atomically — all succeed or all roll back.',
+    template: `const [user, post] = await prisma.___([
+  prisma.user.update({ where: { id: 1 }, data: { name: "Alice" } }),
+  prisma.post.create({ data: { title: "New Post", authorId: 1 } }),
+]);`,
+    blanks: ['$transaction'],
+    solution: 'const [user, post] = await prisma.$transaction([\n  prisma.user.update({ where: { id: 1 }, data: { name: "Alice" } }),\n  prisma.post.create({ data: { title: "New Post", authorId: 1 } }),\n]);',
+    explanation: '$transaction takes an array of Prisma operations and runs them in a single database transaction — if any operation fails, all are rolled back, guaranteeing atomicity for related writes.',
+    hints: ['A single Prisma Client method, prefixed with $.'],
+    tags: ['prisma', 'transaction', 'atomicity', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
   // 5. Coding: Transaction with update and nested create
   {
     id: 'prisma-5',
@@ -388,10 +409,10 @@ async function updateUserAndCreatePost() {
     course: Course.WEB_DEV,
     question: 'You have a page that lists 50 users and each user\'s posts. Your colleague wrote this code:\n\n```typescript\nconst users = await prisma.user.findMany();\nfor (const user of users) {\n  user.posts = await prisma.post.findMany({ where: { authorId: user.id } });\n}\n```\n\nWhat problem does this code have, and how should it be fixed?',
     options: [
-      { id: 'a', text: 'It will crash because you cannot reassign properties on Prisma results; use a map() instead of a for loop', isCorrect: false },
-      { id: 'b', text: 'This is the N+1 problem: 1 query for users + 50 queries for posts = 51 total queries. Fix it by using `include: { posts: true }` in the findMany call, which generates a single JOIN query', isCorrect: true },
-      { id: 'c', text: 'The code is fine for small datasets; N+1 only matters when you have millions of rows', isCorrect: false },
-      { id: 'd', text: 'The fix is to use raw SQL with a manual JOIN since Prisma cannot fetch relations efficiently', isCorrect: false },
+      { id: 'a', text: 'It is fine — Prisma automatically batches sequential queries like this into a single round trip behind the scenes, so no code change is needed', isCorrect: false },
+      { id: 'b', text: 'This is the N+1 problem: 1 query for users plus 50 for posts. Fix it with `include: { posts: true }` in findMany, which generates a single JOIN query', isCorrect: true },
+      { id: 'c', text: 'The code is fine for small datasets like this one; N+1 only becomes a real problem once a table has millions of rows', isCorrect: false },
+      { id: 'd', text: 'The fix is to drop Prisma for this query and hand-write a raw SQL JOIN, since the query builder cannot express relation loading', isCorrect: false },
     ],
     explanation: 'The N+1 problem is one of the most common performance pitfalls in any ORM. The original code makes 1 query for users, then N additional queries (one per user) for their posts. With 50 users, that is 51 database round-trips instead of 1-2. The fix is simple: `prisma.user.findMany({ include: { posts: true } })`. Prisma translates this into efficient SQL (typically a JOIN or a second IN query) that fetches everything in minimal round-trips. You can also use `select` instead of `include` if you only need specific fields, which reduces data transfer. This is why Prisma\'s relation loading is declarative — you describe what data you want, and Prisma optimizes the queries.',
     hints: [
@@ -491,13 +512,8 @@ export default prisma;`,
     language: CodeLanguage.TYPESCRIPT,
     question: 'Modify the Prisma schema and write a delete query so that deleting a User automatically deletes all their Posts.\n\nPart 1: Show the updated Post model with `onDelete: Cascade` on the author relation.\nPart 2: Write a `deleteUser` function that deletes a user by their id. Because of the cascade, all their posts will be automatically deleted by the database.\n\nAssume the User model is already defined with id, email, name, and posts relation.',
     starterCode: `// Part 1: Updated Post model in schema.prisma
-// model Post {
-//   id       Int    @id @default(autoincrement())
-//   title    String
-//   content  String
-//   authorId Int
-//   author   User   @relation(fields: [authorId], references: [id] /* add cascade here */)
-// }
+// The current Post model has id, title, content, authorId, and an author
+// relation to User. Add the cascade behavior to that relation.
 
 // Part 2: Delete function
 import { PrismaClient } from "@prisma/client";
@@ -567,6 +583,491 @@ async function deleteUser(userId: number) {
       'Each serverless instance has its own memory space and connection pool',
     ],
     tags: ['prisma', 'serverless', 'connection-pooling', 'vercel', 'pgbouncer'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 11. Cloze: create + createMany
+  {
+    id: 'prisma-cloze-create',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the two insert calls: one creates a single tag, the other bulk-inserts an array of tags in one round trip, skipping any that would violate a unique constraint.',
+    template: `const tag = await prisma.tag.___({ data: { label: "featured" } });
+
+const result = await prisma.tag.___({
+  data: [{ label: "sale" }, { label: "new" }],
+  skipDuplicates: true,
+});`,
+    blanks: ['create', 'createMany'],
+    solution: `const tag = await prisma.tag.create({ data: { label: "featured" } });
+
+const result = await prisma.tag.createMany({
+  data: [{ label: "sale" }, { label: "new" }],
+  skipDuplicates: true,
+});`,
+    explanation: '`create` inserts one row and returns the full created record. `createMany` inserts an array of rows in a single query but returns only a `{ count }` object, not the created records themselves - use it for bulk seeding where you do not need the rows back. `skipDuplicates` silently skips rows that would violate a unique constraint instead of throwing.',
+    hints: [
+      'The single-row insert method',
+      'The bulk-insert method that takes an array under `data`',
+    ],
+    tags: ['prisma', 'create', 'createMany', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 12. Coding: createMany bulk insert
+  {
+    id: 'prisma-11',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Write a function `seedTags` that bulk-inserts three Tag rows in one query: labels "sale", "new", and "featured". Skip any that already exist instead of throwing. Return the number of rows actually created.\n\nAssume `prisma` is already instantiated and the Tag model has a unique `label` field.',
+    starterCode: `import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function seedTags() {
+  // Bulk-insert the three tags, skipping duplicates
+}`,
+    testCases: [
+      {
+        input: 'createMany call',
+        expectedOutput: 'prisma.tag.createMany({ data: [{ label: "sale" }, { label: "new" }, { label: "featured" }], skipDuplicates: true })',
+        description: 'Should bulk-insert three tags with skipDuplicates',
+      },
+    ],
+    solution: `import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function seedTags() {
+  const result = await prisma.tag.createMany({
+    data: [{ label: "sale" }, { label: "new" }, { label: "featured" }],
+    skipDuplicates: true,
+  });
+  return result.count;
+}`,
+    explanation: '`createMany` sends one INSERT statement for the whole array instead of one round trip per row - far cheaper than looping `create` calls. It returns `{ count }`, the number of rows actually inserted, not the rows themselves. `skipDuplicates` makes reseeding idempotent: rerunning this function will not throw once "sale" already exists.',
+    hints: [
+      'createMany takes `data` as an array of row objects',
+      'skipDuplicates: true avoids unique-constraint errors on rerun',
+      'The return value has a `count` field',
+    ],
+    tags: ['prisma', 'createMany', 'bulk-insert', 'seeding'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 13. Cloze: delete + deleteMany with where
+  {
+    id: 'prisma-cloze-deletemany',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the two delete calls: one removes a single post by id, the other removes every post belonging to a given author.',
+    template: `const post = await prisma.post.___({ where: { id: 1 } });
+
+const deleted = await prisma.post.___({ where: { authorId: 7 } });`,
+    blanks: ['delete', 'deleteMany'],
+    solution: `const post = await prisma.post.delete({ where: { id: 1 } });
+
+const deleted = await prisma.post.deleteMany({ where: { authorId: 7 } });`,
+    explanation: '`delete` requires a `where` that uniquely identifies exactly one row (like a primary key) and returns that row. `deleteMany` accepts any filter and removes every matching row, returning only `{ count }` - it will not error if zero rows match.',
+    hints: [
+      'The single-row method takes a unique where clause',
+      'The bulk method matches on any filter, not just a unique key',
+    ],
+    tags: ['prisma', 'delete', 'deleteMany', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 14. Cloze: enum in schema
+  {
+    id: 'prisma-cloze-enum',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the schema: declare a Role enum with USER and ADMIN, then give the User model a role field of that type, defaulting to USER.',
+    template: `___ Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id   Int  @id @default(autoincrement())
+  role Role @___(USER)
+}`,
+    blanks: ['enum', 'default'],
+    solution: `enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id   Int  @id @default(autoincrement())
+  role Role @default(USER)
+}`,
+    explanation: '`enum` declares a fixed set of allowed string values at the database level (Postgres creates a native enum type). A model field typed with that enum can only ever hold one of its listed values, and `@default(USER)` supplies the value for rows that do not specify one - both catch invalid values at write time instead of leaking bad data into the app layer.',
+    hints: [
+      'The schema keyword that declares a fixed set of values',
+      'The directive that supplies a fallback value',
+    ],
+    tags: ['prisma', 'enum', 'schema', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 15. Cloze: where operators gt/gte, in
+  {
+    id: 'prisma-cloze-whereops',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the two filters: one matches users at least 18 years old, the other matches posts whose id is one of a given set.',
+    template: `const adults = await prisma.user.findMany({
+  where: { age: { ___: 18 } },
+});
+
+const selected = await prisma.post.findMany({
+  where: { id: { ___: [3, 7, 12] } },
+});`,
+    blanks: ['gte', 'in'],
+    solution: `const adults = await prisma.user.findMany({
+  where: { age: { gte: 18 } },
+});
+
+const selected = await prisma.post.findMany({
+  where: { id: { in: [3, 7, 12] } },
+});`,
+    explanation: '`gte` (greater-than-or-equal) and `gt` are the comparison operators for numbers and dates. `in` matches any value present in the given array, translating to a SQL `IN (...)` clause - much cheaper than OR-ing several equality checks by hand.',
+    hints: [
+      'The operator meaning "18 or older"',
+      'The operator that matches against a list of values',
+    ],
+    tags: ['prisma', 'where', 'filters', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 16. Coding: where operators OR / not terse drill
+  {
+    id: 'prisma-13',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Write a function `getFlaggedPosts` that returns every post where EITHER the title contains "urgent" OR the title contains "important", but NOT the ones written by author id 1.\n\nUse the `OR` and `NOT` where operators.',
+    starterCode: `import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function getFlaggedPosts() {
+  // Match title contains "urgent" OR "important", excluding authorId 1
+}`,
+    testCases: [
+      {
+        input: 'where with OR and NOT',
+        expectedOutput: 'prisma.post.findMany({ where: { OR: [{ title: { contains: "urgent" } }, { title: { contains: "important" } }], NOT: { authorId: 1 } } })',
+        description: 'Should combine OR for the two title matches with NOT to exclude authorId 1',
+      },
+    ],
+    solution: `import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function getFlaggedPosts() {
+  return prisma.post.findMany({
+    where: {
+      OR: [
+        { title: { contains: "urgent" } },
+        { title: { contains: "important" } },
+      ],
+      NOT: { authorId: 1 },
+    },
+  });
+}`,
+    explanation: '`OR` takes an array of where conditions - a row matches if ANY of them is true. `NOT` inverts a condition - here it excludes rows matching `{ authorId: 1 }`. Top-level where fields are implicitly ANDed together, so this reads as "(urgent OR important) AND NOT authorId 1".',
+    hints: [
+      'OR takes an array of where clauses',
+      'NOT wraps a single condition to exclude it',
+      'Fields at the top level of `where` are ANDed together',
+    ],
+    tags: ['prisma', 'where', 'OR', 'NOT', 'filters'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 17. Cloze: update vs upsert
+  {
+    id: 'prisma-cloze-upsert',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the upsert: it must supply the data to use when updating an existing row, and the data to use when no row matches and one must be created.',
+    template: `const view = await prisma.pageView.upsert({
+  where: { path: "/pricing" },
+  ___: { count: { increment: 1 } },
+  ___: { path: "/pricing", count: 1 },
+});`,
+    blanks: ['update', 'create'],
+    solution: `const view = await prisma.pageView.upsert({
+  where: { path: "/pricing" },
+  update: { count: { increment: 1 } },
+  create: { path: "/pricing", count: 1 },
+});`,
+    explanation: '`upsert` first tries to find a row matching `where`. If found, it applies `update`; if not, it applies `create`. This avoids the race-prone read-then-branch pattern of "findUnique, then if null create else update" - the database handles the check atomically.',
+    hints: [
+      'The branch that runs when a matching row already exists',
+      'The branch that runs when no row matches',
+    ],
+    tags: ['prisma', 'upsert', 'update', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 18. MC: update vs upsert
+  {
+    id: 'prisma-12',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    question: 'Your colleague writes this to record a page view counter:\n\n```typescript\nconst existing = await prisma.pageView.findUnique({ where: { path } });\nif (existing) {\n  await prisma.pageView.update({ where: { path }, data: { count: { increment: 1 } } });\n} else {\n  await prisma.pageView.create({ data: { path, count: 1 } });\n}\n```\n\nWhy is `prisma.pageView.upsert({ where: { path }, update: {...}, create: {...} })` a better fit here?',
+    options: [
+      { id: 'a', text: 'The findUnique-then-branch version has a race window: two concurrent requests for the same new path can both see "no existing row" and both attempt create, causing a unique-constraint error. upsert lets the database handle the check-and-write atomically in one operation', isCorrect: true },
+      { id: 'b', text: 'upsert is purely a stylistic shorthand for the same two database round trips as the findUnique-then-branch code - it still reads then conditionally writes, so it does not change the concurrency behavior at all', isCorrect: false },
+      { id: 'c', text: 'upsert is only needed because Prisma throws a runtime error whenever update is called without a prior findUnique earlier in the same function, unlike raw SQL UPDATE statements', isCorrect: false },
+      { id: 'd', text: 'The two approaches behave identically under concurrent access; upsert is only faster because it skips validating the where clause before running the query', isCorrect: false },
+    ],
+    explanation: 'The findUnique-then-branch pattern has a classic time-of-check-to-time-of-use race: between the read and the write, another concurrent request can insert the same row, so both requests see "not found" and both call create, and the second one throws a unique-constraint violation. upsert pushes the check-and-write into a single atomic database operation, eliminating that window entirely. It is not just fewer lines of code - it is a correctness fix under concurrency.',
+    hints: [
+      'Think about two requests for a brand-new path arriving at the same instant',
+      'What happens between the read and the write in the findUnique version?',
+    ],
+    tags: ['prisma', 'upsert', 'race-condition', 'concurrency'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 19. Cloze: pagination skip/take
+  {
+    id: 'prisma-cloze-pagination',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the offset-pagination query for page 3 of posts, 10 per page (skip the first 20, take the next 10).',
+    template: `const posts = await prisma.post.findMany({
+  ___: 20,
+  ___: 10,
+  orderBy: { id: "asc" },
+});`,
+    blanks: ['skip', 'take'],
+    solution: `const posts = await prisma.post.findMany({
+  skip: 20,
+  take: 10,
+  orderBy: { id: "asc" },
+});`,
+    explanation: '`skip` discards that many rows from the start of the ordered result, `take` limits how many rows come back after that - together they implement classic offset pagination (page 3 of size 10 skips the first 20 rows). `orderBy` is required for pagination to be stable; without a deterministic order, skip/take can return inconsistent pages.',
+    hints: [
+      'The option that discards leading rows',
+      'The option that caps how many rows come back',
+    ],
+    tags: ['prisma', 'pagination', 'skip', 'take', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 20. Coding: cursor-based pagination
+  {
+    id: 'prisma-14',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Write a function `getNextPage` that takes a `lastPostId` and returns the next 10 posts after it, ordered by id ascending, using cursor-based pagination instead of skip/take.\n\nUse `cursor`, `skip: 1` (to exclude the cursor row itself), and `take: 10`.',
+    starterCode: `import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function getNextPage(lastPostId: number) {
+  // Fetch the next 10 posts after lastPostId using a cursor
+}`,
+    testCases: [
+      {
+        input: 'cursor-based query',
+        expectedOutput: 'prisma.post.findMany({ cursor: { id: lastPostId }, skip: 1, take: 10, orderBy: { id: "asc" } })',
+        description: 'Should use cursor with skip: 1 and take: 10, ordered by id ascending',
+      },
+    ],
+    solution: `import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function getNextPage(lastPostId: number) {
+  return prisma.post.findMany({
+    cursor: { id: lastPostId },
+    skip: 1,
+    take: 10,
+    orderBy: { id: "asc" },
+  });
+}`,
+    explanation: '`cursor` seeks directly to the row matching the given unique field instead of counting through skipped rows, so performance stays constant no matter how deep the page is - offset pagination with a large `skip` gets slower as the offset grows because the database still has to scan past those rows. `skip: 1` excludes the cursor row itself since it was already shown on the previous page.',
+    hints: [
+      'cursor takes a unique where-style object, usually { id: ... }',
+      'skip: 1 excludes the cursor row itself from the results',
+      'A deterministic orderBy is still required',
+    ],
+    tags: ['prisma', 'pagination', 'cursor', 'performance'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 21. MC: skip/take offset vs cursor pagination tradeoffs
+  {
+    id: 'prisma-15',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    question: 'Your app paginates a table with millions of rows. Users on page 2 report snappy loads, but users who jump to page 5,000 report multi-second delays. Why, and what should you switch to?',
+    options: [
+      { id: 'a', text: 'skip/take always costs the same regardless of the offset, since Prisma compiles it to a single indexed lookup either way; the slowdown at page 5,000 must be an unrelated network or connection-pool issue', isCorrect: false },
+      { id: 'b', text: 'The fix is to raise `take` to a much larger page size so fewer page requests are needed overall - this reduces round trips and would resolve the slowdown users see on deep pages', isCorrect: false },
+      { id: 'c', text: 'skip/take stops working correctly once a table passes roughly a thousand rows, so Prisma\'s own docs recommend dropping to hand-written raw SQL for any table past that size', isCorrect: false },
+      { id: 'd', text: 'A large `skip` still requires the database to scan and discard that many rows before it can return the next page, so cost grows with the offset. Switching to cursor-based pagination (cursor + skip: 1) seeks directly to a row by index, keeping cost roughly constant regardless of how deep the page is', isCorrect: true },
+    ],
+    explanation: 'Offset pagination (`skip`/`take`) requires the database to walk through and discard `skip` rows before it can start returning results - the deeper the page, the more rows get scanned and thrown away, so cost scales with the offset even though the page size stays constant. Cursor-based pagination avoids this because it seeks directly to a known row (usually via an indexed unique column) and reads forward from there, so page 5,000 costs about the same as page 2.',
+    hints: [
+      'Think about what the database has to do before it can return row 50,001',
+      'Cursor pagination seeks to a row instead of counting up to it',
+    ],
+    tags: ['prisma', 'pagination', 'cursor', 'performance', 'scale'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 22. Cloze: count / aggregate
+  {
+    id: 'prisma-cloze-aggregate',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Complete the two aggregate queries: one just counts published posts, the other computes the sum and average of order totals.',
+    template: `const published = await prisma.post.___({ where: { published: true } });
+
+const stats = await prisma.order.aggregate({
+  ___: { total: true },
+  ___: { total: true },
+});`,
+    blanks: ['count', '_sum', '_avg'],
+    solution: `const published = await prisma.post.count({ where: { published: true } });
+
+const stats = await prisma.order.aggregate({
+  _sum: { total: true },
+  _avg: { total: true },
+});`,
+    explanation: '`count` returns just a row count for the given filter - cheaper than fetching rows to measure `.length`. `aggregate` computes multiple statistics in one query; `_sum` and `_avg` each take the field(s) to aggregate. Both run entirely in the database instead of pulling raw rows into the app to compute manually.',
+    hints: [
+      'The method that returns only a row count',
+      'The two aggregate fields for total and average',
+    ],
+    tags: ['prisma', 'count', 'aggregate', 'cloze'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 23. Parsons: many-to-many implicit join table
+  {
+    id: 'prisma-parsons-2',
+    type: QuestionType.PARSONS,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Assemble a many-to-many relation between Post and Tag using Prisma\'s implicit join table (no explicit join model). Arrange in this order: Post model, Tag model.',
+    correctOrder: [
+      'model Post {',
+      '  id   Int   @id @default(autoincrement())',
+      '  title String',
+      '  tags Tag[]',
+      '}',
+      'model Tag {',
+      '  id    Int    @id @default(autoincrement())',
+      '  label String @unique',
+      '  posts Post[]',
+      '}',
+    ],
+    distractorLines: [
+      'model PostTag {',
+      '  postId Int',
+      '  tagId  Int',
+      '}',
+    ],
+    solution: `model Post {
+  id   Int   @id @default(autoincrement())
+  title String
+  tags Tag[]
+}
+model Tag {
+  id    Int    @id @default(autoincrement())
+  label String @unique
+  posts Post[]
+}`,
+    explanation: 'When both sides of a relation are arrays (Post.tags is Tag[] and Tag.posts is Post[]), Prisma infers a many-to-many relation and silently manages a hidden join table for you - no explicit PostTag model is needed. You only need an explicit join model when the relationship itself carries extra data (like an assignedAt timestamp).',
+    hints: [
+      'Both sides declare the other model as an array field',
+      'No join model is needed unless the relation needs its own extra fields',
+      'The join-table lines are a distractor - Prisma manages that table implicitly',
+    ],
+    tags: ['prisma', 'many-to-many', 'relations', 'parsons'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 24. MC: many-to-many relation concept
+  {
+    id: 'prisma-16',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    question: 'Given this schema:\n\n```prisma\nmodel Post {\n  id   Int   @id @default(autoincrement())\n  tags Tag[]\n}\n\nmodel Tag {\n  id    Int    @id @default(autoincrement())\n  posts Post[]\n}\n```\n\nWhere does Prisma store the association between a Post and a Tag?',
+    options: [
+      { id: 'a', text: 'Prisma generates and manages a hidden implicit join table (something like _PostToTag) behind the scenes - you never define or query it directly, only the tags and posts relation fields', isCorrect: true },
+      { id: 'b', text: 'It adds a nullable tagId column directly on Post, limiting each post to one tag at a time and making a true many-to-many relationship impossible to express', isCorrect: false },
+      { id: 'c', text: 'Both models must be manually given a shared array column that stores serialized JSON of related ids, which Prisma then parses on every query', isCorrect: false },
+      { id: 'd', text: 'Prisma refuses to create this schema at all - many-to-many relations always require an explicit join model to be defined by hand first', isCorrect: false },
+    ],
+    explanation: 'Because both Post.tags and Tag.posts are declared as arrays of the other model, Prisma recognizes an implicit many-to-many relation and auto-creates a two-column join table in the database (by default named _PostToTag) to store the pairs. You interact with it only through the relation fields (post.tags, tag.posts, connect/disconnect) - the join table itself is invisible in the Prisma Client API. An explicit join model becomes necessary only when the relationship needs its own extra columns.',
+    hints: [
+      'Neither model has a foreign key column for the other in the schema',
+      'Compare to the one-to-many case, which does store an explicit foreign key',
+    ],
+    tags: ['prisma', 'many-to-many', 'relations', 'join-table'],
+    concepts: ['prisma-schema-relations'],
+  },
+
+  // 25. MC: @@unique / @@index awareness
+  {
+    id: 'prisma-17',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    question: 'A booking system must ensure no two rows have the same combination of `roomId` and `date` (one booking per room per day), and lookups by `roomId` alone need to stay fast as the table grows. Which schema addition covers both requirements?\n\n```prisma\nmodel Booking {\n  id     Int      @id @default(autoincrement())\n  roomId Int\n  date   DateTime\n}\n```',
+    options: [
+      { id: 'a', text: 'Add `@unique` to both roomId and date individually - two single-column unique constraints together enforce the same rule as one composite constraint', isCorrect: false },
+      { id: 'b', text: 'Add `@@unique([roomId, date])` for the composite uniqueness rule, and `@@index([roomId])` so lookups filtering by roomId alone can use an index', isCorrect: true },
+      { id: 'c', text: 'Composite constraints spanning two fields are not supported by Prisma - this must be enforced with application-level validation before every insert', isCorrect: false },
+      { id: 'd', text: '@@index([roomId]) alone is sufficient - indexes automatically enforce uniqueness on the indexed column', isCorrect: false },
+    ],
+    explanation: '`@@unique([roomId, date])` is a block-level (model-level) attribute that enforces uniqueness across the COMBINATION of fields, not each independently - two single-field `@unique` attributes would wrongly forbid any room from ever being booked twice at all, or any date from being reused by any room. `@@index([roomId])` separately speeds up queries that filter by roomId without affecting uniqueness at all - indexes and uniqueness constraints are independent concerns; an index does not imply uniqueness unless it is a unique index.',
+    hints: [
+      'Composite uniqueness needs a block-level attribute spanning multiple fields',
+      'An index for query speed and a uniqueness constraint solve different problems',
+    ],
+    tags: ['prisma', '@@unique', '@@index', 'composite-constraints', 'schema'],
     concepts: ['prisma-schema-relations'],
   },
 
@@ -845,10 +1346,10 @@ export default function CreateUserForm() {
     course: Course.WEB_DEV,
     question: 'In TanStack Query, what are query keys and why do they matter?\n\n```typescript\nuseQuery({ queryKey: ["users", { status: "active" }], queryFn: fetchActiveUsers })\nuseQuery({ queryKey: ["users", { status: "inactive" }], queryFn: fetchInactiveUsers })\n```',
     options: [
-      { id: 'a', text: 'Query keys are optional display labels used for debugging in React DevTools; they have no functional impact on caching or refetching', isCorrect: false },
-      { id: 'b', text: 'Query keys are unique cache identifiers — TanStack uses them to cache data, deduplicate simultaneous identical requests, and determine what to refetch when you call invalidateQueries. Different keys mean separate cache entries', isCorrect: true },
-      { id: 'c', text: 'Query keys must be simple strings (not arrays) and are used only to generate the URL endpoint for the fetch request', isCorrect: false },
-      { id: 'd', text: 'Query keys are database primary keys that TanStack uses to store data in IndexedDB for offline access', isCorrect: false },
+      { id: 'a', text: 'Query keys are optional display labels used for debugging in React DevTools; they have no functional impact on caching or refetching at all', isCorrect: false },
+      { id: 'b', text: 'Query keys are cache identifiers — TanStack uses them to cache data, dedupe simultaneous identical requests, and decide what to refetch on invalidateQueries', isCorrect: true },
+      { id: 'c', text: 'Query keys must be simple strings, never arrays, and their only purpose is to generate the URL endpoint that queryFn eventually fetches', isCorrect: false },
+      { id: 'd', text: 'Query keys must exactly match the queryFn function reference — TanStack compares function identity, not the key array, to find cached data', isCorrect: false },
     ],
     explanation: 'Query keys are the foundation of TanStack Query\'s caching system. They serve three critical purposes: (1) Cache identity — `["users", { status: "active" }]` and `["users", { status: "inactive" }]` are separate cache entries with independent data, loading states, and refresh intervals. (2) Deduplication — if two components use the same queryKey simultaneously, TanStack makes ONE network request and shares the result. (3) Invalidation targeting — `invalidateQueries({ queryKey: ["users"] })` invalidates BOTH queries above because ["users"] is a prefix match. This hierarchical invalidation is powerful: invalidating ["users"] refetches all user-related queries without knowing their exact keys.',
     hints: [
@@ -1021,5 +1522,228 @@ export function useToggleTodo() {
     ],
     tags: ['tanstack-query', 'optimistic-updates', 'useMutation', 'cache-manipulation', 'advanced'],
     concepts: ['next-tanstack-query'],
+  },
+
+  // 7. Cloze: useInfiniteQuery basics
+  {
+    id: 'tanstack-cloze-3',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Complete the infinite-scroll query: the hook that fetches pages instead of one result, the config field that has no earlier page so the first fetch starts undefined, and the function called to load more.',
+    template: `const { data, fetchNextPage, hasNextPage } = ___({
+  queryKey: ["posts"],
+  queryFn: ({ pageParam }) => fetchPosts(pageParam),
+  ___: undefined,
+  getNextPageParam: (lastPage) => lastPage.nextCursor,
+});
+
+// When the sentinel div comes into view:
+if (hasNextPage) ___();`,
+    blanks: ['useInfiniteQuery', 'initialPageParam', 'fetchNextPage'],
+    solution: `const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
+  queryKey: ["posts"],
+  queryFn: ({ pageParam }) => fetchPosts(pageParam),
+  initialPageParam: undefined,
+  getNextPageParam: (lastPage) => lastPage.nextCursor,
+});
+
+// When the sentinel div comes into view:
+if (hasNextPage) fetchNextPage();`,
+    explanation:
+      'useInfiniteQuery is useQuery for paginated data: queryFn receives pageParam (the cursor for the page to fetch), getNextPageParam reads the next cursor off the last page\'s response, and initialPageParam is the value used for the very first fetch (undefined when there is no cursor yet). Calling fetchNextPage() appends the next page to data.pages instead of replacing the cache.',
+    hints: [
+      'The hook name mirrors useQuery but for paged data',
+      'The first page has no prior cursor',
+      'The function that triggers loading the next page',
+    ],
+    tags: ['tanstack-query', 'useInfiniteQuery', 'pagination', 'cloze'],
+    concepts: ['next-tanstack-query'],
+  },
+
+  // 8. Cloze: QueryClientProvider setup
+  {
+    id: 'tanstack-cloze-4',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question:
+      'Complete the client wrapper every TanStack Query hook in the app depends on: create one client instance per app load, then provide it to the tree.',
+    template: `"use client";
+import { QueryClient, ___ } from "@tanstack/react-query";
+import { useState } from "react";
+
+export function Providers({ children }) {
+  const [queryClient] = useState(() => new QueryClient());
+  return <___ client={queryClient}>{children}</___>;
+}`,
+    blanks: ['QueryClientProvider', 'QueryClientProvider', 'QueryClientProvider'],
+    solution: `"use client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+
+export function Providers({ children }) {
+  const [queryClient] = useState(() => new QueryClient());
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}`,
+    explanation:
+      'Every useQuery/useMutation call reads from a shared QueryClient via context, so the tree needs a QueryClientProvider somewhere above it - without one, TanStack throws immediately. useState(() => new QueryClient()) (not a plain module-level constant) ensures each user/request gets its own client instance rather than sharing state across requests, which matters once this wrapper runs on a server that handles multiple users.',
+    hints: [
+      'The provider component that makes the client available via context',
+    ],
+    tags: ['tanstack-query', 'QueryClientProvider', 'setup', 'cloze'],
+    concepts: ['next-tanstack-query'],
+  },
+
+  // 9. Coding: QueryClientProvider client wrapper
+  {
+    id: 'tanstack-7',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'Create the Providers client component every TanStack Query hook in this App Router app needs, at app/providers.tsx.\n\nRequirements:\n- "use client" directive\n- Create exactly one QueryClient instance per component instance (not a module-level constant), using useState with a lazy initializer\n- Wrap children in QueryClientProvider, passing the client\n- Export Providers as the default export',
+    starterCode: `// app/providers.tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+
+export default function Providers({ children }) {
+  // your code here
+}`,
+    testCases: [
+      {
+        input: 'Providers wrapper',
+        expectedOutput: 'useState(() => new QueryClient()) then <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>',
+        description: 'Should create one QueryClient per instance via lazy useState and wrap children in the provider',
+      },
+    ],
+    solution: `// app/providers.tsx
+"use client";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+
+export default function Providers({ children }) {
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}`,
+    explanation: 'This wrapper is the prerequisite every other TanStack question in this topic silently assumes exists - useQuery and useMutation both read the client from context, and there is no context without a QueryClientProvider somewhere above them in the tree (typically wrapping {children} in the root layout). The lazy useState(() => new QueryClient()) avoids creating a new client on every render, and - critically for App Router, where this component can run per-request on the server - avoids sharing one client across multiple users the way a module-level `const queryClient = new QueryClient()` would.',
+    hints: [
+      '"use client" is required - QueryClientProvider relies on React context',
+      'useState(() => new QueryClient()) creates the client lazily, once',
+      'A module-level QueryClient constant would leak across requests/users',
+    ],
+    tags: ['tanstack-query', 'QueryClientProvider', 'setup', 'app-router'],
+    concepts: ['next-tanstack-query'],
+  },
+
+  // 10. Cloze: enabled option for dependent queries
+  {
+    id: 'tanstack-cloze-5',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Complete the dependent query: the posts query must not run until a userId is actually available.',
+    template: `const { data: posts } = useQuery({
+  queryKey: ["posts", userId],
+  queryFn: () => fetchPostsByUser(userId),
+  ___: !!userId,
+});`,
+    blanks: ['enabled'],
+    solution: `const { data: posts } = useQuery({
+  queryKey: ["posts", userId],
+  queryFn: () => fetchPostsByUser(userId),
+  enabled: !!userId,
+});`,
+    explanation:
+      'enabled: false (or any falsy expression) tells TanStack Query to skip running queryFn entirely - the query stays idle instead of firing with an undefined userId and erroring or fetching garbage. Once userId becomes truthy, the query automatically starts running because TanStack re-evaluates enabled on every render.',
+    hints: [
+      'The option that gates whether the query is allowed to run at all',
+    ],
+    tags: ['tanstack-query', 'enabled', 'dependent-queries', 'cloze'],
+    concepts: ['next-tanstack-query'],
+  },
+
+  // 11. MC: enabled option for dependent queries
+  {
+    id: 'tanstack-8',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    question: 'A component fetches a user\'s posts with `useQuery({ queryKey: ["posts", userId], queryFn: () => fetchPostsByUser(userId) })`, but userId comes from another query that has not resolved yet on first render (userId is undefined). What happens, and how do you fix it?',
+    options: [
+      { id: 'a', text: 'TanStack Query automatically detects that userId is undefined and delays running the query until it becomes defined - no configuration is needed', isCorrect: false },
+      { id: 'b', text: 'The query runs immediately with userId as undefined, calling fetchPostsByUser(undefined) and likely erroring or fetching the wrong data. Add `enabled: !!userId` so the query stays idle until userId has a real value, then TanStack automatically fires it once enabled becomes true', isCorrect: true },
+      { id: 'c', text: 'This is not possible in TanStack Query - dependent queries where one query\'s input depends on another query\'s output require manually chaining two separate useEffect calls instead', isCorrect: false },
+      { id: 'd', text: 'The queryKey ["posts", userId] containing undefined causes TanStack to throw a build-time error and refuse to render the component at all', isCorrect: false },
+    ],
+    explanation: 'By default, useQuery runs queryFn as soon as the component mounts, regardless of whether the values it depends on are ready - there is no automatic dependency detection. That means fetchPostsByUser(undefined) runs immediately here, which is either a bug or a wasted request. The `enabled` option controls whether the query is allowed to run at all; passing `enabled: !!userId` keeps the query idle until userId is truthy, at which point TanStack re-evaluates enabled on the next render and fires the query automatically - no manual refetch call needed.',
+    hints: [
+      'useQuery has no built-in awareness that a value "isn\'t ready yet" - you have to tell it',
+      'The enabled option accepts any boolean expression, re-evaluated every render',
+    ],
+    tags: ['tanstack-query', 'enabled', 'dependent-queries', 'useQuery'],
+    concepts: ['next-tanstack-query'],
+  },
+
+  // 12. MC: retry / error propagation to error boundaries
+  {
+    id: 'tanstack-9',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    question: 'By default, a failing useQuery retries 3 times with exponential backoff, then just sets isError: true and leaves rendering to the component\'s own error UI. Your team wants critical queries to instead propagate to the nearest error.tsx-style boundary, matching how a thrown render error would be handled. How do you get that behavior?',
+    options: [
+      { id: 'a', text: 'Pass `throwOnError: true` (or a function that returns true for specific errors) to useQuery - this makes TanStack Query re-throw the error during render after retries are exhausted, so the nearest error boundary catches it exactly like a normal render-time throw', isCorrect: true },
+      { id: 'b', text: 'Wrap every component using useQuery in a try/catch block inside its render function to manually forward query errors to the boundary', isCorrect: false },
+      { id: 'c', text: 'Set `retry: false` - disabling retries automatically routes any failed query straight to the nearest error boundary instead of returning isError', isCorrect: false },
+      { id: 'd', text: 'This is not possible - error boundaries can only catch errors thrown synchronously during render, and useQuery failures happen inside an async fetch, so they can never reach a boundary', isCorrect: false },
+    ],
+    explanation: 'By default TanStack Query treats query failures as data to hand back to your component (isError, error), not as thrown exceptions - this is deliberate, since most fetch failures should be handled gracefully rather than crashing the tree. `throwOnError` flips that for cases where you genuinely want fetch failures treated as fatal: when true (or when a predicate function you provide returns true for a given error), TanStack re-throws the error during the next render after retries are exhausted, which is exactly the kind of synchronous render-time throw a React error boundary (and therefore error.tsx) is built to catch. retry: false only stops retrying - it does not change how the failure is reported.',
+    hints: [
+      'Error boundaries only catch throws that happen during render - TanStack needs an option that converts an async failure into one',
+      'retry and throwOnError control two different things: how many attempts happen, and how the final failure is reported',
+    ],
+    tags: ['tanstack-query', 'throwOnError', 'error-boundary', 'retry'],
+    concepts: ['next-tanstack-query', 'next-error-boundary'],
+  },
+
+  // 13. MC: prefetchQuery + HydrationBoundary awareness
+  {
+    id: 'tanstack-10',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    question: 'You want a page\'s data to already be in the TanStack Query cache the moment the Client Component mounts, instead of showing a loading spinner while useQuery fetches for the first time client-side. What is the pattern for prefetching on the server and handing that cache to the client in an App Router page?',
+    options: [
+      { id: 'a', text: 'In the Server Component page.tsx, call queryClient.prefetchQuery() with the same queryKey/queryFn the client will use, then wrap the Client Component in <HydrationBoundary state={dehydrate(queryClient)}>. useQuery on the client sees the matching queryKey already populated and skips the initial fetch/loading state entirely', isCorrect: true },
+      { id: 'b', text: 'Fetch the data in the Server Component and pass it down as a normal prop - useQuery automatically detects a matching prop with the same name as its queryKey and skips fetching', isCorrect: false },
+      { id: 'c', text: 'prefetchQuery only works with useMutation, not useQuery, since prefetching is conceptually a write operation that primes the cache', isCorrect: false },
+      { id: 'd', text: 'Call useQuery directly inside the Server Component to warm the cache, then the same hook call in the Client Component automatically reuses that warmed result since hooks share state across the server/client boundary', isCorrect: false },
+    ],
+    explanation: 'useQuery is a Client Component hook and cannot run on the server, so warming its cache server-side needs a separate mechanism. queryClient.prefetchQuery({ queryKey, queryFn }) runs the fetch on the server and stores the result under that queryKey in a (server-created) QueryClient. dehydrate(queryClient) serializes that cache into plain data, and <HydrationBoundary state={...}> ships it to the client and rehydrates it into the client-side QueryClient before any component reads from it. When a Client Component then calls useQuery with the SAME queryKey, TanStack finds the prefetched data already there and renders it immediately instead of showing a loading state - it still may revalidate in the background depending on staleTime.',
+    hints: [
+      'useQuery cannot run in a Server Component at all - prefetching needs its own client-independent API',
+      'The queryKey used during prefetch must exactly match the queryKey the Client Component\'s useQuery uses',
+    ],
+    tags: ['tanstack-query', 'prefetchQuery', 'HydrationBoundary', 'ssr', 'server-components'],
+    concepts: ['next-tanstack-query', 'next-server-vs-client'],
   },
 ];

@@ -869,8 +869,25 @@ class Timer:
         self.elapsed = time.perf_counter() - self._start
         print(f"[Timer] {self.label}: {self.elapsed:.4f}s")
         return False  # Don't suppress exceptions
+# OR
+import time
+
+class Timer:
+    def __init__(self, label: str = "block"):
+        self.label = label
+        self.elapsed: float = 0.0
+        self._start: float = 0.0
+
+    def __enter__(self):
+        self._start = time.monotonic()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.elapsed = time.monotonic() - self._start
+        print(f"[Timer] {self.label}: {self.elapsed:.4f}s")
+        return False
 `,
-      explanation: '__enter__ is called when entering the `with` block — it must return the value bound to the `as` variable (typically self). __exit__ is called when leaving the block, even if an exception occurred. It receives exception info (all None if no exception). Returning False (or None) lets exceptions propagate; returning True suppresses them. time.perf_counter() is preferred over time.time() for measuring durations because it uses the highest-resolution clock available and isn\'t affected by system clock adjustments.',
+      explanation: '__enter__ is called when entering the `with` block — it must return the value bound to the `as` variable (typically self). __exit__ is called when leaving the block, even if an exception occurred. It receives exception info (all None if no exception). Returning False (or None) lets exceptions propagate; returning True suppresses them. time.perf_counter() is preferred over time.time() for measuring durations because it uses the highest-resolution clock available and isn\'t affected by system clock adjustments. time.monotonic() has the same immunity to clock adjustments and is also accepted.',
       hints: [
         '__enter__ returns self (the `as` variable)',
         '__exit__ receives exception info — return False to propagate',
@@ -984,7 +1001,7 @@ with Traced() as t:
         '__exit__ gets (exc_type, exc_val, tb); None on success',
         'Return True from __exit__ to suppress the exception',
       ],
-      tags: ['context-manager', 'class-based', 'enter', 'exit'],
+      tags: ['context-manager', 'class-based', '__enter__', '__exit__'],
       concepts: ['py-context-manager-protocol'],
     },
   {
@@ -1271,6 +1288,32 @@ with safe_section("A"):
         'finally for unconditional teardown',
       ],
       tags: ['context-manager', 'contextmanager', 'exception-handling'],
+      concepts: ['py-context-manager-protocol'],
+    },
+  {
+      id: 'py-context-managers-exceptcatch-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_CONTEXT_MANAGERS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the keywords so a @contextmanager generator catches an exception from the block and does NOT re-raise it (swallows it).',
+      template: `from contextlib import contextmanager
+
+@contextmanager
+def safe():
+    ___:
+        yield
+    ___ Exception as e:
+        print("caught", type(e).__name__)`,
+      blanks: ['try', 'except'],
+      solution:
+        'from contextlib import contextmanager\n\n@contextmanager\ndef safe():\n    try:\n        yield\n    except Exception as e:\n        print("caught", type(e).__name__)',
+      explanation:
+        'An exception raised in the with-block resurfaces at the yield point inside the generator. Wrapping yield in try/except lets the generator catch it and, by NOT re-raising, swallow it — different from try/finally, which lets the exception propagate after cleanup runs.',
+      hints: ['try/except around yield — except (not finally) is what swallows the exception.'],
+      tags: ['context-manager', 'try-except', 'exception-handling'],
       concepts: ['py-context-manager-protocol'],
     },
   {

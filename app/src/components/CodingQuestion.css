@@ -268,18 +268,53 @@
   letter-spacing: 0.08em;
 }
 
+/* Row holding the answer editor and (for HTML/CSS questions) the live preview
+   pane. Carries the flex budget the editor wrapper used to own directly. */
+.editor-preview-row {
+  flex: 1 1 auto;
+  min-height: 400px;
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+}
+
 /* The answer editor flexes to fill the budget left after the fixed-size
    siblings; min-height keeps Monaco usable once the card starts to scroll. */
 .answer-editor-wrapper {
-  flex: 1 1 auto;
+  flex: 1 1 55%;
+  min-width: 0;
   min-height: 400px;
-  height: 100%;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   position: relative;
   z-index: 1;
   pointer-events: auto !important;
+}
+
+/* No preview: editor keeps the whole row, exactly the pre-preview layout. */
+.editor-preview-row.editor-only .answer-editor-wrapper {
+  flex: 1 1 auto;
+}
+
+.editor-preview-row .live-preview {
+  flex: 1 1 45%;
+  min-width: 0;
+  /* Let the row's align-items: stretch size it; an explicit 100% against the
+     row's auto height is unreliable (Monaco zero-height lesson). */
+  height: auto;
+}
+
+/* Narrow viewports: stack preview under the editor instead of squashing both.
+   Card already scroll-falls-back, so extra height is safe. */
+@media (max-width: 1100px) {
+  .editor-preview-row {
+    flex-direction: column;
+  }
+  .editor-preview-row .live-preview {
+    flex: 0 0 auto;
+    height: clamp(200px, 30vh, 320px);
+  }
 }
 
 /* Solution editor uses an explicit height so Monaco can measure its parent
@@ -291,6 +326,13 @@
   overflow: hidden;
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: var(--radius-sm);
+}
+
+/* Rendered result of the reference solution, shown above the solution code.
+   Explicit height for the same Monaco/flex-measurement reason as above. */
+.solution-preview-wrapper {
+  height: clamp(160px, 26vh, 280px);
+  margin-bottom: 10px;
 }
 
 .tags {

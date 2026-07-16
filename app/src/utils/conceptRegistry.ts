@@ -965,6 +965,10 @@ export const WEBDEV_CONCEPTS: Concept[] = [
     section: 'TypeScript', prereqs: ['ts-narrowing'], beta: 0.3 },
   { id: 'ts-any-vs-unknown', label: 'any vs unknown vs never',
     section: 'TypeScript' },
+  { id: 'ts-void-never', label: 'void vs never return types',
+    section: 'TypeScript' },
+  { id: 'ts-null-safety', label: 'strictNullChecks & optional chaining',
+    section: 'TypeScript' },
 
   // ── Next.js ───────────────────────────────────────────────────────────────
   { id: 'next-server-vs-client', label: '"use client" boundary & component placement',

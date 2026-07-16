@@ -1,6 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ParsonsQuestion as ParsonsQ } from '../types';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  MeasuringStrategy,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type {
+  CollisionDetection,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { ParsonsQuestion as ParsonsQ, CodeLanguage, Topic } from '../types';
 import { StyledButton } from './StyledButton';
+import { LivePreview } from './visual/LivePreview';
 import './ParsonsQuestion.css';
 
 interface Props {
@@ -56,6 +83,80 @@ function seededShuffle<T>(items: T[], seedKey: string): T[] {
   return out;
 }
 
+// Bin ids used as droppable targets so drops on empty-bin background land.
+const AVAILABLE_BIN = 'available-bin';
+const ANSWER_BIN = 'answer-bin';
+
+// The bin droppables enclose every tile, so distance-based strategies like
+// closestCorners keep resolving to the bin (= append) instead of the hovered
+// tile, breaking insert-between and multi-step reorders. Prefer tile hits;
+// fall back to the bin only when no tile is under the pointer (empty bin,
+// bin padding).
+const preferTileCollisions: CollisionDetection = args => {
+  const pointerHits = pointerWithin(args);
+  const hits = pointerHits.length > 0 ? pointerHits : rectIntersection(args);
+  const tileHits = hits.filter(c => c.id !== AVAILABLE_BIN && c.id !== ANSWER_BIN);
+  return tileHits.length > 0 ? tileHits : hits;
+};
+
+const BinDroppable: React.FC<{
+  id: string;
+  className: string;
+  disabled: boolean;
+  children: React.ReactNode;
+}> = ({ id, className, disabled, children }) => {
+  const { setNodeRef, isOver } = useDroppable({ id, disabled });
+  return (
+    <div ref={setNodeRef} className={`${className}${isOver && !disabled ? ' drop-active' : ''}`}>
+      {children}
+    </div>
+  );
+};
+
+const SortableAvailableLine: React.FC<{
+  line: Line;
+  disabled: boolean;
+  onAdd: () => void;
+}> = ({ line, disabled, onAdd }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: line.id, disabled });
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      className={`parsons-line available${isDragging ? ' dragging' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      onClick={onAdd}
+      {...attributes}
+      {...listeners}
+    >
+      <pre>{line.text}</pre>
+    </button>
+  );
+};
+
+const SortableAnswerLine: React.FC<{
+  line: Line;
+  className: string;
+  disabled: boolean;
+  controls: React.ReactNode;
+}> = ({ line, className, disabled, controls }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: line.id, disabled });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className}${isDragging ? ' dragging' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      {...listeners}
+    >
+      <pre>{line.text}</pre>
+      {controls}
+    </div>
+  );
+};
+
 export const ParsonsQuestion: React.FC<Props> = ({
   question,
   onAnswer,
@@ -98,13 +199,22 @@ export const ParsonsQuestion: React.FC<Props> = ({
   const [answer, setAnswer] = useState<Line[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     setAvailable(allLines);
     setAnswer([]);
     setIsSubmitted(false);
     setShowHint(false);
+    setActiveId(null);
   }, [question.id, allLines]);
+
+  // 5px activation distance lets a plain click still fire onClick (click-to-add
+  // and the ↑/↓/✕ controls) - only an actual pointer move starts a drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const moveToAnswer = (line: Line) => {
     if (isSubmitted) return;
@@ -136,6 +246,62 @@ export const ParsonsQuestion: React.FC<Props> = ({
     });
   };
 
+  const findContainer = (id: string): 'available' | 'answer' | null => {
+    if (id === AVAILABLE_BIN) return 'available';
+    if (id === ANSWER_BIN) return 'answer';
+    if (available.some(l => l.id === id)) return 'available';
+    if (answer.some(l => l.id === id)) return 'answer';
+    return null;
+  };
+
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    if (isSubmitted) return;
+    setActiveId(String(active.id));
+  };
+
+  // Cross-container moves happen live during the drag so the tile visually
+  // joins the target list mid-drag. Same-container reorders finalize in
+  // handleDragEnd via arrayMove.
+  const handleDragOver = ({ active, over }: DragOverEvent) => {
+    if (isSubmitted || !over) return;
+    const from = findContainer(String(active.id));
+    const to = findContainer(String(over.id));
+    if (!from || !to || from === to) return;
+
+    const sourceList = from === 'available' ? available : answer;
+    const line = sourceList.find(l => l.id === String(active.id));
+    if (!line) return;
+
+    const setSource = from === 'available' ? setAvailable : setAnswer;
+    const setTarget = to === 'available' ? setAvailable : setAnswer;
+    const overId = String(over.id);
+
+    setSource(prev => prev.filter(l => l.id !== line.id));
+    setTarget(prev => {
+      // Guard against duplicate insertion during rapid dragOver bursts.
+      if (prev.some(l => l.id === line.id)) return prev;
+      const overIdx = prev.findIndex(l => l.id === overId);
+      const idx = overIdx === -1 ? prev.length : overIdx;
+      return [...prev.slice(0, idx), line, ...prev.slice(idx)];
+    });
+  };
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveId(null);
+    if (isSubmitted || !over || active.id === over.id) return;
+    const from = findContainer(String(active.id));
+    const to = findContainer(String(over.id));
+    if (!from || from !== to) return;
+
+    const setList = from === 'available' ? setAvailable : setAnswer;
+    setList(prev => {
+      const oldIdx = prev.findIndex(l => l.id === String(active.id));
+      const newIdx = prev.findIndex(l => l.id === String(over.id));
+      if (oldIdx === -1 || newIdx === -1) return prev;
+      return arrayMove(prev, oldIdx, newIdx);
+    });
+  };
+
   const evaluate = (): boolean => {
     if (answer.length !== meaningfulCorrectOrder.length) return false;
     if (answer.some(line => line.isDistractor)) return false;
@@ -163,6 +329,16 @@ export const ParsonsQuestion: React.FC<Props> = ({
 
   const wasCorrect = isSubmitted && evaluate();
 
+  // Live preview of the current arrangement (HTML/CSS questions): the answer
+  // column's lines joined as-is. Renders progressively as lines are added.
+  const isHtmlQuestion = question.language === CodeLanguage.HTML;
+  const previewActive = isHtmlQuestion || Boolean(question.previewHtml);
+  const assembledCode = answer.map(line => line.text).join('\n');
+
+  const activeLine = activeId
+    ? available.find(l => l.id === activeId) ?? answer.find(l => l.id === activeId) ?? null
+    : null;
+
   return (
     <div className="parsons-question">
       <h3 className="question-text">{question.question}</h3>
@@ -176,73 +352,118 @@ export const ParsonsQuestion: React.FC<Props> = ({
       </div>
 
       <div className="parsons-instructions">
-        Click lines on the left to add them to your solution. Use ↑/↓ to reorder, ✕ to remove.
+        Drag lines into your solution and drag to reorder - or click a line to add it. Use ↑/↓ to reorder, ✕ to remove.
         {question.distractorLines && question.distractorLines.length > 0 && (
           <span className="parsons-warning"> Some lines don't belong — leave them out.</span>
         )}
       </div>
 
-      <div className="parsons-columns">
-        <div className="parsons-column">
-          <div className="parsons-column-header">Available lines</div>
-          <div className="parsons-bin">
-            {available.length === 0 && (
-              <div className="parsons-empty">All lines used.</div>
-            )}
-            {available.map(line => (
-              <button
-                key={line.id}
-                type="button"
-                className="parsons-line available"
-                onClick={() => moveToAnswer(line)}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={preferTileCollisions}
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <div className={`parsons-columns${activeId ? ' is-dragging' : ''}`}>
+          <div className="parsons-column">
+            <div className="parsons-column-header">Available lines</div>
+            <BinDroppable id={AVAILABLE_BIN} className="parsons-bin" disabled={isSubmitted}>
+              {available.length === 0 && (
+                <div className="parsons-empty">All lines used.</div>
+              )}
+              <SortableContext
+                items={available.map(l => l.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <pre>{line.text}</pre>
-              </button>
-            ))}
+                {available.map(line => (
+                  <SortableAvailableLine
+                    key={line.id}
+                    line={line}
+                    disabled={isSubmitted}
+                    onAdd={() => moveToAnswer(line)}
+                  />
+                ))}
+              </SortableContext>
+            </BinDroppable>
+          </div>
+
+          <div className="parsons-column">
+            <div className="parsons-column-header">Your solution</div>
+            <BinDroppable
+              id={ANSWER_BIN}
+              className="parsons-bin parsons-answer-bin"
+              disabled={isSubmitted}
+            >
+              {answer.length === 0 && (
+                <div className="parsons-empty">Drag or click a line on the left to start.</div>
+              )}
+              <SortableContext
+                items={answer.map(l => l.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {answer.map((line, idx) => (
+                  <SortableAnswerLine
+                    key={line.id}
+                    line={line}
+                    className={lineClass(line, idx)}
+                    disabled={isSubmitted}
+                    controls={
+                      !isSubmitted && (
+                        <div className="parsons-line-controls">
+                          <button
+                            onClick={() => moveUp(idx)}
+                            disabled={idx === 0}
+                            title="Move up"
+                            aria-label="Move line up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            onClick={() => moveDown(idx)}
+                            disabled={idx === answer.length - 1}
+                            title="Move down"
+                            aria-label="Move line down"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            onClick={() => moveToAvailable(line)}
+                            title="Remove"
+                            aria-label="Remove line"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )
+                    }
+                  />
+                ))}
+              </SortableContext>
+            </BinDroppable>
           </div>
         </div>
 
-        <div className="parsons-column">
-          <div className="parsons-column-header">Your solution</div>
-          <div className="parsons-bin parsons-answer-bin">
-            {answer.length === 0 && (
-              <div className="parsons-empty">Click a line on the left to start.</div>
-            )}
-            {answer.map((line, idx) => (
-              <div key={line.id} className={lineClass(line, idx)}>
-                <pre>{line.text}</pre>
-                {!isSubmitted && (
-                  <div className="parsons-line-controls">
-                    <button
-                      onClick={() => moveUp(idx)}
-                      disabled={idx === 0}
-                      title="Move up"
-                      aria-label="Move line up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => moveDown(idx)}
-                      disabled={idx === answer.length - 1}
-                      title="Move down"
-                      aria-label="Move line down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      onClick={() => moveToAvailable(line)}
-                      title="Remove"
-                      aria-label="Remove line"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        <DragOverlay dropAnimation={null}>
+          {activeLine ? (
+            <div className="parsons-line available drag-overlay">
+              <pre>{activeLine.text}</pre>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {previewActive && (
+        <div className="parsons-preview-wrapper">
+          <LivePreview
+            html={isHtmlQuestion ? assembledCode : question.previewHtml ?? ''}
+            css={isHtmlQuestion ? undefined : assembledCode}
+            tailwind={question.topic === Topic.TAILWIND}
+          />
         </div>
-      </div>
+      )}
 
       {!isSubmitted && showHints && question.hints && question.hints.length > 0 && (
         <div className="hints-section">

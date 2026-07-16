@@ -87,7 +87,7 @@ fallback`,
       hints: ['Default arg replaces None', '0 is a valid cached value but falsy in `or`'],
       tags: ['django', 'caching', 'cache.get', 'predict'],
       concepts: ['dj-caching'],
-    },
+    },
   {
       id: 'dj-cache-2',
       type: QuestionType.CODING,
@@ -150,6 +150,25 @@ def product_detail(request, pk):
         'Cache invalidation is hard; avoid if possible',
       ],
       tags: ['django', 'caching', 'design', 'performance'],
+      concepts: ['dj-caching'],
+    },
+  {
+      id: 'dj-caching-getset-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_CACHING,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two low-level cache methods: store a value with a TTL, then read it back with a default.',
+      template: `from django.core.cache import cache
+
+cache.___("greeting", "hello", timeout=60)
+value = cache.___("greeting", "default")`,
+      blanks: ['set', 'get'],
+      solution: 'from django.core.cache import cache\n\ncache.set("greeting", "hello", timeout=60)\nvalue = cache.get("greeting", "default")',
+      explanation: '`cache.set(key, value, timeout=...)` stores a value for the given number of seconds. `cache.get(key, default)` reads it back, returning `default` if the key is missing or expired.',
+      hints: ['Store first, then read', 'get() takes an optional default as its second arg'],
+      tags: ['django', 'caching', 'cache', 'low-level', 'cloze'],
       concepts: ['dj-caching'],
     },
   {
@@ -218,6 +237,27 @@ def popular_posts(request):
       concepts: ['dj-caching'],
     },
   {
+      id: 'dj-caching-getorset-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_CACHING,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the method that computes-and-caches in one call, running the callable only on a miss.',
+      template: `from django.core.cache import cache
+
+def compute():
+    return expensive_lookup()
+
+value = cache.___("key", compute, timeout=60)`,
+      blanks: ['get_or_set'],
+      solution: 'from django.core.cache import cache\n\ndef compute():\n    return expensive_lookup()\n\nvalue = cache.get_or_set("key", compute, timeout=60)',
+      explanation: '`get_or_set(key, callable_or_value, timeout)` collapses the "get, if None compute and set" dance into one call. Pass a CALLABLE (not the already-computed value) so it only runs on a cache miss.',
+      hints: ['One method replaces the get/if-None/set pattern'],
+      tags: ['django', 'caching', 'get_or_set', 'cloze'],
+      concepts: ['dj-caching'],
+    },
+  {
       id: 'py-dj-cache-getorset',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -253,6 +293,28 @@ def get_site_stats():
       ],
       tags: ['django', 'caching', 'get_or_set', 'memoisation'],
       concepts: ['dj-caching'],
+    },
+  {
+      id: 'dj-caching-signal-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_CACHING,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the decorator that runs this function every time a Post is saved.',
+      template: `from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import Post
+
+@___(post_save, sender=Post)
+def on_post_saved(sender, instance, **kwargs):
+    print(f"Saved: {instance}")`,
+      blanks: ['receiver'],
+      solution: 'from django.db.models.signals import post_save\nfrom django.dispatch import receiver\nfrom .models import Post\n\n@receiver(post_save, sender=Post)\ndef on_post_saved(sender, instance, **kwargs):\n    print(f"Saved: {instance}")',
+      explanation: '`@receiver(signal, sender=Model)` connects a function to a Django signal — here `post_save`, which fires after every `.save()` on `Post`. The function always accepts `sender`, `instance`, and `**kwargs` (the extra kwargs vary by signal).',
+      hints: ['Decorator that wires a function to a signal', 'sender= scopes it to one model'],
+      tags: ['django', 'signals', 'post_save', 'receiver', 'cloze'],
+      concepts: ['dj-signal-vs-override'],
     },
   {
       id: 'py-dj-cache-invalidate',

@@ -113,7 +113,7 @@ def transfer_funds(from_id, to_id, amount):
       ],
       tags: ['django', 'transactions', 'atomic', 'database', 'consistency'],
       concepts: ['dj-transaction-atomic'],
-    },
+    },
   {
       id: 'py-dj-tx-what',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -216,6 +216,27 @@ def process(a, b):
       concepts: ['dj-transaction-atomic', 'py-context-manager-protocol'],
     },
   {
+      id: 'dj-transactions-selectforupdate-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_TRANSACTIONS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the transaction wrapper and the queryset method that row-locks the fetched account until commit.',
+      template: `from django.db import transaction
+
+with transaction.___():
+    acct = Account.objects.___().get(pk=1)
+    acct.balance -= 10
+    acct.save()`,
+      blanks: ['atomic', 'select_for_update'],
+      solution: 'from django.db import transaction\n\nwith transaction.atomic():\n    acct = Account.objects.select_for_update().get(pk=1)\n    acct.balance -= 10\n    acct.save()',
+      explanation: '`select_for_update()` adds `FOR UPDATE` to the SELECT, row-locking the fetched account until the surrounding transaction commits or rolls back — it must run inside `transaction.atomic()`. A concurrent caller trying to lock the same row blocks until this transaction finishes.',
+      hints: ['Same wrapper used earlier for atomic blocks', 'Queryset method that locks the row'],
+      tags: ['django', 'transactions', 'select_for_update', 'atomic', 'cloze'],
+      concepts: ['dj-transaction-atomic'],
+    },
+  {
       id: 'py-dj-tx-select-for-update',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -252,6 +273,29 @@ def reserve(account_id, amount):
         'skip_locked for worker queues, nowait for fail-fast',
       ],
       tags: ['django', 'transactions', 'select_for_update', 'locking'],
+      concepts: ['dj-transaction-atomic'],
+    },
+  {
+      id: 'dj-transactions-savepoint-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_TRANSACTIONS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the nested block that lets a duplicate Tag insert fail without aborting the surrounding transaction.',
+      template: `from django.db import transaction, IntegrityError
+
+with transaction.atomic():
+    try:
+        with transaction.___():
+            Tag.objects.create(name="python")
+    except ___:
+        pass`,
+      blanks: ['atomic', 'IntegrityError'],
+      solution: 'from django.db import transaction, IntegrityError\n\nwith transaction.atomic():\n    try:\n        with transaction.atomic():\n            Tag.objects.create(name="python")\n    except IntegrityError:\n        pass',
+      explanation: 'A nested `transaction.atomic()` creates a SAVEPOINT rather than a whole new transaction. If the inner block raises, only it rolls back — the outer transaction stays healthy and can keep committing other work. Catch the exception OUTSIDE the inner `with`, not inside it.',
+      hints: ['Same context manager, nested', 'The exception a duplicate unique value raises'],
+      tags: ['django', 'transactions', 'savepoint', 'nested', 'cloze'],
       concepts: ['dj-transaction-atomic'],
     },
   {

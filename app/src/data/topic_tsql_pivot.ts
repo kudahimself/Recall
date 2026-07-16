@@ -67,6 +67,42 @@ FROM dbo.FactSale;`,
     tags: ['tsql', 'pivot', 'conditional-aggregation', 'cloze'],
   },
   {
+    id: 'tsql-pivot-native-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_PIVOT,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the native pivot clause and the keyword that names the columns to create.",
+    template: `SELECT Books, Toys
+FROM dbo.FactSale
+___ (SUM(Amount) ___ Category IN ([Books], [Toys])) AS p;`,
+    blanks: ['PIVOT', 'FOR'],
+    solution: `SELECT Books, Toys
+FROM dbo.FactSale
+PIVOT (SUM(Amount) FOR Category IN ([Books], [Toys])) AS p;`,
+    explanation: 'Native `PIVOT (aggregate(col) FOR spreading_col IN (val1, val2, …)) AS alias` rotates each listed value of `Category` into its own output column, aggregating `Amount` under it. The value list must be hard-coded - PIVOT cannot discover column names dynamically.',
+    hints: ['The operator keyword itself', 'FOR names the column whose values become new columns'],
+    tags: ['tsql', 'pivot', 'native-pivot', 'cloze'],
+  },
+  {
+    id: 'tsql-pivot-unpivot-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_PIVOT,
+    course: Course.SQL,
+    question: 'What does UNPIVOT do to a table with columns `Books` and `Toys`?',
+    options: [
+      { id: 'a', text: 'Rotates those columns back into rows, producing a Category column (with values \'Books\'/\'Toys\') and a matching value column - the reverse of PIVOT.', isCorrect: true },
+      { id: 'b', text: 'Deletes the Books and Toys columns without replacing them.', isCorrect: false },
+      { id: 'c', text: 'Merges Books and Toys into a single summed column.', isCorrect: false },
+      { id: 'd', text: 'Sorts the table by the Books and Toys values.', isCorrect: false },
+    ],
+    explanation: 'UNPIVOT is the mirror image of PIVOT: it takes several columns and rotates them into two columns - one holding the original column name (as a value) and one holding the original value - turning "wide" data back into "long" (tidy/row-per-fact) data.',
+    hints: ['The reverse of PIVOT: columns become rows', 'wide → long'],
+    tags: ['tsql', 'pivot', 'unpivot'],
+  },
+  {
     id: 'tsql-pivot-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,

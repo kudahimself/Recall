@@ -375,6 +375,29 @@ print(args["page"])`,
       concepts: ['py-json-serialization'],
     },
   {
+      id: 'py-http-statuscode-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_HTTP,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the response attributes: the integer HTTP status code, and the boolean that is True for any 2xx/3xx.',
+      template: `import requests
+
+r = requests.get("https://api.example.com")
+print(r.___)
+print(r.___)`,
+      blanks: ['status_code', 'ok'],
+      solution:
+        'import requests\n\nr = requests.get("https://api.example.com")\nprint(r.status_code)\nprint(r.ok)',
+      explanation:
+        'r.status_code is the raw integer code. r.ok is a shortcut boolean — True when status_code < 400 — for when you want to branch without raising an exception via raise_for_status().',
+      hints: ['Snake-case attribute for the code; two-letter attribute for the boolean.'],
+      tags: ['requests', 'status_code', 'ok', 'response'],
+      concepts: ['py-http-requests'],
+    },
+  {
       id: 'py-http-8',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,

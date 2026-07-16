@@ -79,6 +79,23 @@ export const tsql_ddl_tables_questions: Question[] = [
     tags: ['tsql', 'ddl', 'create-table'],
   },
   {
+    id: 'tsql-ddl-drop-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_DDL_TABLES,
+    course: Course.SQL,
+    question: 'How does `DROP TABLE dbo.StageOrders` differ from `DELETE FROM dbo.StageOrders`?',
+    options: [
+      { id: 'a', text: 'DROP TABLE removes the table definition itself, along with all its data - the table no longer exists; DELETE only removes rows and leaves the (now empty) table and its structure intact.', isCorrect: true },
+      { id: 'b', text: 'They are equivalent - both remove every row and leave an empty table behind.', isCorrect: false },
+      { id: 'c', text: 'DROP TABLE only removes rows matching a WHERE clause; DELETE removes the table structure.', isCorrect: false },
+      { id: 'd', text: 'DROP TABLE is DML and can be rolled back automatically; DELETE is DDL and cannot.', isCorrect: false },
+    ],
+    explanation: '`DROP TABLE` is DDL - it erases the table\'s definition and data entirely, so the object is gone and would need `CREATE TABLE` again to exist. `DELETE` is DML - it removes rows (optionally filtered by WHERE) but the empty table, its columns, and its constraints remain.',
+    hints: ['DROP removes the whole object (structure + data)', 'DELETE removes rows, keeps the table'],
+    tags: ['tsql', 'ddl', 'drop-table'],
+  },
+  {
     id: 'tsql-ddl-alter-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,

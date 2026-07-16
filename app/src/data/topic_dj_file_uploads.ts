@@ -14,6 +14,30 @@ import {
 
 export const dj_file_uploads_questions: Question[] = [
   {
+      id: 'dj-uploads-basics-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FILE_UPLOADS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the field type for image uploads, and the two settings that control where uploaded files are stored and served from.',
+      template: `# models.py
+from django.db import models
+
+class UserProfile(models.Model):
+    avatar = models.___(upload_to="avatars/%Y/%m/", blank=True)
+
+# settings.py
+___ = "/media/"
+___ = BASE_DIR / "media"`,
+      blanks: ['ImageField', 'MEDIA_URL', 'MEDIA_ROOT'],
+      solution: '# models.py\nfrom django.db import models\n\nclass UserProfile(models.Model):\n    avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)\n\n# settings.py\nMEDIA_URL = "/media/"\nMEDIA_ROOT = BASE_DIR / "media"',
+      explanation: '`ImageField` (a `FileField` subclass that also validates actual image content — requires Pillow) stores the file on disk under `upload_to` and saves just the path in the database. `MEDIA_ROOT` is the absolute filesystem directory files are written to; `MEDIA_URL` is the URL prefix they are served under.',
+      hints: ['Field type for images specifically (not generic FileField)', 'ROOT = filesystem path; URL = the public prefix'],
+      tags: ['django', 'file-upload', 'ImageField', 'MEDIA_ROOT', 'cloze'],
+      concepts: ['dj-storage-backends'],
+    },
+  {
       id: 'be-infra-uploads-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,

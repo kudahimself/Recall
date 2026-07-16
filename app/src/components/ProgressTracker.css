@@ -546,6 +546,47 @@
   font-family: var(--font-mono);
 }
 
+.weak-area-slipped {
+  background: rgba(244, 63, 94, 0.08);
+  border-left: 2px solid var(--error);
+}
+
+.weak-area-badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--error);
+  color: #fff;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.weak-area-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.weak-area-review-btn {
+  padding: 2px 10px;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--error);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.weak-area-review-btn:hover {
+  background: var(--error);
+  color: #fff;
+}
+
 /* Strong Areas */
 .strong-areas-section {
   background: var(--success-soft);

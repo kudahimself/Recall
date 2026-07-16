@@ -74,8 +74,10 @@ const DATA_ENG_TOPICS = new Set<string>([
 
 const SQL_TOPICS = new Set<string>([
   // Pillar 1 — Querying Foundations
-  Topic.TSQL_SELECT, Topic.TSQL_FILTERING, Topic.TSQL_JOINS, Topic.TSQL_AGGREGATION,
-  Topic.TSQL_SUBQUERIES_CTE, Topic.TSQL_SET_OPS,
+  Topic.TSQL_SELECT, Topic.TSQL_FILTERING,
+  Topic.TSQL_STRING_FUNCTIONS, Topic.TSQL_DATE_FUNCTIONS,
+  Topic.TSQL_JOINS, Topic.TSQL_AGGREGATION,
+  Topic.TSQL_SUBQUERIES_CTE, Topic.TSQL_SET_OPS, Topic.TSQL_DML,
   // Pillar 2 — DDL & Constraints
   Topic.TSQL_DDL_TABLES, Topic.TSQL_TYPES, Topic.TSQL_CONSTRAINTS, Topic.TSQL_VIEWS,
   // Pillar 3 — Analytical & Window SQL
@@ -557,10 +559,13 @@ export const SQL_SECTIONS: Record<string, { weight: string; topics: Record<strin
     topics: {
       'SELECT, WHERE, ORDER BY, TOP': ['tsql_select'],
       'Filtering, NULLs & CASE': ['tsql_filtering'],
+      'String Functions': ['tsql_string_functions'],
+      'Date & Time Functions': ['tsql_date_functions'],
       'Joins': ['tsql_joins'],
       'Aggregation & GROUP BY': ['tsql_aggregation'],
       'Subqueries & CTEs': ['tsql_subqueries_cte'],
       'Set Operations': ['tsql_set_ops'],
+      'Basic DML (INSERT, UPDATE, DELETE)': ['tsql_dml'],
     },
   },
   'DDL & Constraints': {
@@ -643,6 +648,20 @@ export const SQL_PATH_ORDER = [
   'Performance & Optimization',
   'Cloud Warehouse SQL',
 ];
+
+/**
+ * Drain supersession map: superseded section -> superseding section.
+ * Once every question in the superseding section has been attempted (the
+ * section is finished), the superseded section's topics retire from the
+ * review-drain hard gate - their primitives are re-exercised by the
+ * superseding section's own coding/advanced cards, so cold-drilling the old
+ * fundamentals is redundant. Retired topics remain eligible for the normal
+ * (non-gating) due resurface. Section names are globally unique across
+ * courses, so a flat map suffices.
+ */
+export const DRAIN_SUPERSEDED_SECTIONS: Record<string, string> = {
+  'Python Fundamentals': 'Python Advanced',
+};
 
 /** All topic keys for a given section name */
 export function getTopicKeysForSection(sectionName: string): string[] {

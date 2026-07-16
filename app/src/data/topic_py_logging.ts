@@ -379,7 +379,7 @@ logger.info("user %s logged in from %s", user_id, ip)`,
         'Use %s / %d / %r placeholders',
         'Linters (pylint/ruff) enforce this — f-strings in log calls are a warning',
       ],
-      tags: ['logging', 'format-string', 'lazy-evaluation', 'best-practice'],
+      tags: ['logging', 'format-string', 'lazy-evaluation', 'lazy-formatting', 'best-practice'],
       concepts: ['py-logging-config'],
     },
   {

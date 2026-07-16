@@ -12,7 +12,7 @@ import {
   CodeLanguage,
 } from '../types';
 
-export const dj_urls_questions: Question[] = [
+export const dj_urls_questions: Question[] = [
   {
       id: 'dj-url-4',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -28,8 +28,8 @@ export const dj_urls_questions: Question[] = [
       ],
       explanation: 'Named URLs decouple your code from URL paths — {% url "name" %} in templates and reverse("name") in code. If you change "/articles/" to "/posts/", you only change the path() call — all {% url "article-list" %} and reverse("article-list") references still work. Never hardcode URL paths.',
       tags: ['urls', 'named-urls', 'reverse', 'django'],
-      concepts: ['dj-view-patterns', 'py-iterator-protocol'],
-    },
+      concepts: ['dj-view-patterns'],
+    },
   {
       id: 'py-dj-urls-path-basic',
       type: QuestionType.CODING,
@@ -175,6 +175,29 @@ urlpatterns = [
       concepts: ['dj-view-patterns'],
     },
   {
+      id: 'py-dj-urls-cloze-4',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_URLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the import for regex-based routing and the pattern that matches exactly four digits.',
+      template: `from django.urls import ___
+
+urlpatterns = [
+    re_path(r"^year/(?P<year>___)/$", views.year_archive),
+]`,
+      blanks: ['re_path', '\\d{4}'],
+      solution:
+        'from django.urls import re_path\n\nurlpatterns = [\n    re_path(r"^year/(?P<year>\\d{4})/$", views.year_archive),\n]',
+      explanation:
+        '`re_path` is imported from `django.urls`, same place as `path`. `(?P<year>...)` is a named group; `\\d{4}` inside it matches exactly four digits — useful for fixed-length numeric segments that `path`\'s built-in converters can\'t express directly.',
+      hints: ['Import re_path from django.urls, same place as path', '\\d{4} matches exactly four digits'],
+      tags: ['django', 'urls', 're_path', 'regex', 'cloze'],
+      concepts: ['py-regex-syntax'],
+    },
+  {
       id: 'py-dj-urls-re-path',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -227,7 +250,7 @@ urlpatterns = [
         'reverse_lazy for class-level attributes',
       ],
       tags: ['django', 'urls', 'reverse', 'url-tag'],
-      concepts: ['dj-view-patterns', 'py-iterator-protocol'],
+      concepts: ['dj-view-patterns'],
     },
   {
       id: 'py-dj-urls-parsons-1',

@@ -27,8 +27,31 @@ export const dj_templates_questions: Question[] = [
       explanation: '{{ variable }} outputs a value. {% tag %} is a template tag for logic. {% for %} loops. {% empty %} renders when the list is empty. Django auto-escapes HTML in variables to prevent XSS.',
       hints: ['{{ var }} for output', '{% for item in list %}...{% endfor %} for loops', '{% empty %} for empty list fallback'],
       tags: ['template', 'for', 'variables', 'django'],
-      concepts: ['dj-templates', 'py-builtin-io'],
-    },
+      concepts: ['dj-templates'],
+    },
+  {
+      id: 'py-dj-tpl-cloze-4',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_TEMPLATES,
+      course: Course.BACKEND,
+      language: CodeLanguage.HTML,
+      question:
+        'Fill in the tags that conditionally render a welcome message vs. a login link.',
+      template: `{% ___ user.is_authenticated %}
+  <p>Welcome!</p>
+{% ___ %}
+  <a href="/login/">Login</a>
+{% endif %}`,
+      blanks: ['if', 'else'],
+      solution:
+        '{% if user.is_authenticated %}\n  <p>Welcome!</p>\n{% else %}\n  <a href="/login/">Login</a>\n{% endif %}',
+      explanation:
+        '`{% if %}` evaluates a variable/expression as a condition; `{% else %}` is optional; the block always closes with `{% endif %}`. Unlike Python, tags are explicit start/end pairs — no colon, no indentation-sensitivity.',
+      hints: ['Conditional tag pair: if / else / endif', 'endif always closes the block'],
+      tags: ['django', 'templates', 'if', 'conditional', 'cloze'],
+      concepts: ['dj-templates'],
+    },
   {
       id: 'dj-tmpl-3',
       type: QuestionType.CODING,
@@ -43,7 +66,27 @@ export const dj_templates_questions: Question[] = [
       explanation: '{% if condition %} for conditionals. user is automatically available in templates (from context processors). {% url "name" %} generates URLs from named URL patterns (reverse URL resolution). Always use {% url %} instead of hardcoded paths.',
       hints: ['{% if %}...{% else %}...{% endif %}', 'user.is_authenticated checks login', '{% url "name" %} for reverse URL'],
       tags: ['template', 'if', 'url', 'auth', 'django'],
-      concepts: ['dj-auth-token-vs-session'],
+      concepts: ['dj-templates'],
+    },
+  {
+      id: 'py-dj-tpl-cloze-5',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_TEMPLATES,
+      course: Course.BACKEND,
+      language: CodeLanguage.HTML,
+      question:
+        'Fill in the filter names: format a date, then truncate long text to 100 characters.',
+      template: `<p>{{ article.published_date|___:"M d, Y" }}</p>
+<p>{{ article.body|___:100 }}</p>`,
+      blanks: ['date', 'truncatechars'],
+      solution:
+        '<p>{{ article.published_date|date:"M d, Y" }}</p>\n<p>{{ article.body|truncatechars:100 }}</p>',
+      explanation:
+        'Filters modify a variable\'s output with a pipe: `{{ value|filter }}` or `{{ value|filter:arg }}`. `date:"M d, Y"` formats a date object; `truncatechars:100` cuts text to 100 characters. Filters can be chained: `{{ value|filter1|filter2 }}`.',
+      hints: ['Pipe syntax: {{ value|filter:arg }}', 'date and truncatechars are two of many built-in filters'],
+      tags: ['django', 'templates', 'filters', 'date', 'truncate', 'cloze'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'dj-tmpl-4',
@@ -60,7 +103,7 @@ export const dj_templates_questions: Question[] = [
       hints: ['{{ var|filter:arg }} syntax', 'date:"M d, Y" for formatting', 'truncatechars:N adds ... if longer'],
       tags: ['template', 'filters', 'date', 'truncate', 'django'],
       concepts: ['dj-templates'],
-    },
+    },
   {
       id: 'py-dj-tpl-url-tag',
       type: QuestionType.CODING,
@@ -128,7 +171,7 @@ export const dj_templates_questions: Question[] = [
         '{{ block.super }} to include parent content',
       ],
       tags: ['django', 'templates', 'inheritance', 'extends', 'block'],
-      concepts: ['py-super-call'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'py-dj-tpl-include',
@@ -158,7 +201,7 @@ export const dj_templates_questions: Question[] = [
         'Prefix partial filenames with _ by convention',
       ],
       tags: ['django', 'templates', 'include', 'partial'],
-      concepts: ['py-functools-cache-partial'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'py-dj-tpl-custom-filter',
@@ -238,7 +281,7 @@ def currency(value):
         'Child templates start with `{% extends "base.html" %}` then override blocks',
       ],
       tags: ['django', 'templates', 'inheritance', 'extends', 'block', 'base'],
-      concepts: ['py-super-call'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'dj4e-tmpl-2',
@@ -259,7 +302,7 @@ def currency(value):
         'Filters modify output: `{{ name|upper }}`, `{{ list|length }}`',
       ],
       tags: ['django', 'templates', 'variables', 'tags', 'syntax', 'fundamentals'],
-      concepts: ['dj-templates', 'py-builtin-io', 'py-control-flow'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'py-dj-tpl-parsons-1',
@@ -285,7 +328,7 @@ def currency(value):
         '{% extends %} must be the first tag in the template — it loads the parent, then matching {% block %} tags override the parent\'s blocks. The template name is a quoted string. {% include %} pastes another template inline; it does NOT set up inheritance.',
       hints: ['extends (quoted name) comes first, then the block overrides.'],
       tags: ['django', 'templates', 'inheritance', 'extends', 'block'],
-      concepts: ['py-super-call'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'py-dj-tpl-parsons-2',
@@ -311,7 +354,7 @@ def currency(value):
         '{% for %} ... {% endfor %} is the loop; {% include %} renders a partial inline, and "with item=item" passes that variable into it. The partial filename must be quoted, and the loop closes with {% endfor %} (not {% endeach %}).',
       hints: ['for ... / include "..." with ... / endfor.'],
       tags: ['django', 'templates', 'include', 'for'],
-      concepts: ['dj-templates', 'py-functools-cache-partial'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'py-dj-tpl-cloze-1',
@@ -331,7 +374,7 @@ def currency(value):
         'extends loads the parent template; the child\'s blocks then override the parent\'s. It must be the first tag in the file.',
       hints: ['Inheritance tag — "extends from".'],
       tags: ['django', 'templates', 'extends'],
-      concepts: ['py-super-call'],
+      concepts: ['dj-templates'],
     },
   {
       id: 'py-dj-tpl-cloze-2',

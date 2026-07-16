@@ -253,6 +253,28 @@ def create_profile(sender, instance, created, **kwargs):
       concepts: ['dj-signal-vs-override'],
     },
   {
+      id: 'dj-signals-appconfig-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_SIGNALS_MW,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class, the app-name attribute, and the method Django calls at startup to load signal handlers.',
+      template: `from django.apps import AppConfig
+
+class BlogConfig(___):
+    ___ = "blog"
+
+    def ___(self):
+        from . import signals  # noqa`,
+      blanks: ['AppConfig', 'name', 'ready'],
+      solution: 'from django.apps import AppConfig\n\nclass BlogConfig(AppConfig):\n    name = "blog"\n\n    def ready(self):\n        from . import signals  # noqa',
+      explanation: '`AppConfig` is the base class every app config subclasses. `name` must match the app\'s dotted path. Django calls `ready()` once at startup — importing the `signals` module there (not at the top of the file) guarantees the `@receiver` decorators run exactly once, after models are loaded.',
+      hints: ['Base class for app configuration', 'Django calls this method once at startup'],
+      tags: ['django', 'signals', 'AppConfig', 'ready', 'cloze'],
+      concepts: ['dj-signal-vs-override'],
+    },
+  {
       id: 'py-dj-signal-register-ready',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,

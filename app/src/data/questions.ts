@@ -35,10 +35,13 @@ import { dataEngineeringDistributedQuestions } from './dataEngineeringDistribute
 import { dataEngineeringOpsQuestions } from './dataEngineeringOpsQuestions';
 import { tsql_select_questions } from './topic_tsql_select';
 import { tsql_filtering_questions } from './topic_tsql_filtering';
+import { tsql_string_functions_questions } from './topic_tsql_string_functions';
+import { tsql_date_functions_questions } from './topic_tsql_date_functions';
 import { tsql_joins_questions } from './topic_tsql_joins';
 import { tsql_aggregation_questions } from './topic_tsql_aggregation';
 import { tsql_subqueries_cte_questions } from './topic_tsql_subqueries_cte';
 import { tsql_set_ops_questions } from './topic_tsql_set_ops';
+import { tsql_dml_questions } from './topic_tsql_dml';
 import { tsql_windows_questions } from './topic_tsql_windows';
 import { tsql_window_frames_questions } from './topic_tsql_window_frames';
 import { tsql_lag_lead_questions } from './topic_tsql_lag_lead';
@@ -1049,10 +1052,13 @@ export const questions: Question[] = dedupeById([
   ...dataEngineeringOpsQuestions,
   ...tsql_select_questions,
   ...tsql_filtering_questions,
+  ...tsql_string_functions_questions,
+  ...tsql_date_functions_questions,
   ...tsql_joins_questions,
   ...tsql_aggregation_questions,
   ...tsql_subqueries_cte_questions,
   ...tsql_set_ops_questions,
+  ...tsql_dml_questions,
   ...tsql_windows_questions,
   ...tsql_window_frames_questions,
   ...tsql_lag_lead_questions,

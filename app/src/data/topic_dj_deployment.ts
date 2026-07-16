@@ -53,6 +53,28 @@ export const dj_deployment_questions: Question[] = [
       concepts: ['dj-deployment-cicd'],
     },
   {
+      id: 'dj-deploy-compose-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_DEPLOYMENT,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two service-level keys: one builds the Django app from the local Dockerfile, one publishes host port 8000 to container port 8000.',
+      template: `version: "3.8"
+
+services:
+  web:
+    ___: .
+    ___:
+      - "8000:8000"`,
+      blanks: ['build', 'ports'],
+      solution: 'version: "3.8"\n\nservices:\n  web:\n    build: .\n    ports:\n      - "8000:8000"',
+      explanation: '`build: .` tells Compose to build the image from the Dockerfile in the current directory (instead of pulling a pre-built `image:`). `ports:` is a YAML list — each entry maps `"host:container"`. Services can reference each other by their service name as a hostname (e.g. a `db` service is reachable at `db:5432`).',
+      hints: ['Key that builds from a local Dockerfile', 'Key for a list of host:container port mappings'],
+      tags: ['docker-compose', 'yaml', 'cloze'],
+      concepts: ['dj-deployment-cicd'],
+    },
+  {
       id: 'be-docker-3',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,

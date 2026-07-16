@@ -89,6 +89,25 @@ True
       concepts: ['dj-model-construction'],
     },
   {
+      id: 'dj-models-mastery-proxy-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.DJ_MODELS_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'A `Customer` model already exists. Define `VipCustomer` reusing the exact same table, ordered by `-spent` (highest spender first). Fill in the two Meta options.',
+      template: `class VipCustomer(Customer):
+    class Meta:
+        ___ = True
+        ___ = ["-spent"]`,
+      blanks: ['proxy', 'ordering'],
+      solution: 'class VipCustomer(Customer):\n    class Meta:\n        proxy = True\n        ordering = ["-spent"]',
+      explanation: '`proxy = True` tells Django this model reuses the parent\'s table — no migration, no new columns. `ordering` (or any other Python-level behaviour: managers, methods) can differ from the parent even though the rows are identical.',
+      hints: ['The Meta flag meaning "same table as parent"', 'Meta option for default query ordering'],
+      tags: ['django', 'models', 'inheritance', 'proxy', 'cloze'],
+      concepts: ['dj-model-construction'],
+    },
+  {
       id: 'dj-models-mastery-proxy-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,

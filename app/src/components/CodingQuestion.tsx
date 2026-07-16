@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { CodingQuestion as CQQuestion, CodeLanguage } from '../types';
+import { CodingQuestion as CQQuestion, CodeLanguage, Topic } from '../types';
 import { validateAnswer, ValidationResult, ValidationVerdict } from '../utils/codeValidator';
+import { validateByComputedStyle } from '../utils/computedStyleValidator';
+import { LivePreview } from './visual/LivePreview';
 import { StyledButton } from './StyledButton';
 import { StyledBadge } from './StyledBadge';
 import './CodingQuestion.css';
@@ -194,9 +196,28 @@ export const CodingQuestion: React.FC<Props> = ({
     return results;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitted(true);
-    const results = validateCode();
+    let results: ValidationResult[];
+    if (question.previewChecks && question.previewChecks.length > 0) {
+      // Visual grading: render solution and user code in twin hidden iframes
+      // and compare computed styles. Always definitive - no uncertain verdicts.
+      try {
+        results = await validateByComputedStyle(question, code);
+      } catch (error) {
+        results = [
+          {
+            passed: false,
+            verdict: 'fail' as ValidationVerdict,
+            description: 'Render your code',
+            error: error instanceof Error ? error.message : 'Preview grading failed.',
+          },
+        ];
+      }
+      setTestResults(results);
+    } else {
+      results = validateCode();
+    }
     // If any verdict is uncertain (and none are definitively failed), wait for
     // the user to self-grade against the reference instead of recording an
     // answer the validator isn't confident about.
@@ -246,6 +267,12 @@ export const CodingQuestion: React.FC<Props> = ({
     }
   };
 
+  // Live preview: HTML questions render their own code; CSS questions render
+  // their code over the question's previewHtml. Everything else - no preview.
+  const isHtmlQuestion = question.language === CodeLanguage.HTML;
+  const previewActive = isHtmlQuestion || Boolean(question.previewHtml);
+  const usesTailwind = question.topic === Topic.TAILWIND;
+
   return (
     <div className="coding-question">
       <h3 className="question-text">{question.question}</h3>
@@ -262,6 +289,7 @@ export const CodingQuestion: React.FC<Props> = ({
         </StyledBadge>
       </div>
 
+      <div className={previewActive ? 'editor-preview-row' : 'editor-preview-row editor-only'}>
       <div className="answer-editor-wrapper">
         <Editor
           key={question.id}
@@ -323,6 +351,15 @@ export const CodingQuestion: React.FC<Props> = ({
             mouseWheelZoom: false,
           }}
         />
+      </div>
+
+      {previewActive && (
+        <LivePreview
+          html={isHtmlQuestion ? code : question.previewHtml ?? ''}
+          css={isHtmlQuestion ? undefined : code}
+          tailwind={usesTailwind}
+        />
+      )}
       </div>
 
       <div className="button-group">
@@ -430,6 +467,15 @@ export const CodingQuestion: React.FC<Props> = ({
         {showSolution && (
           <div className="solution">
             <h4>Solution:</h4>
+            {previewActive && (
+              <div className="solution-preview-wrapper">
+                <LivePreview
+                  html={isHtmlQuestion ? question.solution : question.previewHtml ?? ''}
+                  css={isHtmlQuestion ? undefined : question.solution}
+                  tailwind={usesTailwind}
+                />
+              </div>
+            )}
             <div className="solution-editor-wrapper">
               <Editor
                 key={`${question.id}-solution`}

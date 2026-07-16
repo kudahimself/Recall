@@ -1169,7 +1169,7 @@ class AsyncDatabasePool:
         '__aexit__ receives exception info, return False to not suppress errors',
         'Both methods are async — they can use await',
       ],
-      tags: ['async', 'context-manager', 'aenter', 'aexit', 'protocol'],
+      tags: ['async', 'context-manager', 'async-context-manager', 'aenter', 'aexit', '__aenter__', '__aexit__', 'protocol'],
       concepts: ['py-async-coroutines', 'py-context-manager-protocol'],
     },
   {

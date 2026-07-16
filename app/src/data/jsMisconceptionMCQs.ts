@@ -97,10 +97,10 @@ export const jsMisconceptionMCQs: Question[] = [
     course: Course.WEB_DEV,
     question: 'What does this class snippet log?\n\n```\nclass Counter {\n  constructor() { this.n = 0; }\n  tick = () => this.n++;\n}\nconst c = new Counter();\nconst t = c.tick;\nt(); t(); t();\nconsole.log(c.n);\n```',
     options: [
-      { id: 'a', text: '3 — `tick` is an arrow property, so its `this` is permanently bound to the instance', isCorrect: true },
-      { id: 'b', text: '0 — `this` was lost when `tick` was assigned to `t`', isCorrect: false, misconceptionTag: 'js-arrow-this' },
-      { id: 'c', text: 'TypeError: cannot read property `n` of undefined', isCorrect: false, misconceptionTag: 'js-arrow-this' },
-      { id: 'd', text: 'NaN', isCorrect: false },
+      { id: 'a', text: '3 — `tick` is an arrow class field, so its `this` stays bound to the instance forever, even after detaching it into `t`', isCorrect: true },
+      { id: 'b', text: '0 — assigning `c.tick` to `t` strips away the binding to the instance, so each increment has nothing to attach to', isCorrect: false, misconceptionTag: 'js-arrow-this' },
+      { id: 'c', text: 'TypeError: cannot read property `n` of undefined, because calling `t()` bare leaves `this` undefined inside the function', isCorrect: false, misconceptionTag: 'js-arrow-this' },
+      { id: 'd', text: 'NaN — after detaching, `this` becomes the global object, so `this.n` is undefined and `undefined++` evaluates to NaN', isCorrect: false },
     ],
     explanation:
       'Arrow functions don\'t have their own `this` — they inherit it from the enclosing lexical scope, which here is the constructor where `this` is the new instance. So `tick` always refers to that instance, even when detached. (This is the trick that makes class-property arrow methods auto-bind.)',
@@ -133,10 +133,10 @@ export const jsMisconceptionMCQs: Question[] = [
     course: Course.WEB_DEV,
     question: 'What does this snippet log?\n\n```\nconst a = { x: 1 };\nconst b = a;\nb.x = 99;\nconsole.log(a.x);\n```',
     options: [
-      { id: 'a', text: '99 — `b = a` copies the reference, so both names point to the same object', isCorrect: true },
-      { id: 'b', text: '1 — `b = a` made an independent copy of the object', isCorrect: false, misconceptionTag: 'js-reference-vs-value' },
-      { id: 'c', text: 'undefined', isCorrect: false },
-      { id: 'd', text: 'TypeError: Cannot reassign const', isCorrect: false },
+      { id: 'a', text: '99 — `b = a` copies the reference, not the object, so both names point to the same underlying object', isCorrect: true },
+      { id: 'b', text: '1 — `b = a` made an independent copy of the object, so mutating `b` afterward cannot affect `a` at all', isCorrect: false, misconceptionTag: 'js-reference-vs-value' },
+      { id: 'c', text: 'undefined — `a` only has the property `x` at declaration time, so reading it again later returns undefined', isCorrect: false },
+      { id: 'd', text: 'TypeError: Cannot reassign const — `const b = a` locks `b`\'s properties too, so `b.x = 99` fails the same way reassigning `b` would', isCorrect: false },
     ],
     explanation:
       'Object/array assignment copies the REFERENCE, not the contents. `a` and `b` are two names for the same object, so mutating through one is visible through the other. Use `{ ...a }` (shallow) or `structuredClone(a)` (deep) to actually copy.',

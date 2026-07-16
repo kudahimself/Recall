@@ -127,7 +127,7 @@ class ArticleAdmin(admin.ModelAdmin):
       ],
       tags: ['django', 'admin', 'TabularInline', 'admin-action', 'get_queryset', 'advanced'],
       concepts: ['dj-admin', 'dj-view-patterns'],
-    },
+    },
   {
       id: 'py-dj-admin-what',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -222,6 +222,31 @@ class PostAdmin(admin.ModelAdmin):
       concepts: ['dj-admin'],
     },
   {
+      id: 'dj-admin-inline-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_ADMIN,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the inline base class and the attribute that shows one blank row for adding a new Comment.',
+      template: `from django.contrib import admin
+from .models import Post, Comment
+
+class CommentInline(admin.___):
+    model = Comment
+    ___ = 1
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    inlines = [CommentInline]`,
+      blanks: ['TabularInline', 'extra'],
+      solution: 'from django.contrib import admin\nfrom .models import Post, Comment\n\nclass CommentInline(admin.TabularInline):\n    model = Comment\n    extra = 1\n\n@admin.register(Post)\nclass PostAdmin(admin.ModelAdmin):\n    inlines = [CommentInline]',
+      explanation: '`TabularInline` renders related rows as a compact table beneath the parent form (`StackedInline` is the one-form-per-child alternative). `extra` controls how many blank rows appear for adding new children; `model` points at the child model with the FK back to the parent.',
+      hints: ['Row-style inline base class', 'Attribute for blank new-row count'],
+      tags: ['django', 'admin', 'inline', 'TabularInline', 'cloze'],
+      concepts: ['dj-admin'],
+    },
+  {
       id: 'py-dj-admin-inline',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -256,6 +281,27 @@ class PostAdmin(admin.ModelAdmin):
         'extra = N blank rows for new children',
       ],
       tags: ['django', 'admin', 'inline', 'TabularInline'],
+      concepts: ['dj-admin'],
+    },
+  {
+      id: 'dj-admin-action-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_ADMIN,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the decorator that labels this bulk action, and how it is exposed on PostAdmin.',
+      template: `@admin.___(description="Mark selected as published")
+def publish(self, request, queryset):
+    queryset.update(is_published=True)
+
+class PostAdmin(admin.ModelAdmin):
+    ___ = ["publish"]`,
+      blanks: ['action', 'actions'],
+      solution: '@admin.action(description="Mark selected as published")\ndef publish(self, request, queryset):\n    queryset.update(is_published=True)\n\nclass PostAdmin(admin.ModelAdmin):\n    actions = ["publish"]',
+      explanation: '`@admin.action(description=...)` sets the label shown in the admin\'s action dropdown. The method itself always takes `(self, request, queryset)`. Adding its name to the `actions` list on the ModelAdmin exposes it in that dropdown.',
+      hints: ['Decorator sets the dropdown label', 'List attribute exposing the action by name'],
+      tags: ['django', 'admin', 'actions', 'cloze'],
       concepts: ['dj-admin'],
     },
   {
@@ -294,6 +340,26 @@ class PostAdmin(admin.ModelAdmin):
         '@admin.action(description="...") sets the label',
       ],
       tags: ['django', 'admin', 'actions', 'bulk'],
+      concepts: ['dj-admin'],
+    },
+  {
+      id: 'dj-admin-fieldsets-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_ADMIN,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the attribute marking two fields non-editable and the attribute grouping fields under headed sections.',
+      template: `class PostAdmin(admin.ModelAdmin):
+    ___ = ("created_at", "updated_at")
+    ___ = [
+        ("Content", {"fields": ("title", "body")}),
+    ]`,
+      blanks: ['readonly_fields', 'fieldsets'],
+      solution: 'class PostAdmin(admin.ModelAdmin):\n    readonly_fields = ("created_at", "updated_at")\n    fieldsets = [\n        ("Content", {"fields": ("title", "body")}),\n    ]',
+      explanation: '`readonly_fields` renders the listed fields as text instead of inputs. `fieldsets` is a list of `(heading, {"fields": (...)})` tuples that group the edit form into labeled sections.',
+      hints: ['Renders as text, not an input', 'List of (heading, {"fields": ...}) tuples'],
+      tags: ['django', 'admin', 'fieldsets', 'readonly_fields', 'cloze'],
       concepts: ['dj-admin'],
     },
   {

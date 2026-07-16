@@ -275,6 +275,27 @@ def reserve_one(pk):
       concepts: ['dj-orm-query-construction', 'dj-n-plus-one', 'dj-select-related-vs-prefetch'],
     },
   {
+      id: 'dj-orm-mastery-nplus1-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two eager-loading calls and the dotted lookup that trims to just title and the author\'s username.',
+      template: `articles = (
+    Article.objects
+    .___("author")
+    .___("tags")
+    .only("title", "___")
+)`,
+      blanks: ['select_related', 'prefetch_related', 'author__username'],
+      solution: 'articles = (\n    Article.objects\n    .select_related("author")\n    .prefetch_related("tags")\n    .only("title", "author__username")\n)',
+      explanation: '`select_related` JOINs the FK; `prefetch_related` loads the M2M in a second query. `.only()` accepts dotted relation lookups too — `"author__username"` keeps just that column from the joined author row, alongside `"title"` from Article itself.',
+      hints: ['FK eager-load, then M2M eager-load', 'only() accepts dotted relation paths like a filter'],
+      tags: ['django', 'orm', 'select_related', 'prefetch_related', 'only', 'cloze'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
       id: 'dj-orm-mastery-nplus1-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,

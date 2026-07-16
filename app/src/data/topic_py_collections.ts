@@ -745,6 +745,7 @@ def analyze_text(text: str, top_n: int = 5) -> dict:
 `,
       explanation: 'Counter is a dict subclass designed for counting hashable objects. Counter(iterable) counts occurrences of each element. most_common(n) returns the n highest counts as (element, count) tuples, sorted by count descending. Counter also supports arithmetic: Counter("aab") - Counter("ab") == Counter({"a": 1}). Using re.findall(r"[a-z]+", text.lower()) is a robust way to extract words while stripping punctuation and normalizing case.',
       hints: [
+        'Tokenize with re.findall(r\'[a-z]+\', text.lower()) to strip punctuation and normalize case',
         'Counter(list) counts occurrences of each element',
         'counter.most_common(n) returns top n as (elem, count) pairs',
         'Iterate counter.items() to find hapax (count == 1)',

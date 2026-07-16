@@ -36,6 +36,28 @@ export const dj_auth_questions: Question[] = [
       concepts: ['dj-auth-token-vs-session', 'py-decorator-application'],
     },
 {
+      id: 'dj-auth-jwt-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_AUTH,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two class-level attributes a DRF APIView uses to require a valid JWT and an authenticated user.',
+      template: `from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+class ProtectedView(APIView):
+    ___ = [JWTAuthentication]
+    ___ = [IsAuthenticated]`,
+      blanks: ['authentication_classes', 'permission_classes'],
+      solution: 'from rest_framework.views import APIView\nfrom rest_framework.permissions import IsAuthenticated\nfrom rest_framework_simplejwt.authentication import JWTAuthentication\n\nclass ProtectedView(APIView):\n    authentication_classes = [JWTAuthentication]\n    permission_classes = [IsAuthenticated]',
+      explanation: '`authentication_classes` defines HOW to authenticate (here: parse a JWT from the `Authorization` header); `permission_classes` defines WHO may proceed once authenticated (`IsAuthenticated` = any logged-in user). DRF runs authentication first, then checks permissions.',
+      hints: ['One attribute for HOW, one for WHO', 'Both take a list of classes'],
+      tags: ['django', 'drf', 'jwt', 'authentication', 'permissions', 'cloze'],
+      concepts: ['dj-auth-token-vs-session'],
+    },
+{
       id: 'be-auth-3',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,
@@ -306,6 +328,26 @@ def change_password(request):
       concepts: ['dj-auth-token-vs-session'],
     },
 {
+      id: 'dj-auth-usercreationform-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_AUTH,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the import and the form class used for registration (it collects username, password1, password2).',
+      template: `from django.contrib.auth.forms import ___
+
+form = ___(request.POST)
+if form.is_valid():
+    form.save()`,
+      blanks: ['UserCreationForm', 'UserCreationForm'],
+      solution: 'from django.contrib.auth.forms import UserCreationForm\n\nform = UserCreationForm(request.POST)\nif form.is_valid():\n    form.save()',
+      explanation: '`UserCreationForm` is Django\'s built-in registration form — it handles `username`, `password1`, `password2` (confirmation), and runs the configured password validators. `form.save()` creates and persists the new user.',
+      hints: ['Same class imported and instantiated', 'Lives in django.contrib.auth.forms'],
+      tags: ['django', 'auth', 'registration', 'UserCreationForm', 'cloze'],
+      concepts: ['dj-auth-token-vs-session'],
+    },
+{
       id: 'py-dj-auth-register-view',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,
@@ -343,6 +385,24 @@ def register(request):
         'For custom User models, override Meta.model',
       ],
       tags: ['django', 'auth', 'registration', 'UserCreationForm'],
+      concepts: ['dj-auth-token-vs-session'],
+    },
+{
+      id: 'dj-auth-setpassword-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_AUTH,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two methods that hash-and-store a new password, then verify it.',
+      template: `user.___("new-secret")
+user.save()
+print(user.___("new-secret"))`,
+      blanks: ['set_password', 'check_password'],
+      solution: 'user.set_password("new-secret")\nuser.save()\nprint(user.check_password("new-secret"))',
+      explanation: '`set_password(raw)` hashes and stores the password (never assign `user.password = "..."` directly — that stores plaintext). `check_password(raw)` re-hashes the candidate and compares. Both live on the user instance.',
+      hints: ['Hashing method comes first, then save()', 'The verification method returns a bool'],
+      tags: ['django', 'auth', 'password', 'hashing', 'cloze'],
       concepts: ['dj-auth-token-vs-session'],
     },
 {
@@ -454,6 +514,30 @@ def archive_post(request, pk):
       ],
       tags: ['django', 'auth', 'permissions', 'permission_required'],
       concepts: ['dj-auth-token-vs-session', 'dj-permission-class'],
+    },
+{
+      id: 'dj-auth-customuser-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_AUTH,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class for a custom user model that keeps username/password/email, and the setting that activates it.',
+      template: `# accounts/models.py
+from django.contrib.auth.models import ___
+from django.db import models
+
+class User(___):
+    bio = models.TextField(blank=True)
+
+# settings.py
+___ = "accounts.User"`,
+      blanks: ['AbstractUser', 'AbstractUser', 'AUTH_USER_MODEL'],
+      solution: '# accounts/models.py\nfrom django.contrib.auth.models import AbstractUser\nfrom django.db import models\n\nclass User(AbstractUser):\n    bio = models.TextField(blank=True)\n\n# settings.py\nAUTH_USER_MODEL = "accounts.User"',
+      explanation: '`AbstractUser` keeps Django\'s default username/password/email fields — subclass it and add extras. `AUTH_USER_MODEL` must point at the new model (as an `"app_label.ModelName"` string) before the first migration.',
+      hints: ['Same base class used twice: import + subclass', 'Setting name is AUTH_USER_MODEL'],
+      tags: ['django', 'auth', 'custom-user', 'AbstractUser', 'cloze'],
+      concepts: ['dj-auth-token-vs-session'],
     },
 {
       id: 'py-dj-auth-custom-user',
@@ -808,7 +892,7 @@ print(response.status_code)`,
       concepts: ['dj-view-patterns'],
     },
 {
-      id: 'dj-views-adv-4',
+      id: 'dj-auth-adv-4',
       type: QuestionType.PARSONS,
       difficulty: Difficulty.ADVANCED,
       topic: Topic.DJ_AUTH,

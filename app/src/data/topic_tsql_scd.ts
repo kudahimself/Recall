@@ -133,4 +133,57 @@ WHEN NOT MATCHED BY TARGET THEN
     hints: ['ON ProductCode; WHEN MATCHED → UPDATE SET both columns', 'WHEN NOT MATCHED BY TARGET → INSERT the three columns'],
     tags: ['tsql', 'scd', 'merge', 'type-1'],
   },
+  {
+    id: 'tsql-scd-2',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_SCD,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Write the expire step of a Type 2 load for `dbo.DimProduct` (ProductCode, Category, EffectiveDate, EndDate, IsCurrent): close the current row (set EndDate to CAST(GETDATE() AS DATE) and IsCurrent to 0) for every product whose Category in `stg.Product` (ProductCode, Category) no longer matches its current dimension row.',
+    starterCode: `-- UPDATE the current DimProduct row when its Category no longer matches staging
+`,
+    testCases: [
+      {
+        input: "UPDATE ... SET EndDate = CAST(GETDATE() AS DATE), IsCurrent = 0 FROM DimProduct JOIN stg.Product WHERE IsCurrent = 1 AND Category <> src.Category",
+        expectedOutput: 'Closes the current version of every changed product',
+        description: 'SCD Type 2 expire step',
+      },
+    ],
+    solution: `UPDATE tgt
+    SET tgt.EndDate = CAST(GETDATE() AS DATE), tgt.IsCurrent = 0
+FROM dbo.DimProduct AS tgt
+    JOIN stg.Product AS src ON src.ProductCode = tgt.ProductCode
+WHERE tgt.IsCurrent = 1 AND tgt.Category <> src.Category;`,
+    explanation: 'This mirrors the earlier expire-step pattern: join the current dimension rows to staging on the natural key, and for rows where the tracked attribute actually changed, stamp EndDate and clear IsCurrent. A separate INSERT (not shown here) would then add each product\'s new current version - the expire step never DELETEs, since that would destroy history.',
+    hints: ['UPDATE ... FROM dbo.DimProduct JOIN stg.Product ON ProductCode', 'WHERE IsCurrent = 1 AND the tracked column differs'],
+    tags: ['tsql', 'scd', 'type-2', 'effective-dates'],
+  },
+  {
+    id: 'tsql-scd-insert-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_SCD,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the value for a freshly-inserted current row's IsCurrent flag, and the predicate that skips products which already have a current row.",
+    template: `INSERT INTO dbo.DimProduct (ProductCode, Category, EffectiveDate, EndDate, IsCurrent)
+SELECT src.ProductCode, src.Category, CAST(GETDATE() AS DATE), NULL, ___
+FROM stg.Product AS src
+WHERE ___ (
+    SELECT 1 FROM dbo.DimProduct tgt
+    WHERE tgt.ProductCode = src.ProductCode AND tgt.IsCurrent = 1
+);`,
+    blanks: ['1', 'NOT EXISTS'],
+    solution: `INSERT INTO dbo.DimProduct (ProductCode, Category, EffectiveDate, EndDate, IsCurrent)
+SELECT src.ProductCode, src.Category, CAST(GETDATE() AS DATE), NULL, 1
+FROM stg.Product AS src
+WHERE NOT EXISTS (
+    SELECT 1 FROM dbo.DimProduct tgt
+    WHERE tgt.ProductCode = src.ProductCode AND tgt.IsCurrent = 1
+);`,
+    explanation: 'This is the second half of a Type 2 load, run right after the expire step: any ProductCode with no `IsCurrent = 1` row - either brand new, or just closed out by the expire UPDATE - gets a fresh version inserted with today\'s EffectiveDate, a NULL EndDate, and IsCurrent = 1. Expire-then-insert is the complete SCD2 pattern.',
+    hints: ['A newly inserted current row has IsCurrent = 1', 'NOT EXISTS a current row for that ProductCode'],
+    tags: ['tsql', 'scd', 'type-2', 'effective-dates', 'cloze'],
+  },
 ];

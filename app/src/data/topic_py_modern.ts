@@ -37,7 +37,7 @@ export const py_modern_questions: Question[] = [
       topic: Topic.PY_MODERN,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use Enum and structural pattern matching for type-safe constants and transitions. Define an `OrderStatus` string enum with states: `PENDING = "pending"`, `PROCESSING = "processing"`, `SHIPPED = "shipped"`, `DELIVERED = "delivered"`, and `CANCELLED = "cancelled"`. Then write a function `get_next_status(current: OrderStatus) -> OrderStatus` that uses a Python 3.10+ `match/case` statement to determine the next valid status: `PENDING` transitions to `PROCESSING`, `PROCESSING` to `SHIPPED`, `SHIPPED` to `DELIVERED`. If `DELIVERED` or `CANCELLED` are passed, raise `InvalidTransitionError` (which you should define). For any other value, raise `ValueError`.',
+      question: 'Use Enum and structural pattern matching for type-safe constants and transitions. Define an `OrderStatus` string enum with five members: PENDING, PROCESSING, SHIPPED, DELIVERED, and CANCELLED, each valued as its own lowercase name (e.g. the PENDING member equals "pending"). Then write a function get_next_status(current) -> OrderStatus that uses a Python 3.10+ match/case statement to determine the next valid status: PENDING transitions to PROCESSING, PROCESSING to SHIPPED, SHIPPED to DELIVERED. If DELIVERED or CANCELLED are passed, raise InvalidTransitionError (which you should define). For any other value, raise ValueError.',
       starterCode: `from enum import Enum
 
 class InvalidTransitionError(Exception):

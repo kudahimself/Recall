@@ -29,8 +29,8 @@ export const dj_models_questions: Question[] = [
           description: 'Should define Django model with correct fields',
         },
       ],
-      solution: `from django.db import models\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    author = models.CharField(max_length=100)\n    published_date = models.DateTimeField(auto_now_add=True)\n    is_published = models.BooleanField(default=False)\n\n    def __str__(self):\n        return self.title`,
-      explanation: 'Django models map to database tables. Each class attribute is a column. CharField needs max_length. auto_now_add=True sets the timestamp on creation. __str__ defines what appears in the admin panel and shell.',
+      solution: `from django.db import models\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    author = models.CharField(max_length=100)\n    published_date = models.DateTimeField(auto_now_add=True)\n    is_published = models.BooleanField(default=False)`,
+      explanation: 'Django models map to database tables. Each class attribute is a column. CharField needs max_length. auto_now_add=True sets the timestamp once, at creation.',
       hints: ['Inherit from models.Model', 'CharField requires max_length', 'auto_now_add sets timestamp on creation'],
       tags: ['model', 'fields', 'django', 'orm'],
       concepts: ['dj-orm-query-construction'],
@@ -51,7 +51,7 @@ export const dj_models_questions: Question[] = [
           description: 'Should create model with ForeignKey',
         },
       ],
-      solution: `from django.db import models\n\nclass Comment(models.Model):\n    article = models.ForeignKey("Article", on_delete=models.CASCADE)\n    author = models.CharField(max_length=100)\n    body = models.TextField()\n    created_at = models.DateTimeField(auto_now_add=True)\n\n    def __str__(self):\n        return f"Comment by {self.author} on {self.article}"`,
+      solution: `from django.db import models\n\nclass Comment(models.Model):\n    article = models.ForeignKey("Article", on_delete=models.CASCADE)\n    author = models.CharField(max_length=100)\n    body = models.TextField()\n    created_at = models.DateTimeField(auto_now_add=True)`,
       explanation: 'ForeignKey creates a many-to-one relationship (many comments per article). on_delete=CASCADE deletes comments when the article is deleted. Other options: PROTECT (prevent deletion), SET_NULL (set to null), SET_DEFAULT.',
       hints: ['models.ForeignKey(Model, on_delete=...)', 'CASCADE deletes children with parent', 'Access reverse: article.comment_set.all()'],
       tags: ['foreignkey', 'model', 'relationship', 'django'],
@@ -344,6 +344,27 @@ class Book(models.Model):
       concepts: ['dj-model-construction'],
     },
   {
+      id: 'dj-models-m2m-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_MODELS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'A Recipe can have many Ingredients and an Ingredient can appear in many Recipes. Fill in the field type and the reverse-accessor name so `ingredient.recipes.all()` works.',
+      template: `class Ingredient(models.Model):
+    name = models.CharField(max_length=100)
+
+class Recipe(models.Model):
+    title = models.CharField(max_length=200)
+    ingredients = models.___(Ingredient, related_name="___")`,
+      blanks: ['ManyToManyField', 'recipes'],
+      solution: 'class Ingredient(models.Model):\n    name = models.CharField(max_length=100)\n\nclass Recipe(models.Model):\n    title = models.CharField(max_length=200)\n    ingredients = models.ManyToManyField(Ingredient, related_name="recipes")',
+      explanation: '`ManyToManyField` can go on either model — here it\'s declared on `Recipe` since "a recipe has many ingredients" reads naturally. `related_name="recipes"` gives the reverse accessor `ingredient.recipes.all()` instead of the default `recipe_set`. Django creates a hidden join table automatically; manage the relation with `.add()`/`.remove()`/`.set()`/`.clear()`.',
+      hints: ['Both sides can have many counterparts → ManyToManyField', 'related_name names the reverse accessor'],
+      tags: ['django', 'models', 'ManyToManyField', 'related_name', 'cloze'],
+      concepts: ['dj-model-construction'],
+    },
+  {
       id: 'dj4e-m2m-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,
@@ -408,6 +429,32 @@ class Article(models.Model):
         'The through model has ForeignKeys to both sides plus your extra fields',
       ],
       tags: ['django', 'models', 'ManyToManyField', 'through', 'junction-table', 'intermediate'],
+      concepts: ['dj-model-construction'],
+    },
+  {
+      id: 'dj-models-m2m-through-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_MODELS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'A Band has many Musicians and a Musician can join many Bands — but you also need to store the `joined_date` on that relationship. Fill in the parameter that routes the M2M through an explicit model, and the field type on Membership.',
+      template: `class Musician(models.Model):
+    name = models.CharField(max_length=100)
+
+class Band(models.Model):
+    name = models.CharField(max_length=100)
+    musicians = models.ManyToManyField(Musician, through="___")
+
+class Membership(models.Model):
+    musician = models.___(Musician, on_delete=models.CASCADE)
+    band = models.ForeignKey(Band, on_delete=models.CASCADE)
+    joined_date = models.DateField()`,
+      blanks: ['Membership', 'ForeignKey'],
+      solution: 'class Musician(models.Model):\n    name = models.CharField(max_length=100)\n\nclass Band(models.Model):\n    name = models.CharField(max_length=100)\n    musicians = models.ManyToManyField(Musician, through="Membership")\n\nclass Membership(models.Model):\n    musician = models.ForeignKey(Musician, on_delete=models.CASCADE)\n    band = models.ForeignKey(Band, on_delete=models.CASCADE)\n    joined_date = models.DateField()',
+      explanation: 'A `through` model is required when the relationship itself carries data (here, `joined_date`). `ManyToManyField(..., through="Membership")` tells Django to route adds/removes through that model instead of the automatic hidden join table. The through model needs a ForeignKey to BOTH sides plus the extra field(s); you can no longer use `.add()` — create `Membership` rows directly.',
+      hints: ['through= takes the model name as a string', 'The through model needs ForeignKeys to both sides'],
+      tags: ['django', 'models', 'ManyToManyField', 'through', 'cloze'],
       concepts: ['dj-model-construction'],
     },
   {
@@ -865,6 +912,28 @@ True`,
         'O2O reverse = one object; unique-FK reverse = a manager',
       ],
       tags: ['django', 'models', 'OneToOneField', 'relationships'],
+      concepts: ['dj-model-construction'],
+    },
+  {
+      id: 'dj-models-o2o-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_MODELS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Each Driver has exactly one License and each License belongs to exactly one Driver; deleting the driver deletes the license too. Fill in the strict-1:1 field type and the reverse-accessor name so `driver.license` returns the single License object (not a manager).',
+      template: `class License(models.Model):
+    number = models.CharField(max_length=20)
+    driver = models.___(
+        "Driver",
+        on_delete=models.CASCADE,
+        related_name="___",
+    )`,
+      blanks: ['OneToOneField', 'license'],
+      solution: 'class License(models.Model):\n    number = models.CharField(max_length=20)\n    driver = models.OneToOneField(\n        "Driver",\n        on_delete=models.CASCADE,\n        related_name="license",\n    )',
+      explanation: '`OneToOneField` enforces a strict 1:1 link — the DB column is unique, and unlike a unique `ForeignKey`, the reverse accessor (`driver.license`) returns the single related object directly instead of a manager. `on_delete=models.CASCADE` removes the License with its Driver.',
+      hints: ['Strict 1:1 = OneToOneField, not ForeignKey(unique=True)', 'related_name controls the reverse singular accessor'],
+      tags: ['django', 'models', 'OneToOneField', 'related_name', 'cloze'],
       concepts: ['dj-model-construction'],
     },
   {

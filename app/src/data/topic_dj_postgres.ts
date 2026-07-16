@@ -66,6 +66,26 @@ print(qs3.count())`,
       concepts: ['inf-postgres', 'dj-model-construction'],
     },
   {
+      id: 'dj-postgres-keytexttransform-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_POSTGRES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the import and the annotation helper that extracts a JSON key as text for ordering/filtering.',
+      template: `from django.db.models.fields.json import ___
+
+products = Product.objects.annotate(
+    brand=___("brand", "metadata")
+).order_by("brand")`,
+      blanks: ['KeyTextTransform', 'KeyTextTransform'],
+      solution: 'from django.db.models.fields.json import KeyTextTransform\n\nproducts = Product.objects.annotate(\n    brand=KeyTextTransform("brand", "metadata")\n).order_by("brand")',
+      explanation: '`KeyTextTransform(key, json_field_name)` extracts a JSON key\'s value as text, usable in `.annotate()`, `.filter()`, or `.order_by()` — handy since you can\'t `order_by("metadata__brand")` directly for arbitrary JSON keys.',
+      hints: ['Import from django.db.models.fields.json', 'Takes the key name, then the JSON field name'],
+      tags: ['django', 'postgres', 'JSONField', 'KeyTextTransform', 'cloze'],
+      concepts: ['inf-postgres'],
+    },
+  {
       id: 'be-infra-postgres-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -125,7 +145,7 @@ products_by_brand = Product.objects.annotate(
         '__has_key checks for key existence without comparing values',
         'KeyTextTransform extracts values for annotation/ordering',
       ],
-      tags: ['jsonfield', 'postgres', 'django-orm', 'metadata'],
+      tags: ['JSONField', 'postgres', 'django-orm', 'metadata'],
       concepts: ['dj-model-construction', 'inf-postgres'],
     },
   {
@@ -144,6 +164,26 @@ products_by_brand = Product.objects.annotate(
       explanation: 'Django\'s django.contrib.postgres module provides Python-native access to PostgreSQL\'s most powerful features. JSONField stores and queries semi-structured data. ArrayField stores lists directly in a column. Full-text search with SearchVector, SearchQuery, and SearchRank provides relevance-ranked text search without Elasticsearch. Range fields enforce constraints like "available from date X to date Y" at the database level. CITextField provides case-insensitive uniqueness. These are why PostgreSQL is the recommended database for Django — SQLite lacks these features entirely.',
       tags: ['postgres', 'django', 'jsonfield', 'arrayfield', 'full-text-search'],
       concepts: ['inf-postgres', 'dj-model-construction'],
+    },
+  {
+      id: 'dj-postgres-fts-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_POSTGRES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the three full-text search helpers: build the vector, parse the query, and score relevance.',
+      template: `from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+
+vector = ___("title")
+query = ___("django")
+results = Article.objects.annotate(rank=___(vector, query)).filter(search=vector).order_by("-rank")`,
+      blanks: ['SearchVector', 'SearchQuery', 'SearchRank'],
+      solution: 'from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank\n\nvector = SearchVector("title")\nquery = SearchQuery("django")\nresults = Article.objects.annotate(rank=SearchRank(vector, query)).filter(search=vector).order_by("-rank")',
+      explanation: '`SearchVector(field)` builds a tsvector from the column; `SearchQuery(term)` parses the user\'s search term into a tsquery (with stemming); `SearchRank(vector, query)` scores each row\'s relevance so results can be ordered by how well they match.',
+      hints: ['Builds the searchable vector from a field', 'Parses the user\'s search term', 'Scores relevance for ordering'],
+      tags: ['django', 'postgres', 'full-text-search', 'SearchVector', 'cloze'],
+      concepts: ['inf-postgres'],
     },
   {
       id: 'be-infra-postgres-3',

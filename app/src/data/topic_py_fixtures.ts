@@ -194,6 +194,27 @@ def test_greeting(greeting):
     concepts: ['py-test-isolation'],
   },
   {
+    id: 'py-fix-scope-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PY_FIXTURES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the kwarg that controls how often a fixture is rebuilt, and the value for "once per file".',
+    template: `import pytest
+
+@pytest.fixture(___="module")
+def db_conn():
+    return connect()`,
+    blanks: ['scope'],
+    solution: 'import pytest\n\n@pytest.fixture(scope="module")\ndef db_conn():\n    return connect()',
+    explanation:
+      'scope controls how often the fixture is rebuilt: "function" (default, once per test), "class", "module" (once per file), "package", "session" (once per run). Wider scopes save setup cost but risk sharing mutable state across tests.',
+    hints: ['Kwarg name is the noun for "how wide a range applies".'],
+    tags: ['pytest', 'fixture', 'scope'],
+    concepts: ['py-test-isolation'],
+  },
+  {
     id: 'py-test-fixture-scope',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -229,6 +250,28 @@ def test_b(expensive_setup):
       'Never mutate a wider-scoped fixture in one test that another test reads',
     ],
     tags: ['pytest', 'fixture', 'scope'],
+    concepts: ['py-test-isolation'],
+  },
+  {
+    id: 'py-fix-autouse-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PY_FIXTURES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the kwarg that applies a fixture to every test without it being requested by parameter.',
+    template: `import pytest
+
+@pytest.fixture(___=True)
+def reset_state():
+    state.clear()
+    yield`,
+    blanks: ['autouse'],
+    solution: 'import pytest\n\n@pytest.fixture(autouse=True)\ndef reset_state():\n    state.clear()\n    yield',
+    explanation:
+      'autouse=True runs the fixture for every test in its scope automatically — tests do not need to name it as a parameter. Use sparingly since it makes setup implicit and harder to trace.',
+    hints: ['Snake-case: "auto" + "use".'],
+    tags: ['pytest', 'fixture', 'autouse'],
     concepts: ['py-test-isolation'],
   },
   {
@@ -270,6 +313,26 @@ def test_increment():
     concepts: ['py-test-isolation'],
   },
   {
+    id: 'py-fix-tmppath-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PY_FIXTURES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: "Fill in pytest's built-in fixture name for a unique per-test pathlib.Path temp directory.",
+    template: `def test_writes(___):
+    f = ___ / "out.txt"
+    f.write_text("x")
+    assert f.read_text() == "x"`,
+    blanks: ['tmp_path', 'tmp_path'],
+    solution: 'def test_writes(tmp_path):\n    f = tmp_path / "out.txt"\n    f.write_text("x")\n    assert f.read_text() == "x"',
+    explanation:
+      'tmp_path is a built-in fixture — no import or definition needed, just request it by parameter name. It is a pathlib.Path to a fresh temp directory created per test, so file-based tests never collide.',
+    hints: ['Snake-case: "tmp" + "_path" — same name in both blanks.'],
+    tags: ['pytest', 'fixture', 'tmp_path', 'builtin'],
+    concepts: ['py-test-isolation'],
+  },
+  {
     id: 'py-fix-tmppath-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -304,6 +367,26 @@ def test_writes_file(tmp_path):
       'write_text / read_text avoid open()',
     ],
     tags: ['pytest', 'fixture', 'tmp_path', 'builtin'],
+    concepts: ['py-test-isolation'],
+  },
+  {
+    id: 'py-fix-capsys-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PY_FIXTURES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: "Fill in pytest's built-in fixture for capturing stdout/stderr, and the method that returns what was captured.",
+    template: `def test_prints(___):
+    print("hi")
+    captured = ___.readouterr()
+    assert captured.out == "hi\\n"`,
+    blanks: ['capsys', 'capsys'],
+    solution: 'def test_prints(capsys):\n    print("hi")\n    captured = capsys.readouterr()\n    assert captured.out == "hi\\n"',
+    explanation:
+      'capsys is a built-in fixture; capsys.readouterr() returns an object with .out and .err holding everything printed since the last read, then clears the buffers.',
+    hints: ['Blend of "cap" + "sys(tem)"; method name is "read" + "out" + "err".'],
+    tags: ['pytest', 'fixture', 'capsys', 'builtin'],
     concepts: ['py-test-isolation'],
   },
   {
@@ -410,6 +493,27 @@ def test_add(calc, a, b, expected):
     concepts: ['py-test-isolation'],
   },
   {
+    id: 'py-fix-paramfixture-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.PY_FIXTURES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Fill in the kwarg that parametrizes a fixture itself, and the attribute that exposes the current value.',
+    template: `import pytest
+
+@pytest.fixture(___=[1, 2, 3])
+def n(request):
+    return request.___`,
+    blanks: ['params', 'param'],
+    solution: 'import pytest\n\n@pytest.fixture(params=[1, 2, 3])\ndef n(request):\n    return request.param',
+    explanation:
+      'params=[...] on @pytest.fixture makes the fixture itself parametrized — every test that depends on it re-runs once per value. The built-in request fixture exposes the current value as request.param. Unlike @pytest.mark.parametrize (one test), this multiplies every dependent test.',
+    hints: ['Fixture kwarg is plural "params"; the request attribute is singular "param".'],
+    tags: ['pytest', 'fixture', 'parametrized-fixture', 'request'],
+    concepts: ['py-test-isolation'],
+  },
+  {
     id: 'py-fix-param-fixture-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
@@ -450,7 +554,7 @@ def test_is_positive(number):
     topic: Topic.PY_FIXTURES,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Write a pytest test suite for a `Calculator` class that exposes three methods: one that adds two numbers, one that subtracts the second from the first, and one that divides the first by the second. Define the class inline in the same file — addition and subtraction are trivial; division must raise `ZeroDivisionError` whose message is `"Cannot divide by zero"` when the divisor is zero.\n\nThe test suite must:\n\n- Build the `Calculator` ONCE per test via a SHARED pytest fixture — do not instantiate it inline in every test.\n- Cover all three methods with MULTIPLE input rows each (mix positive, negative, zero, and float values), without duplicating the same test body per row (use the pytest decorator that parametrises a single test across many input rows).\n- Assert that dividing by zero raises `ZeroDivisionError` AND that the error message contains `"Cannot divide by zero"` (use `pytest.raises` with a pattern check).\n\nUse pytest primitives; no `unittest.TestCase`.',
+    question: 'Write pytest tests for a `Calculator` class (define it inline) with a `divide` method that raises `ZeroDivisionError` with message `"Cannot divide by zero"` on a zero divisor. Instantiate `Calculator` once via a shared fixture. Parametrize the normal-division test over (a, b, expected):\n\n(10, 2, 5.0)\n(7, 2, 3.5)\n(-9, 3, -3.0)\n(0, 5, 0.0)\n\nThen assert the zero-divisor case with `pytest.raises(ZeroDivisionError, match=...)`.',
     starterCode: `import pytest
 
 class Calculator:
@@ -460,18 +564,12 @@ class Calculator:
       {
         input: 'pytest runs all test functions',
         expectedOutput: 'All tests pass, including parametrized and exception tests',
-        description: 'Should use fixtures, parametrize, and pytest.raises',
+        description: 'Should use a fixture, parametrize, and pytest.raises',
       },
     ],
     solution: `import pytest
 
 class Calculator:
-    def add(self, a: float, b: float) -> float:
-        return a + b
-
-    def subtract(self, a: float, b: float) -> float:
-        return a - b
-
     def divide(self, a: float, b: float) -> float:
         if b == 0:
             raise ZeroDivisionError("Cannot divide by zero")
@@ -485,26 +583,10 @@ def calc():
     return Calculator()
 
 @pytest.mark.parametrize("a, b, expected", [
-    (2, 3, 5),
-    (-1, 1, 0),
-    (0, 0, 0),
-    (1.5, 2.5, 4.0),
-])
-def test_add(calc, a, b, expected):
-    assert calc.add(a, b) == expected
-
-@pytest.mark.parametrize("a, b, expected", [
-    (5, 3, 2),
-    (0, 5, -5),
-    (-3, -3, 0),
-])
-def test_subtract(calc, a, b, expected):
-    assert calc.subtract(a, b) == expected
-
-@pytest.mark.parametrize("a, b, expected", [
     (10, 2, 5.0),
     (7, 2, 3.5),
     (-9, 3, -3.0),
+    (0, 5, 0.0),
 ])
 def test_divide(calc, a, b, expected):
     assert calc.divide(a, b) == expected

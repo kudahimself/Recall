@@ -10,7 +10,7 @@ import {
 export const securityQuestions: Question[] = [
 
   // =====================================================================
-  // 1. AUTHENTICATION DEEP DIVE (5 questions, topic: NEXT_AUTH)
+  // 1. AUTHENTICATION DEEP DIVE (10 questions, topic: NEXT_AUTH)
   // =====================================================================
 
   {
@@ -101,6 +101,98 @@ export const securityQuestions: Question[] = [
     concepts: ['web-security-xss', 'web-security-csrf', 'web-security-input-validation'],
   },
 
+  // BEGINNER faded (Parsons + Cloze) — jose's jwtVerify is a new primitive, never faded elsewhere before this topic's lone ADVANCED coding question
+
+  {
+    id: 'sec-auth-parsons-1',
+    type: QuestionType.PARSONS,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_AUTH,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Assemble a function that checks whether a JWT is valid using the jose library. Order: import, secret key, function declaration, try the verification, return true, catch and return false.',
+    correctOrder: [
+      'import { jwtVerify } from "jose";',
+      'const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key");',
+      'async function isValidToken(token: string) {',
+      '  try {',
+      '    await jwtVerify(token, JWT_SECRET);',
+      '    return true;',
+      '  } catch {',
+      '    return false;',
+      '  }',
+      '}',
+    ],
+    distractorLines: [
+      'import jwtVerify from "jose";',
+      '    const valid = jwtVerify(token, JWT_SECRET);',
+    ],
+    solution: `import { jwtVerify } from "jose";
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key");
+async function isValidToken(token: string) {
+  try {
+    await jwtVerify(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}`,
+    explanation:
+      'jose exports jwtVerify as a named export, not a default export. JWT_SECRET must be a Uint8Array, which is why the secret string is run through new TextEncoder().encode(). jwtVerify is async and throws when the token is expired, malformed, or has a bad signature — since there is nothing useful in the resolved value here, the pattern is to await it inside a try block and let a thrown error mean "invalid."',
+    hints: [
+      'jose exports jwtVerify by name — { jwtVerify }, not a default export',
+      'The secret must be encoded to a Uint8Array first',
+      'jwtVerify throws on an invalid or expired token — it does not return false',
+    ],
+    tags: ['jwt', 'jose', 'jwtVerify', 'parsons'],
+    concepts: ['web-security-auth-tokens'],
+  },
+
+  {
+    id: 'sec-auth-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_AUTH,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'Complete the code: the TextEncoder method that turns the secret string into a Uint8Array, and the jose function that verifies a token against it.',
+    template: `import { jwtVerify } from "jose";
+
+const JWT_SECRET = new TextEncoder().___(process.env.JWT_SECRET || "your-secret-key");
+
+async function isValidToken(token: string) {
+  try {
+    await ___(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}`,
+    blanks: ['encode', 'jwtVerify'],
+    solution: `import { jwtVerify } from "jose";
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key");
+
+async function isValidToken(token: string) {
+  try {
+    await jwtVerify(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}`,
+    explanation:
+      'jose\'s APIs work with raw bytes rather than strings, so TextEncoder().encode() converts the secret into the Uint8Array jwtVerify expects. jwtVerify(token, secret) resolves if the signature and expiry are valid, and throws otherwise.',
+    hints: [
+      'The TextEncoder method that produces a Uint8Array',
+      'The jose function that checks a token\'s signature and expiry',
+    ],
+    tags: ['jwt', 'jose', 'jwtVerify', 'cloze'],
+    concepts: ['web-security-auth-tokens'],
+  },
+
   {
     id: 'sec-auth-5',
     type: QuestionType.CODING,
@@ -177,6 +269,66 @@ export const config = {
     ],
     tags: ['nextjs', 'middleware', 'jwt', 'jose', 'authentication', 'cookies'],
     concepts: ['next-middleware', 'web-security-auth-tokens', 'web-security-csrf'],
+  },
+
+  {
+    id: 'next-auth-session-cookie-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_AUTH,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Fill in the next/headers import used to access cookies, and the cookie option that keeps it out of reach of client-side JavaScript.',
+    template: 'import { ___ } from "next/headers";\n\nexport async function login(formData: FormData) {\n  "use server";\n  const token = await createSessionToken(formData);\n  const cookieStore = await cookies();\n  cookieStore.set("session", token, { ___: true, secure: true, sameSite: "lax" });\n}',
+    blanks: ['cookies', 'httpOnly'],
+    solution: 'import { cookies } from "next/headers";\n\nexport async function login(formData: FormData) {\n  "use server";\n  const token = await createSessionToken(formData);\n  const cookieStore = await cookies();\n  cookieStore.set("session", token, { httpOnly: true, secure: true, sameSite: "lax" });\n}',
+    explanation: 'The cookies() function from next/headers gives Server Actions and Route Handlers read/write access to cookies. Setting httpOnly: true means document.cookie in the browser cannot read or tamper with the session cookie — only the server (and the browser\'s own request pipeline) ever sees it, which is the main defense against session theft via XSS.',
+    hints: ['the next/headers function that returns the cookie store', 'the option that blocks client-side JS from reading the cookie'],
+    tags: ['cookies', 'httpOnly', 'session', 'server-action'],
+    concepts: ['web-security-auth-tokens'],
+  },
+  {
+    id: 'next-auth-session-cookie-1',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_AUTH,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Implement a Server Action that logs a user in by setting an httpOnly session cookie.\n\nFile: app/actions/auth.ts\n\nRequirements:\n- "use server" directive at the top of the function\n- async function `login(formData: FormData)`\n- Get a token from `await verifyCredentials(formData)` (assume this is imported from "@/lib/auth" and returns a session token string)\n- `const cookieStore = await cookies();`\n- Set the cookie: `cookieStore.set("session", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 })`',
+    starterCode: `// app/actions/auth.ts\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  // Verify credentials and set an httpOnly session cookie\n}`,
+    testCases: [
+      {
+        input: 'verify credentials',
+        expectedOutput: 'await verifyCredentials(formData)',
+        description: 'Should verify credentials to obtain a session token',
+      },
+      {
+        input: 'set httpOnly cookie',
+        expectedOutput: 'cookieStore.set("session", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 })',
+        description: 'Should set an httpOnly session cookie with a 7-day expiry',
+      },
+    ],
+    solution: `// app/actions/auth.ts\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  const token = await verifyCredentials(formData);\n  const cookieStore = await cookies();\n\n  cookieStore.set("session", token, {\n    httpOnly: true,\n    secure: true,\n    sameSite: "lax",\n    maxAge: 60 * 60 * 24 * 7,\n  });\n}`,
+    explanation: 'A Server Action runs entirely on the server, so it can set an httpOnly cookie directly through cookies().set() — the browser never gets a chance to read or modify the raw token via document.cookie. secure: true ensures the cookie is only sent over HTTPS, and sameSite: "lax" blocks it from being attached to most cross-site requests, mitigating CSRF for the common case. maxAge is in seconds, so 60 * 60 * 24 * 7 is one week.',
+    hints: ['cookies() must be awaited before calling .set()', 'httpOnly, secure, and sameSite are all options in the same object'],
+    tags: ['server-action', 'cookies', 'httpOnly', 'session'],
+    concepts: ['web-security-auth-tokens'],
+  },
+  {
+    id: 'next-auth-logout-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_AUTH,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Fill in the cookie-store method that removes the session cookie, and the function that sends the user back to the login page.',
+    template: 'import { cookies } from "next/headers";\nimport { redirect } from "next/navigation";\n\nexport async function logout() {\n  "use server";\n  const cookieStore = await cookies();\n  cookieStore.___("session");\n  ___("/login");\n}',
+    blanks: ['delete', 'redirect'],
+    solution: 'import { cookies } from "next/headers";\nimport { redirect } from "next/navigation";\n\nexport async function logout() {\n  "use server";\n  const cookieStore = await cookies();\n  cookieStore.delete("session");\n  redirect("/login");\n}',
+    explanation: 'cookieStore.delete(name) removes the cookie by sending a Set-Cookie header that expires it immediately. redirect() (from next/navigation) then sends the now-logged-out user back to /login. Both work inside a Server Action marked "use server".',
+    hints: ['the cookie-store method that removes a cookie by name', 'the next/navigation function for a server-side redirect'],
+    tags: ['logout', 'cookies', 'redirect', 'server-action'],
+    concepts: ['web-security-auth-tokens'],
   },
 
   // =====================================================================

@@ -95,7 +95,7 @@ FROM dbo.FactOrders;`,
   {
     id: 'tsql-frames-1',
     type: QuestionType.CODING,
-    difficulty: Difficulty.ADVANCED,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.TSQL_WINDOW_FRAMES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
@@ -115,5 +115,33 @@ FROM dbo.FactOrders;`,
     explanation: '`PARTITION BY CustomerKey` restarts the accumulation for each customer; `ORDER BY OrderDate` with the default frame makes it a running total of that customer\'s spend over time.',
     hints: ['PARTITION BY CustomerKey to reset per customer', 'ORDER BY OrderDate for the cumulative effect'],
     tags: ['tsql', 'window-frames', 'running-total', 'partition-by'],
+  },
+  {
+    id: 'tsql-frames-2',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_WINDOW_FRAMES,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "From `dbo.FactOrders` (CustomerKey, OrderDate, Amount), return CustomerKey, OrderDate, Amount and a 3-order moving average of Amount (the current order plus the two immediately before it, by OrderDate) for each customer, aliased `MovingAvg3`.",
+    starterCode: `-- 3-order moving average per customer
+`,
+    testCases: [
+      {
+        input: 'AVG(Amount) OVER (PARTITION BY CustomerKey ORDER BY OrderDate ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)',
+        expectedOutput: 'Per-customer 3-order sliding average',
+        description: 'Partitioned moving average with an explicit ROWS frame',
+      },
+    ],
+    solution: `SELECT CustomerKey, OrderDate, Amount,
+       AVG(Amount) OVER (
+           PARTITION BY CustomerKey
+           ORDER BY OrderDate
+           ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+       ) AS MovingAvg3
+FROM dbo.FactOrders;`,
+    explanation: 'This combines three primitives: PARTITION BY to keep each customer\'s sequence separate, ORDER BY to define "before," and an explicit ROWS BETWEEN 2 PRECEDING AND CURRENT ROW frame to slide a fixed 3-row window instead of accumulating everything since the start.',
+    hints: ['Partition per customer, order by date', 'A fixed-size sliding window needs an explicit ROWS BETWEEN frame, not the default'],
+    tags: ['tsql', 'window-frames', 'moving-average', 'rows-between', 'partition-by'],
   },
 ];

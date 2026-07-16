@@ -1486,7 +1486,9 @@ button[type="submit"]:hover {
 
 .progress-tab {
   display: inline-flex;
+  flex: 1;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   background: transparent;
@@ -1508,15 +1510,22 @@ button[type="submit"]:hover {
   color: var(--primary);
 }
 
-.tab-indicator {
+/* Underline anchored to the active tab itself, so it tracks the tab's real
+   position and width regardless of label length. */
+.progress-tab::after {
+  content: '';
   position: absolute;
   bottom: -2px;
   left: 0;
-  width: calc(33.333% - var(--space-xs));
+  right: 0;
   height: 2px;
   background: var(--primary);
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  margin: 0 calc(var(--space-xs) / 2);
+  transform: scaleX(0);
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-tab.active::after {
+  transform: scaleX(1);
 }
 
 .progress-tab-content {

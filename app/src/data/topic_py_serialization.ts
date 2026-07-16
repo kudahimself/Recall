@@ -389,6 +389,28 @@ print(loaded == data)`,
       concepts: ['py-json-serialization'],
     },
   {
+      id: 'py-serialization-objecthook-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_SERIALIZATION,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the json.loads kwarg that runs a callback on every parsed dict.',
+      template: `import json
+
+obj = json.loads('{"x": 1}', ___=lambda d: {k.upper(): v for k, v in d.items()})
+print(obj)`,
+      blanks: ['object_hook'],
+      solution:
+        'import json\n\nobj = json.loads(\'{"x": 1}\', object_hook=lambda d: {k.upper(): v for k, v in d.items()})\nprint(obj)',
+      explanation:
+        'object_hook=fn is called with every dict the decoder parses — you can return anything (a transformed dict, a custom class instance, a namedtuple). Classic use: converting JSON objects into typed Python objects during parsing.',
+      hints: ['Snake-case: "object" + "_hook".'],
+      tags: ['json', 'loads', 'object_hook', 'decoder'],
+      concepts: ['py-json-serialization'],
+    },
+  {
       id: 'py-ser-object-hook',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -602,6 +624,33 @@ print(result)`,
         'For many types, subclass json.JSONEncoder and override default',
       ],
       tags: ['json', 'default', 'datetime', 'encoder'],
+      concepts: ['py-json-serialization'],
+    },
+  {
+      id: 'py-serialization-jsonencoder-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_SERIALIZATION,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the class a custom encoder subclasses, the method it overrides, and the kwarg that applies it to dumps.',
+      template: `import json
+
+class UpperEncoder(json.___):
+    def ___(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return super().default(obj)
+
+print(json.dumps({"tags": {"a"}}, ___=UpperEncoder))`,
+      blanks: ['JSONEncoder', 'default', 'cls'],
+      solution:
+        'import json\n\nclass UpperEncoder(json.JSONEncoder):\n    def default(self, obj):\n        if isinstance(obj, set):\n            return list(obj)\n        return super().default(obj)\n\nprint(json.dumps({"tags": {"a"}}, cls=UpperEncoder))',
+      explanation:
+        'A custom encoder subclasses json.JSONEncoder and overrides default(self, obj) — called for any value the base encoder cannot handle. Apply it with json.dumps(data, cls=YourEncoder). Always fall back to super().default(obj) for the TypeError on genuinely unhandled types.',
+      hints: ['Subclass JSONEncoder; override default(); pass cls= to dumps.'],
+      tags: ['json', 'JSONEncoder', 'custom-encoder', 'subclass'],
       concepts: ['py-json-serialization'],
     },
   {

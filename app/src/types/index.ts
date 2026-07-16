@@ -279,10 +279,13 @@ export enum Topic {
   // Pillar 1 — Querying Foundations
   TSQL_SELECT = 'tsql_select',
   TSQL_FILTERING = 'tsql_filtering',
+  TSQL_STRING_FUNCTIONS = 'tsql_string_functions',
+  TSQL_DATE_FUNCTIONS = 'tsql_date_functions',
   TSQL_JOINS = 'tsql_joins',
   TSQL_AGGREGATION = 'tsql_aggregation',
   TSQL_SUBQUERIES_CTE = 'tsql_subqueries_cte',
   TSQL_SET_OPS = 'tsql_set_ops',
+  TSQL_DML = 'tsql_dml',
   // Pillar 2 — DDL & Constraints
   TSQL_DDL_TABLES = 'tsql_ddl_tables',
   TSQL_TYPES = 'tsql_types',
@@ -382,6 +385,12 @@ export interface CodingQuestion extends BaseQuestion {
   starterCode: string;
   testCases: TestCase[];
   solution: string;
+  // Markup the learner's CSS renders against in the live preview pane (CSS questions).
+  // HTML questions preview their own code and don't need this field.
+  previewHtml?: string;
+  // Computed-style grading targets: for each selector, the CSS properties to compare
+  // between the user's render and the solution's render.
+  previewChecks?: { selector: string; properties: string[] }[];
 }
 
 export interface ParsonsQuestion extends BaseQuestion {
@@ -393,6 +402,9 @@ export interface ParsonsQuestion extends BaseQuestion {
   distractorLines?: string[];
   // The assembled correct answer, shown after submission for reference.
   solution: string;
+  // Markup the arranged CSS renders against in the live preview (CSS questions).
+  // HTML questions preview their arranged lines directly.
+  previewHtml?: string;
 }
 
 export interface PredictOutputQuestion extends BaseQuestion {
@@ -419,6 +431,9 @@ export interface ClozeCodeQuestion extends BaseQuestion {
   blankAlternates?: string[][];
   // The fully-assembled correct code, shown after submission.
   solution: string;
+  // Markup the filled-in CSS renders against in the live preview (CSS questions).
+  // HTML questions preview their filled-in template directly.
+  previewHtml?: string;
 }
 
 export type Question =

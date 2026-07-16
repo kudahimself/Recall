@@ -862,6 +862,28 @@ print(list(dropwhile(lambda x: x < 5, nums)))`,
       concepts: ['py-itertools-combinators'],
     },
   {
+      id: 'py-itertools-starmap-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_ITERTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the itertools function that unpacks each tuple as positional args to a callable (the *-prefixed cousin of map).',
+      template: `from itertools import ___
+
+pairs = [(2, 3), (4, 5)]
+print(list(___(lambda a, b: a * b, pairs)))`,
+      blanks: ['starmap', 'starmap'],
+      solution:
+        'from itertools import starmap\n\npairs = [(2, 3), (4, 5)]\nprint(list(starmap(lambda a, b: a * b, pairs)))',
+      explanation:
+        'map(fn, iter) passes one arg at a time. starmap(fn, iter) unpacks each item as positional args — equivalent to [fn(*t) for t in iter] but lazy.',
+      hints: ['Same prefix as *args unpacking, then "map".'],
+      tags: ['itertools', 'starmap'],
+      concepts: ['py-itertools-combinators'],
+    },
+  {
       id: 'py-iter-starmap',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -889,6 +911,26 @@ print(list(starmap(lambda a, b: a * b, pairs)))`,
         'Lazy; materialise with list()',
       ],
       tags: ['itertools', 'starmap', 'unpack'],
+      concepts: ['py-itertools-combinators'],
+    },
+  {
+      id: 'py-itertools-pairwise-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_ITERTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the itertools function (3.10+) that yields overlapping 2-windows: (x0,x1), (x1,x2), ...',
+      template: `from itertools import ___
+
+print(list(___([1, 2, 3, 4])))`,
+      blanks: ['pairwise', 'pairwise'],
+      solution: 'from itertools import pairwise\n\nprint(list(pairwise([1, 2, 3, 4])))',
+      explanation:
+        'pairwise(iter) yields overlapping consecutive pairs — the classic sliding window of size 2. Before 3.10 the recipe is zip(it, it[1:]).',
+      hints: ['Same word as the adjective for "taken two at a time".'],
+      tags: ['itertools', 'pairwise'],
       concepts: ['py-itertools-combinators'],
     },
   {

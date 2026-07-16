@@ -357,6 +357,29 @@ class Rectangle(Shape):
       concepts: ['py-list-aliasing'],
     },
 {
+      id: 'py-oop-copy-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_OOP_ADVANCED,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the copy module functions: one for a shallow copy (shares nested objects), one for a deep copy (recursively independent).',
+      template: `import copy
+
+original = [[1, 2], [3, 4]]
+shallow = copy.___(original)
+deep = copy.___(original)`,
+      blanks: ['copy', 'deepcopy'],
+      solution:
+        'import copy\n\noriginal = [[1, 2], [3, 4]]\nshallow = copy.copy(original)\ndeep = copy.deepcopy(original)',
+      explanation:
+        'copy.copy() makes a new outer container but nested objects are still shared references. copy.deepcopy() recursively duplicates everything, so the result is fully independent of the original.',
+      hints: ['Same word repeated for shallow; "deep" + that word for deep.'],
+      tags: ['copy', 'shallow-copy', 'deep-copy'],
+      concepts: ['py-list-aliasing'],
+    },
+{
       id: 'pcpp-copy-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,

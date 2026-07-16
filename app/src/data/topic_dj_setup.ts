@@ -59,9 +59,10 @@ export const dj_setup_questions: Question[] = [
       topic: Topic.DJ_SETUP,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'After `startapp blog`, register the app in settings. Show the `INSTALLED_APPS` list in `settings.py` with the default six Django apps (`admin`, `auth`, `contenttypes`, `sessions`, `messages`, `staticfiles`) PLUS `"blog.apps.BlogConfig"`. The AppConfig path is preferred over the bare `"blog"` string because it activates the app\'s `ready()` hook.',
+      question: 'After `startapp blog`, register the app in settings. Show the `INSTALLED_APPS` list in `settings.py` with the default six Django apps (`admin`, `auth`, `contenttypes`, `sessions`, `messages`, `staticfiles`) PLUS the `blog` app — registered via its AppConfig class (in `blog/apps.py`, named `<App>Config` by convention), not the bare app name, so its `ready()` hook actually runs.',
       starterCode: `# Write the INSTALLED_APPS list: the six django.contrib defaults
-# named in the prompt, plus the blog app's AppConfig dotted path.
+# named in the prompt, plus the blog app registered via its AppConfig
+# class (not the bare "blog" string).
 `,
       testCases: [
         {
@@ -176,18 +177,19 @@ export const dj_setup_questions: Question[] = [
       topic: Topic.DJ_SETUP,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a new Django app called "blog" and add it to INSTALLED_APPS. Show: (1) the terminal command to create the app, and (2) the updated INSTALLED_APPS list in settings.py. The project already has django.contrib.admin, django.contrib.auth, django.contrib.contenttypes, django.contrib.sessions, django.contrib.messages, and django.contrib.staticfiles installed.',
+      question: 'Create a new Django app called "blog" and register it in INSTALLED_APPS via its AppConfig class (not the bare app name). Show: (1) the terminal command to create the app, and (2) the updated INSTALLED_APPS list in settings.py. The project already has django.contrib.admin, django.contrib.auth, django.contrib.contenttypes, django.contrib.sessions, django.contrib.messages, and django.contrib.staticfiles installed.',
       starterCode: `# Step 1: write the terminal command (as a '# $ ...' comment) that scaffolds the new Django app
 
 
 # Step 2: write the full INSTALLED_APPS list for settings.py,
-# including the six django.contrib.* apps from the prompt plus the new app
+# including the six django.contrib.* apps from the prompt plus the new app,
+# registered via its AppConfig class
 `,
       testCases: [
         {
           input: 'App creation and registration',
-          expectedOutput: 'python manage.py startapp blog and blog added to INSTALLED_APPS',
-          description: 'Should show the startapp command and add blog to INSTALLED_APPS',
+          expectedOutput: 'python manage.py startapp blog and blog.apps.BlogConfig added to INSTALLED_APPS',
+          description: 'Should show the startapp command and add blog via its AppConfig path',
         },
       ],
       solution: `# Step 1: Terminal command
@@ -201,12 +203,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'blog',
+    'blog.apps.BlogConfig',
 ]`,
-      explanation: '`python manage.py startapp blog` creates a new directory called "blog" with models.py, views.py, admin.py, apps.py, tests.py, and a migrations folder. Adding \'blog\' (or \'blog.apps.BlogConfig\' for the full AppConfig path) to INSTALLED_APPS tells Django to include this app in migrations, template discovery, and other framework features. Apps not listed in INSTALLED_APPS are invisible to Django.',
+      explanation: '`python manage.py startapp blog` creates a new directory called "blog" with models.py, views.py, admin.py, apps.py, tests.py, and a migrations folder. Registering it as `blog.apps.BlogConfig` (rather than the bare `\'blog\'` string) guarantees the AppConfig\'s `ready()` hook runs — the bare string still works for a plain app with no `ready()`-dependent setup, but the class path is the safer default since it also works once you add signals or field overrides later. Apps not listed in INSTALLED_APPS are invisible to Django.',
       hints: [
         'The command to create an app is: python manage.py startapp <app_name>',
-        'Add the app name as a string to the INSTALLED_APPS list',
+        'Register via its AppConfig class (<App>Config in <app>/apps.py), not the bare app name',
       ],
       tags: ['django', 'startapp', 'installed-apps', 'project-setup'],
       concepts: ['dj-setup'],

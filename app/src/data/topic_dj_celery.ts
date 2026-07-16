@@ -119,6 +119,30 @@ False`,
       tags: ['celery', 'shared_task', 'delay', 'async-tasks', 'django'],
       concepts: ['ce-task-idempotency'],
     },
+  {
+      id: 'dj-celery-appconfig-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_CELERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the app constructor and the two calls that wire it to Django settings and app-discovered tasks.',
+      template: `# myproject/celery.py
+import os
+from celery import Celery
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
+
+app = ___("myproject")
+app.___("django.conf:settings", namespace="CELERY")
+app.___()`,
+      blanks: ['Celery', 'config_from_object', 'autodiscover_tasks'],
+      solution: '# myproject/celery.py\nimport os\nfrom celery import Celery\n\nos.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")\n\napp = Celery("myproject")\napp.config_from_object("django.conf:settings", namespace="CELERY")\napp.autodiscover_tasks()',
+      explanation: '`Celery("myproject")` creates the app. `config_from_object("django.conf:settings", namespace="CELERY")` reads any `CELERY_*` setting from Django\'s settings module. `autodiscover_tasks()` scans every installed app for a `tasks.py` module. The whole file must also be imported from `myproject/__init__.py` so the app exists at Django startup.',
+      hints: ['Constructor takes the project name', 'Two setup calls: read Django settings, then find tasks.py files'],
+      tags: ['celery', 'django-config', 'celery-setup', 'cloze'],
+      concepts: ['ce-task-idempotency'],
+    },
     // 2. Coding: Configure Celery in a Django project
   {
       id: 'celery-drf-2',
@@ -245,6 +269,28 @@ False`,
       tags: ['celery', 'result-backend', 'task-status', 'configuration'],
       concepts: ['ce-task-idempotency'],
     },
+  {
+      id: 'dj-celery-composition-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_CELERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the signature method and the two composition helpers: one runs tasks in sequence, one runs them in parallel.',
+      template: `from celery import chain, group
+
+pipeline = ___(fetch_data.___(url), process_data.s())
+pipeline.apply_async()
+
+parallel = ___(send_notification.s(uid) for uid in [1, 2, 3])
+parallel.apply_async()`,
+      blanks: ['chain', 's', 'group'],
+      solution: 'from celery import chain, group\n\npipeline = chain(fetch_data.s(url), process_data.s())\npipeline.apply_async()\n\nparallel = group(send_notification.s(uid) for uid in [1, 2, 3])\nparallel.apply_async()',
+      explanation: '`.s(args)` creates a "signature" — a serializable description of a task call, required for composition (you never call the task function directly when building a workflow). `chain(...)` runs signatures sequentially, feeding each result into the next. `group(...)` runs signatures in parallel and collects all results.',
+      hints: ['Method that builds a serializable task reference', 'Sequential composition vs parallel composition'],
+      tags: ['celery', 'chain', 'group', 'signature', 'cloze'],
+      concepts: ['ce-task-idempotency', 'ce-chord-vs-chain'],
+    },
     // 8. Coding: Chain and group
   {
       id: 'celery-drf-8',
@@ -271,6 +317,28 @@ False`,
       ],
       tags: ['celery', 'chain', 'group', 'task-composition', 'workflow'],
       concepts: ['ce-task-idempotency', 'ce-chord-vs-chain'],
+    },
+  {
+      id: 'dj-celery-chord-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_CELERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the composition primitive that runs a group and then feeds all its results into a single callback once every task finishes.',
+      template: `from celery import group, ___
+
+workflow = ___(
+    group(task_a.s(), task_b.s()),
+    finalize.s(),
+)
+workflow.apply_async()`,
+      blanks: ['chord', 'chord'],
+      solution: 'from celery import group, chord\n\nworkflow = chord(\n    group(task_a.s(), task_b.s()),\n    finalize.s(),\n)\nworkflow.apply_async()',
+      explanation: '`chord(header, callback)` is a `group` plus a finalizer: it runs the header group in parallel, then calls `callback` with the list of all group results as its first argument once every task in the group has finished -- the classic fan-out/fan-in pattern.',
+      hints: ['Same import style as chain/group', 'Takes a group as the header and a signature as the callback'],
+      tags: ['celery', 'chord', 'group', 'fan-in', 'cloze'],
+      concepts: ['ce-chord-vs-chain'],
     },
   {
       id: 'dj-celery-adv-1',

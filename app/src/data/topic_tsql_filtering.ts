@@ -72,6 +72,23 @@ WHERE Price BETWEEN 10 AND 100
     tags: ['tsql', 'filtering', 'between', 'in', 'like', 'cloze'],
   },
   {
+    id: 'tsql-filter-iif-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_FILTERING,
+    course: Course.SQL,
+    question: "What does `IIF(Price > 100, 'Premium', 'Standard')` return?",
+    options: [
+      { id: 'a', text: "'Premium' when Price > 100 is true, otherwise 'Standard' - a shorthand for a two-branch CASE.", isCorrect: true },
+      { id: 'b', text: "Both 'Premium' and 'Standard' concatenated together, separated by a comma.", isCorrect: false },
+      { id: 'c', text: "'Premium' always, regardless of the Price comparison.", isCorrect: false },
+      { id: 'd', text: "NULL, because IIF requires exactly one argument in T-SQL.", isCorrect: false },
+    ],
+    explanation: "`IIF(condition, true_value, false_value)` is T-SQL's inline shorthand for a simple two-branch `CASE WHEN condition THEN true_value ELSE false_value END`. It only handles one condition - anything with more branches needs a full CASE.",
+    hints: ['IIF(cond, if_true, if_false)', 'Shorthand for a two-branch CASE'],
+    tags: ['tsql', 'filtering', 'iif'],
+  },
+  {
     id: 'tsql-filter-coalesce-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,

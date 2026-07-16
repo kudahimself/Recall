@@ -30,6 +30,29 @@ export const dj_rest_questions: Question[] = [
       concepts: ['dj-serializer-validation'],
     },
   {
+      id: 'dj-drf-filtering-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the attributes that enable django-filter query-param filtering on a ViewSet.',
+      template: `from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+
+class ArticleViewSet(viewsets.ModelViewSet):
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
+    ___ = [DjangoFilterBackend]
+    ___ = ["is_published", "author"]`,
+      blanks: ['filter_backends', 'filterset_fields'],
+      solution: 'from rest_framework import viewsets\nfrom django_filters.rest_framework import DjangoFilterBackend\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n    filter_backends = [DjangoFilterBackend]\n    filterset_fields = ["is_published", "author"]',
+      explanation: '`filter_backends` enables a filtering engine; `DjangoFilterBackend` (from `django-filter`) reads `filterset_fields` to auto-build exact-match query-param filters, e.g. `?is_published=true&author=1`.',
+      hints: ['View attribute listing filter engines', 'View attribute listing exact-match filterable fields'],
+      tags: ['drf', 'filtering', 'django-filter', 'cloze'],
+      concepts: ['dj-orm-query-construction'],
+    },
+  {
       id: 'dj-rest-5',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -75,6 +98,29 @@ export const dj_rest_questions: Question[] = [
       concepts: ['dj-serializer-validation'],
     },
   {
+      id: 'dj-drf-apiview-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class for a class-based DRF endpoint and the response wrapper it returns.',
+      template: `from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class ArticleListView(___):
+    def get(self, request):
+        articles = Article.objects.all()
+        serializer = ArticleSerializer(articles, many=True)
+        return ___(serializer.data)`,
+      blanks: ['APIView', 'Response'],
+      solution: 'from rest_framework.views import APIView\nfrom rest_framework.response import Response\n\nclass ArticleListView(APIView):\n    def get(self, request):\n        articles = Article.objects.all()\n        serializer = ArticleSerializer(articles, many=True)\n        return Response(serializer.data)',
+      explanation: '`APIView` is DRF\'s class-based base — HTTP verbs map to methods (`get`, `post`, ...) just like Django\'s plain `View`. Always return a DRF `Response` (not Django\'s `HttpResponse`) — it handles content negotiation and renders JSON automatically.',
+      hints: ['Base class subclassed for class-based DRF views', 'DRF-specific response wrapper'],
+      tags: ['drf', 'apiview', 'cloze'],
+      concepts: ['dj-view-patterns'],
+    },
+  {
       id: 'dj-rest-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -100,6 +146,28 @@ export const dj_rest_questions: Question[] = [
       hints: ['Define get() and post() methods', 'Use many=True for querysets', 'is_valid() before save()'],
       tags: ['drf', 'apiview', 'get', 'post', 'rest', 'django'],
       concepts: ['dj-view-patterns'],
+    },
+  {
+      id: 'dj-drf-basepermission-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class for a custom permission and the per-object check it overrides.',
+      template: `from rest_framework import permissions
+
+class IsOwnerOrReadOnly(permissions.___):
+    def ___(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.author == request.user`,
+      blanks: ['BasePermission', 'has_object_permission'],
+      solution: 'from rest_framework import permissions\n\nclass IsOwnerOrReadOnly(permissions.BasePermission):\n    def has_object_permission(self, request, view, obj):\n        if request.method in permissions.SAFE_METHODS:\n            return True\n        return obj.author == request.user',
+      explanation: 'A custom permission subclasses `BasePermission` and overrides `has_object_permission(self, request, view, obj)` for per-row checks (or `has_permission` for per-request checks with no object yet). `SAFE_METHODS` (GET/HEAD/OPTIONS) is the standard way to let read-only requests through regardless of ownership.',
+      hints: ['Base class every custom permission subclasses', 'Hook that receives the specific object being accessed'],
+      tags: ['drf', 'permissions', 'BasePermission', 'cloze'],
+      concepts: ['dj-permission-class'],
     },
   {
       id: 'dj-drf-adv-1',
@@ -238,6 +306,26 @@ class ArticleSerializer(serializers.ModelSerializer):
       concepts: ['dj-serializer-validation'],
     },
   {
+      id: 'dj-drf-modelviewset-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the ViewSet base class that gives full CRUD from just a queryset and a serializer, and the attribute that names the serializer.',
+      template: `from rest_framework import viewsets
+
+class ArticleViewSet(viewsets.___):
+    queryset = Article.objects.all()
+    ___ = ArticleSerializer`,
+      blanks: ['ModelViewSet', 'serializer_class'],
+      solution: 'from rest_framework import viewsets\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer',
+      explanation: '`ModelViewSet` bundles list/retrieve/create/update/partial_update/destroy from just `queryset` + `serializer_class` — no method bodies needed. A router then wires it to URLs.',
+      hints: ['ViewSet subclass that gives the full CRUD surface', 'Attribute name mirrors ModelForm-style Meta.model pairing'],
+      tags: ['drf', 'ViewSet', 'ModelViewSet', 'cloze'],
+      concepts: ['dj-view-patterns'],
+    },
+  {
       id: 'py-drf-modelviewset',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -273,6 +361,28 @@ class ArticleViewSet(viewsets.ModelViewSet):
       concepts: ['dj-view-patterns'],
     },
   {
+      id: 'dj-drf-router-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the router class and the method that wires a ViewSet under a URL prefix.',
+      template: `from rest_framework.routers import DefaultRouter
+from .views import ArticleViewSet
+
+router = ___()
+router.___(r"articles", ArticleViewSet, basename="article")
+
+urlpatterns = router.urls`,
+      blanks: ['DefaultRouter', 'register'],
+      solution: 'from rest_framework.routers import DefaultRouter\nfrom .views import ArticleViewSet\n\nrouter = DefaultRouter()\nrouter.register(r"articles", ArticleViewSet, basename="article")\n\nurlpatterns = router.urls',
+      explanation: '`DefaultRouter()` builds the router; `.register(prefix, ViewSet, basename=...)` wires a ViewSet\'s full CRUD to URLs under that prefix. Expose `router.urls` as `urlpatterns`.',
+      hints: ['Router class instantiated with no args', 'Method that attaches a ViewSet to a prefix'],
+      tags: ['drf', 'router', 'DefaultRouter', 'cloze'],
+      concepts: ['dj-view-patterns'],
+    },
+  {
       id: 'py-drf-router',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -305,6 +415,30 @@ urlpatterns = router.urls`,
       ],
       tags: ['drf', 'router', 'DefaultRouter'],
       concepts: ['dj-view-patterns'],
+    },
+  {
+      id: 'dj-drf-validatefield-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the field-level validation hook and DRF\'s validation-error class.',
+      template: `class ArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Article
+        fields = ["title", "body"]
+
+    def ___(self, value):
+        if len(value) < 5:
+            raise serializers.___("Title too short")
+        return value`,
+      blanks: ['validate_title', 'ValidationError'],
+      solution: 'class ArticleSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Article\n        fields = ["title", "body"]\n\n    def validate_title(self, value):\n        if len(value) < 5:\n            raise serializers.ValidationError("Title too short")\n        return value',
+      explanation: 'DRF field-level validators are named `validate_<field>(self, value)` — note the `value` parameter (Django Forms\' `clean_<field>` instead reads `self.cleaned_data`). Raise `serializers.ValidationError`, not Django\'s `core.exceptions` version.',
+      hints: ['Method name encodes the field, takes (self, value)', 'serializers.ValidationError, not core.exceptions'],
+      tags: ['drf', 'serializer', 'validate_field', 'cloze'],
+      concepts: ['dj-serializer-validation'],
     },
   {
       id: 'py-drf-serializer-validator',
@@ -348,6 +482,30 @@ class ArticleSerializer(serializers.ModelSerializer):
       concepts: ['dj-serializer-validation'],
     },
   {
+      id: 'dj-drf-methodfield-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the read-only computed field and its backing method.',
+      template: `class ArticleSerializer(serializers.ModelSerializer):
+    word_count = serializers.___()
+
+    class Meta:
+        model = Article
+        fields = ["title", "word_count"]
+
+    def ___(self, obj):
+        return len(obj.body.split())`,
+      blanks: ['SerializerMethodField', 'get_word_count'],
+      solution: 'class ArticleSerializer(serializers.ModelSerializer):\n    word_count = serializers.SerializerMethodField()\n\n    class Meta:\n        model = Article\n        fields = ["title", "word_count"]\n\n    def get_word_count(self, obj):\n        return len(obj.body.split())',
+      explanation: '`SerializerMethodField` is a read-only computed field. Its value comes from a method named `get_<field_name>(self, obj)` on the serializer — `obj` is the model instance being serialized.',
+      hints: ['Field class for a read-only computed value', 'Method name pattern: get_<field_name>'],
+      tags: ['drf', 'serializer', 'SerializerMethodField', 'cloze'],
+      concepts: ['dj-serializer-validation'],
+    },
+  {
       id: 'py-drf-method-field',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -388,6 +546,28 @@ class ArticleSerializer(serializers.ModelSerializer):
       concepts: ['dj-serializer-validation'],
     },
   {
+      id: 'dj-drf-permclass-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the built-in permission class and the view attribute that applies it.',
+      template: `from rest_framework import viewsets
+from rest_framework.permissions import ___
+
+class ArticleViewSet(viewsets.ModelViewSet):
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
+    ___ = [IsAuthenticatedOrReadOnly]`,
+      blanks: ['IsAuthenticatedOrReadOnly', 'permission_classes'],
+      solution: 'from rest_framework import viewsets\nfrom rest_framework.permissions import IsAuthenticatedOrReadOnly\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n    permission_classes = [IsAuthenticatedOrReadOnly]',
+      explanation: '`permission_classes` is the view attribute that lists permission checks (DRF ANDs them together). `IsAuthenticatedOrReadOnly` is a built-in: reads are open to anyone, writes require authentication.',
+      hints: ['Built-in class: reads open, writes need auth', 'View attribute holding a list of permission classes'],
+      tags: ['drf', 'permissions', 'cloze'],
+      concepts: ['dj-permission-class'],
+    },
+  {
       id: 'py-drf-permission-class',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -423,6 +603,26 @@ class ArticleViewSet(viewsets.ModelViewSet):
       ],
       tags: ['drf', 'permissions'],
       concepts: ['dj-permission-class'],
+    },
+  {
+      id: 'dj-drf-pagination-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two REST_FRAMEWORK settings keys that configure global pagination.',
+      template: `# settings.py
+REST_FRAMEWORK = {
+    "___": "rest_framework.pagination.PageNumberPagination",
+    "___": 20,
+}`,
+      blanks: ['DEFAULT_PAGINATION_CLASS', 'PAGE_SIZE'],
+      solution: '# settings.py\nREST_FRAMEWORK = {\n    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",\n    "PAGE_SIZE": 20,\n}',
+      explanation: '`DEFAULT_PAGINATION_CLASS` sets the pagination style project-wide; `PageNumberPagination` is the simplest (`?page=N`). `PAGE_SIZE` sets how many items per page. List responses are then wrapped with `count`/`next`/`previous`/`results`.',
+      hints: ['Key naming the pagination class', 'Key naming items per page'],
+      tags: ['drf', 'pagination', 'cloze'],
+      concepts: ['dj-pagination-strategy'],
     },
   {
       id: 'py-drf-pagination',
@@ -478,6 +678,32 @@ REST_FRAMEWORK = {
       ],
       tags: ['drf', 'APIView', 'ViewSet', 'design'],
       concepts: ['dj-view-patterns'],
+    },
+  {
+      id: 'dj-drf-nested-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REST,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Embed AuthorSerializer as a read-only field on ArticleSerializer.',
+      template: `class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username"]
+
+class ArticleSerializer(serializers.ModelSerializer):
+    author = ___(___=True)
+
+    class Meta:
+        model = Article
+        fields = ["id", "title", "author"]`,
+      blanks: ['AuthorSerializer', 'read_only'],
+      solution: 'class AuthorSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = User\n        fields = ["id", "username"]\n\nclass ArticleSerializer(serializers.ModelSerializer):\n    author = AuthorSerializer(read_only=True)\n\n    class Meta:\n        model = Article\n        fields = ["id", "title", "author"]',
+      explanation: 'A serializer can be used as a field on another serializer — embedding `AuthorSerializer` under `author` produces nested JSON on read. `read_only=True` keeps writes simple: accept a separate `author_id` field, or set it from `request.user`, rather than parsing a nested dict on input.',
+      hints: ['Use the other ModelSerializer as the field type', 'Keyword that keeps this nested field read-side only'],
+      tags: ['drf', 'serializer', 'nested', 'cloze'],
+      concepts: ['dj-serializer-validation'],
     },
   {
       id: 'py-drf-nested-serializer',

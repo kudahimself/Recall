@@ -90,4 +90,29 @@ WHERE Amount IS NULL OR Amount < 0;`,
     hints: ['COUNT(*) of the rule-breakers', 'WHERE Amount IS NULL OR Amount < 0'],
     tags: ['tsql', 'quality', 'null-handling', 'assertion'],
   },
+  {
+    id: 'tsql-quality-2',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_QUALITY,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Write a uniqueness check on `dbo.DimCustomer`: return every `CustomerId` that appears more than once, alongside the count of its occurrences aliased `NumRows`.',
+    starterCode: `-- SELECT CustomerId, COUNT(*) AS NumRows FROM dbo.DimCustomer ...
+`,
+    testCases: [
+      {
+        input: 'GROUP BY CustomerId HAVING COUNT(*) > 1',
+        expectedOutput: 'Duplicate CustomerId values with their row counts',
+        description: 'Uniqueness assertion via GROUP BY / HAVING',
+      },
+    ],
+    solution: `SELECT CustomerId, COUNT(*) AS NumRows
+FROM dbo.DimCustomer
+GROUP BY CustomerId
+HAVING COUNT(*) > 1;`,
+    explanation: 'The uniqueness assertion is the same GROUP BY/HAVING shape used everywhere else in the course: group by the key, and any group with `COUNT(*) > 1` is a violation. A load gate fails when this query returns any rows.',
+    hints: ['GROUP BY CustomerId', 'HAVING COUNT(*) > 1'],
+    tags: ['tsql', 'quality', 'uniqueness', 'having'],
+  },
 ];

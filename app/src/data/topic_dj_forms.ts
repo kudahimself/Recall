@@ -12,7 +12,7 @@ import {
   CodeLanguage,
 } from '../types';
 
-export const dj_forms_questions: Question[] = [
+export const dj_forms_questions: Question[] = [
   {
       id: 'dj-form-3',
       type: QuestionType.CODING,
@@ -220,6 +220,31 @@ class ArticleForm(forms.ModelForm):
       concepts: ['dj-form-validation'],
     },
   {
+      id: 'dj-forms-clean-cross-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FORMS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the cross-field check: reject when end is before start.',
+      template: `class BookingForm(forms.Form):
+    start = forms.DateField()
+    end = forms.DateField()
+
+    def clean(self):
+        cleaned = ___.clean()
+        s, e = cleaned.get("start"), cleaned.get("end")
+        if s and e and e < s:
+            raise forms.___("End date must be after start date")
+        return cleaned`,
+      blanks: ['super()', 'ValidationError'],
+      solution: 'class BookingForm(forms.Form):\n    start = forms.DateField()\n    end = forms.DateField()\n\n    def clean(self):\n        cleaned = super().clean()\n        s, e = cleaned.get("start"), cleaned.get("end")\n        if s and e and e < s:\n            raise forms.ValidationError("End date must be after start date")\n        return cleaned',
+      explanation: 'Cross-field checks belong in the global `clean()`, not `clean_<field>` (which only ever sees its own field). Call `super().clean()` first, guard with `.get()` since a field that already failed its own validation is absent from `cleaned_data`, and raise `ValidationError` for a form-level error — it lands in `form.non_field_errors()` rather than a specific field.',
+      hints: ['Start from super().clean()', 'Guard with .get() before comparing', 'raise ValidationError() for a form-level error'],
+      tags: ['django', 'forms', 'clean', 'cross-field', 'cloze'],
+      concepts: ['dj-form-validation'],
+    },
+  {
       id: 'py-dj-form-clean-cross-field',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -257,6 +282,28 @@ class BookingForm(forms.Form):
         'Always call super().clean() and return the dict',
       ],
       tags: ['django', 'forms', 'clean', 'cross-field'],
+      concepts: ['dj-form-validation'],
+    },
+  {
+      id: 'dj-forms-widgets-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FORMS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Give the body field a bigger textarea via Meta.widgets. Fill the Meta attribute and the widget class.',
+      template: `class ArticleForm(forms.ModelForm):
+    class Meta:
+        model = Article
+        fields = ["title", "body"]
+        ___ = {
+            "body": forms.___(attrs={"rows": 10}),
+        }`,
+      blanks: ['widgets', 'Textarea'],
+      solution: 'class ArticleForm(forms.ModelForm):\n    class Meta:\n        model = Article\n        fields = ["title", "body"]\n        widgets = {\n            "body": forms.Textarea(attrs={"rows": 10}),\n        }',
+      explanation: '`Meta.widgets` maps field names to widget INSTANCES (not classes), so you can pass `attrs`. `forms.Textarea` renders a multi-line `<textarea>` instead of the default single-line `<input>`.',
+      hints: ['The Meta attribute name is widgets', 'Textarea is the multi-line widget class'],
+      tags: ['django', 'forms', 'widgets', 'Meta', 'cloze'],
       concepts: ['dj-form-validation'],
     },
   {
@@ -530,6 +577,26 @@ def create_article(request):
       concepts: ['dj-form-validation'],
     },
   {
+      id: 'dj-forms-plainform-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FORMS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Declare a plain (non-model) form with a name field and an email field.',
+      template: `from django import forms
+
+class ContactForm(forms.___):
+    name = forms.___(max_length=100)
+    email = forms.___()`,
+      blanks: ['Form', 'CharField', 'EmailField'],
+      solution: 'from django import forms\n\nclass ContactForm(forms.Form):\n    name = forms.CharField(max_length=100)\n    email = forms.EmailField()',
+      explanation: 'A plain `forms.Form` declares each field explicitly as a class attribute — unlike `ModelForm`, there is no `Meta`/model to infer fields from. `CharField` validates text input (with an optional `max_length`); `EmailField` additionally validates the email format.',
+      hints: ['Base class for a form with no model', 'CharField for text, EmailField validates format'],
+      tags: ['django', 'forms', 'CharField', 'EmailField', 'cloze'],
+      concepts: ['dj-form-validation'],
+    },
+  {
       id: 'dj-forms-gap-2',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
@@ -560,7 +627,7 @@ class ContactForm(forms.Form):
         'Import forms from django, not from django.forms',
         'For a multi-line text input, use widget=forms.Textarea on a CharField',
       ],
-      tags: ['django', 'forms', 'charfield', 'emailfield', 'textarea'],
+      tags: ['django', 'forms', 'CharField', 'EmailField', 'textarea'],
       concepts: ['dj-form-validation'],
     },
   {

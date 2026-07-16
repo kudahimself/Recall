@@ -937,55 +937,127 @@ after`,
       concepts: ['py-magic-methods', 'py-iterator-protocol'],
     },
   {
+      id: 'py-magic-notimplemented-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_MAGIC_METHODS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the value __eq__ returns when compared against a type it does not recognize, so Python falls back to trying the OTHER object\'s comparison instead of just declaring them unequal.',
+      template: `class Meters:
+    def __init__(self, value):
+        self.value = value
+    def __eq__(self, other):
+        if not isinstance(other, Meters):
+            return ___
+        return self.value == other.value`,
+      blanks: ['NotImplemented'],
+      solution:
+        'class Meters:\n    def __init__(self, value):\n        self.value = value\n    def __eq__(self, other):\n        if not isinstance(other, Meters):\n            return NotImplemented\n        return self.value == other.value',
+      explanation:
+        'NotImplemented is a distinct singleton — not False, not an exception. Returning it tells Python "I don\'t know how to compare against this type," so Python tries the other object\'s __eq__ before falling back to identity comparison. Returning False outright would wrongly claim the objects are definitely unequal, even if the other type could meaningfully compare itself against this one.',
+      hints: ['Not False, not an exception — a distinct singleton', 'Its name says what it means: this comparison is not implemented for that type'],
+      tags: ['magic-methods', '__eq__', 'notimplemented'],
+      concepts: ['py-magic-methods'],
+    },
+  {
       id: 'py-adv-magic-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.ADVANCED,
       topic: Topic.PY_MAGIC_METHODS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a `Money` value-object class representing an amount in a currency. The constructor takes a float `amount` and a string `currency` — store the amount as-given, but normalise the currency to UPPERCASE so a lowercase `"usd"` and uppercase `"USD"` behave identically downstream.\n\nBehaviour requirements:\n\n- Two `Money` instances compare equal iff BOTH their amount and currency match. Comparing a `Money` to a non-`Money` must let Python fall back to the other operand\'s comparison (return the singleton that signals "not implemented for this type") — do NOT raise.\n- `Money` instances must be usable as dict keys and set members. Two instances that compare equal MUST hash equal.\n- Addition of two `Money` instances in the SAME currency returns a new `Money` with the summed amount and that currency. In DIFFERENT currencies, raise `ValueError` whose message is `"Cannot add "` + left currency + `" and "` + right currency. Adding a non-`Money` must again defer to the other operand — do NOT raise.\n- The developer-representation hook returns the string `"Money(<amount>, \'<CURRENCY>\')"` so the REPL shows something unambiguous.\n\nExamples: two `Money` with the same amount and currency compare equal; summing `5 USD` and `3 USD` yields `Money(8, \'USD\')`; summing USD with EUR raises `ValueError`.',
-      starterCode: `class Money:
-      ...
-  `,
+      question: 'Build a `Money` value-object class representing an amount in a currency. The constructor takes a float `amount` and a string `currency` — store the amount as-given, but normalise the currency to UPPERCASE so a lowercase `"usd"` and uppercase `"USD"` behave identically downstream.\n\nTwo `Money` instances compare equal iff BOTH amount and currency match. Comparing a `Money` to a non-`Money` must let Python fall back to the other operand\'s comparison (return the singleton that signals "not implemented for this type") rather than raising or returning `False` outright. Instances must be usable as dict keys and set members — two instances that compare equal MUST hash equal. The developer-representation hook returns the string `"Money(<amount>, \'<CURRENCY>\')"`.\n\nBuild `a = Money(10, "usd")` and `b = Money(10, "USD")`. Print whether they compare equal (expect `True`), print `repr(b)` (expect `Money(10, \'USD\')`), then put both into a set and print its length (expect `1`, since they collapse to one entry).',
+      starterCode: ``,
       testCases: [
         {
-          input: 'Money(10, "USD") == Money(10, "USD"), used as dict key',
-          expectedOutput: 'True, works as dict key, add same currency',
-          description: 'Should implement equality, hashing, and addition',
+          input: 'Money identity: normalize + eq + hash + repr',
+          expectedOutput: "True\nMoney(10, 'USD')\n1",
+          description: 'Equal Money instances hash equal and collapse in a set',
         },
       ],
       solution: `class Money:
-      """Value object representing a monetary amount."""
-  
-      def __init__(self, amount: float, currency: str):
-          self.amount = amount
-          self.currency = currency.upper()
-  
-      def __eq__(self, other):
-          if not isinstance(other, Money):
-              return NotImplemented
-          return self.amount == other.amount and self.currency == other.currency
-  
-      def __hash__(self):
-          return hash((self.amount, self.currency))
-  
-      def __add__(self, other):
-          if not isinstance(other, Money):
-              return NotImplemented
-          if self.currency != other.currency:
-              raise ValueError(f"Cannot add {self.currency} and {other.currency}")
-          return Money(self.amount + other.amount, self.currency)
-  
-      def __repr__(self):
-          return f"Money({self.amount}, '{self.currency}')"
-  `,
-      explanation: 'If you override __eq__, Python makes the class unhashable by default (sets __hash__ to None). You must explicitly implement __hash__ for objects to work as dict keys or set members. The rule is: objects that are equal MUST have the same hash (but objects with the same hash don\'t have to be equal). Returning NotImplemented (not raising NotImplementedError) from __eq__ and __add__ tells Python to try the other operand\'s method — this enables interoperability. __repr__ should return a string that ideally could recreate the object.',
+    def __init__(self, amount, currency):
+        self.amount = amount
+        self.currency = currency.upper()
+
+    def __eq__(self, other):
+        if not isinstance(other, Money):
+            return NotImplemented
+        return self.amount == other.amount and self.currency == other.currency
+
+    def __hash__(self):
+        return hash((self.amount, self.currency))
+
+    def __repr__(self):
+        return f"Money({self.amount}, '{self.currency}')"
+
+a = Money(10, "usd")
+b = Money(10, "USD")
+print(a == b)
+print(repr(b))
+print(len({a, b}))`,
+      explanation: 'Normalizing the currency in __init__ means two instances built from differently-cased input still compare equal. __eq__ returns NotImplemented (not False) for a non-Money operand so Python can try the other side\'s comparison instead of assuming inequality. Because __eq__ is defined, __hash__ must be defined too — hashing the same (amount, currency) tuple that equality compares keeps the contract (equal objects hash equal), which is why the set collapses a and b into one entry.',
       hints: [
-        'Return NotImplemented (not raise) for unsupported types',
-        'Equal objects must have equal hashes',
-        'hash((field1, field2)) for multi-field hashing',
+        'Normalize currency once, in __init__',
+        '__eq__ should return NotImplemented, not False, for an unrecognized type',
+        'Hash the same fields that __eq__ compares',
       ],
-      tags: ['magic-methods', 'eq', 'hash', 'add', 'value-object'],
+      tags: ['magic-methods', '__eq__', '__hash__', '__repr__', 'value-object', 'notimplemented'],
+      concepts: ['py-magic-methods'],
+    },
+  {
+      id: 'py-adv-money-add',
+      type: QuestionType.CODING,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.PY_MAGIC_METHODS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Extend the `Money` value-object class (constructor takes a float `amount` and a string `currency`, normalised to UPPERCASE; already has `__eq__`/`__hash__`/`__repr__` as before) with addition. Adding two `Money` instances in the SAME currency returns a new `Money` with the summed amount and that currency. Adding across DIFFERENT currencies must raise `ValueError` with the message `"Cannot add "` + left currency + `" and "` + right currency. Adding a non-`Money` must defer to the other operand (return the singleton that signals "not implemented for this type") rather than raising.\n\nBuild `Money(5, "USD") + Money(3, "USD")` and print its repr (expect `Money(8, \'USD\')`). Then attempt `Money(5, "USD") + Money(3, "EUR")` inside a try/except catching `ValueError`, and print the exception\'s message (expect `Cannot add USD and EUR`).',
+      starterCode: ``,
+      testCases: [
+        {
+          input: 'Money.__add__: same-currency sum, cross-currency ValueError',
+          expectedOutput: "Money(8, 'USD')\nCannot add USD and EUR",
+          description: 'Addition combines amounts or raises on currency mismatch',
+        },
+      ],
+      solution: `class Money:
+    def __init__(self, amount, currency):
+        self.amount = amount
+        self.currency = currency.upper()
+
+    def __eq__(self, other):
+        if not isinstance(other, Money):
+            return NotImplemented
+        return self.amount == other.amount and self.currency == other.currency
+
+    def __hash__(self):
+        return hash((self.amount, self.currency))
+
+    def __repr__(self):
+        return f"Money({self.amount}, '{self.currency}')"
+
+    def __add__(self, other):
+        if not isinstance(other, Money):
+            return NotImplemented
+        if self.currency != other.currency:
+            raise ValueError(f"Cannot add {self.currency} and {other.currency}")
+        return Money(self.amount + other.amount, self.currency)
+
+print(repr(Money(5, "USD") + Money(3, "USD")))
+try:
+    Money(5, "USD") + Money(3, "EUR")
+except ValueError as e:
+    print(e)`,
+      explanation: '__add__ mirrors __eq__\'s NotImplemented guard for unrelated types, but adds a second check once it knows it is dealing with two Money instances: same currency sums cleanly, different currencies raise a ValueError naming both sides rather than silently producing a nonsensical total. Returning a NEW Money (not mutating either operand) matches the immutable-value-object convention used elsewhere in this topic.',
+      hints: [
+        'Check isinstance first (defer to the other operand), then check currency match',
+        'Same currency -> new Money with the summed amount',
+        'Different currency -> raise ValueError naming both currencies',
+      ],
+      tags: ['magic-methods', '__add__', 'value-object', 'notimplemented', 'valueerror'],
       concepts: ['py-magic-methods'],
     },
   {
@@ -1102,7 +1174,7 @@ print(str(p))`,
         'str(x) / print(x) — human-friendly',
         'If only __repr__ is defined, str() falls back to it',
       ],
-      tags: ['magic-methods', 'str', 'repr'],
+      tags: ['magic-methods', 'str', 'repr', '__str__', '__repr__'],
       concepts: ['py-magic-methods'],
     },
   {
@@ -1143,7 +1215,7 @@ print(len({a, b}))`,
         'Defining __eq__ without __hash__ → unhashable',
         'hash(tuple_of_fields) is the easy implementation',
       ],
-      tags: ['magic-methods', 'eq', 'hash'],
+      tags: ['magic-methods', 'eq', 'hash', '__eq__', '__hash__'],
       concepts: ['py-magic-methods'],
     },
   {
@@ -1185,7 +1257,33 @@ print("K" in d)`,
         '__getitem__ alone gives you iteration for free',
         'Inherit collections.abc.Sequence for free mixins',
       ],
-      tags: ['magic-methods', 'container', 'protocol'],
+      tags: ['magic-methods', 'container', 'protocol', '__len__', '__getitem__', '__contains__'],
+      concepts: ['py-magic-methods'],
+    },
+  {
+      id: 'py-magic-methods-addiadd-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_MAGIC_METHODS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the dunder for `+` (returns a NEW object) and the dunder for `+=` (mutates self and returns self).',
+      template: `class Bag:
+    def __init__(self, items):
+        self.items = items
+    def ___(self, other):
+        return Bag(self.items + other.items)
+    def ___(self, other):
+        self.items.extend(other.items)
+        return self`,
+      blanks: ['__add__', '__iadd__'],
+      solution:
+        'class Bag:\n    def __init__(self, items):\n        self.items = items\n    def __add__(self, other):\n        return Bag(self.items + other.items)\n    def __iadd__(self, other):\n        self.items.extend(other.items)\n        return self',
+      explanation:
+        '__add__ handles `a + b` and should return a NEW object, leaving both operands unchanged. __iadd__ handles `a += b` and mutates self in place, returning self. Without __iadd__, `+=` falls back to `__add__` plus a rebind — often fine, but not what accumulator-style containers want.',
+      hints: ['Plain + is __add__ (new object); += is __iadd__ (mutate, return self).'],
+      tags: ['magic-methods', '__add__', '__iadd__', 'operator-overloading'],
       concepts: ['py-magic-methods'],
     },
   {
@@ -1265,7 +1363,7 @@ print(double(7))`,
         'Great for parameterised decorators, stateful callbacks',
         'Classes are callable because `type` defines __call__',
       ],
-      tags: ['magic-methods', 'call', 'callable'],
+      tags: ['magic-methods', 'call', 'callable', '__call__'],
       concepts: ['py-magic-methods'],
     },
   {
@@ -1311,6 +1409,34 @@ print(double(7))`,
       ],
       tags: ['magic-methods', 'aenter', 'async-with'],
       concepts: ['py-magic-methods'],
+    },
+  {
+      id: 'py-magic-methods-iternext-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_MAGIC_METHODS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the dunder pair that makes a class its own iterator: one returns self, the other returns the next value or signals the end.',
+      template: `class Down:
+    def __init__(self, n):
+        self.n = n
+    def ___(self):
+        return self
+    def ___(self):
+        if self.n <= 0:
+            raise StopIteration
+        self.n -= 1
+        return self.n`,
+      blanks: ['__iter__', '__next__'],
+      solution:
+        'class Down:\n    def __init__(self, n):\n        self.n = n\n    def __iter__(self):\n        return self\n    def __next__(self):\n        if self.n <= 0:\n            raise StopIteration\n        self.n -= 1\n        return self.n',
+      explanation:
+        '__iter__ returns "the thing that gets iterated" — often self. __next__ returns the next value or raises StopIteration to signal exhaustion. Together these two dunders are the full iterator protocol that for-loops, list(), and unpacking rely on.',
+      hints: ['iter/next, both dunders — __next__ raises StopIteration to stop.'],
+      tags: ['magic-methods', '__iter__', '__next__', 'iterator-protocol'],
+      concepts: ['py-magic-methods', 'py-iterator-protocol'],
     },
   {
       id: 'py-magic-iter',

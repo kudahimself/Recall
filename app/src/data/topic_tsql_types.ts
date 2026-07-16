@@ -47,6 +47,23 @@ export const tsql_types_questions: Question[] = [
     tags: ['tsql', 'types', 'decimal', 'bit'],
   },
   {
+    id: 'tsql-types-bigint-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_TYPES,
+    course: Course.SQL,
+    question: "A `SalesKey` identity column is expected to grow past 2 billion rows over the table's lifetime. Which type should you use, and why?",
+    options: [
+      { id: 'a', text: 'BIGINT - INT tops out around 2.1 billion (its signed 32-bit range), while BIGINT covers a signed 64-bit range with room to spare.', isCorrect: true },
+      { id: 'b', text: 'INT - it is always sufficient for a primary key regardless of row count.', isCorrect: false },
+      { id: 'c', text: 'DECIMAL(19, 0) - integers must switch to DECIMAL once they exceed a few million rows.', isCorrect: false },
+      { id: 'd', text: 'BIT - keys should be as small as possible to save space.', isCorrect: false },
+    ],
+    explanation: 'INT is a signed 32-bit integer, capped at roughly 2.1 billion. A large fact table\'s surrogate key can realistically approach or exceed that, so BIGINT (signed 64-bit) is the safer default there - the extra 4 bytes per row is cheap insurance against an overflow that would halt loads.',
+    hints: ['INT maxes out around 2.1 billion', 'BIGINT = 64-bit, the standard choice for large fact-table keys'],
+    tags: ['tsql', 'types', 'bigint', 'int'],
+  },
+  {
     id: 'tsql-types-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.BEGINNER,

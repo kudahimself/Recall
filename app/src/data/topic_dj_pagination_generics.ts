@@ -62,6 +62,33 @@ export const dj_pagination_generics_questions: Question[] = [
     // 4. MC: Generic views vs ModelViewSet vs APIView
     // 5. Coding: Custom pagination class
   {
+      id: 'dj-pagination-custom-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_PAGINATION_GENERICS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class and the hook overridden to reshape the paginated response.',
+      template: `from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+
+class CustomPagination(___):
+    page_size = 20
+
+    def ___(self, data):
+        return Response({
+            "count": self.page.paginator.count,
+            "has_next": self.page.has_next(),
+            "results": data,
+        })`,
+      blanks: ['PageNumberPagination', 'get_paginated_response'],
+      solution: 'from rest_framework.pagination import PageNumberPagination\nfrom rest_framework.response import Response\n\nclass CustomPagination(PageNumberPagination):\n    page_size = 20\n\n    def get_paginated_response(self, data):\n        return Response({\n            "count": self.page.paginator.count,\n            "has_next": self.page.has_next(),\n            "results": data,\n        })',
+      explanation: 'Subclass `PageNumberPagination` and override `get_paginated_response(self, data)` to control the exact shape of the paginated JSON. `self.page` is the underlying Django `Page` object — `.paginator.count` is the total row count, `.has_next()`/`.has_previous()` are booleans. Attach the class to a view via `pagination_class = CustomPagination`.',
+      hints: ['Base class every DRF pagination style subclasses', 'Method that shapes the final response dict'],
+      tags: ['drf', 'pagination', 'PageNumberPagination', 'cloze'],
+      concepts: ['dj-pagination-strategy'],
+    },
+  {
       id: 'celery-drf-16',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,

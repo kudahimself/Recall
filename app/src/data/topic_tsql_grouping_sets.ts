@@ -49,6 +49,25 @@ GROUP BY ROLLUP(Category, SubCategory);`,
     tags: ['tsql', 'grouping-sets', 'rollup', 'cloze'],
   },
   {
+    id: 'tsql-gs-cube-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_GROUPING_SETS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the operator that computes every combination of Category and SubCategory (not just the hierarchical ones).',
+    template: `SELECT Category, SubCategory, SUM(Amount) AS Total
+FROM dbo.FactSale
+GROUP BY ___(Category, SubCategory);`,
+    blanks: ['CUBE'],
+    solution: `SELECT Category, SubCategory, SUM(Amount) AS Total
+FROM dbo.FactSale
+GROUP BY CUBE(Category, SubCategory);`,
+    explanation: '`CUBE(Category, SubCategory)` returns every combination of the grouping columns: (Category, SubCategory), (Category) alone, (SubCategory) alone, and the grand total. ROLLUP would skip the (SubCategory)-alone row since it only builds a strict hierarchy.',
+    hints: ['All-combinations operator, not just the hierarchy'],
+    tags: ['tsql', 'grouping-sets', 'cube', 'cloze'],
+  },
+  {
     id: 'tsql-gs-groupingsets-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.ADVANCED,
@@ -66,6 +85,27 @@ GROUP BY GROUPING SETS ((Category, SubCategory), (Category), ());`,
     explanation: '`GROUPING SETS` computes exactly the listed groupings in one pass: full detail, a Category subtotal, and the grand total `()`. It is the explicit form ROLLUP/CUBE are shorthand for.',
     hints: ['Two words: the explicit grouping-list operator'],
     tags: ['tsql', 'grouping-sets', 'cloze'],
+  },
+  {
+    id: 'tsql-gs-groupingfn-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_GROUPING_SETS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the function that flags whether SubCategory's NULL is a real value or a ROLLUP subtotal placeholder.",
+    template: `SELECT Category, SubCategory, SUM(Amount) AS Total,
+       ___(SubCategory) AS IsSubtotal
+FROM dbo.FactSale
+GROUP BY ROLLUP(Category, SubCategory);`,
+    blanks: ['GROUPING'],
+    solution: `SELECT Category, SubCategory, SUM(Amount) AS Total,
+       GROUPING(SubCategory) AS IsSubtotal
+FROM dbo.FactSale
+GROUP BY ROLLUP(Category, SubCategory);`,
+    explanation: '`ROLLUP`/`CUBE`/`GROUPING SETS` all pad missing grouping columns with NULL to mark a subtotal row - but if SubCategory can genuinely be NULL in the source data, that is ambiguous. `GROUPING(col)` returns 1 when the NULL is a rollup placeholder and 0 when it is a real stored NULL.',
+    hints: ['Returns 1 for a rollup-placeholder NULL, 0 for a real NULL'],
+    tags: ['tsql', 'grouping-sets', 'grouping-function', 'cloze'],
   },
   {
     id: 'tsql-gs-1',
@@ -90,5 +130,29 @@ GROUP BY ROLLUP(Category, SubCategory);`,
     explanation: 'ROLLUP(Category, SubCategory) emits the detail level, a subtotal row per Category (with SubCategory NULL), and a final grand-total row (both NULL) — exactly the shape of a hierarchical sales report.',
     hints: ['One operator does subtotals + grand total'],
     tags: ['tsql', 'grouping-sets', 'rollup'],
+  },
+  {
+    id: 'tsql-gs-2',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_GROUPING_SETS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'From `dbo.FactSale` (Category, SubCategory, Amount), using GROUPING SETS, return Category, SubCategory and `SUM(Amount) AS Total` for exactly these three groupings in one query: (Category, SubCategory), (Category) alone, and the overall grand total.',
+    starterCode: `-- return Category, SubCategory, and Total for three exactly-specified groupings
+`,
+    testCases: [
+      {
+        input: 'GROUP BY GROUPING SETS ((Category, SubCategory), (Category), ())',
+        expectedOutput: 'Detail rows + per-category subtotals + grand total, with no other grouping levels',
+        description: 'Explicit grouping-set list',
+      },
+    ],
+    solution: `SELECT Category, SubCategory, SUM(Amount) AS Total
+FROM dbo.FactSale
+GROUP BY GROUPING SETS ((Category, SubCategory), (Category), ());`,
+    explanation: 'ROLLUP(Category, SubCategory) would produce this same shape here, but GROUPING SETS lets you specify precisely which groupings to compute - useful when the groupings you need are not a strict hierarchy (e.g. you want (Category) subtotals but not (SubCategory) subtotals, which CUBE would also include).',
+    hints: ['Explicit grouping-list operator, not ROLLUP or CUBE', 'List each grouping as its own parenthesized tuple, with () for the grand total'],
+    tags: ['tsql', 'grouping-sets'],
   },
 ];

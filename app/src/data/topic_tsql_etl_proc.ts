@@ -156,6 +156,39 @@ WHERE TableName = 'FactSales';`,
     tags: ['tsql', 'etl-proc', 'truncate-reload', 'tradeoffs'],
   },
   {
+    id: 'tsql-etlproc-runlog-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_ETL_PROC,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the function that captures how many rows the MERGE just affected, and the status value logged on success.",
+    template: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN MATCHED THEN UPDATE SET tgt.ProductName = src.ProductName
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (ProductCode, ProductName) VALUES (src.ProductCode, src.ProductName);
+
+DECLARE @rows INT = ___;
+INSERT INTO dbo.EtlRunLog (ProcName, RunAt, RowsAffected, Status)
+VALUES ('LoadDimProduct', GETDATE(), @rows, ___);`,
+    blanks: ['@@ROWCOUNT', "'SUCCESS'"],
+    solution: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN MATCHED THEN UPDATE SET tgt.ProductName = src.ProductName
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (ProductCode, ProductName) VALUES (src.ProductCode, src.ProductName);
+
+DECLARE @rows INT = @@ROWCOUNT;
+INSERT INTO dbo.EtlRunLog (ProcName, RunAt, RowsAffected, Status)
+VALUES ('LoadDimProduct', GETDATE(), @rows, 'SUCCESS');`,
+    explanation: '`@@ROWCOUNT` returns the number of rows affected by the immediately preceding statement (here, the MERGE\'s total inserts+updates) - capture it into a variable right away, since the next statement resets it. Logging ProcName/RunAt/RowsAffected/Status to a run-log table gives every load a record you can audit or alert on when a run processes an unexpectedly low (or zero) row count.',
+    hints: ['Rows touched by the last statement: @@ROWCOUNT', 'Capture it immediately - the next statement overwrites it'],
+    tags: ['tsql', 'etl-proc', 'run-logging', 'rowcount', 'cloze'],
+  },
+  {
     id: 'tsql-etlproc-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
@@ -230,5 +263,53 @@ WHERE TableName = 'FactSales';`,
     explanation: 'The high-watermark pattern: load only rows newer than the last recorded watermark (`UpdatedAt > @lastLoaded`), then advance the watermark to the new maximum actually loaded. Reading and storing the watermark in a control table makes each run process just the delta — the standard way to load a large, append-heavy fact incrementally.',
     hints: ['Read @lastLoaded from EtlControl', 'INSERT rows WHERE UpdatedAt > @lastLoaded, then advance LastLoadedAt to MAX'],
     tags: ['tsql', 'etl-proc', 'incremental', 'watermark'],
+  },
+  {
+    id: 'tsql-etlproc-3',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_ETL_PROC,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Write a load procedure `dbo.LoadDimCustomerSCD2` that performs a Type 2 SCD load of `dbo.DimCustomer` (CustomerId, City, EffectiveDate, EndDate, IsCurrent) from `stg.Customer` (CustomerId, City), inside a transaction with SET XACT_ABORT ON and TRY/CATCH. First expire the current row (EndDate = CAST(GETDATE() AS DATE), IsCurrent = 0) for any CustomerId whose City no longer matches its current row. Then insert a new current row (EffectiveDate = today, EndDate = NULL, IsCurrent = 1) for every CustomerId in staging that has no current row afterward - this covers both brand-new customers and ones whose row was just expired. Commit at the end; in the CATCH, roll back and re-throw.",
+    starterCode: `-- Type 2 SCD load: expire changed rows, then insert new/changed versions, all inside a transaction
+`,
+    testCases: [
+      {
+        input: 'Proc: SET XACT_ABORT ON; TRY BEGIN TRAN; expire-UPDATE; insert-new-version; COMMIT; CATCH ROLLBACK; THROW',
+        expectedOutput: 'Atomic SCD Type 2 load: closes changed rows, inserts new current versions',
+        description: 'SCD2 merge-style load procedure',
+      },
+    ],
+    solution: `CREATE PROCEDURE dbo.LoadDimCustomerSCD2
+AS
+BEGIN
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRAN;
+            UPDATE tgt
+                SET tgt.EndDate = CAST(GETDATE() AS DATE), tgt.IsCurrent = 0
+            FROM dbo.DimCustomer AS tgt
+                JOIN stg.Customer AS src ON src.CustomerId = tgt.CustomerId
+            WHERE tgt.IsCurrent = 1 AND tgt.City <> src.City;
+
+            INSERT INTO dbo.DimCustomer (CustomerId, City, EffectiveDate, EndDate, IsCurrent)
+            SELECT src.CustomerId, src.City, CAST(GETDATE() AS DATE), NULL, 1
+            FROM stg.Customer AS src
+            WHERE NOT EXISTS (
+                SELECT 1 FROM dbo.DimCustomer AS tgt
+                WHERE tgt.CustomerId = src.CustomerId
+                  AND tgt.IsCurrent = 1
+            );
+        COMMIT;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK;
+        THROW;
+    END CATCH
+END;`,
+    explanation: 'This ties together three already-learned patterns: the expire step (UPDATE ... FROM ... JOIN ... WHERE IsCurrent = 1 AND changed) from the SCD topic, an INSERT ... SELECT ... WHERE NOT EXISTS to add new current versions (it naturally covers both brand-new CustomerIds and just-expired ones, since both now have zero current rows), and the transactional TRY/CATCH proc wrapper from earlier in this topic. Doing the expire before the insert, in the same transaction, is what makes NOT EXISTS see the freshly-closed rows.',
+    hints: ['Expire step first: UPDATE ... JOIN stg.Customer WHERE IsCurrent = 1 AND City differs', 'Insert step: WHERE NOT EXISTS a current row for that CustomerId'],
+    tags: ['tsql', 'etl-proc', 'scd', 'type-2', 'transactions', 'try-catch'],
   },
 ];

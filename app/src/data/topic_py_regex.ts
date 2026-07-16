@@ -702,22 +702,17 @@ print(re.split(r"\\s*,\\s*", "a , b,c , d"))`,
       topic: Topic.PY_REGEX,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write two regex helpers against free-form text.\n\n(1) `extract_emails` takes a text string and returns every email address appearing in it, in the order they appear. A pragmatic definition is fine: a run of letters/digits/`.`/`_`/`%`/`+`/`-` for the local part, an `@`, a run of letters/digits/dots/dashes for the domain, a dot, and a top-level domain of at least two letters. Example input `"Contact us at info@example.com or admin@test.org"` → `["info@example.com", "admin@test.org"]`.\n\n(2) `parse_log_entry` takes a single structured log line of the form `[YYYY-MM-DD HH:MM:SS] LEVEL: message (host=hostname)` and returns a dict with exactly the keys `"timestamp"`, `"level"`, `"message"`, `"host"`. If the line does not match that shape, return `None`. Example input `"[2024-01-15 10:30:45] ERROR: Connection timeout (host=db.example.com)"` → `{"timestamp": "2024-01-15 10:30:45", "level": "ERROR", "message": "Connection timeout", "host": "db.example.com"}`. The `message` field must NOT include the trailing `(host=...)` segment.',
+      question: 'Write `parse_log_entry(line: str) -> dict[str, str] | None` that parses one log line of the form `[YYYY-MM-DD HH:MM:SS] LEVEL: message (host=hostname)` and returns a dict with exactly the keys `"timestamp"`, `"level"`, `"message"`, and `"host"`. Return `None` if the line does not match that shape. The `message` value must NOT include the trailing `(host=...)` segment.\n\nExample: `"[2024-01-15 10:30:45] ERROR: Connection timeout (host=db.example.com)"` → `{"timestamp": "2024-01-15 10:30:45", "level": "ERROR", "message": "Connection timeout", "host": "db.example.com"}`.',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
-          input: '"Contact info@test.com and admin@site.org please"',
-          expectedOutput: '["info@test.com", "admin@site.org"]',
-          description: 'Should extract emails and parse structured log lines',
+          input: '"[2024-01-15 10:30:45] ERROR: Connection timeout (host=db.example.com)"',
+          expectedOutput: '{"timestamp": "2024-01-15 10:30:45", "level": "ERROR", "message": "Connection timeout", "host": "db.example.com"}',
+          description: 'Should parse a structured log line into a dict, or None on mismatch',
         },
       ],
       solution: `import re
-
-def extract_emails(text: str) -> list[str]:
-    """Extract all email addresses from text."""
-    pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}'
-    return re.findall(pattern, text)
 
 def parse_log_entry(line: str) -> dict[str, str] | None:
     """Parse a log line into structured data."""
@@ -731,14 +726,29 @@ def parse_log_entry(line: str) -> dict[str, str] | None:
     if match:
         return match.groupdict()
     return None
+
+# OR
+import re
+
+def parse_log_entry(line: str) -> dict[str, str] | None:
+    pattern = r'\\[(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\]\\s+(\\w+):\\s+(.+?)\\s+\\(host=([^)]+)\\)'
+    match = re.search(pattern, line)
+    if match is None:
+        return None
+    return {
+        "timestamp": match.group(1),
+        "level": match.group(2),
+        "message": match.group(3),
+        "host": match.group(4),
+    }
 `,
-      explanation: 're.findall returns all non-overlapping matches as strings (or tuples if there are capturing groups). The email pattern matches: local-part @ domain . tld. Named groups (?P<name>pattern) make regex self-documenting and let you access matches by name via match.groupdict(). The log parser combines several regex features: literal brackets (escaped as \\[), named groups, character classes ([^)]+), and non-greedy matching (.+?). Breaking complex patterns across lines with string concatenation improves readability.',
+      explanation: 'Named groups (?P<name>pattern) make the regex self-documenting and let match.groupdict() build the result dict directly. The parser combines several features: literal brackets (escaped as \\[), named groups, a negated character class ([^)]+) to stop at the closing paren, and non-greedy matching (.+?) so message does not swallow the (host=...) segment. Positional groups with a hand-built dict work too.',
       hints: [
-        're.findall returns a list of all matches',
         '(?P<name>pattern) creates a named group',
         'match.groupdict() returns {name: matched_text}',
+        'Use .+? (non-greedy) for message so it stops before (host=...)',
       ],
-      tags: ['regex', 'findall', 'named-groups', 'parsing'],
+      tags: ['regex', 'named-groups', 'parsing'],
       concepts: ['py-regex-syntax'],
     },
   {
@@ -761,6 +771,28 @@ def parse_log_entry(line: str) -> dict[str, str] | None:
         'fullmatch = start AND end; findall = all hits as a list',
       ],
       tags: ['regex', 're', 'match', 'search', 'fullmatch', 'findall'],
+      concepts: ['py-regex-syntax'],
+    },
+  {
+      id: 'py-regex-fullmatch-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_REGEX,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the re function that requires the pattern to match the ENTIRE string, not just a prefix or substring.',
+      template: `import re
+
+print(bool(re.___(r"\\d+", "123")))
+print(bool(re.___(r"\\d+", "123abc")))`,
+      blanks: ['fullmatch', 'fullmatch'],
+      solution:
+        'import re\n\nprint(bool(re.fullmatch(r"\\d+", "123")))\nprint(bool(re.fullmatch(r"\\d+", "123abc")))',
+      explanation:
+        're.fullmatch anchors at both ends — the whole string must match, not just a prefix (match) or any substring (search). "123" matches fully; "123abc" does not because of the trailing letters.',
+      hints: ['Same word as "match", prefixed with "full".'],
+      tags: ['regex', 'fullmatch', 'api'],
       concepts: ['py-regex-syntax'],
     },
   {
@@ -852,7 +884,7 @@ print(re.sub(r"\\d{4}-\\d{4}-\\d{4}-\\d{4}", "[REDACTED]", text))`,
         'Replacement can be a string or a callable',
         'Returns a new string — originals are immutable',
       ],
-      tags: ['regex', 're.sub', 'redaction', 'substitution'],
+      tags: ['regex', 're.sub', 'sub', 'redaction', 'substitution'],
       concepts: ['py-regex-syntax'],
     },
   {
@@ -882,7 +914,7 @@ print(re.split(r"[,;|]\\s*", s))`,
         '\\s* trims optional trailing whitespace',
         'Pass maxsplit=N to cap the number of splits',
       ],
-      tags: ['regex', 're.split', 'tokenize'],
+      tags: ['regex', 're.split', 'split', 'tokenize'],
       concepts: ['py-regex-syntax'],
     },
   {
@@ -1415,7 +1447,7 @@ print(re.split(r"___+", "the  quick   fox"))`,
       explanation:
         "\\s matches a single whitespace character (space, tab, newline, etc.). \\s+ collapses any run of whitespace, so splitting yields ['the', 'quick', 'fox'] regardless of how many spaces separate the words. \\S is the negation (non-whitespace).",
       hints: ['Backslash + a letter standing for "space".'],
-      tags: ['regex', 'character-classes', 'shorthand', 'primitive'],
+      tags: ['regex', 'character-classes', 'shorthand', 'primitive', 'split'],
       concepts: ['py-regex-syntax'],
     },
   {

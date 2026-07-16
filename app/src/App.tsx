@@ -594,6 +594,17 @@ function App() {
     });
   };
 
+  // From the progress dashboard: filter down to one weak category's topics
+  // and drop straight into question mode.
+  const handleReviewWeakTopic = useCallback((topicKeys: string[]) => {
+    applyFiltersAndLoadQuestion({
+      topics: topicKeys as Topic[],
+      difficulties: Object.values(Difficulty),
+      questionTypes: Object.values(QuestionType),
+    });
+    changeView('quiz');
+  }, [applyFiltersAndLoadQuestion, changeView]);
+
   const handleAnswer = (isCorrect: boolean) => {
     if (!currentQuestion) return;
 
@@ -885,6 +896,30 @@ function App() {
     return SpacedRepetitionSystem.getTopicDueReviewCount(tq, progress, cardDifficulty);
   }, [currentQuestion, progress, cardDifficulty]);
 
+  // Whether the card on screen was unseen when it was served. Deliberately
+  // memoized on the question alone: answering it adds it to questionsAttempted,
+  // and recomputing then would flip the pill to "Review" mid-card.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const isUnseenCard = useMemo(
+    () => !!currentQuestion && !progress.questionsAttempted.has(currentQuestion.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentQuestion]
+  );
+
+  // Pill mode reflects the CURRENT card, not the global bank state. The old
+  // check (any unseen question anywhere in the course) made "New topic" the
+  // permanent default mid-course, even while answering review cards.
+  const pillMode: 'drain' | 'new' | 'review' =
+    reviewStatus.mode === 'drain' ? 'drain' : isUnseenCard ? 'new' : 'review';
+
+  // Number on the mode pill. While DRAINING it's the global drain-queue
+  // countdown (falls by one per correct answer, holds on a miss) - the
+  // per-topic due count would jump around as the drain serves cards from
+  // different topics. Outside a drain it's the current topic's due count.
+  const modePillCount = pillMode === 'drain'
+    ? reviewStatus.drainQueueCount
+    : topicReviewCount;
+
   const overallRecentAccuracy = useMemo(() => {
     const recent = recentAttempts(progress.attemptHistory, RECENT_WINDOW);
     const correct = recent.filter(a => a.isCorrect).length;
@@ -1124,7 +1159,15 @@ function App() {
               changeView(view);
             }
           }}
-          onCourseChange={setActiveCourse}
+          onCourseChange={(course) => {
+            if (viewMode === 'quiz') {
+              // Mid-question course switch: swap the whole quiz context, not
+              // just the theme — otherwise the old course's question lingers.
+              startQuiz(course);
+            } else {
+              setActiveCourse(course);
+            }
+          }}
           collapsed={railCollapsed}
         />
 
@@ -1379,24 +1422,24 @@ function App() {
                     </span>
                   </div>
                   <span
-                    className={`mode-pill mode-pill-${reviewStatus.mode}`}
+                    className={`mode-pill mode-pill-${pillMode}`}
                     title={
-                      topicReviewCount > 0
-                        ? `${topicReviewCount} review card${topicReviewCount === 1 ? '' : 's'} due in this topic.`
-                        : reviewStatus.mode === 'drain'
-                        ? 'Review drain active — clearing the due coding/advanced backlog before the next topic.'
-                        : reviewStatus.mode === 'new'
-                        ? 'Learning new content in this topic.'
-                        : 'Caught up — spaced review.'
+                      pillMode === 'drain'
+                        ? `${modePillCount} coding/advanced card${modePillCount === 1 ? '' : 's'} left in the review drain before the next topic.`
+                        : pillMode === 'new'
+                        ? 'First time seeing this question.'
+                        : modePillCount > 0
+                        ? `${modePillCount} review card${modePillCount === 1 ? '' : 's'} due in this topic.`
+                        : 'Revisiting a question you have seen before.'
                     }
                   >
-                    {reviewStatus.mode === 'drain'
+                    {pillMode === 'drain'
                       ? 'Review drain'
-                      : reviewStatus.mode === 'new'
-                      ? 'New topic'
+                      : pillMode === 'new'
+                      ? 'New'
                       : 'Review'}
-                    {topicReviewCount > 0 && (
-                      <span className="mode-pill-count">{topicReviewCount}</span>
+                    {modePillCount > 0 && (
+                      <span className="mode-pill-count">{modePillCount}</span>
                     )}
                   </span>
                   {topicDifficulty && (
@@ -1481,16 +1524,6 @@ function App() {
                   <Activity size={16} />
                   Activity
                 </button>
-                <div
-                  className="tab-indicator"
-                  style={{
-                    transform: `translateX(${
-                      activeProgressTab === 'overview' ? '0%' :
-                      activeProgressTab === 'topics' ? '100%' :
-                      '200%'
-                    })`
-                  }}
-                />
               </div>
 
               {/* Tab Content */}
@@ -1503,6 +1536,7 @@ function App() {
                       questions={courseQuestions}
                       course={activeCourse}
                       misconceptions={misconceptions}
+                      onReviewTopic={handleReviewWeakTopic}
                     />
                   </div>
                 )}
@@ -1515,6 +1549,7 @@ function App() {
                       questions={courseQuestions}
                       course={activeCourse}
                       misconceptions={misconceptions}
+                      onReviewTopic={handleReviewWeakTopic}
                     />
                   </div>
                 )}

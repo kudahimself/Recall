@@ -81,6 +81,31 @@ WHERE rn = 1;`,
     tags: ['tsql', 'dedup', 'row-number', 'cloze'],
   },
   {
+    id: 'tsql-dedup-delete-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_DEDUP,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the statement that removes rows directly through a CTE reference (rather than selecting from it).',
+    template: `WITH d AS (
+    SELECT ROW_NUMBER() OVER (PARTITION BY CustomerId ORDER BY LoadedAt DESC) AS rn
+    FROM stg.Customer
+)
+___ FROM d
+WHERE rn > 1;`,
+    blanks: ['DELETE'],
+    solution: `WITH d AS (
+    SELECT ROW_NUMBER() OVER (PARTITION BY CustomerId ORDER BY LoadedAt DESC) AS rn
+    FROM stg.Customer
+)
+DELETE FROM d
+WHERE rn > 1;`,
+    explanation: 'A CTE can be the target of a DELETE, not just a SELECT source. `DELETE FROM d` removes rows from the underlying `stg.Customer` wherever the CTE\'s computed `rn` says `rn > 1` (the duplicates), leaving exactly one row per key - a physical cleanup rather than just filtering a read.',
+    hints: ['The CTE stands in for the table it was built from', 'DELETE can target a CTE directly'],
+    tags: ['tsql', 'dedup', 'delete', 'cte', 'cloze'],
+  },
+  {
     id: 'tsql-dedup-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,

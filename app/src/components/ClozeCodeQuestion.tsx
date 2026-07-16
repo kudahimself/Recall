@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ClozeCodeQuestion as ClozeQ } from '../types';
+import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic } from '../types';
 import { StyledButton } from './StyledButton';
+import { LivePreview } from './visual/LivePreview';
 import './ClozeCodeQuestion.css';
 
 interface Props {
@@ -136,6 +137,21 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
   const allFilled = values.every(v => v.trim().length > 0);
   const wasCorrect = isSubmitted && evaluate();
 
+  // Live preview: assemble the template with the current blank values so the
+  // learner sees their fills render as they type. HTML questions preview the
+  // assembled markup; CSS questions render it over the question's previewHtml.
+  const isHtmlQuestion = question.language === CodeLanguage.HTML;
+  const previewActive = isHtmlQuestion || Boolean(question.previewHtml);
+  const assembledCode = useMemo(
+    () =>
+      segments
+        .map(seg =>
+          seg.kind === 'text' ? seg.text ?? '' : values[seg.blankIndex ?? 0] ?? '',
+        )
+        .join(''),
+    [segments, values],
+  );
+
   const blankClass = (idx: number): string => {
     if (!isSubmitted) return 'cloze-blank';
     return checkBlank(idx, values[idx])
@@ -191,6 +207,16 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
           })}
         </pre>
       </div>
+
+      {previewActive && (
+        <div className="cloze-preview-wrapper">
+          <LivePreview
+            html={isHtmlQuestion ? assembledCode : question.previewHtml ?? ''}
+            css={isHtmlQuestion ? undefined : assembledCode}
+            tailwind={question.topic === Topic.TAILWIND}
+          />
+        </div>
+      )}
 
       {!isSubmitted && showHints && question.hints && question.hints.length > 0 && (
         <div className="hints-section">

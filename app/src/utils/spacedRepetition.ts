@@ -1,5 +1,5 @@
 import { Question, QuestionAttempt, QuestionType, UserProgress, Difficulty, Course } from '../types';
-import { getCourseForTopic, WEBDEV_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, DATA_ENG_PATH_ORDER, SQL_PATH_ORDER, getTopicKeysForSection, getSectionUnits, getTopicOrder, SelectionPolicy } from './courseConfig';
+import { getCourseForTopic, WEBDEV_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, DATA_ENG_PATH_ORDER, SQL_PATH_ORDER, getTopicKeysForSection, getSectionUnits, getTopicOrder, SelectionPolicy, DRAIN_SUPERSEDED_SECTIONS } from './courseConfig';
 import {
   bucketCard,
   CardBucket,
@@ -44,6 +44,9 @@ export const TOPIC_RECENT_WINDOW = 5;    // per-topic priority / proficiency
 export const WEAK_AREA_PCT = 50;
 export const STRONG_AREA_PCT = 75;
 export const MIN_ATTEMPTS_FOR_STATS = 3;
+// "Areas to Focus On" is relative: show the N weakest topics below 100%,
+// even when none fall under WEAK_AREA_PCT.
+export const WEAK_AREAS_MAX = 8;
 
 // Progress-bar colour bands (recent accuracy %).
 export const BAR_GOOD_PCT = 80;
@@ -94,10 +97,16 @@ export const MASTERY_PROFICIENT_STREAK = 3;
 // Two surfacing modes, both running BEFORE the concept-aware bucketing so its
 // DUE/IDLE buckets can't starve them:
 //   1. DUE cards (daysSinceLastReview >= targetInterval, i.e. dueRatio >= 1)
-//      surface whenever due — no probability cap, most-overdue first. Outside
-//      onboarding the rate is 1 (every review slot drains the due queue);
-//      while onboarding a new topic it drops to ONBOARDING_DUE_RESURFACE_PROB
-//      (reduced, not off) so fresh material gets focused practice.
+//      surface whenever due — no probability cap, most-overdue first. A due
+//      DRAIN card (isDrainCard: coding/advanced) additionally hard-gates new
+//      content until cleared — mid-topic included (reviews-first, Anki-style).
+//      Exception: supersession-retired topics (getRetiredDrainTopics /
+//      DRAIN_SUPERSEDED_SECTIONS) never hard-gate — once the superseding
+//      section is finished their cards only resurface via the normal due path.
+//      For due NON-drain cards the rate is 1 outside onboarding (every review
+//      slot drains the due queue); while onboarding a new topic it drops to
+//      ONBOARDING_DUE_RESURFACE_PROB (reduced, not off) so fresh material gets
+//      focused practice.
 //   2. When nothing is strictly due, a light MASTERED_RESURFACE_FLOOR_FRACTION
 //      interleave keeps not-yet-due advanced cards warm ("desirable
 //      difficulty", Bjork & Kornell) — applied only OUTSIDE onboarding.
@@ -116,7 +125,9 @@ export const MASTERED_BEGINNER_WEIGHT = 0.5;
 // review is reduced — not off — so the new material gets blocked practice
 // before interleaving resumes. This is the reduced due-resurface rate during
 // onboarding; once every question in the topic has been seen once, the gate
-// lifts and full due-driven review (rate 1) resumes.
+// lifts and full due-driven review (rate 1) resumes. Applies only to NON-drain
+// due cards: a due drain card (coding/advanced) overrides onboarding entirely
+// and hard-gates new content until reviewed.
 export const ONBOARDING_DUE_RESURFACE_PROB = 0.25;
 
 // Recent-failure pivot. When the very last attempt in attemptHistory is wrong,
@@ -297,16 +308,25 @@ export class SpacedRepetitionSystem {
    * past the section-unlock gate. Used to identify the "mastered interleave"
    * pool: questions that should keep cycling at lower frequency to support
    * long-term retention via desirable-difficulty interleaving.
+   *
+   * `treatCorrectId`: evaluate mastery as if that question's latest attempt
+   * were correct. Used by the drain queue so the ONE card being retried right
+   * now (most-recent attempt, wrong) doesn't demote its whole topic and
+   * collapse the count mid-drain; older failures still break mastery.
    */
   static isTopicMastered(
     progress: UserProgress,
     topicQuestions: Question[],
+    treatCorrectId: string | null = null,
   ): boolean {
     if (topicQuestions.length === 0) return false;
     const topicIds = new Set(topicQuestions.map(q => q.id));
     const latest = new Map<string, boolean>();
     for (const a of progress.attemptHistory) {
       if (topicIds.has(a.questionId)) latest.set(a.questionId, a.isCorrect);
+    }
+    if (treatCorrectId !== null && latest.has(treatCorrectId)) {
+      latest.set(treatCorrectId, true);
     }
     if (latest.size < topicQuestions.length) return false;
     let correct = 0;
@@ -318,10 +338,38 @@ export class SpacedRepetitionSystem {
    * A "drain card" is a mastered-review question worth gating new content for:
    * a CODING cold-write (one per concept) or ANY advanced card. Beginner/
    * intermediate faded + MCQ recur naturally inside later topics and via the
-   * concept-aware path, so they are excluded from the topic-finish hard drain.
+   * concept-aware path, so they are excluded from the reviews-first hard drain.
    */
   static isDrainCard(q: Question): boolean {
     return q.type === QuestionType.CODING || q.difficulty === Difficulty.ADVANCED;
+  }
+
+  /**
+   * Topics retired from the drain queue (DRAIN_SUPERSEDED_SECTIONS): a
+   * superseded section's topics stop hard-gating new content once its
+   * superseding section is FINISHED - every question of every superseding
+   * topic present in the pool attempted. The superseding section's own
+   * coding/advanced cards re-exercise the same primitives, so cold-drilling
+   * the old fundamentals is redundant. Retired topics remain eligible for the
+   * normal (non-gating) due resurface - they just never trip the hard gate.
+   * Scoped to topics present in topicToQs so pools without the superseding
+   * section (other courses, partial test fixtures) never retire anything.
+   */
+  static getRetiredDrainTopics(
+    topicToQs: Map<string, Question[]>,
+    progress: UserProgress,
+  ): Set<string> {
+    const retired = new Set<string>();
+    for (const [supersededSection, supersedingSection] of Object.entries(DRAIN_SUPERSEDED_SECTIONS)) {
+      const supersedingTopics = getTopicKeysForSection(supersedingSection)
+        .filter(t => topicToQs.has(t));
+      if (supersedingTopics.length === 0) continue;
+      const finished = supersedingTopics.every(t =>
+        (topicToQs.get(t) ?? []).every(q => progress.questionsAttempted.has(q.id)));
+      if (!finished) continue;
+      for (const t of getTopicKeysForSection(supersededSection)) retired.add(t);
+    }
+    return retired;
   }
 
   /**
@@ -353,13 +401,52 @@ export class SpacedRepetitionSystem {
   }
 
   /**
-   * Topic-finish drain gate: true iff a card is still in the drain queue —
-   * exactly the set the drain serves and getReviewStatus.drainQueueCount counts
-   * (so the pill and the gate can never disagree). A COVERED-topic CODING+ADVANCED
-   * card qualifies iff its topic is mastered AND it is due (the servable backlog),
+   * Drain queue size — the single source of truth shared by the reviews-first
+   * gate (hasPendingDrain) and the UI pill (getReviewStatus.drainQueueCount),
+   * so the two can never disagree. A COVERED-topic CODING+ADVANCED card is in
+   * the queue iff its topic is mastered AND it is due (the servable backlog),
    * OR it is the card you're retrying now (your most-recent attempt, wrong).
-   * In-review topics' due cards and old failed cards are consolidation blockers,
-   * not the drain — excluded, so the gate (and the count) can reach zero.
+   * The mastery check treats that retried card as correct (treatCorrectId) so
+   * a single fresh miss doesn't demote its topic and drop every OTHER due card
+   * from the queue — the count HOLDS on a miss and falls by one per correct
+   * answer. In-review topics' due cards and old failed cards are consolidation
+   * blockers, not the drain — excluded, so the count can reach zero.
+   * Topics retired by supersession (getRetiredDrainTopics) are also excluded:
+   * once the superseding section is finished, their cards never re-enter the
+   * queue.
+   */
+  static countPendingDrain(
+    pool: Question[],
+    topicToQs: Map<string, Question[]>,
+    progress: UserProgress,
+    cardDifficulty: Record<string, number> = {},
+  ): number {
+    const lastA = progress.attemptHistory.length > 0
+      ? progress.attemptHistory[progress.attemptHistory.length - 1]
+      : null;
+    const lastWrongId = lastA && !lastA.isCorrect ? lastA.questionId : null;
+    const retired = this.getRetiredDrainTopics(topicToQs, progress);
+    const now = Date.now();
+    let count = 0;
+    for (const q of pool) {
+      if (!progress.questionsAttempted.has(q.id) || !this.isDrainCard(q)) continue;
+      if (retired.has(q.topic)) continue;
+      const tq = topicToQs.get(q.topic);
+      if (!tq || !tq.every(x => progress.questionsAttempted.has(x.id))) continue;
+      if (q.id === lastWrongId) { count++; continue; } // the card you're retrying now
+      const last = progress.lastAttempt.get(q.id) ?? 0;
+      const daysSince = last > 0 ? (now - last) / MS_PER_DAY : Infinity;
+      if (this.isTopicMastered(progress, tq, lastWrongId)
+          && daysSince >= this.getEffectiveInterval(q.id, progress, cardDifficulty)) {
+        count++; // mastered + due
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Reviews-first drain gate: true iff a card is still in the drain queue.
+   * Delegates to countPendingDrain — see its docstring for queue membership.
    */
   static hasPendingDrain(
     pool: Question[],
@@ -367,24 +454,7 @@ export class SpacedRepetitionSystem {
     progress: UserProgress,
     cardDifficulty: Record<string, number> = {},
   ): boolean {
-    const lastA = progress.attemptHistory.length > 0
-      ? progress.attemptHistory[progress.attemptHistory.length - 1]
-      : null;
-    const lastWrongId = lastA && !lastA.isCorrect ? lastA.questionId : null;
-    const now = Date.now();
-    for (const q of pool) {
-      if (!progress.questionsAttempted.has(q.id) || !this.isDrainCard(q)) continue;
-      const tq = topicToQs.get(q.topic);
-      if (!tq || !tq.every(x => progress.questionsAttempted.has(x.id))) continue;
-      if (q.id === lastWrongId) return true; // the card you're retrying now
-      const last = progress.lastAttempt.get(q.id) ?? 0;
-      const daysSince = last > 0 ? (now - last) / MS_PER_DAY : Infinity;
-      if (this.isTopicMastered(progress, tq)
-          && daysSince >= this.getEffectiveInterval(q.id, progress, cardDifficulty)) {
-        return true; // mastered + due
-      }
-    }
-    return false;
+    return this.countPendingDrain(pool, topicToQs, progress, cardDifficulty) > 0;
   }
 
   /**
@@ -459,15 +529,15 @@ export class SpacedRepetitionSystem {
 
   /**
    * Lightweight, read-only snapshot of what selectNextQuestion is currently
-   * doing — for a UI mode indicator. Mirrors the same frontier/drain logic:
-   *   - `drain`  : the frontier topic (deepest started) is 100% covered AND a
-   *                CODING+ADVANCED backlog is due → the hard gate is active.
+   * doing — for a UI mode indicator. Mirrors the same drain-first logic:
+   *   - `drain`  : a mastered-topic CODING+ADVANCED backlog is due (anywhere,
+   *                mid-topic included) → the hard gate is active.
    *   - `new`    : not draining and unseen content remains → learning a topic.
    *   - `review` : not draining and everything is seen → caught-up review.
    * `drainQueueCount` is the drain queue size = exactly the cards the drain
-   * serves (see hasPendingDrain): mastered-topic cards that are due, plus the one
-   * card you're retrying after a miss. Get one right → it leaves → count − 1; get
-   * one wrong → it's held (retried until right). Reaches 0 as the backlog clears.
+   * serves (see countPendingDrain): mastered-topic cards that are due, plus the
+   * one card you're retrying after a miss. Get one right → it leaves → count − 1;
+   * get one wrong → it's held (retried until right). Reaches 0 as the backlog clears.
    */
   static getReviewStatus(
     questions: Question[],
@@ -476,11 +546,6 @@ export class SpacedRepetitionSystem {
     cardDifficulty: Record<string, number> = {},
   ): { mode: 'drain' | 'new' | 'review'; drainQueueCount: number } {
     if (questions.length === 0) return { mode: 'review', drainQueueCount: 0 };
-    const topicOrder = policy
-      ? policy.topicOrder
-      : getTopicOrder(getCourseForTopic(questions[0].topic));
-    const topicIndex = new Map(topicOrder.map((t, i) => [t, i]));
-
     const topicToQs = new Map<string, Question[]>();
     for (const q of questions) {
       const arr = topicToQs.get(q.topic) ?? [];
@@ -488,46 +553,15 @@ export class SpacedRepetitionSystem {
       topicToQs.set(q.topic, arr);
     }
 
-    // Frontier = deepest path-order topic the learner has started.
-    let frontierTopic: string | null = null;
-    let frontierIdx = -1;
-    for (const [topic, tq] of Array.from(topicToQs.entries())) {
-      if (tq.some(q => progress.questionsAttempted.has(q.id))) {
-        const idx = topicIndex.get(topic) ?? -1;
-        if (idx > frontierIdx) { frontierIdx = idx; frontierTopic = topic; }
-      }
-    }
-    const frontierCovered = frontierTopic !== null
-      && (topicToQs.get(frontierTopic) ?? []).every(q => progress.questionsAttempted.has(q.id));
+    // Drain queue = exactly the cards the drain SERVES (countPendingDrain is
+    // the shared source of truth with the hasPendingDrain gate): drains by one
+    // per correct answer, HOLDS on a miss, reaches zero as the backlog clears.
+    // Reviews-first: any pending drain card puts the selector in drain mode,
+    // even while a topic is mid-learning.
+    const drainQueueCount = this.countPendingDrain(questions, topicToQs, progress, cardDifficulty);
 
-    // Drain queue = exactly the cards the drain SERVES, so the count always
-    // reaches zero: a CODING+ADVANCED card in a COVERED topic that is either
-    //   (a) mastered AND due  — the servable backlog (served by the resurface), or
-    //   (b) the card you're retrying right now — your most-recent attempt, wrong.
-    // (a) drains as you answer correctly; (b) holds the number on a miss until you
-    // get it right (you don't advance past a missed card, so there is only ever
-    // ONE retried card). Due cards in IN-REVIEW topics and OLD failed cards are
-    // consolidation blockers the drain never serves — excluded, so no un-reachable
-    // floor.
-    const lastA = progress.attemptHistory.length > 0
-      ? progress.attemptHistory[progress.attemptHistory.length - 1]
-      : null;
-    const lastWrongId = lastA && !lastA.isCorrect ? lastA.questionId : null;
-    const now = Date.now();
-    let drainQueueCount = 0;
-    for (const q of questions) {
-      if (!progress.questionsAttempted.has(q.id) || !this.isDrainCard(q)) continue;
-      const tq = topicToQs.get(q.topic);
-      if (!tq || !tq.every(x => progress.questionsAttempted.has(x.id))) continue; // covered only
-      const masteredDue = this.isTopicMastered(progress, tq)
-        && (now - (progress.lastAttempt.get(q.id) ?? 0)) / MS_PER_DAY
-           >= this.getEffectiveInterval(q.id, progress, cardDifficulty);
-      if (masteredDue || q.id === lastWrongId) drainQueueCount++;
-    }
-
-    const draining = frontierCovered && drainQueueCount > 0;
     const hasUnseen = questions.some(q => !progress.questionsAttempted.has(q.id));
-    const mode = draining ? 'drain' : hasUnseen ? 'new' : 'review';
+    const mode = drainQueueCount > 0 ? 'drain' : hasUnseen ? 'new' : 'review';
     return { mode, drainQueueCount };
   }
 
@@ -1035,33 +1069,22 @@ export class SpacedRepetitionSystem {
       ? (topicToQs.get(leadTopic) ?? []).some(q => progress.questionsAttempted.has(q.id))
       : false;
 
-    // Topic-finish hard drain. Section unlock requires 100% coverage and the
-    // selector serves earliest-unseen first, so progression is sequential: the
-    // DEEPEST path-order topic the learner has started is the topic they're
-    // currently on. When that frontier topic hits 100% seen they have just
-    // finished it — so hard-gate new content (newProb 0 below) and drain the
-    // due CODING+ADVANCED backlog (isDrainCard) before opening the next topic.
-    // This fires regardless of whether the *next* topic is 0-seen (the old
-    // !leadStarted trigger almost never matched because the 75%-new coin
-    // consumed the one-pick 0-seen window). Trigger off reviewQuestions
+    // Reviews-first hard drain (Anki-style). Recall on already-learned topics
+    // outranks new material: whenever ANY mastered-topic CODING+ADVANCED card
+    // is due — mid-topic included, not just at a topic boundary — hard-gate new
+    // content (newProb 0 below) and drain the due backlog (isDrainCard) first.
+    // Due beginner/intermediate MCQs deliberately do NOT trip the gate: they
+    // recur naturally inside later topics and keep the reduced-rate onboarding
+    // resurface below, so a few days away never buries the learner in forced
+    // MCQ review before they can continue. Trigger off reviewQuestions
     // (uncooled) so the gate reflects the true due set, not a REVIEW_COOLDOWN gap.
-    let frontierTopic: string | null = null;
-    let frontierIdx = -1;
-    for (const [topic, tq] of Array.from(topicToQs.entries())) {
-      if (tq.some(q => progress.questionsAttempted.has(q.id))) {
-        const idx = topicIndex.get(topic) ?? -1;
-        if (idx > frontierIdx) { frontierIdx = idx; frontierTopic = topic; }
-      }
-    }
-    const frontierCovered = frontierTopic !== null
-      && (topicToQs.get(frontierTopic) ?? []).every(q => progress.questionsAttempted.has(q.id));
     // The gate stays closed while ANY drain card is still pending — due, OR
     // failed (latest attempt wrong) and not yet re-mastered. hasPendingDrain
     // mirrors getReviewStatus's count exactly, so the pill and the gate never
     // disagree, and a missed card keeps new content hard-gated (the drain does
     // not "leak" a new question on a wrong answer) until it's answered right.
-    const drainDueReviews = frontierCovered
-      && this.hasPendingDrain(reviewQuestions, topicToQs, progress, cardDifficulty);
+    const drainDueReviews =
+      this.hasPendingDrain(reviewQuestions, topicToQs, progress, cardDifficulty);
 
     // ── DECISION: New content or reinforcement? ──
     // Normally: 70% new (sequential), 30% review.
@@ -1096,15 +1119,11 @@ export class SpacedRepetitionSystem {
     const completionPush = firstUnlockedNew !== null
       && newQuestions.length <= COMPLETION_PUSH_THRESHOLD
       && !activeTopicHasLatestWrong;
-    // Precedence: a fresh failure always pivots to review first; otherwise, at a
-    // new-topic boundary with due reviews pending, hard-gate new content (0) so
-    // the due queue drains before the topic opens; otherwise the completion-push
-    // forces new near the end of the unlocked pool; otherwise the default split.
-    // Precedence: the topic-finish drain hard-gates new content (0) FIRST — even
-    // on a fresh failure — so a missed drain card re-surfaces (via the latest-
-    // wrong priority path) instead of leaking a new question through the gate.
-    // Otherwise a fresh failure pivots to review; otherwise completion-push;
-    // otherwise the default split.
+    // Precedence: the reviews-first drain hard-gates new content (0) FIRST —
+    // even on a fresh failure — so a missed drain card re-surfaces (via the
+    // latest-wrong priority path) instead of leaking a new question through the
+    // gate. Otherwise a fresh failure pivots to review; otherwise completion-
+    // push; otherwise the default split.
     const newProb = drainDueReviews ? 0
       : lastAttemptWrong ? REVIEW_AFTER_FAIL_PROB
       : completionPush ? 1
@@ -1118,7 +1137,7 @@ export class SpacedRepetitionSystem {
     // routes to review (gated on !lastAttemptWrong so a fresh miss never
     // trickles forward). Guarantees forward motion never fully stops even while
     // the user is below the difficulty-gate accuracy bar. Suppressed during a
-    // topic-finish drain so a gated new card can't leak past the hard gate.
+    // drain so a gated new card can't leak past the hard gate.
     if (firstUnlockedNew === null && gateBlockedNew !== null && !drainDueReviews
         && !lastAttemptWrong && Math.random() < GATE_RELIEF_PROB) {
       return gateBlockedNew;
@@ -1168,16 +1187,22 @@ export class SpacedRepetitionSystem {
       const consolidationPending = !inOnboarding && Array.from(topicToQs.values())
         .some(tq => this.isTopicInReview(progress, tq));
       if (!consolidationPending) {
-        // During a topic-finish drain, restrict the queue to STRICTLY-DUE
+        // During a drain, restrict the queue to STRICTLY-DUE
         // CODING+ADVANCED cards (isDrainCard AND past their spacing interval) so
         // the hard gate clears the high-value backlog AND every served card
         // decrements the visible drain count by exactly one — a clean countdown
         // (a not-yet-due card would otherwise be served and leave the count
-        // unchanged, which reads as a stuck counter). The lighter onboarding-
+        // unchanged, which reads as a stuck counter). Supersession-retired
+        // topics are excluded to mirror countPendingDrain exactly — serving one
+        // would not decrement the visible count. The lighter onboarding-
         // trickle and caught-up floor stay all-types (drainPred undefined).
+        const retiredDrainTopics = drainDueReviews
+          ? this.getRetiredDrainTopics(topicToQs, progress)
+          : null;
         const drainPred = drainDueReviews
           ? (q: Question): boolean => {
               if (!SpacedRepetitionSystem.isDrainCard(q)) return false;
+              if (retiredDrainTopics && retiredDrainTopics.has(q.topic)) return false;
               const lastTs = progress.lastAttempt.get(q.id) ?? 0;
               if (lastTs === 0) return true; // never timestamped → maximally due
               const daysSince = (Date.now() - lastTs) / MS_PER_DAY;

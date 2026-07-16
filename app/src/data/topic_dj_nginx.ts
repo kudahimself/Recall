@@ -14,6 +14,34 @@ import {
 
 export const dj_nginx_questions: Question[] = [
   {
+      id: 'dj-nginx-proxypass-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_NGINX,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two directives: proxy dynamic requests to Gunicorn, and forward the real client IP.',
+      template: `upstream gunicorn_backend {
+    server unix:/run/gunicorn.sock;
+}
+
+server {
+    listen 80;
+    server_name example.com;
+
+    location / {
+        ___ http://gunicorn_backend;
+        proxy_set_header X-Real-IP $___;
+    }
+}`,
+      blanks: ['proxy_pass', 'remote_addr'],
+      solution: 'upstream gunicorn_backend {\n    server unix:/run/gunicorn.sock;\n}\n\nserver {\n    listen 80;\n    server_name example.com;\n\n    location / {\n        proxy_pass http://gunicorn_backend;\n        proxy_set_header X-Real-IP $remote_addr;\n    }\n}',
+      explanation: '`proxy_pass` forwards the request to the named upstream (Gunicorn). `proxy_set_header X-Real-IP $remote_addr` passes the real client IP through — without it, every request appears to originate from Nginx itself (127.0.0.1) inside Django.',
+      hints: ['Directive that forwards the request to Gunicorn', 'Nginx variable holding the real client IP'],
+      tags: ['nginx', 'gunicorn', 'proxy_pass', 'cloze'],
+      concepts: ['dj-deployment-cicd'],
+    },
+  {
       id: 'be-infra-nginx-1',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,

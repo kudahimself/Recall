@@ -818,6 +818,54 @@ print(r)`,
       concepts: ['py-dataclass-defaults'],
     },
   {
+      id: 'py-dataclasses-slots-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_DATACLASSES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the kwarg (Python 3.10+) that replaces the per-instance __dict__ with fixed slots.',
+      template: `@dataclass(___=True)
+class Point:
+    x: int
+    y: int`,
+      blanks: ['slots'],
+      solution: '@dataclass(slots=True)\nclass Point:\n    x: int\n    y: int',
+      explanation:
+        'slots=True (3.10+) allocates a fixed structure instead of a per-instance __dict__, cutting memory use and rejecting accidental attribute additions. On 3.9 and earlier you\'d write __slots__ = ("x", "y") manually.',
+      hints: ['Same word as the class-level __slots__ attribute it generates.'],
+      tags: ['dataclasses', 'slots', 'memory'],
+      concepts: ['py-dataclass-defaults'],
+    },
+  {
+      id: 'py-dataclasses-inheritance-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_DATACLASSES,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the base class a dataclass subclass extends, and the field it inherits.',
+      template: `@dataclass
+class Animal:
+    name: str
+
+@dataclass
+class Dog(___):
+    breed: str
+
+d = Dog(name="Rex", breed="Labrador")
+print(d.___)`,
+      blanks: ['Animal', 'name'],
+      solution: '@dataclass\nclass Animal:\n    name: str\n\n@dataclass\nclass Dog(Animal):\n    breed: str\n\nd = Dog(name="Rex", breed="Labrador")\nprint(d.name)',
+      explanation:
+        'A @dataclass subclass inherits fields normally — base-class fields come first in the generated __init__, subclass fields after. Dog(Animal) both applies @dataclass to Dog AND extends Animal, so d.name resolves to the inherited field.',
+      hints: ['Standard Python subclassing syntax; both classes still need @dataclass.'],
+      tags: ['dataclasses', 'inheritance'],
+      concepts: ['py-dataclass-defaults'],
+    },
+  {
       id: 'py-adv-dc-3',
       type: QuestionType.MULTIPLE_CHOICE,
       difficulty: Difficulty.INTERMEDIATE,
@@ -1250,7 +1298,7 @@ print(a.years)`,
         'Raise ValueError/TypeError for bad inputs',
         'Also used for normalization and derived-field computation',
       ],
-      tags: ['dataclasses', 'post_init', 'validation', 'basics'],
+      tags: ['dataclasses', 'post_init', '__post_init__', 'validation', 'basics'],
       concepts: ['py-dataclass-defaults'],
     },
   {

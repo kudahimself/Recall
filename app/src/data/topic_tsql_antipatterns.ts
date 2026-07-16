@@ -16,7 +16,7 @@ export const tsql_antipatterns_questions: Question[] = [
   {
     id: 'tsql-anti-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.TSQL_ANTIPATTERNS,
     course: Course.SQL,
     question: 'Why is `WHERE YEAR(OrderDate) = 2026` a non-SARGable predicate, and what is the fix?',

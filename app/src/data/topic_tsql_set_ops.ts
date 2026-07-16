@@ -87,6 +87,27 @@ SELECT Country FROM dbo.DimSupplier;`,
     tags: ['tsql', 'set-ops', 'intersect', 'except'],
   },
   {
+    id: 'tsql-setops-except-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_SET_OPS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Fill in the operator that returns rows from the first query with no match in the second.',
+    template: `-- countries with customers but no suppliers
+SELECT Country FROM dbo.DimCustomer
+___
+SELECT Country FROM dbo.DimSupplier;`,
+    blanks: ['EXCEPT'],
+    solution: `-- countries with customers but no suppliers
+SELECT Country FROM dbo.DimCustomer
+EXCEPT
+SELECT Country FROM dbo.DimSupplier;`,
+    explanation: '`EXCEPT` returns rows from the first query that have no match in the second, deduplicated - the set-difference operator. It compares whole rows, so both queries must be union-compatible.',
+    hints: ['Set-difference operator: rows in the first query, not the second'],
+    tags: ['tsql', 'set-ops', 'except', 'cloze'],
+  },
+  {
     id: 'tsql-setops-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,

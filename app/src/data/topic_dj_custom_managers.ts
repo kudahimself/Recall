@@ -40,6 +40,31 @@ export const dj_custom_managers_questions: Question[] = [
       tags: ['django', 'manager', 'custom-manager', 'orm', 'query-patterns'],
       concepts: ['dj-model-manager-vs-queryset', 'dj-orm-query-construction'],
     },
+  {
+      id: 'dj-custom-managers-queryset-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_CUSTOM_MANAGERS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the base class for a chainable custom queryset and the method that converts it into a usable manager.',
+      template: `from django.db import models
+
+class ArticleQuerySet(models.___):
+    def published(self):
+        return self.filter(status="published")
+
+class Article(models.Model):
+    status = models.CharField(max_length=20, default="draft")
+
+    objects = ArticleQuerySet.___()`,
+      blanks: ['QuerySet', 'as_manager'],
+      solution: 'from django.db import models\n\nclass ArticleQuerySet(models.QuerySet):\n    def published(self):\n        return self.filter(status="published")\n\nclass Article(models.Model):\n    status = models.CharField(max_length=20, default="draft")\n\n    objects = ArticleQuerySet.as_manager()',
+      explanation: 'Subclassing `models.QuerySet` (not `models.Manager`) means every method must return `self.filter(...)` (or similar) so calls stay chainable — `Article.objects.published().recent()`. `as_manager()` converts the QuerySet class into a Manager so `objects = ArticleQuerySet.as_manager()` still works as the model\'s default manager.',
+      hints: ['Base class for a chainable queryset (not Manager)', 'Classmethod that turns the QuerySet into a Manager'],
+      tags: ['django', 'queryset', 'custom-queryset', 'as_manager', 'cloze'],
+      concepts: ['dj-orm-query-construction'],
+    },
     // 2. Coding: Chainable custom QuerySet
   {
       id: 'celery-drf-23',

@@ -48,7 +48,7 @@ export const dj_redis_questions: Question[] = [
       ],
       explanation: 'Redis is more than a key-value store -- its data structures are why it is so versatile. Strings: SET/GET for caching (most common). Lists: LPUSH/RPOP for queues, recent activity feeds. Sets: SADD/SMEMBERS for unique tags, online users. Sorted Sets: ZADD/ZRANGE for leaderboards where each member has a score. Hashes: HSET/HGET for storing objects (like a user profile with multiple fields) without serializing to JSON. Pub/Sub: PUBLISH/SUBSCRIBE for real-time notifications between services.',
       tags: ['redis', 'data-structures', 'strings', 'lists', 'sets', 'sorted-sets'],
-      concepts: ['py-list-aliasing'],
+      concepts: ['dj-caching'],
     },
   {
       id: 'dj-redis-gap-1',
@@ -85,6 +85,6 @@ export const dj_redis_questions: Question[] = [
         'One Redis server often handles caching AND Celery brokering for a Django app',
       ],
       tags: ['redis', 'caching', 'celery', 'in-memory', 'basics'],
-      concepts: ['ce-task-idempotency'],
+      concepts: ['dj-caching'],
     },
 ];

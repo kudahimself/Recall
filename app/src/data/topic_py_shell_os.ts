@@ -72,6 +72,30 @@ print(result.returncode)`,
       concepts: ['py-shell-os-interop'],
     },
   {
+      id: 'py-shell-calledprocesserror-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_SHELL_OS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the exception subprocess.run(check=True) raises on non-zero exit, and the attribute holding the exit code.',
+      template: `import subprocess
+
+try:
+    subprocess.run(["false"], check=True)
+except subprocess.___ as e:
+    print(e.___)`,
+      blanks: ['CalledProcessError', 'returncode'],
+      solution:
+        'import subprocess\n\ntry:\n    subprocess.run(["false"], check=True)\nexcept subprocess.CalledProcessError as e:\n    print(e.returncode)',
+      explanation:
+        'check=True makes subprocess.run raise CalledProcessError on non-zero exit. The exception carries returncode, cmd, stdout, and stderr — everything you need to report what failed.',
+      hints: ['CamelCase exception name; the attribute is the exit code.'],
+      tags: ['subprocess', 'CalledProcessError', 'error-handling'],
+      concepts: ['py-exception-hierarchy'],
+    },
+  {
       id: 'py-shell-3',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,

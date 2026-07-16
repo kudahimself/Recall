@@ -31,6 +31,23 @@ export const tsql_control_flow_questions: Question[] = [
     tags: ['tsql', 'control-flow', 'if', 'begin-end'],
   },
   {
+    id: 'tsql-flow-go-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_CONTROL_FLOW,
+    course: Course.SQL,
+    question: 'What does the `GO` batch separator do in a T-SQL script?',
+    options: [
+      { id: 'a', text: "It is not T-SQL at all - it's a signal recognized by client tools (SSMS, sqlcmd) that splits the script into separate batches sent to the server one at a time; local variables do not survive across a GO.", isCorrect: true },
+      { id: 'b', text: 'It commits the current transaction, equivalent to COMMIT.', isCorrect: false },
+      { id: 'c', text: 'It is a T-SQL keyword that pauses execution until the user confirms.', isCorrect: false },
+      { id: 'd', text: 'It repeats the preceding statement in an infinite loop.', isCorrect: false },
+    ],
+    explanation: '`GO` is a client-side batch separator, not part of the T-SQL language itself - the server never sees the word. Everything between two `GO`s is compiled and sent as one batch, which is why a `DECLARE @v ...` in one batch is gone by the next: variables are scoped to a single batch.',
+    hints: ['Client-tool signal, not a T-SQL keyword', 'Splits the script into independent batches'],
+    tags: ['tsql', 'control-flow', 'go', 'batch'],
+  },
+  {
     id: 'tsql-flow-predict-1',
     type: QuestionType.PREDICT_OUTPUT,
     difficulty: Difficulty.BEGINNER,
@@ -111,6 +128,31 @@ END`,
     tags: ['tsql', 'control-flow', 'function', 'procedures'],
   },
   {
+    id: 'tsql-flow-func-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_CONTROL_FLOW,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the clause that declares the function's return type, and the statement that sends back its result.",
+    template: `CREATE FUNCTION dbo.DoubleIt (@n INT)
+___ INT
+AS
+BEGIN
+    ___ @n * 2;
+END;`,
+    blanks: ['RETURNS', 'RETURN'],
+    solution: `CREATE FUNCTION dbo.DoubleIt (@n INT)
+RETURNS INT
+AS
+BEGIN
+    RETURN @n * 2;
+END;`,
+    explanation: '`RETURNS <type>` (after the parameter list, before AS) declares what type the function produces; the body must end with a `RETURN <expr>` statement supplying that one value. A function, unlike a procedure, always sends back exactly one value this way.',
+    hints: ['Type declaration goes between the parameter list and AS', 'The body ends with RETURN <expression>'],
+    tags: ['tsql', 'control-flow', 'function', 'cloze'],
+  },
+  {
     id: 'tsql-flow-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -137,5 +179,34 @@ END;`,
     explanation: 'A scalar function declares its parameters in parentheses, states `RETURNS <type>`, and the body `RETURN`s a single value. `@Gross * @DiscountPct / 100` converts the percentage to a fraction; subtracting it from the gross gives the net. The function can then be used inline, e.g. `SELECT dbo.NetAmount(Price, 10) FROM …`.',
     hints: ['RETURNS DECIMAL(10,2), body RETURNs one value', '@Gross - @Gross * @DiscountPct / 100'],
     tags: ['tsql', 'control-flow', 'function'],
+  },
+  {
+    id: 'tsql-flow-tvf-cloze-1',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.TSQL_CONTROL_FLOW,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: "Fill in the return type and the statement that supplies an inline table-valued function's result set.",
+    template: `CREATE FUNCTION dbo.OrdersForCustomer (@CustomerKey INT)
+RETURNS ___
+AS
+___ (
+    SELECT OrderId, Amount
+    FROM dbo.FactOrders
+    WHERE CustomerKey = @CustomerKey
+);`,
+    blanks: ['TABLE', 'RETURN'],
+    solution: `CREATE FUNCTION dbo.OrdersForCustomer (@CustomerKey INT)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT OrderId, Amount
+    FROM dbo.FactOrders
+    WHERE CustomerKey = @CustomerKey
+);`,
+    explanation: 'An inline table-valued function declares `RETURNS TABLE` and its body is a single `RETURN (<select>)` - no BEGIN…END, no @variable to fill in. Unlike a scalar function, it is queried like a table: `SELECT * FROM dbo.OrdersForCustomer(42)`, and the optimizer can inline it into the calling query\'s plan.',
+    hints: ['Return type for a table-shaped result: TABLE', 'Inline TVF body is just RETURN (a SELECT), no BEGIN/END'],
+    tags: ['tsql', 'control-flow', 'table-valued-function', 'cloze'],
   },
 ];

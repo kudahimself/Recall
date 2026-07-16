@@ -48,7 +48,7 @@ function q(id: string): Question {
 export const advancedWebdevOrderedQuestions: Question[] = [
 
   // =====================================================================
-  // 1. NEXT_ROUTING (4 questions)
+  // 1. NEXT_ROUTING (12 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -58,12 +58,25 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // BEGINNER coding
   q('next-route-1'),
   q('next-route-2'),
+  // BEGINNER faded (notFound, redirect primitives, before their coding pairs)
+  q('next-route-notfound-cloze-1'),
+  // BEGINNER coding
+  q('next-route-notfound-1'),
+  q('next-route-redirect-cloze-1'),
+  q('next-route-useroute-1'),
   // INTERMEDIATE MC
   q('next-route-3'),
   q('next-route-4'),
+  // INTERMEDIATE faded (usePathname, catch-all primitives)
+  q('next-route-pathname-cloze-1'),
+  // INTERMEDIATE MC
+  q('next-route-catchall-mcq-1'),
+  q('next-route-catchall-cloze-1'),
+  // ADVANCED MC
+  q('next-route-parallel-mcq-1'),
 
   // =====================================================================
-  // 2. NEXT_SERVER_COMPONENTS (4 questions)
+  // 2. NEXT_SERVER_COMPONENTS (10 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -72,32 +85,51 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-sc-cloze-2'),
   // BEGINNER coding
   q('next-sc-1'),
+  // INTERMEDIATE faded (Cloze, on-ramp for serializable-props MC)
+  q('next-sc-serializable-cloze-1'),
   // INTERMEDIATE MC
   q('next-sc-3'),
+  q('next-sc-serializable-mcq-1'),
+  q('next-sc-serveronly-mcq-1'),
   // INTERMEDIATE coding
   q('next-sc-2'),
+  // ADVANCED faded (Cloze, on-ramp for context-provider coding)
+  q('next-sc-context-cloze-1'),
+  // ADVANCED coding
+  q('next-sc-context-1'),
   // ADVANCED MC
   q('next-sc-4'),
+  q('next-sc-modulegraph-mcq-1'),
 
   // =====================================================================
-  // 3. NEXT_DATA_FETCHING (4 questions)
+  // 3. NEXT_DATA_FETCHING (12 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
   q('next-fetch-parsons-1'),
   q('next-fetch-cloze-1'),
   q('next-fetch-cloze-2'),
+  q('next-ssg-cloze-1'),
   // BEGINNER coding
   q('next-fetch-1'),
+  q('next-ssg-1'),
   // INTERMEDIATE MC
   q('next-fetch-3'),
+  q('next-dynamic-mcq-1'),
+  q('next-dynamic-mcq-2'),
+  // INTERMEDIATE faded (Cloze, on-ramp for the parallel-fetch coding question)
+  q('next-parallel-cloze-1'),
   // INTERMEDIATE coding
   q('next-fetch-2'),
+  q('next-parallel-1'),
+  q('next-suspense-1'),
+  // ADVANCED faded (Cloze)
+  q('next-tags-cloze-1'),
   // ADVANCED MC
   q('next-fetch-4'),
 
   // =====================================================================
-  // 4. NEXT_API_ROUTES (4 questions)
+  // 4. NEXT_API_ROUTES (10 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -106,15 +138,27 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-api-cloze-2'),
   // BEGINNER coding
   q('next-api-1'),
+  // BEGINNER faded (dynamic segment primitive, before next-api-dynamic-1 combines it)
+  q('next-api-dynamic-cloze-1'),
+  // BEGINNER coding
+  q('next-api-dynamic-1'),
+  // INTERMEDIATE faded (query-string primitive)
+  q('next-api-searchparams-cloze-1'),
   // INTERMEDIATE MC
   q('next-api-3'),
+  // BEGINNER faded (Server Actions primitive, before next-api-2 combines it)
+  q('next-api-server-action-cloze-1'),
   // INTERMEDIATE coding
   q('next-api-2'),
+  q('next-api-error-1'),
+  // INTERMEDIATE faded (useFormStatus, redirect-after-action primitives)
+  q('next-api-formstatus-cloze-1'),
+  q('next-api-redirect-cloze-1'),
   // ADVANCED MC
   q('next-api-4'),
 
   // =====================================================================
-  // 5. NEXT_MIDDLEWARE (3 questions)
+  // 5. NEXT_MIDDLEWARE (6 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -125,11 +169,16 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-mw-2'),
   // INTERMEDIATE coding
   q('next-mw-1'),
+  // INTERMEDIATE faded + coding (response cookie/header mutation)
+  q('next-mw-setcookie-cloze-1'),
+  q('next-mw-setcookie-1'),
   // ADVANCED MC
   q('next-mw-3'),
+  // ADVANCED MC (middleware-before-cache mental model)
+  q('next-mw-precache-mcq-1'),
 
   // =====================================================================
-  // 6. NEXT_OPTIMIZATION (3 questions)
+  // 6. NEXT_OPTIMIZATION (9 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -138,26 +187,44 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-opt-cloze-2'),
   // BEGINNER coding
   q('next-opt-1'),
+  // BEGINNER faded + MC (next/font)
+  q('next-opt-font-mcq-1'),
+  q('next-opt-font-cloze-1'),
   // INTERMEDIATE MC
   q('next-opt-2'),
   // INTERMEDIATE coding
   q('next-opt-3'),
+  // INTERMEDIATE faded (Image fill/sizes)
+  q('next-opt-fill-cloze-1'),
+  // INTERMEDIATE MC + faded (next/dynamic)
+  q('next-opt-dynamic-mcq-1'),
+  q('next-opt-dynamic-cloze-1'),
+  // INTERMEDIATE MC (priority for LCP)
+  q('next-opt-priority-mcq-1'),
 
   // =====================================================================
-  // 7. NEXT_AUTH (5 questions — from securityQuestions)
+  // 7. NEXT_AUTH (10 questions — from securityQuestions)
   // =====================================================================
 
+  // BEGINNER faded (logout primitive, simplest cookie mutation first)
+  q('next-auth-logout-cloze-1'),
   // INTERMEDIATE MC
   q('sec-auth-1'),
   q('sec-auth-2'),
   q('sec-auth-3'),
   // ADVANCED MC
   q('sec-auth-4'),
+  // BEGINNER faded (jose jwtVerify primitive, before sec-auth-5 combines it)
+  q('sec-auth-parsons-1'),
+  q('sec-auth-cloze-1'),
+  // INTERMEDIATE faded + coding (httpOnly session cookie on login)
+  q('next-auth-session-cookie-cloze-1'),
+  q('next-auth-session-cookie-1'),
   // ADVANCED coding
   q('sec-auth-5'),
 
   // =====================================================================
-  // 8. DB_DESIGN (10 questions — relocated from former position 23)
+  // 8. DB_DESIGN (11 questions — relocated from former position 23)
   // Schema fundamentals (normalization, relationships, indexes, N+1) land
   // before Prisma so the user has the mental model for writing schemas.
   // =====================================================================
@@ -173,62 +240,94 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-db-8'),
   q('dp-db-9'),
   q('dp-db-10'),
+  q('dp-db-11'),
   // ADVANCED MC
   q('dp-db-2'),
   q('dp-db-6'),
 
   // =====================================================================
-  // 9. NEXT_PRISMA (10 questions)
+  // 9. NEXT_PRISMA (29 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
   q('prisma-parsons-1'),
   q('prisma-cloze-1'),
   q('prisma-cloze-2'),
+  q('prisma-cloze-create'),
+  q('prisma-cloze-deletemany'),
+  q('prisma-cloze-enum'),
+  q('prisma-cloze-whereops'),
+  q('prisma-transaction-cloze-1'),
   // BEGINNER MC
   q('prisma-4'),
   q('prisma-8'),
   // BEGINNER coding
   q('prisma-1'),
   q('prisma-2'),
+  q('prisma-11'),
+  q('prisma-13'),
+  // INTERMEDIATE faded (Parsons + Cloze)
+  q('prisma-parsons-2'),
+  q('prisma-cloze-upsert'),
+  q('prisma-cloze-pagination'),
+  q('prisma-cloze-aggregate'),
   // INTERMEDIATE MC
   q('prisma-3'),
   q('prisma-6'),
+  q('prisma-12'),
+  q('prisma-15'),
+  q('prisma-16'),
   // INTERMEDIATE coding
   q('prisma-5'),
   q('prisma-7'),
   q('prisma-9'),
+  q('prisma-14'),
   // ADVANCED MC
   q('prisma-10'),
+  q('prisma-17'),
 
   // =====================================================================
-  // 10. NEXT_TANSTACK (6 questions)
+  // 10. NEXT_TANSTACK (15 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
   q('tanstack-parsons-1'),
   q('tanstack-cloze-1'),
   q('tanstack-cloze-2'),
+  q('tanstack-cloze-4'),
   // BEGINNER MC
   q('tanstack-3'),
   // BEGINNER coding
   q('tanstack-1'),
+  q('tanstack-7'),
+  // INTERMEDIATE faded (Cloze)
+  q('tanstack-cloze-5'),
   // INTERMEDIATE MC
   q('tanstack-4'),
   q('tanstack-5'),
+  q('tanstack-8'),
   // INTERMEDIATE coding
   q('tanstack-2'),
+  // ADVANCED MC
+  q('tanstack-9'),
+  q('tanstack-10'),
   // ADVANCED coding
   q('tanstack-6'),
+  // INTERMEDIATE cloze (on-ramp for useInfiniteQuery, used cold by proj-url-2)
+  q('tanstack-cloze-3'),
 
   // =====================================================================
-  // 11. NEXT_FORMS_VALIDATION (8 questions)
+  // 11. NEXT_FORMS_VALIDATION (21 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — next-forms-1/2/4/8 are BEGINNER difficulty
   q('next-forms-parsons-1'),
   q('next-forms-cloze-1'),
   q('next-forms-cloze-2'),
+  q('next-forms-cloze-refine'),
+  q('next-forms-cloze-enum'),
+  // BEGINNER MC
+  q('next-forms-11'),
   // INTERMEDIATE MC
   q('next-forms-4'),
   q('next-forms-5'),
@@ -238,27 +337,46 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-forms-1'),
   q('next-forms-2'),
   q('next-forms-3'),
+  // INTERMEDIATE faded (Cloze)
+  q('next-forms-cloze-coerce'),
+  q('next-forms-cloze-composition'),
+  q('next-forms-cloze-watch'),
+  // INTERMEDIATE MC
+  q('next-forms-9'),
+  // INTERMEDIATE coding
+  q('next-forms-10'),
+  // ADVANCED faded (Cloze)
+  q('next-forms-cloze-controller'),
+  // ADVANCED MC
+  q('next-forms-12'),
   // ADVANCED coding
   q('next-forms-6'),
 
   // =====================================================================
-  // 12. NEXT_TESTING (15 questions)
+  // 12. NEXT_TESTING (21 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — next-testing-1/5/8/9 are BEGINNER difficulty
   q('next-testing-parsons-1'),
   q('next-testing-cloze-1'),
   q('next-testing-cloze-2'),
+  q('next-testing-cloze-labeltext'),
+  q('next-testing-parsons-2'),
   // INTERMEDIATE MC
   q('next-testing-3'),
   q('next-testing-4'),
   q('next-testing-8'),
   q('next-testing-10'),
   q('next-testing-14'),
+  q('next-testing-16'),
   // INTERMEDIATE coding
   q('next-testing-1'),
   q('next-testing-5'),
   q('next-testing-9'),
+  // INTERMEDIATE faded (Cloze)
+  q('next-testing-cloze-userevent'),
+  q('next-testing-cloze-waitfor'),
+  q('next-testing-cloze-spyon'),
   // ADVANCED MC
   q('next-testing-6'),
   q('next-testing-12'),
@@ -270,18 +388,29 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-testing-15'),
 
   // =====================================================================
-  // 13. NEXT_URL_STATE (4 questions)
+  // 13. NEXT_URL_STATE (11 questions)
   // =====================================================================
 
-  // ADVANCED MC
+  // BEGINNER faded (Parsons + Cloze)
+  q('next-url-state-parsons-1'),
+  q('next-url-state-cloze-1'),
+  q('next-url-state-cloze-2'),
+  q('next-url-state-cloze-3'),
+  // INTERMEDIATE MC
   q('next-url-state-3'),
-  q('next-url-state-4'),
-  // ADVANCED coding
+  // INTERMEDIATE coding
   q('next-url-state-1'),
+  q('next-url-state-6'),
+  // ADVANCED MC
+  q('next-url-state-4'),
+  q('next-url-state-5'),
+  // ADVANCED faded (Cloze)
+  q('next-url-state-cloze-4'),
+  // ADVANCED coding
   q('next-url-state-2'),
 
   // =====================================================================
-  // 14. NEXT_ERROR_HANDLING (5 questions)
+  // 14. NEXT_ERROR_HANDLING (8 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — next-error-handling-1/3/5 are BEGINNER difficulty
@@ -295,25 +424,40 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // ADVANCED coding
   q('next-error-handling-1'),
   q('next-error-handling-2'),
+  // INTERMEDIATE MC
+  q('next-error-handling-7'),
+  // INTERMEDIATE coding
+  q('next-error-handling-6'),
+  // ADVANCED MC
+  q('next-error-handling-8'),
 
   // =====================================================================
-  // 15. NEXT_AUTH_DEEP (5 questions)
+  // 15. NEXT_AUTH_DEEP (14 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — next-auth-deep-2 is BEGINNER difficulty
   q('next-auth-deep-parsons-1'),
   q('next-auth-deep-cloze-1'),
   q('next-auth-deep-cloze-2'),
-  // ADVANCED MC
+  q('next-auth-deep-cloze-3'),
+  q('next-auth-deep-cloze-4'),
+  // BEGINNER coding
+  q('next-auth-deep-2'),
+  // INTERMEDIATE faded (Cloze)
+  q('next-auth-deep-cloze-5'),
+  q('next-auth-deep-cloze-6'),
+  // INTERMEDIATE MC
   q('next-auth-deep-3'),
   q('next-auth-deep-4'),
   q('next-auth-deep-5'),
+  q('next-auth-deep-7'),
+  // INTERMEDIATE coding
+  q('next-auth-deep-6'),
   // ADVANCED coding
   q('next-auth-deep-1'),
-  q('next-auth-deep-2'),
 
   // =====================================================================
-  // 16. ACCESSIBILITY (16 questions)
+  // 16. ACCESSIBILITY (24 questions)
   // =====================================================================
 
   // BEGINNER MC
@@ -321,7 +465,11 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('a11y-focus-spa-1'),
   q('a11y-reduced-motion-1'),
   q('a11y-audit-tools-1'),
-  // BEGINNER coding
+  q('a11y-contrast-mcq-1'),
+  q('a11y-alt-text-mcq-1'),
+  q('a11y-heading-structure-mcq-1'),
+  // BEGINNER cloze fade, then coding
+  q('a11y-visually-hidden-cloze-1'),
   q('a11y-skip-nav-1'),
   // INTERMEDIATE faded (Parsons + Cloze) — scaffolds the modal & dropdown primitives
   q('a11y-escape-parsons-1'),
@@ -334,12 +482,18 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('a11y-aria-labels-1'),
   q('a11y-roving-tabindex-1'),
   q('a11y-native-first-1'),
+  q('a11y-aria-live-mcq-1'),
+  // INTERMEDIATE coding
+  q('a11y-aria-live-coding-1'),
+  q('a11y-tabindex-coding-1'),
   // ADVANCED coding
   q('a11y-modal-1'),
   q('a11y-dropdown-1'),
+  // ADVANCED MC
+  q('a11y-accessible-name-mcq-1'),
 
   // =====================================================================
-  // 17. NEXT_SHADCN (5 questions)
+  // 17. NEXT_SHADCN (12 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -354,6 +508,17 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // INTERMEDIATE coding
   q('shadcn-cn-utility-1'),
   q('shadcn-dark-mode-1'),
+  // INTERMEDIATE faded (Cloze), then coding — CVA
+  q('shadcn-cva-cloze-1'),
+  q('shadcn-cva-coding-1'),
+  // INTERMEDIATE MC, then coding — asChild
+  q('shadcn-aschild-mcq-1'),
+  q('shadcn-aschild-coding-1'),
+  // INTERMEDIATE coding — theming
+  q('shadcn-theming-coding-1'),
+  // ADVANCED coding, then MC
+  q('shadcn-variantprops-coding-1'),
+  q('shadcn-form-pattern-mcq-1'),
 
   // =====================================================================
   // 18. PATTERNS_CREATIONAL (8 questions)
@@ -373,7 +538,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-create-8'),
 
   // =====================================================================
-  // 19. PATTERNS_STRUCTURAL (8 questions)
+  // 19. PATTERNS_STRUCTURAL (9 questions)
   // =====================================================================
 
   // BEGINNER MC
@@ -383,6 +548,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-struct-4'),
   q('dp-struct-5'),
   q('dp-struct-6'),
+  q('dp-struct-9'),
   // INTERMEDIATE coding
   q('dp-struct-2'),
   // ADVANCED MC
@@ -431,7 +597,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-arch-1'),
 
   // =====================================================================
-  // 22. API_DESIGN (18 questions — from designPatternQuestions + securityQuestions)
+  // 22. API_DESIGN (19 questions — from designPatternQuestions + securityQuestions)
   // =====================================================================
 
   // BEGINNER MC
@@ -443,6 +609,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-api-6'),
   q('dp-api-7'),
   q('dp-api-8'),
+  q('dp-api-10'),
   q('sec-attack-1'),
   q('sec-attack-3'),
   q('sec-data-1'),
@@ -458,15 +625,18 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-attack-4'),
 
   // =====================================================================
-  // 23. NEXT_DEPLOYMENT (3 questions — relocated from former position 8)
+  // 23. NEXT_DEPLOYMENT (5 questions — relocated from former position 8)
   // Deployment sits immediately before the projects block so "how to deploy"
   // pairs with "now deploy what you built."
   // =====================================================================
 
   // BEGINNER MC
   q('next-deploy-1'),
+  // BEGINNER faded (NEXT_PUBLIC_ hands-on)
+  q('next-deploy-public-cloze-1'),
   // INTERMEDIATE MC
   q('next-deploy-2'),
+  q('next-deploy-buildtime-mcq-1'),
   // ADVANCED MC
   q('next-deploy-3'),
 
