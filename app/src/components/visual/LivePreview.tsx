@@ -1,6 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildPreviewDoc } from '../../utils/previewDoc';
+import { readMediaRules, detectLayoutContainers, MediaRuleStatus } from '../../utils/frameInspector';
+import { renderLayoutOverlay, clearLayoutOverlay } from '../../utils/layoutOverlay';
 import { ResponsiveDeviceToolbar, DevicePreset } from './ResponsiveDeviceToolbar';
+import { MediaRuleChips } from './MediaRuleChips';
 import './LivePreview.css';
 
 interface Props {
@@ -15,6 +18,9 @@ interface Props {
 }
 
 const DEBOUNCE_MS = 300;
+// Tailwind's JIT applies styles after load - re-inspect once so the overlay
+// toggle and media chips catch up.
+const TAILWIND_REINSPECT_MS = 500;
 
 export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
   // Debounce the srcDoc rebuild so the iframe doesn't reload on every keystroke.
@@ -31,8 +37,33 @@ export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
   // The frame document's <title>, surfaced as a fake browser tab - otherwise
   // metadata/head questions have no visible effect at all.
   const [docTitle, setDocTitle] = useState('');
+  // Inspector state: @media chips + flex/grid overlay toggle.
+  const [mediaRules, setMediaRules] = useState<MediaRuleStatus[]>([]);
+  const [hasLayoutContainers, setHasLayoutContainers] = useState(false);
+  const [overlayOn, setOverlayOn] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const reinspectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hasLearnerCss = Boolean(debounced.css);
+
+  // Re-reads the frame document: @media activity at the current frame width,
+  // layout-container detection, and the overlay (re)draw. Called after every
+  // frame load (srcDoc replaced the whole document) and on every resize
+  // (matchMedia flips, rects move). frameInspector degrades to [] on failure.
+  const inspectFrame = useCallback(() => {
+    const doc = frameRef.current?.contentDocument;
+    const win = frameRef.current?.contentWindow;
+    if (!doc || !win) return;
+    setMediaRules(hasLearnerCss ? readMediaRules(doc, win) : []);
+    const containersFound = detectLayoutContainers(doc, win).length > 0;
+    setHasLayoutContainers(containersFound);
+    if (overlayOn && containersFound) {
+      renderLayoutOverlay(doc, win);
+    } else {
+      clearLayoutOverlay(doc);
+    }
+  }, [hasLearnerCss, overlayOn]);
 
   const handleFrameLoad = () => {
     try {
@@ -40,7 +71,22 @@ export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
     } catch {
       setDocTitle('');
     }
+    inspectFrame();
+    if (reinspectTimer.current) clearTimeout(reinspectTimer.current);
+    if (debounced.tailwind) {
+      reinspectTimer.current = setTimeout(inspectFrame, TAILWIND_REINSPECT_MS);
+    }
   };
+
+  useEffect(() => () => {
+    if (reinspectTimer.current) clearTimeout(reinspectTimer.current);
+  }, []);
+
+  // Draw/clear immediately when the toggle flips, without waiting for a
+  // resize or reload.
+  useEffect(() => {
+    inspectFrame();
+  }, [inspectFrame]);
 
   // Track the frame's actual rendered width (preset may exceed the pane, in
   // which case the pane scrolls horizontally and the frame keeps preset width;
@@ -49,6 +95,7 @@ export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
     const measure = () => {
       const frame = frameRef.current;
       if (frame) setRenderedWidth(Math.round(frame.getBoundingClientRect().width));
+      inspectFrame();
     };
     measure();
     const pane = paneRef.current;
@@ -57,11 +104,19 @@ export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
     observer.observe(pane);
     if (frameRef.current) observer.observe(frameRef.current);
     return () => observer.disconnect();
-  }, [preset]);
+  }, [preset, inspectFrame]);
 
   return (
     <div className="live-preview">
-      <ResponsiveDeviceToolbar active={preset} onChange={setPreset} renderedWidth={renderedWidth} />
+      <ResponsiveDeviceToolbar
+        active={preset}
+        onChange={setPreset}
+        renderedWidth={renderedWidth}
+        overlayAvailable={hasLayoutContainers}
+        overlayOn={overlayOn}
+        onToggleOverlay={() => setOverlayOn(on => !on)}
+      />
+      {mediaRules.length > 0 && <MediaRuleChips rules={mediaRules} />}
       {docTitle && (
         <div className="live-preview-tab" title="The document's <title> - what the browser tab would show">
           <span className="live-preview-tab-dot" />

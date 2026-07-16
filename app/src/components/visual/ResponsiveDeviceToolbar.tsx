@@ -9,6 +9,11 @@ interface Props {
   onChange: (preset: DevicePreset) => void;
   // Actual rendered width of the preview frame, for the px badge.
   renderedWidth: number | null;
+  // Layout-overlay toggle (flex/grid inspector). All optional so existing
+  // callers render unchanged; the pill only appears when containers exist.
+  overlayAvailable?: boolean;
+  overlayOn?: boolean;
+  onToggleOverlay?: () => void;
 }
 
 const PRESETS: { label: string; width: DevicePreset }[] = [
@@ -29,7 +34,14 @@ function tailwindBreakpoint(width: number): string {
   return 'base';
 }
 
-export const ResponsiveDeviceToolbar: React.FC<Props> = ({ active, onChange, renderedWidth }) => {
+export const ResponsiveDeviceToolbar: React.FC<Props> = ({
+  active,
+  onChange,
+  renderedWidth,
+  overlayAvailable,
+  overlayOn,
+  onToggleOverlay,
+}) => {
   return (
     <div className="device-toolbar">
       <div className="device-toolbar-presets">
@@ -45,12 +57,24 @@ export const ResponsiveDeviceToolbar: React.FC<Props> = ({ active, onChange, ren
           </button>
         ))}
       </div>
-      {renderedWidth !== null && (
-        <div className="device-toolbar-readout">
-          <span className="device-width-badge">{renderedWidth}px</span>
-          <span className="device-breakpoint-pill">{tailwindBreakpoint(renderedWidth)}</span>
-        </div>
-      )}
+      <div className="device-toolbar-readout">
+        {overlayAvailable && onToggleOverlay && (
+          <button
+            type="button"
+            className={`device-preset${overlayOn ? ' device-preset-active' : ''}`}
+            onClick={onToggleOverlay}
+            title="Show flex/grid containers, items, tracks and gaps over the preview"
+          >
+            Layout
+          </button>
+        )}
+        {renderedWidth !== null && (
+          <>
+            <span className="device-width-badge">{renderedWidth}px</span>
+            <span className="device-breakpoint-pill">{tailwindBreakpoint(renderedWidth)}</span>
+          </>
+        )}
+      </div>
     </div>
   );
 };

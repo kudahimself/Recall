@@ -45,7 +45,9 @@ export function buildPreviewDoc({ html, css, tailwind }: PreviewDocInput): strin
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<style>${BASE_STYLES}</style>`,
     tailwind ? '<script src="https://cdn.tailwindcss.com"></script>' : '',
-    css ? `<style>${css}</style>` : '',
+    // data-learner-css lets frame inspectors find this sheet and skip
+    // Tailwind's CDN-generated ones.
+    css ? `<style data-learner-css>${css}</style>` : '',
     '</head>',
     `<body>${html}</body>`,
     '</html>',

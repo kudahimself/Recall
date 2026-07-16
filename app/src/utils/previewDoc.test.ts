@@ -16,6 +16,13 @@ describe('buildPreviewDoc', () => {
     expect(cssIndex).toBeGreaterThan(doc.indexOf('box-sizing: border-box'));
   });
 
+  it('tags the learner style so frame inspectors can find it', () => {
+    // Load-bearing for the @media inspector: readMediaRules looks up
+    // style[data-learner-css] and ignores every other sheet (Tailwind CDN).
+    const doc = buildPreviewDoc({ html: '<div></div>', css: '.a { color: red; }' });
+    expect(doc).toContain('<style data-learner-css>');
+  });
+
   it('omits the user style tag when no CSS is given', () => {
     const doc = buildPreviewDoc({ html: '<p>plain</p>' });
     // Exactly one <style> block: the base reset.

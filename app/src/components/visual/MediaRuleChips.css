@@ -1,0 +1,36 @@
+.media-rule-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.media-rule-chips-label {
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+
+.media-rule-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.media-rule-chip-active {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: rgba(14, 165, 233, 0.12);
+  color: var(--primary);
+  font-weight: 600;
+}
