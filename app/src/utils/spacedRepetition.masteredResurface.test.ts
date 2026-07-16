@@ -42,6 +42,12 @@ import {
 const backendPolicy = getSelectionPolicy(Course.BACKEND);
 const DAY = 86_400_000;
 
+// Every makeQ() lands here so recordAttempt can grant mastery the way
+// App.handleAnswer does (updateMasteredTopics over the created pool). Reset per
+// test so a prior test's questions can't dilute a topic's coverage.
+let questionRegistry: Question[] = [];
+beforeEach(() => { questionRegistry = []; });
+
 beforeAll(() => {
   // Unlock every section/topic so gating doesn't interfere with the synthetic
   // mastered + active-learning topics.
@@ -60,6 +66,7 @@ function emptyProgress(): UserProgress {
     difficultyScores: new Map(),
     lastAttempt: new Map(),
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 
@@ -69,7 +76,7 @@ function makeQ(
   difficulty: Difficulty,
   concepts?: string[],
 ): Question {
-  return {
+  const q: Question = {
     id,
     topic,
     difficulty,
@@ -82,6 +89,8 @@ function makeQ(
     explanation: 'e',
     concepts,
   };
+  questionRegistry.push(q);
+  return q;
 }
 
 function makeAttempt(qid: string, isCorrect: boolean, msAgo: number): QuestionAttempt {
@@ -95,6 +104,25 @@ function recordAttempt(progress: UserProgress, qid: string, isCorrect: boolean, 
   if (isCorrect) progress.correctAnswers.add(qid);
   progress.attemptHistory.push(makeAttempt(qid, isCorrect, msAgo));
   progress.lastAttempt.set(qid, Date.now() - msAgo);
+  grantTopicMastery(progress, qid);
+}
+
+/**
+ * Grant sticky mastery for the answered card's TOPIC only (full coverage of the
+ * topic's questions in the registry + latest-correct > 80%). These tests run
+ * under dev-unlock-all with synthetic single-topic pools, so only topic-level
+ * mastery is exercised - the unit/section aggregate scopes of the production
+ * updateMasteredTopics would spuriously master a sibling topic here.
+ */
+function grantTopicMastery(progress: UserProgress, qid: string) {
+  const q = questionRegistry.find(x => x.id === qid);
+  if (!q) return;
+  const topicQs = questionRegistry.filter(x => x.topic === q.topic);
+  const latest = new Map<string, boolean>();
+  for (const a of progress.attemptHistory) latest.set(a.questionId, a.isCorrect);
+  if (!topicQs.every(x => latest.has(x.id))) return; // not fully covered
+  const correct = topicQs.filter(x => latest.get(x.id)).length;
+  if ((correct / topicQs.length) * 100 > 80) progress.masteredTopics.add(q.topic);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -634,10 +662,11 @@ describe('getReviewStatus (mode indicator)', () => {
     expect(SpacedRepetitionSystem.getReviewStatus([a1, a2], p, backendPolicy).drainQueueCount).toBe(1);
   });
 
-  test('a fresh miss HOLDS the count even when it demotes its own topic (same-topic case)', () => {
+  test('a fresh miss HOLDS the count — mastery is sticky, the topic never demotes (same-topic case)', () => {
     // All three cards in ONE topic: missing a1 drops PY_BASICS latest-correct to
-    // 66% (< 95). Without the treatCorrectId hold, a2/a3 would fall out of the
-    // mastered&&due set and the count would collapse 3 → 1 on the miss.
+    // 66%, but mastery is sticky (everMetMasteryBar) so a2/a3 stay in the
+    // mastered&&due set and a1 stays as a latest-wrong drain card — the count
+    // holds at 3 instead of collapsing on the miss.
     const a1 = makeQ('a1', Topic.PY_BASICS, Difficulty.ADVANCED);
     const a2 = makeQ('a2', Topic.PY_BASICS, Difficulty.ADVANCED);
     const a3 = makeQ('a3', Topic.PY_BASICS, Difficulty.ADVANCED);
@@ -667,11 +696,11 @@ describe('getReviewStatus (mode indicator)', () => {
     expect(parity(p)).toEqual({ mode: 'drain', drainQueueCount: 2 });
   });
 
-  test('an OLD failure (not the latest attempt) still excludes its topic — consolidation blocker, not drain', () => {
-    // a2 failed and was never retried, then the user moved on (latest attempt is
-    // a correct a3). The topic is genuinely below mastery with no retry in
-    // flight, so its due card a1 is a consolidation blocker the drain never
-    // serves — count 0, gate open.
+  test('a NEVER-mastered topic stays out of the drain — consolidation blocker, not drain', () => {
+    // a2 failed on its only attempt, so the topic never met the mastery bar
+    // (everMetMasteryBar false). Its due card a1 is a consolidation blocker the
+    // drain never serves — count 0, gate open. (Had the topic EVER met the bar,
+    // sticky mastery would put a2 in the drain as a latest-wrong card.)
     const a1 = makeQ('a1', Topic.PY_BASICS, Difficulty.ADVANCED);
     const a2 = makeQ('a2', Topic.PY_BASICS, Difficulty.ADVANCED);
     const a3 = makeQ('a3', Topic.PY_BASICS, Difficulty.ADVANCED);

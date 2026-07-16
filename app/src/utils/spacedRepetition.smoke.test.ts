@@ -55,6 +55,7 @@ function seenLongAgo(pool: Question[]): UserProgress {
     difficultyScores: new Map(),
     lastAttempt,
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 

@@ -44,6 +44,7 @@ function emptyProgress(): UserProgress {
     difficultyScores: new Map(),
     lastAttempt: new Map(),
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 

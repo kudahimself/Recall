@@ -11,6 +11,7 @@ import {
 } from './types';
 import { questions } from './data/questions';
 import { SpacedRepetitionSystem, RECENT_WINDOW, pct, recentAttempts, ConceptSelectionContext } from './utils/spacedRepetition';
+import { seedMasteredTopics } from './utils/masteryMigration';
 import { applyReview, ConceptProgress, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
 import {
   migrateProgressToConcepts,
@@ -235,6 +236,7 @@ function loadProgress(): UserProgress {
     difficultyScores: new Map(),
     lastAttempt: new Map(),
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   });
 
   const saved = localStorage.getItem(STORAGE_KEYS.progress);
@@ -248,6 +250,13 @@ function loadProgress(): UserProgress {
       const cleanedCorrect = (parsed.correctAnswers || []).filter((id: string) => currentQuestionIds.has(id));
       const cleanedHistory = (parsed.attemptHistory || []).filter((a: { questionId: string }) => currentQuestionIds.has(a.questionId));
 
+      // Stored sticky mastery: use the persisted set when present; otherwise
+      // seed it once from history (existing users predate the set). Fresh
+      // installs have empty history → an empty set.
+      const masteredTopics = parsed.masteredTopics !== undefined
+        ? new Set<string>(parsed.masteredTopics)
+        : seedMasteredTopics(questions, cleanedHistory);
+
       return {
         ...parsed,
         questionsAttempted: new Set(cleanedAttempted),
@@ -257,6 +266,7 @@ function loadProgress(): UserProgress {
         difficultyScores: new Map(Object.entries(parsed.difficultyScores ?? {})),
         lastAttempt: new Map(Object.entries(parsed.lastAttempt ?? {})),
         repetitionQueue: new Map(Object.entries(parsed.repetitionQueue ?? {})),
+        masteredTopics,
       };
     } catch {
       // Corrupted store; start fresh rather than crashing app init.
@@ -464,6 +474,7 @@ function App() {
       difficultyScores: Object.fromEntries(progress.difficultyScores),
       lastAttempt: Object.fromEntries(progress.lastAttempt),
       repetitionQueue: Object.fromEntries(progress.repetitionQueue),
+      masteredTopics: Array.from(progress.masteredTopics),
     };
     localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(toSave));
   }, [progress]);
@@ -642,6 +653,15 @@ function App() {
     const newLastAttempt = new Map(progress.lastAttempt);
     newLastAttempt.set(currentQuestion.id, Date.now());
 
+    // Grant sticky mastery for any unlock scope this answer just completed.
+    // Computed against the new history so this answer counts; the set only
+    // ever grows, so a same-reference return means nothing changed.
+    const newMasteredTopics = SpacedRepetitionSystem.updateMasteredTopics(
+      { ...progress, attemptHistory: newAttemptHistory },
+      currentQuestion.topic,
+      questions,
+    );
+
     const newProgress: UserProgress = {
       questionsAttempted: newQuestionsAttempted,
       correctAnswers: newCorrectAnswers,
@@ -650,6 +670,7 @@ function App() {
       attemptHistory: newAttemptHistory,
       lastAttempt: newLastAttempt,
       repetitionQueue: progress.repetitionQueue,
+      masteredTopics: newMasteredTopics,
     };
 
     setProgress(newProgress);
@@ -820,6 +841,7 @@ function App() {
         difficultyScores: new Map(),
         lastAttempt: new Map(),
         repetitionQueue: new Map(),
+        masteredTopics: new Set(),
       };
       setProgress(newProgress);
       setMisconceptions({ events: [] });

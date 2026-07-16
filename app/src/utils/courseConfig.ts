@@ -713,6 +713,40 @@ export function getSelectionPolicy(course: Course): SelectionPolicy {
   };
 }
 
+/** Section path order (section names in learn order) for a course. */
+export function getPathOrder(course: Course): string[] {
+  return course === Course.WEB_DEV ? WEBDEV_PATH_ORDER
+    : course === Course.BACKEND ? BACKEND_PATH_ORDER
+    : course === Course.DATABRICKS ? DATABRICKS_PATH_ORDER
+    : course === Course.DATA_ENGINEERING ? DATA_ENG_PATH_ORDER
+    : course === Course.SQL ? SQL_PATH_ORDER
+    : [];
+}
+
+/**
+ * Reverse lookup: the section name plus the unit's and section's topic keys
+ * that contain a topic. Used by the mastery grant to check the three unlock
+ * scopes (topic / unit / section) that finishing an answer might cross.
+ * Returns null for a topic not found in any section (e.g. a stray/unmapped key).
+ */
+export function getGroupsForTopic(
+  topic: string,
+): { section: string; unitTopics: string[]; sectionTopics: string[] } | null {
+  const course = getCourseForTopic(topic);
+  for (const sectionName of getPathOrder(course)) {
+    for (const [, topicKeys] of getSectionUnits(sectionName)) {
+      if (topicKeys.includes(topic)) {
+        return {
+          section: sectionName,
+          unitTopics: topicKeys,
+          sectionTopics: getTopicKeysForSection(sectionName),
+        };
+      }
+    }
+  }
+  return null;
+}
+
 /**
  * Get the progressive topic order for a course.
  * Returns a flat array of topic keys in the order they should be learned.

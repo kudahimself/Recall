@@ -14,6 +14,7 @@ import { questions as allQuestions } from '../data/questions';
 import { Course, Question, QuestionAttempt, UserProgress } from '../types';
 import { getCourseForTopic } from './courseConfig';
 import { SpacedRepetitionSystem, recentAttempts, TOPIC_RECENT_WINDOW, pct } from './spacedRepetition';
+import { seedMasteredTopics } from './masteryMigration';
 
 const backendQuestions = allQuestions.filter(
   q => getCourseForTopic(q.topic) === Course.BACKEND,
@@ -28,6 +29,7 @@ function emptyProgress(): UserProgress {
     difficultyScores: new Map(),
     lastAttempt: new Map(),
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 
@@ -64,17 +66,22 @@ function scenarioStuckAtDataStructures() {
     progress.attemptHistory.push(attempt(id, true, 5 * 86_400_000 + idx * 1000));
   });
 
-  // py_data_structures — every question seen with a correct first attempt,
-  // then the LATEST attempt for ~25% of them is wrong so topic accuracy is
-  // ~75% (below the 80% unlock gate). Scaling to question count keeps the
-  // scenario stable as the question pool grows.
+  // py_data_structures — the non-blocker questions are seen with a correct
+  // first attempt; the blocker tail (~25%) is seen ONCE with a WRONG attempt.
+  // The topic's latest-correct therefore NEVER crosses the 80% bar - under
+  // sticky mastery (everMetMasteryBar) a topic that never met the bar is the
+  // genuinely-stuck state the consolidation path exists for. Scaling to
+  // question count keeps the scenario stable as the question pool grows.
+  const blockerCount = Math.max(5, Math.ceil(ds.length * 0.25));
+  const realBlockers = ds.slice(-blockerCount);
+  const blockerSet = new Set(realBlockers);
   ds.forEach((id, idx) => {
+    if (blockerSet.has(id)) return;
     progress.questionsAttempted.add(id);
     progress.attemptHistory.push(attempt(id, true, 3 * 86_400_000 + idx * 1000));
   });
-  const blockerCount = Math.max(5, Math.ceil(ds.length * 0.25));
-  const realBlockers = ds.slice(-blockerCount);
   realBlockers.forEach((id, i) => {
+    progress.questionsAttempted.add(id);
     // Stagger by 1ms each so sort order is deterministic — the cooldown
     // depends on which blockers are most recent.
     progress.attemptHistory.push(attempt(id, false, 2 * 3_600_000 - i));
@@ -89,6 +96,10 @@ function scenarioStuckAtDataStructures() {
   });
 
   progress.attemptHistory.sort((a, b) => a.timestamp - b.timestamp);
+  // Stored mastery, seeded from history exactly like App.loadProgress: py_basics
+  // crosses the bar; py_data_structures never does (the blocker tail stays
+  // latest-wrong); py_functions is only partially covered.
+  progress.masteredTopics = seedMasteredTopics(backendQuestions, progress.attemptHistory);
   return { progress, blockers: realBlockers, ds, fns };
 }
 
@@ -129,6 +140,7 @@ function scenarioMasteredPlusLearning() {
   });
 
   progress.attemptHistory.sort((a, b) => a.timestamp - b.timestamp);
+  progress.masteredTopics = seedMasteredTopics(backendQuestions, progress.attemptHistory);
   return { progress, masteredIds: basics, dsSeen: seen };
 }
 
@@ -391,11 +403,11 @@ describe('selection strategies — user\'s stuck state', () => {
     console.log(`\n═══ PRODUCTION (with blocker boost + mastered interleave) ═══`);
     console.log(`  blockers picked:  ${blockerPicks}/${N}  (${((blockerPicks / N) * 100).toFixed(1)}%)  — should be > 50%`);
     console.log(`  py_basics picked: ${py_basicsPicks}/${N}  (${((py_basicsPicks / N) * 100).toFixed(1)}%)  — expected low (mastered resurface defers while blockers exist)`);
-    // Due-driven mastered resurface DEFERS while any covered topic is still in
-    // review (here py_data_structures, with its unlock blockers): consolidation
-    // and progression come first. So py_basics (mastered) does NOT get an
-    // interleave share here — it resurfaces only once the learner is caught up
-    // (no covered topic below mastery). Blockers dominate the priority pool.
+    // Due-driven mastered resurface DEFERS while a covered topic has NEVER
+    // met the mastery bar (here py_data_structures, with its unlock blockers):
+    // consolidation and progression come first. So py_basics (mastered) does
+    // NOT get an interleave share here — it resurfaces once the learner is
+    // caught up. Blockers dominate the priority pool.
     expect(blockerPicks / N).toBeGreaterThan(0.5);
     expect(py_basicsPicks / N).toBeLessThan(0.15);
   });

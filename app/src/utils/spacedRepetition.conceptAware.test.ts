@@ -48,6 +48,7 @@ function progressWithAttempts(items: Array<{ id: string; isCorrect: boolean; ago
     difficultyScores: new Map(),
     lastAttempt,
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 

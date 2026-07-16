@@ -27,6 +27,7 @@ import {
   migrateAttemptHistoryToConceptProgress,
 } from '../conceptMigration';
 import { BACKEND_CONCEPTS } from '../conceptRegistry';
+import { seedMasteredTopics } from '../masteryMigration';
 import {
   getSelectionPolicy,
   getTopicOrder,
@@ -117,6 +118,7 @@ function buildPriorCompletionState(targetTopic: string): {
     attemptHistory,
     lastAttempt,
     repetitionQueue: new Map(),
+    masteredTopics: seedMasteredTopics(pool, attemptHistory),
   };
 
   const conceptIndex = buildQuestionConceptIndex(pool);

@@ -15,8 +15,14 @@ import {
   UserProgress,
 } from '../types';
 import { SpacedRepetitionSystem } from './spacedRepetition';
+import { seedMasteredTopics } from './masteryMigration';
 
 const DAY = 86_400_000;
+
+/** Mirror App.loadProgress: derive the stored mastery set from history + pool. */
+function seedMastery(progress: UserProgress, pool: Question[]) {
+  progress.masteredTopics = seedMasteredTopics(pool, progress.attemptHistory);
+}
 
 function emptyProgress(): UserProgress {
   return {
@@ -27,6 +33,7 @@ function emptyProgress(): UserProgress {
     difficultyScores: new Map(),
     lastAttempt: new Map(),
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 
@@ -69,6 +76,7 @@ describe('getTopicDueReviewCount', () => {
     const progress = emptyProgress();
     recordAttempt(progress, 'q0', true, 60_000); // 1 min ago, interval 1 day → not due
     recordAttempt(progress, 'q1', true, 60_000);
+    seedMastery(progress, qs);
     expect(SpacedRepetitionSystem.getTopicDueReviewCount(qs, progress)).toBe(0);
   });
 
@@ -78,6 +86,7 @@ describe('getTopicDueReviewCount', () => {
     // streak 1 → 1-day interval; reviewed 10 days ago → both due.
     recordAttempt(progress, 'q0', true, 10 * DAY);
     recordAttempt(progress, 'q1', true, 10 * DAY);
+    seedMastery(progress, qs);
     expect(SpacedRepetitionSystem.getTopicDueReviewCount(qs, progress)).toBe(2);
   });
 
@@ -88,6 +97,7 @@ describe('getTopicDueReviewCount', () => {
     // streak 1 → base interval 3 days (getTargetInterval([1,3,7,...])[1]).
     recordAttempt(progress, 'hard', true, 3 * DAY);
     recordAttempt(progress, 'easy', true, 3 * DAY);
+    seedMastery(progress, qs);
     // FSRS difficulty 1..10 scales the interval: hard=9 → ~3×0.49 ≈ 1.5d → due at
     // 3 days; easy=2 → ~3×2.04 ≈ 6.1d → not yet due at 3 days.
     const cardDifficulty = { hard: 9, easy: 2 };

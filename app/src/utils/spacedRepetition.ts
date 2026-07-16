@@ -1,5 +1,5 @@
 import { Question, QuestionAttempt, QuestionType, UserProgress, Difficulty, Course } from '../types';
-import { getCourseForTopic, WEBDEV_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, DATA_ENG_PATH_ORDER, SQL_PATH_ORDER, getTopicKeysForSection, getSectionUnits, getTopicOrder, SelectionPolicy, DRAIN_SUPERSEDED_SECTIONS } from './courseConfig';
+import { getCourseForTopic, WEBDEV_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, DATA_ENG_PATH_ORDER, SQL_PATH_ORDER, getTopicKeysForSection, getSectionUnits, getGroupsForTopic, getTopicOrder, SelectionPolicy, DRAIN_SUPERSEDED_SECTIONS } from './courseConfig';
 import {
   bucketCard,
   CardBucket,
@@ -80,6 +80,9 @@ export const TOPIC_REVIEW_BOOST = 120;
 // pct exceeds this bar. Set higher than UNLOCK_ACCURACY_PCT (the section-unlock
 // gate) so a topic keeps cycling even after it's technically passed the unlock
 // bar — the learner practises to mastery, not just to the pass mark.
+// PRIORITY-BOOST HEURISTIC ONLY: it feeds TOPIC_REVIEW_BOOST scoring. Mastery
+// itself (drain/resurface/unlock eligibility) is the stored sticky set
+// (masteredTopics) at the 80% bar — this constant no longer gates any queue.
 export const TOPIC_REVIEW_THRESHOLD_PCT = 95;
 
 // Mastery streak tiers (consecutive correct answers).
@@ -91,8 +94,10 @@ export const MASTERY_PROFICIENT_STREAK = 3;
 // interval (1, 3, 7, 14, 30, 60, 120 days) is due, and for concept-aware
 // courses the resurface only happens via a 30-day-stale SPOT_CHECK that almost
 // never fires during active study. A topic counts as mastered when
-// isTopicMastered returns true (full coverage + latest-correct pct
-// >= TOPIC_REVIEW_THRESHOLD_PCT).
+// isTopicMastered returns true — STICKY mastery via the stored masteredTopics
+// set: the topic's unlock bar was crossed once (full coverage + latest-correct
+// > UNLOCK_ACCURACY_PCT) and stays granted. Later misses make cards due (and
+// latest-wrong drain cards re-queue) but never demote the topic.
 //
 // Two surfacing modes, both running BEFORE the concept-aware bucketing so its
 // DUE/IDLE buckets can't starve them:
@@ -225,23 +230,23 @@ export function recentAttempts<T>(attempts: T[], window: number): T[] {
  * than a time window — so a repeatedly-failing question can't keep dragging
  * the gate down once the learner eventually gets it right.
  */
+
+/**
+ * Section/unit-unlock predicate: STORED sticky mastery. A group is unlocked
+ * once every one of its topic keys is in progress.masteredTopics (granted at
+ * the crossing by updateMasteredTopics and never revoked), so once a section
+ * unlocks it can never re-lock — resurfaced misses on old material make cards
+ * due, not sections closed. A declared topic with no questions in the pool
+ * never blocks an unlock.
+ */
 export function isMastered(
   topicKeys: string[],
   questions: Question[],
   progress: UserProgress,
 ): boolean {
-  const qs = questions.filter(q => topicKeys.includes(q.topic));
-  if (qs.length === 0) return true; // nothing to master → don't block
-  if (qs.some(q => !progress.questionsAttempted.has(q.id))) return false;
-
-  const qIds = new Set(qs.map(q => q.id));
-  const latest = new Map<string, boolean>();
-  for (const a of progress.attemptHistory) {
-    if (qIds.has(a.questionId)) latest.set(a.questionId, a.isCorrect);
-  }
-  let correct = 0;
-  latest.forEach(isCorrect => { if (isCorrect) correct++; });
-  return pct(correct, latest.size) > UNLOCK_ACCURACY_PCT;
+  return topicKeys.every(t =>
+    progress.masteredTopics.has(t) || !questions.some(q => q.topic === t),
+  );
 }
 
 export class SpacedRepetitionSystem {
@@ -303,35 +308,60 @@ export class SpacedRepetitionSystem {
   }
 
   /**
-   * True when the topic has full coverage AND latest-correct pct is at or
-   * above TOPIC_REVIEW_THRESHOLD_PCT — i.e. genuinely mastered, not just
-   * past the section-unlock gate. Used to identify the "mastered interleave"
-   * pool: questions that should keep cycling at lower frequency to support
-   * long-term retention via desirable-difficulty interleaving.
-   *
-   * `treatCorrectId`: evaluate mastery as if that question's latest attempt
-   * were correct. Used by the drain queue so the ONE card being retried right
-   * now (most-recent attempt, wrong) doesn't demote its whole topic and
-   * collapse the count mid-drain; older failures still break mastery.
+   * Topic-level mastery for the drain/resurface pool. A simple membership
+   * check against the STORED sticky set (progress.masteredTopics): same 80%
+   * bar as the section unlock, granted once at the crossing and never revoked.
+   * A mastered topic's misses re-enter the drain as individual due/latest-wrong
+   * cards; they can never demote the topic and silently empty its queue.
    */
   static isTopicMastered(
     progress: UserProgress,
     topicQuestions: Question[],
-    treatCorrectId: string | null = null,
   ): boolean {
     if (topicQuestions.length === 0) return false;
-    const topicIds = new Set(topicQuestions.map(q => q.id));
-    const latest = new Map<string, boolean>();
-    for (const a of progress.attemptHistory) {
-      if (topicIds.has(a.questionId)) latest.set(a.questionId, a.isCorrect);
+    return progress.masteredTopics.has(topicQuestions[0].topic);
+  }
+
+  /**
+   * The ONLY writer of mastery. Called after each answer with the just-answered
+   * topic: checks the three unlock scopes that answer could complete — the
+   * topic itself, its unit, and its section (aggregate bars, matching the
+   * unlock gates) — and, for any scope now holding full coverage +
+   * latest-correct > UNLOCK_ACCURACY_PCT, adds ALL of that scope's member
+   * topics to the set. Mastery is sticky: entries are only ever added.
+   * Returns the same Set reference when nothing changed (so React skips the
+   * re-render/persist) and a new Set when a scope was newly crossed.
+   */
+  static updateMasteredTopics(
+    progress: UserProgress,
+    answeredTopic: string,
+    allQuestions: Question[],
+  ): Set<string> {
+    const current = progress.masteredTopics;
+    const scopes: string[][] = [[answeredTopic]];
+    const groups = getGroupsForTopic(answeredTopic);
+    if (groups) scopes.push(groups.unitTopics, groups.sectionTopics);
+
+    const latest = this.latestCorrectness(progress);
+    let next: Set<string> | null = null;
+
+    for (const keys of scopes) {
+      if (keys.every(k => current.has(k))) continue; // scope already granted
+      const qs = allQuestions.filter(q => keys.includes(q.topic));
+      if (qs.length === 0) continue;
+      let covered = true;
+      let correct = 0;
+      for (const q of qs) {
+        const lc = latest.get(q.id);
+        if (lc === undefined) { covered = false; break; } // group not fully covered
+        if (lc) correct++;
+      }
+      if (!covered) continue;
+      if (pct(correct, qs.length) <= UNLOCK_ACCURACY_PCT) continue;
+      if (!next) next = new Set(current);
+      for (const k of keys) next.add(k);
     }
-    if (treatCorrectId !== null && latest.has(treatCorrectId)) {
-      latest.set(treatCorrectId, true);
-    }
-    if (latest.size < topicQuestions.length) return false;
-    let correct = 0;
-    latest.forEach(isCorrect => { if (isCorrect) correct++; });
-    return pct(correct, latest.size) >= TOPIC_REVIEW_THRESHOLD_PCT;
+    return next ?? current;
   }
 
   /**
@@ -378,7 +408,9 @@ export class SpacedRepetitionSystem {
    * (dueRatio >= 1). Drives the due-driven resurface: when due cards exist the
    * caller surfaces one (most-overdue first) instead of waiting on a
    * probability roll. Uses progress.lastAttempt for O(1) last-review lookups.
-   * Optional `filter` narrows the pool (e.g. isDrainCard for the hard drain).
+   * Optional `filter` is AUTHORITATIVE on dueness (e.g. the drain predicate,
+   * which admits latest-wrong cards that are not yet interval-due): a card
+   * passing the filter only needs the mastered-topic check.
    */
   static hasDueMastered(
     pool: Question[],
@@ -392,6 +424,7 @@ export class SpacedRepetitionSystem {
       if (filter && !filter(q)) continue;
       const tq = topicToQs.get(q.topic);
       if (!tq || !this.isTopicMastered(progress, tq)) continue;
+      if (filter) return true; // filter already decided dueness
       const last = progress.lastAttempt.get(q.id) ?? 0;
       if (last === 0) return true; // never timestamped → treat as maximally due
       const daysSince = (now - last) / MS_PER_DAY;
@@ -401,19 +434,28 @@ export class SpacedRepetitionSystem {
   }
 
   /**
+   * Latest-attempt correctness per question, one pass over attemptHistory.
+   * Single source for the drain's "latest-wrong" membership test.
+   */
+  static latestCorrectness(progress: UserProgress): Map<string, boolean> {
+    const latest = new Map<string, boolean>();
+    for (const a of progress.attemptHistory) latest.set(a.questionId, a.isCorrect);
+    return latest;
+  }
+
+  /**
    * Drain queue size — the single source of truth shared by the reviews-first
    * gate (hasPendingDrain) and the UI pill (getReviewStatus.drainQueueCount),
-   * so the two can never disagree. A COVERED-topic CODING+ADVANCED card is in
-   * the queue iff its topic is mastered AND it is due (the servable backlog),
-   * OR it is the card you're retrying now (your most-recent attempt, wrong).
-   * The mastery check treats that retried card as correct (treatCorrectId) so
-   * a single fresh miss doesn't demote its topic and drop every OTHER due card
-   * from the queue — the count HOLDS on a miss and falls by one per correct
-   * answer. In-review topics' due cards and old failed cards are consolidation
-   * blockers, not the drain — excluded, so the count can reach zero.
-   * Topics retired by supersession (getRetiredDrainTopics) are also excluded:
-   * once the superseding section is finished, their cards never re-enter the
-   * queue.
+   * so the two can never disagree. Membership is one rule:
+   *   topic mastered (sticky) AND isDrainCard AND (latest attempt wrong OR
+   *   due by its spacing interval).
+   * A failed drain card therefore stays in the queue — regardless of how many
+   * other questions were answered since — until it is answered correctly: the
+   * count genuinely HOLDS on a miss and falls by one per correct answer.
+   * Because mastery is sticky, a rough session can never demote a topic and
+   * silently drop its other due cards from the queue.
+   * Topics retired by supersession (getRetiredDrainTopics) are excluded: once
+   * the superseding section is finished, their cards never re-enter the queue.
    */
   static countPendingDrain(
     pool: Question[],
@@ -421,23 +463,20 @@ export class SpacedRepetitionSystem {
     progress: UserProgress,
     cardDifficulty: Record<string, number> = {},
   ): number {
-    const lastA = progress.attemptHistory.length > 0
-      ? progress.attemptHistory[progress.attemptHistory.length - 1]
-      : null;
-    const lastWrongId = lastA && !lastA.isCorrect ? lastA.questionId : null;
     const retired = this.getRetiredDrainTopics(topicToQs, progress);
+    const latest = this.latestCorrectness(progress);
     const now = Date.now();
     let count = 0;
     for (const q of pool) {
-      if (!progress.questionsAttempted.has(q.id) || !this.isDrainCard(q)) continue;
-      if (retired.has(q.topic)) continue;
+      if (!this.isDrainCard(q) || retired.has(q.topic)) continue;
+      const latestCorrect = latest.get(q.id);
+      if (latestCorrect === undefined) continue; // never attempted
       const tq = topicToQs.get(q.topic);
-      if (!tq || !tq.every(x => progress.questionsAttempted.has(x.id))) continue;
-      if (q.id === lastWrongId) { count++; continue; } // the card you're retrying now
+      if (!tq || !this.isTopicMastered(progress, tq)) continue;
+      if (latestCorrect === false) { count++; continue; } // failed → held until answered right
       const last = progress.lastAttempt.get(q.id) ?? 0;
       const daysSince = last > 0 ? (now - last) / MS_PER_DAY : Infinity;
-      if (this.isTopicMastered(progress, tq, lastWrongId)
-          && daysSince >= this.getEffectiveInterval(q.id, progress, cardDifficulty)) {
+      if (daysSince >= this.getEffectiveInterval(q.id, progress, cardDifficulty)) {
         count++; // mastered + due
       }
     }
@@ -546,8 +585,18 @@ export class SpacedRepetitionSystem {
     cardDifficulty: Record<string, number> = {},
   ): { mode: 'drain' | 'new' | 'review'; drainQueueCount: number } {
     if (questions.length === 0) return { mode: 'review', drainQueueCount: 0 };
+
+    // Same unlock-filtered pool the selector serves from, so the pill can
+    // never count a card selectNextQuestion is unable to serve (a locked
+    // section's due card would otherwise be an undrainable drain count).
+    const unlockedTopics = this.getUnlockedTopics(questions, progress);
+    const pool = unlockedTopics
+      ? questions.filter(q => unlockedTopics.has(q.topic))
+      : questions;
+    if (pool.length === 0) return { mode: 'review', drainQueueCount: 0 };
+
     const topicToQs = new Map<string, Question[]>();
-    for (const q of questions) {
+    for (const q of pool) {
       const arr = topicToQs.get(q.topic) ?? [];
       arr.push(q);
       topicToQs.set(q.topic, arr);
@@ -558,9 +607,9 @@ export class SpacedRepetitionSystem {
     // per correct answer, HOLDS on a miss, reaches zero as the backlog clears.
     // Reviews-first: any pending drain card puts the selector in drain mode,
     // even while a topic is mid-learning.
-    const drainQueueCount = this.countPendingDrain(questions, topicToQs, progress, cardDifficulty);
+    const drainQueueCount = this.countPendingDrain(pool, topicToQs, progress, cardDifficulty);
 
-    const hasUnseen = questions.some(q => !progress.questionsAttempted.has(q.id));
+    const hasUnseen = pool.some(q => !progress.questionsAttempted.has(q.id));
     const mode = drainQueueCount > 0 ? 'drain' : hasUnseen ? 'new' : 'review';
     return { mode, drainQueueCount };
   }
@@ -1184,25 +1233,31 @@ export class SpacedRepetitionSystem {
       // due-mastered resurface still runs at the reduced onboarding rate — so a
       // topic mastered earlier (e.g. threading) keeps resurfacing for retention
       // instead of being suppressed for the whole rest of the course.
+      // Mastered topics are excluded: their cleanup flows through the drain
+      // now, so only a covered-but-NEVER-mastered topic (a genuine unlock
+      // blocker) should divert slots away from due reviews.
       const consolidationPending = !inOnboarding && Array.from(topicToQs.values())
-        .some(tq => this.isTopicInReview(progress, tq));
+        .some(tq => this.isTopicInReview(progress, tq)
+          && !this.isTopicMastered(progress, tq));
       if (!consolidationPending) {
-        // During a drain, restrict the queue to STRICTLY-DUE
-        // CODING+ADVANCED cards (isDrainCard AND past their spacing interval) so
-        // the hard gate clears the high-value backlog AND every served card
-        // decrements the visible drain count by exactly one — a clean countdown
-        // (a not-yet-due card would otherwise be served and leave the count
-        // unchanged, which reads as a stuck counter). Supersession-retired
-        // topics are excluded to mirror countPendingDrain exactly — serving one
-        // would not decrement the visible count. The lighter onboarding-
-        // trickle and caught-up floor stay all-types (drainPred undefined).
+        // During a drain, restrict the queue to exactly countPendingDrain's
+        // membership - CODING+ADVANCED cards that are latest-wrong OR past
+        // their spacing interval - so the gate, the pill, and the served card
+        // can never disagree, and every served card decrements the visible
+        // count by exactly one. Supersession-retired topics are excluded for
+        // the same reason. The lighter onboarding-trickle and caught-up floor
+        // stay all-types (drainPred undefined).
         const retiredDrainTopics = drainDueReviews
           ? this.getRetiredDrainTopics(topicToQs, progress)
+          : null;
+        const latestForDrain = drainDueReviews
+          ? this.latestCorrectness(progress)
           : null;
         const drainPred = drainDueReviews
           ? (q: Question): boolean => {
               if (!SpacedRepetitionSystem.isDrainCard(q)) return false;
               if (retiredDrainTopics && retiredDrainTopics.has(q.topic)) return false;
+              if (latestForDrain && latestForDrain.get(q.id) === false) return true; // failed → back until cleared
               const lastTs = progress.lastAttempt.get(q.id) ?? 0;
               if (lastTs === 0) return true; // never timestamped → maximally due
               const daysSince = (Date.now() - lastTs) / MS_PER_DAY;

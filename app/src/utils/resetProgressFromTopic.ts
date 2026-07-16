@@ -47,6 +47,7 @@ function resetProgressFromTopic(topicKey: string): void {
     difficultyScores?: Record<string, unknown>;
     lastAttempt?: Record<string, unknown>;
     repetitionQueue?: Record<string, unknown>;
+    masteredTopics?: string[];
   } = JSON.parse(raw);
 
   const before = {
@@ -61,6 +62,9 @@ function resetProgressFromTopic(topicKey: string): void {
 
   if (p.topicScores) {
     topicsToReset.forEach(t => { delete p.topicScores![t]; });
+  }
+  if (p.masteredTopics) {
+    p.masteredTopics = p.masteredTopics.filter(t => !topicsToReset.has(t));
   }
   if (p.lastAttempt) {
     for (const id of Object.keys(p.lastAttempt)) if (idsToReset.has(id)) delete p.lastAttempt[id];

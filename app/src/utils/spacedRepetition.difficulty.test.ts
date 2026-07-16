@@ -23,6 +23,7 @@ import {
   easeFactor,
   SpacedRepetitionSystem,
 } from './spacedRepetition';
+import { seedMasteredTopics } from './masteryMigration';
 
 const backendPolicy = getSelectionPolicy(Course.BACKEND);
 const DAY = 86_400_000;
@@ -37,6 +38,7 @@ function emptyProgress(): UserProgress {
     difficultyScores: new Map(),
     lastAttempt: new Map(),
     repetitionQueue: new Map(),
+    masteredTopics: new Set(),
   };
 }
 
@@ -107,6 +109,7 @@ describe('hard cards become due sooner than easy ones (same streak)', () => {
   function seed() {
     const p = emptyProgress();
     recordAttempt(p, 'h', true, 3 * DAY);
+    p.masteredTopics = seedMasteredTopics([q], p.attemptHistory);
     return p;
   }
 
@@ -148,6 +151,7 @@ describe('drain count parity', () => {
     const p = emptyProgress();
     recordAttempt(p, 'x1', true, 5 * DAY); // due (base 3)
     recordAttempt(p, 'x2', true, 5 * DAY);
+    p.masteredTopics = seedMasteredTopics([x1, x2], p.attemptHistory);
     const baseline = S.getReviewStatus([x1, x2], p, backendPolicy).drainQueueCount;
     const mid = S.getReviewStatus([x1, x2], p, backendPolicy, { x1: 5.5, x2: 5.5 }).drainQueueCount;
     expect(baseline).toBe(2);
@@ -157,7 +161,7 @@ describe('drain count parity', () => {
   test('pill/gate parity: hasPendingDrain truthiness == drainQueueCount > 0', () => {
     const q = makeQ('p', Topic.PY_BASICS, Difficulty.ADVANCED);
     const map = t2q([q]);
-    const seed = () => { const p = emptyProgress(); recordAttempt(p, 'p', true, 5 * DAY); return p; };
+    const seed = () => { const p = emptyProgress(); recordAttempt(p, 'p', true, 5 * DAY); p.masteredTopics = seedMasteredTopics([q], p.attemptHistory); return p; };
     for (const cd of [{ p: 3 }, { p: 9 }, { p: 2 }] as Record<string, number>[]) {
       const p = seed();
       const gate = S.hasPendingDrain([q], map, p, cd);

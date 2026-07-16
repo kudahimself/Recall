@@ -459,6 +459,10 @@ export interface UserProgress {
   difficultyScores: Map<Difficulty, { correct: number; total: number }>;
   lastAttempt: Map<string, number>;
   repetitionQueue: Map<string, number>; // questionId -> priority score
+  // Sticky mastery: topic keys whose unlock bar (topic, unit, or section
+  // aggregate) has ever been crossed. Granted at crossing, never revoked -
+  // the single runtime source of truth for mastery (see updateMasteredTopics).
+  masteredTopics: Set<string>;
 }
 
 export interface UserProfile {
