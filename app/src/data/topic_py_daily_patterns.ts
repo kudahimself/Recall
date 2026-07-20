@@ -67,6 +67,32 @@ export const py_daily_patterns_questions: Question[] = [
           "error_rows": error_rows,
           "field_summary": field_summary,
       }`,
+      tieredHints: {
+        apiSignature: 'enumerate(iterable, start=0) -> enumerate',
+        skeleton: `def process_rows(rows):
+    required_fields = ["name", "email"]
+
+    has_errors = ____
+
+    all_fields_present = ____
+
+    error_rows = []
+    for row_num, row in ____:
+        missing = ____
+        if missing:
+            error_rows.append(____)
+
+    field_names = required_fields
+    field_counts = ____
+    field_summary = ____
+
+    return {
+        "has_errors": has_errors,
+        "all_fields_present": all_fields_present,
+        "error_rows": error_rows,
+        "field_summary": field_summary,
+    }`,
+      },
       explanation: 'These four builtins appear in almost every Python codebase. enumerate() adds an index to any iterable — use it instead of range(len(...)). any() short-circuits on the first truthy value, making it efficient for "does at least one item match?" checks. all() short-circuits on the first falsy value for "do all items match?" checks. zip() pairs elements from multiple iterables — perfect for creating dicts from parallel lists. Together they eliminate most manual loop index tracking and boolean flag patterns.',
       hints: [
         'enumerate(rows, start=1) gives 1-based row numbers',
@@ -135,6 +161,39 @@ export const py_daily_patterns_questions: Question[] = [
           "is_exclamation": is_exclamation,
           "cleaned": cleaned,
       }`,
+      tieredHints: {
+        apiSignature: 'str.split(sep=None, maxsplit=-1) -> list[str]',
+        skeleton: `def clean_user_input(text):
+    stripped = text.strip()
+
+    lowered = stripped.lower()
+
+    normalized = ____
+
+    slug = ____
+
+    is_greeting = ____
+    is_exclamation = ____
+
+    cleaned = (
+        text
+        .strip()
+        .lower()
+        .replace("\\t", " ")
+        .replace("\\n", " ")
+    )
+    cleaned = ____
+
+    return {
+        "stripped": stripped,
+        "lowered": lowered,
+        "normalized": normalized,
+        "slug": slug,
+        "is_greeting": is_greeting,
+        "is_exclamation": is_exclamation,
+        "cleaned": cleaned,
+    }`,
+      },
       explanation: 'String methods are non-mutating — each returns a new string, so they chain naturally. .strip() is essential for user input that may have leading/trailing whitespace or newlines. The .split() without arguments splits on any whitespace and removes empty strings, so "  hello   world  ".split() gives ["hello", "world"]. Joining with " ".join() normalizes any amount of whitespace to a single space. .startswith() and .endswith() accept tuples for checking multiple prefixes/suffixes: name.endswith((".jpg", ".png")).',
       hints: [
         '.split() with no args splits on any whitespace and removes empties',
@@ -252,6 +311,50 @@ by_dept_lambda = sorted(team, key=lambda e: (e.department, e.salary))
 
 # For descending on one key: use reverse or negate numeric values
 highest_paid = sorted(employees, key=itemgetter("salary"), reverse=True)`,
+      tieredHints: {
+        apiSignature: 'operator.itemgetter(*items)',
+        skeleton: `from operator import itemgetter, attrgetter
+
+
+employees = [
+    {"name": "Alice", "department": "Engineering", "salary": 95000},
+    {"name": "Bob", "department": "Marketing", "salary": 72000},
+    {"name": "Charlie", "department": "Engineering", "salary": 110000},
+    {"name": "Diana", "department": "Marketing", "salary": 85000},
+]
+
+by_salary = sorted(employees, key=____("salary"))
+
+by_dept_salary = sorted(employees, key=____)
+
+by_dept_salary_lambda = ____
+
+
+class Employee:
+    def __init__(self, name, department, salary):
+        self.name = name
+        self.department = department
+        self.salary = salary
+
+    def __repr__(self):
+        return ____
+
+
+team = [
+    Employee("Alice", "Engineering", 95000),
+    Employee("Bob", "Marketing", 72000),
+    Employee("Charlie", "Engineering", 110000),
+    Employee("Diana", "Marketing", 85000),
+]
+
+by_name = sorted(team, key=____("name"))
+
+by_dept = sorted(team, key=____)
+
+by_dept_lambda = ____
+
+highest_paid = sorted(employees, key=itemgetter("salary"), ____=True)`,
+      },
       explanation: 'operator.itemgetter and operator.attrgetter are faster than lambdas because they are implemented in C and avoid Python function call overhead. itemgetter("salary") creates a callable equivalent to lambda x: x["salary"]. With multiple arguments, itemgetter("department", "salary") returns a tuple, enabling multi-key sorting. attrgetter does the same for object attributes. The performance difference is small for short lists but significant when sorting thousands of items. They also improve readability — the intent "sort by these fields" is clearer than a lambda.',
       hints: [
         'itemgetter("a", "b") returns a tuple (x["a"], x["b"])',

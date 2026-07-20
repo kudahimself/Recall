@@ -56,6 +56,16 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("about/", views.about, name="about"),
 ]`,
+      tieredHints: {
+        apiSignature: 'path(route, view, kwargs=None, name=None) -> URLPattern',
+        skeleton: `from django.urls import ____
+from . import views
+
+____ = [
+    ____("", views.____, name="home"),
+    ____("about/", views.____, name="about"),
+]`,
+      },
       explanation: '`path(route, view, name=...)` is the building block. Trailing slash is a Django convention — `APPEND_SLASH=True` in settings redirects `/about` to `/about/`. Naming URLs (`name="about"`) lets templates and code reference them symbolically via `{% url "about" %}` or `reverse("about")` — change the path without breaking anything.',
       hints: [
         'path(route, view, name=...) — name enables reverse lookups',
@@ -93,6 +103,17 @@ urlpatterns = [
     path("posts/<slug:slug>/", views.post_by_slug, name="post-by-slug"),
     path("archive/<int:year>/<int:month>/", views.archive, name="archive"),
 ]`,
+      tieredHints: {
+        apiSignature: 'path("prefix/<converter:param>/", view, name=None)',
+        skeleton: `from django.urls import ____
+from . import views
+
+urlpatterns = [
+    ____("posts/<____:pk>/", views.____, name="post-detail"),
+    ____("posts/<____:slug>/", views.____, name="post-by-slug"),
+    ____("archive/<____:____>/<____:____>/", views.____, name="archive"),
+]`,
+      },
       explanation: 'Built-in converters: `int`, `str` (default — no slashes), `slug` (letters/numbers/hyphens), `uuid`, `path` (matches everything including slashes — use sparingly). Capture name after the colon becomes the kwarg passed to the view: `def post_detail(request, pk): ...`. For custom formats (e.g. YYYY-MM-DD) register a `register_converter()` class.',
       hints: [
         'Built-ins: int, str, slug, uuid, path',
@@ -128,6 +149,16 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("blog/", include("blog.urls")),
 ]`,
+      tieredHints: {
+        apiSignature: 'path("prefix/", include("app.urls"))',
+        skeleton: `from django.contrib import admin
+from django.urls import ____, ____
+
+urlpatterns = [
+    ____("admin/", ____.____.____),
+    ____("blog/", ____("blog.urls")),
+]`,
+      },
       explanation: '`include()` mounts an entire URL tree under a prefix — keeps each app\'s URL config local to the app. If `blog/urls.py` has `path("<slug>/", ...)`, the final URL is `/blog/<slug>/`. You can also include an imported list directly: `include([path(...)])`. This is also where you set up API versioning: `path("api/v1/", include("myapp.api.v1.urls"))`.',
       hints: [
         'include("app.urls") mounts the entire tree',
@@ -165,6 +196,18 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("<int:pk>/", views.detail, name="detail"),
 ]`,
+      tieredHints: {
+        apiSignature: 'app_name = "namespace"; path(route, view, name=None)',
+        skeleton: `from django.urls import ____
+from . import views
+
+____ = "blog"
+
+urlpatterns = [
+    ____("", views.____, name="index"),
+    ____("<____:pk>/", views.____, name="detail"),
+]`,
+      },
       explanation: 'Without `app_name`, two apps both defining `name="index"` will clash — Django picks whichever was registered last, silently. `app_name = "blog"` scopes names to `blog:index`, `blog:detail`. Templates: `{% url "blog:detail" post.pk %}`. Code: `reverse("blog:detail", args=[pk])`. For nested includes, use `namespace="..."` on `include()` when including a third-party app you don\'t control.',
       hints: [
         'app_name namespaces URL names to avoid collisions',
@@ -221,6 +264,15 @@ from . import views
 urlpatterns = [
     re_path(r"^year/(?P<year>\\d{4})/$", views.year_archive),
 ]`,
+      tieredHints: {
+        apiSignature: 're_path(r"^regex/(?P<param>pattern)/$", view, kwargs=None, name=None)',
+        skeleton: `from django.urls import ____
+from . import views
+
+urlpatterns = [
+    ____(r"^year/(?P<____>____)/$", views.____),
+]`,
+      },
       explanation: '`re_path` is Django\'s older URL router, using Python regex with named groups. Prefer `path` + built-in converters whenever possible — more readable, faster. Use `re_path` for: exact length constraints (`\\d{4}`), character alternations (`(v1|v2)`), optional segments, anything with `^`/`$` anchors. Avoid trying to be clever — overloaded regex URLs become unmaintainable.',
       hints: [
         'Prefer path() + converters when possible',

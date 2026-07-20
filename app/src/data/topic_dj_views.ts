@@ -29,6 +29,10 @@ export const dj_views_questions: Question[] = [
 
 def hello(request):
     return HttpResponse("hello world")`,
+      tieredHints: {
+        apiSignature: 'HttpResponse(content, content_type=None, status=200)',
+        skeleton: 'from django.http import HttpResponse\n\ndef ____(____):\n    return ____("____")',
+      },
       explanation: 'A Django view is just a callable that takes an `HttpRequest` and returns an `HttpResponse`. This is the whole contract — templates, ORM, and forms are optional layers on top. The `request` argument holds method, headers, GET/POST data, the authenticated user, and more. `HttpResponse` takes a body string (or bytes) and optional `status=` / `content_type=` kwargs.',
       hints: [
         'Import HttpResponse from django.http',
@@ -59,6 +63,10 @@ def hello(request):
 
 def greet(request):
     return render(request, "greet.html", {"name": "Alice", "count": 3})`,
+      tieredHints: {
+        apiSignature: 'render(request, template_name, context=None, content_type=None, status=None, using=None)',
+        skeleton: 'from django.shortcuts import render\n\ndef ____(____):\n    return ____(____, "____", {"____": "Alice", "____": 3})',
+      },
       explanation: '`render(request, template_name, context)` is the canonical shortcut. It finds the template in your `TEMPLATES["DIRS"]` or any app\'s `templates/` folder, renders it with the context, and returns an `HttpResponse` in one call. Alternatives: `render_to_string` if you just need the rendered text, or manually `get_template(name).render(context, request)` then wrap in `HttpResponse`.',
       hints: [
         'render(request, "template_name.html", context_dict)',
@@ -89,6 +97,10 @@ def greet(request):
 
 def detail(request, pk):
     return HttpResponse(f"article {pk}")`,
+      tieredHints: {
+        apiSignature: 'def view(request, *args, **kwargs) -> HttpResponse',
+        skeleton: 'from django.http import HttpResponse\n\ndef ____(____, ____):\n    return ____(f"____ {____}")',
+      },
       explanation: 'Django matches the URL pattern, extracts captures, and passes them as kwargs. Path converters (`<int:pk>`, `<slug:name>`, `<uuid:id>`, `<str:name>`, `<path:rest>`) also validate and type-coerce — `<int:pk>` gives you `pk=42`, not `pk="42"`. Use descriptive names: `<int:article_id>` reads better in the view signature than `<int:pk>` when it\'s not actually the primary key.',
       hints: [
         'URL captures → view kwargs by name match',
@@ -122,6 +134,10 @@ from .models import Article
 def article_detail(request, pk):
     article = get_object_or_404(Article, pk=pk)
     return render(request, "article_detail.html", {"article": article})`,
+      tieredHints: {
+        apiSignature: 'get_object_or_404(klass, *args, **kwargs)',
+        skeleton: 'from django.shortcuts import get_object_or_404, render\nfrom .models import Article\n\ndef ____(____, ____):\n    ____ = ____(____, pk=____)\n    return ____(____, "____", {"article": ____})',
+      },
       explanation: '`get_object_or_404(Model, **lookups)` wraps `Model.objects.get(**lookups)` and translates `DoesNotExist` into `Http404`. Django converts the 404 into a 404 response with the templates/`404.html` page in prod (or the yellow debug page in DEBUG mode). There\'s also `get_list_or_404` for querysets — raises 404 if the list is empty. Do NOT catch `Http404` in view code; let Django\'s middleware handle it.',
       hints: [
         'get_object_or_404(Model, **lookups) = .get() + 404 on DoesNotExist',
@@ -155,6 +171,10 @@ def submit(request):
         name = request.POST.get("name", "")
         return HttpResponse(f"saved: {name}")
     return HttpResponse("please POST a name field")`,
+      tieredHints: {
+        apiSignature: 'request.method; request.POST.get(key, default)',
+        skeleton: 'from django.http import HttpResponse\n\ndef ____(____):\n    if ____.____ == "____":\n        name = ____.____.____("____", "")\n        return ____(f"saved: {name}")\n    return ____("please POST a name field")',
+      },
       explanation: '`request.method` is the HTTP verb as a string. `request.POST` is a QueryDict of form-encoded body data; `request.GET` is the query string. For JSON bodies, use `json.loads(request.body)`. Django forms wrap this pattern with validation — but under the hood it\'s still `if request.method == "POST": form = MyForm(request.POST); if form.is_valid(): ...`. Views with only GET/POST handling don\'t usually need the `else` branch for PUT/DELETE; those arrive rarely except in APIs (where you\'d switch to DRF).',
       hints: [
         'request.method is the HTTP verb string',
@@ -184,6 +204,10 @@ def submit(request):
         },
       ],
       solution: `from django.shortcuts import render\nfrom .models import Article\n\ndef article_list(request):\n    articles = Article.objects.filter(is_published=True)\n    return render(request, "articles/list.html", {"articles": articles})`,
+      tieredHints: {
+        apiSignature: 'Model.objects.filter(**kwargs); render(request, template, context)',
+        skeleton: 'from django.shortcuts import render\nfrom .models import Article\n\ndef ____(____):\n    ____ = ____.____.____(is_published=True)\n    return ____(____, "____", {"articles": ____})',
+      },
       explanation: 'Function-based views take a request and return a response. render() combines a template with context data. Article.objects.filter() queries the database. The context dict makes "articles" available in the template.',
       hints: ['Use Article.objects.filter() for querying', 'render(request, template, context_dict)', 'Pass data to template via context dict'],
       tags: ['view', 'function-based', 'render', 'django'],
@@ -400,6 +424,10 @@ def visit_counter(request):
     count += 1
     request.session['visit_count'] = count
     return HttpResponse(f"You have visited this page {count} time(s)")`,
+      tieredHints: {
+        apiSignature: 'request.session.get(key, default); request.session[key] = val',
+        skeleton: 'from django.http import HttpResponse\n\ndef ____(____):\n    ____ = ____.____.____(\'visit_count\', 0)\n    ____ += 1\n    ____.____[\'visit_count\'] = ____\n    return ____(f"You have visited this page {____} time(s)")',
+      },
       explanation: '`request.session` behaves like a dictionary. `.get("key", default)` safely retrieves a value. Assigning back (`request.session["key"] = value`) marks the session as modified and Django saves it automatically. Sessions persist across requests for the same browser until cleared or expired.',
       hints: [
         'Use `request.session.get("visit_count", 0)` with a default of 0',
@@ -434,6 +462,10 @@ def set_theme(request):
 def get_theme(request):
     theme = request.COOKIES.get('theme', 'light')
     return HttpResponse(f"Current theme: {theme}")`,
+      tieredHints: {
+        apiSignature: 'response.set_cookie(key, value, max_age=seconds); request.COOKIES.get(key, default)',
+        skeleton: 'from django.http import HttpResponse\n\ndef ____(____):\n    ____ = ____("Theme set to dark")\n    ____.____(\'____\', \'dark\', max_age=7*24*60*60)\n    return ____\n\ndef ____(____):\n    ____ = ____.____.____(\'____\', \'light\')\n    return ____(f"Current theme: {____}")',
+      },
       explanation: '`response.set_cookie(name, value, max_age=seconds)` sets a cookie. `max_age` is in seconds — 7 days = 7×24×60×60. Reading cookies uses `request.COOKIES` (a dict). Use `.get()` with a default since the cookie may not exist yet. You can also use `expires` instead of `max_age` for a specific datetime.',
       hints: [
         '`response.set_cookie("name", "value", max_age=seconds)` to set',
@@ -716,6 +748,36 @@ def article_search(request):
         "page": page_obj.number,
         "total_pages": paginator.num_pages,
     })`,
+      tieredHints: {
+        apiSignature: 'Paginator(qs, per_page); paginator.get_page(number); JsonResponse(data)',
+        skeleton: `from django.core.paginator import Paginator
+from django.http import JsonResponse, HttpResponseBadRequest
+from .models import Article
+
+
+def ____(request):
+    q = request.GET.get("q", "").strip()
+    if not q:
+        return ____("missing q")
+
+    qs = (
+        Article.objects
+        .____(____=q, status="published")
+        .____("author")
+        .____("-created_at")
+    )
+    paginator = ____(qs, ____)
+    page_obj = paginator.____(request.GET.get("page", 1))
+
+    return ____({
+        "results": [
+            {"id": ____, "title": ____, "author": ____}
+            for a in page_obj
+        ],
+        "page": ____,
+        "total_pages": ____,
+    })`,
+      },
       explanation: 'Four primitives in one realistic endpoint: input validation (`q` missing → 400), DB query (filter + select_related + order_by), pagination (`Paginator(qs, page_size).get_page(n)` — `get_page` is forgiving of bad page numbers, unlike `.page()`, so the raw query-string value can be passed straight in without an `int()` that would crash on `?page=abc`), and shaping (`JsonResponse` with a list comprehension). `select_related("author")` is critical — without it, the comprehension issues N additional queries (one per article) for `a.author.username`.',
       hints: [
         'Paginator.get_page is forgiving; .page() is strict',
@@ -726,8 +788,6 @@ def article_search(request):
       tags: ['django', 'views', 'JsonResponse', 'Paginator', 'select_related', 'advanced'],
       concepts: ['dj-view-patterns', 'dj-select-related-vs-prefetch'],
     },
-// ===== Layer A: in-place advanced single-skill primitives (depth) =====
-// redirect() shortcut
 {
       id: 'dj-views-redirect-mcq-1',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -798,18 +858,18 @@ def publish(request, pk):
     post = get_object_or_404(Post, pk=pk)
     post.is_published = True
     post.save()
-    return redirect("post-detail", pk=post.pk)
-# OR
-from django.http import HttpResponseRedirect
-from django.urls import reverse
-from django.shortcuts import get_object_or_404
+    return redirect("post-detail", pk=post.pk)`,
+      tieredHints: {
+        apiSignature: 'get_object_or_404(klass, *args, **kwargs); redirect(to, *args, **kwargs)',
+        skeleton: `from django.shortcuts import get_object_or_404, redirect
 from .models import Post
 
-def publish(request, pk):
-    post = get_object_or_404(Post, pk=pk)
-    post.is_published = True
-    post.save()
-    return HttpResponseRedirect(reverse("post-detail", kwargs={"pk": post.pk}))`,
+def ____(request, pk):
+    post = ____(____, pk=pk)
+    post.____ = True
+    post.____()
+    return ____("post-detail", pk=____)`,
+      },
       explanation: '`redirect("post-detail", pk=post.pk)` is shorthand for `HttpResponseRedirect(reverse("post-detail", kwargs={"pk": post.pk}))`. Redirecting after a successful write (instead of rendering) is the Post/Redirect/Get pattern — refreshing the resulting page re-issues a harmless GET rather than re-POSTing.',
       hints: [
         'get_object_or_404(Post, pk=pk) first',
@@ -819,7 +879,6 @@ def publish(request, pk):
       tags: ['django', 'views', 'redirect', 'get_object_or_404', 'post-redirect-get'],
       concepts: ['dj-view-patterns'],
     },
-// HTTP-method restriction decorators (not auth)
 {
       id: 'dj-views-require-mcq-1',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -887,7 +946,6 @@ def submit(request):
       tags: ['django', 'views', 'require_http_methods', 'cloze'],
       concepts: ['dj-view-patterns'],
     },
-// JsonResponse(safe=False) for a list
 {
       id: 'dj-views-json-mcq-1',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -931,7 +989,6 @@ def api_tags(request):
       tags: ['django', 'views', 'JsonResponse', 'safe', 'cloze'],
       concepts: ['dj-view-patterns'],
     },
-// request.FILES upload
 {
       id: 'dj-views-upload-mcq-1',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -1003,6 +1060,10 @@ def upload_avatar(request):
         for chunk in incoming.chunks():
             out.write(chunk)
     return HttpResponse(f"saved {incoming.name}")`,
+      tieredHints: {
+        apiSignature: 'request.FILES.get(name); file.chunks()',
+        skeleton: 'from django.http import HttpResponse, HttpResponseBadRequest\n\ndef ____(____):\n    if ____.____ != "POST":\n        return ____("POST required")\n    ____ = ____.____.____("avatar")\n    if not ____:\n        return ____("no file")\n    dest = "/media/avatars/" + ____.name\n    with open(dest, "wb") as out:\n        for chunk in ____.____():\n            out.____(chunk)\n    return ____(f"saved {____.name}")',
+      },
       explanation: 'Two guards first: wrong verb and missing file both return `HttpResponseBadRequest` (400). `request.FILES.get("avatar")` is `None` when the field is absent, so `if not incoming` catches it. Writing with `.chunks()` streams the upload in 64 KB pieces — critical for large files, which would otherwise be buffered entirely in memory by `.read()`.',
       hints: [
         'Guard request.method != "POST" → 400',

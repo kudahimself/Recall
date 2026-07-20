@@ -179,6 +179,20 @@ function LoginForm({ onSubmit }) {
       'Spread {...register("fieldName", validationRules)} on each input',
       'Wrap onSubmit with handleSubmit: onSubmit={handleSubmit(onSubmit)}',
     ],
+    tieredHints: {
+      apiSignature: 'function LoginForm({ onSubmit }: { onSubmit: (data: any) => void })',
+      skeleton: `function LoginForm({ onSubmit }) {
+  const { register, handleSubmit, formState: { errors } } = useForm();
+
+  return (
+    <form onSubmit={____(onSubmit)}>
+      <input {...____("email", { required: "Required" })} />
+      {____.email && <p>{errors.email.message}</p>}
+      <button type="submit">Log In</button>
+    </form>
+  );
+}`,
+    },
     tags: ['react-hook-form', 'useForm', 'register', 'validation', 'forms'],
     concepts: ['forms-rhf-controller', 'forms-zod-schema', 'web-html-forms-a11y'],
   },
@@ -226,6 +240,17 @@ export type FormData = z.infer<typeof registrationSchema>;`,
       '.refine() goes on the whole z.object(), not individual fields',
       'path: ["confirmPassword"] attaches the error to the right field',
     ],
+    tieredHints: {
+      apiSignature: 'const registrationSchema = z.object({ ... }).refine((data) => data.password === data.confirmPassword, { ... })',
+      skeleton: `const registrationSchema = z.object({
+  email: z.string().____(),
+  password: z.string().min(8),
+  confirmPassword: z.string(),
+}).refine((data) => ____.password === ____.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["____"],
+});`,
+    },
     tags: ['zod', 'schema', 'refine', 'validation', 'typescript'],
     concepts: ['forms-zod-schema'],
   },
@@ -308,6 +333,19 @@ function RegistrationForm({ onSubmit }) {
       'No need for validation rules in register() — Zod handles it all',
       'useForm<FormData> gives you autocomplete on field names',
     ],
+    tieredHints: {
+      apiSignature: 'useForm<FormData>({ resolver: zodResolver(registrationSchema) })',
+      skeleton: `const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  resolver: ____(registrationSchema),
+});
+
+return (
+  <form onSubmit={____(onSubmit)}>
+    <input {...register("email")} />
+    {____.email && <p>{errors.email.message}</p>}
+  </form>
+);`,
+    },
     tags: ['zodResolver', 'react-hook-form', 'zod', 'forms', 'integration'],
     concepts: ['forms-zod-resolver', 'forms-rhf-controller', 'forms-zod-schema', 'web-html-forms-a11y'],
   },
@@ -452,6 +490,26 @@ export async function createUser(formData: FormData) {
       'safeParse returns { success, data } or { success, error } — never throws',
       'error.flatten().fieldErrors gives you { field: ["message"] }',
     ],
+    tieredHints: {
+      apiSignature: 'async function createUser(formData: FormData): Promise<{ success: boolean; errors?: any; data?: any }>',
+      skeleton: `"use server";
+
+export async function createUser(formData: FormData) {
+  const rawData = {
+    email: formData.get("____"),
+    password: formData.get("password"),
+    name: formData.get("name"),
+  };
+
+  const parsed = userSchema.____(rawData);
+
+  if (!parsed.____) {
+    return { success: false as const, errors: parsed.error.flatten().fieldErrors };
+  }
+
+  return { success: true as const, data: parsed.data };
+}`,
+    },
     tags: ['server-actions', 'zod', 'safeParse', 'validation', 'next.js'],
     concepts: ['next-server-actions', 'forms-zod-schema'],
   },
@@ -804,6 +862,26 @@ function CommentForm({ postComment }) {
       'reset() with no args goes back to defaultValues',
       'Call reset() after the async submit succeeds, inside onSubmit',
     ],
+    tieredHints: {
+      apiSignature: 'function CommentForm({ postComment }: { postComment: (data: any) => Promise<void> })',
+      skeleton: `function CommentForm({ postComment }) {
+  const { register, handleSubmit, watch, reset } = useForm({ defaultValues: { comment: "" } });
+  const comment = ____("comment");
+
+  const onSubmit = async (data) => {
+    await postComment(data);
+    ____();
+  };
+
+  return (
+    <form onSubmit={____(onSubmit)}>
+      <textarea {...____("comment")} />
+      <span>{comment.____}/280</span>
+      <button disabled={comment.____ === 0}>Post</button>
+    </form>
+  );
+}`,
+    },
     tags: ['react-hook-form', 'watch', 'reset', 'forms'],
     concepts: ['forms-rhf-controller'],
   },
@@ -1016,6 +1094,24 @@ describe("Button", () => {
       'jest.fn() creates a spy you can assert on with toHaveBeenCalled()',
       'Disabled buttons should not fire click handlers',
     ],
+    tieredHints: {
+      apiSignature: 'describe("Button", () => { it("renders/clicks/disabled", () => { ... }) })',
+      skeleton: `describe("Button", () => {
+  it("calls onClick when clicked", () => {
+    const handleClick = jest.____();
+    render(<Button onClick={handleClick}>Click me</Button>);
+    fireEvent.click(screen.getByRole("button", { name: "Click me" }));
+    expect(handleClick).____();
+  });
+
+  it("does not call onClick when disabled", () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick} ____>Click me</Button>);
+    fireEvent.click(screen.getByRole("button", { name: "Click me" }));
+    expect(handleClick).not.toHaveBeenCalled();
+  });
+});`,
+    },
     tags: ['jest', 'react-testing-library', 'unit-test', 'button', 'fireEvent'],
     concepts: ['testing-rtl-queries', 'testing-user-event'],
   },
@@ -1083,6 +1179,21 @@ describe("UserProfile", () => {
       'Use findByText (async) for elements that appear after state updates',
       'Use getByText (sync) for elements rendered immediately',
     ],
+    tieredHints: {
+      apiSignature: 'it("displays data", async () => { ... })',
+      skeleton: `beforeEach(() => {
+  global.fetch = jest.____(() =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve({ name: "Alice" }) })
+  ) as jest.Mock;
+});
+
+it("displays user", async () => {
+  render(<UserProfile />);
+  expect(screen.getByText("Loading...")).____();
+  const userName = await screen.____("Alice");
+  expect(userName).toBeInTheDocument();
+});`,
+    },
     tags: ['jest', 'react-testing-library', 'async', 'fetch', 'mock'],
     concepts: ['testing-rtl-queries', 'js-promises-async'],
   },
@@ -1223,10 +1334,34 @@ describe("ContactForm", () => {
     explanation:
       'Testing form submission exercises the full user flow: find inputs, type values, click submit, verify the result. fireEvent.change simulates a change event with a new value — you pass { target: { value: "..." } } to set the input\'s value. We find inputs by their accessible role and name (/name/i uses regex for case-insensitive matching of the label). After clicking Submit, we verify the mock was called with the exact data object the user entered. This is an integration test — it tests the form as a whole, not individual inputs.',
     hints: [
-      'fireEvent.change(element, { target: { value: "new value" } })',
-      'Use getByRole("textbox", { name: /label/i }) to find inputs by label',
-      'toHaveBeenCalledWith checks the exact arguments passed to the mock',
+      'fireEvent.change(input, { target: { value: "..." } }) simulates user typing',
+      'fireEvent.click(button) simulates a click event',
+      'waitFor(() => expect(...)) retries assertions until they pass or time out',
     ],
+    tieredHints: {
+      apiSignature: 'describe("ContactForm", () => { it("calls onSubmit with form data", () => { ... }) })',
+      skeleton: `describe("ContactForm", () => {
+  it("calls onSubmit with form data when submitted", () => {
+    const handleSubmit = jest.fn();
+    render(<ContactForm onSubmit={handleSubmit} />);
+
+    fireEvent.____(screen.getByRole("textbox", { name: /name/i }), {
+      target: { value: "John" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /email/i }), {
+      target: { value: "john@test.com" },
+    });
+
+    fireEvent.click(screen.getByRole("____", { name: /submit/i }));
+
+    expect(handleSubmit).____({
+      name: "John",
+      email: "john@test.com",
+      message: "Hello",
+    });
+  });
+});`,
+    },
     tags: ['jest', 'react-testing-library', 'form', 'fireEvent', 'integration-test'],
     concepts: ['testing-rtl-queries', 'web-html-forms-a11y', 'testing-user-event'],
   },
@@ -1317,6 +1452,27 @@ export const handlers = [
       'HttpResponse.json(data) creates a JSON response',
       'For POST, access the body with await request.json()',
     ],
+    tieredHints: {
+      apiSignature: 'HttpResponse.json(body, init?: { status?: number }) -> Response',
+      skeleton: `import { http, HttpResponse } from "msw";
+
+export const handlers = [
+  http.____("/api/users", () => {
+    return ____.____([
+      { id: ____, name: "Alice" },
+      { id: ____, name: "Bob" },
+    ]);
+  }),
+
+  http.____("/api/users", async ({ request }) => {
+    const body = await request.____();
+    return ____.____(
+      { id: ____, ...body },
+      { ____: ____ }
+    );
+  }),
+];`,
+    },
     tags: ['msw', 'mock-service-worker', 'handlers', 'api-mocking', 'typescript'],
     concepts: ['testing-msw-mocking'],
   },
@@ -1416,6 +1572,21 @@ describe("useCounter", () => {
       'Access return values with result.current.count',
       'Wrap state-changing calls in act(() => { ... })',
     ],
+    tieredHints: {
+      apiSignature: 'const { result } = renderHook(() => useCounter())',
+      skeleton: `it("starts with count 0", () => {
+  const { result } = ____(() => useCounter());
+  expect(result.current.____).toBe(0);
+});
+
+it("increments the count", () => {
+  const { result } = renderHook(() => useCounter());
+  ____(() => {
+    result.current.increment();
+  });
+  expect(result.current.count).toBe(1);
+});`,
+    },
     tags: ['renderHook', 'custom-hooks', 'act', 'jest', 'react-testing-library'],
     concepts: ['react-custom-hooks', 'testing-rtl-queries'],
   },
@@ -1503,6 +1674,15 @@ test.describe("Login Flow", () => {
       'Use getByLabel and getByRole for accessible locators',
       'expect(page).toHaveURL() waits for navigation',
     ],
+    tieredHints: {
+      apiSignature: 'test("title", async ({ page }) => { ... })',
+      skeleton: `test("login", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("____").fill("user@test.com");
+  await page.getByRole("button", { name: /log in/i }).____();
+  await expect(page).toHaveURL(____);
+});`,
+    },
     tags: ['playwright', 'e2e', 'login', 'navigation', 'testing'],
     concepts: ['testing-async'],
   },
@@ -1698,6 +1878,23 @@ describe("UserList", () => {
       'Use server.resetHandlers() in afterEach to clean up per-test overrides',
       'server.use() adds one-time handler overrides for testing error states',
     ],
+    tieredHints: {
+      apiSignature: 'const server = setupServer(...handlers); beforeAll(() => server.listen()); afterEach(() => server.resetHandlers()); afterAll(() => server.close());',
+      skeleton: `const server = setupServer(
+  http.get("/api/users", () => HttpResponse.json([{ id: 1, name: "Alice" }]))
+);
+
+beforeAll(() => server.____());
+afterEach(() => server.____());
+afterAll(() => server.____());
+
+describe("UserList", () => {
+  it("fetches and displays users", async () => {
+    render(<UserList />);
+    expect(await screen.findByText("Alice")).toBeInTheDocument();
+  });
+});`,
+    },
     tags: ['msw', 'react-testing-library', 'integration-test', 'setupServer', 'async'],
     concepts: ['testing-msw-mocking', 'testing-rtl-queries', 'js-promises-async'],
   },

@@ -90,6 +90,28 @@ query(sql: string): string {
   return \`Executing: \${sql}\`;
   }
 }`,
+    tieredHints: {
+      apiSignature: 'DatabasePool.getInstance(connectionString: string) -> DatabasePool',
+      skeleton: `class ____ {
+  private static ____: ____;
+  private connectionString: string;
+
+  private ____(connectionString: string) {
+    this.____ = ____;
+  }
+
+  static ____(connectionString: string): ____ {
+    if (!____.____) {
+      ____.____ = new ____(____);
+    }
+    return ____.____;
+  }
+
+  query(sql: string): string {
+    return ____;
+  }
+}`,
+    },
     explanation: `The Singleton Pattern ensures a class has exactly one instance. For a database connection pool, this prevents accidentally opening hundreds of connections. The private constructor stops external code from calling "new DatabasePool()" — the only way to get an instance is through getInstance(). Note: In modern apps, dependency injection frameworks (like NestJS providers with scope: Scope.DEFAULT) handle singletons more cleanly than manual implementation.`,
     hints: [
       'The constructor must be private to prevent direct instantiation',
@@ -322,6 +344,19 @@ def log_and_time(func):
 def fetch_users():
     time.sleep(0.1)
     return ["Alice", "Bob"]`,
+    tieredHints: {
+      apiSignature: '@functools.wraps(func)',
+      skeleton: `import functools
+
+def ____(func):
+    @functools.____(func)
+    def ____(*args, **____):
+        ____ = ____.____()
+        res = ____(*args, **____)
+        ____ = ____.____() - ____
+        return ____
+    return ____`,
+    },
     explanation: `This is the Decorator Pattern in action — adding behavior (logging, timing) to a function without modifying its source code. Python's @decorator syntax is literally the Decorator Pattern from the Gang of Four book. The key principle: Open/Closed Principle — the function is open for extension (adding logging) but closed for modification (original code unchanged). Real-world uses: Flask's @app.route, Django's @login_required, pytest's @pytest.fixture, and retry decorators like @tenacity.retry.`,
     hints: [
       'The decorator takes a function and returns a new function that wraps the original',
@@ -550,6 +585,33 @@ The class should support multiple listeners per event.`,
     }
   }
 }`,
+    tieredHints: {
+      apiSignature: 'emitter.on(event: string, callback: Function) -> void',
+      skeleton: `class EventEmitter {
+  private ____: ____<string, ____<Function>> = new ____();
+
+  on(event: string, callback: Function): void {
+    if (!this.____.____(event)) {
+      this.____.____(event, new ____());
+    }
+    this.____.____(event)!.____(callback);
+  }
+
+  off(event: string, callback: Function): void {
+    const el = this.____.____(event);
+    if (el) {
+      el.____(callback);
+    }
+  }
+
+  emit(event: string, ...args: any[]): void {
+    const el = this.____.____(event);
+    if (el) {
+      el.____(cb => ____(...args));
+    }
+  }
+}`,
+    },
     explanation: `This is the Observer Pattern (also called Pub/Sub or EventEmitter). Objects subscribe to events and get notified when those events occur, without the publisher knowing anything about the subscribers. This pattern is everywhere: Node.js EventEmitter, DOM addEventListener, Redux store.subscribe(), RxJS Observables, WebSocket message handlers, and React's synthetic event system. The key benefit: loose coupling — the emitter does not need to know who is listening or what they do with the data.`,
     hints: [
       'Use a Map to store event names as keys and arrays/sets of callbacks as values',
@@ -887,6 +949,32 @@ class InMemoryUserRepository(UserRepository):
 
     def delete(self, user_id: str) -> None:
         self._users.pop(user_id, None)`,
+    tieredHints: {
+      apiSignature: '@abstractmethod',
+      skeleton: `from abc import ABC, abstractmethod
+from typing import Optional
+
+class UserRepository(ABC):
+    @____
+    def get_by_id(self, user_id: str) -> Optional[dict]:
+        pass
+
+class InMemoryUserRepository(UserRepository):
+    def __init__(self):
+        self._users: dict[str, dict] = {}
+
+    def get_by_id(self, user_id: str) -> Optional[dict]:
+        return self._users.____(user_id)
+
+    def get_all(self) -> list[dict]:
+        return list(self._users.____())
+
+    def save(self, user: dict) -> None:
+        self._users[user["id"]] = ____
+
+    def delete(self, user_id: str) -> None:
+        self._users.____(user_id, None)`,
+    },
     explanation: `The Repository Pattern abstracts data access behind a clean interface. Your business logic depends on UserRepository (abstract), not on any specific storage. In tests, use InMemoryUserRepository. In production, use PostgresUserRepository or DjangoUserRepository. This is Dependency Inversion: high-level code depends on abstractions, not concretions. Django's ORM Manager is essentially a repository. In Clean Architecture, repositories sit at the boundary between domain logic and infrastructure. Swapping from SQL to MongoDB means writing one new class — no business logic changes.`,
     hints: [
       'Use ABC and @abstractmethod to define the interface',
@@ -1155,6 +1243,39 @@ function createNotFoundError(resource: string, id: string): ApiError {
     \`\${resource} with id \${id} not found\`
   );
 }`,
+    tieredHints: {
+      apiSignature: 'new ApiError(statusCode: number, code: string, message: string, details?: Array) -> ApiError',
+      skeleton: `class ApiError extends ____ {
+  statusCode: ____;
+  code: ____;
+  details?: ____;
+
+  constructor(statusCode: ____, code: ____, message: ____, details?: ____) {
+    ____(message);
+    this.statusCode = ____;
+    this.code = ____;
+    this.details = ____;
+  }
+
+  toJSON() {
+    return {
+      error: {
+        code: ____,
+        message: ____,
+        ____(this.details && { details: this.details }),
+      },
+    };
+  }
+}
+
+function createValidationError(fields: ____): ApiError {
+  return new ApiError(____, ____, ____, fields);
+}
+
+function createNotFoundError(resource: string, id: string): ApiError {
+  return new ApiError(____, ____, ____);
+}`,
+    },
     explanation: `Consistent error responses are critical for API usability. Clients need machine-readable codes (for switch statements), human-readable messages (for display), and field-level details (for form validation). The "code" field (VALIDATION_ERROR, NOT_FOUND, UNAUTHORIZED) lets frontend code handle errors programmatically without parsing message strings. The "details" array maps errors to specific form fields. This pattern is used by Stripe (error.type + error.code + error.message), GitHub (message + errors[]), and Google APIs (error.code + error.message + error.errors[]). Having a single ApiError class and helper factories ensures every endpoint returns the same shape.`,
     hints: [
       'Extend the Error class so ApiError works with try/catch',
@@ -1434,6 +1555,16 @@ def get_books_right():
         # No additional query — author data already loaded via JOIN
         results.append(f"{book.title} by {book.author.name}")
     return results`,
+    tieredHints: {
+      apiSignature: 'Book.objects.select_related(*fields) -> QuerySet',
+      skeleton: `def get_books_wrong():
+    books = Book.objects.____()
+    return [____ for book in books]
+
+def get_books_right():
+    books = Book.objects.____("author")
+    return [____ for book in books]`,
+    },
     explanation: `The N+1 problem is the most common performance killer in web applications using ORMs. With 1000 books, the "wrong" version executes 1001 queries (1 for books + 1000 for each author). The "right" version executes 1 query using a SQL JOIN. Django solutions: select_related("author") for ForeignKey/OneToOne (uses JOIN). prefetch_related("tags") for ManyToMany/reverse FK (uses 2 queries: one for books, one for all related tags, then joins in Python). SQLAlchemy equivalent: joinedload() and subqueryload(). Detecting N+1: use django-debug-toolbar, which shows query count per request. In production, a page making 500 queries is almost always an N+1 bug.`,
     hints: [
       'In the wrong version, accessing book.author.name inside a loop triggers a query per book',

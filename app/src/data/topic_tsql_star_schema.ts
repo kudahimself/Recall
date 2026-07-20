@@ -107,8 +107,18 @@ GROUP BY p.Category;`,
 FROM dbo.FactSales AS f
 JOIN dbo.DimCustomer AS c ON c.CustomerKey = f.CustomerKey
 JOIN dbo.DimProduct AS p ON p.ProductKey = f.ProductKey
-GROUP BY c.Country, p.Category;`,
-    explanation: 'A star query fans out from the fact to each dimension it needs on the surrogate keys, then groups by the chosen dimension attributes and sums the measure. Joining two conformed dimensions lets you slice sales by both customer geography and product category in one pass.',
+GROUP BY c.Country, p.Category
+ORDER BY c.Country, p.Category;`,
+    tieredHints: {
+      apiSignature: 'JOIN table AS alias ON alias.column = other.column',
+      skeleton: `SELECT c.____, p.____, ____(f.____) AS TotalSales
+FROM dbo.FactSales AS f
+____ dbo.DimCustomer AS c ON c.____ = f.____
+____ dbo.____ AS p ON p.____ = f.____
+GROUP BY c.____, p.____
+ORDER BY c.____, p.____;`,
+    },
+    explanation: 'FactSales joins directly to DimCustomer and DimProduct via their foreign keys (CustomerKey and ProductKey) - both star joins. `SUM(Amount)` is aggregated at the `(Country, Category)` level.',
     hints: ['Fact JOIN DimCustomer ON CustomerKey, JOIN DimProduct ON ProductKey', 'GROUP BY c.Country, p.Category; SUM(f.Amount)'],
     tags: ['tsql', 'star-schema', 'join'],
   },

@@ -181,6 +181,23 @@ model Post {
       'String? makes a field optional (nullable)',
       '@relation(fields: [authorId], references: [id]) links the foreign key to the parent',
     ],
+    tieredHints: {
+      apiSignature: '@relation(fields: FieldReference[], references: FieldReference[], onDelete?: ReferentialAction)',
+      skeleton: `model User {
+  id    Int     @____ @default(____())
+  email String  @____
+  name  String____
+  posts ____[]
+}
+
+model Post {
+  id       Int    @____ @default(____())
+  title    String
+  content  String
+  authorId Int
+  author   ____   @____(fields: [____], references: [____])
+}`,
+    },
     tags: ['prisma', 'schema', 'models', 'relations'],
     concepts: ['prisma-schema-relations'],
   },
@@ -270,6 +287,26 @@ async function createUserWithPost() {
       'orderBy takes an object like { field: "desc" }',
       'Nested creates use the relation name (posts) with { create: {...} }',
     ],
+    tieredHints: {
+      apiSignature: 'prisma.post.findMany(options) / prisma.user.create(options)',
+      skeleton: `async function getPublishedPosts() {
+  return prisma.post.findMany({
+    where: { title: { ____: "prisma", mode: "insensitive" } },
+    orderBy: { id: "____" },
+    ____: { author: true },
+  });
+}
+
+async function createUserWithPost() {
+  return prisma.user.create({
+    data: {
+      email: "alice@prisma.io",
+      name: "Alice",
+      posts: { ____: { title: "My First Post", content: "Hello world!" } },
+    },
+  });
+}`,
+    },
     tags: ['prisma', 'queries', 'findMany', 'create', 'nested-relations'],
     concepts: ['prisma-schema-relations'],
   },
@@ -396,6 +433,21 @@ async function updateUserAndCreatePost() {
       'Use prisma.user.update with where and data',
       'Use prisma.post.create with authorId to connect to the user',
     ],
+    tieredHints: {
+      apiSignature: 'prisma.$transaction([ prisma.user.update(...), prisma.post.create(...) ])',
+      skeleton: `async function updateUserAndCreatePost() {
+  const [updatedUser, newPost] = await prisma.____([
+    prisma.user.____({
+      where: { id: 1 },
+      data: { name: "Alice Updated" },
+    }),
+    prisma.post.____({
+      data: { title: "Transaction Post", content: "Created in a transaction", authorId: 1 },
+    }),
+  ]);
+  return { updatedUser, newPost };
+}`,
+    },
     tags: ['prisma', 'transaction', 'atomicity', 'update', 'create'],
     concepts: ['prisma-schema-relations'],
   },
@@ -475,6 +527,22 @@ export default prisma;`,
       'Use nullish coalescing (??) to reuse or create',
       'Only assign to globalThis in non-production environments',
     ],
+    tieredHints: {
+      apiSignature: 'new PrismaClient(options?: PrismaClientOptions)',
+      skeleton: `import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = ____ as unknown as {
+  ____: PrismaClient | undefined;
+};
+
+const prisma = globalForPrisma.____ ____ ____();
+
+if (process.env.____ !== "____") {
+  globalForPrisma.____ = prisma;
+}
+
+export default prisma;`,
+    },
     tags: ['prisma', 'nextjs', 'singleton', 'connection-pooling', 'hot-reload'],
     concepts: ['prisma-schema-relations', 'pattern-creational'],
   },
@@ -559,6 +627,18 @@ async function deleteUser(userId: number) {
       'With cascade in place, a simple prisma.user.delete is all you need',
       'The database handles deleting related records automatically',
     ],
+    tieredHints: {
+      apiSignature: '@relation(fields, references, onDelete?: ReferentialAction) / prisma.<model>.delete(args: { where }) -> Promise<T>',
+      skeleton: `// Post model in schema.prisma
+author User @relation(fields: [authorId], references: [id], ____: ____)
+
+// deleteUser function
+async function deleteUser(userId: number) {
+  return prisma.user.____({
+    ____: { id: userId },
+  });
+}`,
+    },
     tags: ['prisma', 'cascade', 'delete', 'referential-actions', 'schema'],
     concepts: ['prisma-schema-relations', 'web-css-specificity'],
   },
@@ -655,6 +735,16 @@ async function seedTags() {
       'skipDuplicates: true avoids unique-constraint errors on rerun',
       'The return value has a `count` field',
     ],
+    tieredHints: {
+      apiSignature: 'prisma.tag.createMany({ data: [...], skipDuplicates: true })',
+      skeleton: `async function seedTags() {
+  const result = await prisma.tag.____({
+    data: [{ label: "sale" }, { label: "new" }, { label: "featured" }],
+    ____: true,
+  });
+  return result.____;
+}`,
+    },
     tags: ['prisma', 'createMany', 'bulk-insert', 'seeding'],
     concepts: ['prisma-schema-relations'],
   },
@@ -796,6 +886,20 @@ async function getFlaggedPosts() {
       'NOT wraps a single condition to exclude it',
       'Fields at the top level of `where` are ANDed together',
     ],
+    tieredHints: {
+      apiSignature: 'prisma.post.findMany({ where: { OR: [...], NOT: { authorId: 1 } } })',
+      skeleton: `async function getFlaggedPosts() {
+  return prisma.post.findMany({
+    where: {
+      ____: [
+        { title: { contains: "urgent" } },
+        { title: { contains: "important" } },
+      ],
+      ____: { authorId: 1 },
+    },
+  });
+}`,
+    },
     tags: ['prisma', 'where', 'OR', 'NOT', 'filters'],
     concepts: ['prisma-schema-relations'],
   },
@@ -920,6 +1024,17 @@ async function getNextPage(lastPostId: number) {
       'skip: 1 excludes the cursor row itself from the results',
       'A deterministic orderBy is still required',
     ],
+    tieredHints: {
+      apiSignature: 'prisma.post.findMany({ cursor: { id: lastPostId }, skip: 1, take: 10, orderBy: { id: "asc" } })',
+      skeleton: `async function getNextPage(lastPostId: number) {
+  return prisma.post.findMany({
+    ____: { id: lastPostId },
+    ____: 1,
+    ____: 10,
+    orderBy: { id: "asc" },
+  });
+}`,
+    },
     tags: ['prisma', 'pagination', 'cursor', 'performance'],
     concepts: ['prisma-schema-relations'],
   },
@@ -1254,6 +1369,23 @@ export default function UserList() {
       'queryFn should return a Promise that resolves to your data',
       'Always check isPending and isError before accessing data',
     ],
+    tieredHints: {
+      apiSignature: 'const { data, isPending, isError, error } = useQuery<User[]>({ queryKey: ["users"], queryFn: fn })',
+      skeleton: `export default function UserList() {
+  const { data, isPending, isError, error } = useQuery<User[]>({
+    ____: ["users"],
+    ____: async () => {
+      const res = await fetch("/api/users");
+      return res.json();
+    },
+  });
+
+  if (isPending) return <div>Loading...</div>;
+  if (isError) return <div>Error: {error.message}</div>;
+
+  return <ul>{data.map((user) => <li key={user.id}>{user.name}</li>)}</ul>;
+}`,
+    },
     tags: ['tanstack-query', 'useQuery', 'data-fetching', 'loading-states'],
     concepts: ['next-tanstack-query', 'next-data-fetching'],
   },
@@ -1333,6 +1465,27 @@ export default function CreateUserForm() {
       'Call mutation.mutate(data) to trigger the mutation',
       'invalidateQueries marks cached data as stale and triggers a refetch',
     ],
+    tieredHints: {
+      apiSignature: 'const mutation = useMutation({ mutationFn: fn, onSuccess: fn })',
+      skeleton: `export default function CreateUserForm() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    ____: async (newName: string) => {
+      const res = await fetch("/api/users", { method: "POST", body: JSON.stringify({ name: newName }) });
+      return res.json();
+    },
+    ____: () => {
+      queryClient.____({ queryKey: ["users"] });
+    },
+  });
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(name); }}>
+      <button disabled={mutation.isPending}>Create User</button>
+    </form>
+  );
+}`,
+    },
     tags: ['tanstack-query', 'useMutation', 'invalidation', 'forms'],
     concepts: ['next-tanstack-query', 'web-html-forms-a11y'],
   },
@@ -1520,6 +1673,27 @@ export function useToggleTodo() {
       'setQueryData directly modifies the cache — use it for the optimistic update and rollback',
       'onSettled runs on both success AND error — perfect for final refetch',
     ],
+    tieredHints: {
+      apiSignature: 'useMutation({ mutationFn, onMutate, onError, onSettled })',
+      skeleton: `export function useToggleTodo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (todoId: number) => { /* ... */ },
+    onMutate: async (todoId: number) => {
+      await queryClient.____({ queryKey: ["todos"] });
+      const previousTodos = queryClient.____<Todo[]>(["todos"]);
+      queryClient.____<Todo[]>(["todos"], (old) => /* update */);
+      return { previousTodos };
+    },
+    onError: (err, todoId, context) => {
+      if (context?.previousTodos) queryClient.setQueryData(["todos"], context.previousTodos);
+    },
+    onSettled: () => {
+      queryClient.____({ queryKey: ["todos"] });
+    },
+  });
+}`,
+    },
     tags: ['tanstack-query', 'optimistic-updates', 'useMutation', 'cache-manipulation', 'advanced'],
     concepts: ['next-tanstack-query'],
   },
@@ -1644,6 +1818,20 @@ export default function Providers({ children }) {
       'useState(() => new QueryClient()) creates the client lazily, once',
       'A module-level QueryClient constant would leak across requests/users',
     ],
+    tieredHints: {
+      apiSignature: 'function Providers({ children }: { children: React.ReactNode })',
+      skeleton: `"use client";
+
+export default function Providers({ children }) {
+  const [queryClient] = useState(() => new ____());
+
+  return (
+    <____ client={queryClient}>
+      {children}
+    </____>
+  );
+}`,
+    },
     tags: ['tanstack-query', 'QueryClientProvider', 'setup', 'app-router'],
     concepts: ['next-tanstack-query'],
   },

@@ -165,6 +165,10 @@ from django.views.generic import TemplateView
 @method_decorator(cache_page(300), name="dispatch")
 class ReportView(TemplateView):
     template_name = "report.html"`,
+      tieredHints: {
+        apiSignature: '@method_decorator(decorator, name="dispatch")',
+        skeleton: 'from django.utils.decorators import method_decorator\nfrom django.views.decorators.cache import cache_page\nfrom django.views.generic import TemplateView\n\n@____(____(____), name="____")\nclass ____(____):\n    ____ = "report.html"',
+      },
       explanation: '`cache_page` is a function-view decorator, so it cannot wrap a class directly. `method_decorator(cache_page(300), name="dispatch")` adapts it to wrap `dispatch`, caching the rendered response for 300 seconds across all verbs the view handles.',
       hints: [
         'cache_page(300) is the function decorator',
@@ -268,6 +272,18 @@ def export_items(request):
         for obj in Item.objects.iterator():
             yield f"{obj.id},{obj.label}\\n"
     return StreamingHttpResponse(rows(), content_type="text/csv")`,
+      tieredHints: {
+        apiSignature: 'StreamingHttpResponse(streaming_content, content_type=None)',
+        skeleton: `from django.http import StreamingHttpResponse
+from .models import Item
+
+def ____(request):
+    def ____():
+        yield "id,label\\n"
+        for obj in ____.____.____():
+            yield f"{____},{____}\\n"
+    return ____(____(), ____="text/csv")`,
+      },
       explanation: 'The nested generator `rows()` yields the header then one line per item. `Item.objects.iterator()` streams rows from the DB without filling the queryset cache, and `StreamingHttpResponse` forwards each yielded chunk to the client — so peak memory is one row, not the whole table.',
       hints: [
         'Define a generator yielding header then per-row lines',

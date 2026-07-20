@@ -157,6 +157,17 @@ def test_greeting(greeting):
       '@pytest.fixture above a function that returns the value',
       'Request it by adding a parameter with the same name',
     ],
+    tieredHints: {
+      apiSignature: '@pytest.fixture(scope="function", autouse=False, params=None)',
+      skeleton: `import pytest
+
+@pytest.____
+def greeting():
+    ____ "hello"
+
+def test_greeting(____):
+    assert greeting == "hello"`,
+    },
     tags: ['pytest', 'fixture', 'basics'],
     concepts: ['py-test-isolation'],
   },
@@ -249,6 +260,21 @@ def test_b(expensive_setup):
       'Wider scope = less setup cost, more risk of test bleed',
       'Never mutate a wider-scoped fixture in one test that another test reads',
     ],
+    tieredHints: {
+      apiSignature: '@pytest.fixture(scope="function", autouse=False, params=None)',
+      skeleton: `import pytest
+
+@pytest.____(____="module")
+def expensive_setup():
+    ____("SETUP")
+    return {"id": 1}
+
+def test_a(____):
+    ____ expensive_setup["id"] == 1
+
+def test_b(____):
+    assert ____["id"] ____ 1`,
+    },
     tags: ['pytest', 'fixture', 'scope'],
     concepts: ['py-test-isolation'],
   },
@@ -309,6 +335,21 @@ def test_increment():
       'Use sparingly — hidden setup hurts readability',
       'Put in conftest.py to apply across a directory',
     ],
+    tieredHints: {
+      apiSignature: '@pytest.fixture(scope="function", autouse=False, params=None)',
+      skeleton: `import pytest
+
+counter = {"n": ____}
+
+@pytest.____(____=____)
+def ____():
+    counter["n"] = ____
+    ____
+
+def test_increment():
+    counter["n"] ____ 1
+    ____ counter["n"] ____ 1`,
+    },
     tags: ['pytest', 'fixture', 'autouse'],
     concepts: ['py-test-isolation'],
   },
@@ -366,6 +407,13 @@ def test_writes_file(tmp_path):
       'No import needed; request it by parameter name',
       'write_text / read_text avoid open()',
     ],
+    tieredHints: {
+      apiSignature: 'Path.write_text(data, encoding=None, errors=None, newline=None) -> int',
+      skeleton: `def test_writes_file(tmp_path):
+    target = tmp_path ____ "report.txt"
+    target.____("data")
+    assert target.____() == "data"`,
+    },
     tags: ['pytest', 'fixture', 'tmp_path', 'builtin'],
     concepts: ['py-test-isolation'],
   },
@@ -420,6 +468,16 @@ def test_announce(capsys):
       'print adds a trailing newline — include it in the expected string',
       'capfd captures at fd level; caplog captures logging',
     ],
+    tieredHints: {
+      apiSignature: 'capsys.readouterr() -> CaptureResult(out, err)',
+      skeleton: `def ____(who):
+    ____(f"hi {who}")
+
+def test_announce(____):
+    ____("ada")
+    captured = ____.____()
+    ____ captured.____ ____ "hi ada\\n"`,
+    },
     tags: ['pytest', 'fixture', 'capsys', 'builtin'],
     concepts: ['py-test-isolation'],
   },
@@ -465,6 +523,26 @@ def test_add(calc, a, b, expected):
       'Fixture rebuilds per test invocation (default function scope)',
       'Use ids= on parametrize for readable names in the output',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.mark.parametrize(argnames, argvalues, ids=None)',
+      skeleton: `import pytest
+
+class Calculator:
+    def ____(self, a, b):
+        return a ____ b
+
+@pytest.____
+def ____():
+    return Calculator()
+
+@pytest.mark.____("a,b,expected", [
+    (____, ____, ____),
+    (0, 0, 0),
+    (-1, 1, 0),
+])
+def test_add(____, a, b, expected):
+    ____ calc.____(a, b) ____ expected`,
+    },
     tags: ['pytest', 'fixture', 'parametrize', 'intermediate'],
     concepts: ['py-test-isolation'],
   },
@@ -544,6 +622,17 @@ def test_is_positive(number):
       'It multiplies every dependent test, not just one',
       'request is a built-in fixture exposing the current param',
     ],
+    tieredHints: {
+      apiSignature: '@pytest.fixture(scope="function", autouse=False, params=None)',
+      skeleton: `import pytest
+
+@pytest.____(____=[1, 2, 3])
+def number(____):
+    return ____.____
+
+def test_is_positive(____):
+    ____ number ____ 0`,
+    },
     tags: ['pytest', 'fixture', 'parametrized-fixture', 'request'],
     concepts: ['py-test-isolation'],
   },
@@ -601,6 +690,33 @@ def test_divide_by_zero(calc):
       '@pytest.mark.parametrize takes a string of param names and a list of tuples',
       'pytest.raises(ExcType, match="pattern") for exception testing',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.raises(expected_exception, match=None) -> ExceptionInfo',
+      skeleton: `import pytest
+
+class Calculator:
+    def ____(self, a: float, b: float) -> float:
+        if b ____ 0:
+            ____ ZeroDivisionError("Cannot divide by zero")
+        return a ____ b
+
+@pytest.____
+def ____():
+    return Calculator()
+
+@pytest.mark.____("a, b, expected", [
+    (____, ____, ____),
+    (7, 2, 3.5),
+    (-9, 3, -3.0),
+    (0, 5, 0.0),
+])
+def test_divide(____, a, b, expected):
+    ____ calc.____(a, b) ____ expected
+
+def test_divide_by_zero(____):
+    with pytest.____(ZeroDivisionError, ____="Cannot divide by zero"):
+        calc.____(1, 0)`,
+    },
     tags: ['pytest', 'fixture', 'parametrize', 'raises', 'testing'],
     concepts: ['py-test-isolation'],
   },
