@@ -105,6 +105,10 @@ def transfer_funds(from_id, to_id, amount):
             to_account=receiver,
             amount=amount,
         )`,
+      tieredHints: {
+        apiSignature: 'transaction.atomic(); queryset.select_for_update().get(pk=id)',
+        skeleton: 'from django.db import transaction\nfrom .models import Account, TransferLog\nfrom decimal import Decimal\n\ndef ____(from_id, to_id, amount):\n    with ____.____():\n        sender = ____.____.____().get(pk=from_id)\n        receiver = ____.____.____().get(pk=to_id)\n\n        if sender.____ < amount:\n            raise ____("Insufficient funds")\n\n        sender.____ -= amount\n        sender.____()\n\n        receiver.____ += amount\n        receiver.____()\n\n        ____.____.____(\n            from_account=sender,\n            to_account=receiver,\n            amount=amount,\n        )',
+      },
       explanation: 'transaction.atomic() creates a database savepoint. If any exception is raised inside the block, ALL changes within it are rolled back — the sender\'s debit, receiver\'s credit, and the transfer log are all undone. This is critical for financial operations where partial updates would mean money disappearing or being duplicated. The select_for_update() call acquires a row-level lock, preventing other transactions from modifying these accounts until this transaction completes. Without atomic(), if the code crashed after debiting the sender but before crediting the receiver, the money would vanish. The with-statement syntax is preferred over the @transaction.atomic decorator because it gives you finer control over exactly which operations should be atomic.',
       hints: [
         'Use "with transaction.atomic():" as a context manager',
@@ -165,6 +169,10 @@ def checkout(request):
     order = Order.objects.create(user=request.user, total=100)
     Inventory.objects.filter(item=1).update(count=models.F("count") - 1)
     return HttpResponse(f"Order {order.pk} created")`,
+      tieredHints: {
+        apiSignature: '@transaction.atomic; models.F("count") - 1',
+        skeleton: 'from django.db import transaction, models\nfrom django.http import HttpResponse\nfrom .models import Order, Inventory\n\n@____.____\ndef ____(request):\n    order = ____.____.____(user=request.user, total=100)\n    ____.____.____(item=1).____(count=models.____("count") - 1)\n    return ____(f"Order {____.pk} created")',
+      },
       explanation: '`@transaction.atomic` on a view wraps the entire request in a transaction. Any exception that escapes the view triggers a rollback. Use when a view performs more than one write that must commit together. WARNING: long transactions hold locks and slow concurrency — don\'t put slow external calls (HTTP, long sleep) inside. Alternative: `with transaction.atomic():` context manager for partial-block scoping (next question).',
       hints: [
         '@transaction.atomic wraps the full function',
@@ -206,6 +214,10 @@ def process(a, b):
 
     # follow-up (not transactional)
     notify(a, b)`,
+      tieredHints: {
+        apiSignature: 'with transaction.atomic(): ...',
+        skeleton: 'from django.db import transaction\n\ndef ____(a, b):\n    a.____()\n    b.____()\n\n    with ____.____():\n        a.____()\n        b.____()\n\n    ____(a, b)',
+      },
       explanation: 'Scoping matters because transactions hold locks. Non-DB work (logging, metrics, notifications, HTTP calls) should live OUTSIDE the atomic block. Can nest: an inner `atomic()` becomes a SAVEPOINT — its exception rolls back only the inner, preserving the outer. For cleanup that must run after commit (not during), use `transaction.on_commit(callable)` — fires when the outermost atomic block commits, perfect for triggering Celery tasks without races.',
       hints: [
         '`with transaction.atomic():` scopes a transaction',
@@ -266,6 +278,10 @@ def reserve(account_id, amount):
             raise ValueError("insufficient")
         acct.balance -= amount
         acct.save()`,
+      tieredHints: {
+        apiSignature: 'transaction.atomic(); Account.objects.select_for_update().get(pk=id)',
+        skeleton: 'from django.db import transaction\nfrom .models import Account\n\ndef ____(account_id, amount):\n    with ____.____():\n        acct = ____.____.____().get(pk=account_id)\n        if acct.____ < amount:\n            raise ____("insufficient")\n        acct.____ -= amount\n        acct.____()',
+      },
       explanation: 'Without the lock, two concurrent reservations could both read balance=100, both decide they can subtract 80, both write balance=20 — overdrawing by 60. `select_for_update()` makes the SQL `SELECT ... FOR UPDATE` — row locked until the transaction ends. MUST be inside `transaction.atomic()`. For non-blocking behaviour use `select_for_update(skip_locked=True)` (worker-queue pattern) or `nowait=True` (fail fast instead of wait). Prefer `F()` expressions where possible — they sidestep the race without explicit locks.',
       hints: [
         'Must be inside atomic()',
@@ -329,6 +345,19 @@ def best_effort_add(payload):
                 Tag.objects.create(name=payload)
         except IntegrityError:
             pass  # only the inner savepoint rolls back`,
+      tieredHints: {
+        apiSignature: 'with transaction.atomic(): try: with transaction.atomic(): ... except IntegrityError:',
+        skeleton: `from django.db import transaction, IntegrityError
+from .models import ____
+
+def ____(payload):
+    with ____.____():
+        try:
+            with ____.____():
+                Tag.____.____(name=____)
+        except ____:
+            pass`,
+      },
       explanation: 'IMPORTANT gotcha: an outer `atomic()` without inner savepoints goes into a "broken" state after ANY query error — subsequent queries raise `TransactionManagementError`. Nested `atomic()` creates a SAVEPOINT the inner can roll back to, leaving the outer healthy. Use for "try and ignore if it fails" operations (idempotent inserts, best-effort upserts, eventual-consistency backfills).',
       hints: [
         'Nested atomic = SAVEPOINT',

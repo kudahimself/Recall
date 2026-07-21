@@ -131,7 +131,7 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.DimProduct` (Category, ProductName, Price), return Category, ProductName, Price and a column `Rnk` that ranks products by Price descending WITHIN each Category (tied prices share a rank, with gaps).',
-    starterCode: `-- SELECT ..., RANK() OVER (PARTITION BY ... ORDER BY ...) AS Rnk FROM dbo.DimProduct;
+    starterCode: `-- Return Category, ProductName, Price, and Rnk (Price DESC per Category)
 `,
     testCases: [
       {
@@ -145,6 +145,12 @@ FROM dbo.DimProduct;`,
 FROM dbo.DimProduct;`,
     explanation: '`RANK()` gives gaps on ties (the prompt asked for that); `PARTITION BY Category` restarts the ranking per category; `ORDER BY Price DESC` makes rank 1 the most expensive. Every product row is retained — that is the window-function advantage over GROUP BY.',
     hints: ['RANK() for tie-with-gap', 'PARTITION BY Category ORDER BY Price DESC'],
+    tieredHints: {
+      apiSignature: 'RANK() OVER (PARTITION BY partition_expr, ... ORDER BY sort_expr [ASC|DESC], ...)',
+      skeleton: `SELECT ____, ____, ____,
+       ____() OVER (PARTITION BY ____ ORDER BY ____ ____) AS ____
+FROM dbo.DimProduct;`,
+    },
     tags: ['tsql', 'windows', 'rank', 'partition-by'],
   },
 ];

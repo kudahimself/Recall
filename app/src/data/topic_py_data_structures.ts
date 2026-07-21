@@ -30,6 +30,10 @@ export const py_data_structures_questions: Question[] = [
         },
       ],
       solution: `numbers = [3, 1, 4, 1, 5, 9, 2, 6]\n\nresult = [x for x in numbers if x > 4]`,
+      tieredHints: {
+        apiSignature: '[expr for item in iterable if cond]',
+        skeleton: `numbers = [____, ____, ____, ____, ____, ____, ____, ____]\n\nresult = [____ for x in numbers if ____ ____ ____]`,
+      },
       explanation: 'List comprehensions are concise: [expression for item in iterable if condition]. Result: [5, 9, 6]. They are more Pythonic and faster than equivalent for loops with append.',
       hints: ['[expression for item in list if condition]', 'The if clause filters items'],
       tags: ['list-comprehension', 'list', 'filter', 'python'],
@@ -52,6 +56,10 @@ export const py_data_structures_questions: Question[] = [
         },
       ],
       solution: `words = ["hello", "world", "hello", "python", "world", "hello"]\n\nfreq = {}\nfor word in words:\n    freq[word] = freq.get(word, 0) + 1\n# OR\nfrom collections import Counter\nfreq = Counter(words)`,
+      tieredHints: {
+        apiSignature: 'dict.get(key, default=None)',
+        skeleton: `words = [____, ____, ____, ____, ____, ____]\n\nfreq = ____\nfor word in words:\n    freq[____] = freq.____(word, ____) ____ ____`,
+      },
       explanation: 'dict.get(key, default) returns the value or default if missing — avoids KeyError. Counter is even simpler: Counter(words) returns {"hello": 3, "world": 2, "python": 1}. Both are common Python patterns.',
       hints: ['Use dict.get(key, 0) to handle missing keys', 'Or use collections.Counter for one-liner'],
       tags: ['dict', 'counter', 'frequency', 'python'],
@@ -74,6 +82,10 @@ export const py_data_structures_questions: Question[] = [
         },
       ],
       solution: `keys = ["name", "age", "city"]\nvalues = ["Alice", 30, "London"]\n\nresult = dict(zip(keys, values))`,
+      tieredHints: {
+        apiSignature: 'zip(*iterables) -> zip object',
+        skeleton: `keys = ["name", "age", "city"]\nvalues = ["Alice", ____, "London"]\n\nresult = ____(____(____, ____))`,
+      },
       explanation: 'zip() pairs elements from two iterables: zip(keys, values) = [("name","Alice"), ("age",30), ("city","London")]. dict() converts the pairs into a dictionary. Very Pythonic for parallel iteration.',
       hints: ['zip() pairs elements from two lists', 'dict() converts pairs to a dictionary'],
       tags: ['zip', 'dict', 'python'],
@@ -96,6 +108,10 @@ export const py_data_structures_questions: Question[] = [
         },
       ],
       solution: `squares = {n: n**2 for n in range(1, 6)}`,
+      tieredHints: {
+        apiSignature: 'range(start, stop, step=1) -> range',
+        skeleton: `squares = {____: n ____ ____ for n in ____(____, ____)}`,
+      },
       explanation: 'Dict comprehensions: {key_expr: val_expr for item in iterable}. Result: {1: 1, 2: 4, 3: 9, 4: 16, 5: 25}. range(1, 6) gives [1, 2, 3, 4, 5]. Also supports if clauses for filtering.',
       hints: ['{key: value for item in iterable}', 'range(1, 6) gives 1 through 5'],
       tags: ['dict-comprehension', 'dict', 'python'],
@@ -872,6 +888,14 @@ print(nums)`,
 print(numbers[2])
 print(numbers[-1])
 print(numbers[:3])`,
+      tieredHints: {
+        apiSignature: 'list[start:stop:step]',
+        skeleton: `numbers = [____, ____, ____, ____, ____]
+
+____(numbers[____])
+____(numbers[____])
+____(numbers[____])`,
+      },
       explanation: '`numbers[2]` accesses index 2 (the third element, 30). `numbers[-1]` accesses the last element (50). `numbers[:3]` slices from the beginning up to (not including) index 3, giving `[10, 20, 30]`.',
       hints: [
         'Index 2 is the third element (0-based)',
@@ -926,6 +950,13 @@ print(squares)
 for i in range(1, 6):
     squares.append(i ** 2)
 print(squares)`,
+      tieredHints: {
+        apiSignature: 'list.append(object) -> None',
+        skeleton: `squares = []
+for i in ____(____, ____):
+    squares.____(i ____ ____)
+____(squares)`,
+      },
       explanation: 'Start with an empty list `[]`. In each iteration, `i ** 2` calculates the square and `.append()` adds it to the list. After the loop, the list contains all squares. This pattern (build up a list with a loop and append) is common — though list comprehensions are a more Pythonic alternative.',
       hints: [
         'Start with `squares = []`',
@@ -987,6 +1018,22 @@ for temp in temperatures:
 
 print(max_temp)
 print(min_temp)`,
+      tieredHints: {
+        apiSignature: 'for item in sequence:',
+        skeleton: `temperatures = [____, ____, ____, ____, ____, ____]
+
+max_temp = temperatures[____]
+min_temp = temperatures[____]
+
+for temp in temperatures:
+    if temp ____ max_temp:
+        ____ = temp
+    if temp ____ min_temp:
+        ____ = temp
+
+print(____)
+print(____)`,
+      },
       explanation: 'Initialize max and min to the first element as a baseline. Then loop through all values: if a temperature is greater than the current max, update max; if it\'s less than current min, update min. This is the classic algorithm for finding extremes in a list.',
       hints: [
         'Start `max_temp` and `min_temp` at the first element',
@@ -1046,6 +1093,17 @@ identity = [
 
 for row in identity:
     print(row)`,
+      tieredHints: {
+        apiSignature: 'for item in sequence:',
+        skeleton: `identity = [
+    [____, ____, ____],
+    [____, ____, ____],
+    [____, ____, ____],
+]
+
+for row in identity:
+    ____(row)`,
+      },
       explanation: 'A 2D list is simply a list where each element is itself a list. Iterating with `for row in identity:` gives each inner list in turn. When you `print(row)`, Python displays it in list format `[1, 0, 0]`. The identity matrix has 1s on the main diagonal (top-left to bottom-right) and 0s elsewhere.',
       hints: [
         'Each row is a list inside the outer list',
@@ -1123,6 +1181,16 @@ result = min_max([3, 1, 4, 1, 5, 9, 2, 6])
 low, high = result
 print(low)
 print(high)`,
+      tieredHints: {
+        apiSignature: 'min(iterable) -> value / max(iterable) -> value',
+        skeleton: `def min_max(numbers):
+    return (____(numbers), ____(numbers))
+
+result = min_max([____, ____, ____, ____, ____, ____, ____, ____])
+____, ____ = result
+____(low)
+____(high)`,
+      },
       explanation: 'A function can return multiple values as a tuple: `return (min_val, max_val)`. The caller can then unpack them: `low, high = min_max(...)`. This is a very Pythonic pattern. Here we use the built-in `min()` and `max()` functions — they work on any iterable.',
       hints: [
         'Use `return (min(numbers), max(numbers))`',
@@ -1181,10 +1249,8 @@ print(high)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Create a dictionary `person` with keys `"name"`, `"age"`, and `"city"`. Then: (1) print the name, (2) add a key `"email"` with a value, (3) print all keys, (4) print all values.',
-      starterCode: `# Build a 'person' dict with name="Alice", age=30, city="Dublin"
-# Print person["name"]; add person["email"] = "alice@example.com";
-# Then print person.keys() and person.values()
-`,
+      starterCode: `# Create a 'person' dictionary with name="Alice", age=30, city="Dublin"
+# Print the name, add email="alice@example.com", then print all keys and all values`,
       testCases: [
         {
           input: '',
@@ -1202,6 +1268,19 @@ print(person["name"])
 person["email"] = "alice@example.com"
 print(person.keys())
 print(person.values())`,
+      tieredHints: {
+        apiSignature: 'dict.keys() -> dict_keys / dict.values() -> dict_values',
+        skeleton: `person = {
+    ____: ____,
+    ____: ____,
+    ____: ____,
+}
+
+print(person[____])
+person[____] = ____
+print(person.____())
+print(person.____())`,
+      },
       explanation: 'Access values with `dict[key]`. Add new keys by assigning: `dict["new_key"] = value`. `.keys()` returns all keys as a `dict_keys` view, `.values()` returns all values as `dict_values`. To iterate: `for key in person:` or `for key, value in person.items():`.',
       hints: [
         'Access with `person["name"]`, add with `person["email"] = ...`',
@@ -1219,9 +1298,7 @@ print(person.values())`,
       language: CodeLanguage.PYTHON,
       question: 'Write a function `word_count(text)` that counts how many times each word appears in a string and returns a dictionary. Test with `"the cat sat on the mat the cat"`.',
       starterCode: `# Define word_count(text) returning a dict mapping each word to its frequency
-# (split on whitespace; use dict.get(word, 0) + 1 to increment safely)
-# Print the result for "the cat sat on the mat the cat"
-`,
+# Print the result for "the cat sat on the mat the cat"`,
       testCases: [
         {
           input: 'word_count("the cat sat on the mat the cat")',
@@ -1237,6 +1314,17 @@ print(person.values())`,
 
 result = word_count("the cat sat on the mat the cat")
 print(result)`,
+      tieredHints: {
+        apiSignature: 'str.split(sep=None) -> list[str]',
+        skeleton: `def ____(text):
+    ____ = {}
+    for word in text.____():
+        counts[word] = counts.____(word, ____) ____ ____
+    return ____
+
+result = ____("the cat sat on the mat the cat")
+print(result)`,
+      },
       explanation: '`text.split()` breaks the string into a list of words. For each word, `counts.get(word, 0)` gets the current count (or 0 if not yet seen), then adds 1. This is the classic word-frequency pattern. An alternative is using `collections.Counter(text.split())`.',
       hints: [
         'Split the text with `.split()`',

@@ -86,6 +86,12 @@ SELECT CustomerId, FullName FROM dbo.DimCustomer;`,
     solution: `SELECT COUNT(*) AS BadRows
 FROM dbo.FactSales
 WHERE Amount IS NULL OR Amount < 0;`,
+    tieredHints: {
+      apiSignature: 'SELECT COUNT(*) FROM tbl WHERE col IS NULL OR col < val;',
+      skeleton: `SELECT COUNT(*) AS ____
+FROM dbo.FactSales
+WHERE Amount ____ ____ OR Amount ____ 0;`,
+    },
     explanation: 'A data-quality assertion counts the rows that break a rule; a load gate then fails (or quarantines) when `BadRows > 0`. Note `Amount IS NULL` must be tested explicitly — `Amount < 0` alone would silently ignore NULLs because any comparison with NULL is unknown, not true.',
     hints: ['COUNT(*) of the rule-breakers', 'WHERE Amount IS NULL OR Amount < 0'],
     tags: ['tsql', 'quality', 'null-handling', 'assertion'],
@@ -111,6 +117,13 @@ WHERE Amount IS NULL OR Amount < 0;`,
 FROM dbo.DimCustomer
 GROUP BY CustomerId
 HAVING COUNT(*) > 1;`,
+    tieredHints: {
+      apiSignature: 'SELECT col, COUNT(*) FROM tbl GROUP BY col HAVING COUNT(*) > 1;',
+      skeleton: `SELECT ____, COUNT(*) AS ____
+FROM dbo.DimCustomer
+GROUP BY ____
+HAVING COUNT(*) ____ 1;`,
+    },
     explanation: 'The uniqueness assertion is the same GROUP BY/HAVING shape used everywhere else in the course: group by the key, and any group with `COUNT(*) > 1` is a violation. A load gate fails when this query returns any rows.',
     hints: ['GROUP BY CustomerId', 'HAVING COUNT(*) > 1'],
     tags: ['tsql', 'quality', 'uniqueness', 'having'],

@@ -21,9 +21,9 @@ export const tsql_string_functions_questions: Question[] = [
     course: Course.SQL,
     question: "How do `CONCAT(FirstName, ' ', LastName)` and `FirstName + ' ' + LastName` differ when `LastName` is NULL?",
     options: [
-      { id: 'a', text: 'CONCAT treats a NULL argument as an empty string and still returns the other parts; `+` propagates NULL, so the whole expression becomes NULL.', isCorrect: true },
-      { id: 'b', text: 'They behave identically in every case - both return NULL whenever any single argument passed in happens to be NULL.', isCorrect: false },
-      { id: 'c', text: 'CONCAT raises a hard error the moment it sees NULL input; `+` silently skips over NULL arguments and keeps whatever is left.', isCorrect: false },
+      { id: 'a', text: 'They behave identically in every case - both return NULL whenever any single argument passed in happens to be NULL.', isCorrect: false },
+      { id: 'b', text: 'CONCAT raises a hard error the moment it sees NULL input; `+` silently skips over NULL arguments and keeps whatever is left.', isCorrect: false },
+      { id: 'c', text: 'CONCAT treats a NULL argument as an empty string and still returns the other parts; `+` propagates NULL, so the whole expression becomes NULL.', isCorrect: true },
       { id: 'd', text: '`+` is the NULL-safe one, treating NULL as an empty string; CONCAT is actually the operator that propagates NULL through the result.', isCorrect: false },
     ],
     explanation: '`CONCAT()` is NULL-safe - a NULL argument is treated as an empty string, so the other parts still come through. The classic `+` gotcha is that any NULL operand makes the *entire* concatenated result NULL, which is why `CONCAT` is generally the safer default for building display strings.',
@@ -134,10 +134,10 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     question: "What does `CHARINDEX('@', Email)` return for `'alex@example.com'`?",
     options: [
-      { id: 'a', text: "5 - the 1-based position of the first '@' character; it returns 0 if the substring is not found.", isCorrect: true },
-      { id: 'b', text: "The substring that comes before the '@', meaning it would return just 'alex' from that email.", isCorrect: false },
-      { id: 'c', text: "A boolean value indicating only whether or not an '@' is present anywhere in the string.", isCorrect: false },
-      { id: 'd', text: "The total count of how many '@' characters appear anywhere in the whole string.", isCorrect: false },
+      { id: 'a', text: "The substring that comes before the '@', meaning it would return just 'alex' from that email.", isCorrect: false },
+      { id: 'b', text: "A boolean value indicating only whether or not an '@' is present anywhere in the string.", isCorrect: false },
+      { id: 'c', text: "The total count of how many '@' characters appear anywhere in the whole string.", isCorrect: false },
+      { id: 'd', text: "5 - the 1-based position of the first '@' character; it returns 0 if the substring is not found.", isCorrect: true },
     ],
     explanation: '`CHARINDEX(substring, string)` returns the 1-based starting position of the first match, or 0 if it never appears. Combined with `SUBSTRING`/`LEFT`, it is how you split text at a delimiter whose position varies row to row.',
     hints: ['1-based position of the first match', 'Returns 0 when not found'],
@@ -168,7 +168,7 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "From `dbo.DimProduct` (ProductName, Category), return one column `Label` that combines Category and ProductName separated by ' - ', with the whole result in uppercase (e.g. 'BOOKS - THE GREAT NOVEL').",
-    starterCode: `-- SELECT UPPER(CONCAT(...)) AS Label FROM dbo.DimProduct;
+    starterCode: `-- dbo.DimProduct(ProductName, Category); return one Label column
 `,
     testCases: [
       {
@@ -185,6 +185,11 @@ FROM dbo.DimProduct;`,
     explanation: '`CONCAT` joins the three pieces (Category, the literal separator, ProductName); wrapping the whole thing in `UPPER` (or upper-casing each piece before concatenating) produces the all-caps label either way.',
     hints: ["CONCAT(Category, ' - ', ProductName)", 'Wrap the result in UPPER (or upper-case each piece first)'],
     tags: ['tsql', 'string-functions', 'concat', 'upper'],
+    tieredHints: {
+      apiSignature: 'CONCAT(string1, string2, ..., string_n) -> varchar',
+      skeleton: `SELECT ____(____(Category, ____, ProductName)) AS Label
+FROM dbo.DimProduct;`,
+    },
   },
   {
     id: 'tsql-str-2',
@@ -194,7 +199,7 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `stg.Customer` (Email), return Email and a column `EmailLength` giving the length of Email with leading/trailing whitespace excluded from the count.',
-    starterCode: `-- SELECT Email, LEN(TRIM(Email)) AS EmailLength FROM stg.Customer;
+    starterCode: `-- stg.Customer(Email); return Email and EmailLength
 `,
     testCases: [
       {
@@ -208,6 +213,11 @@ FROM stg.Customer;`,
     explanation: 'Trimming first (`TRIM(Email)`) removes stray leading/trailing spaces from the staged value before `LEN` measures it - without the trim, whitespace in the raw data would inflate the count.',
     hints: ['Trim before measuring', 'LEN(TRIM(Email))'],
     tags: ['tsql', 'string-functions', 'trim', 'len'],
+    tieredHints: {
+      apiSignature: 'TRIM(string_expression) -> varchar',
+      skeleton: `SELECT Email, ____(____(Email)) AS ____
+FROM stg.Customer;`,
+    },
   },
   {
     id: 'tsql-str-domain-cloze-1',
@@ -250,5 +260,10 @@ FROM stg.Customer;`,
     explanation: '`REPLACE(Phone, \'-\', \'\')` strips every hyphen; wrapping that in `TRIM` then removes the surrounding whitespace. Order matters here only in that both must run - REPLACE does not touch whitespace, and TRIM does not touch hyphens, so neither alone is enough.',
     hints: ['REPLACE removes the hyphens', 'TRIM removes the surrounding whitespace'],
     tags: ['tsql', 'string-functions', 'replace', 'trim'],
+    tieredHints: {
+      apiSignature: 'REPLACE(string_expression, string_pattern, string_replacement) -> varchar',
+      skeleton: `SELECT CustomerId, ____(____(Phone, ____, ____)) AS ____
+FROM stg.Customer;`,
+    },
   },
 ];

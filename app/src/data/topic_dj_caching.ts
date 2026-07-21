@@ -121,6 +121,21 @@ def product_detail(request, pk):
         product = get_object_or_404(Product, pk=pk)
         cache.set(cache_key, product, 60 * 10)
     return render(request, 'products/detail.html', {'product': product})`,
+      tieredHints: {
+        apiSignature: 'cache.get(key, default=None)',
+        skeleton: `@____(60 * 15)
+def product_list(request):
+    products = Product.objects.all()
+    return render(request, 'products/list.html', {'products': products})
+
+def product_detail(request, pk):
+    cache_key = f'product_{pk}'
+    product = cache.____(cache_key)
+    if product is None:
+        product = get_object_or_404(Product, pk=pk)
+        cache.____(cache_key, product, 60 * 10)
+    return render(request, 'products/detail.html', {'product': product})`,
+      },
       explanation: '@cache_page(seconds) caches the entire HTTP response — both the rendered HTML and headers. It is best for pages that are identical for all users (anonymous views). The timeout of 60*15 = 900 seconds = 15 minutes. Low-level caching with cache.get()/cache.set() gives you control over what gets cached and for how long. The pattern "get from cache, if None query DB and set cache" is called cache-aside (or lazy-loading). This is preferred for detail views because you can cache individual objects with unique keys, invalidate specific entries when data changes, and avoid caching user-specific content accidentally.',
       hints: [
         '@cache_page takes seconds as argument: 60 * 15 = 15 minutes',
@@ -194,6 +209,14 @@ value = cache.___("greeting", "default")`,
 cache.set("user_count", 42, timeout=60)
 value = cache.get("user_count", 0)
 print(value)`,
+      tieredHints: {
+        apiSignature: 'cache.set(key, value, timeout=DEFAULT_TIMEOUT, version=None)',
+        skeleton: `from django.core.cache import ____
+
+____.____(____, 42, timeout=60)
+____ = ____.____(____, 0)
+print(____)`,
+      },
       explanation: 'Low-level API: `set(key, value, timeout=...)`, `get(key, default=None)`, `delete(key)`, `get_or_set(key, callable_or_value, timeout)` (compute + store if missing — the "memoize" pattern), `incr(key)` / `decr(key)` atomic counters (Memcached / Redis). Timeout in seconds; `None` = forever; `0` = do not cache (handy for feature flags). Keys must be strings; values are pickled.',
       hints: [
         'set(key, value, timeout); get(key, default)',
@@ -227,6 +250,15 @@ from django.http import HttpResponse
 @cache_page(60 * 15)
 def popular_posts(request):
     return HttpResponse("...")`,
+      tieredHints: {
+        apiSignature: 'cache_page(timeout, cache=None, key_prefix=None)',
+        skeleton: `from django.views.decorators.cache import ____
+from django.http import ____
+
+@____(60 * 15)
+def ____(request):
+    return ____("...")`,
+      },
       explanation: '`cache_page` caches the full rendered response keyed by URL + query string. Best for genuinely public pages (same response for every user). Do NOT use for personalised pages — every user would see the same cached content. Per-user options: `vary_on_cookie` decorator, or low-level caching keyed by `user.id`. Use `cache_control` for client-side browser caching headers (orthogonal to server-side).',
       hints: [
         'cache_page caches the full response per URL+query',
@@ -285,6 +317,18 @@ def compute_stats():
 
 def get_site_stats():
     return cache.get_or_set("site:stats", compute_stats, timeout=300)`,
+      tieredHints: {
+        apiSignature: 'cache.get_or_set(key, default, timeout=DEFAULT_TIMEOUT, version=None)',
+        skeleton: `from django.core.cache import ____
+from django.contrib.auth.models import User
+from .models import Post
+
+def ____():
+    return {"users": User.objects.____(), "posts": Post.objects.____()}
+
+def ____():
+    return ____.____("site:stats", ____, timeout=300)`,
+      },
       explanation: '`get_or_set(key, callable_or_value, timeout)` replaces the `v = cache.get(k); if v is None: v = compute(); cache.set(k, v); return v` dance. Passing a CALLABLE (not the value) means compute only runs on miss. Naming convention: colon-separated keys (`"site:stats"`, `"user:42:profile"`) for grep-ability. Watch out for thundering-herd (many misses at the same instant hammering the source); use `cache.add()` + external lock or libraries like `django-cacheops` for advanced patterns.',
       hints: [
         'get_or_set(key, callable, timeout) — callable runs only on miss',
@@ -342,6 +386,17 @@ from .models import Post
 @receiver(post_save, sender=Post)
 def clear_list_cache(sender, instance, **kwargs):
     cache.delete("posts:list")`,
+      tieredHints: {
+        apiSignature: 'cache.delete(key, version=None)',
+        skeleton: `from django.db.models.signals import ____
+from django.dispatch import ____
+from django.core.cache import ____
+from .models import Post
+
+@____(____, sender=____)
+def ____(sender, instance, **kwargs):
+    ____.____("posts:list")`,
+      },
       explanation: 'Works, but blunt — any post save clears the whole list. Smarter: version keys. Store a "generation counter" (`cache.incr("posts:gen")` on each save), embed it in every downstream key (`f"posts:list:gen={gen}"`). Old entries age out; readers always get fresh data. Signals aren\'t fired by bulk `update()` / raw SQL / `bulk_create` — either avoid bulk or invalidate explicitly. Third-party: `django-cacheops` handles a lot of this automatically.',
       hints: [
         'Signal blunt: clears on every save',

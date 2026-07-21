@@ -742,6 +742,17 @@ def parse_log_entry(line: str) -> dict[str, str] | None:
         "host": match.group(4),
     }
 `,
+      tieredHints: {
+        apiSignature: 're.search(pattern, string, flags=0) -> re.Match | None',
+        skeleton: `import re
+
+def parse_log_entry(line: str) -> dict[str, str] | None:
+    pattern = r'____'  # named groups: timestamp, level, message (non-greedy), host
+    match = re.____(pattern, line)
+    if match:
+        return match.____()
+    return None`,
+      },
       explanation: 'Named groups (?P<name>pattern) make the regex self-documenting and let match.groupdict() build the result dict directly. The parser combines several features: literal brackets (escaped as \\[), named groups, a negated character class ([^)]+) to stop at the closing paren, and non-greedy matching (.+?) so message does not swallow the (host=...) segment. Positional groups with a hand-built dict work too.',
       hints: [
         '(?P<name>pattern) creates a named group',
@@ -817,6 +828,14 @@ print(bool(re.___(r"\\d+", "123abc")))`,
 pattern = r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+"
 print(bool(re.fullmatch(pattern, "user@example.com")))
 print(bool(re.fullmatch(pattern, "not-an-email")))`,
+      tieredHints: {
+        apiSignature: 're.fullmatch(pattern, string, flags=0) -> re.Match | None',
+        skeleton: `import re
+
+pattern = r"____"
+res1 = re.____(pattern, "____")
+res2 = re.____(pattern, "____")`,
+      },
       explanation: '`fullmatch` is the right tool for validation — if ANY extra characters slip in, it fails. The character class `[^@\\s]+` means "one or more non-at, non-whitespace characters"; this is not a full RFC-compliant email validator but works for 99% of real inputs. For robust email validation, use the `email-validator` library — do NOT try to implement RFC 5322 yourself.',
       hints: [
         'fullmatch returns None on mismatch, a Match object on hit',
@@ -848,6 +867,14 @@ print(bool(re.fullmatch(pattern, "not-an-email")))`,
 s = "2025-03-15"
 m = re.search(r"(?P<year>\\d{4})-(?P<month>\\d{2})-(?P<day>\\d{2})", s)
 print(m.groupdict())`,
+      tieredHints: {
+        apiSignature: 're.search(pattern, string, flags=0) -> re.Match | None',
+        skeleton: `import re
+
+s = "2025-03-15"
+m = re.____(r"____", s)  # three named groups: year(4d)-month(2d)-day(2d)
+print(m.____())`,
+      },
       explanation: 'Named groups `(?P<name>pattern)` make regex self-documenting and let you access results by name (`m.group("year")`) or as a dict (`m.groupdict()`). Dramatically better than positional `m.group(1)` — renaming or adding a group does not break call sites. Pair with `typing.TypedDict` for fully typed parsed output.',
       hints: [
         'Named group syntax: (?P<name>...)',
@@ -878,6 +905,13 @@ print(m.groupdict())`,
 
 text = "card 4111-1111-1111-1111 used"
 print(re.sub(r"\\d{4}-\\d{4}-\\d{4}-\\d{4}", "[REDACTED]", text))`,
+      tieredHints: {
+        apiSignature: 're.sub(pattern, repl, string, count=0, flags=0) -> str',
+        skeleton: `import re
+
+text = "card 4111-1111-1111-1111 used"
+print(re.____(r"____", "____", text))  # replace card-shaped runs`,
+      },
       explanation: '`re.sub(pattern, replacement, string)` returns a new string with every non-overlapping match replaced. Pass a callable as the replacement for transformations that depend on the match: `re.sub(r"\\d+", lambda m: str(int(m.group()) * 2), text)`. Essential for log scrubbing, text templating, and simple content rewriting.',
       hints: [
         're.sub(pattern, replacement, string)',
@@ -908,6 +942,13 @@ print(re.sub(r"\\d{4}-\\d{4}-\\d{4}-\\d{4}", "[REDACTED]", text))`,
 
 s = "a,b;c|d, e"
 print(re.split(r"[,;|]\\s*", s))`,
+      tieredHints: {
+        apiSignature: 're.split(pattern, string, maxsplit=0, flags=0) -> list[str]',
+        skeleton: `import re
+
+s = "a,b;c|d, e"
+____(____.____(r"____", ____))`,
+      },
       explanation: '`re.split` is `str.split` on steroids — the "delimiter" can be any regex. Essential for messy inputs where the delimiter varies. Pass `maxsplit=N` to limit splits (like str.split). Inverse: `re.findall` extracts the stuff between delimiters directly.',
       hints: [
         'Pattern class [,;|] matches any one of those chars',
@@ -939,6 +980,14 @@ print(re.split(r"[,;|]\\s*", s))`,
 pattern = re.compile(r"^hello", re.IGNORECASE | re.MULTILINE)
 text = "Hello world\\nhello again\\nbye"
 print(pattern.findall(text))`,
+      tieredHints: {
+        apiSignature: 're.compile(pattern, flags=0) -> re.Pattern',
+        skeleton: `import re
+
+pattern = re.____(r"____", re.____ | re.____)
+text = "____"
+____(pattern.____(text))`,
+      },
       explanation: 'Compile patterns you use repeatedly — once per program startup, not per call. Useful flags: `IGNORECASE` (case-insensitive), `MULTILINE` (^/$ match line boundaries, not just string start/end), `DOTALL` (. matches newline too), `VERBOSE` (whitespace and comments ignored — great for complex patterns). Combine with `|`. Also accessible as `re.I`, `re.M`, etc.',
       hints: [
         're.compile(pattern, flags) → reusable Pattern object',
@@ -992,6 +1041,14 @@ print(pattern.findall(text))`,
 text = "cat 3 dog 7 bird 9"
 for m in re.finditer(r"\\d+", text):
     print(f"{m.group()}@{m.start()}")`,
+      tieredHints: {
+        apiSignature: 're.finditer(pattern, string, flags=0) -> Iterator[re.Match]',
+        skeleton: `import re
+
+text = "____"
+for m in ____.____(r"____", text):
+    ____(f"{m.____()}@{m.____()}")`,
+      },
       explanation: '`findall` returns just the strings; `finditer` returns the Match objects, giving you `.group()`, `.start()`, `.end()`, `.span()`, and named-group access. Use it when you need positions (for replacement, highlighting, further parsing) or when the pattern has multiple groups. Lazy — iterates one match at a time, memory-friendly for huge texts.',
       hints: [
         'finditer yields Match objects, not strings',
@@ -1023,6 +1080,14 @@ for m in re.finditer(r"\\d+", text):
 text = "this is is a test test case"
 cleaned = re.sub(r"\\b(\\w+)\\s+\\1\\b", r"\\1", text, flags=re.IGNORECASE)
 print(cleaned)`,
+      tieredHints: {
+        apiSignature: 're.sub(pattern, repl, string, count=0, flags=0) -> str',
+        skeleton: `import re
+
+text = "____"
+cleaned = re.____(r"____", r"____", text, flags=re.____)
+____(cleaned)`,
+      },
       explanation: 'Backreferences let a regex match what it already matched: `\\1` means "the same text group 1 captured". In replacements, `r"\\1"` inserts the captured text. Essential for things like quote matching, balanced tag detection (to a limit), or dedup. `\\b` is a word boundary — prevents matching partial words like "is" inside "this is".',
       hints: [
         '(\\w+)\\s+\\1 = a word, whitespace, then the SAME word again',
@@ -1077,6 +1142,15 @@ text = "level=info user=alice action=login status=200"
 pairs = re.findall(r"(\\w+)=(\\S+)", text)
 result = dict(pairs)
 print(result)`,
+      tieredHints: {
+        apiSignature: 're.findall(pattern, string, flags=0) -> list[str | tuple[str, ...]]',
+        skeleton: `import re
+
+text = "____"
+pairs = ____.____(r"____", text)
+result = ____(pairs)
+____(result)`,
+      },
       explanation: 'Pattern: `(\\w+)` captures the key, `=` is literal, `(\\S+)` captures the non-whitespace value. When `findall` has more than one group, it returns a list of TUPLES rather than a list of strings — perfect for `dict()`. Every structured logger (logfmt, JSON, Apache, nginx) benefits from one-line regex parsers you can reuse across tools.',
       hints: [
         'findall with multiple groups returns list[tuple[str, ...]]',
@@ -1110,6 +1184,14 @@ text = "I have 3 cats and 12 dogs, totaling 15 pets"
 
 numbers = re.findall(r'\\d+', text)
 print(numbers)  # ['3', '12', '15']`,
+      tieredHints: {
+        apiSignature: 're.findall(pattern, string, flags=0) -> list[str]',
+        skeleton: `import re
+
+text = "I have 3 cats and 12 dogs, totaling 15 pets"
+numbers = ____.____(r'____', ____)
+____(numbers)`,
+      },
       explanation: '`re.findall(pattern, string)` scans the string from left to right and returns a list of all non-overlapping matches. The pattern `r\'\\d+\'` means: `\\d` matches any digit (0-9), and `+` means "one or more." So `\\d+` matches sequences of digits like "3", "12", and "15". Note that results are strings — use `int()` to convert if you need numbers. The `r` prefix makes it a raw string so `\\d` isn\'t treated as an escape sequence.',
       hints: [
         '`re.findall` returns a list of all matches',

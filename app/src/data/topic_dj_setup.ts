@@ -80,6 +80,10 @@ export const dj_setup_questions: Question[] = [
     "django.contrib.staticfiles",
     "blog.apps.BlogConfig",
 ]`,
+      tieredHints: {
+        apiSignature: 'INSTALLED_APPS = [... "app.apps.AppConfig"]',
+        skeleton: 'INSTALLED_APPS = [\n    ____,  # django.contrib.admin\n    ____,  # django.contrib.auth\n    ____,  # django.contrib.contenttypes\n    ____,  # django.contrib.sessions\n    ____,  # django.contrib.messages\n    ____,  # django.contrib.staticfiles\n    ____,  # blog, registered via its AppConfig class\n]',
+      },
       explanation: 'Until an app is in `INSTALLED_APPS`, Django doesn\'t see its models (no migrations), admin registrations, or signals. Use the full AppConfig path (`blog.apps.BlogConfig`) rather than `"blog"` because it guarantees the `ready()` method runs — that\'s where you register signals, override field types, etc. The bare string form still works but some third-party apps rely on `ready()`.',
       hints: [
         'AppConfig path activates ready() hook — prefer over bare name',
@@ -205,6 +209,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'blog.apps.BlogConfig',
 ]`,
+      tieredHints: {
+        apiSignature: 'python manage.py startapp <app_name>; INSTALLED_APPS',
+        skeleton: '# Step 1: Terminal command\n# $ ____ ____ ____ blog\n\n# Step 2: settings.py — update INSTALLED_APPS\nINSTALLED_APPS = [\n    \'____.____.admin\',\n    \'____.____.auth\',\n    \'____.____.contenttypes\',\n    \'____.____.sessions\',\n    \'____.____.messages\',\n    \'____.____.staticfiles\',\n    \'____.____.____\',\n]',
+      },
       explanation: '`python manage.py startapp blog` creates a new directory called "blog" with models.py, views.py, admin.py, apps.py, tests.py, and a migrations folder. Registering it as `blog.apps.BlogConfig` (rather than the bare `\'blog\'` string) guarantees the AppConfig\'s `ready()` hook runs — the bare string still works for a plain app with no `ready()`-dependent setup, but the class path is the safer default since it also works once you add signals or field overrides later. Apps not listed in INSTALLED_APPS are invisible to Django.',
       hints: [
         'The command to create an app is: python manage.py startapp <app_name>',

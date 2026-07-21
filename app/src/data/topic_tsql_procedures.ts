@@ -226,6 +226,18 @@ BEGIN
     WHERE OrderDate >= @FromDate
     ORDER BY OrderDate;
 END;`,
+    tieredHints: {
+      apiSignature: 'CREATE PROCEDURE proc_name @param_name data_type AS BEGIN ... END;',
+      skeleton: `CREATE PROCEDURE dbo.GetOrdersSince
+    @FromDate DATE
+AS
+BEGIN
+    SELECT ____, ____, ____
+    FROM dbo.FactOrders
+    WHERE OrderDate ____ @FromDate
+    ORDER BY ____;
+END;`,
+    },
     explanation: 'The `@FromDate DATE` parameter is declared after the proc name and used in the `WHERE` to filter on or after that date. Wrapping the query in `CREATE PROCEDURE … AS BEGIN … END` turns a one-off query into a reusable, schedulable load/report step.',
     hints: ['Declare @FromDate DATE after the name', 'WHERE OrderDate >= @FromDate, ORDER BY OrderDate'],
     tags: ['tsql', 'procedures', 'create-procedure'],
@@ -256,6 +268,18 @@ BEGIN
     FROM dbo.FactOrders
     WHERE CustomerKey = @CustomerKey;
 END;`,
+    tieredHints: {
+      apiSignature: '@param_name data_type OUTPUT',
+      skeleton: `CREATE PROCEDURE dbo.CountOrdersForCustomer
+    @CustomerKey INT,
+    @____ INT ____
+AS
+BEGIN
+    SELECT @OrderCount = ____(*)
+    FROM dbo.FactOrders
+    WHERE ____ = @____;
+END;`,
+    },
     explanation: 'The header declares one plain input parameter and one parameter suffixed `OUTPUT`. The body assigns into the output parameter with `SELECT @OrderCount = COUNT(*) ...` rather than returning a result set - the caller reads the count back through the parameter after EXEC, not from a SELECT.',
     hints: ['Second parameter needs the OUTPUT suffix', 'Assign the count into it with SELECT @OrderCount = COUNT(*) ... WHERE CustomerKey = @CustomerKey'],
     tags: ['tsql', 'procedures', 'output-parameter', 'create-procedure'],

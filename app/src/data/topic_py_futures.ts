@@ -306,6 +306,17 @@ print(f"parallel: {elapsed:.1f}s")`,
         'with-block shuts down the pool cleanly',
         'For CPU-bound work use ProcessPoolExecutor with the same API',
       ],
+      tieredHints: {
+        apiSignature: 'ThreadPoolExecutor(max_workers=None, thread_name_prefix="", initializer=None, initargs=())',
+        skeleton: `import time
+from concurrent.futures import ThreadPoolExecutor
+
+t0 = ____.____()
+with ____(max_workers=3) as ____:
+    list(____.____(time.sleep, [0.5, 0.5, 0.5]))
+elapsed = ____.____() - t0
+print(f"parallel: {____:.1f}s")`,
+      },
       tags: ['concurrency', 'ThreadPoolExecutor', 'concurrent-futures', 'parallel'],
       concepts: ['py-thread-vs-process'],
     },
@@ -345,6 +356,21 @@ print(sorted(results))`,
         'as_completed yields completed futures as they finish',
         'Exceptions from tasks surface on .result()',
       ],
+      tieredHints: {
+        apiSignature: 'concurrent.futures.as_completed(fs, timeout=None)',
+        skeleton: `import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def work(n):
+    time.sleep(0.01)
+    return n * n
+
+with ____() as ex:
+    futures = [ex.____(____, n) for n in [1, 2, 3, 4, 5]]
+    results = [f.____() for f in ____(____)]
+
+____(sorted(results))`,
+      },
       tags: ['concurrency', 'ThreadPoolExecutor', 'as_completed', 'futures'],
       concepts: ['py-thread-vs-process'],
     },

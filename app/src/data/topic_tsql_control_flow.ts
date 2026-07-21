@@ -176,6 +176,16 @@ AS
 BEGIN
     RETURN @Gross - @Gross * @DiscountPct / 100;
 END;`,
+    tieredHints: {
+      apiSignature: 'CREATE FUNCTION func_name (@param1 type, @param2 type) RETURNS return_type AS BEGIN RETURN expression; END;',
+      skeleton: `CREATE FUNCTION dbo.NetAmount
+    (@Gross ____, @DiscountPct ____)
+____
+AS
+____
+    ____ @Gross ____ @Gross ____ @DiscountPct ____ ____;
+END;`,
+    },
     explanation: 'A scalar function declares its parameters in parentheses, states `RETURNS <type>`, and the body `RETURN`s a single value. `@Gross * @DiscountPct / 100` converts the percentage to a fraction; subtracting it from the gross gives the net. The function can then be used inline, e.g. `SELECT dbo.NetAmount(Price, 10) FROM …`.',
     hints: ['RETURNS DECIMAL(10,2), body RETURNs one value', '@Gross - @Gross * @DiscountPct / 100'],
     tags: ['tsql', 'control-flow', 'function'],

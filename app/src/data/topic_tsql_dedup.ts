@@ -128,6 +128,15 @@ WHERE rn > 1;`,
 )
 DELETE FROM d
 WHERE rn > 1;`,
+    tieredHints: {
+      apiSignature: 'ROW_NUMBER() OVER (PARTITION BY partition_col ORDER BY sort_col [ASC|DESC])',
+      skeleton: `WITH d AS (
+    SELECT ROW_NUMBER() OVER (PARTITION BY ____ ORDER BY ____ ____) AS rn
+    FROM stg.Orders
+)
+____ FROM d
+WHERE rn > ____;`,
+    },
     explanation: 'You can DELETE directly through a CTE in T-SQL: number the rows per `OrderId` (newest first), then delete every row with `rn > 1`, leaving exactly the latest per key. This is the in-place cleanup of a staging table before it feeds the target load.',
     hints: ['ROW_NUMBER() PARTITION BY OrderId ORDER BY UpdatedAt DESC', 'DELETE FROM the CTE WHERE rn > 1'],
     tags: ['tsql', 'dedup', 'row-number', 'delete'],

@@ -134,5 +134,14 @@ VALUES (NEXT VALUE FOR dbo.OrderKeySeq, 100);`,
     explanation: 'The surrogate `ProductKey` (`IDENTITY(1,1)`) is the warehouse-owned join key the facts use; the natural `ProductCode` is kept as a `UNIQUE` attribute so loads can look up the surrogate by business key. Separating the two is what later enables SCD Type 2 — one ProductCode can map to several ProductKeys over time.',
     hints: ['IDENTITY(1,1) PRIMARY KEY for the surrogate', 'ProductCode NVARCHAR(30) NOT NULL UNIQUE for the natural key'],
     tags: ['tsql', 'surrogate-keys', 'identity', 'natural-key'],
+    tieredHints: {
+      apiSignature: 'column_name INT IDENTITY(seed, increment) PRIMARY KEY',
+      skeleton: `CREATE TABLE dbo.DimProduct (
+    ProductKey  INT ____(____, ____) PRIMARY KEY,
+    ProductCode NVARCHAR(30) ____ ____,
+    ProductName NVARCHAR(120) ____,
+    Category    NVARCHAR(60) ____
+);`,
+    },
   },
 ];

@@ -131,6 +131,16 @@ for num in countdown(5):
     ],
     tags: ['generators', 'yield', 'while', 'countdown'],
     concepts: ['py-generator-yield'],
+    tieredHints: {
+      apiSignature: 'yield expression',
+      skeleton: `def ____(n):
+    ____ n > 0:
+        ____ n
+        n ____ 1
+
+for ____ in ____(5):
+    ____(____)`,
+    },
   },
   {
     id: 'py-gen-parsons-1',
@@ -249,6 +259,19 @@ print(list(squared(evens(range(6)))))`,
     ],
     tags: ['generators', 'pipeline', 'lazy', 'composition'],
     concepts: ['py-generator-yield'],
+    tieredHints: {
+      apiSignature: 'yield expression',
+      skeleton: `def evens(nums):
+    ____ n in nums:
+        ____ n ____ 2 == 0:
+            ____ n
+
+def squared(nums):
+    ____ n in nums:
+        ____ n ____ n
+
+____(____(____(____(range(6)))))`,
+    },
   },
   {
     id: 'py-gen-infinite-islice',
@@ -285,6 +308,18 @@ print(list(islice(naturals(), 5)))`,
     ],
     tags: ['generators', 'infinite', 'islice', 'itertools'],
     concepts: ['py-generator-yield'],
+    tieredHints: {
+      apiSignature: 'itertools.islice(iterable, stop) -> iterator',
+      skeleton: `from itertools import ____
+
+def naturals():
+    n = 1
+    ____ True:
+        ____ n
+        n ____ 1
+
+____(____(____(____(), 5)))`,
+    },
   },
   {
     id: 'py-gen-predict-state',
@@ -387,6 +422,14 @@ print(list(flatten([[1, 2], [3], [4, 5]])))`,
     ],
     tags: ['generators', 'yield-from', 'delegation'],
     concepts: ['py-generator-yield'],
+    tieredHints: {
+      apiSignature: 'yield from subiterable',
+      skeleton: `def flatten(nested):
+    ____ sub in ____:
+        ____ ____ sub
+
+____(____(____([[1, 2], [3], [4, 5]])))`,
+    },
   },
   {
     id: 'py-gen-yield-from-predict',
@@ -454,6 +497,24 @@ print(avg.send(30))`,
     ],
     tags: ['generators', 'coroutine', 'send', 'two-way'],
     concepts: ['py-generator-yield'],
+    tieredHints: {
+      apiSignature: 'generator.send(value)',
+      skeleton: `def averager():
+    total = 0.0
+    count = 0
+    average = None
+    ____ True:
+        x = ____ average
+        total ____ x
+        count ____ 1
+        average = total ____ count
+
+avg = ____()
+____(____)
+____(____.____(10))
+____(____.____(20))
+____(____.____(30))`,
+    },
   },
   {
     id: 'py-gen-send-predict',

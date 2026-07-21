@@ -31,16 +31,16 @@ export const sparkSqlPredictOutputQuestions: Question[] = [
     language: CodeLanguage.SQL,
     question: 'How many rows does this query return?',
     code: `WITH users AS (
-  SELECT 1 AS id, 'Alice' AS name UNION ALL
+  SELECT 1 AS id, 'Alice' AS username UNION ALL
   SELECT 2, NULL UNION ALL
   SELECT 3, 'Bob' UNION ALL
   SELECT 4, NULL
 )
-SELECT COUNT(*) FROM users WHERE name = NULL;`,
+SELECT COUNT(*) FROM users WHERE username = NULL;`,
     expectedOutput: `0`,
     explanation:
-      'In SQL three-valued logic, `NULL = NULL` evaluates to NULL (treated as not-true), so `WHERE name = NULL` matches zero rows even though two rows have NULL. Use `WHERE name IS NULL` — it would return 2 here.',
-    hints: ['What does `name = NULL` evaluate to in three-valued logic?'],
+      'In SQL three-valued logic, `NULL = NULL` evaluates to NULL (treated as not-true), so `WHERE username = NULL` matches zero rows even though two rows have NULL. Use `WHERE username IS NULL` — it would return 2 here.',
+    hints: ['What does `username = NULL` evaluate to in three-valued logic?'],
     tags: ['null', 'where', 'three-valued-logic'],
     concepts: ['ps-null-handling', 'ps-select-filter'],
   },
@@ -77,7 +77,7 @@ SELECT COUNT(*), COUNT(coupon) FROM payments;`,
     language: CodeLanguage.SQL,
     question: 'How many rows does this query return?',
     code: `WITH customers AS (
-  SELECT 1 AS id, 'Alice' AS name UNION ALL
+  SELECT 1 AS id, 'Alice' AS username UNION ALL
   SELECT 2, 'Bob' UNION ALL
   SELECT 3, 'Carol'
 ), orders AS (
@@ -102,7 +102,7 @@ SELECT * FROM customers c INNER JOIN orders o ON c.id = o.customer_id;`,
     language: CodeLanguage.SQL,
     question: 'How many rows does this query return?',
     code: `WITH customers AS (
-  SELECT 1 AS id, 'Alice' AS name UNION ALL
+  SELECT 1 AS id, 'Alice' AS username UNION ALL
   SELECT 2, 'Bob' UNION ALL
   SELECT 3, 'Carol'
 ), orders AS (
@@ -176,12 +176,12 @@ NULL
     language: CodeLanguage.SQL,
     question: 'What does this query return?',
     code: `WITH products AS (
-  SELECT 'apple' AS name UNION ALL
+  SELECT 'apple' AS product_name UNION ALL
   SELECT 'apricot' UNION ALL
   SELECT 'banana' UNION ALL
   SELECT 'pineapple'
 )
-SELECT name FROM products WHERE name LIKE 'ap%' ORDER BY name;`,
+SELECT product_name FROM products WHERE product_name LIKE 'ap%' ORDER BY product_name;`,
     expectedOutput: `apple
 apricot`,
     explanation:
@@ -220,15 +220,15 @@ SELECT MAX(x), MIN(x), AVG(x) FROM t;`,
     language: CodeLanguage.SQL,
     question: 'How many rows does this query return?',
     code: `WITH visits AS (
-  SELECT 'A' AS user, '2024-01-01' AS day UNION ALL
+  SELECT 'A' AS user_id, '2024-01-01' AS visit_date UNION ALL
   SELECT 'A', '2024-01-01' UNION ALL
   SELECT 'A', '2024-01-02' UNION ALL
   SELECT 'B', '2024-01-01'
 )
-SELECT DISTINCT user, day FROM visits;`,
+SELECT DISTINCT user_id, visit_date FROM visits;`,
     expectedOutput: `3`,
     explanation:
-      'DISTINCT applies to the FULL row of selected columns, not each column independently. Distinct (user, day) pairs are: (A, Jan 1), (A, Jan 2), (B, Jan 1) — 3 rows. The duplicate (A, Jan 1) collapses to one. A common confusion is reading DISTINCT as "deduplicate each column separately."',
+      'DISTINCT applies to the FULL row of selected columns, not each column independently. Distinct (user_id, visit_date) pairs are: (A, Jan 1), (A, Jan 2), (B, Jan 1) — 3 rows. The duplicate (A, Jan 1) collapses to one. A common confusion is reading DISTINCT as "deduplicate each column separately."',
     hints: ['DISTINCT operates on the whole row of selected columns at once.'],
     tags: ['distinct', 'deduplication'],
     concepts: ['ps-distinct-drop-dup'],

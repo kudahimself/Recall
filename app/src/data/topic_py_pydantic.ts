@@ -939,6 +939,19 @@ print(type(u.age).__name__)`,
         'pydantic coerces "30" to int 30 automatically',
         'Enable strict=True in model_config for no coercion',
       ],
+      tieredHints: {
+        apiSignature: 'BaseModel(**data)',
+        skeleton: `from pydantic import BaseModel
+
+class User(____):
+    name: ____
+    age: ____
+    email: ____
+
+u = ____(name="Alice", age="30", email="alice@example.com")
+____(u.____)
+print(____(u.____).__name__)`,
+      },
       tags: ['pydantic', 'BaseModel', 'coercion'],
       concepts: ['py-pydantic-validation'],
     },
@@ -975,6 +988,19 @@ except ValidationError:
         'e.errors() gives a structured list of field problems',
         'FastAPI auto-catches this and returns 422 Unprocessable Entity',
       ],
+      tieredHints: {
+        apiSignature: 'ValidationError(title, line_errors, input_type=None, model=None)',
+        skeleton: `from pydantic import BaseModel, ValidationError
+
+class User(____):
+    name: str
+    age: int
+
+try:
+    User(name="Alice", age="not a number")
+____ ____:
+    print("validation failed")`,
+      },
       tags: ['pydantic', 'ValidationError', 'error-handling'],
       concepts: ['py-pydantic-validation', 'py-exception-hierarchy'],
     },
@@ -1018,6 +1044,26 @@ except ValidationError:
         'Raise ValueError inside the validator — pydantic rewraps it',
         'Return the (possibly transformed) value on success',
       ],
+      tieredHints: {
+        apiSignature: 'field_validator(field, *fields, mode="after", check_fields=None)',
+        skeleton: `from pydantic import BaseModel, field_validator, ValidationError
+
+class Product(____):
+    name: str
+    price: float
+
+    @____("price")
+    @____
+    def check_positive(cls, v):
+        if v <= 0:
+            ____ ValueError("price must be > 0")
+        return ____
+
+try:
+    ____(name="Widget", price=-1)
+____ ____:
+    print("invalid")`,
+      },
       tags: ['pydantic', 'field_validator', 'validation'],
       concepts: ['py-pydantic-validation'],
     },
@@ -1056,6 +1102,21 @@ print(parsed.order_id)`,
         'model_validate / model_validate_json to deserialise',
         'v2 spelling — avoid old .dict() / .json() if possible',
       ],
+      tieredHints: {
+        apiSignature: 'BaseModel.model_dump_json(*, indent=None, include=None, exclude=None, by_alias=False) -> str',
+        skeleton: `from pydantic import BaseModel
+
+class Order(____):
+    order_id: int
+    items: list[str]
+
+o = Order(order_id=1, items=["apple", "banana"])
+s = o.____()
+print(s)
+
+parsed = Order.____(s)
+print(parsed.order_id)`,
+      },
       tags: ['pydantic', 'json', 'serialization', 'model_dump'],
       concepts: ['py-pydantic-validation', 'py-json-serialization'],
     },
@@ -1124,6 +1185,22 @@ print(type(u.address).__name__)`,
         'Validation runs recursively',
         'Same trick works with list[InnerModel]',
       ],
+      tieredHints: {
+        apiSignature: 'BaseModel.model_validate(obj, *, strict=None, from_attributes=None, context=None) -> BaseModel',
+        skeleton: `from pydantic import BaseModel
+
+class Address(____):
+    city: str
+    zip: str
+
+class User(____):
+    name: str
+    address: ____
+
+u = ____(name="Alice", address={"city": "Dublin", "zip": "D04"})
+print(u.____.city)
+____(type(u.address).__name__)`,
+      },
       tags: ['pydantic', 'nested-models', 'composition'],
       concepts: ['py-pydantic-validation'],
     },

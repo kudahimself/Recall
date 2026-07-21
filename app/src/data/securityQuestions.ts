@@ -201,18 +201,9 @@ async function isValidToken(token: string) {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question: 'Implement a Next.js middleware that protects routes by checking for a valid JWT in cookies. If the token is missing or expired, redirect to /login. If valid, allow the request to proceed. Use the jose library for JWT verification.\n\nThe middleware should:\n1. Read the "access_token" from cookies\n2. Verify it using jose\'s jwtVerify with a secret key\n3. Redirect to /login if verification fails\n4. Only apply to routes under /dashboard and /api (not /login, /register, or static files)',
-    starterCode: `// Import NextRequest/NextResponse from 'next/server' and jwtVerify from 'jose'
-// Build JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key')
-
-
-// export async function middleware(request) that:
-//   reads 'access_token' from request.cookies.get('access_token')?.value
-//   redirects to /login if absent
-//   tries jwtVerify(token, JWT_SECRET); returns NextResponse.next() on success,
-//   catches and redirects to /login on failure
-
-
-// export const config.matcher limiting to /dashboard/:path* and /api/:path*
+    starterCode: `// Setup imports and secret key
+// Middleware logic to verify token and redirect
+// Route matcher configuration
 `,
     testCases: [
       {
@@ -262,6 +253,32 @@ export const config = {
   matcher: ['/dashboard/:path*', '/api/:path*'],
 };`,
     explanation: 'This middleware runs on the Edge Runtime before every matched request. Key points: (1) request.cookies.get() reads the httpOnly cookie -- middleware runs server-side so it CAN access httpOnly cookies even though client JS cannot. (2) jwtVerify from jose throws an error if the token is expired, has an invalid signature, or is malformed -- we catch all of these and redirect to /login. (3) The matcher config ensures we only check auth on protected routes, not on /login or static assets. (4) In production, JWT_SECRET must be a strong, randomly generated value stored in environment variables. Never hardcode it. This pattern works with Next.js 13+ App Router and runs at the edge for minimal latency.',
+    tieredHints: {
+      apiSignature: 'jwtVerify(jwt: string | Uint8Array, key: KeyLike | Uint8Array) -> Promise<JWTVerifyResult>',
+      skeleton: `import { ____, ____ } from 'next/server';
+import { jwtVerify } from 'jose';
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
+
+export async function ____(request: NextRequest) {
+  const token = ____.cookies.get('____')?.value;
+
+  if (!token) {
+    return ____.____(new URL('____', ____.url));
+  }
+
+  try {
+    await ____(token, JWT_SECRET);
+    return ____.____();
+  } catch (error) {
+    return ____.____(new URL('____', ____.url));
+  }
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/api/:path*'],
+};`,
+    },
     hints: [
       'Use request.cookies.get("access_token")?.value to read the cookie',
       'jwtVerify throws an error for expired or invalid tokens -- wrap it in try/catch',
@@ -295,7 +312,8 @@ export const config = {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question: 'Implement a Server Action that logs a user in by setting an httpOnly session cookie.\n\nFile: app/actions/auth.ts\n\nRequirements:\n- "use server" directive at the top of the function\n- async function `login(formData: FormData)`\n- Get a token from `await verifyCredentials(formData)` (assume this is imported from "@/lib/auth" and returns a session token string)\n- `const cookieStore = await cookies();`\n- Set the cookie: `cookieStore.set("session", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 })`',
-    starterCode: `// app/actions/auth.ts\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  // Verify credentials and set an httpOnly session cookie\n}`,
+    starterCode: `// app/actions/auth.ts\n"use server";\n\n// Import cookies and verifyCredentials\n\n// Implement login Server Action
+`,
     testCases: [
       {
         input: 'verify credentials',
@@ -310,6 +328,20 @@ export const config = {
     ],
     solution: `// app/actions/auth.ts\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  const token = await verifyCredentials(formData);\n  const cookieStore = await cookies();\n\n  cookieStore.set("session", token, {\n    httpOnly: true,\n    secure: true,\n    sameSite: "lax",\n    maxAge: 60 * 60 * 24 * 7,\n  });\n}`,
     explanation: 'A Server Action runs entirely on the server, so it can set an httpOnly cookie directly through cookies().set() — the browser never gets a chance to read or modify the raw token via document.cookie. secure: true ensures the cookie is only sent over HTTPS, and sameSite: "lax" blocks it from being attached to most cross-site requests, mitigating CSRF for the common case. maxAge is in seconds, so 60 * 60 * 24 * 7 is one week.',
+    tieredHints: {
+      apiSignature: 'ResponseCookies.set(name: str, value: str, options: CookieOptions) -> ResponseCookies',
+      skeleton: `export async function login(formData: FormData) {
+  const token = await ____(formData);
+  const cookieStore = await ____();
+
+  cookieStore.____("session", token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}`,
+    },
     hints: ['cookies() must be awaited before calling .set()', 'httpOnly, secure, and sameSite are all options in the same object'],
     tags: ['server-action', 'cookies', 'httpOnly', 'session'],
     concepts: ['web-security-auth-tokens'],
@@ -368,16 +400,11 @@ export const config = {
     starterCode: `# Imports: JsonResponse from django.http; connection from django.db;
 #          User from django.contrib.auth.models
 
+# Implement get_user_vulnerable(request) for comparison
 
-# Keep the vulnerable view (f-string interpolation into the SQL) for comparison
+# Implement get_user_safe_raw(request) using parameterized SQL queries with cursor.execute
 
-
-# get_user_safe_raw(request): use query "... WHERE username = %s" and
-#   cursor.execute(query, [username]) so the driver parameterises it
-
-
-# get_user_safe_orm(request): use User.objects.filter(username=username)
-#   .values('id', 'username', 'email') then JsonResponse({'users': list(users)}, safe=False)
+# Implement get_user_safe_orm(request) using Django ORM filter
 `,
     testCases: [
       {
@@ -421,6 +448,21 @@ def get_user_safe_orm(request):
     users = User.objects.filter(username=username).values('id', 'username', 'email')
     return JsonResponse({'users': list(users)}, safe=False)`,
     explanation: 'SQL injection works because the vulnerable version builds the SQL string by concatenating user input directly: f"...WHERE username = \'{username}\'". An attacker sends username=\' OR 1=1 -- which produces: WHERE username = \'\' OR 1=1 --\' -- the OR 1=1 matches every row, and -- comments out the rest. The fix is parameterized queries: cursor.execute(query, [username]) sends the SQL template and values separately to the database driver. The database treats the parameter as a literal value, not as SQL syntax, so \' OR 1=1 -- is treated as a literal string to match against, not as SQL code. Django\'s ORM (User.objects.filter(username=username)) always uses parameterized queries under the hood, making it safe by default. Use raw SQL only when the ORM can\'t express your query, and ALWAYS use %s placeholders with a params list.',
+    tieredHints: {
+      apiSignature: 'Cursor.execute(sql: str, params: List[Any]) -> None',
+      skeleton: `def get_user_safe_raw(request):
+    username = request.GET.get('username', '')
+    query = "SELECT id, username, email FROM users WHERE username = %s"
+    with connection.cursor() as cursor:
+        cursor.____(query, [____])
+        rows = cursor.fetchall()
+    return JsonResponse({'users': rows}, safe=False)
+
+def get_user_safe_orm(request):
+    username = request.GET.get('username', '')
+    users = User.objects.____(username=username).values('id', 'username', 'email')
+    return JsonResponse({'users': list(users)}, safe=False)`,
+    },
     hints: [
       'The vulnerability is in the f-string that directly interpolates user input into SQL',
       'cursor.execute() accepts a second argument: a list of parameters that replace %s placeholders',
@@ -482,17 +524,11 @@ def get_user_safe_orm(request):
     course: Course.WEB_DEV,
     language: CodeLanguage.PYTHON,
     question: 'Implement rate limiting for a Django REST Framework API to prevent brute-force attacks. Configure:\n- Authenticated users: 100 requests per hour\n- Anonymous users: 20 requests per hour\n- A specific login endpoint: 5 attempts per minute (to prevent password brute-force)\n\nSet up the DRF throttle classes and apply them to a login view.',
-    starterCode: `# settings.py — configure REST_FRAMEWORK with:
-#   DEFAULT_THROTTLE_CLASSES: AnonRateThrottle and UserRateThrottle
-#   DEFAULT_THROTTLE_RATES: anon=20/hour, user=100/hour, login=5/min
+    starterCode: `# settings.py — configure REST_FRAMEWORK defaults and throttle rates for anon, user, and login
 
+# throttles.py — define custom LoginRateThrottle for login scope
 
-# throttles.py — LoginRateThrottle(AnonRateThrottle) with scope = "login"
-
-
-# views.py — decorate login_view with @api_view(['POST']) and
-# @throttle_classes([LoginRateThrottle])
-# Body reads username/password from request.data; returns Response({'message': 'Login successful'})
+# views.py — apply throttle decorator to login_view endpoint
 `,
     testCases: [
       {
@@ -545,6 +581,19 @@ def login_view(request):
     # ... authentication logic ...
     return Response({'message': 'Login successful'})`,
     explanation: 'Rate limiting is essential to prevent: (1) Brute-force password attacks -- without limits, an attacker can try thousands of passwords per second. (2) API abuse -- a single user overwhelming your server. (3) Credential stuffing -- automated attacks using leaked password databases. DRF\'s throttling system uses a cache backend (default: in-memory) to track request counts per client. AnonRateThrottle identifies clients by IP address. UserRateThrottle identifies by user ID (for authenticated users) or IP (for anonymous). The LoginRateThrottle extends AnonRateThrottle because login requests come from unauthenticated users. The scope = "login" maps to the "login" key in DEFAULT_THROTTLE_RATES. When the limit is exceeded, DRF returns a 429 Too Many Requests response with a Retry-After header. For production, use a Redis cache backend instead of in-memory to persist rates across server restarts and support multiple server instances.',
+    tieredHints: {
+      apiSignature: 'rest_framework.decorators.throttle_classes(throttle_classes: List[type]) -> Callable',
+      skeleton: `-- ____ rate limiting
+class LoginRateThrottle(AnonRateThrottle):
+    scope = '____'
+
+@api_view(['POST'])
+@____([LoginRateThrottle])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+    return Response({'message': 'Login successful'})`,
+    },
     hints: [
       'DEFAULT_THROTTLE_CLASSES applies globally; @throttle_classes overrides per-view',
       'LoginRateThrottle extends AnonRateThrottle because login requests are unauthenticated',
@@ -659,6 +708,22 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]`,
     explanation: 'CORS (Cross-Origin Resource Sharing) is a browser security mechanism that blocks frontend JavaScript from making requests to a different domain unless the server explicitly allows it. When your Next.js app (localhost:3000) calls your Django API (localhost:8000), the browser sends a preflight OPTIONS request first, asking "is this allowed?" The server responds with Access-Control-Allow-Origin, Access-Control-Allow-Methods, etc. Key gotcha: Access-Control-Allow-Origin: * (wildcard) does NOT work with Access-Control-Allow-Credentials: true. The browser spec requires a specific origin when credentials are involved. This prevents a malicious site from making authenticated requests to your API and reading the response. CorsMiddleware MUST come before CommonMiddleware so it can handle the preflight OPTIONS request before Django rejects it. The x-csrftoken header is needed if you use Django\'s CSRF protection with cross-origin requests.',
+    tieredHints: {
+      apiSignature: 'CORS_ALLOWED_ORIGINS: List[str]; CORS_ALLOW_CREDENTIALS: bool',
+      skeleton: `MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'https://myapp.com',
+]
+
+CORS_ALLOW_CREDENTIALS = ____
+CORS_ALLOW_HEADERS = ['____', 'authorization', 'content-type']
+CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
+    },
     hints: [
       'CORS_ALLOW_ALL_ORIGINS = True won\'t work with CORS_ALLOW_CREDENTIALS = True',
       'CorsMiddleware must be placed before CommonMiddleware in MIDDLEWARE',
@@ -885,6 +950,20 @@ class ArticleViewSet(viewsets.ModelViewSet):
     # queryset = Article.objects.all()
     # serializer_class = ArticleSerializer`,
     explanation: 'RBAC (Role-Based Access Control) assigns permissions based on roles rather than individual users. This is more maintainable than per-user permissions as your app scales. The permission class checks: (1) Is the user authenticated? (2) What role do they have? (3) Is the HTTP method allowed for that role? DRF calls has_permission() before the view executes. If it returns False, DRF returns a 403 Forbidden response. The ROLE_PERMISSIONS dict makes it easy to modify access levels without changing code logic. For more granular control, override has_object_permission() to check if a user can access a SPECIFIC object (e.g., editors can only edit their own articles). DRF\'s built-in IsAdminUser only checks is_staff, which is too coarse for most apps. Custom permissions give you the flexibility to implement your exact business rules. In production, consider django-guardian for object-level permissions or django-rules for predicate-based permissions.',
+    tieredHints: {
+      apiSignature: 'BasePermission.has_permission(request: Request, view: View) -> bool',
+      skeleton: `class RoleBasedPermission(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.____:
+            return False
+
+        user_role = getattr(request.user, '____', None)
+        if not user_role:
+            return False
+
+        allowed_methods = ROLE_PERMISSIONS.get(user_role, [])
+        return request.method in ____`,
+    },
     hints: [
       'BasePermission requires implementing has_permission(self, request, view)',
       'Check request.method against allowed methods for the user\'s role',

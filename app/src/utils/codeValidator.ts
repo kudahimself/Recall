@@ -249,6 +249,23 @@ function detectAlternativeApproach(
   return null;
 }
 
+/**
+ * Detect a manual `for x in sub: yield x` loop submitted where the reference
+ * solution specifically teaches `yield from sub` delegation. Token-set
+ * matching alone can't catch this: `from` is a NOISE_TOKEN (needed so
+ * `import x from y` doesn't get penalised), and every other token
+ * (`yield`, `for`, `in`, the loop var) is shared between both forms, so a
+ * manual loop scores as a near-perfect match despite not using delegation.
+ */
+function checkYieldFromRequired(userCode: string, solution: string): string | null {
+  if (!/\byield\s+from\b/.test(solution)) return null;
+  if (/\byield\s+from\b/.test(userCode)) return null;
+  if (/\byield\b/.test(userCode)) {
+    return 'Use generator delegation (`yield from`) instead of a manual `for ... yield` loop.';
+  }
+  return null;
+}
+
 const SQL_MISTAKES: MistakeCheck[] = [
   {
     test: /\bLIMIT\b.*\bWHERE\b/i,
@@ -305,6 +322,13 @@ export function validateAnswer(
   for (const { test, message } of mistakes) {
     if (test.test(userCode)) {
       return { passed: false, verdict: 'fail', description: testDescription, error: message };
+    }
+  }
+
+  if (language === CodeLanguage.PYTHON) {
+    const yieldFromError = checkYieldFromRequired(userCode, solution);
+    if (yieldFromError) {
+      return { passed: false, verdict: 'fail', description: testDescription, error: yieldFromError };
     }
   }
 

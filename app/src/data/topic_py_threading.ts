@@ -616,6 +616,25 @@ print(counter)`,
         '+= is read-modify-write — not atomic',
         'Always .join() threads before reading shared state',
       ],
+      tieredHints: {
+        apiSignature: 'threading.Lock()',
+        skeleton: `from threading import Thread, Lock
+
+counter = 0
+lock = ____()
+
+def increment_many(n):
+    global ____
+    for _ in range(n):
+        ____ ____:
+            ____ ____ 1
+
+t1 = ____(target=____, args=(1000,))
+t2 = ____(target=increment_many, args=(1000,))
+t1.____(); t2.____()
+t1.____(); t2.____()
+print(____)`,
+      },
       tags: ['threading', 'Lock', 'race-condition', 'shared-state'],
       concepts: ['py-thread-vs-process'],
     },
@@ -665,6 +684,31 @@ p.join(); c.join()`,
         'Sentinel (None) is the canonical shutdown signal',
         'For async code use asyncio.Queue — same semantics',
       ],
+      tieredHints: {
+        apiSignature: 'queue.Queue(maxsize=0)',
+        skeleton: `from threading import Thread
+from queue import Queue
+
+q = ____()
+
+def producer():
+    for n in (1, 2, 3):
+        q.____(n)
+    q.____(None)
+
+def consumer():
+    while True:
+        item = ____.____()
+        if item ____ None:
+            ____
+        ____(item)
+        q.____()
+
+p = ____(target=____)
+c = ____(target=____)
+p.____(); c.____()
+p.____(); c.____()`,
+      },
       tags: ['threading', 'Queue', 'producer-consumer', 'concurrency'],
       concepts: ['py-thread-vs-process'],
     },

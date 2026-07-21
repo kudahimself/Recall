@@ -181,6 +181,20 @@ WHEN NOT MATCHED BY TARGET THEN
     VALUES (src.ProductCode, src.ProductName, src.Category)
 WHEN NOT MATCHED BY SOURCE THEN
     DELETE;`,
+    tieredHints: {
+      apiSignature: 'MERGE target_tbl AS tgt USING source_tbl AS src ON tgt.key = src.key WHEN MATCHED THEN UPDATE SET col = src.col WHEN NOT MATCHED BY TARGET THEN INSERT (cols) VALUES (src.cols) WHEN NOT MATCHED BY SOURCE THEN DELETE;',
+      skeleton: `____ dbo.DimProduct AS tgt
+____ stg.Product AS src
+    ____ tgt.____ = src.____
+____ MATCHED THEN
+    ____ SET tgt.____ = src.____,
+               tgt.____ = src.____
+____ NOT MATCHED BY TARGET THEN
+    ____ (____, ____, ____)
+    VALUES (src.____, src.____, src.____)
+____ NOT MATCHED BY SOURCE THEN
+    ____;`,
+    },
     explanation: 'All three branches make this a full sync: matched products are refreshed, source-only products are inserted (`BY TARGET`), and target-only products — gone from the source — are deleted (`BY SOURCE`). One statement keeps the dimension a faithful mirror of staging. (A `MERGE` statement must end with a semicolon.)',
     hints: ['Three WHEN clauses: MATCHED, NOT MATCHED BY TARGET, NOT MATCHED BY SOURCE', 'BY SOURCE → DELETE'],
     tags: ['tsql', 'merge', 'upsert', 'sync'],

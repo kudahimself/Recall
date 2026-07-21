@@ -48,6 +48,10 @@ export const dj_deployment_questions: Question[] = [
       ],
       solution: `FROM python:3.11-slim\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY . .\n\nEXPOSE 8000\n\nCMD ["gunicorn", "mysite.wsgi:application", "--bind", "0.0.0.0:8000"]`,
       explanation: 'FROM sets the base image. WORKDIR sets the working directory. Copy requirements first (Docker caches this layer — dependencies only reinstall when requirements.txt changes). EXPOSE documents the port. CMD runs the production server (gunicorn, not manage.py runserver).',
+      tieredHints: {
+        apiSignature: 'CMD ["executable", "param1", "param2"]',
+        skeleton: '____ ____\n\n____ ____\n\n____ ____ .\n____ ____ install ____ -r ____\n\n____ . .\n\n____ ____\n\nCMD [____, ____, ____, ____]',
+      },
       hints: ['Copy requirements.txt BEFORE code for caching', 'Use slim image for smaller size', 'gunicorn for production, not runserver'],
       tags: ['docker', 'dockerfile', 'gunicorn', 'deployment'],
       concepts: ['dj-deployment-cicd'],
@@ -92,6 +96,10 @@ services:
       ],
       solution: `version: "3.8"\n\nservices:\n  db:\n    image: postgres:15\n    environment:\n      POSTGRES_DB: mydb\n      POSTGRES_USER: myuser\n      POSTGRES_PASSWORD: mypassword\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n\n  web:\n    build: .\n    ports:\n      - "8000:8000"\n    depends_on:\n      - db\n    environment:\n      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb\n\nvolumes:\n  postgres_data:`,
       explanation: 'docker-compose defines multiple services. db uses the official postgres image. web builds from the Dockerfile. depends_on ensures db starts first. volumes persist database data. Services communicate by service name (db as hostname).',
+      tieredHints: {
+        apiSignature: 'depends_on: [service_name]',
+        skeleton: 'version: "3.8"\n\nservices:\n  db:\n    ____: postgres:15\n    ____:\n      POSTGRES_DB: mydb\n      POSTGRES_USER: myuser\n      POSTGRES_PASSWORD: mypassword\n    ____:\n      - postgres_data:/var/lib/postgresql/data\n\n  web:\n    ____: .\n    ____:\n      - "8000:8000"\n    ____:\n      - db\n    ____:\n      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb\n\nvolumes:\n  postgres_data:',
+      },
       hints: ['depends_on controls startup order', 'Services reference each other by name', 'volumes persist data across restarts'],
       tags: ['docker-compose', 'postgres', 'multi-container', 'deployment'],
       concepts: ['dj-deployment-cicd', 'inf-postgres'],
@@ -157,6 +165,10 @@ accesslog = '-'
 errorlog = '-'
 loglevel = 'info'`,
       explanation: 'Gunicorn (Green Unicorn) is a production WSGI HTTP server that replaces Django\'s runserver. The formula "2 * CPU cores + 1" for workers comes from the assumption that each worker will spend some time waiting on I/O (database, API calls), so having more workers than CPUs keeps the server busy. Binding to 127.0.0.1 (not 0.0.0.0) is important because nginx should be the public-facing server, proxying requests to gunicorn — exposing gunicorn directly bypasses nginx\'s static file serving, SSL termination, and DDoS protection. max_requests restarts each worker after N requests, which is a pragmatic defense against memory leaks: the OS reclaims all memory when the process exits. max_requests_jitter adds randomness so all workers don\'t restart simultaneously. The accesslog="-" sends logs to stdout, which is the standard practice for containerized deployments (Docker, Kubernetes) where a log aggregator captures stdout.',
+      tieredHints: {
+        apiSignature: 'multiprocessing.cpu_count() -> int',
+        skeleton: '# 1. gunicorn command\n# gunicorn myproject.wsgi:application --workers 4 --bind 127.0.0.1:8000 --timeout 120\n\n# 2. gunicorn.conf.py\nimport multiprocessing\n\n# Server socket\nbind = \'127.0.0.1:8000\'\n\n# Worker processes: 2-4x CPU cores is recommended\nworkers = multiprocessing.____() * 2 + 1\n\n# Worker timeout (seconds) — increase for slow requests\ntimeout = 120\n\n# Restart workers after this many requests to prevent memory leaks\n____ = 1000\nmax_requests_jitter = 50\n\n# Logging\n____ = \'-\'\nerrorlog = \'-\'\nloglevel = \'info\'',
+      },
       hints: [
         'The WSGI entry point is myproject.wsgi:application',
         'Workers = 2 * CPU cores + 1 is the recommended formula',
@@ -236,6 +248,10 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 X_FRAME_OPTIONS = "DENY"`,
       explanation: '`ALLOWED_HOSTS` blocks Host-header injection attacks. `SECURE_SSL_REDIRECT` 301s HTTP → HTTPS (also set `SECURE_PROXY_SSL_HEADER` behind a TLS-terminating proxy). HSTS tells browsers "only HTTPS for this domain for N seconds" — test with small values before committing to a year. `_COOKIE_SECURE` means cookies only sent over HTTPS. `X_FRAME_OPTIONS = "DENY"` blocks clickjacking. `python manage.py check --deploy` catches missing items.',
+      tieredHints: {
+        apiSignature: 'SECURE_HSTS_SECONDS: int',
+        skeleton: '# settings.py\nDEBUG = False\n____ = ["example.com", "www.example.com"]\nSECURE_SSL_REDIRECT = True\nSESSION_COOKIE_SECURE = True\nCSRF_COOKIE_SECURE = True\nSECURE_HSTS_SECONDS = 31536000\n____ = True\n____ = "DENY"',
+      },
       hints: [
         'ALLOWED_HOSTS is non-negotiable in prod',
         'HSTS: start small (seconds) and ramp up',
@@ -274,6 +290,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # At deploy time:
 # python manage.py collectstatic --noinput`,
       explanation: '`collectstatic` walks every app\'s `static/` dir plus anything in `STATICFILES_DIRS` and copies them all to `STATIC_ROOT`. That directory is what nginx / CDN / whitenoise serves. `MEDIA_URL` / `MEDIA_ROOT` are the analogous settings for user uploads (NEVER serve these through Django in prod either — S3 + signed URLs). Always include a content hash in static file names for cache-busting: `STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"`.',
+      tieredHints: {
+        apiSignature: 'STATIC_ROOT = BASE_DIR / "staticfiles"',
+        skeleton: 'from pathlib import Path\n\n____ = Path(__file__).resolve().parent.parent\n\n____ = "/static/"\n____ = ____ / "staticfiles"\n\n# At deploy time run management command:\n# ____ ____ ____ --noinput',
+      },
       hints: [
         'STATIC_ROOT = where collectstatic writes',
         'STATIC_URL = where it is served from',
@@ -340,6 +360,10 @@ MIDDLEWARE = [
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"`,
       explanation: 'whitenoise removes the need for a separate nginx just for static files — common for small deployments, Heroku, k8s where simplicity beats optimal split. `CompressedManifestStaticFilesStorage` gives you gzip + Brotli + per-file hash in the filename (`app.a7f82b.css`) so browsers cache forever and you bust by changing the hash. Middleware MUST be immediately after `SecurityMiddleware` so static requests skip sessions/auth for speed.',
+      tieredHints: {
+        apiSignature: 'STATICFILES_STORAGE: str',
+        skeleton: '# settings.py\nMIDDLEWARE = [\n    "django.middleware.security.SecurityMiddleware",\n    "____.middleware.WhiteNoiseMiddleware",\n    "django.contrib.sessions.middleware.SessionMiddleware",\n    # ... rest\n]\n\n____ = "whitenoise.storage.____"',
+      },
       hints: [
         'WhiteNoiseMiddleware right after SecurityMiddleware',
         'CompressedManifestStaticFilesStorage for hash + gzip',

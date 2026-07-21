@@ -714,6 +714,23 @@ def batch_process(iterable, batch_size: int):
       ],
       tags: ['itertools', 'heapq', 'merge', 'islice', 'batching'],
       concepts: ['py-itertools-combinators'],
+      tieredHints: {
+        apiSignature: 'itertools.islice(iterable, stop) -> iterator',
+        skeleton: `import itertools
+import heapq
+
+def merge_sorted_streams(*streams: ____) -> ____:
+    return ____(heapq.____(*____))
+
+def batch_process(iterable, batch_size: ____):
+    it = ____(____)
+    while ____:
+        batch = ____(itertools.____(it, ____))
+        if not batch:
+            ____
+        ____ batch
+`,
+      },
     },
   {
       id: 'py-adv-iter-2',
@@ -754,6 +771,21 @@ def unique_pairs(names: list[str]) -> list[tuple[str, str]]:
       ],
       tags: ['itertools', 'product', 'combinations', 'testing'],
       concepts: ['py-itertools-combinators', 'py-test-isolation'],
+      tieredHints: {
+        apiSignature: 'itertools.combinations(iterable, r) -> iterator',
+        skeleton: `from itertools import product, combinations
+
+def generate_test_combinations(
+    browsers: ____,
+    operating_systems: ____,
+    resolutions: ____
+) -> ____:
+    return ____(____(browsers, operating_systems, resolutions))
+
+def unique_pairs(names: ____) -> ____:
+    return ____(____(names, ____))
+`,
+      },
     },
   {
       id: 'py-adv-iter-3',
@@ -829,6 +861,14 @@ print(results)`,
       ],
       tags: ['itertools', 'groupby', 'run-length'],
       concepts: ['py-itertools-combinators'],
+      tieredHints: {
+        apiSignature: 'itertools.groupby(iterable, key=None) -> iterator[(key, group)]',
+        skeleton: `from itertools import ____
+
+s = "aaabbcccdab"
+results = [(____, ____(list(____))) for ____, ____ in ____(s)]
+____(results)`,
+      },
     },
   {
       id: 'py-iter-takewhile-dropwhile',
@@ -860,6 +900,14 @@ print(list(dropwhile(lambda x: x < 5, nums)))`,
       ],
       tags: ['itertools', 'takewhile', 'dropwhile'],
       concepts: ['py-itertools-combinators'],
+      tieredHints: {
+        apiSignature: 'itertools.dropwhile(predicate, iterable) -> iterator',
+        skeleton: `from itertools import ____, ____
+
+nums = [1, 2, 3, 10, 2, 1]
+____(____(____(lambda x: x ____ 5, nums)))
+____(____(____(lambda x: x ____ 5, nums)))`,
+      },
     },
   {
       id: 'py-itertools-starmap-cloze-1',
@@ -912,6 +960,13 @@ print(list(starmap(lambda a, b: a * b, pairs)))`,
       ],
       tags: ['itertools', 'starmap', 'unpack'],
       concepts: ['py-itertools-combinators'],
+      tieredHints: {
+        apiSignature: 'itertools.starmap(function, iterable) -> iterator',
+        skeleton: `from itertools import ____
+
+pairs = [(2, 3), (4, 5), (6, 7)]
+____(____(____(lambda a, b: a ____ b, pairs)))`,
+      },
     },
   {
       id: 'py-itertools-pairwise-cloze-1',
@@ -963,6 +1018,14 @@ print(gaps)`,
       ],
       tags: ['itertools', 'pairwise', 'sliding-window'],
       concepts: ['py-itertools-combinators'],
+      tieredHints: {
+        apiSignature: 'itertools.pairwise(iterable) -> iterator[(x0,x1), (x1,x2), ...]',
+        skeleton: `from itertools import ____
+
+timestamps = [10, 13, 20, 22, 30]
+gaps = [b ____ a for a, b in ____(timestamps)]
+____(gaps)`,
+      },
     },
   {
       id: 'py-iter-int-product-islice',
@@ -995,5 +1058,12 @@ print(first_five)`,
       ],
       tags: ['itertools', 'product', 'islice', 'lazy', 'intermediate'],
       concepts: ['py-itertools-combinators'],
+      tieredHints: {
+        apiSignature: 'itertools.islice(iterable, stop) -> iterator',
+        skeleton: `from itertools import ____, ____
+
+first_five = ____(____(____(range(10), repeat=____), 5))
+____(first_five)`,
+      },
     },
 ];

@@ -127,6 +127,12 @@ SELECT Country FROM dbo.DimSupplier;`,
     solution: `SELECT Country FROM dbo.DimCustomer
 EXCEPT
 SELECT Country FROM dbo.DimSupplier;`,
+    tieredHints: {
+      apiSignature: 'SELECT cols FROM t1 EXCEPT SELECT cols FROM t2',
+      skeleton: `SELECT ____ FROM dbo.DimCustomer
+____
+SELECT ____ FROM dbo.DimSupplier;`,
+    },
     explanation: '`EXCEPT` returns rows from the first query that are not in the second, deduplicated — exactly "countries with customers but no suppliers". It is far cleaner than a `LEFT JOIN … IS NULL` when comparing whole rows.',
     hints: ['First-query rows minus second-query rows → EXCEPT'],
     tags: ['tsql', 'set-ops', 'except'],

@@ -76,6 +76,21 @@ print(Point.dimensions)`,
         'Args: `"Point"` (name), `(object,)` (bases tuple), `{...}` (class body dict)',
         'Put both `dimensions` and `describe` in the dict',
       ],
+      tieredHints: {
+        apiSignature: 'type(name, bases, dict, **kwds) -> type',
+        skeleton: `def describe(self):
+    return f"{Point.dimensions}D Point"
+
+Point = ____(
+    "Point",
+    (____,),
+    {"____": 2, "____": describe},
+)
+
+p = ____()
+____(p.describe())
+print(____.dimensions)`,
+      },
       tags: ['metaprogramming', 'type', 'dynamic-class', 'advanced'],
       concepts: ['py-metaclass'],
     },
@@ -155,6 +170,25 @@ print(Config.VERSION)`,
         'Metaclass `__new__` receives the namespace dict before the class is created',
         'Skip `__dunder__` keys — only transform user-defined names',
       ],
+      tieredHints: {
+        apiSignature: 'type.__new__(mcs, name, bases, namespace, **kwargs)',
+        skeleton: `class UppercaseAttrMeta(____):
+    def ____(mcs, name, bases, namespace):
+        upper_namespace = {}
+        for key, value in ____.items():
+            if not key.____("__"):
+                upper_namespace[key.____()] = ____
+            else:
+                upper_namespace[____] = value
+        return ____().____(mcs, name, bases, upper_namespace)
+
+class Config(____=UppercaseAttrMeta):
+    debug = True
+    version = "1.0"
+
+print(Config.____)
+____(Config.VERSION)`,
+      },
       tags: ['metaprogramming', 'metaclass', '__new__', 'advanced', 'namespace'],
       concepts: ['py-metaclass'],
     },
@@ -207,8 +241,8 @@ print(Dog.___)    # (<class 'object'>,)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Inspect a class hierarchy using special attributes. Create `Animal` and `Dog(Animal)` classes, then print: the class name, its module, its bases, and the full MRO for `Dog`.',
-      starterCode: `# Define Animal and Dog(Animal) classes (bodies can just be pass)
-# Print Dog.__name__, Dog.__module__, Dog.__bases__, and Dog.mro()
+      starterCode: `# Define Animal class and Dog subclassing Animal
+# Inspect and print Dog's name, defining module, direct bases, and full MRO
 `,
       testCases: [
         { input: '', expectedOutput: 'Dog\n__main__\n(<class \'__main__.Animal\'>,)\n[<class \'__main__.Dog\'>, <class \'__main__.Animal\'>, <class \'object\'>]', description: 'Should print class introspection data' },
@@ -228,6 +262,19 @@ print(Dog.mro())`,
         'Use `Dog.__name__`, `Dog.__module__`, `Dog.__bases__`, `Dog.mro()`',
         'All classes inherit from `object` at the top of the MRO',
       ],
+      tieredHints: {
+        apiSignature: 'cls.mro() -> list[type]',
+        skeleton: `class Animal:
+    pass
+
+class Dog(Animal):
+    pass
+
+print(Dog.____)
+print(Dog.____)
+print(Dog.____)
+print(Dog.____())`,
+      },
       tags: ['metaprogramming', '__name__', '__bases__', 'MRO', 'introspection'],
       concepts: ['py-mro-resolution'],
     },

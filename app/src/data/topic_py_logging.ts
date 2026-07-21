@@ -274,6 +274,17 @@ logger.warning("heads up")`,
         'getLogger(__name__) per module',
         'Call logger.debug / info / warning — messages are filtered by level',
       ],
+      tieredHints: {
+        apiSignature: 'logging.basicConfig(*, filename=None, filemode="a", format=None, datefmt=None, level=None, stream=None, handlers=None, force=None, encoding=None, errors=None)',
+        skeleton: `import logging
+
+logging.____(level=logging.INFO)
+logger = logging.____(__name__)
+
+logger.____("debug skipped")
+logger.____("hello")
+logger.____("heads up")`,
+      },
       tags: ['logging', 'basicConfig', 'getLogger', 'levels'],
       concepts: ['py-logging-config'],
     },
@@ -310,6 +321,19 @@ logger.info("processed 42")`,
         'Formatter fields: %(asctime)s, %(levelname)s, %(name)s, %(message)s',
         'Handler.setFormatter attaches the formatter to that one handler',
       ],
+      tieredHints: {
+        apiSignature: 'logging.Formatter(fmt=None, datefmt=None, style="%", validate=True, *, defaults=None)',
+        skeleton: `import logging
+
+logger = logging.getLogger("payments")
+logger.____(logging.DEBUG)
+
+handler = logging.____()
+handler.____(logging.____("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+logger.____(handler)
+
+logger.info("processed 42")`,
+      },
       tags: ['logging', 'Formatter', 'StreamHandler', 'handlers'],
       concepts: ['py-logging-config'],
     },
@@ -345,6 +369,18 @@ except Exception:
         'Must be called inside an except block',
         'Traceback is attached to the LogRecord automatically',
       ],
+      tieredHints: {
+        apiSignature: 'logger.exception(msg, *args, exc_info=True, stack_info=False, stacklevel=1, extra=None)',
+        skeleton: `import logging
+
+logging.____(level=logging.ERROR)
+logger = logging.____(__name__)
+
+try:
+    ____ ValueError("bad id")
+except Exception:
+    logger.____("query failed")`,
+      },
       tags: ['logging', 'exception', 'traceback', 'exc_info'],
       concepts: ['py-logging-config', 'py-exception-hierarchy'],
     },
@@ -379,6 +415,17 @@ logger.info("user %s logged in from %s", user_id, ip)`,
         'Use %s / %d / %r placeholders',
         'Linters (pylint/ruff) enforce this — f-strings in log calls are a warning',
       ],
+      tieredHints: {
+        apiSignature: 'logger.info(msg, *args, exc_info=None, stack_info=False, stacklevel=1, extra=None)',
+        skeleton: `import logging
+
+logging.____(level=logging.INFO)
+logger = logging.____(__name__)
+
+user_id = 42
+ip = "10.0.0.1"
+logger.____("user %s logged in from %s", ____, ____)`,
+      },
       tags: ['logging', 'format-string', 'lazy-evaluation', 'lazy-formatting', 'best-practice'],
       concepts: ['py-logging-config'],
     },

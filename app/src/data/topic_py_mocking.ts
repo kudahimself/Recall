@@ -162,6 +162,19 @@ with pytest.raises(ValueError):
       '.side_effect = Exception to raise on call',
       '.side_effect = [1, 2, 3] gives sequential return values',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.raises(expected_exception, *, match=None)',
+      skeleton: `from unittest.mock import MagicMock
+import pytest
+
+fetcher = ____()
+fetcher.get_user.____ = {"id": 1, "name": "Alice"}
+assert fetcher.____(99) == {"id": 1, "name": "Alice"}
+
+fetcher.get_user.____ = ____("not found")
+with pytest.____(____):
+    fetcher.get_user(99)`,
+    },
     tags: ['MagicMock', 'return_value', 'side_effect', 'mock'],
     concepts: ['py-test-isolation'],
   },
@@ -219,6 +232,17 @@ print(notifier.send.call_count)`,
       'assert_called_once_with combines the count + args check',
       'call_args_list holds every call for "any of these" patterns',
     ],
+    tieredHints: {
+      apiSignature: 'mock.assert_called_with(*args, **kwargs) -> None',
+      skeleton: `from unittest.mock import MagicMock
+
+notifier = ____()
+notifier.send("alice@example.com", subject="Welcome", body="Hi!")
+
+notifier.send.____()
+notifier.send.____("alice@example.com", subject="Welcome", body="Hi!")
+print(notifier.send.____)`,
+    },
     tags: ['mock', 'assert_called', 'interaction-testing'],
     concepts: ['py-test-isolation'],
   },
@@ -285,6 +309,23 @@ def test_retry_does_not_really_sleep(mock_sleep):
       'Mock is restored to the real object after the test',
       'Use `mock.assert_not_called()` / `assert_called_once()` for verifications',
     ],
+    tieredHints: {
+      apiSignature: 'mock.assert_not_called() -> None',
+      skeleton: `import time
+from unittest.mock import patch
+
+def retry_once(action):
+    try:
+        return action()
+    except ____:
+        time.____(5)
+        return action()
+
+@____("time.sleep")
+def test_retry_does_not_really_sleep(____):
+    retry_once(lambda: 1)
+    mock_sleep.____()`,
+    },
     tags: ['mock', 'patch', 'pytest', 'decorator'],
     concepts: ['py-test-isolation', 'py-decorator-application'],
   },
@@ -318,6 +359,15 @@ with patch("time.time") as mock_time:
       'Configure mock_name.return_value inside the block',
       'The patch is undone when the with-block exits',
     ],
+    tieredHints: {
+      apiSignature: 'patch(target, new=DEFAULT, spec=None, create=False) -> _patch',
+      skeleton: `import time
+from unittest.mock import patch
+
+____ patch("time.time") ____ mock_time:
+    mock_time.____ = 1000.0
+    assert time.time() == ____`,
+    },
     tags: ['mock', 'patch', 'context-manager'],
     concepts: ['py-test-isolation'],
   },
@@ -352,6 +402,17 @@ def test_api_key(monkeypatch):
       'Methods: setenv, setattr, setitem, chdir',
       'Changes auto-revert at test teardown',
     ],
+    tieredHints: {
+      apiSignature: 'monkeypatch.setenv(name, value, prepend=None) -> None',
+      skeleton: `import os
+
+def get_api_key():
+    return os.____["MY_API_KEY"]
+
+def test_api_key(____):
+    monkeypatch.____("MY_API_KEY", "test-key-42")
+    assert get_api_key() == ____`,
+    },
     tags: ['pytest', 'monkeypatch', 'env-vars', 'fixture'],
     concepts: ['py-test-isolation'],
   },
@@ -412,6 +473,19 @@ print(len(log.call_args_list))`,
       'call_args_list is the ordered list of all calls (len == call_count)',
       'Compare to [call(...), ...] for an exact sequence',
     ],
+    tieredHints: {
+      apiSignature: 'mock.assert_any_call(*args, **kwargs) -> None',
+      skeleton: `from unittest.mock import MagicMock
+
+log = ____()
+log("a")
+log("b")
+log("c")
+
+assert log.____ == 3
+log.____("b")
+print(len(log.____))`,
+    },
     tags: ['mock', 'call_args_list', 'assert_any_call', 'interaction-testing'],
     concepts: ['py-test-isolation'],
   },
@@ -484,6 +558,17 @@ with patch("myapp.api.get") as mock_get:
       '`from X import Y` creates a local name — patch the local one',
       'Chain attribute access on a MagicMock: mock.return_value.json.return_value',
     ],
+    tieredHints: {
+      apiSignature: 'patch(target, new=DEFAULT, spec=None, create=False) -> _patch',
+      skeleton: `from unittest.mock import patch
+
+from myapp.api import fetch_json
+
+with ____("myapp.api.get") as mock_get:
+    mock_get.____.____.____ = {"ok": True}
+    result = fetch_json("http://x")
+    assert result == {"ok": True}`,
+    },
     tags: ['mock', 'patch', 'import', 'gotcha'],
     concepts: ['py-test-isolation'],
   },
@@ -598,6 +683,21 @@ assert client.mock_calls == [
       'Build expected entries with call.method(args)',
       'Equality on the list asserts exact order',
     ],
+    tieredHints: {
+      apiSignature: 'call.method_name(*args, **kwargs) -> _Call',
+      skeleton: `from unittest.mock import ____, call
+
+client = ____()
+client.connect()
+client.send("hi")
+client.close()
+
+assert client.____ == [
+    ____.connect(),
+    ____.send("hi"),
+    ____.close(),
+]`,
+    },
     tags: ['mock', 'mock_calls', 'call', 'ordering'],
     concepts: ['py-test-isolation'],
   },

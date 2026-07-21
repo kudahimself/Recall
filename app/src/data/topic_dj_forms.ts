@@ -25,6 +25,10 @@ export const dj_forms_questions: Question[] = [
       testCases: [{ input: 'form template', expectedOutput: '{% csrf_token %}, {{ form.as_p }} or manual rendering', description: 'Should render form with CSRF' }],
       solution: `<form method="post">\n  {% csrf_token %}\n  {{ form.as_p }}\n  <button type="submit">Save</button>\n</form>\n\n{% if form.errors %}\n  <div class="errors">\n    {% for field, errors in form.errors.items %}\n      <p>{{ field }}: {{ errors|join:", " }}</p>\n    {% endfor %}\n  </div>\n{% endif %}`,
       explanation: '{% csrf_token %} is required for POST forms — it prevents cross-site request forgery. {{ form.as_p }} renders fields in <p> tags. form.errors contains validation errors after is_valid() fails. as_table and as_ul are alternatives.',
+      tieredHints: {
+        apiSignature: '{{ form.as_p }} | {{ form.as_table }} | {{ form.as_ul }}',
+        skeleton: '<form method="post">\n  {% ____ %}\n  {{ ____.____ }}\n  <button type="submit">Save</button>\n</form>\n\n{% if ____.____ %}\n  <div class="errors">\n    {% for ____, ____ in ____.____.____ %}\n      <p>{{ ____ }}: {{ ____|join:", " }}</p>\n    {% endfor %}\n  </div>\n{% endif %}',
+      },
       hints: ['{% csrf_token %} required for POST', '{{ form.as_p }} for quick rendering', 'form.errors for validation messages'],
       tags: ['form', 'template', 'csrf', 'errors', 'django'],
       concepts: ['dj-templates', 'dj-form-validation'],
@@ -92,6 +96,10 @@ class SignupForm(forms.Form):
             self.add_error("password_confirm", "Passwords do not match")
         return cleaned`,
       explanation: 'Three validation layers in one form. `clean_<field>` runs after the field-level coercion and is the right place for "ask the database" checks — `User.objects.filter(...).exists()` is the canonical uniqueness check (cheaper than `.count() > 0`). Cross-field validation lives in the global `clean()` method; use `self.add_error(field, msg)` instead of `raise ValidationError` so the error attaches to a specific field instead of the form-level `__all__`. Always call `super().clean()` first so per-field validators run.',
+      tieredHints: {
+        apiSignature: 'Form.add_error(field, error)',
+        skeleton: 'from django import forms\nfrom django.core.exceptions import ValidationError\nfrom django.contrib.auth import get_user_model\n\nUser = get_user_model()\nBLOCKED_DOMAINS = {"tempmail.com", "throwaway.com"}\n\n\nclass ____(forms.Form):\n    username = forms.____(min_length=3, max_length=30)\n    email = forms.____()\n    password = forms.____(widget=forms.____)\n    password_confirm = forms.____(widget=forms.____)\n\n    def ____(self):\n        ____ = self.____["username"]\n        if User.objects.____(username__iexact=____).____():\n            raise ____("Username already taken")\n        return ____\n\n    def ____(self):\n        ____ = self.____["email"]\n        domain = ____.____("@", 1)[1].____()\n        if domain in ____:\n            raise ____("This email domain is not allowed")\n        return ____\n\n    def ____(self):\n        cleaned = ____().clean()\n        pw = cleaned.____("password")\n        confirm = cleaned.____("password_confirm")\n        if pw and confirm and pw != confirm:\n            self.____("password_confirm", "Passwords do not match")\n        return ____',
+      },
       hints: [
         'clean_<field> returns the value; clean() handles cross-field',
         'Use .exists() for uniqueness, not .count()',
@@ -170,6 +178,10 @@ class ArticleForm(forms.ModelForm):
         model = Article
         fields = ["title", "body"]`,
       explanation: 'ModelForms skip the boilerplate of redeclaring every field — the model is the source of truth. Use `fields = "__all__"` in development (shows everything), but be explicit in production (new model fields get auto-exposed otherwise — a common data-leak path). Use `exclude = [...]` sparingly (same leak risk). Override individual fields in the form class body to customise widgets: `title = forms.CharField(widget=forms.TextInput(attrs={"class": "fancy"}))`.',
+      tieredHints: {
+        apiSignature: 'ModelForm.Meta: model, fields',
+        skeleton: 'from django import forms\nfrom .models import ____\n\nclass ____(forms.____):\n    class ____:\n        ____ = ____\n        ____ = ["title", "body"]',
+      },
       hints: [
         'Meta.model + Meta.fields is the minimum',
         'Avoid fields = "__all__" in production',
@@ -211,6 +223,10 @@ class ArticleForm(forms.ModelForm):
             raise forms.ValidationError("Title too short")
         return title`,
       explanation: 'Django\'s clean protocol: basic validators run first (type coercion, max_length, regex). Then `clean_<field>` for each field in declaration order. Then `clean()` for cross-field validation. ALWAYS return the cleaned value — if you forget, the field is silently `None`. Raise `ValidationError` to surface an error — it appears as `form.errors["title"]` and near the field in the rendered form.',
+      tieredHints: {
+        apiSignature: 'clean_<fieldname>(self) -> Any',
+        skeleton: 'from django import forms\nfrom .models import ____\n\nclass ____(forms.ModelForm):\n    class Meta:\n        model = ____\n        fields = ["title", "body"]\n\n    def ____(self):\n        ____ = self.____["title"]\n        if len(____) < 5:\n            raise forms.____("Title too short")\n        return ____',
+      },
       hints: [
         'Must return the (possibly modified) value',
         'Raise forms.ValidationError for errors',
@@ -276,6 +292,10 @@ class BookingForm(forms.Form):
             raise forms.ValidationError("End date must be after start date")
         return cleaned`,
       explanation: 'Field validators can\'t know about other fields — that\'s what `clean()` is for. Important: guard with `.get()` because a field may have failed its own `clean_<field>` and be missing from `cleaned_data`. Errors raised from `clean()` (without a field-specific key) appear in `form.non_field_errors()`. Return `cleaned` so the rest of the framework gets the dict.',
+      tieredHints: {
+        apiSignature: 'Form.clean(self) -> dict',
+        skeleton: 'from django import forms\n\nclass ____(forms.Form):\n    start = forms.____()\n    end = forms.____()\n\n    def ____(self):\n        cleaned = ____().____()\n        s, e = cleaned.____("start"), cleaned.____("end")\n        if s and e and e < s:\n            raise forms.____("End date must be after start date")\n        return ____',
+      },
       hints: [
         'Override clean() for cross-field validation',
         'Guard with .get() — a failed field won\'t be in cleaned_data',
@@ -336,6 +356,10 @@ class ArticleForm(forms.ModelForm):
             "body": forms.Textarea(attrs={"rows": 10, "class": "prose"}),
         }`,
       explanation: 'The `widgets` Meta attribute maps field names to widget INSTANCES — not classes, so you can configure them. `attrs` becomes HTML attributes: class, data-*, placeholder, maxlength. Other common widgets: `forms.PasswordInput` (type=password), `forms.DateInput(attrs={"type": "date"})` (HTML5 date picker), `forms.Select` (dropdown), `forms.CheckboxInput`. For cross-cutting style changes (every input needs `form-control`), a form package like `crispy-forms` or `django-widget-tweaks` saves repetition.',
+      tieredHints: {
+        apiSignature: 'forms.Widget(attrs=None)',
+        skeleton: 'from django import forms\nfrom .models import ____\n\nclass ____(forms.____):\n    class ____:\n        ____ = ____\n        ____ = [____, ____]\n        ____ = {\n            ____: forms.____(attrs={____: 10, ____: ____}),\n        }',
+      },
       hints: [
         'widgets = {"field": WidgetClass(attrs={...})}',
         'attrs become HTML attributes on the input',
@@ -376,6 +400,10 @@ def create_article(request):
         form = ArticleForm()
     return render(request, "blog/new.html", {"form": form})`,
       explanation: 'This is the Post/Redirect/Get (PRG) pattern: always redirect after a successful POST so refreshing the result page doesn\'t resubmit. `form = ArticleForm()` (empty) for GET, `ArticleForm(request.POST)` (bound) for POST. If you need extra data, `form.save(commit=False)` gives you the unsaved instance, let you mutate (`article.author = request.user`), then `article.save()`. File uploads also need `request.FILES`: `ArticleForm(request.POST, request.FILES)`.',
+      tieredHints: {
+        apiSignature: 'Form.is_valid() -> bool',
+        skeleton: 'from django.shortcuts import render, redirect\nfrom .forms import ____\n\ndef ____(request):\n    if request.method == ____:\n        form = ____(request.POST)\n        if form.____():\n            article = form.____()\n            return ____("blog:detail", pk=article.pk)\n    else:\n        form = ____()\n    return ____(request, ____, {"form": form})',
+      },
       hints: [
         'POST + valid → save + redirect (PRG pattern)',
         'POST + invalid OR GET → render the form',
@@ -532,6 +560,10 @@ def create_article(request):
         form = ArticleForm()
     return render(request, 'articles/create.html', {'form': form})`,
       explanation: 'The GET branch creates an empty form. The POST branch binds `request.POST` data to the form and validates it. `form.is_valid()` runs all field validators and model validators. `form.save()` writes to the database. If validation fails, the form (with errors) is re-rendered — the `return render(...)` after the if/else handles both the initial GET and failed POST.',
+      tieredHints: {
+        apiSignature: 'ModelForm.save(commit=True) -> Model',
+        skeleton: 'from django import forms\nfrom django.shortcuts import render, redirect\n\nclass ____(forms.____):\n    class ____:\n        ____ = Article\n        ____ = [____, ____]\n\ndef ____(request):\n    if request.method == ____:\n        form = ____(request.POST)\n        if form.____():\n            form.____()\n            return ____(____)\n    else:\n        form = ____()\n    return ____(request, ____, {____: form})',
+      },
       hints: [
         'Pass `request.POST` to bind data: `ArticleForm(request.POST)`',
         'Call `form.is_valid()` before `form.save()`',
@@ -623,6 +655,10 @@ class ContactForm(forms.Form):
     email = forms.EmailField()
     message = forms.CharField(widget=forms.Textarea)`,
       explanation: 'Django forms are defined by subclassing forms.Form and declaring fields as class attributes. CharField handles text input, EmailField validates email format automatically, and using widget=forms.Textarea renders a multi-line text area instead of a single-line input. When you call form.is_valid(), Django checks that name is under 100 characters, email is a valid email address, and all fields are filled in.',
+      tieredHints: {
+        apiSignature: 'forms.CharField(max_length=None, widget=None)',
+        skeleton: '# forms.py\nfrom django import forms\n\nclass ContactForm(forms.Form):\n    name = forms.____(max_length=100)\n    email = forms.____()\n    message = forms.CharField(widget=forms.____)',
+      },
       hints: [
         'Import forms from django, not from django.forms',
         'For a multi-line text input, use widget=forms.Textarea on a CharField',
@@ -932,6 +968,10 @@ class ArticleForm(forms.Form):
     category = forms.ModelChoiceField(queryset=Category.objects.all())
     tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.all())`,
       explanation: '`ModelChoiceField` is the single-select queryset field (cleans to one instance); `ModelMultipleChoiceField` is the multi-select (cleans to a queryset). Both take `queryset=` to source their options, so the dropdown always reflects the current DB rows.',
+      tieredHints: {
+        apiSignature: 'forms.ModelChoiceField(queryset, **kwargs)',
+        skeleton: 'from django import forms\nfrom .models import Category, Tag\n\nclass ____(forms.Form):\n    title = forms.____()\n    category = forms.____(queryset=Category.objects.____())\n    tags = forms.____(queryset=Tag.objects.____())',
+      },
       hints: [
         'ModelChoiceField(queryset=Category.objects.all()) for the single FK',
         'ModelMultipleChoiceField(queryset=Tag.objects.all()) for the multi-select',
@@ -953,7 +993,7 @@ class ArticleForm(forms.Form):
         { id: 'c', text: '`required=False` makes the field read-only; `initial` is a fallback applied when the user submits blank; `label` names the DB column; `help_text` is the placeholder inside the input', isCorrect: false },
         { id: 'd', text: '`required=False` skips the validators but still errors if blank; `initial` overrides submitted data; `label` sets the field `id`; `help_text` is the validation error message', isCorrect: false },
       ],
-      explanation: '`required=False` is the validation switch: a blank submission is accepted and cleans to the field\'s empty value (`""` for text) instead of raising "this field is required". `initial` only pre-populates an *unbound* form (it never overrides submitted data). `label` is the human-readable name rendered next to the field; `help_text` is descriptive text shown beside it. None of them hide, disable, or rename the DB column.',
+      explanation: '`required=False` is the validation switch: a blank submission is accepted and cleans to the field\'s empty value (`""` for text) instead of raising "this field is required". `initial` only pre-populate an *unbound* form (it never overrides submitted data). `label` is the human-readable name rendered next to the field; `help_text` is descriptive text shown beside it. None of them hide, disable, or rename the DB column.',
       hints: [
         'required=False → blank is allowed, cleans to empty',
         'initial pre-fills only the unbound form',
@@ -1061,6 +1101,10 @@ def create_article(request):
         form = ArticleForm()
     return render(request, "articles/new.html", {"form": form})`,
       explanation: '`save(commit=False)` returns the unsaved `Article` built from validated data; you attach the request user as `author` (a field the form never exposed, so it cannot be tampered with), then `article.save()` writes the complete row. The redirect after a successful POST is the Post/Redirect/Get pattern.',
+      tieredHints: {
+        apiSignature: 'ModelForm.save(commit=False) -> Model',
+        skeleton: 'from django.shortcuts import render, redirect\nfrom .forms import ____\n\ndef ____(request):\n    if request.method == ____:\n        form = ____(request.POST)\n        if form.____():\n            article = form.____(____=False)\n            article.____ = request.user\n            article.____()\n            return ____("article-detail", pk=article.pk)\n    else:\n        form = ____()\n    return ____(request, ____, {"form": form})',
+      },
       hints: [
         'Bind ArticleForm(request.POST); guard is_valid()',
         'article = form.save(commit=False); article.author = request.user; article.save()',
@@ -1136,6 +1180,10 @@ class ArticleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["category"].queryset = Category.objects.filter(owner=user)`,
       explanation: 'The class body runs once at import, so it cannot see the request user — per-request changes belong in `__init__`. Pop the custom `user` kwarg first (the parent constructor would reject an unknown keyword), call `super().__init__`, then overwrite `self.fields["category"].queryset`. The view instantiates it as `ArticleForm(request.POST, user=request.user)`.',
+      tieredHints: {
+        apiSignature: 'Field.queryset: QuerySet',
+        skeleton: 'from django import forms\nfrom .models import ____, ____\n\nclass ArticleForm(forms.____):\n    class ____:\n        ____ = ____\n        ____ = ["title", "category"]\n\n    def ____(self, *args, **kwargs):\n        user = kwargs.____("user")\n        ____().__init__(*args, **kwargs)\n        self.____["category"].____ = ____.objects.____(owner=user)',
+      },
       hints: [
         'Pop "user" from kwargs BEFORE super().__init__',
         'Reassign self.fields["category"].queryset after super()',

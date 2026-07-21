@@ -89,6 +89,10 @@ class UserFactory(factory.django.DjangoModelFactory):
     username = factory.Sequence(lambda n: f"user_{n}")
     email = factory.Faker("email")`,
       explanation: 'Generators: `Sequence` increments `n` per call (unique strings), `Faker("email")` / `Faker("name")` / `Faker("sentence")` produce realistic fake data, `LazyAttribute(lambda o: f"{o.first_name.lower()}@example.com")` derives from other fields, `FuzzyChoice([...])` picks random from a list. `.build()` creates UNsaved, `.create()` (default) calls `.objects.create()`. Bulk: `UserFactory.create_batch(10)`.',
+      tieredHints: {
+        apiSignature: 'factory.Sequence(func) -> Any',
+        skeleton: 'import factory\nfrom django.contrib.auth.models import ____\n\nclass ____(factory.django.____):\n    class ____:\n        ____ = ____\n\n    ____ = factory.____(lambda n: f"user_{n}")\n    ____ = factory.____("email")',
+      },
       hints: [
         'Sequence for unique integers / strings',
         'Faker for realistic names / emails / addresses',
@@ -127,6 +131,10 @@ class PostFactory(factory.django.DjangoModelFactory):
     title = factory.Faker("sentence")
     author = factory.SubFactory(UserFactory)`,
       explanation: 'SubFactory calls the referenced factory\'s `.create()` for each new Post. Nest arbitrarily deep (Comment → Post → Author). For self-referential / recursive FKs, use `factory.RelatedFactory` (post-save hook). For M2M: `@factory.post_generation def tags(self, create, extracted, **kwargs): if extracted: self.tags.set(extracted)`. Now `PostFactory(tags=[tag1, tag2])` sets the M2M after the Post is saved.',
+      tieredHints: {
+        apiSignature: 'factory.SubFactory(factory_class, **kwargs)',
+        skeleton: 'import factory\nfrom .factories import ____\nfrom .models import ____\n\nclass ____(factory.django.____):\n    class ____:\n        ____ = ____\n\n    ____ = factory.____("sentence")\n    ____ = factory.____(____)',
+      },
       hints: [
         'SubFactory for FK / OneToOne relations',
         'RelatedFactory for reverse relations / self-references',
@@ -187,6 +195,10 @@ class UserFactory(factory.django.DjangoModelFactory):
     class Params:
         admin = factory.Trait(is_staff=True, is_superuser=True)`,
       explanation: 'Traits avoid "multiple factory subclasses for every variation" bloat. Combine multiple: `UserFactory(admin=True, verified=True)`. For flows that need a truly different factory (different model), subclass: `class AdminUserFactory(UserFactory): is_staff = True`. Rule of thumb: Trait for field-level flags that apply to the same model; subclass for "structurally different" factories (e.g. Comment on Post vs Comment on Photo).',
+      tieredHints: {
+        apiSignature: 'factory.Trait(**kwargs)',
+        skeleton: 'import factory\nfrom django.contrib.auth.models import ____\n\nclass ____(factory.django.____):\n    class ____:\n        ____ = ____\n\n    ____ = factory.____(lambda n: f"user_{n}")\n    ____ = factory.____("email")\n\n    class ____:\n        ____ = factory.____(is_staff=True, is_superuser=True)',
+      },
       hints: [
         'class Params: trait_name = Trait(field_overrides)',
         'Activate: Factory(trait_name=True)',
@@ -241,6 +253,10 @@ class PostListTest(TestCase):
         response = self.client.get("/posts/")
         self.assertEqual(response.context["posts"].count(), 3)`,
       explanation: '`create_batch(N, **kwargs)` calls `.create()` N times with the overrides. `Post.objects.all().count()` would be 5, but the view filters to published — test proves the filter works. Factories make tests self-documenting: the test function\'s first 2 lines READ as "given 3 published and 2 draft posts". `pytest-django` + `pytest-factoryboy` lets you use factories as pytest fixtures directly.',
+      tieredHints: {
+        apiSignature: 'Factory.create_batch(size, **kwargs)',
+        skeleton: 'from django.test import TestCase\nfrom .factories import ____\n\nclass ____(____):\n    def ____(self):\n        ____.____(3, is_published=True)\n        ____.____(2, is_published=False)\n        response = self.client.____("/posts/")\n        self.____(response.context["posts"].____(), 3)',
+      },
       hints: [
         'create_batch(N, **overrides) for bulk',
         'Each batch can have different overrides',

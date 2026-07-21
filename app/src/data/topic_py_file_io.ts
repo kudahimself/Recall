@@ -26,6 +26,11 @@ export const py_file_io_questions: Question[] = [
       solution: `with open("data.txt", "r") as f:\n    content = f.read()`,
       explanation: 'with open() is the Pythonic way — it auto-closes the file. "r" is the default mode (read text). Other modes: "w" (write, truncates), "a" (append), "rb"/"wb" (binary). f.read() returns the entire file as a string.',
       hints: ['with open() auto-closes', '"r" for read (default)', 'f.read() gets entire content'],
+      tieredHints: {
+        apiSignature: 'open(file, mode="r") -> TextIOWrapper',
+        skeleton: `____ open("data.txt", "____") as f:
+    content = f.____()`,
+      },
       tags: ['file', 'read', 'context-manager', 'python'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -42,6 +47,11 @@ export const py_file_io_questions: Question[] = [
       solution: `with open("output.txt", "w") as f:\n    f.write("Hello, World!")`,
       explanation: '"w" mode creates the file if it doesn\'t exist, or truncates (empties) it if it does. Use "a" mode to append without truncating. f.write() writes a string. f.writelines() writes a list of strings.',
       hints: ['"w" overwrites, "a" appends', 'f.write() for strings', 'f.writelines() for lists'],
+      tieredHints: {
+        apiSignature: 'open(file, mode="r") -> TextIOWrapper',
+        skeleton: `____ open("output.txt", "____") as f:
+    f.____("____")`,
+      },
       tags: ['file', 'write', 'context-manager', 'python'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -58,6 +68,15 @@ export const py_file_io_questions: Question[] = [
       solution: `import csv\n\nwith open("employees.csv", "r") as f:\n    reader = csv.DictReader(f)\n    for row in reader:\n        print(row)`,
       explanation: 'csv.DictReader uses the first row as headers and returns each row as an OrderedDict. row["name"] accesses fields by column name. csv.reader returns lists instead. csv.DictWriter writes dicts to CSV.',
       hints: ['DictReader uses header row as keys', 'Iterate over reader for rows', 'Each row is a dictionary'],
+      tieredHints: {
+        apiSignature: 'csv.DictReader(f, fieldnames=None, restkey=None, restval=None)',
+        skeleton: `import csv
+
+with open("employees.csv", "____") as f:
+    reader = csv.____(f)
+    ____ row ____ reader:
+        print(____)`,
+      },
       tags: ['csv', 'DictReader', 'file', 'python'],
       concepts: ['py-file-io-modes'],
     },
@@ -74,6 +93,18 @@ export const py_file_io_questions: Question[] = [
       solution: `import json\n\nwith open("config.json", "r") as f:\n    config = json.load(f)\n\nconfig["debug"] = True\n\nwith open("config.json", "w") as f:\n    json.dump(config, f, indent=2)`,
       explanation: 'json.load(file) reads JSON into Python objects (dict/list). json.dump(data, file) writes Python objects as JSON. indent=2 formats with 2-space indentation. json.loads/json.dumps work with strings instead of files.',
       hints: ['json.load(file) reads, json.dump(data, file) writes', 'indent=2 for pretty printing', 'loads/dumps for strings, load/dump for files'],
+      tieredHints: {
+        apiSignature: 'json.dump(obj, fp, indent=None, sort_keys=False)',
+        skeleton: `import json
+
+with open("config.json", "r") as f:
+    config = json.____(f)
+
+config["____"] = ____
+
+with open("config.json", "____") as f:
+    json.____(config, f, ____=2)`,
+      },
       tags: ['json', 'load', 'dump', 'file', 'python'],
       concepts: ['py-json-serialization'],
     },
@@ -90,6 +121,17 @@ export const py_file_io_questions: Question[] = [
       solution: `from pathlib import Path\n\nreports_dir = Path("data/reports")\n\nif not reports_dir.exists():\n    reports_dir.mkdir(parents=True, exist_ok=True)\n\ncsv_files = list(reports_dir.glob("*.csv"))`,
       explanation: 'pathlib is the modern way to handle file paths (replaces os.path). Path objects support / operator: Path("data") / "file.txt". mkdir(parents=True) creates parent dirs. glob() finds files matching a pattern. exist_ok=True prevents errors if dir exists.',
       hints: ['Path() creates path objects', 'mkdir(parents=True) creates parent dirs', 'glob("*.csv") finds matching files'],
+      tieredHints: {
+        apiSignature: 'Path.mkdir(mode=0o777, parents=False, exist_ok=False)',
+        skeleton: `from pathlib import Path
+
+reports_dir = ____("data/reports")
+
+if not reports_dir.____():
+    reports_dir.____(parents=____, exist_ok=____)
+
+csv_files = list(reports_dir.____("*.csv"))`,
+      },
       tags: ['pathlib', 'file', 'directory', 'python'],
       concepts: ['py-pathlib', 'py-file-io-modes'],
     },
@@ -106,6 +148,13 @@ export const py_file_io_questions: Question[] = [
       solution: `with open("log.txt", "r") as f:\n    for line in f:\n        if "ERROR" in line:\n            print(line.strip())`,
       explanation: 'Iterating over a file object reads one line at a time — memory efficient for large files (unlike f.read() which loads everything). strip() removes trailing newline. "in" checks for substring presence.',
       hints: ['for line in file iterates line by line', 'Memory efficient for large files', 'strip() removes trailing whitespace/newlines'],
+      tieredHints: {
+        apiSignature: 'str.strip(chars=None) -> str',
+        skeleton: `with open("log.txt", "r") as f:
+    ____ line ____ f:
+        ____ "ERROR" ____ line:
+            print(line.____())`,
+      },
       tags: ['file', 'iterate', 'filter', 'python'],
       concepts: ['dj-orm-query-construction'],
     },
@@ -303,9 +352,11 @@ print(repr(rest))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Write code that: (1) writes three lines to a file called `notes.txt`, (2) reads the file back and prints its contents. Use `with open(...)` for both operations.',
-      starterCode: `# Open "notes.txt" with mode "w" in a with-block and f.writelines of
-# ["Line one\\n", "Line two\\n", "Line three\\n"]
-# Open it again with mode "r" in a second with-block and print f.read()
+      starterCode: `# Step 1: Open "notes.txt" in write mode using a context manager
+# Write three lines ("Line one\\n", "Line two\\n", "Line three\\n") to the file
+
+# Step 2: Open "notes.txt" in read mode using a context manager
+# Read the file contents and print them
 `,
       testCases: [
         {
@@ -326,6 +377,16 @@ with open("notes.txt", "r") as f:
         'Open with `"w"` mode to write, `"r"` mode to read',
         'Use `f.writelines(lines)` to write a list of strings',
       ],
+      tieredHints: {
+        apiSignature: 'file.writelines(lines) -> None',
+        skeleton: `____ = ["____", "____", "____"]
+
+with ____("notes.txt", "____") as f:
+    f.____(lines)
+
+with open("notes.txt", "____") as f:
+    print(f.____())`,
+      },
       tags: ['file-io', 'write', 'read', 'with', 'writelines'],
       concepts: ['py-file-io-modes', 'py-context-manager-protocol'],
     },

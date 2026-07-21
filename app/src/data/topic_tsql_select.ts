@@ -145,6 +145,13 @@ OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;`,
 FROM dbo.DimProduct
 WHERE Category = 'Books'
 ORDER BY Price DESC;`,
+    tieredHints: {
+      apiSignature: 'SELECT TOP (n) cols FROM tbl WHERE cond ORDER BY sort_col ASC|DESC;',
+      skeleton: `SELECT ____ (5) ProductName, Price
+FROM dbo.DimProduct
+WHERE ____ = ____
+ORDER BY ____ ____;`,
+    },
     explanation: '`TOP (5)` caps the result, `WHERE Category = \'Books\'` restricts the category, and `ORDER BY Price DESC` makes "most expensive" well-defined — the sort must be present for TOP to be deterministic.',
     hints: ['TOP (5) for the cap', "WHERE Category = 'Books'", 'ORDER BY Price DESC'],
     tags: ['tsql', 'select', 'top', 'where', 'order-by'],
@@ -170,6 +177,13 @@ ORDER BY Price DESC;`,
 FROM dbo.DimProduct
 ORDER BY ProductName
 OFFSET 20 ROWS FETCH NEXT 20 ROWS ONLY;`,
+    tieredHints: {
+      apiSignature: 'OFFSET count ROWS FETCH NEXT count ROWS ONLY',
+      skeleton: `SELECT ProductName
+FROM dbo.DimProduct
+ORDER BY ____
+____ 20 ____ FETCH ____ 20 ROWS ____;`,
+    },
     explanation: 'To get the second page of 20, skip the first 20 (`OFFSET 20 ROWS`) and take the next 20 (`FETCH NEXT 20 ROWS ONLY`). The `ORDER BY` is mandatory for OFFSET/FETCH and makes paging stable.',
     hints: ['Skip 20, fetch next 20', 'OFFSET/FETCH needs ORDER BY'],
     tags: ['tsql', 'select', 'offset-fetch', 'pagination'],

@@ -756,6 +756,13 @@ print(digest)`,
         '.hexdigest() for the hex string; .digest() for raw bytes',
         'For passwords: bcrypt/argon2, NOT sha256',
       ],
+      tieredHints: {
+        apiSignature: 'hashlib.sha256(string=b"", *, usedforsecurity=True) -> hash object',
+        skeleton: `import hashlib
+
+digest = hashlib.____("hello world".____("utf-8")).____()
+print(digest)`,
+      },
       tags: ['hashlib', 'sha256', 'hashing'],
       concepts: ['py-security-primitives'],
     },
@@ -789,6 +796,16 @@ print(f"{code:06d}")`,
         'token_hex(n) → hex',
         'randbelow(n) → secure integer in [0, n)',
       ],
+      tieredHints: {
+        apiSignature: 'secrets.token_urlsafe(nbytes=None) -> str',
+        skeleton: `import secrets
+
+token = ____.____(32)
+print(token)
+
+code = secrets.____(1_000_000)
+print(f"{code:06d}")`,
+      },
       tags: ['secrets', 'token_urlsafe', 'randbelow', 'tokens'],
       concepts: ['py-security-primitives'],
     },
@@ -828,6 +845,20 @@ print(hmac.compare_digest(expected, signature))`,
         'Always hmac.compare_digest for the comparison (timing-safe)',
         'Shared secret → both sides can sign/verify; use asymmetric (RSA/ECDSA) for non-repudiation',
       ],
+      tieredHints: {
+        apiSignature: 'hmac.new(key, msg=None, digestmod="") -> hmac object',
+        skeleton: `import hmac
+import hashlib
+
+secret = b"shared-secret"
+payload = b'{"order":1}'
+
+signature = ____.____(secret, ____, hashlib.____).____()
+print(signature)
+
+expected = ____.____(secret, payload, ____.sha256).____()
+print(____.____(expected, ____))`,
+      },
       tags: ['security', 'hmac', 'webhooks', 'timing-attack'],
       concepts: ['py-security-primitives'],
     },
@@ -860,6 +891,15 @@ print(str(uuid.uuid5(ns, "example.com")))`,
         'uuid.uuid5(ns, name) → deterministic from (ns, name)',
         'NAMESPACE_DNS / NAMESPACE_URL / NAMESPACE_OID / NAMESPACE_X500',
       ],
+      tieredHints: {
+        apiSignature: 'uuid.uuid4() -> UUID',
+        skeleton: `import uuid
+
+print(str(uuid.____()))
+
+ns = uuid.____
+print(str(uuid.____(ns, "example.com")))`,
+      },
       tags: ['uuid', 'identifiers', 'namespace'],
       concepts: ['py-security-primitives'],
     },
@@ -892,8 +932,19 @@ print(decoded == data)`,
       hints: [
         'b64encode → bytes; .decode("ascii") to get a str',
         'urlsafe_b64encode avoids `+` and `/`',
-        'Base64 is encoding, not encryption — anyone can reverse it',
+        'Base64 is encoding, not encryption — anyone can decode it',
       ],
+      tieredHints: {
+        apiSignature: 'base64.b64encode(s, altchars=None) -> bytes',
+        skeleton: `import base64
+
+data = b"\\x00\\x01\\x02hello"
+encoded = ____.____(____).____("ascii")
+print(encoded)
+
+decoded = ____.____(____)
+____(____ == data)`,
+      },
       tags: ['base64', 'encoding', 'binary'],
       concepts: ['py-security-primitives'],
     },

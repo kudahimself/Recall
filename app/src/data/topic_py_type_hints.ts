@@ -428,6 +428,16 @@ print(names)  # ["Alice", "Bob"]`,
         'Return type: `-> float` after the closing parenthesis',
         'Variable: `names: list[str] = [...]`',
       ],
+      tieredHints: {
+        apiSignature: 'def func(param: type, ...) -> return_type:',
+        skeleton: `def calculate_area(width: ____, height: ____) -> ____:
+    return width ____ height
+
+names: ____[____] = ["Alice", "Bob"]
+
+print(____(5.0, 3.0))
+print(names)`,
+      },
       tags: ['type-hints', 'annotations', 'basics'],
       concepts: ['py-type-hint-syntax'],
     },

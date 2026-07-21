@@ -387,6 +387,18 @@ print(loaded == data)`,
       ],
       tags: ['json', 'dump', 'load', 'file'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'open(file, mode="r", encoding=None) -> file object',
+        skeleton: `import json
+
+data = {"name": "Alice", "count": 3}
+with ____("/tmp/dump.json", "w") as fh:
+    ____.____(data, fh)
+with ____("/tmp/dump.json") as fh:
+    loaded = ____.____(fh)
+
+print(loaded ____ data)`,
+      },
     },
   {
       id: 'py-serialization-objecthook-cloze-1',
@@ -443,6 +455,17 @@ print(result)`,
       ],
       tags: ['json', 'loads', 'object_hook', 'decoder'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'dict.items() -> view of (key, value) pairs',
+        skeleton: `import json
+
+def to_upper(d):
+    return {k.____(): v for k, v in d.____()}
+
+s = '{"x": 1, "y": 2}'
+result = json.____(s, ____=____)
+print(result)`,
+      },
     },
   {
       id: 'py-ser-pickle',
@@ -477,6 +500,17 @@ print(type(restored["meta"]).__name__)`,
       ],
       tags: ['pickle', 'dumps', 'loads'],
       concepts: ['py-pickle-serialization'],
+      tieredHints: {
+        apiSignature: 'pickle.dumps(obj, protocol=None) -> bytes',
+        skeleton: `import pickle
+
+obj = {"numbers": [1, 2, 3], "meta": (7, "x")}
+data = ____.____(obj)
+restored = ____.____(data)
+
+print(restored ____ obj)
+print(____(restored["meta"]).____)`,
+      },
     },
   {
       id: 'py-ser-pickle-vs-json-mcq',
@@ -536,6 +570,19 @@ print(json.dumps([asdict(x) for x in items]))`,
       ],
       tags: ['json', 'dataclass', 'asdict', 'serialization'],
       concepts: ['py-json-serialization', 'py-dataclass-defaults'],
+      tieredHints: {
+        apiSignature: 'dataclasses.asdict(obj, *, dict_factory=dict) -> dict',
+        skeleton: `from dataclasses import ____, ____
+import json
+
+@____
+class Item:
+    name: ____
+    price: ____
+
+items = [Item("pen", 1.5), Item("pad", 2.0)]
+print(json.____([____(x) for x in items]))`,
+      },
     },
   {
       id: 'py-json-1',
@@ -592,6 +639,17 @@ print(back == data)`,
       ],
       tags: ['json', 'dumps', 'loads', 'round-trip'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'json.loads(s, *, object_hook=None) -> object',
+        skeleton: `import json
+
+data = {"name": "Alice", "age": 30, "tags": ["admin", "beta"]}
+____ = ____.____(data)
+print(____)
+
+____ = ____.____(____)
+print(____ ____ data)`,
+      },
     },
   {
       id: 'py-json-3',
@@ -625,6 +683,15 @@ print(result)`,
       ],
       tags: ['json', 'default', 'datetime', 'encoder'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'datetime.datetime.isoformat(sep="T", timespec="auto") -> str',
+        skeleton: `import json
+import datetime
+
+____ = {"created": datetime.datetime(2025, 1, 15, 14, 30, tzinfo=datetime.timezone.____)}
+____ = ____.____(____, ____=lambda o: o.____() if ____(o, datetime.datetime) else None)
+print(____)`,
+      },
     },
   {
       id: 'py-serialization-jsonencoder-cloze-1',
@@ -692,6 +759,22 @@ print(json.dumps(data, cls=SafeEncoder))`,
       ],
       tags: ['json', 'JSONEncoder', 'custom-encoder', 'subclass'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'json.dumps(obj, *, cls=None, default=None) -> str',
+        skeleton: `import json
+import datetime
+
+class SafeEncoder(json.____):
+    def ____(self, obj):
+        if ____(obj, datetime.datetime):
+            return obj.____()
+        if ____(obj, ____):
+            return ____(obj)
+        return super().____(obj)
+
+data = {"when": datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.____), "tags": {"a", "b"}}
+print(____.____(data, ____=SafeEncoder))`,
+      },
     },
   {
       id: 'py-serialization-parsons-1',

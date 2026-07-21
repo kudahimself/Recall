@@ -400,6 +400,24 @@ class EmailOrUsernameBackend:
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None`,
+      tieredHints: {
+        apiSignature: 'user.check_password(raw_password) -> bool',
+        skeleton: `class EmailOrUsernameBackend:
+    def ____(self, request, username=None, password=None):
+        try:
+            user = User.objects.____(Q(username=username) | Q(email=username))
+        except User.DoesNotExist:
+            return None
+        if user.____(password):
+            return user
+        return None
+
+    def ____(self, user_id):
+        try:
+            return User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return None`,
+      },
       explanation: 'A custom backend is just a class with `authenticate(self, request, **credentials)` and `get_user(self, user_id)`. The `Q(username=...) | Q(email=...)` lookup is the crux — it accepts either identifier from one field. Always finish with `check_password` (constant-time) rather than comparing hashes directly, and return `None` (never raise) on any miss so `authenticate()` can fall through to the next backend. Register it by listing its dotted path in `AUTHENTICATION_BACKENDS`; `get_user` is what rebuilds `request.user` from the session id on every later request.',
       hints: [
         'Class with authenticate(request, **creds) + get_user(user_id)',

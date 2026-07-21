@@ -226,6 +226,30 @@ BEGIN
         THROW;
     END CATCH
 END;`,
+    tieredHints: {
+      apiSignature: 'BEGIN TRY BEGIN TRAN; <stmt>; COMMIT; END TRY BEGIN CATCH ROLLBACK; THROW; END CATCH',
+      skeleton: `CREATE PROCEDURE dbo.LoadDimProduct
+AS
+BEGIN
+    SET XACT_ABORT ON;
+    ____ TRY
+        ____ TRAN;
+            ____ dbo.DimProduct AS tgt
+            ____ stg.Product AS src
+                ____ tgt.ProductCode = src.ProductCode
+            ____ MATCHED THEN
+                ____ SET tgt.ProductName = src.ProductName
+            ____ NOT MATCHED BY TARGET THEN
+                ____ (ProductCode, ProductName)
+                ____ (src.ProductCode, src.ProductName);
+        ____;
+    END TRY
+    ____ CATCH
+        ____;
+        ____;
+    END CATCH
+END;`,
+    },
     explanation: 'This is the topic\'s keystone: a single procedure that loads staging into the target via an idempotent `MERGE` (safe to retry), made atomic by `BEGIN TRAN … COMMIT`, with `SET XACT_ABORT ON` and a `ROLLBACK`/`THROW` CATCH so any failure undoes the partial load and surfaces the error to the scheduler. Every production warehouse load follows this shape.',
     hints: ['SET XACT_ABORT ON, then TRY: BEGIN TRAN → MERGE → COMMIT', 'CATCH: ROLLBACK then THROW'],
     tags: ['tsql', 'etl-proc', 'merge', 'transactions', 'try-catch'],
@@ -260,6 +284,22 @@ WHERE s.UpdatedAt > @lastLoaded;
 UPDATE dbo.EtlControl
 SET LastLoadedAt = (SELECT MAX(UpdatedAt) FROM dbo.FactSales)
 WHERE TableName = 'FactSales';`,
+    tieredHints: {
+      apiSignature: 'DECLARE @v type; SELECT @v = col FROM tbl WHERE cond; INSERT INTO tbl SELECT ... WHERE col > @v; UPDATE tbl SET col = (SELECT MAX(col) FROM tbl) WHERE cond;',
+      skeleton: `DECLARE @lastLoaded ____;
+SELECT @lastLoaded = ____
+FROM ____
+WHERE TableName = ____;
+
+____ INTO dbo.FactSales (____)
+SELECT ____
+FROM ____ AS s
+WHERE s.UpdatedAt ____ @lastLoaded;
+
+UPDATE dbo.EtlControl
+____ LastLoadedAt = (SELECT ____(UpdatedAt) FROM ____)
+WHERE TableName = ____;`,
+    },
     explanation: 'The high-watermark pattern: load only rows newer than the last recorded watermark (`UpdatedAt > @lastLoaded`), then advance the watermark to the new maximum actually loaded. Reading and storing the watermark in a control table makes each run process just the delta — the standard way to load a large, append-heavy fact incrementally.',
     hints: ['Read @lastLoaded from EtlControl', 'INSERT rows WHERE UpdatedAt > @lastLoaded, then advance LastLoadedAt to MAX'],
     tags: ['tsql', 'etl-proc', 'incremental', 'watermark'],
@@ -308,6 +348,36 @@ BEGIN
         THROW;
     END CATCH
 END;`,
+    tieredHints: {
+      apiSignature: 'UPDATE tgt SET col = expr FROM tbl AS tgt JOIN src ON cond WHERE cond; INSERT INTO tbl (cols) SELECT ... WHERE NOT EXISTS (SELECT 1 FROM tbl WHERE cond);',
+      skeleton: `CREATE PROCEDURE dbo.LoadDimCustomerSCD2
+AS
+BEGIN
+    SET XACT_ABORT ON;
+    ____ TRY
+        ____ TRAN;
+            UPDATE tgt
+                ____ tgt.EndDate = ____(GETDATE() AS DATE), tgt.IsCurrent = 0
+            FROM dbo.DimCustomer AS tgt
+                ____ stg.Customer AS src ____ src.CustomerId = tgt.CustomerId
+            WHERE tgt.IsCurrent = 1 ____ tgt.City ____ src.City;
+
+            ____ INTO dbo.DimCustomer (____)
+            SELECT ____, ____(GETDATE() AS DATE), ____, 1
+            FROM stg.Customer AS src
+            WHERE ____ ____ (
+                SELECT 1 FROM dbo.DimCustomer AS tgt
+                WHERE tgt.CustomerId = src.CustomerId
+                  AND tgt.IsCurrent = ____
+            );
+        ____;
+    END TRY
+    ____ CATCH
+        ____;
+        ____;
+    END CATCH
+END;`,
+    },
     explanation: 'This ties together three already-learned patterns: the expire step (UPDATE ... FROM ... JOIN ... WHERE IsCurrent = 1 AND changed) from the SCD topic, an INSERT ... SELECT ... WHERE NOT EXISTS to add new current versions (it naturally covers both brand-new CustomerIds and just-expired ones, since both now have zero current rows), and the transactional TRY/CATCH proc wrapper from earlier in this topic. Doing the expire before the insert, in the same transaction, is what makes NOT EXISTS see the freshly-closed rows.',
     hints: ['Expire step first: UPDATE ... JOIN stg.Customer WHERE IsCurrent = 1 AND City differs', 'Insert step: WHERE NOT EXISTS a current row for that CustomerId'],
     tags: ['tsql', 'etl-proc', 'scd', 'type-2', 'transactions', 'try-catch'],

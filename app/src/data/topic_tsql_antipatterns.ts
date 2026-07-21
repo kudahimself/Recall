@@ -102,6 +102,12 @@ export const tsql_antipatterns_questions: Question[] = [
     solution: `SELECT OrderId, Amount
 FROM dbo.FactOrders
 WHERE OrderDate >= '2026-01-01' AND OrderDate < '2027-01-01';`,
+    tieredHints: {
+      apiSignature: 'SELECT cols FROM tbl WHERE col >= date1 AND col < date2;',
+      skeleton: `SELECT ____, ____
+FROM ____
+WHERE OrderDate ____ '2026-01-01' ____ OrderDate ____ '2027-01-01';`,
+    },
     explanation: 'Keeping `OrderDate` bare on one side of each comparison lets the optimizer seek the index (and eliminate partitions). The half-open range `>= \'2026-01-01\' AND < \'2027-01-01\'` captures the whole year including times on Dec 31 without `YEAR()` — and avoids the `BETWEEN … AND \'2026-12-31\'` trap that would miss timestamps later that day.',
     hints: ['Keep OrderDate bare — no YEAR()', "OrderDate >= '2026-01-01' AND OrderDate < '2027-01-01'"],
     tags: ['tsql', 'antipatterns', 'sargable'],

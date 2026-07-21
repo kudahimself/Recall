@@ -133,6 +133,17 @@ export const tsql_facts_dims_questions: Question[] = [
     Quantity     INT NOT NULL,
     LineAmount   DECIMAL(12, 2) NOT NULL
 );`,
+    tieredHints: {
+      apiSignature: 'col INT NOT NULL REFERENCES dim_table (dim_pk_col)',
+      skeleton: `CREATE TABLE dbo.FactOrderLine (
+    OrderLineKey BIGINT ____ PRIMARY KEY,
+    CustomerKey  INT ____ ____ dbo.DimCustomer (CustomerKey),
+    ProductKey   INT ____ ____ dbo.DimProduct (ProductKey),
+    OrderNumber  NVARCHAR(20) ____,
+    Quantity     INT ____,
+    LineAmount   ____(12, 2) ____
+);`,
+    },
     explanation: 'The grain (one product per order) drives the design: a surrogate `IDENTITY` PK, foreign keys to the customer and product dimensions, the `OrderNumber` as a degenerate dimension (an ID with no attributes of its own, so it stays in the fact), and the additive measures `Quantity` and `LineAmount`. Every column is consistent with the stated grain.',
     hints: ['IDENTITY surrogate PK, two REFERENCES FKs', 'OrderNumber stays inline (degenerate); measures are Quantity + LineAmount'],
     tags: ['tsql', 'facts-dims', 'grain', 'degenerate-dimension'],

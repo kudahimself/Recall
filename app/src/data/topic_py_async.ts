@@ -932,6 +932,20 @@ async def main():
     print(results)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.gather(*aws, return_exceptions=False) -> list',
+        skeleton: `import asyncio
+
+async def ____(n):
+    await asyncio.____(____)
+    return n ____ ____
+
+async def main():
+    results = await asyncio.____(____(1), ____(2), ____(3))
+    print(results)
+
+____.____(main())`,
+      },
       explanation: '`asyncio.gather(*coros)` schedules the coroutines concurrently and waits for all of them. It returns a list of results in the same order as the inputs — order-preserving even though they may finish out of order. This is the building block for concurrent work: you can replace the sleep with any I/O call and the mechanism is identical.',
       hints: [
         'gather(*coros) awaits many coroutines at once',
@@ -988,6 +1002,38 @@ async def main():
     print(f"concurrent: {con:.1f}s")
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.gather(*aws, return_exceptions=False) -> list',
+        skeleton: `import asyncio
+import time
+
+async def slow_task(name, seconds):
+    await asyncio.sleep(seconds)
+    return f"{name} ____"
+
+async def run_sequential():
+    results = []
+    for n in ("A", "B", "C"):
+        results.append(____ slow_task(n, ____))
+    return results
+
+async def run_concurrent():
+    return ____ asyncio.____(____("A", ____), ____("B", ____), ____("C", ____))
+
+async def main():
+    t0 = time.____()
+    await run_sequential()
+    seq = time.____() - t0
+
+    t0 = time.____()
+    await run_concurrent()
+    con = time.____() - t0
+
+    print(f"sequential: {seq:____}s")
+    print(f"concurrent: {con:____}s")
+
+____.____(main())`,
+      },
       explanation: 'This makes the concurrency benefit visible: 3×1s sequentially is ~3s wall-clock, but 3 tasks sleeping 1s in parallel is ~1s wall-clock. `await x; await y` runs x fully before y starts. `await asyncio.gather(x, y)` lets both tasks make progress during I/O waits, so total time is the maximum, not the sum. Any time you have independent I/O-bound work, gather it.',
       hints: [
         'Sequential = await one, then await the next',
@@ -1030,6 +1076,25 @@ async def main():
     print(result)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.create_task(coro, *, name=None) -> Task',
+        skeleton: `import asyncio
+
+async def ____():
+    await asyncio.sleep(____)
+    return "background-done"
+
+async def main():
+    task = asyncio.____(____())
+
+    await asyncio.sleep(____)
+    print("doing other work")
+
+    result = ____ task
+    print(result)
+
+____.____(main())`,
+      },
       explanation: '`asyncio.create_task(coro)` schedules a coroutine to run on the event loop immediately and returns a `Task` handle. Unlike plain `await coro`, it does NOT block — execution continues after the `create_task` call. You can do other work while the task runs, then `await task` later to collect its result. This is the primitive for "fire and forget" patterns and for structured concurrency. `gather` is built on top of it.',
       hints: [
         'create_task starts the coroutine immediately and returns a Task',
@@ -1074,6 +1139,21 @@ async def fetch_all(urls: list[str]) -> list[str]:
         results = await asyncio.gather(*tasks)
         return list(results)
 `,
+      tieredHints: {
+        apiSignature: 'asyncio.gather(*aws, return_exceptions=False) -> list',
+        skeleton: `import asyncio
+import aiohttp
+
+async def ____(session: aiohttp.____, url: ____) -> ____:
+    async with session.____(url) as response:
+        return await response.____()
+
+async def fetch_all(urls: list[____]) -> list[____]:
+    async with aiohttp.____() as session:
+        tasks = [____(session, url) for url in urls]
+        results = await asyncio.____(*tasks)
+        return ____(results)`,
+      },
       explanation: 'asyncio.gather runs multiple coroutines concurrently and returns results in the same order they were passed in. This is far faster than awaiting each URL sequentially because network I/O is the bottleneck — while one request waits for a response, others can proceed. The `async with` on both the session and response ensures proper resource cleanup.',
       hints: [
         'Create an aiohttp.ClientSession with async with',
@@ -1109,6 +1189,16 @@ async def fetch_with_timeout(url: str, timeout: float) -> str:
         return await asyncio.wait_for(fetch_data(url), timeout=timeout)
     except asyncio.TimeoutError:
         raise TimeoutError("Request timed out")`,
+      tieredHints: {
+        apiSignature: 'asyncio.wait_for(aw, timeout) -> Any',
+        skeleton: `import asyncio
+
+async def fetch_with_timeout(url: ____, timeout: ____) -> ____:
+    try:
+        return await asyncio.____(fetch_data(url), ____=timeout)
+    except asyncio.____:
+        raise ____("Request timed out")`,
+      },
       explanation: 'asyncio.wait_for wraps a coroutine with a timeout, raising asyncio.TimeoutError if it exceeds the limit. We catch it and raise a custom TimeoutError with the required message.',
       hints: [
         'Use `await asyncio.wait_for(fetch_data(url), timeout=timeout)`',
@@ -1163,6 +1253,34 @@ class AsyncDatabasePool:
         await asyncio.sleep(0.01)  # Simulate query time
         return {"query": query, "rows": [], "status": "ok"}
 `,
+      tieredHints: {
+        apiSignature: 'asyncio.sleep(delay, result=None) -> None',
+        skeleton: `import asyncio
+
+class AsyncDatabasePool:
+    def __init__(self, db_url: ____, pool_size: ____ = ____):
+        self.db_url = ____
+        self.pool_size = ____
+        self.____ = False
+
+    async def __aenter__(self):
+        print(f"Connecting to {____} (pool_size={____})...")
+        await asyncio.____(____)
+        self.____ = ____
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        print(f"Disconnecting from {____}...")
+        await asyncio.____(____)
+        self.____ = False
+        return ____
+
+    async def execute(self, query: ____) -> ____:
+        if not self.____:
+            raise ____("Not connected to database")
+        await asyncio.____(____)
+        return {"query": ____, "rows": [], "status": "ok"}`,
+      },
       explanation: 'Async context managers use __aenter__ and __aexit__ instead of __enter__ and __exit__. They are essential for async resources like database connections, HTTP sessions, and file handles that need async setup/teardown. The "async with" syntax guarantees __aexit__ runs even if an exception occurs inside the block — just like regular context managers but supporting await. Returning False from __aexit__ means exceptions propagate normally.',
       hints: [
         '__aenter__ must return self (or the managed resource)',
@@ -1239,6 +1357,16 @@ async def greet() -> str:
 
 result = asyncio.run(greet())
 print(result)`,
+      tieredHints: {
+        apiSignature: 'asyncio.run(coro, *, debug=None) -> Any',
+        skeleton: `import asyncio
+
+____ def ____() -> ____:
+    return "hi"
+
+result = asyncio.____(____())
+____(result)`,
+      },
       explanation:
         'This is the minimum viable async: the keyword `async` in front of `def` makes this a COROUTINE, not a regular function. Calling `greet()` returns a coroutine object; you cannot read its return value directly — you either `await` it inside another async function, or pass it to `asyncio.run()` from sync code. No I/O yet — that comes next.',
       hints: [
@@ -1280,6 +1408,22 @@ async def main():
     print(second)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.sleep(delay, result=None) -> None',
+        skeleton: `import asyncio
+
+async def ____(name: ____) -> ____:
+    await asyncio.sleep(____)
+    return f"done: {____}"
+
+async def main():
+    first = ____ ____("one")
+    second = ____ ____("two")
+    ____(first)
+    ____(second)
+
+____.____(main())`,
+      },
       explanation:
         'Two `await` calls in a row run one AFTER the other — just like sync code. Total wall time ≈ sum of both sleeps. Use this pattern when the second call depends on the first. When the two calls are INDEPENDENT you want concurrent execution instead — which is where `asyncio.gather` (next questions) comes in.',
       hints: [
@@ -1320,6 +1464,21 @@ async def main():
         print(v)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.sleep(delay, result=None) -> None',
+        skeleton: `import asyncio
+
+async def ____(n):
+    for i in range(n):
+        await asyncio.____(____)
+        ____ i
+
+async def main():
+    ____ for v in ____(3):
+        print(v)
+
+____.____(main())`,
+      },
       explanation:
         'Any `async def` that contains `yield` is an async generator — you consume it with `async for`, not plain `for`. Use when values become available over time: streaming rows from a DB cursor, chunks from an HTTP body, messages from a queue. The generator pauses on each `await` so other tasks can run. For throwaway transforms, `async for x in src: ... yield f(x)` chains cleanly.',
       hints: [
@@ -1367,6 +1526,28 @@ async def main():
     await asyncio.gather(producer(q), consumer(q))
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.Queue(maxsize=0) -> Queue',
+        skeleton: `import asyncio
+
+async def ____(q):
+    for n in (1, 2, 3):
+        await q.____(n)
+    await q.put(____)
+
+async def ____(q):
+    while True:
+        item = await q.____()
+        if item is ____:
+            break
+        print(item)
+
+async def main():
+    q = asyncio.____()
+    await asyncio.____(____(q), ____(q))
+
+____.____(main())`,
+      },
       explanation:
         '`asyncio.Queue` is the async equivalent of `queue.Queue`: `put` / `get` are coroutines that suspend when the queue is full or empty. Pair with `gather` to run producer and consumer concurrently on the same event loop. For bounded back-pressure, pass `asyncio.Queue(maxsize=N)` so `put` awaits when N items are queued. `task_done()` + `join()` gives you "wait for every item to be processed" semantics.',
       hints: [
@@ -1412,6 +1593,26 @@ async def main():
             print(item)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.gather(*aws, return_exceptions=False) -> list',
+        skeleton: `import asyncio
+
+async def ____(n):
+    await asyncio.sleep(____)
+    if n % 2 == ____:
+        return n * ____
+    raise ____(f"bad {n}")
+
+async def main():
+    results = await asyncio.____(____(1), ____(2), ____(3), ____=True)
+    for item in results:
+        if isinstance(item, ____):
+            print("err")
+        else:
+            print(item)
+
+____.____(main())`,
+      },
       explanation:
         'By default, `gather` re-raises the first exception and cancels the other tasks. With `return_exceptions=True`, failures show up as items in the result list — you decide per-task whether to log, retry, or skip. Essential for batch operations where partial success is acceptable (fetching N URLs, processing N files). Combine with `isinstance(item, Exception)` to separate winners from losers.',
       hints: [
@@ -1454,6 +1655,23 @@ async def main():
     print(results)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.Semaphore(value=1)',
+        skeleton: `import asyncio
+
+async def ____(n, sem):
+    async with ____:
+        await asyncio.sleep(____)
+        return n
+
+async def main():
+    sem = asyncio.____(____)
+    tasks = [____(i, sem) for i in range(____)]
+    results = await asyncio.____(____tasks)
+    print(results)
+
+____.____(main())`,
+      },
       explanation:
         '`asyncio.Semaphore(n)` permits at most N coroutines inside its context at a time — the rest queue up. `async with sem:` is the idiomatic acquire/release wrapper. Use for rate limiting API clients, bounded parallelism over a CPU-heavy op, or capping DB connections. Pattern: one shared semaphore + launch all tasks up-front; each one waits its turn. More flexible than a fixed-size worker pool.',
       hints: [
@@ -1497,6 +1715,24 @@ async def main():
         print("work")
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.run(coro, *, debug=None) -> Any',
+        skeleton: `import asyncio
+
+class ____:
+    async def ____(self):
+        print("open")
+        return self
+
+    async def ____(self, exc_type, exc, tb):
+        print("close")
+
+async def main():
+    async with ____() as s:
+        print("work")
+
+____.____(main())`,
+      },
       explanation:
         'Async context managers use `__aenter__` / `__aexit__` instead of `__enter__` / `__exit__` so setup and teardown can themselves be async (e.g. await a DB connection, await a file open, await acquiring a distributed lock). Consumed with `async with`. Third-party libraries (`aiohttp.ClientSession`, `asyncpg.Pool`, `aiofiles.open`) all return objects that work this way.',
       hints: [
@@ -1538,6 +1774,22 @@ async def main():
         print("timed out")
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.wait_for(aw, timeout) -> Any',
+        skeleton: `import asyncio
+
+async def ____() -> ____:
+    await asyncio.sleep(____)
+    return "done"
+
+async def main():
+    try:
+        await asyncio.____(____(), timeout=____)
+    except asyncio.____:
+        print("timed out")
+
+____.____(main())`,
+      },
       explanation:
         '`asyncio.wait_for(coro, timeout=seconds)` cancels the wrapped coroutine and raises `asyncio.TimeoutError` if it does not finish in time — essential for any external call in a real service. Python 3.11+ adds an even cleaner context-manager form: `async with asyncio.timeout(0.05): await slow()`. Without a timeout, a hung upstream can freeze your event loop forever.',
       hints: [
@@ -1582,6 +1834,25 @@ async def main():
     print(t3.result())
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'tg.create_task(coro, *, name=None) -> Task',
+        skeleton: `import asyncio
+
+async def ____(n: ____) -> ____:
+    await asyncio.sleep(____)
+    return n * ____
+
+async def main():
+    async with asyncio.____() as tg:
+        t1 = tg.____(____(1))
+        t2 = tg.____(____(2))
+        t3 = tg.____(____(3))
+    print(t1.____())
+    print(t2.result())
+    print(t3.result())
+
+____.____(main())`,
+      },
       explanation:
         '`TaskGroup` (3.11+) is the modern alternative to `asyncio.gather` and offers structured concurrency: all tasks finish before the `async with` exits, and if ANY task fails, the rest are cancelled and failures raise as an `ExceptionGroup`. Cleaner for long-lived services because you can no longer leak tasks by forgetting to await. Prefer TaskGroup for new code; keep `gather(..., return_exceptions=True)` when you need per-task error handling without cancellation.',
       hints: [
@@ -1623,6 +1894,21 @@ async def main():
     print(result)
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.to_thread(func, /, *args, **kwargs) -> Any',
+        skeleton: `import asyncio
+import time
+
+def ____(s: ____) -> ____:
+    time.sleep(____)
+    return s.____()
+
+async def main():
+    result = await asyncio.____(____, "hello")
+    print(result)
+
+____.____(main())`,
+      },
       explanation:
         '`asyncio.to_thread(fn, *args, **kwargs)` (3.9+) offloads a blocking sync function to the default thread-pool executor and returns an awaitable. Use whenever you MUST call a sync-only library from async code — pandas, `requests`, `sqlite3`, a third-party SDK without async support. The event loop keeps running; the caller awaits the result as if it were native async. Do NOT use for CPU-bound work on large data — that still ties up a thread and can starve the pool.',
       hints: [
@@ -1667,6 +1953,25 @@ async def main():
         print("batch timeout")
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.wait_for(aw, timeout) -> Any',
+        skeleton: `import asyncio
+
+async def ____(n, seconds):
+    await asyncio.sleep(seconds)
+    return n * ____
+
+async def main():
+    try:
+        await asyncio.____(
+            asyncio.____(____(1, ____), ____(2, ____)),
+            timeout=____,
+        )
+    except asyncio.TimeoutError:
+        print("batch timeout")
+
+____.____(main())`,
+      },
       explanation:
         'Wrapping `gather` in `wait_for` gives the whole batch a single deadline: when it fires, pending child tasks are cancelled. This is the "don\'t let a slow batch stall the service" pattern. For PER-ITEM timeouts instead, wrap each child coroutine in its own `wait_for` before handing them to `gather` — then a single slow call fails alone without cancelling the rest.',
       hints: [
@@ -1719,6 +2024,33 @@ async def main():
     await asyncio.gather(feed(q), consume(q))
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.Queue(maxsize=0) -> Queue',
+        skeleton: `import asyncio
+
+async def ____(n):
+    for i in range(n):
+        await asyncio.sleep(____)
+        ____ i
+
+async def ____(q):
+    ____ for v in numbers(3):
+        await q.____(v)
+    await q.put(____)
+
+async def ____(q):
+    while True:
+        item = await q.____()
+        if item is ____:
+            break
+        print(item)
+
+async def main():
+    q = asyncio.____()
+    await asyncio.____(feed(q), consume(q))
+
+____.____(main())`,
+      },
       explanation:
         'Async generators produce values over time; queues hand values between tasks. Combining them lets the generator run on one task while consumers run on another, with natural back-pressure if you pass `maxsize=` to `Queue`. A `None` sentinel is the canonical end-of-stream signal — alternatives include a custom sentinel object or calling `q.task_done()` + `q.join()` for "wait until all items processed" semantics.',
       hints: [
@@ -1776,6 +2108,34 @@ async def main():
     print(await fetch_all([1, 2, 3, 4, 5, 6]))
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'asyncio.gather(*aws, return_exceptions=False) -> list',
+        skeleton: `import asyncio
+
+async def ____(id: ____) -> ____:
+    await asyncio.sleep(____)
+    return id * ____
+
+async def ____(id: ____, sem: asyncio.____):
+    async with sem:
+        try:
+            return await asyncio.____(____(id), timeout=____)
+        except asyncio.TimeoutError:
+            return "____"
+
+async def fetch_all(ids):
+    sem = asyncio.____(____)
+    results = await asyncio.____(
+        ____(____(i, sem) for i in ids),
+        ____=True,
+    )
+    return [r if not isinstance(r, ____) else "error" for r in results]
+
+async def main():
+    print(await fetch_all([1, 2, 3, 4, 5, 6]))
+
+____.____(main())`,
+      },
       explanation:
         'This is the canonical "batch work against an external system" shape. `Semaphore(2)` caps in-flight work — the other four tasks wait. `wait_for(..., timeout=0.05)` enforces a per-call budget so one slow upstream cannot stall the batch. `gather(..., return_exceptions=True)` keeps the batch running when any single call raises; the caller then separates successes from failures with an `isinstance` check. Swap `fetch_one` for a real HTTP call through a shared `aiohttp.ClientSession` and this becomes a complete rate-limited, timeout-safe, partial-success fetcher.',
       hints: [
@@ -1912,6 +2272,17 @@ async def delayed_greeting():
 
 result = asyncio.run(delayed_greeting())
 print(result)  # done`,
+      tieredHints: {
+        apiSignature: 'asyncio.run(coro, *, debug=None) -> Any',
+        skeleton: `import asyncio
+
+async def ____():
+    await asyncio.sleep(____)
+    return "done"
+
+result = asyncio.____(____())
+____(result)`,
+      },
       explanation: '`async def` defines a coroutine — a function that can be paused and resumed. `await` pauses the coroutine until the awaited operation completes (here, sleeping for 1 second). `asyncio.run()` is the entry point that creates an event loop, runs the coroutine, and cleans up. You cannot call an async function directly — you must either `await` it inside another async function or use `asyncio.run()`.',
       hints: [
         'Use `async def` to define the coroutine',
@@ -1949,6 +2320,19 @@ async def main():
         print(r.json()["url"])
 
 asyncio.run(main())`,
+      tieredHints: {
+        apiSignature: 'client.get(url, params=None, headers=None) -> Response',
+        skeleton: `import asyncio
+import httpx
+
+async def main():
+    async with httpx.____() as client:
+        r = ____ client.____("https://httpbin.org/get")
+        r.____()
+        print(r.json()["____"])
+
+____.____(main())`,
+      },
       explanation: '`httpx.AsyncClient` is the async counterpart of the synchronous `httpx.Client` (seen in the HTTP topic): same `.get` / `.raise_for_status()` / `.json()` API, but you `await` each request and open it with `async with`. `requests` cannot do this — it is sync-only — which is why an async service (FastAPI, asyncio) reaches for httpx. This is a SINGLE await; fetching many URLs at once is the job of `asyncio.gather` (shown with `aiohttp` in the concurrent-fetch question). httpx and aiohttp are the two common async HTTP clients — httpx also offers a matching sync client and HTTP/2.',
       hints: [
         'httpx.AsyncClient + async with',

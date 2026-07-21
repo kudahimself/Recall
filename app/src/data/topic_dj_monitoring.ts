@@ -105,6 +105,10 @@ class OrderView(APIView):
         'logging.getLogger("myapp") gets the logger configured in settings',
         'exc_info=True includes the stack trace in the log entry',
       ],
+      tieredHints: {
+        apiSignature: 'logger.error(msg, *args, exc_info=None, extra=None, stack_info=False)',
+        skeleton: 'import logging\nfrom rest_framework.views import ____\nfrom rest_framework.response import ____\n\nlogger = logging.____("myapp")\n\nclass OrderView(____):\n    def ____(self, ____):\n        logger.____(\n            "Order creation started",\n            ____={"user_id": ____.user.id, "items_count": ____(____.data.get("items", []))},\n        )\n\n        ____:\n            ____ = ____(____.user, ____.data["items"])\n            logger.____(\n                "Order created successfully",\n                ____={"user_id": ____.user.id, "order_id": ____.id},\n            )\n            return ____({"order_id": ____.id}, status=201)\n\n        ____ Exception as ____:\n            logger.____(\n                "Order creation failed",\n                ____={"user_id": ____.user.id, "error": str(____)},\n                ____=True,\n            )\n            return ____({"error": "Order failed"}, status=400)',
+      },
       tags: ['logging', 'django', 'monitoring', 'error-handling'],
       concepts: ['py-logging-config', 'dj-monitoring', 'py-exception-hierarchy'],
     },

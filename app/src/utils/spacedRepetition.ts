@@ -5,6 +5,7 @@ import {
   CardBucket,
   ConceptProgress,
   getRetrievability,
+  ReviewGrade,
 } from './conceptSRS';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -88,6 +89,17 @@ export const TOPIC_REVIEW_THRESHOLD_PCT = 95;
 // Mastery streak tiers (consecutive correct answers).
 export const MASTERY_EXPERT_STREAK = 5;
 export const MASTERY_PROFICIENT_STREAK = 3;
+
+// Tiered-hint partial credit (coding questions only). A clean pass is always
+// 1.0; hint-assisted passes are discounted by tier, and the discount steepens as
+// the card matures — "diminishing cues" (a mature card that still needs the
+// skeleton has not been retained, so it earns little and stays in the drain).
+// Index 0 = no hint, 1 = signature revealed, 2 = skeleton revealed.
+export const HINT_CREDIT_MATURE = [1, 0.5, 0.25] as const;   // streak >= HINT_MATURITY_STREAK or topic mastered
+export const HINT_CREDIT_IMMATURE = [1, 0.8, 0.6] as const;  // new / still-struggling cards
+export const HINT_MATURITY_STREAK = 2;                       // streak at/above which a card counts as mature
+export const CREDIT_CORRECT_THRESHOLD = 0.75;                // credit >= this "counts as correct" downstream
+export const HINT_GRADE_CAP = [4, 2, 1] as const;            // FSRS grade ceiling by hint tier (tier 2 = lapse)
 
 // Mastered-resurface model (Anki-style, due-driven). Without this, mastered
 // questions effectively retire — they only resurface when their spacing
@@ -342,7 +354,7 @@ export class SpacedRepetitionSystem {
     const groups = getGroupsForTopic(answeredTopic);
     if (groups) scopes.push(groups.unitTopics, groups.sectionTopics);
 
-    const latest = this.latestCorrectness(progress);
+    const latest = this.latestCredit(progress);
     let next: Set<string> | null = null;
 
     for (const keys of scopes) {
@@ -350,14 +362,14 @@ export class SpacedRepetitionSystem {
       const qs = allQuestions.filter(q => keys.includes(q.topic));
       if (qs.length === 0) continue;
       let covered = true;
-      let correct = 0;
+      let credit = 0; // fractional: a hinted pass contributes its partial credit
       for (const q of qs) {
         const lc = latest.get(q.id);
         if (lc === undefined) { covered = false; break; } // group not fully covered
-        if (lc) correct++;
+        credit += lc;
       }
       if (!covered) continue;
-      if (pct(correct, qs.length) <= UNLOCK_ACCURACY_PCT) continue;
+      if (pct(credit, qs.length) <= UNLOCK_ACCURACY_PCT) continue;
       if (!next) next = new Set(current);
       for (const k of keys) next.add(k);
     }
@@ -434,12 +446,35 @@ export class SpacedRepetitionSystem {
   }
 
   /**
+   * Partial credit for a single attempt, with legacy fallback: attempts recorded
+   * before tiered hints existed have no `credit` field and resolve to the boolean.
+   */
+  static attemptCredit(a: QuestionAttempt): number {
+    return a.credit ?? (a.isCorrect ? 1 : 0);
+  }
+
+  /**
+   * Latest-attempt credit per question, one pass over attemptHistory. Mirrors
+   * latestCorrectness but carries the fractional value for mastery math.
+   */
+  static latestCredit(progress: UserProgress): Map<string, number> {
+    const latest = new Map<string, number>();
+    for (const a of progress.attemptHistory) latest.set(a.questionId, this.attemptCredit(a));
+    return latest;
+  }
+
+  /**
    * Latest-attempt correctness per question, one pass over attemptHistory.
-   * Single source for the drain's "latest-wrong" membership test.
+   * Single source for the drain's "latest-wrong" membership test. A hinted pass
+   * counts as correct only when its credit clears CREDIT_CORRECT_THRESHOLD, so a
+   * heavily-hinted pass (e.g. tier-2 skeleton) stays "wrong" for the drain and
+   * the card keeps resurfacing until answered cleanly.
    */
   static latestCorrectness(progress: UserProgress): Map<string, boolean> {
     const latest = new Map<string, boolean>();
-    for (const a of progress.attemptHistory) latest.set(a.questionId, a.isCorrect);
+    for (const a of progress.attemptHistory) {
+      latest.set(a.questionId, this.attemptCredit(a) >= CREDIT_CORRECT_THRESHOLD);
+    }
     return latest;
   }
 
@@ -772,13 +807,42 @@ export class SpacedRepetitionSystem {
 
     let streak = 0;
     for (const attempt of attempts) {
-      if (attempt.isCorrect) {
+      // A hinted pass continues the streak only if its credit clears the bar
+      // (an immature tier-1 pass at 0.8 survives; heavier hints break it).
+      if (this.attemptCredit(attempt) >= CREDIT_CORRECT_THRESHOLD) {
         streak++;
       } else {
         break;
       }
     }
     return streak;
+  }
+
+  /**
+   * The partial-credit schedule this question would earn per hint tier right now,
+   * indexed [none, signature, skeleton]. A card is "mature" (steep discount) once
+   * its correct streak reaches HINT_MATURITY_STREAK or its topic is already
+   * mastered; otherwise it gets the gentler immature schedule. Presentational too:
+   * the component shows the tier-1/tier-2 cost from this before the learner clicks.
+   */
+  static getHintCreditSchedule(
+    questionId: string,
+    topic: string,
+    progress: UserProgress,
+  ): readonly [number, number, number] {
+    const mature =
+      this.getCorrectStreak(questionId, progress) >= HINT_MATURITY_STREAK ||
+      progress.masteredTopics.has(topic);
+    return mature ? HINT_CREDIT_MATURE : HINT_CREDIT_IMMATURE;
+  }
+
+  /**
+   * Cap an FSRS response grade by the highest hint tier used, so a hinted pass
+   * can never earn a full-confidence interval bump. Tier 0 leaves the grade
+   * untouched; tier 2 floors it to a lapse-grade ceiling (HINT_GRADE_CAP).
+   */
+  static capGradeForHints(grade: ReviewGrade, hintTierUsed: 0 | 1 | 2): ReviewGrade {
+    return Math.min(grade, HINT_GRADE_CAP[hintTierUsed]) as ReviewGrade;
   }
 
   /**
@@ -1024,7 +1088,7 @@ export class SpacedRepetitionSystem {
 
     // Within the same (topic, difficulty), order by cognitive load: recognition
     // → trace → reorder → fill-in → cold writing. Mirrors the "worked → faded
-    // → cold" progression in HOW_TO_CONSTRUCT_TOPIC.md so the learner sees
+    // → cold" progression from the /construct-topic skill so the learner sees
     // Parsons/Cloze before being asked to write a CODING question from scratch.
     const typeIndex: Record<string, number> = {
       [QuestionType.MULTIPLE_CHOICE]: 0,

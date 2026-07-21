@@ -167,7 +167,7 @@ WHERE o.OrderId IS NULL;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Join `dbo.DimCustomer c` (CustomerKey, FullName) to `dbo.FactOrders o` (CustomerKey, Amount) and return each customer\'s FullName and Amount, for orders with Amount over 100.',
-    starterCode: `-- SELECT c.FullName, o.Amount FROM ... JOIN ... ON ...
+    starterCode: `-- Join dbo.DimCustomer and dbo.FactOrders to return FullName and Amount for orders over 100
 `,
     testCases: [
       {
@@ -180,6 +180,13 @@ WHERE o.OrderId IS NULL;`,
 FROM dbo.DimCustomer c
 INNER JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey
 WHERE o.Amount > 100;`,
+    tieredHints: {
+      apiSignature: 'INNER JOIN table ON left_col = right_col',
+      skeleton: `SELECT c.____, o.____
+FROM dbo.DimCustomer c
+____ ____ dbo.FactOrders o ____ o.____ = c.____
+WHERE o.Amount ____ ____;`,
+    },
     explanation: 'Match the two tables on `CustomerKey`, then filter the matched rows with `WHERE o.Amount > 100`. (`JOIN` and `INNER JOIN` are equivalent.)',
     hints: ['Join on CustomerKey', 'Filter the joined rows with WHERE o.Amount > 100'],
     tags: ['tsql', 'joins', 'inner-join'],
@@ -211,6 +218,13 @@ FROM dbo.DimCustomer c
 WHERE NOT EXISTS (
     SELECT 1 FROM dbo.FactOrders o WHERE o.CustomerKey = c.CustomerKey
 );`,
+    tieredHints: {
+      apiSignature: 'NOT EXISTS (SELECT 1 FROM table WHERE correlated_condition)',
+      skeleton: `SELECT c.____
+FROM dbo.DimCustomer c
+____ ____ dbo.FactOrders o ____ o.____ = c.____
+WHERE o.____ ____ ____;`,
+    },
     explanation: 'Two idiomatic anti-joins: a LEFT JOIN keeping only rows where the right side is NULL, or `NOT EXISTS` with a correlated subquery. Both return customers with zero orders; `NOT EXISTS` is often the clearer intent and handles NULLs safely.',
     hints: ['LEFT JOIN then WHERE o.OrderId IS NULL', 'or NOT EXISTS (correlated subquery)'],
     tags: ['tsql', 'joins', 'left-join', 'anti-join'],
@@ -238,6 +252,15 @@ INNER JOIN dbo.DimCustomer c ON c.CustomerKey = o.CustomerKey
 INNER JOIN dbo.DimProduct p ON p.ProductKey = o.ProductKey
 WHERE c.Country = 'NO' AND p.Category = 'Books'
 ORDER BY o.Amount DESC;`,
+    tieredHints: {
+      apiSignature: 'ORDER BY column ASC|DESC',
+      skeleton: `SELECT c.____, p.____, o.____
+FROM dbo.FactOrders o
+____ ____ dbo.DimCustomer c ____ c.____ = o.____
+____ ____ dbo.DimProduct p ____ p.____ = o.____
+WHERE c.____ = 'NO' ____ p.____ = 'Books'
+ORDER BY o.Amount ____;`,
+    },
     explanation: 'A fact table commonly joins to several dimension tables at once - here FactOrders joins to both DimCustomer and DimProduct on their respective keys. Once joined, the WHERE clause can filter on columns from either dimension, and ORDER BY sorts the combined result.',
     hints: ['Two INNER JOINs, one per dimension table', 'Filter on columns from both joined tables', 'ORDER BY Amount DESC'],
     tags: ['tsql', 'joins', 'multi-table-join', 'inner-join'],

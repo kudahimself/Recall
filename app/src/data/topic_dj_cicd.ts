@@ -124,6 +124,7 @@ jobs:
           python-version: \${{ ___.python-version }}
       - run: python manage.py test`,
       blanks: ['strategy', 'matrix'],
+      // eslint-disable-next-line no-template-curly-in-string
       solution: 'jobs:\n  test:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        python-version: ["3.11", "3.12", "3.13"]\n    steps:\n      - uses: actions/setup-python@v5\n        with:\n          python-version: ${{ matrix.python-version }}\n      - run: python manage.py test',
       explanation: `Matrix tests your project against multiple interpreter versions (or DBs, OSes) in parallel. Matrix values are interpolated via \`\${{ matrix.<name> }}\`. \`fail-fast: false\` lets all cells run even if one fails (useful to see which versions break). Combine with \`include:\` for extra specific combos, \`exclude:\` to skip. Shipping a library? Matrix test every supported Python. Shipping a service? Only the version you run.`,
       hints: [
@@ -172,6 +173,7 @@ jobs:
     DATABASE_URL: \${{ ___.DATABASE_URL }}
   run: python manage.py migrate`,
       blanks: ['env', 'secrets'],
+      // eslint-disable-next-line no-template-curly-in-string
       solution: '- name: Run migrations\n  env:\n    DATABASE_URL: ${{ secrets.DATABASE_URL }}\n  run: python manage.py migrate',
       explanation: 'Secrets live in repo Settings → Secrets. Never echo them (`echo $SECRET` would print literally in the log — but GitHub auto-redacts exact matches of secret values in output as a safety net). Organization-level secrets let you share across repos (deploy keys, shared API tokens). `environments` add approval + deploy-specific secrets. For very sensitive ops (prod deploys), protect the environment with required reviewers.',
       hints: [

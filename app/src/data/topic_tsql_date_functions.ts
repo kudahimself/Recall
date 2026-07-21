@@ -185,7 +185,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.FactOrders` (OrderId, OrderDate), return OrderId and two columns: `OrderYear` (the year of OrderDate) and `OrderMonth` (the month of OrderDate).',
-    starterCode: `-- SELECT OrderId, YEAR(OrderDate) AS OrderYear, MONTH(OrderDate) AS OrderMonth FROM dbo.FactOrders;
+    starterCode: `-- Table: dbo.FactOrders (OrderId, OrderDate)
+-- Return OrderId, OrderYear, and OrderMonth
 `,
     testCases: [
       {
@@ -196,6 +197,11 @@ FROM dbo.FactOrders;`,
     ],
     solution: `SELECT OrderId, YEAR(OrderDate) AS OrderYear, MONTH(OrderDate) AS OrderMonth
 FROM dbo.FactOrders;`,
+    tieredHints: {
+      apiSignature: 'YEAR(date_expression) -> int',
+      skeleton: `SELECT OrderId, ____(OrderDate) AS ____, ____(OrderDate) AS ____
+FROM dbo.FactOrders;`,
+    },
     explanation: 'One call to `YEAR` and one to `MONTH`, each aliased, gives the two requested columns directly from OrderDate.',
     hints: ['YEAR(OrderDate) AS OrderYear', 'MONTH(OrderDate) AS OrderMonth'],
     tags: ['tsql', 'date-functions', 'year', 'month'],
@@ -208,7 +214,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.DimCustomer` (CustomerKey, SignupDate), return CustomerKey and a column `DaysSinceSignup` giving the number of days between SignupDate and today.',
-    starterCode: `-- SELECT CustomerKey, DATEDIFF(DAY, SignupDate, GETDATE()) AS DaysSinceSignup FROM dbo.DimCustomer;
+    starterCode: `-- Table: dbo.DimCustomer (CustomerKey, SignupDate)
+-- Return CustomerKey and DaysSinceSignup (days between SignupDate and today)
 `,
     testCases: [
       {
@@ -219,6 +226,11 @@ FROM dbo.FactOrders;`,
     ],
     solution: `SELECT CustomerKey, DATEDIFF(DAY, SignupDate, GETDATE()) AS DaysSinceSignup
 FROM dbo.DimCustomer;`,
+    tieredHints: {
+      apiSignature: 'DATEDIFF(datepart, startdate, enddate) -> int',
+      skeleton: `SELECT CustomerKey, ____(____, SignupDate, ____()) AS DaysSinceSignup
+FROM dbo.DimCustomer;`,
+    },
     explanation: 'GETDATE() supplies "now" as the end point; DATEDIFF(DAY, ...) counts the days between SignupDate and that moment.',
     hints: ['DATEDIFF(DAY, SignupDate, GETDATE())'],
     tags: ['tsql', 'date-functions', 'datediff', 'getdate'],
@@ -243,6 +255,12 @@ FROM dbo.DimCustomer;`,
     solution: `SELECT OrderId, Amount
 FROM dbo.FactOrders
 WHERE DATEDIFF(DAY, OrderDate, CAST(GETDATE() AS DATE)) > 30;`,
+    tieredHints: {
+      apiSignature: 'DATEDIFF(datepart, startdate, enddate) -> int',
+      skeleton: `SELECT OrderId, Amount
+FROM dbo.FactOrders
+WHERE ____(____, OrderDate, ____(____() AS ____)) ____ 30;`,
+    },
     explanation: '`CAST(GETDATE() AS DATE)` strips today\'s time-of-day so the comparison is purely calendar-based; `DATEDIFF(DAY, OrderDate, ...)` then measures the gap, and the `WHERE` clause keeps only orders where that gap exceeds 30 days.',
     hints: ['CAST(GETDATE() AS DATE) removes the time component', 'DATEDIFF(DAY, OrderDate, that) > 30'],
     tags: ['tsql', 'date-functions', 'datediff', 'cast', 'getdate'],

@@ -233,6 +233,13 @@ print(dt.isoformat())`,
         '.isoformat() returns the ISO-8601 / RFC-3339 string',
         'Parse back with datetime.fromisoformat(s)',
       ],
+      tieredHints: {
+        apiSignature: 'datetime.datetime(year, month, day, hour=0, minute=0, second=0, tzinfo=None) -> datetime',
+        skeleton: `import datetime
+
+dt = datetime.____(2025, 1, 15, 14, 30, ____=datetime.____.____)
+print(dt.____())`,
+      },
       tags: ['datetime', 'timezone', 'isoformat', 'utc'],
       concepts: ['py-datetime-handling'],
     },
@@ -266,6 +273,15 @@ print(utc.astimezone(ZoneInfo("Asia/Tokyo")).isoformat())`,
         'astimezone changes the representation, not the instant',
         'Always start from UTC and convert at display boundary',
       ],
+      tieredHints: {
+        apiSignature: 'datetime.astimezone(tz=None) -> datetime',
+        skeleton: `import datetime
+from zoneinfo import ZoneInfo
+
+utc = datetime.____(2025, 3, 15, 12, 0, ____=datetime.____.____)
+print(utc.____(ZoneInfo("____")).____())
+print(utc.____(ZoneInfo("____")).____())`,
+      },
       tags: ['datetime', 'zoneinfo', 'astimezone', 'timezone'],
       concepts: ['py-datetime-handling'],
     },
@@ -300,6 +316,17 @@ print(delta.total_seconds())`,
         '.total_seconds() gives float seconds',
         'timedelta(hours=2, minutes=30) to build one directly',
       ],
+      tieredHints: {
+        apiSignature: 'timedelta.total_seconds() -> float',
+        skeleton: `import datetime
+
+start = datetime.____(2025, 1, 1, 9, 0)
+end = datetime.____(2025, 1, 1, 17, 30)
+
+delta = end ____ start
+print(delta)
+print(delta.____())`,
+      },
       tags: ['datetime', 'timedelta', 'arithmetic'],
       concepts: ['py-datetime-handling', 'py-arithmetic-ops'],
     },
@@ -333,6 +360,14 @@ print(dt.strftime("%d/%m/%Y"))`,
         'Common: %Y-%m-%d, %H:%M:%S, %z for timezone offset',
         'For ISO-8601 specifically, fromisoformat / isoformat are faster and cleaner',
       ],
+      tieredHints: {
+        apiSignature: 'datetime.strptime(date_string, format) -> datetime',
+        skeleton: `import datetime
+
+dt = datetime.____.____("2025-01-15 14:30", "____")
+print(dt)
+print(dt.____("____"))`,
+      },
       tags: ['datetime', 'strftime', 'strptime', 'parsing', 'formatting'],
       concepts: ['py-datetime-handling'],
     },
@@ -366,6 +401,16 @@ print(p.parent)`,
         '.name / .suffix / .parent are attributes, not methods',
         'str(path) if you need a plain string',
       ],
+      tieredHints: {
+        apiSignature: 'pathlib.Path(*pathsegments) -> Path',
+        skeleton: `from pathlib import Path
+
+p = Path("/var/log") ____ "app" ____ "server.log"
+print(____(p))
+print(p.____)
+print(p.____)
+print(p.____)`,
+      },
       tags: ['pathlib', 'Path', 'paths', 'basics'],
       concepts: ['py-pathlib'],
     },
@@ -397,6 +442,14 @@ print(p.read_text())`,
         '.write_bytes / .read_bytes for binary',
         'For large files use `with p.open("r") as f` streaming',
       ],
+      tieredHints: {
+        apiSignature: 'Path.write_text(data, encoding=None, errors=None, newline=None) -> int',
+        skeleton: `from pathlib import Path
+
+p = ____("greeting.txt")
+p.____("____")
+print(p.____())`,
+      },
       tags: ['pathlib', 'read_text', 'write_text', 'io'],
       concepts: ['py-pathlib'],
     },

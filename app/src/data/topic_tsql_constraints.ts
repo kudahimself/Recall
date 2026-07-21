@@ -152,6 +152,20 @@ export const tsql_constraints_questions: Question[] = [
         ON DELETE CASCADE,
     CONSTRAINT CK_Orders_Amount CHECK (Amount >= 0)
 );`,
+    tieredHints: {
+      apiSignature: 'CONSTRAINT ck_name CHECK (boolean_expression)',
+      skeleton: `CREATE TABLE dbo.FactOrders (
+    OrderId     INT ____ KEY,
+    CustomerKey INT ____ ____,
+    OrderRef    NVARCHAR(40) ____,
+    Amount      DECIMAL(10, 2) ____ ____,
+    IsShipped   BIT ____ 0,
+    CONSTRAINT FK_Orders_Customer ____ ____ (CustomerKey)
+        ____ dbo.DimCustomer (CustomerKey)
+        ON ____ ____,
+    CONSTRAINT CK_Orders_Amount ____ (Amount ____ 0)
+);`,
+    },
     explanation: 'This single statement wires up the full integrity set: PRIMARY KEY (identity), FOREIGN KEY … ON DELETE CASCADE (referential integrity), UNIQUE (no duplicate business key), CHECK (no negative amounts), and DEFAULT (sensible omitted value). Column-level constraints (UNIQUE, DEFAULT) can sit inline; multi-part ones (FK, CHECK) read best as named table-level constraints.',
     hints: ['Inline: PRIMARY KEY, UNIQUE, DEFAULT, NOT NULL', 'Named table-level: FOREIGN KEY … REFERENCES … ON DELETE CASCADE, and CHECK (…)'],
     tags: ['tsql', 'constraints', 'foreign-key', 'check', 'unique'],

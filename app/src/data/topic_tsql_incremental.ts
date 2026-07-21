@@ -109,6 +109,11 @@ FROM dbo.FactSales;
 -- OR
 SELECT COALESCE(MAX(UpdatedAt), '1900-01-01') AS NewWatermark
 FROM dbo.FactSales;`,
+    tieredHints: {
+      apiSignature: 'MAX(expression) -> scalar',
+      skeleton: `SELECT ____(____(UpdatedAt), ____) AS NewWatermark
+FROM dbo.FactSales;`,
+    },
     explanation: '`MAX(UpdatedAt)` returns NULL on an empty table, which would break a `> NULL` comparison on the next run (everything compares false). Wrapping it in `ISNULL(…, \'1900-01-01\')` (or `COALESCE`) supplies a safe floor so the first incremental run still pulls all rows.',
     hints: ["ISNULL(MAX(UpdatedAt), '1900-01-01')", 'Guards against NULL on an empty table'],
     tags: ['tsql', 'incremental', 'watermark', 'null-handling'],

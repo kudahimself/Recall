@@ -129,6 +129,18 @@ WHEN MATCHED THEN
 WHEN NOT MATCHED BY TARGET THEN
     INSERT (ProductCode, ProductName, Category)
     VALUES (src.ProductCode, src.ProductName, src.Category);`,
+    tieredHints: {
+      apiSignature: 'WHEN NOT MATCHED BY TARGET THEN INSERT (col1, col2, ...) VALUES (val1, val2, ...)',
+      skeleton: `MERGE dbo.DimProduct AS tgt
+USING stg.Product AS src
+    ON tgt.ProductCode = src.ProductCode
+WHEN ____ THEN
+    UPDATE SET tgt.ProductName = src.ProductName,
+               tgt.Category = ____
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (ProductCode, ProductName, Category)
+    VALUES (____, ____, ____);`,
+    },
     explanation: 'A single `MERGE` performs the whole Type 1 load: join target to source on the natural key, overwrite the descriptive columns for existing products (`WHEN MATCHED`), and insert rows for brand-new product codes (`WHEN NOT MATCHED BY TARGET`). Type 1 keeps no history — the dimension simply reflects the latest source values.',
     hints: ['ON ProductCode; WHEN MATCHED → UPDATE SET both columns', 'WHEN NOT MATCHED BY TARGET → INSERT the three columns'],
     tags: ['tsql', 'scd', 'merge', 'type-1'],
@@ -155,6 +167,14 @@ WHEN NOT MATCHED BY TARGET THEN
 FROM dbo.DimProduct AS tgt
     JOIN stg.Product AS src ON src.ProductCode = tgt.ProductCode
 WHERE tgt.IsCurrent = 1 AND tgt.Category <> src.Category;`,
+    tieredHints: {
+      apiSignature: 'UPDATE alias SET alias.col = expr FROM table AS alias JOIN table2 AS alias2 ON condition',
+      skeleton: `UPDATE tgt
+    SET tgt.____ = CAST(GETDATE() AS ____), tgt.IsCurrent = ____
+FROM dbo.DimProduct AS tgt
+    ____ stg.Product AS src ON src.ProductCode = tgt.____
+WHERE tgt.____ = 1 AND tgt.Category ____ src.Category;`,
+    },
     explanation: 'This mirrors the earlier expire-step pattern: join the current dimension rows to staging on the natural key, and for rows where the tracked attribute actually changed, stamp EndDate and clear IsCurrent. A separate INSERT (not shown here) would then add each product\'s new current version - the expire step never DELETEs, since that would destroy history.',
     hints: ['UPDATE ... FROM dbo.DimProduct JOIN stg.Product ON ProductCode', 'WHERE IsCurrent = 1 AND the tracked column differs'],
     tags: ['tsql', 'scd', 'type-2', 'effective-dates'],

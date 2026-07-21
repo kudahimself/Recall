@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { CodingQuestion as CQQuestion, CodeLanguage, Topic } from '../types';
+import { CodingQuestion as CQQuestion, CodeLanguage, Topic, AnswerMeta } from '../types';
 import { validateAnswer, ValidationResult, ValidationVerdict } from '../utils/codeValidator';
 import { validateByComputedStyle } from '../utils/computedStyleValidator';
 import { LivePreview } from './visual/LivePreview';
@@ -8,11 +8,20 @@ import { StyledButton } from './StyledButton';
 import { StyledBadge } from './StyledBadge';
 import './CodingQuestion.css';
 
+// The retry loop is a small state machine. `editing` is the classic pre-submit
+// state; a failed submit on a tiered-hints question goes to `review-fail` (the
+// scaffolded retry panel); an uncertain verdict goes to `awaiting-self-grade`;
+// any terminal outcome (pass, give-up, untiered fail) lands on `done`.
+type Phase = 'editing' | 'review-fail' | 'awaiting-self-grade' | 'done';
+
 interface Props {
   question: CQQuestion;
-  onAnswer: (isCorrect: boolean) => void;
+  onAnswer: (isCorrect: boolean, meta?: AnswerMeta) => void;
   onNext?: () => void;
   showHints: boolean;
+  // Partial-credit this pass would earn per hint tier [none, signature, skeleton],
+  // supplied by the SR engine so the retry panel can show the cost before a reveal.
+  hintCreditSchedule?: readonly [number, number, number];
 }
 
 export const CodingQuestion: React.FC<Props> = ({
@@ -20,9 +29,16 @@ export const CodingQuestion: React.FC<Props> = ({
   onAnswer,
   onNext,
   showHints,
+  hintCreditSchedule,
 }) => {
+  const tiered = !!question.tieredHints;
+  const schedule = hintCreditSchedule ?? ([1, 0.5, 0.25] as const);
   const [code, setCode] = useState(question.starterCode);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [phase, setPhase] = useState<Phase>('editing');
+  // Submits so far this visit and the highest hint tier revealed (0/1/2). Both
+  // persist across retries so the recorded attempt reflects the whole struggle.
+  const [submitCount, setSubmitCount] = useState(0);
+  const [hintTier, setHintTier] = useState<0 | 1 | 2>(0);
   const [testResults, setTestResults] = useState<ValidationResult[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
@@ -50,6 +66,10 @@ export const CodingQuestion: React.FC<Props> = ({
   });
   const startTime = useRef(Date.now());
   const editorRef = useRef<any>(null);
+  // Mirror phase into a ref so the Monaco keyboard command (registered once at
+  // mount) reads the live phase instead of the stale mount-time value.
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-height: 860px)');
@@ -85,7 +105,9 @@ export const CodingQuestion: React.FC<Props> = ({
     }
 
     setCode(question.starterCode);
-    setIsSubmitted(false);
+    setPhase('editing');
+    setSubmitCount(0);
+    setHintTier(0);
     setTestResults([]);
     setShowHint(false);
     setHintIndex(0);
@@ -140,7 +162,7 @@ export const CodingQuestion: React.FC<Props> = ({
 
     // Add keyboard shortcut for submit (Cmd/Ctrl + Enter)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-      if (!isSubmitted) {
+      if (phaseRef.current === 'editing') {
         handleSubmit();
       }
     });
@@ -196,8 +218,16 @@ export const CodingQuestion: React.FC<Props> = ({
     return results;
   };
 
+  // Record exactly one attempt for this question visit at a terminal outcome.
+  // Navigating away mid-retry records nothing (same as abandoning pre-submit).
+  const finalize = (passed: boolean, attempts: number) => {
+    setPhase('done');
+    onAnswer(passed, { hintTierUsed: hintTier, attempts: Math.max(attempts, 1) });
+  };
+
   const handleSubmit = async () => {
-    setIsSubmitted(true);
+    const attemptNumber = submitCount + 1;
+    setSubmitCount(attemptNumber);
     let results: ValidationResult[];
     if (question.previewChecks && question.previewChecks.length > 0) {
       // Visual grading: render solution and user code in twin hidden iframes
@@ -220,14 +250,25 @@ export const CodingQuestion: React.FC<Props> = ({
     }
     // If any verdict is uncertain (and none are definitively failed), wait for
     // the user to self-grade against the reference instead of recording an
-    // answer the validator isn't confident about.
+    // answer the validator isn't confident about. The reference is revealed, so
+    // retry is off the table - self-grade is terminal either way.
     const anyUncertain = results.some(r => r.verdict === 'uncertain');
     const anyFail = results.some(r => r.verdict === 'fail');
     if (anyUncertain && !anyFail) {
-      // Hold onAnswer until handleSelfGrade fires.
+      setPhase('awaiting-self-grade');
       return;
     }
-    onAnswer(results.every(r => r.verdict === 'pass'));
+    if (results.every(r => r.verdict === 'pass')) {
+      finalize(true, attemptNumber);
+      return;
+    }
+    // A real failure. Tiered-hints questions offer the scaffolded retry panel;
+    // untiered questions keep the classic one-shot behavior exactly.
+    if (tiered) {
+      setPhase('review-fail');
+    } else {
+      finalize(false, attemptNumber);
+    }
   };
 
   const handleSelfGrade = (matches: boolean) => {
@@ -247,17 +288,38 @@ export const CodingQuestion: React.FC<Props> = ({
           : r,
       ),
     );
-    onAnswer(matches);
+    finalize(matches, submitCount);
+  };
+
+  // Retry: return to the editor keeping the learner's code and any spent hints.
+  const handleTryAgain = () => {
+    setPhase('editing');
+    setTestResults([]);
+    setSelfGrade(null);
+    startTime.current = Date.now();
+  };
+
+  // Reveal the next hint tier. Hints are "spent" - the tier persists across
+  // retries and caps the final credit and FSRS grade even after a clean pass.
+  const revealHintTier = (tier: 1 | 2) => {
+    setHintTier(prev => (tier > prev ? tier : prev));
+  };
+
+  const handleGiveUp = () => {
+    setShowSolution(true);
+    finalize(false, submitCount);
   };
 
   const handleReset = () => {
     setCode(question.starterCode);
-    setIsSubmitted(false);
     setTestResults([]);
     setShowSolution(false);
     setShowHint(false);
     setHintIndex(0);
     setSelfGrade(null);
+    // Reset returns to editing but keeps hints spent (hintTier) and the submit
+    // count - the learner has already seen those cues this visit.
+    setPhase('editing');
     startTime.current = Date.now();
   };
 
@@ -342,7 +404,7 @@ export const CodingQuestion: React.FC<Props> = ({
             // Behavior
             scrollBeyondLastLine: false,
             automaticLayout: true,
-            readOnly: isSubmitted && testResults.every(r => r.passed),
+            readOnly: phase === 'done' && testResults.length > 0 && testResults.every(r => r.passed),
             scrollbar: {
               vertical: 'auto',
               horizontal: 'auto',
@@ -363,7 +425,7 @@ export const CodingQuestion: React.FC<Props> = ({
       </div>
 
       <div className="button-group">
-        {!isSubmitted ? (
+        {phase === 'editing' && (
           <>
             <StyledButton variant="primary" onClick={handleSubmit} shortcut="⌘↵">
               Run Code
@@ -371,7 +433,9 @@ export const CodingQuestion: React.FC<Props> = ({
             <StyledButton variant="secondary" onClick={handleReset} shortcut="⌘R">
               Reset
             </StyledButton>
-            {showHints && question.hints && question.hints.length > 0 && (
+            {/* Legacy flat-hints button: only for questions WITHOUT tiered hints,
+                so the two hint systems never appear together. */}
+            {!tiered && showHints && question.hints && question.hints.length > 0 && (
               <>
                 {!showHint ? (
                   <StyledButton variant="warning" onClick={() => setShowHint(true)}>
@@ -387,7 +451,28 @@ export const CodingQuestion: React.FC<Props> = ({
               </>
             )}
           </>
-        ) : (
+        )}
+        {phase === 'review-fail' && (
+          <>
+            <StyledButton variant="primary" onClick={handleTryAgain}>
+              Try Again
+            </StyledButton>
+            {question.tieredHints && hintTier < 1 && (
+              <StyledButton variant="warning" onClick={() => revealHintTier(1)}>
+                Reveal signature (pass worth {Math.round(schedule[1] * 100)}%)
+              </StyledButton>
+            )}
+            {question.tieredHints && hintTier === 1 && (
+              <StyledButton variant="warning" onClick={() => revealHintTier(2)}>
+                Reveal skeleton (pass worth {Math.round(schedule[2] * 100)}%)
+              </StyledButton>
+            )}
+            <StyledButton variant="danger" onClick={handleGiveUp}>
+              Give Up - Show Solution
+            </StyledButton>
+          </>
+        )}
+        {phase === 'done' && (
           <>
             {onNext && (
               <StyledButton variant="primary" onClick={onNext}>
@@ -403,13 +488,30 @@ export const CodingQuestion: React.FC<Props> = ({
         )}
       </div>
 
-      {!isSubmitted && showHint && question.hints && question.hints.length > 0 && (
+      {phase === 'editing' && !tiered && showHint && question.hints && question.hints.length > 0 && (
         <div className="hint">
           <strong>Hint {hintIndex + 1}:</strong> {question.hints[hintIndex]}
         </div>
       )}
 
-      {isSubmitted && (
+      {/* Tiered hints stay visible once spent - during the review panel AND the
+          retry editing pass - so the learner can consult them while typing. */}
+      {question.tieredHints && hintTier >= 1 && phase !== 'done' && (
+        <div className="hint tiered-hint">
+          <div className="tiered-hint-tier">
+            <strong>API signature:</strong>
+            <pre className="tiered-hint-code">{question.tieredHints.apiSignature}</pre>
+          </div>
+          {hintTier >= 2 && (
+            <div className="tiered-hint-tier">
+              <strong>Skeleton:</strong>
+              <pre className="tiered-hint-code">{question.tieredHints.skeleton}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase !== 'editing' && (
         <>
         <div className="results">
           <h4>Test Results:</h4>
@@ -436,7 +538,7 @@ export const CodingQuestion: React.FC<Props> = ({
               and ask the user to self-grade. Avoids the "validator rejected my
               correct code" trust-killer and the "validator accepted my wrong
               code" silent-failure. */}
-          {selfGrade === null && testResults.some(r => r.verdict === 'uncertain') && (
+          {phase === 'awaiting-self-grade' && selfGrade === null && testResults.some(r => r.verdict === 'uncertain') && (
             <div className="self-grade-prompt">
               <h4>Need your eyes on this one</h4>
               <p>
@@ -459,12 +561,16 @@ export const CodingQuestion: React.FC<Props> = ({
           )}
         </div>
 
+        {/* Explanation and solution are gated to `done` so they can't leak the
+            answer into a retry (review-fail / awaiting-self-grade). */}
+        {phase === 'done' && (
         <div className="explanation">
           <h4>Explanation:</h4>
           <p>{question.explanation}</p>
         </div>
+        )}
 
-        {showSolution && (
+        {phase === 'done' && showSolution && (
           <div className="solution">
             <h4>Solution:</h4>
             {previewActive && (

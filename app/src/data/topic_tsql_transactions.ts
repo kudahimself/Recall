@@ -129,6 +129,13 @@ COMMIT;`,
 COMMIT;`,
     explanation: 'The two updates are a single logical operation (a transfer), so they must succeed or fail together. `BEGIN TRAN` opens the transaction and `COMMIT` makes both updates permanent at once — there is never a moment where the money has left one account but not arrived in the other.',
     hints: ['BEGIN TRAN around both updates', 'COMMIT at the end'],
+    tieredHints: {
+      apiSignature: 'UPDATE table SET column = expression WHERE condition;',
+      skeleton: `BEGIN TRAN;
+    UPDATE ____ SET Balance = Balance ____ 250 WHERE AccountId = ____;
+    UPDATE ____ SET Balance = Balance ____ 250 WHERE AccountId = ____;
+COMMIT;`,
+    },
     tags: ['tsql', 'transactions', 'begin-tran'],
   },
   {

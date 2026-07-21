@@ -8,6 +8,7 @@ import {
   Topic,
   Difficulty,
   MisconceptionStore,
+  AnswerMeta,
 } from './types';
 import { questions } from './data/questions';
 import { SpacedRepetitionSystem, RECENT_WINDOW, pct, recentAttempts, ConceptSelectionContext } from './utils/spacedRepetition';
@@ -55,7 +56,6 @@ import {
   ListChecks,
   Flame,
   Target,
-  Zap,
   ArrowRight,
   TrendingUp,
   Eye,
@@ -616,10 +616,23 @@ function App() {
     changeView('quiz');
   }, [applyFiltersAndLoadQuestion, changeView]);
 
-  const handleAnswer = (isCorrect: boolean) => {
+  const handleAnswer = (isCorrect: boolean, meta?: AnswerMeta) => {
     if (!currentQuestion) return;
 
     const timeSpent = Date.now() - questionStartTime;
+
+    // Tiered-hint partial credit (coding only). Credit is the single source of
+    // truth for mastery math; the boolean stays for legacy scoring/session stats.
+    // No meta (other 4 question types, or an untiered coding pass) => tier 0 =>
+    // credit is exactly `isCorrect ? 1 : 0`, preserving prior behavior.
+    const hintTierUsed = meta?.hintTierUsed ?? 0;
+    const attemptCount = meta?.attempts ?? 1;
+    const creditSchedule = SpacedRepetitionSystem.getHintCreditSchedule(
+      currentQuestion.id,
+      currentQuestion.topic,
+      progress,
+    );
+    const credit = isCorrect ? creditSchedule[hintTierUsed] : 0;
 
     // Create truly new references so React detects the change
     const newQuestionsAttempted = new Set(progress.questionsAttempted);
@@ -646,8 +659,10 @@ function App() {
       questionId: currentQuestion.id,
       timestamp: Date.now(),
       isCorrect,
-      attempts: 1,
+      attempts: attemptCount,
       timeSpent,
+      credit,
+      hintTierUsed,
     }];
 
     const newLastAttempt = new Map(progress.lastAttempt);
@@ -687,7 +702,9 @@ function App() {
 
     // Auto-grade from response time + correctness (a 4-second MCQ pass weighs more
     // than a 30-second one; envelopes are per-question-type in conceptSRS).
-    const cardGrade = gradeFromResponseTime(currentQuestion.type, timeSpent, isCorrect);
+    const rawGrade = gradeFromResponseTime(currentQuestion.type, timeSpent, isCorrect);
+    // A hint-assisted pass can never earn a full-confidence interval bump.
+    const cardGrade = SpacedRepetitionSystem.capGradeForHints(rawGrade, hintTierUsed);
 
     // Per-card FSRS difficulty for EVERY answered card (concept-tagged or not) —
     // the single source of truth, so the difficulty-scaled drain interval applies
@@ -822,39 +839,101 @@ function App() {
           onAnswer={handleAnswer}
           onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
+          hintCreditSchedule={SpacedRepetitionSystem.getHintCreditSchedule(
+            currentQuestion.id,
+            currentQuestion.topic,
+            progress,
+          )}
         />
       );
     }
   };
 
+  // Scoped to the active course only (e.g. resetting Databricks & PySpark
+  // leaves Web Dev / Backend / Data Engineering / SQL progress untouched).
   const resetProgress = () => {
+    const courseLabel = COURSE_META[activeCourse]?.label ?? activeCourse;
     if (
       window.confirm(
-        'Are you sure you want to reset all progress? This cannot be undone.'
+        `Are you sure you want to reset all progress for ${courseLabel}? This cannot be undone.`
       )
     ) {
-      const newProgress: UserProgress = {
-        questionsAttempted: new Set(),
-        correctAnswers: new Set(),
-        attemptHistory: [],
-        topicScores: new Map(),
-        difficultyScores: new Map(),
-        lastAttempt: new Map(),
-        repetitionQueue: new Map(),
-        masteredTopics: new Set(),
-      };
-      setProgress(newProgress);
-      setMisconceptions({ events: [] });
-      setSessionStats({ answered: 0, correct: 0 });
-      setProfile(prev => ({
-        ...prev,
-        currentStreak: 0,
-        longestStreak: 0,
-        totalSessions: 1,
-        totalTimeSpentMs: 0,
+      const courseTopics = new Set<string>(
+        questions.filter(q => getCourseForTopic(q.topic) === activeCourse).map(q => q.topic)
+      );
+      const courseQuestionIds = new Set(
+        questions.filter(q => courseTopics.has(q.topic)).map(q => q.id)
+      );
+      const difficultyById = new Map(questions.map(q => [q.id, q.difficulty]));
+
+      const courseConcepts = new Set(
+        (activeCourse === Course.DATABRICKS ? DATABRICKS_CONCEPTS
+          : activeCourse === Course.BACKEND ? BACKEND_CONCEPTS
+          : activeCourse === Course.WEB_DEV ? WEBDEV_CONCEPTS
+          : []
+        ).map(c => c.id)
+      );
+
+      setProgress(prev => {
+        const questionsAttempted = new Set(
+          Array.from(prev.questionsAttempted).filter(id => !courseQuestionIds.has(id))
+        );
+        const correctAnswers = new Set(
+          Array.from(prev.correctAnswers).filter(id => !courseQuestionIds.has(id))
+        );
+        const attemptHistory = prev.attemptHistory.filter(a => !courseQuestionIds.has(a.questionId));
+
+        const topicScores = new Map(prev.topicScores);
+        courseTopics.forEach(t => topicScores.delete(t as Topic));
+
+        const lastAttempt = new Map(prev.lastAttempt);
+        const repetitionQueue = new Map(prev.repetitionQueue);
+        courseQuestionIds.forEach(id => {
+          lastAttempt.delete(id);
+          repetitionQueue.delete(id);
+        });
+
+        const masteredTopics = new Set(
+          Array.from(prev.masteredTopics).filter(t => !courseTopics.has(t))
+        );
+
+        // difficultyScores has no course dimension in its keys (Difficulty
+        // only) - recompute it from the surviving attemptHistory so the
+        // cross-course aggregate stays honest after the course-scoped wipe.
+        const difficultyScores = new Map<Difficulty, { correct: number; total: number }>();
+        attemptHistory.forEach(a => {
+          const diff = difficultyById.get(a.questionId);
+          if (!diff) return;
+          const entry = difficultyScores.get(diff) || { correct: 0, total: 0 };
+          entry.total += 1;
+          if (a.isCorrect) entry.correct += 1;
+          difficultyScores.set(diff, entry);
+        });
+
+        return {
+          questionsAttempted,
+          correctAnswers,
+          attemptHistory,
+          topicScores,
+          difficultyScores,
+          lastAttempt,
+          repetitionQueue,
+          masteredTopics,
+        };
+      });
+
+      if (courseConcepts.size > 0) {
+        setConceptProgress(prev => {
+          const next = { ...prev };
+          courseConcepts.forEach(id => { delete next[id]; });
+          return next;
+        });
+      }
+
+      setMisconceptions(prev => ({
+        events: prev.events.filter(e => !courseQuestionIds.has(e.questionId)),
       }));
-      localStorage.removeItem(STORAGE_KEYS.progress);
-      localStorage.removeItem(STORAGE_KEYS.misconceptions);
+      setSessionStats({ answered: 0, correct: 0 });
     }
   };
 
@@ -1592,7 +1671,7 @@ function App() {
 
               <div className="progress-actions">
                 <button className="reset-button-danger" onClick={resetProgress}>
-                  Reset All Progress
+                  Reset {COURSE_META[activeCourse]?.label ?? 'Course'} Progress
                 </button>
               </div>
             </div>

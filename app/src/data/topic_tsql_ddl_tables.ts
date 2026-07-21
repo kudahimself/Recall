@@ -74,6 +74,15 @@ export const tsql_ddl_tables_questions: Question[] = [
     Email       NVARCHAR(255),
     CreatedAt   DATETIME2
 );`,
+    tieredHints: {
+      apiSignature: 'CREATE TABLE table_name (column_name data_type, ...);',
+      skeleton: `CREATE TABLE dbo.DimCustomer (
+    CustomerKey ____,
+    FullName    ____(100),
+    Email       ____(255),
+    CreatedAt   ____
+);`,
+    },
     explanation: 'Each column is `name type`. `NVARCHAR(n)` for Unicode text with a length cap; `DATETIME2` is the modern timestamp type (wider range and higher precision than the legacy `DATETIME`). Keys/constraints come later — this is the bare table definition.',
     hints: ['One `column type` per line, comma-separated', 'NVARCHAR(n) for text, DATETIME2 for timestamps'],
     tags: ['tsql', 'ddl', 'create-table'],
@@ -192,6 +201,13 @@ WHERE IsActive = 1;`,
 INTO #StageOrders
 FROM dbo.FactOrders
 WHERE OrderDate >= '2026-01-01';`,
+    tieredHints: {
+      apiSignature: 'SELECT column_list INTO new_table FROM source_table WHERE condition;',
+      skeleton: `SELECT ____, ____, ____
+____ #StageOrders
+FROM ____
+WHERE OrderDate ____ ____;`,
+    },
     explanation: '`SELECT … INTO #StageOrders` creates the temp table from the projected columns and loads the filtered rows in one pass — the common first step of an ELT load before transforming and merging into the target.',
     hints: ['The INTO clause goes between SELECT list and FROM', 'Filter with WHERE OrderDate >= the date literal'],
     tags: ['tsql', 'ddl', 'select-into', 'staging'],

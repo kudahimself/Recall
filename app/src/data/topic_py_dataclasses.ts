@@ -935,6 +935,19 @@ class Point:
 p = Point(3, 4)
 print(p)
 print(p.x + p.y)`,
+      tieredHints: {
+        apiSignature: '@dataclass(*, init=True, repr=True, eq=True, order=False, frozen=False)',
+        skeleton: `from dataclasses import ____
+
+@____
+class Point:
+    x: ____
+    y: ____
+
+p = ____(3, 4)
+print(p)
+print(p.x ____ p.y)`,
+      },
       explanation: 'The decorator sees the type-annotated class attributes and generates `__init__(self, x: int, y: int)` plus `__repr__` and `__eq__`. Fields must be type-annotated — untyped class attributes are ignored. Order of args in `__init__` matches declaration order in the class body.',
       hints: [
         'Every field needs a type annotation',
@@ -972,6 +985,20 @@ b = Cart()
 a.items.append("apple")
 print(a.items)
 print(b.items)`,
+      tieredHints: {
+        apiSignature: 'field(*, default_factory=MISSING, init=True, repr=True)',
+        skeleton: `from dataclasses import ____, ____
+
+@dataclass
+class Cart:
+    items: list[____] = ____(default_factory=____)
+
+a = ____()
+b = ____()
+a.items.____("apple")
+print(a.items)
+print(b.items)`,
+      },
       explanation: 'Never write `items: list = []` — the `[]` is evaluated ONCE at class-creation time, so every instance shares the same list. `field(default_factory=list)` calls `list()` per instance, giving each its own empty list. Same rule applies to `dict`, `set`, any mutable object. Plain `dataclass`/`@dataclass` actually raises `ValueError` if you try `items: list = []` — it guards you from the classic Python mutable-default footgun.',
       hints: [
         'mutable default → use field(default_factory=callable)',
@@ -1011,6 +1038,22 @@ class Rectangle:
 
 r = Rectangle(3, 4)
 print(r.area)`,
+      tieredHints: {
+        apiSignature: 'field(*, init=True, default=MISSING, repr=True)',
+        skeleton: `from dataclasses import ____, ____
+
+@dataclass
+class Rectangle:
+    width: ____
+    height: ____
+    area: ____ = ____(init=____)
+
+    def ____(self):
+        self.area = self.width ____ self.height
+
+r = ____(3, 4)
+print(r.area)`,
+      },
       explanation: '`field(init=False)` excludes a field from `__init__` so callers cannot set it directly. `__post_init__` runs right after `__init__` and is the canonical place to compute derived state or validate combinations of fields. Also useful for any setup that needs the fully-initialized instance — opening a resource, precomputing an index, etc.',
       hints: [
         'field(init=False) removes it from __init__ signature',
@@ -1047,6 +1090,19 @@ class Credentials:
 c = Credentials(user="alice", password="s3cr3t")
 print(c)
 print(c.password)`,
+      tieredHints: {
+        apiSignature: 'field(*, repr=True, compare=True, default=MISSING)',
+        skeleton: `from dataclasses import ____, ____
+
+@dataclass
+class Credentials:
+    user: ____
+    password: ____ = ____(repr=____)
+
+c = ____(user="alice", password="s3cr3t")
+print(c)
+print(c.____)`,
+      },
       explanation: 'Accidental secret leakage through logs / tracebacks / error reports is a depressingly common cause of breach notifications. `field(repr=False)` is the lightweight mitigation: the field is present and works normally, but `repr()` (and therefore any `print`, `logger.info(obj)`, exception traceback) omits it. Combine with `field(compare=False)` to also exclude from `__eq__`. Pydantic has a similar `Field(repr=False)` and `SecretStr` type.',
       hints: [
         'field(repr=False) hides the field from __repr__',
@@ -1084,6 +1140,20 @@ class Version:
 v1 = Version(1, 2, 3)
 v2 = Version(1, 3, 0)
 print(v1 < v2)`,
+      tieredHints: {
+        apiSignature: '@dataclass(*, order=False, frozen=False, eq=True)',
+        skeleton: `from dataclasses import ____
+
+@____(____=True)
+class Version:
+    major: ____
+    minor: ____
+    patch: ____
+
+v1 = ____(1, 2, 3)
+v2 = ____(1, 3, 0)
+print(v1 ____ v2)`,
+      },
       explanation: '`order=True` generates `__lt__`, `__le__`, `__gt__`, `__ge__` that compare field-by-field in declaration order — exactly how you want semver to work. For more complex sort rules (e.g. case-insensitive string), define `__lt__` yourself. If you only want equality without ordering, leave `order=False` (the default).',
       hints: [
         'order=True generates __lt__/__le__/__gt__/__ge__',
@@ -1119,6 +1189,18 @@ class Node:
 
 n = Node(1, None)
 print(n.value)`,
+      tieredHints: {
+        apiSignature: '@dataclass(*, slots=False, frozen=False, order=False)',
+        skeleton: `from dataclasses import ____
+
+@____(____=True)
+class Node:
+    value: ____
+    next: "Node | ____"
+
+n = ____(1, None)
+print(n.value)`,
+      },
       explanation: '`slots=True` (3.10+) tells Python to allocate a fixed structure instead of a per-instance `__dict__`. Benefits: ~20-40% memory reduction (important for millions of instances), and typos or accidental attribute additions fail loudly. Tradeoff: you cannot add attributes dynamically, which is occasionally desired (e.g. duck-typing hacks, `__getattr__` tricks). On 3.9 and earlier you\'d write `__slots__ = ("value", "next")` manually.',
       hints: [
         'slots=True on 3.10+ (manual __slots__ on older Python)',
@@ -1177,6 +1259,19 @@ class User:
 u = User("Alice", 30)
 print(asdict(u))
 print(astuple(u))`,
+      tieredHints: {
+        apiSignature: 'asdict(instance, *, dict_factory=dict) -> dict',
+        skeleton: `from dataclasses import dataclass, ____, ____
+
+@dataclass
+class User:
+    name: ____
+    age: ____
+
+u = ____("Alice", 30)
+print(____(u))
+print(____(u))`,
+      },
       explanation: '`asdict` recursively converts nested dataclasses, lists, tuples, and dicts. Useful for JSON serialization: `json.dumps(asdict(user))`. `astuple` returns a flat tuple — handy for unpacking. Both are one-shot conversions; they don\'t "view" the instance. For round-tripping use pydantic or write a classmethod `from_dict`.',
       hints: [
         'asdict walks nested dataclasses recursively',
@@ -1215,6 +1310,21 @@ class Dog(Animal):
 
 d = Dog(name="Rex", breed="Labrador")
 print(d)`,
+      tieredHints: {
+        apiSignature: '@dataclass\nclass Sub(Base): ...',
+        skeleton: `from dataclasses import ____
+
+@____
+class Animal:
+    name: ____
+
+@____
+class Dog(____):
+    breed: ____
+
+d = ____(name="Rex", ____="Labrador")
+print(d)`,
+      },
       explanation: 'Inheritance works as expected: base fields come first in `__init__`, subclass fields after. Common gotcha: a subclass non-default field after a base default field is a positional-argument error (e.g. `Animal(name: str = "?")` + `Dog(breed: str)` — the generated `__init__(name="?", breed)` is invalid Python). Either give the subclass field a default too, or use `field(kw_only=True)` (3.10+) to sidestep the positional rule.',
       hints: [
         'Base fields appear first in the generated __init__',
@@ -1251,6 +1361,18 @@ class Config:
 
 c = Config("localhost", 5432)
 print(c)`,
+      tieredHints: {
+        apiSignature: '@dataclass(*, frozen=False, eq=True, order=False)',
+        skeleton: `from dataclasses import ____
+
+@dataclass(____=True)
+class Config:
+    host: ____
+    port: ____
+
+c = ____("localhost", 5432)
+print(c)`,
+      },
       explanation:
         '`@dataclass(frozen=True)` makes instances immutable — any attribute assignment after `__init__` raises `FrozenInstanceError`. Side benefits: the instance becomes hashable (works in sets and as dict keys) and `__eq__` still works by value. Pick frozen for configuration objects, domain value-types like `Money`, or anything you want to use as a cache key. To bypass the freeze inside `__post_init__` (rare), use `object.__setattr__(self, "field", value)`.',
       hints: [
@@ -1291,6 +1413,21 @@ class Age:
 
 a = Age(30)
 print(a.years)`,
+      tieredHints: {
+        apiSignature: 'raise ValueError(message: str)',
+        skeleton: `from dataclasses import ____
+
+@dataclass
+class Age:
+    years: ____
+
+    def ____(self):
+        if self.years ____ 0:
+            raise ____("years must be non-negative")
+
+a = ____(30)
+print(a.years)`,
+      },
       explanation:
         '`__post_init__` runs immediately after the auto-generated `__init__` finishes assigning fields, so every field is available. It\'s the canonical place to validate inputs, normalize values (`self.email = self.email.lower()`), or compute derived state. If you also use `field(init=False)` this is where you\'d assign the derived field. For an immutable (`frozen=True`) dataclass you must use `object.__setattr__` to write — but for pure validation like this, no mutation is needed.',
       hints: [
@@ -1333,6 +1470,23 @@ print(v1 < v2)
 
 s = {v1, v2, Version(1, 2, 3)}
 print(len(s))`,
+      tieredHints: {
+        apiSignature: '@dataclass(*, frozen=False, order=False, eq=True)',
+        skeleton: `from dataclasses import ____
+
+@____(____=True, ____=True)
+class Version:
+    major: ____
+    minor: ____
+    patch: ____
+
+v1 = ____(1, 2, 3)
+v2 = ____(1, 3, 0)
+print(v1 ____ v2)
+
+s = {v1, v2, ____(1, 2, 3)}
+print(____(s))`,
+      },
       explanation:
         'Pairing `frozen=True` and `order=True` produces the shape you want for value-object identifiers: immutable, comparable, hashable. `order=True` on its own generates `__lt__/__le__/__gt__/__ge__` that compare field-by-field in declaration order — so semver sorts naturally. `frozen=True` alone generates `__hash__`. Together they give you a class whose instances behave like sortable, set-member-able, never-mutated domain values. Real use cases: version numbers, commit SHAs, event offsets, coordinate points.',
       hints: [
@@ -1409,6 +1563,23 @@ p3 = Point(3.0, 4.0)
 print(p1 == p2)  # True  — auto-generated __eq__ compares fields
 print(p1 == p3)  # False
 print(p1)        # Point(x=1.0, y=2.0) — auto-generated __repr__`,
+      tieredHints: {
+        apiSignature: '@dataclass(*, init=True, repr=True, eq=True)',
+        skeleton: `from dataclasses import ____
+
+@____
+class Point:
+    x: ____
+    y: ____
+
+p1 = ____(1.0, 2.0)
+p2 = ____(1.0, 2.0)
+p3 = ____(3.0, 4.0)
+
+print(p1 ____ p2)
+print(p1 ____ p3)
+print(p1)`,
+      },
       explanation: 'The `@dataclass` decorator reads the type-annotated fields (`x: float`, `y: float`) and auto-generates: (1) `__init__` so you can write `Point(1.0, 2.0)`, (2) `__repr__` so printing shows `Point(x=1.0, y=2.0)`, and (3) `__eq__` so two Points with the same x and y are considered equal. Without `@dataclass`, a regular class would compare by identity (memory address), not by field values.',
       hints: [
         'Apply `@dataclass` above the class definition',

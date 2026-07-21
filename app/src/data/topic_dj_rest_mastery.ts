@@ -302,6 +302,10 @@ REST_FRAMEWORK = {
 }`,
     explanation: 'DRF routes any `APIException` (plus `Http404`/`PermissionDenied`) through the configured `EXCEPTION_HANDLER`. Calling the built-in handler first yields the standard `Response` (status + `detail`); it returns `None` for exceptions DRF does not handle (e.g. a raw `KeyError`), which must bubble up as a 500 — so guard on `response is not None` before reshaping. Registering the dotted path in `REST_FRAMEWORK["EXCEPTION_HANDLER"]` makes it apply API-wide, giving every client one consistent error shape.',
     hints: ['Delegate to the built-in handler, then reshape', 'Guard: response is not None (None → unhandled 500)', 'Register via REST_FRAMEWORK["EXCEPTION_HANDLER"] dotted path'],
+    tieredHints: {
+      apiSignature: 'exception_handler(exc, context) -> Response; REST_FRAMEWORK = {\'EXCEPTION_HANDLER\': ...}',
+      skeleton: '# handlers.py\nfrom rest_framework.views import ____\n\n\ndef custom_exception_handler(exc, context):\n    response = ____(exc, context)\n    if response is not None:\n        response.data = {\n            "error": response.data,\n            "status_code": response.status_code,\n        }\n    return response\n\n\n# settings.py\nREST_FRAMEWORK = {\n    "____": "myapp.handlers.custom_exception_handler",\n}',
+    },
     tags: ['django', 'drf', 'exception-handler', 'error-handling'],
     concepts: ['dj-view-patterns'],
   },

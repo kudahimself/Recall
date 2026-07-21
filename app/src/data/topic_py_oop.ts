@@ -63,6 +63,15 @@ export const py_oop_questions: Question[] = [
       solution: `class Person:\n    def __init__(self, name):\n        self.name = name\n\np = Person("Ada")\nprint(p.name)`,
       explanation: '`__init__` runs every time you create an instance. The first parameter is always `self` (the instance being initialised), and assignments like `self.name = name` create attributes on that instance. Reading `p.name` later just looks them up.',
       hints: ['Use `class Person:` then `def __init__(self, name):`', 'Inside __init__, write `self.name = name`', 'Create the instance with `Person("Ada")` and print `p.name`'],
+      tieredHints: {
+        apiSignature: 'def __init__(self, name) -> None',
+        skeleton: `class Person:
+    def ____(self, name):
+        self.____ = ____
+
+p = Person("Ada")
+print(p.____)`,
+      },
       tags: ['class', 'init', 'self', 'attribute', 'beginner', 'python'],
       concepts: ['py-class-instance-distinction'],
     },
@@ -253,6 +262,26 @@ print(dog1.species == dog2.species)`,
         'Set instance variables with `self.name = name` in `__init__`',
         'Access instance data in methods with `self.name`',
       ],
+      tieredHints: {
+        apiSignature: 'def __init__(self, name, age) -> None',
+        skeleton: `class Dog:
+    ____ = "Canis lupus"
+
+    def __init__(self, name, age):
+        self.____ = ____
+        self.____ = ____
+
+    def ____(self):
+        return f"Woof! I am {self.____}"
+
+dog1 = Dog("Rex", 3)
+dog2 = Dog("Bella", 5)
+
+print(dog1.____())
+print(dog2.____())
+print(dog1.____)
+print(dog1.species ____ dog2.____)`,
+      },
       tags: ['oop', 'class-variables', 'instance-variables', '__init__', 'self'],
       concepts: ['py-class-instance-distinction', 'py-modules-imports'],
     },
@@ -299,6 +328,21 @@ print(my_dog.breed)    # Labrador`,
         'Use `self.name = name` to store attributes on the instance',
         'Methods like `bark` also take `self` as the first parameter',
       ],
+      tieredHints: {
+        apiSignature: 'def bark(self) -> str',
+        skeleton: `class Dog:
+    def __init__(self, ____, ____):
+        self.____ = name
+        self.____ = breed
+
+    def ____(self):
+        return "____"
+
+my_dog = Dog("Rex", "Labrador")
+print(my_dog.____())
+print(my_dog.____)
+print(my_dog.____)`,
+      },
       tags: ['oop', 'class', '__init__', 'methods', 'basics'],
       concepts: ['py-class-instance-distinction', 'py-modules-imports'],
     },
@@ -321,6 +365,25 @@ print(my_dog.breed)    # Labrador`,
       solution: `class BankAccount:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n\n    def deposit(self, amount):\n        if amount < 0:\n            raise ValueError("Amount must be positive")\n        self.balance += amount\n\n    def withdraw(self, amount):\n        if amount < 0:\n            raise ValueError("Amount must be positive")\n        if amount > self.balance:\n            raise ValueError("Insufficient funds")\n        self.balance -= amount`,
       explanation: '__init__ is the constructor. self refers to the instance. Methods modify self.balance. Raising ValueError for invalid operations is standard Python practice for input validation.',
       hints: ['__init__(self, ...) is the constructor', 'Use self.attribute for instance variables', 'raise ValueError("message") for validation'],
+      tieredHints: {
+        apiSignature: 'raise ValueError(message: str)',
+        skeleton: `class BankAccount:
+    def __init__(self, owner, balance=0):
+        self.____ = owner
+        self.____ = balance
+
+    def deposit(self, amount):
+        if amount ____ 0:
+            raise ____("____")
+        self.balance ____ amount
+
+    def withdraw(self, amount):
+        if amount ____ 0:
+            raise ____("____")
+        if amount ____ self.____:
+            raise ____("____")
+        self.balance ____ amount`,
+      },
       tags: ['class', 'oop', 'init', 'validation', 'python'],
       concepts: ['py-class-instance-distinction'],
     },
@@ -343,6 +406,20 @@ print(my_dog.breed)    # Labrador`,
       solution: `class Animal:\n    def __init__(self, name, sound):\n        self.name = name\n        self.sound = sound\n\n    def speak(self):\n        return f"{self.name} says {self.sound}!"\n\nclass Dog(Animal):\n    def __init__(self, name):\n        super().__init__(name, "Woof")`,
       explanation: 'class Dog(Animal) inherits from Animal. super().__init__() calls the parent constructor. Dog gets speak() from Animal without redefining it. This is the core of OOP — code reuse through inheritance.',
       hints: ['class Child(Parent) for inheritance', 'super().__init__() calls parent constructor', 'Child inherits all parent methods'],
+      tieredHints: {
+        apiSignature: 'super().__init__(*args) -> None',
+        skeleton: `class Animal:
+    def __init__(self, name, sound):
+        self.____ = name
+        self.____ = sound
+
+    def ____(self):
+        return f"{self.____} says {self.____}!"
+
+class Dog(____):
+    def __init__(self, name):
+        ____().____(name, "____")`,
+      },
       tags: ['inheritance', 'super', 'oop', 'python'],
       concepts: ['py-super-call', 'py-class-instance-distinction'],
     },
@@ -790,6 +867,27 @@ for animal in animals:
         'Each subclass overrides `speak()` with its own return value',
         'No type checking needed — Python dispatches automatically',
       ],
+      tieredHints: {
+        apiSignature: 'class Sub(Base): def method(self) -> str',
+        skeleton: `class Animal:
+    def __init__(self, ____):
+        self.____ = name
+
+    def ____(self):
+        return "____"
+
+class Dog(____):
+    def ____(self):
+        return "____"
+
+class Cat(____):
+    def ____(self):
+        return "____"
+
+animals = [____("Rex"), ____("Whiskers"), ____("Buddy")]
+for animal in ____:
+    print(f"{animal.____}: {animal.____()}")`,
+      },
       tags: ['oop', 'inheritance', 'polymorphism', 'override', 'dispatch'],
       concepts: ['py-class-instance-distinction', 'py-super-call'],
     },
@@ -856,6 +954,28 @@ print(car.make)`,
         'Call `super().__init__(make, year)` first, then set `self.num_doors`',
         'Override `describe()` in `Car` to include `num_doors`',
       ],
+      tieredHints: {
+        apiSignature: 'super().__init__(make, year) -> None',
+        skeleton: `class Vehicle:
+    def __init__(self, make, year):
+        self.____ = make
+        self.____ = year
+
+    def ____(self):
+        return f"{self.____} {self.____}"
+
+class Car(____):
+    def __init__(self, make, year, num_doors):
+        ____().____(make, year)
+        self.____ = num_doors
+
+    def ____(self):
+        return f"{self.____} {self.____} ({self.____}-____)"
+
+car = Car("Toyota", 2022, 4)
+print(car.____())
+print(car.make)`,
+      },
       tags: ['oop', 'super', 'inheritance', '__init__', 'override'],
       concepts: ['py-class-instance-distinction', 'py-super-call', 'py-modules-imports'],
     },
@@ -919,6 +1039,24 @@ print(car.make)`,
         'Use `return cls(celsius)` in the classmethod — not `Temperature(...)`',
         'Static methods just take the parameters they need, no `self` or `cls`',
       ],
+      tieredHints: {
+        apiSignature: '@classmethod def name(cls, *args) -> instance',
+        skeleton: `class Temperature:
+    def __init__(self, celsius):
+        self.____ = celsius
+
+    @____
+    def from_fahrenheit(cls, fahrenheit):
+        celsius = (fahrenheit - ____) * ____ / ____
+        return ____(celsius)
+
+    @____
+    def is_freezing(celsius):
+        return celsius ____ ____
+
+    def __repr__(self):
+        return f"____({self.celsius:____}____)"`,
+      },
       tags: ['oop', 'classmethod', 'staticmethod', 'factory-method', 'Temperature'],
       concepts: ['py-class-instance-distinction'],
     },

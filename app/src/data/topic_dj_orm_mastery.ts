@@ -147,6 +147,10 @@ ranked = Article.objects.annotate(
         'partition_by per author; order_by created_at descending',
         'Stays annotate — every row is kept, each gets its rn',
       ],
+      tieredHints: {
+        apiSignature: 'Window(expression, partition_by=None, order_by=None, frame=None)',
+        skeleton: 'from django.db.models import ____, ____\nfrom django.db.models.functions import ____\nfrom .models import Article\n\nranked = Article.____.____(\n    rn=____(\n        ____=____(),\n        ____=[____("____")],\n        ____=____("____").____(),\n    )\n)',
+      },
       tags: ['django', 'orm', 'window', 'RowNumber', 'advanced'],
       concepts: ['dj-orm-query-construction'],
     },
@@ -226,6 +230,10 @@ def reserve_one(pk):
         'Guard stock <= 0 before decrementing',
         'The lock serialises concurrent callers',
       ],
+      tieredHints: {
+        apiSignature: 'QuerySet.select_for_update(nowait=False, skip_locked=False, of=(), no_key=False)',
+        skeleton: 'from django.db import ____\nfrom .models import Product\n\ndef reserve_one(pk):\n    with ____.____():\n        product = Product.____.____().____(pk=pk)\n        if product.____ <= 0:\n            return ____\n        product.____ -= 1\n        product.____()\n        return ____',
+      },
       tags: ['django', 'orm', 'select_for_update', 'atomic', 'concurrency', 'advanced'],
       concepts: ['dj-orm-query-construction', 'dj-transaction-atomic'],
     },
@@ -326,6 +334,10 @@ articles = (
         'prefetch_related for the tags M2M (one extra query)',
         'only() to drop the unused wide column',
       ],
+      tieredHints: {
+        apiSignature: 'QuerySet.only(*fields)',
+        skeleton: 'from .models import Article\n\narticles = (\n    ____.____\n    .____("____")\n    .____("____")\n    .____("____", "____")\n)',
+      },
       tags: ['django', 'orm', 'n-plus-one', 'select_related', 'prefetch_related', 'only', 'advanced'],
       concepts: ['dj-orm-query-construction', 'dj-n-plus-one', 'dj-select-related-vs-prefetch'],
     },

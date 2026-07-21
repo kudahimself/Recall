@@ -859,6 +859,25 @@ after`,
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y`,
+      tieredHints: {
+        apiSignature: '__add__(self, other) -> Vector',
+        skeleton: `class Vector:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def ____(self):
+        return f"Vector({self.x}, {self.y})"
+
+    def ____(self, other):
+        return Vector(self.x + ____, self.y + ____)
+
+    def ____(self, scalar):
+        return Vector(self.x * ____, self.y * ____)
+
+    def ____(self, other):
+        return self.x == ____ and self.y == ____`,
+      },
       explanation: 'Magic methods let you define how your objects respond to operators. `__add__` handles `+`, `__mul__` handles `*`, `__eq__` handles `==`. Each returns a new `Vector` (or bool for `__eq__`). Without these, using `+` on two Vectors would raise `TypeError`. Python calls `v1.__add__(v2)` when it sees `v1 + v2`.',
       hints: [
         '`__add__` receives `self` and `other` — both Vectors',
@@ -895,6 +914,24 @@ after`,
 
     def __contains__(self, item):
         return item in self._items`,
+      tieredHints: {
+        apiSignature: '__len__(self) -> int',
+        skeleton: `class Stack:
+    def __init__(self):
+        self._items = ____
+
+    def push(self, item):
+        self.____.append(item)
+
+    def pop(self):
+        return self.____.pop()
+
+    def ____(self):
+        return len(self.____)
+
+    def ____(self, item):
+        return item in self.____`,
+      },
       explanation: '`__len__` enables `len(s)`, `__contains__` enables `x in s`. Both can just delegate to the underlying list. Defining these makes your class participate in the built-in container protocols.',
       hints: [
         '`__len__` returns `len(self._items)`',
@@ -928,6 +965,21 @@ after`,
 
     def __iter__(self):
         return iter(reversed(self._items))`,
+      tieredHints: {
+        apiSignature: 'reversed(sequence) -> reversed_iterator',
+        skeleton: `class Stack:
+    def __init__(self):
+        self._items = ____
+
+    def push(self, item):
+        self.____.append(item)
+
+    def pop(self):
+        return self.____.pop()
+
+    def ____(self):
+        return ____(____(self.____))`,
+      },
       explanation: '`__iter__` must return an iterator. `reversed(self._items)` gives a top-first traversal of the underlying list. `for x in s`, `list(s)`, and unpacking all route through `__iter__`, so defining it once fixes every iteration syntax at the same time.',
       hints: [
         '`__iter__` returns an iterator (not the iterable itself)',
@@ -998,6 +1050,30 @@ b = Money(10, "USD")
 print(a == b)
 print(repr(b))
 print(len({a, b}))`,
+      tieredHints: {
+        apiSignature: 'str.upper() -> str',
+        skeleton: `class Money:
+    def __init__(self, amount, currency):
+        self.____ = amount
+        self.____ = currency.____()
+
+    def __eq__(self, other):
+        if not isinstance(other, ____):
+            return ____
+        return self.amount == ____.amount and self.currency == ____.currency
+
+    def __hash__(self):
+        return hash((____, ____))
+
+    def __repr__(self):
+        return f"Money({self.____}, '{____}')"
+
+a = Money(____, "usd")
+b = Money(____, "USD")
+print(a == b)
+print(repr(b))
+print(len({a, b}))`,
+      },
       explanation: 'Normalizing the currency in __init__ means two instances built from differently-cased input still compare equal. __eq__ returns NotImplemented (not False) for a non-Money operand so Python can try the other side\'s comparison instead of assuming inequality. Because __eq__ is defined, __hash__ must be defined too — hashing the same (amount, currency) tuple that equality compares keeps the contract (equal objects hash equal), which is why the set collapses a and b into one entry.',
       hints: [
         'Normalize currency once, in __init__',
@@ -1051,6 +1127,21 @@ try:
     Money(5, "USD") + Money(3, "EUR")
 except ValueError as e:
     print(e)`,
+      tieredHints: {
+        apiSignature: '__add__(self, other) -> Money',
+        skeleton: `    def __add__(self, other):
+        if not isinstance(other, Money):
+            return ____
+        if self.currency != other.currency:
+            raise ____(f"Cannot add {self.currency} and {other.currency}")
+        return Money(self.amount + ____, self.currency)
+
+print(repr(Money(5, "USD") + Money(3, "USD")))
+try:
+    Money(5, "USD") + Money(3, "EUR")
+except ____ as e:
+    print(e)`,
+      },
       explanation: '__add__ mirrors __eq__\'s NotImplemented guard for unrelated types, but adds a second check once it knows it is dealing with two Money instances: same currency sums cleanly, different currencies raise a ValueError naming both sides rather than silently producing a nonsensical total. Returning a NEW Money (not mutating either operand) matches the immutable-value-object convention used elsewhere in this topic.',
       hints: [
         'Check isinstance first (defer to the other operand), then check currency match',
@@ -1108,6 +1199,33 @@ class Task:
     def __repr__(self):
         return f"Task({self.name!r}, priority={self.priority})"
 `,
+      tieredHints: {
+        apiSignature: 'functools.total_ordering(cls) -> cls',
+        skeleton: `from datetime import datetime
+from functools import ____
+
+@____
+class Task:
+    def __init__(self, name: str, priority: int, created_at: datetime = None):
+        self.____ = name
+        self.____ = priority
+        self.____ = created_at or datetime.____()
+
+    def __eq__(self, other):
+        if not isinstance(other, ____):
+            return ____
+        return self.priority == ____.priority and self.____ == ____.created_at
+
+    def __lt__(self, other):
+        if not isinstance(other, ____):
+            return NotImplemented
+        if self.priority != other.priority:
+            return self.priority ____ other.priority  # higher priority sorts first
+        return self.____ ____ other.created_at  # earlier breaks ties
+
+    def __repr__(self):
+        return f"Task({____!r}, priority={self.____})"`,
+      },
       explanation: '@total_ordering fills in __le__, __gt__, and __ge__ from just __eq__ and __lt__, saving you from implementing all four comparison methods. Python\'s sorted() and min() use __lt__ internally. The trick for "higher priority first" is inverting the comparison in __lt__: self.priority > other.priority makes higher-priority tasks sort earlier. The tiebreaker (created_at) uses normal ascending order. This is the same pattern used by heapq — defining __lt__ makes your objects work with heaps, sorted(), min(), max(), and bisect.',
       hints: [
         '@total_ordering generates missing comparison methods',
@@ -1168,6 +1286,23 @@ class Task:
 p = Point(3, 4)
 print(repr(p))
 print(str(p))`,
+      tieredHints: {
+        apiSignature: '__repr__(self) -> str',
+        skeleton: `class Point:
+    def __init__(self, x, y):
+        self.____ = x
+        self.____ = y
+
+    def ____(self):
+        return f"____({self.____}, {self.____})"
+
+    def ____(self):
+        return f"({self.____}, {self.____})"
+
+p = ____(____, ____)
+print(____(p))
+print(____(p))`,
+      },
       explanation: '`__repr__` is the developer-facing representation — shown in REPLs, debuggers, and default `print(list_of_objects)`. Ideally it returns something that would rebuild the object: `Point(3, 4)`. `__str__` is the user-facing display — used by `print()` and `str()`. If you only define `__repr__`, `str()` falls back to it. Rule of thumb: always define `__repr__`; define `__str__` only when the human format differs.',
       hints: [
         'repr(x) — unambiguous dev representation',
@@ -1209,6 +1344,25 @@ b = Coord(1, 2)
 print(a == b)
 print(hash(a) == hash(b))
 print(len({a, b}))`,
+      tieredHints: {
+        apiSignature: '__hash__(self) -> int',
+        skeleton: `class Coord:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def ____(self, other):
+        return ____(other, ____) and (self.x, self.y) == (____, ____)
+
+    def ____(self):
+        return hash((____, ____))
+
+a = Coord(1, 2)
+b = Coord(1, 2)
+print(a == b)
+print(hash(a) == hash(b))
+print(len({a, b}))`,
+      },
       explanation: 'Python\'s hash contract: if `a == b`, then `hash(a) == hash(b)`. The reverse does NOT have to hold. If you define `__eq__` without `__hash__`, Python sets `__hash__ = None` (unhashable — cannot be used as dict key or set member) because the default hash (identity-based) would break the contract. Always define both together — a common mistake is defining only `__eq__` and wondering why sets misbehave.',
       hints: [
         'Contract: a == b implies hash(a) == hash(b)',
@@ -1251,6 +1405,26 @@ d = Deck(["A", "K", "Q"])
 print(len(d))
 print(d[0])
 print("K" in d)`,
+      tieredHints: {
+        apiSignature: '__getitem__(self, idx) -> Any',
+        skeleton: `class Deck:
+    def __init__(self, cards):
+        self.____ = cards
+
+    def ____(self):
+        return len(self.____)
+
+    def ____(self, idx):
+        return self.____[idx]
+
+    def ____(self, item):
+        return item in self.____
+
+d = Deck(["A", "K", "Q"])
+print(len(d))
+print(d[0])
+print("K" in d)`,
+      },
       explanation: 'Defining these protocol methods makes your class a first-class container: `len(d)`, `d[i]`, `for x in d`, `if x in d`, slicing, unpacking — all just work. Bonus: `__getitem__` alone enables iteration (Python falls back to calling `__getitem__(0)`, `__getitem__(1)`, ...) for integer indices. For finer control, add `__iter__`. Truly container-like? Inherit from `collections.abc.Sequence` for free mixins (count, index, __reversed__) and ABC checking.',
       hints: [
         '__len__, __getitem__, __contains__ — the sequence protocol',
@@ -1322,6 +1496,29 @@ print(a._items)
 
 a += b
 print(a._items)`,
+      tieredHints: {
+        apiSignature: 'list.extend(iterable) -> None',
+        skeleton: `class Bag:
+    def __init__(self, items):
+        self.____ = items
+
+    def ____(self, other):
+        return Bag(self.____ + ____.____)
+
+    def ____(self, other):
+        self.____.____(other._items)
+        return ____
+
+a = ____(["x"])
+b = ____(["y"])
+
+c = a + b
+print(c._items)
+print(a._items)
+
+a += b
+print(a._items)`,
+      },
       explanation: '`__add__` is called for `a + b` and should return a NEW object. `__iadd__` is called for `a += b` and should return `self` after mutating. If you define only `__add__`, `+=` falls back to `a = a + b` — which creates a new object and rebinds the name, often surprising. For immutable-feeling value objects (Point, Money), skip `__iadd__`. For accumulator-style containers (Bag, Counter), define both.',
       hints: [
         '__add__ → new object (immutable style)',
@@ -1357,6 +1554,19 @@ print(a._items)`,
 double = Multiplier(2)
 print(double(5))
 print(double(7))`,
+      tieredHints: {
+        apiSignature: '__call__(self, x) -> Any',
+        skeleton: `class Multiplier:
+    def __init__(self, factor):
+        self.____ = factor
+
+    def ____(self, x):
+        return x * self.____
+
+double = ____(2)
+print(double(____))
+print(double(____))`,
+      },
       explanation: '`__call__` turns an instance into a callable — useful for stateful functions (a callback object that counts its calls), parameterised decorators, or configurable strategies (a `Sampler(rate=0.1)` you can pass to `map`). Also why classes themselves are callable (`MyClass()` invokes `type.__call__` which runs `__init__`).',
       hints: [
         '__call__ makes instance() work',
@@ -1470,6 +1680,24 @@ print(double(7))`,
 
 for v in Countdown(3):
     print(v)`,
+      tieredHints: {
+        apiSignature: '__next__(self) -> Any',
+        skeleton: `class Countdown:
+    def __init__(self, start: int):
+        self.____ = start
+
+    def ____(self):
+        return ____
+
+    def ____(self):
+        if self.____ <= 0:
+            raise ____
+        self.____ -= ____
+        return self.____
+
+for v in Countdown(____):
+    print(v)`,
+      },
       explanation:
         'Python\'s iteration protocol is two methods: `__iter__` returns "the thing that gets iterated" (often `self`), and `__next__` returns the next value or raises `StopIteration` to signal the end. `for` loops, comprehensions, `list()`, `sum()`, `*unpacking` — everything iterable goes through this protocol. When `__iter__` returns `self`, the object is both iterable AND an iterator — convenient but single-use (it remembers its position). For multi-pass iteration, return a fresh iterator object each time. Generators (`yield`) are the shortcut: one function replaces the whole class.',
       hints: [
@@ -1542,6 +1770,23 @@ for v in Countdown(3):
 book = Book("Python Crash Course", 544)
 print(book)       # Python Crash Course (544 pages)  — uses __str__
 print(len(book))  # 544  — uses __len__`,
+      tieredHints: {
+        apiSignature: '__str__(self) -> str',
+        skeleton: `class Book:
+    def __init__(self, title, pages):
+        self.____ = title
+        self.____ = pages
+
+    def ____(self):
+        return f"{self.____} ({self.____} pages)"
+
+    def ____(self):
+        return self.____
+
+book = ____("Python Crash Course", ____)
+print(____)
+print(len(____))`,
+      },
       explanation: '`__str__` is called by `print()` and `str()` to get a human-readable string representation. `__len__` is called by `len()` to get the "length" of an object (here, the page count). By implementing these magic methods, your `Book` class integrates naturally with Python\'s built-in functions. Without `__str__`, printing would show something like `<__main__.Book object at 0x...>`.',
       hints: [
         '`__str__` should return a string (not print it)',

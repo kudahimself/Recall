@@ -100,6 +100,11 @@ ON dbo.FactSales;`,
     ],
     solution: `CREATE CLUSTERED COLUMNSTORE INDEX CCI_FactOrders
 ON dbo.FactOrders;`,
+    tieredHints: {
+      apiSignature: 'CREATE CLUSTERED COLUMNSTORE INDEX index_name ON schema.table;',
+      skeleton: `CREATE ____ ____ INDEX CCI_FactOrders
+____ dbo.FactOrders;`,
+    },
     explanation: 'A clustered columnstore makes column-oriented storage the table\'s primary structure, giving the heavy compression and column-scan efficiency that analytical aggregations over a big fact need. No key columns are specified — the index reorganises all columns into compressed rowgroups/segments.',
     hints: ['CREATE CLUSTERED COLUMNSTORE INDEX name ON table', 'No column list'],
     tags: ['tsql', 'columnstore', 'clustered-columnstore'],

@@ -115,7 +115,7 @@ GROUP BY ROLLUP(Category, SubCategory);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.FactSale` (Category, SubCategory, Amount), return Category, SubCategory and `SUM(Amount) AS Total` with a subtotal per Category and an overall grand total, using ROLLUP.',
-    starterCode: `-- GROUP BY ROLLUP(Category, SubCategory)
+    starterCode: `-- Return Category, SubCategory, and Total with subtotals and grand total using ROLLUP
 `,
     testCases: [
       {
@@ -127,6 +127,12 @@ GROUP BY ROLLUP(Category, SubCategory);`,
     solution: `SELECT Category, SubCategory, SUM(Amount) AS Total
 FROM dbo.FactSale
 GROUP BY ROLLUP(Category, SubCategory);`,
+    tieredHints: {
+      apiSignature: 'SUM(expression) -> aggregate per GROUP BY group',
+      skeleton: `SELECT Category, SubCategory, ____(____) AS ____
+FROM dbo.FactSale
+____ ____ ____(Category, ____);`,
+    },
     explanation: 'ROLLUP(Category, SubCategory) emits the detail level, a subtotal row per Category (with SubCategory NULL), and a final grand-total row (both NULL) — exactly the shape of a hierarchical sales report.',
     hints: ['One operator does subtotals + grand total'],
     tags: ['tsql', 'grouping-sets', 'rollup'],
@@ -151,6 +157,12 @@ GROUP BY ROLLUP(Category, SubCategory);`,
     solution: `SELECT Category, SubCategory, SUM(Amount) AS Total
 FROM dbo.FactSale
 GROUP BY GROUPING SETS ((Category, SubCategory), (Category), ());`,
+    tieredHints: {
+      apiSignature: 'SUM(expression) -> aggregate per GROUP BY group',
+      skeleton: `SELECT Category, SubCategory, ____(____) AS ____
+FROM dbo.FactSale
+____ ____ ____ ____ ((Category, ____), (____), ());`,
+    },
     explanation: 'ROLLUP(Category, SubCategory) would produce this same shape here, but GROUPING SETS lets you specify precisely which groupings to compute - useful when the groupings you need are not a strict hierarchy (e.g. you want (Category) subtotals but not (SubCategory) subtotals, which CUBE would also include).',
     hints: ['Explicit grouping-list operator, not ROLLUP or CUBE', 'List each grouping as its own parenthesized tuple, with () for the grand total'],
     tags: ['tsql', 'grouping-sets'],

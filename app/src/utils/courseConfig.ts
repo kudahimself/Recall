@@ -112,12 +112,14 @@ export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Recor
   'Lakehouse Platform': {
     weight: '24%',
     topics: {
-      'Workspace, Clusters & Repos': ['databricks_basics', 'databricks_platform'],
+      'Compute & Cluster Administration': ['databricks_compute_admin', 'databricks_platform', 'databricks_basics'],
+      'Storage Architecture, DBFS & Git Repos': ['databricks_storage_repos'],
+      'Unity Catalog Foundations & Volumes (3-tier namespaces, volumes, managed/external tables)': ['unity_catalog_basics'],
+      'Notebook Mechanics, Secrets & Security': ['databricks_notebooks_security', 'databricks_utilities'],
       'Delta Lake Fundamentals': ['delta_lake_basics'],
       'Delta Operations (MERGE, CLONE)': ['delta_operations'],
       'Delta Time Travel': ['delta_time_travel'],
       'Delta Optimization (OPTIMIZE, VACUUM, ZORDER)': ['delta_optimization'],
-      'Databricks Utilities (dbutils)': ['databricks_utilities'],
     },
   },
   'ELT with Spark SQL & Python': {
@@ -162,8 +164,8 @@ export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Recor
   'Data Governance': {
     weight: '9%',
     topics: {
-      'Unity Catalog (namespaces, managed/external)': ['data_governance'],
-      'Access Controls (GRANT, REVOKE, permissions)': ['data_governance'],
+      'Access Controls & Privileges (GRANT, REVOKE, permissions)': ['data_governance'],
+      'Unity Catalog Governance (credentials, locations, row filters, column masks)': ['unity_catalog_governance'],
     },
   },
   'Data Modeling & Warehousing Design': {
@@ -172,6 +174,14 @@ export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Recor
       'Dimensional Modeling (star schema, fact/dim, grain, surrogate keys)': ['data_modeling'],
       'Slowly Changing Dimensions (SCD Type 1 / 2 / 3, MERGE patterns)': ['scd_patterns'],
       'Pipeline Design (idempotency, late arrivals, backfill, contracts)': ['pipeline_design'],
+    },
+  },
+  'Lakehouse Architecture & Engineering Practice': {
+    weight: 'Beyond cert',
+    topics: {
+      'Gold Layer & Multi-Hop Pipeline Design (OBT vs star, grain, marts, reprocessing)': ['gold_layer_design'],
+      'Ingestion & Partitioning Architecture (batch vs streaming, formats, Liquid Clustering, CDC)': ['ingestion_architecture'],
+      'Orchestration & Data-Quality Design (run_if, backfill, DLT expectations)': ['orchestration_design'],
     },
   },
 };
@@ -455,6 +465,7 @@ export const DATABRICKS_PATH_ORDER = [
   'Optimization & Advanced',
   'Data Governance',
   'Data Modeling & Warehousing Design',
+  'Lakehouse Architecture & Engineering Practice',
 ];
 
 /**

@@ -127,6 +127,13 @@ FROM dbo.FactSale;
 SELECT Books, Toys
 FROM dbo.FactSale
 PIVOT (SUM(Amount) FOR Category IN ([Books], [Toys])) AS p;`,
+    tieredHints: {
+      apiSignature: 'PIVOT(aggregate_function(value_column) FOR pivot_column IN ([val1], [val2])) AS alias',
+      skeleton: `SELECT
+    ____(CASE WHEN Category = 'Books' THEN ____ ELSE 0 END) AS ____,
+    ____(CASE WHEN Category = 'Toys'  THEN ____ ELSE 0 END) AS ____
+FROM dbo.FactSale;`,
+    },
     explanation: 'Conditional aggregation collapses all rows into a single pivoted row: one `SUM(CASE …)` per target category. The native `PIVOT` operator (shown as the alternate) is more compact but requires you to hard-code the category list in `FOR Category IN (…)` either way.',
     hints: ['One SUM(CASE WHEN Category = …) per output column', 'no GROUP BY needed for a single summary row'],
     tags: ['tsql', 'pivot', 'conditional-aggregation'],

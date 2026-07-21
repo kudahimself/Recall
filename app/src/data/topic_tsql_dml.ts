@@ -213,6 +213,12 @@ WHERE Category = 'Books';`,
     solution: `UPDATE dbo.DimCustomer
 SET IsActive = 0
 WHERE CustomerKey = 42;`,
+    tieredHints: {
+      apiSignature: 'UPDATE table_name SET column = value WHERE condition;',
+      skeleton: `UPDATE dbo.DimCustomer
+SET ____ = ____
+____ CustomerKey ____ 42;`,
+    },
     explanation: 'The WHERE clause narrows the update to exactly one customer; `SET IsActive = 0` is the change applied to that row only.',
     hints: ['SET IsActive = 0', 'WHERE CustomerKey = 42'],
     tags: ['tsql', 'dml', 'update'],
@@ -236,6 +242,11 @@ WHERE CustomerKey = 42;`,
     ],
     solution: `DELETE FROM stg.Customer
 WHERE IsActive = 0;`,
+    tieredHints: {
+      apiSignature: 'DELETE FROM table_name WHERE condition;',
+      skeleton: `DELETE ____ stg.Customer
+____ IsActive ____ 0;`,
+    },
     explanation: 'The WHERE clause limits the DELETE to rows flagged inactive, leaving active staging rows untouched.',
     hints: ['DELETE FROM stg.Customer', 'WHERE IsActive = 0'],
     tags: ['tsql', 'dml', 'delete'],
@@ -290,7 +301,8 @@ FROM dbo.DimCustomer AS tgt
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Update `dbo.DimProduct` (ProductKey, ProductName) so `ProductName` matches the latest value from `stg.Product` (ProductKey, ProductName), for every row where the two currently differ. Use UPDATE...FROM...JOIN.',
-    starterCode: `-- UPDATE tgt SET ... FROM dbo.DimProduct AS tgt JOIN stg.Product AS src ON ... WHERE ...
+    starterCode: `-- dbo.DimProduct(ProductKey, ProductName), stg.Product(ProductKey, ProductName)
+-- Update DimProduct.ProductName to match stg.Product.ProductName where they differ using UPDATE...FROM...JOIN
 `,
     testCases: [
       {
@@ -304,6 +316,14 @@ FROM dbo.DimCustomer AS tgt
 FROM dbo.DimProduct AS tgt
 JOIN stg.Product AS src ON src.ProductKey = tgt.ProductKey
 WHERE tgt.ProductName <> src.ProductName;`,
+    tieredHints: {
+      apiSignature: 'UPDATE alias SET alias.col = src.col FROM tbl AS alias JOIN src_tbl AS src ON join_cond WHERE diff_cond;',
+      skeleton: `UPDATE tgt
+    ____ tgt.ProductName = src.ProductName
+____ dbo.DimProduct AS tgt
+____ stg.Product AS src ____ ____ = ____
+WHERE tgt.ProductName ____ src.ProductName;`,
+    },
     explanation: 'The FROM/JOIN brings each target row together with its staging counterpart on `ProductKey`; the WHERE clause limits the write to rows that actually changed, avoiding pointless updates to rows already in sync.',
     hints: ['FROM dbo.DimProduct AS tgt JOIN stg.Product AS src ON ProductKey', 'WHERE tgt.ProductName <> src.ProductName limits it to real changes'],
     tags: ['tsql', 'dml', 'update', 'join'],
@@ -329,6 +349,13 @@ WHERE tgt.ProductName <> src.ProductName;`,
 FROM dbo.FactOrders AS f
 JOIN dbo.DimProduct AS p ON p.ProductKey = f.ProductKey
 WHERE p.Discontinued = 1;`,
+    tieredHints: {
+      apiSignature: 'DELETE alias FROM tbl AS alias JOIN dim_tbl AS dim ON join_cond WHERE filter_cond;',
+      skeleton: `DELETE f
+____ dbo.FactOrders AS f
+____ dbo.DimProduct AS p ____ ____ = ____
+WHERE p.Discontinued ____ 1;`,
+    },
     explanation: 'T-SQL supports `DELETE <alias> FROM <table> AS alias JOIN ...` - the alias right after DELETE tells the engine which side\'s rows to remove (here `f`, the fact rows), while the join brings in the dimension\'s `Discontinued` flag to filter by.',
     hints: ['DELETE f FROM dbo.FactOrders AS f JOIN dbo.DimProduct AS p ON ProductKey', 'WHERE p.Discontinued = 1'],
     tags: ['tsql', 'dml', 'delete', 'join'],

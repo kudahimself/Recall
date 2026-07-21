@@ -54,6 +54,9 @@ export enum Topic {
   // Databricks platform
   DATABRICKS_PLATFORM = 'databricks_platform',
   DATABRICKS_UTILITIES = 'databricks_utilities',
+  DATABRICKS_COMPUTE_ADMIN = 'databricks_compute_admin',
+  DATABRICKS_STORAGE_REPOS = 'databricks_storage_repos',
+  DATABRICKS_NOTEBOOKS_SECURITY = 'databricks_notebooks_security',
 
   // Streaming & incremental
   STRUCTURED_STREAMING = 'structured_streaming',
@@ -65,13 +68,20 @@ export enum Topic {
   DELTA_LIVE_TABLES = 'delta_live_tables',
   DATABRICKS_WORKFLOWS = 'databricks_workflows',
 
-  // Governance
+  // Governance & Unity Catalog
+  UNITY_CATALOG_BASICS = 'unity_catalog_basics',
+  UNITY_CATALOG_GOVERNANCE = 'unity_catalog_governance',
   DATA_GOVERNANCE = 'data_governance',
 
   // Data Modeling & Warehousing Design
   DATA_MODELING = 'data_modeling',
   SCD_PATTERNS = 'scd_patterns',
   PIPELINE_DESIGN = 'pipeline_design',
+
+  // Lakehouse Architecture & Engineering Practice
+  ORCHESTRATION_DESIGN = 'orchestration_design',
+  GOLD_LAYER_DESIGN = 'gold_layer_design',
+  INGESTION_ARCHITECTURE = 'ingestion_architecture',
 
   // ── Data Engineering Concepts (tool-agnostic, MCQ-only, beginner→mastery) ──
   // Foundations (small topics, each ramps from a plain beginner intro upward)
@@ -355,6 +365,13 @@ export interface TestCase {
   description: string;
 }
 
+export interface TieredHints {
+  /** Tier 1: the central API's call surface, e.g. "re.sub(pattern, repl, string) -> str". One line, no prose. */
+  apiSignature: string;
+  /** Tier 2: solution skeleton with load-bearing tokens replaced by ____ (cloze-style). */
+  skeleton: string;
+}
+
 export interface BaseQuestion {
   id: string;
   type: QuestionType;
@@ -391,6 +408,10 @@ export interface CodingQuestion extends BaseQuestion {
   // Computed-style grading targets: for each selector, the CSS properties to compare
   // between the user's render and the solution's render.
   previewChecks?: { selector: string; properties: string[] }[];
+  // Optional two-tier hint scaffold (Tier 1 signature, Tier 2 skeleton), revealed
+  // only after a failed attempt and graded with fading partial credit. Absent =
+  // classic one-shot behavior with no hint button.
+  tieredHints?: TieredHints;
 }
 
 export interface ParsonsQuestion extends BaseQuestion {
@@ -449,6 +470,18 @@ export interface QuestionAttempt {
   isCorrect: boolean;
   attempts: number;
   timeSpent: number;
+  // Partial credit in [0, 1] for hint-assisted coding passes. Absent on legacy
+  // attempts, where credit is derived as `isCorrect ? 1 : 0`.
+  credit?: number;
+  // Highest hint tier revealed before the terminal outcome (0 = none, 1 = signature, 2 = skeleton).
+  hintTierUsed?: 0 | 1 | 2;
+}
+
+// Extra outcome data a question component may pass to the recorder alongside the
+// boolean result. Only coding questions with tiered hints populate this today.
+export interface AnswerMeta {
+  hintTierUsed: 0 | 1 | 2;
+  attempts: number;
 }
 
 export interface UserProgress {

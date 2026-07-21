@@ -28,6 +28,14 @@ export const py_error_handling_questions: Question[] = [
       solution: `class InsufficientFundsError(Exception):\n    def __init__(self, amount, balance):\n        self.amount = amount\n        self.balance = balance\n        super().__init__(f"Cannot withdraw {amount}: only {balance} available")`,
       explanation: 'Custom exceptions inherit from Exception. Call super().__init__(message) to set the error message. Store extra context as attributes (amount, balance) for programmatic access in the except block.',
       hints: ['Inherit from Exception', 'super().__init__(message) for error text', 'Store context as attributes'],
+      tieredHints: {
+        apiSignature: 'super().__init__(*args) -> None',
+        skeleton: `class InsufficientFundsError(____):
+    def __init__(self, amount, balance):
+        self.____ = amount
+        self.____ = balance
+        ____.__init__(f"Cannot withdraw {amount}: only {balance} available")`,
+      },
       tags: ['exception', 'custom', 'class', 'python'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -44,6 +52,20 @@ export const py_error_handling_questions: Question[] = [
       solution: `def parse_int(s):\n    try:\n        result = int(s)\n    except ValueError as e:\n        print(f"Error: {e}")\n        return None\n    else:\n        print(f"Success: {result}")\n        return result\n    finally:\n        print("Done")`,
       explanation: 'try: code that might fail. except: handles the error. else: runs ONLY if no exception (good for success logic). finally: ALWAYS runs (cleanup). The full flow: try → (except OR else) → finally.',
       hints: ['else only runs if no exception', 'finally always runs', 'except catches specific errors'],
+      tieredHints: {
+        apiSignature: 'int(x) -> int',
+        skeleton: `def parse_int(s):
+    try:
+        result = ____(s)
+    except ____ as e:
+        print(f"Error: {e}")
+        return ____
+    ____:
+        print(f"Success: {result}")
+        return result
+    ____:
+        print("Done")`,
+      },
       tags: ['try', 'except', 'else', 'finally', 'python'],
       concepts: ['py-try-finally-ordering'],
     },
@@ -72,14 +94,31 @@ export const py_error_handling_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Write a function "retry" that takes a function and max_attempts (default 3). It calls the function, and if it raises an exception, retries up to max_attempts times before re-raising.',
-      starterCode: `# Import time; define retry(func, max_attempts=3)
-# Loop 1..max_attempts: try func(); on exception, re-raise on last attempt,
-# otherwise print a message and time.sleep(1)
+      starterCode: `import time
+
+
+def retry(func, max_attempts=3):
+    # Retry func up to max_attempts times before re-raising
+    pass
 `,
       testCases: [{ input: 'failing function', expectedOutput: 'loop with try/except and re-raise', description: 'Should retry on failure' }],
       solution: `import time\n\ndef retry(func, max_attempts=3):\n    for attempt in range(1, max_attempts + 1):\n        try:\n            return func()\n        except Exception as e:\n            if attempt == max_attempts:\n                raise\n            print(f"Attempt {attempt} failed: {e}. Retrying...")\n            time.sleep(1)`,
       explanation: '"raise" without arguments re-raises the current exception. This retry pattern is used for network calls, database connections, etc. In production, use exponential backoff (time.sleep(2 ** attempt)) and the tenacity library.',
       hints: ['Loop over attempts', '"raise" re-raises the current exception', 'Only retry if not the last attempt'],
+      tieredHints: {
+        apiSignature: 'range(start, stop, step=1) -> range',
+        skeleton: `import time
+
+def retry(func, max_attempts=3):
+    for attempt in ____(1, max_attempts + 1):
+        try:
+            return ____()
+        except Exception as e:
+            if attempt == ____:
+                ____
+            print(f"Attempt {attempt} failed: {e}. Retrying...")
+            time.sleep(1)`,
+      },
       tags: ['retry', 'exception', 'pattern', 'python'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -103,6 +142,14 @@ export const py_error_handling_questions: Question[] = [
       solution: `def safe_divide(a, b):\n    try:\n        return a / b\n    except (ZeroDivisionError, TypeError):\n        return None`,
       explanation: 'try/except catches specific exceptions. You can catch multiple exceptions with a tuple: except (Error1, Error2). Always catch specific exceptions — bare except: catches everything including KeyboardInterrupt, which is bad practice.',
       hints: ['Use try/except', 'Catch specific exceptions, not bare except', 'Tuple for multiple exception types'],
+      tieredHints: {
+        apiSignature: 'except (ExceptionType1, ExceptionType2):',
+        skeleton: `def safe_divide(a, b):
+    ____:
+        return a / b
+    except (____, ____):
+        return ____`,
+      },
       tags: ['try', 'except', 'error-handling', 'python'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -125,6 +172,11 @@ export const py_error_handling_questions: Question[] = [
       solution: `with open("data.txt") as f:\n    content = f.read()`,
       explanation: 'The "with" statement is a context manager that automatically closes the file when the block exits, even if an exception occurs. Always use "with" for files, database connections, and locks. It calls __enter__ and __exit__ under the hood.',
       hints: ['Use "with open(...) as f:" pattern', 'File is auto-closed when block exits'],
+      tieredHints: {
+        apiSignature: 'file.read(size=-1) -> str',
+        skeleton: `____ open("data.txt") ____ f:
+    content = f.____()`,
+      },
       tags: ['context-manager', 'with', 'file', 'python'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -217,6 +269,14 @@ export const py_error_handling_questions: Question[] = [
       solution: `s = "hello"\ntry:\n    int(s)\nexcept ValueError:\n    print("not a number")`,
       explanation: '`int("hello")` raises `ValueError` because "hello" is not a numeric string. The `except ValueError:` clause catches that specific exception and runs the body. Catching the specific class (not a bare `except:`) is best practice — it lets unrelated errors keep propagating.',
       hints: ['Wrap `int(s)` in a `try` block', 'Use `except ValueError:` to catch the conversion error', 'Print the message inside the except'],
+      tieredHints: {
+        apiSignature: 'print(*objects, sep=" ", end="\\n") -> None',
+        skeleton: `s = "hello"
+____:
+    int(s)
+____ ValueError:
+    print(____)`,
+      },
       tags: ['try', 'except', 'value-error', 'beginner', 'python'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -1015,6 +1075,29 @@ except NetworkError as e:
         'Use `raise NetworkError(...) from e` inside the except block',
         'Access the cause with `e.__cause__`',
       ],
+      tieredHints: {
+        apiSignature: 'raise ExceptionType(*args) from cause',
+        skeleton: `class AppError(Exception):
+    pass
+
+class DatabaseError(____):
+    pass
+
+class NetworkError(____):
+    pass
+
+def connect_to_server(host):
+    try:
+        raise ____(f"____ {host}")
+    except ____ as e:
+        raise ____(f"____ {host}") ____ e
+
+try:
+    connect_to_server("db.example.com")
+except ____ as e:
+    print(f"NetworkError: {e}")
+    print(f"Caused by: {e.____}")`,
+      },
       tags: ['exceptions', 'chaining', 'custom-exceptions', 'hierarchy', '__cause__'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -1087,6 +1170,29 @@ except ValueError as e:
         'Raise `DivisionByZeroError(f"Cannot divide {a} by zero")`',
         'Subclasses can be caught by parent `except` clauses',
       ],
+      tieredHints: {
+        apiSignature: 'class Subclass(ParentClass): ...',
+        skeleton: `class DivisionByZeroError(____):
+    pass
+
+def safe_divide(a, b):
+    try:
+        return a / b
+    except ____:
+        raise ____(f"Cannot divide {a} by zero")
+
+print(safe_divide(10, 2))
+
+try:
+    safe_divide(5, 0)
+except DivisionByZeroError as e:
+    print(f"Custom: {e}")
+
+try:
+    safe_divide(5, 0)
+except ____ as e:
+    print(f"ValueError: {e}")`,
+      },
       tags: ['exceptions', 'custom-exceptions', 'ValueError', 'hierarchy', 'safe-divide'],
       concepts: ['py-exception-hierarchy'],
     },

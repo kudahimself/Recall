@@ -97,7 +97,7 @@ FROM stg.Product;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Load `dbo.FactSales (CustomerKey, ProductKey, Amount)` from `stg.Sales (CustomerId, ProductCode, Amount)`, resolving the natural keys to surrogate keys by joining `dbo.DimCustomer (CustomerKey, CustomerId)` and `dbo.DimProduct (ProductKey, ProductCode)`. Use INSERT … SELECT.',
-    starterCode: `-- INSERT INTO dbo.FactSales (...) SELECT ... FROM stg.Sales s JOIN ... JOIN ...
+    starterCode: `-- Load dbo.FactSales by resolving natural keys from stg.Sales to surrogate keys via joins
 `,
     testCases: [
       {
@@ -111,6 +111,14 @@ SELECT c.CustomerKey, p.ProductKey, s.Amount
 FROM stg.Sales AS s
 JOIN dbo.DimCustomer AS c ON c.CustomerId = s.CustomerId
 JOIN dbo.DimProduct AS p ON p.ProductCode = s.ProductCode;`,
+    tieredHints: {
+      apiSignature: 'JOIN table AS alias ON alias.col = other_alias.col',
+      skeleton: `INSERT INTO dbo.FactSales (____, ____, Amount)
+SELECT c.____, p.____, s.Amount
+FROM stg.Sales AS s
+JOIN dbo.DimCustomer AS c ON c.____ = s.____
+JOIN dbo.DimProduct AS p ON p.____ = s.____;`,
+    },
     explanation: 'This is the canonical fact load: the staging rows carry natural keys (`CustomerId`, `ProductCode`), so you join to each dimension to translate them into the warehouse surrogate keys (`CustomerKey`, `ProductKey`) before inserting. The fact stores surrogates, never the source business keys.',
     hints: ['JOIN staging to each dimension on the natural key', 'SELECT the surrogate keys + measure into the fact'],
     tags: ['tsql', 'insert', 'insert-select', 'surrogate-keys'],

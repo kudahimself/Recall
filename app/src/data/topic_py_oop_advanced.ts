@@ -113,6 +113,26 @@ export const py_oop_advanced_questions: Question[] = [
         if amount > self.__balance:
             raise ValueError("Insufficient funds")
         self.__balance -= amount`,
+      tieredHints: {
+        apiSignature: 'property(fget=None, fset=None, fdel=None, doc=None)',
+        skeleton: `class BankAccount:
+    def __init__(self, ____=0):
+        self.____ = initial_balance
+
+    @____
+    def balance(self):
+        return self.____
+
+    def ____(self, amount):
+        if amount ____ 0:
+            raise ValueError("Deposit amount must be positive")
+        self.__balance ____ amount
+
+    def ____(self, amount):
+        if amount ____ self.____:
+            raise ValueError("Insufficient funds")
+        self.__balance ____ amount`,
+      },
       explanation: '`__balance` uses name mangling — it becomes `_BankAccount__balance`. The `@property` decorator creates a read-only attribute (no setter). Validation in `withdraw` raises `ValueError` to signal invalid operations. Callers can\'t accidentally set `account.balance = 1000000` since there\'s no setter.',
       hints: [
         '`@property` creates a getter — no setter means read-only',
@@ -183,6 +203,32 @@ class Car:
 
     def stop(self):
         return self.engine.stop()`,
+      tieredHints: {
+        apiSignature: 'Engine(horsepower)',
+        skeleton: `class Engine:
+    def __init__(self, horsepower):
+        self.horsepower = horsepower
+        self.running = ____
+
+    def ____(self):
+        self.running = ____
+        return f"____"
+
+    def ____(self):
+        self.running = ____
+        return "Engine stopped"
+
+class Car:
+    def __init__(self, make, engine):
+        self.make = make
+        self.____ = engine
+
+    def ____(self):
+        return self.engine.____()
+
+    def ____(self):
+        return self.engine.____()`,
+      },
       explanation: '`Car` holds a reference to an `Engine` instance. Instead of inheriting engine behaviour, `Car` delegates to it. You could swap the engine for a different `Engine` instance with different horsepower without changing `Car` at all. This is the core benefit of composition over inheritance.',
       hints: [
         'Store engine as `self.engine = engine` in `__init__`',
@@ -249,6 +295,28 @@ cl.append(2)
 cl.append(3)
 print(cl)
 print(cl.append_count)`,
+      tieredHints: {
+        apiSignature: 'super().append(object) -> None',
+        skeleton: `class CountedList(____):
+    def __init__(self):
+        super().____()
+        self._append_count = ____
+
+    def append(self, item):
+        self._append_count += ____
+        super().____(item)
+
+    @____
+    def append_count(self):
+        return self.____
+
+cl = CountedList()
+cl.____(1)
+cl.____(2)
+cl.____(3)
+print(____)
+print(____)`,
+      },
       explanation: '`super().__init__()` initialises the underlying list. Overriding `append()` lets us intercept every append call to increment the counter, then `super().append(item)` does the actual list operation. The class inherits ALL other list methods (`pop`, `sort`, `len`, etc.) without needing to implement them.',
       hints: [
         'Call `super().append(item)` to actually add the item to the list',
@@ -327,6 +395,41 @@ class Rectangle(Shape):
 
     def perimeter(self):
         return 2 * (self.width + self.height)`,
+      tieredHints: {
+        apiSignature: 'math.pi -> float',
+        skeleton: `from abc import ABC, abstractmethod
+import math
+
+class Shape(ABC):
+    @____
+    def area(self):
+        pass
+
+    @____
+    def perimeter(self):
+        pass
+
+class Circle(Shape):
+    def __init__(self, radius):
+        self.radius = radius
+
+    def area(self):
+        return ____
+
+    def perimeter(self):
+        return ____
+
+class Rectangle(Shape):
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def area(self):
+        return ____
+
+    def perimeter(self):
+        return ____`,
+      },
       explanation: 'Both `Circle` and `Rectangle` must implement ALL abstract methods or Python raises `TypeError` at instantiation. The abstract class acts as a contract — any `Shape` subclass guarantees it has `area()` and `perimeter()`. This enables polymorphic code like `for shape in shapes: print(shape.area())`.',
       hints: [
         'Circle area = `math.pi * r**2`, perimeter = `2 * math.pi * r`',
@@ -411,6 +514,23 @@ print("Original after shallow modify:", original)
 print("Original after deep modify:", original)
 print("Shallow copy:", shallow)
 print("Deep copy:", deep)`,
+      tieredHints: {
+        apiSignature: 'copy.deepcopy(x, memo=None) -> Any',
+        skeleton: `import copy
+
+original = ____
+
+shallow = copy.____(original)
+deep = copy.____(original)
+
+shallow[0][0] = ____
+deep[1][0] = ____
+
+print("Original after shallow modify:", ____)
+print("Original after deep modify:", ____)
+print("Shallow copy:", ____)
+print("Deep copy:", ____)`,
+      },
       explanation: 'Shallow copy creates a new outer list but the inner lists are shared. `shallow[0]` and `original[0]` point to the same list object — modifying one changes both. Deep copy creates entirely independent copies — `deep[1]` is a separate list object, so modifying it has no effect on `original`.',
       hints: [
         'The shallow copy shares inner lists — they\'re the same objects in memory',
@@ -469,6 +589,23 @@ print("Deep copy:", deep)`,
         if not isinstance(value, int) or not (0 <= value <= 150):
             raise ValueError("Age must be between 0 and 150")
         self._age = value`,
+      tieredHints: {
+        apiSignature: 'isinstance(object, classinfo) -> bool',
+        skeleton: `class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    @property
+    def age(self):
+        return self.____
+
+    @age.____
+    def age(self, value):
+        if ____:
+            raise ValueError("Age must be between 0 and 150")
+        self._age = ____`,
+      },
       explanation: 'Even in `__init__`, `self.age = age` calls the setter — so validation runs at construction time too. The private storage uses `_age` (single underscore) while the public interface is `age`. The setter uses `isinstance(value, int)` to check the type, then validates the range.',
       hints: [
         'Store in `self._age` (private), expose via `self.age` (property)',
@@ -497,6 +634,19 @@ print("Deep copy:", deep)`,
         },
       ],
       solution: `class Product:\n    def __init__(self, name, price):\n        self.name = name\n        self.price = price\n\n    def __str__(self):\n        return f"Product: {self.name} - \${self.price:.2f}"\n\n    def __repr__(self):\n        return f"Product('{self.name}', {self.price})"`,
+      tieredHints: {
+        apiSignature: 'format(value, format_spec="") -> str',
+        skeleton: `class Product:
+    def __init__(self, name, price):
+        self.name = name
+        self.price = price
+
+    def ____(self):
+        return f"____"
+
+    def ____(self):
+        return f"____"`,
+      },
       explanation: '__str__ is for human-readable output (print(), str()). __repr__ is for unambiguous representation (debugging, REPL). Convention: __repr__ should ideally return valid Python to recreate the object.',
       hints: ['__str__ for display, __repr__ for debugging', '__repr__ should be unambiguous', ':.2f formats to 2 decimal places'],
       tags: ['dunder', 'str', 'repr', 'oop', 'python'],
@@ -867,6 +1017,28 @@ except AttributeError:
       starterCode: `import math\n\nclass Circle:\n`,
       testCases: [{ input: 'Circle class', expectedOutput: '@property getter, @radius.setter, area property', description: 'Should use property decorator' }],
       solution: `import math\n\nclass Circle:\n    def __init__(self, radius):\n        self.radius = radius\n\n    @property\n    def radius(self):\n        return self._radius\n\n    @radius.setter\n    def radius(self, value):\n        if value <= 0:\n            raise ValueError("Radius must be positive")\n        self._radius = value\n\n    @property\n    def area(self):\n        return math.pi * self._radius ** 2`,
+      tieredHints: {
+        apiSignature: 'math.pi -> float',
+        skeleton: `import math
+
+class Circle:
+    def __init__(self, radius):
+        self.radius = radius
+
+    @property
+    def radius(self):
+        return self.____
+
+    @radius.____
+    def radius(self, value):
+        if ____:
+            raise ValueError("Radius must be positive")
+        self._radius = value
+
+    @____
+    def area(self):
+        return ____`,
+      },
       explanation: '@property makes a method act like an attribute (circle.radius not circle.radius()). @name.setter adds write support with validation. area is read-only (no setter). The actual data is stored in _radius (convention for private).',
       hints: ['@property for getter', '@name.setter for setter with validation', 'No setter = read-only property'],
       tags: ['property', 'setter', 'getter', 'oop', 'python'],

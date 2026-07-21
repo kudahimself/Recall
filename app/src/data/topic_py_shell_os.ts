@@ -68,6 +68,19 @@ print(result.returncode)`,
         'text=True → get str instead of bytes',
         'check=True → raise CalledProcessError on failure',
       ],
+      tieredHints: {
+        apiSignature: 'subprocess.run(args, *, stdin=None, input=None, stdout=None, stderr=None, capture_output=False, shell=False, timeout=None, check=False, text=None) -> CompletedProcess',
+        skeleton: `import subprocess
+
+result = subprocess.____(
+    ["echo", "hello"],
+    ____=True,
+    ____=True,
+    check=True,
+)
+print(result.stdout.____())
+print(result.____)`,
+      },
       tags: ['subprocess', 'run', 'capture_output'],
       concepts: ['py-shell-os-interop'],
     },
@@ -124,6 +137,15 @@ except subprocess.CalledProcessError as e:
         'e.returncode / e.stdout / e.stderr available in the except',
         'Also handle TimeoutExpired when you pass timeout=',
       ],
+      tieredHints: {
+        apiSignature: 'subprocess.CalledProcessError(returncode, cmd, output=None, stderr=None)',
+        skeleton: `import subprocess
+
+try:
+    subprocess.run(["false"], ____=True, capture_output=True, text=True)
+____ subprocess.____ as e:
+    print(f"failed with {e.____}")`,
+      },
       tags: ['subprocess', 'CalledProcessError', 'error-handling'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -158,6 +180,16 @@ with tempfile.TemporaryDirectory() as tmp:
         'tmp is a str path; wrap with Path() for pathlib API',
         'Cleanup is guaranteed on __exit__, even on exception',
       ],
+      tieredHints: {
+        apiSignature: 'tempfile.TemporaryDirectory(suffix=None, prefix=None, dir=None, ignore_cleanup_errors=False)',
+        skeleton: `import tempfile
+from pathlib import Path
+
+with tempfile.____() as tmp:
+    p = Path(tmp) / "note.txt"
+    p.____("temp data")
+    print(p.____())`,
+      },
       tags: ['tempfile', 'TemporaryDirectory', 'pathlib', 'cleanup'],
       concepts: ['py-shell-os-interop', 'py-pathlib'],
     },
@@ -198,6 +230,21 @@ print(shutil.disk_usage("/").total > 0)`,
         'shutil.disk_usage returns (total, used, free) namedtuple',
         'shutil.which(cmd) finds executables in PATH — avoids shelling out',
       ],
+      tieredHints: {
+        apiSignature: 'shutil.copy(src, dst, *, follow_symlinks=True)',
+        skeleton: `import shutil
+import tempfile
+from pathlib import Path
+
+with tempfile.____() as tmp:
+    src = Path(tmp) / "a.txt"
+    src.write_text("hello")
+    dst = Path(tmp) / "b.txt"
+    ____.____(src, dst)
+    print(dst.____())
+
+print(shutil.____("/").____ > 0)`,
+      },
       tags: ['shutil', 'filesystem', 'disk_usage'],
       concepts: ['py-shell-os-interop'],
     },
@@ -228,6 +275,13 @@ print(port)`,
         'All values are strings — always cast',
         'bool("False") == True — use an explicit comparison',
       ],
+      tieredHints: {
+        apiSignature: 'os.environ.get(key, default=None)',
+        skeleton: `import os
+
+port = ____(____.____.____("PORT", "8000"))
+____(port)`,
+      },
       tags: ['os', 'environ', 'env-vars', 'config'],
       concepts: ['py-shell-os-interop'],
     },

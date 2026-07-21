@@ -123,7 +123,8 @@ FROM (VALUES ('x'), ('y'), ('x'), ('z'), ('y')) AS v(c);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.FactOrders` (CustomerKey, Amount), return each CustomerKey and their total Amount (aliased `Total`), keeping only customers whose total exceeds 1000, ordered by Total descending.',
-    starterCode: `-- SELECT CustomerKey, SUM(Amount) AS Total ... GROUP BY ... HAVING ... ORDER BY ...
+    starterCode: `-- dbo.FactOrders(CustomerKey, Amount)
+-- Return CustomerKey and total Amount (aliased Total) for customers with total > 1000, ordered by Total DESC
 `,
     testCases: [
       {
@@ -137,6 +138,14 @@ FROM dbo.FactOrders
 GROUP BY CustomerKey
 HAVING SUM(Amount) > 1000
 ORDER BY Total DESC;`,
+    tieredHints: {
+      apiSignature: 'SELECT col, SUM(col2) FROM tbl GROUP BY col HAVING SUM(col2) > val ORDER BY alias ASC|DESC;',
+      skeleton: `SELECT ____, ____(Amount) AS ____
+FROM dbo.FactOrders
+____ BY ____
+____ ____(Amount) ____ 1000
+____ BY ____ ____;`,
+    },
     explanation: 'Group by customer, sum their amounts, filter the groups with `HAVING SUM(Amount) > 1000`, then sort by the computed total. `HAVING` (not `WHERE`) is required because the filter is on an aggregate.',
     hints: ['SUM per CustomerKey', 'HAVING for the aggregate filter, then ORDER BY Total DESC'],
     tags: ['tsql', 'aggregation', 'group-by', 'having', 'sum'],

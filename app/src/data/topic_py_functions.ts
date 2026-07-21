@@ -32,6 +32,11 @@ export const py_functions_questions: Question[] = [
       solution: `def apply_discount(price, discount=10):\n    return price * (1 - discount / 100)`,
       explanation: 'Default parameter values make arguments optional. apply_discount(100) uses 10%, apply_discount(100, 20) uses 20%. IMPORTANT: never use mutable defaults (like def f(items=[]) — use None instead).',
       hints: ['Use = for default values in parameters', 'Never use mutable objects as defaults'],
+      tieredHints: {
+        apiSignature: 'def func(pos_param, kw_param=default_value):',
+        skeleton: `def apply_discount(price, discount=____):
+    ____ price ____ (____ - discount ____ ____)`,
+      },
       tags: ['functions', 'default-params', 'python'],
       concepts: ['py-default-arg-evaluation'],
     },
@@ -54,6 +59,11 @@ export const py_functions_questions: Question[] = [
       solution: `def process_items(*args, **kwargs):\n    return {"items": list(args), "options": kwargs}`,
       explanation: '*args collects positional arguments into a tuple. **kwargs collects keyword arguments into a dict. process_items(1, 2, 3, color="red") returns {"items": [1, 2, 3], "options": {"color": "red"}}.',
       hints: ['*args is a tuple of positional args', '**kwargs is a dict of keyword args'],
+      tieredHints: {
+        apiSignature: 'list(iterable) -> list',
+        skeleton: `def process_items(*args, **kwargs):
+    ____ {"____": ____(args), "____": ____}`,
+      },
       tags: ['args', 'kwargs', 'functions', 'python'],
       concepts: ['py-args-kwargs'],
     },
@@ -76,6 +86,10 @@ export const py_functions_questions: Question[] = [
       solution: `add = lambda x, y: x + y`,
       explanation: 'Lambda creates anonymous inline functions: lambda params: expression. Useful for short callbacks (sorted(items, key=lambda x: x.name)). For anything complex, use a regular def function.',
       hints: ['lambda parameters: expression', 'Can only contain a single expression'],
+      tieredHints: {
+        apiSignature: 'lambda param1, param2: expression',
+        skeleton: `add = ____ x, y: ____ ____ ____`,
+      },
       tags: ['lambda', 'functions', 'python'],
       concepts: ['py-function-as-value'],
     },
@@ -846,10 +860,9 @@ type error`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Write a function `describe_person(name, *hobbies, **details)` that prints the person\'s name, their hobbies (as a comma-separated list), and any extra keyword details as "key: value" pairs.',
-      starterCode: `# Define describe_person(name, *hobbies, **details):
-#   print f"Name: {name}"
-#   if hobbies: print f"Hobbies: {comma-separated list}"; else print "Hobbies: none"
-#   iterate details.items() and print f"{key}: {value}"
+      starterCode: `def describe_person(name, *hobbies, **details):
+    # Print name, comma-separated hobbies, and key: value details
+    pass
 
 
 # Call: describe_person("Alice", "reading", "cycling", age=30, city="Dublin")
@@ -872,6 +885,19 @@ describe_person("Alice", "reading", "cycling", age=30, city="Dublin")`,
         '`*hobbies` is a tuple — use `", ".join(hobbies)` to format it',
         '`**details` is a dict — iterate with `.items()`',
       ],
+      tieredHints: {
+        apiSignature: 'sep.join(iterable) -> str',
+        skeleton: `def describe_person(name, *hobbies, **details):
+    ____(f"____: {name}")
+    if hobbies:
+        ____(f"____: {____.____(hobbies)}")
+    else:
+        ____("____: none")
+    for ____, ____ in details.____():
+        ____(f"____: {____}")
+
+describe_person("____", "____", "____", age=____, city="____")`,
+      },
       tags: ['functions', 'args', 'kwargs', 'join', 'unpacking'],
       concepts: ['py-unpacking'],
     },
@@ -1000,6 +1026,15 @@ print(power(5, 3))`,
         'Use `exponent=2` in the function signature for the default',
         'Use `**` for exponentiation inside the function',
       ],
+      tieredHints: {
+        apiSignature: 'print(*values, sep=" ", end="\\n")',
+        skeleton: `def power(base, exponent=____):
+    ____ base ____ exponent
+
+____(power(3))
+____(power(2, 10))
+____(power(5, 3))`,
+      },
       tags: ['functions', 'default-parameters', 'exponentiation', 'basics'],
       concepts: ['py-default-arg-evaluation', 'py-arithmetic-ops'],
     },
@@ -1089,6 +1124,20 @@ print(double(10))`,
         'The inner function can access `factor` from the outer scope',
         'Return the inner function (not the result of calling it)',
       ],
+      tieredHints: {
+        apiSignature: 'def outer(x):\n    def inner(y): ...\n    return inner',
+        skeleton: `def make_multiplier(factor):
+    def ____(n):
+        ____ n ____ factor
+    ____ ____
+
+double = make_multiplier(____)
+triple = make_multiplier(____)
+
+____(double(5))
+____(triple(4))
+____(double(10))`,
+      },
       tags: ['closures', 'factory-functions', 'scope', 'functions'],
       concepts: ['py-closure-capture'],
     },
@@ -1149,6 +1198,14 @@ print(result)  # 8`,
         'Start with `def add(a, b):`',
         'Use `return` to send the sum back to the caller',
       ],
+      tieredHints: {
+        apiSignature: 'print(*values, sep=" ", end="\\n")',
+        skeleton: `def add(a, b):
+    ____ a ____ b
+
+result = ____(3, 5)
+____(result)`,
+      },
       tags: ['functions', 'def', 'return', 'basics'],
       concepts: ['py-function-as-value'],
     },

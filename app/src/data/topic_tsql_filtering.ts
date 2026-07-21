@@ -21,9 +21,9 @@ export const tsql_filtering_questions: Question[] = [
     course: Course.SQL,
     question: 'How do you correctly find rows where `Email` has no value?',
     options: [
-      { id: 'a', text: '`WHERE Email IS NULL` — a comparison like `= NULL` is never true, because NULL means "unknown".', isCorrect: true },
-      { id: 'b', text: '`WHERE Email = NULL` — the equals operator treats NULL like any other literal value.', isCorrect: false },
-      { id: 'c', text: '`WHERE Email = \'\'` — an empty string and NULL are the same thing in SQL.', isCorrect: false },
+      { id: 'a', text: '`WHERE Email = NULL` — the equals operator treats NULL like any other literal value.', isCorrect: false },
+      { id: 'b', text: '`WHERE Email = \'\'` — an empty string and NULL are the same thing in SQL.', isCorrect: false },
+      { id: 'c', text: '`WHERE Email IS NULL` — a comparison like `= NULL` is never true, because NULL means "unknown".', isCorrect: true },
       { id: 'd', text: '`WHERE Email <> NULL` — the not-equals operator returns the NULL rows.', isCorrect: false },
     ],
     explanation: 'In three-valued logic any comparison against NULL yields UNKNOWN, which `WHERE` treats as not-true — so `= NULL` and `<> NULL` both match zero rows. You must use the `IS NULL` / `IS NOT NULL` predicates. An empty string is also distinct from NULL.',
@@ -79,10 +79,10 @@ WHERE Price BETWEEN 10 AND 100
     course: Course.SQL,
     question: "What does `IIF(Price > 100, 'Premium', 'Standard')` return?",
     options: [
-      { id: 'a', text: "'Premium' when Price > 100 is true, otherwise 'Standard' - a shorthand for a two-branch CASE.", isCorrect: true },
-      { id: 'b', text: "Both 'Premium' and 'Standard' concatenated together, separated by a comma.", isCorrect: false },
-      { id: 'c', text: "'Premium' always, regardless of the Price comparison.", isCorrect: false },
-      { id: 'd', text: "NULL, because IIF requires exactly one argument in T-SQL.", isCorrect: false },
+      { id: 'a', text: "Both 'Premium' and 'Standard' concatenated together, separated by a comma.", isCorrect: false },
+      { id: 'b', text: "'Premium' when Price > 100 is true, otherwise 'Standard' — the false branch.", isCorrect: true },
+      { id: 'c', text: "'Premium' always, regardless of how the Price comparison evaluates.", isCorrect: false },
+      { id: 'd', text: "NULL, because IIF requires exactly one argument in T-SQL syntax.", isCorrect: false },
     ],
     explanation: "`IIF(condition, true_value, false_value)` is T-SQL's inline shorthand for a simple two-branch `CASE WHEN condition THEN true_value ELSE false_value END`. It only handles one condition - anything with more branches needs a full CASE.",
     hints: ['IIF(cond, if_true, if_false)', 'Shorthand for a two-branch CASE'],
@@ -96,10 +96,10 @@ WHERE Price BETWEEN 10 AND 100
     course: Course.SQL,
     question: 'How do `COALESCE`, `ISNULL`, and `NULLIF` differ?',
     options: [
-      { id: 'a', text: '`COALESCE(a, b, c, …)` returns the first non-NULL of any number of args (ANSI); `ISNULL(a, b)` is the 2-arg T-SQL form; `NULLIF(a, b)` returns NULL when a equals b.', isCorrect: true },
-      { id: 'b', text: '`COALESCE` and `ISNULL` both take exactly two args and behave identically; `NULLIF` converts NULL into a zero-length string.', isCorrect: false },
-      { id: 'c', text: '`COALESCE` returns the last non-NULL value; `ISNULL` raises an error on NULL; `NULLIF` returns 1 when a equals b.', isCorrect: false },
-      { id: 'd', text: '`COALESCE` only works on numbers; `ISNULL` only on text; `NULLIF` swaps two values when both are NULL.', isCorrect: false },
+      { id: 'a', text: '`COALESCE` and `ISNULL` both take exactly two args and behave identically; `NULLIF` converts NULL into a zero-length string.', isCorrect: false },
+      { id: 'b', text: '`COALESCE` returns the last non-NULL value; `ISNULL` raises an error on any NULL; `NULLIF` returns 1 when a equals b.', isCorrect: false },
+      { id: 'c', text: '`COALESCE` only works on numbers; `ISNULL` only works on text; `NULLIF` swaps two values when both are NULL.', isCorrect: false },
+      { id: 'd', text: '`COALESCE(a, b, …)` returns the first non-NULL argument (ANSI); `ISNULL(a, b)` is the 2-arg T-SQL form; `NULLIF(a, b)` returns NULL when a equals b.', isCorrect: true },
     ],
     explanation: '`COALESCE` is the ANSI, variadic choice — first non-NULL wins. `ISNULL` is the T-SQL two-argument shorthand (and returns the first argument\'s data type). `NULLIF(a, b)` returns NULL when the two are equal — handy for turning a sentinel like 0 into NULL before dividing.',
     hints: ['COALESCE = variadic first-non-null', 'NULLIF(a,b) → NULL when a = b'],
@@ -152,7 +152,7 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "From `dbo.DimCustomer` (FullName, Email, Country), return FullName and a column `ContactEmail` that shows Email, or the text 'none' when Email is NULL — for customers in country 'NO' or 'SE' whose FullName is not NULL.",
-    starterCode: `-- SELECT FullName, COALESCE(...) AS ContactEmail ...
+    starterCode: `-- dbo.DimCustomer(FullName, Email, Country); return FullName, ContactEmail
 `,
     testCases: [
       {
@@ -165,6 +165,13 @@ FROM dbo.DimProduct;`,
 FROM dbo.DimCustomer
 WHERE Country IN ('NO', 'SE')
   AND FullName IS NOT NULL;`,
+    tieredHints: {
+      apiSignature: 'COALESCE(expression, ...) -> first non-null expression',
+      skeleton: `SELECT FullName, ____(____, ____) AS ____
+FROM dbo.DimCustomer
+WHERE Country ____ (____, ____)
+  AND FullName ____ ____ ____;`,
+    },
     explanation: '`COALESCE(Email, \'none\')` substitutes a default for missing emails; `Country IN (\'NO\', \'SE\')` filters the set; `FullName IS NOT NULL` excludes nameless rows (a plain `<>` would not catch NULLs).',
     hints: ["COALESCE(Email, 'none') for the default", "IN ('NO','SE') and IS NOT NULL"],
     tags: ['tsql', 'filtering', 'coalesce', 'in', 'is-null'],

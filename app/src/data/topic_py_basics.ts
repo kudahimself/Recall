@@ -30,6 +30,15 @@ export const py_basics_questions: Question[] = [
         },
       ],
       solution: `CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  username VARCHAR(50) NOT NULL UNIQUE,\n  email VARCHAR(100) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);`,
+      tieredHints: {
+        apiSignature: 'CREATE TABLE name (col TYPE CONSTRAINTS, ...)',
+        skeleton: `CREATE TABLE users (
+  id ____ PRIMARY KEY,
+  username VARCHAR(____) NOT NULL ____,
+  email VARCHAR(____) NOT NULL,
+  created_at TIMESTAMP DEFAULT ____
+);`,
+      },
       explanation: 'SERIAL auto-increments (PostgreSQL). PRIMARY KEY uniquely identifies rows. NOT NULL prevents empty values. UNIQUE prevents duplicates. DEFAULT sets a value when none is provided. These constraints enforce data integrity at the database level.',
       hints: ['SERIAL = auto-increment in PostgreSQL', 'PRIMARY KEY = unique + not null', 'DEFAULT CURRENT_TIMESTAMP for auto-dating'],
       tags: ['sql', 'create-table', 'constraints', 'database'],
@@ -52,6 +61,15 @@ export const py_basics_questions: Question[] = [
         },
       ],
       solution: `SELECT u.username, COUNT(o.id) as order_count\nFROM users u\nJOIN orders o ON u.id = o.user_id\nGROUP BY u.username\nORDER BY order_count DESC\nLIMIT 5;`,
+      tieredHints: {
+        apiSignature: 'JOIN table alias ON left = right',
+        skeleton: `SELECT u.username, ____(o.id) as order_count
+FROM users u
+____ orders o ON u.id = o.____
+____ BY u.username
+____ BY order_count ____
+LIMIT ____;`,
+      },
       explanation: 'JOIN connects users to their orders. GROUP BY aggregates per user. COUNT counts orders per user. ORDER BY DESC sorts highest first. LIMIT 5 returns only top 5. This is a fundamental analytics query pattern.',
       hints: ['JOIN to connect tables', 'GROUP BY + COUNT for aggregation', 'ORDER BY DESC LIMIT 5 for top N'],
       tags: ['sql', 'join', 'aggregation', 'group-by', 'database'],
@@ -74,6 +92,11 @@ export const py_basics_questions: Question[] = [
         },
       ],
       solution: `CREATE INDEX idx_orders_user_id ON orders(user_id);\nCREATE INDEX idx_orders_status_date ON orders(status, created_at);`,
+      tieredHints: {
+        apiSignature: 'CREATE INDEX name ON table(col1, col2, ...)',
+        skeleton: `CREATE INDEX ____ ON orders(____);
+CREATE INDEX ____ ON orders(____, ____);`,
+      },
       explanation: 'Indexes speed up queries on indexed columns (like WHERE user_id = 1). Composite indexes help queries that filter on multiple columns (WHERE status = "active" AND created_at > ...). Trade-off: faster reads, slower writes, more storage.',
       hints: ['CREATE INDEX name ON table(column)', 'Composite: ON table(col1, col2)', 'Column order matters in composite indexes'],
       tags: ['sql', 'index', 'performance', 'database'],
@@ -130,6 +153,12 @@ export const py_basics_questions: Question[] = [
         },
       ],
       solution: `def is_palindrome(s):\n    s = s.lower()\n    return s == s[::-1]`,
+      tieredHints: {
+        apiSignature: 's[start:stop:step] -> str',
+        skeleton: `def ____(s):
+    s = s.____()
+    return s == s[____]`,
+      },
       explanation: 's[::-1] reverses a string using slice notation [start:stop:step] with step=-1. .lower() normalises case. This is the Pythonic way to reverse sequences.',
       hints: ['Use s[::-1] to reverse a string', 'Convert to lowercase first with .lower()'],
       tags: ['string', 'slicing', 'palindrome', 'python'],
@@ -152,6 +181,18 @@ export const py_basics_questions: Question[] = [
         },
       ],
       solution: `def fizzbuzz(n):\n    if n % 15 == 0:\n        return "FizzBuzz"\n    elif n % 3 == 0:\n        return "Fizz"\n    elif n % 5 == 0:\n        return "Buzz"\n    else:\n        return str(n)`,
+      tieredHints: {
+        apiSignature: 'str(obj) -> str',
+        skeleton: `def ____(n):
+    if n % ____ ____ 0:
+        return "FizzBuzz"
+    elif n % ____ ____ 0:
+        return "Fizz"
+    elif n % ____ ____ 0:
+        return "Buzz"
+    else:
+        return ____(n)`,
+      },
       explanation: 'Check divisibility by 15 first (both 3 and 5), then 3, then 5. Order matters — if you check 3 first, 15 would match "Fizz" instead of "FizzBuzz". The modulo operator % returns the remainder.',
       hints: ['Check n % 15 first (both 3 and 5)', 'Order of conditions matters', '% is the modulo operator'],
       tags: ['conditionals', 'modulo', 'classic', 'python'],
@@ -174,6 +215,13 @@ export const py_basics_questions: Question[] = [
         },
       ],
       solution: `name = "Alice"\nage = 30\n\ngreeting = f"Hello, {name}! You are {age} years old."`,
+      tieredHints: {
+        apiSignature: 'f"...{expr}..." -> str',
+        skeleton: `name = "Alice"
+age = 30
+
+greeting = ____"Hello, {____}! You are {____} years old."`,
+      },
       explanation: 'f-strings (formatted string literals) embed expressions inside {} within a string prefixed with f. They support any Python expression: f"{name.upper()}", f"{age + 1}", f"{price:.2f}".',
       hints: ['Prefix string with f', 'Use {variable} for interpolation'],
       tags: ['f-string', 'formatting', 'string', 'python'],
@@ -1058,6 +1106,10 @@ print(len(person))`,
         },
       ],
       solution: `print("Hello, World!")`,
+      tieredHints: {
+        apiSignature: 'print(*values, sep=" ", end="\\n")',
+        skeleton: `____("____, ____!")`,
+      },
       explanation: '`print()` is the most basic Python function. It takes any value and displays it in the terminal. String literals (text) are written inside quotes — either single `\'` or double `"` quotes work in Python.',
       hints: [
         'Use the `print()` function',
@@ -1198,6 +1250,14 @@ age = 30
 height = 1.75
 
 print(f"Name: {name}, Age: {age}, Height: {height}")`,
+      tieredHints: {
+        apiSignature: 'f"...{expr}..." -> str',
+        skeleton: `name = "Alice"
+age = ____
+height = ____
+
+print(____"Name: {____}, Age: {____}, Height: {____}")`,
+      },
       explanation: 'F-strings (formatted string literals) let you embed variable values directly in strings using `{variable_name}` syntax. They are prefixed with `f` before the opening quote. F-strings are the modern, recommended way to format strings in Python (Python 3.6+).',
       hints: [
         'Strings go in quotes, integers are plain numbers, floats have a decimal point',
@@ -1228,6 +1288,11 @@ name = "Bob"
       ],
       solution: `name = "Bob"
 print(f"Hello, {name}!")`,
+      tieredHints: {
+        apiSignature: 'f"...{expr}..." -> str',
+        skeleton: `name = "____"
+print(____"Hello, {____}!")`,
+      },
       explanation: 'In real programs you\'d use `name = input("What is your name? ")` to get user input. The result is always a string. Here we simulate it by assigning directly. The f-string `f"Hello, {name}!"` embeds the variable value into the output.',
       hints: [
         'Use an f-string to include the name variable in the output',
@@ -1331,6 +1396,17 @@ print(a - b)   # 14
 print(a * b)   # 120
 print(a // b)  # 3
 print(a % b)   # 2`,
+      tieredHints: {
+        apiSignature: 'print(*values, sep=" ", end="\\n")',
+        skeleton: `a = ____
+b = ____
+
+____(a ____ b)
+____(a ____ b)
+____(a ____ b)
+____(a ____ b)
+____(a ____ b)`,
+      },
       explanation: 'Python\'s arithmetic operators: `+` add, `-` subtract, `*` multiply, `//` floor divide (whole number result), `%` modulo (remainder). Note: regular division `/` would give `3.333...` while `//` gives `3`.',
       hints: [
         'Use `+`, `-`, `*`, `//`, `%` in order',
@@ -1446,6 +1522,14 @@ print(a % b)   # 2`,
 print(sentence.upper())
 print(len(sentence))
 print(sentence.replace("fox", "cat"))`,
+      tieredHints: {
+        apiSignature: 'str.replace(old, new, count=-1) -> str',
+        skeleton: `sentence = "the quick brown fox"
+
+____(sentence.____())
+____(____(sentence))
+____(sentence.____("____", "____"))`,
+      },
       explanation: '`.upper()` converts to uppercase. `len()` is a built-in function that returns the number of characters. `.replace(old, new)` returns a new string with all occurrences of `old` replaced by `new`. None of these modify the original string — strings are immutable.',
       hints: [
         'Use `.upper()`, `len()`, and `.replace()`',
@@ -1556,6 +1640,20 @@ print(sentence.replace("fox", "cat"))`,
 print(classify_number(5))
 print(classify_number(-3))
 print(classify_number(0))`,
+      tieredHints: {
+        apiSignature: 'if cond: ... elif cond: ... else: ...',
+        skeleton: `def ____(n):
+    if n ____ 0:
+        return "positive"
+    elif n ____ 0:
+        return "negative"
+    else:
+        return "zero"
+
+print(____(5))
+print(____(-3))
+print(____(0))`,
+      },
       explanation: 'The `if/elif/else` chain tests conditions in order. The first condition that is `True` runs its block; the rest are skipped. `elif` is short for "else if" — use it for additional conditions. `else` is the catch-all that runs when no condition matched.',
       hints: [
         'Use `if`, `elif`, and `else`',
@@ -1651,6 +1749,26 @@ print(grade(83))
 print(grade(74))
 print(grade(61))
 print(grade(45))`,
+      tieredHints: {
+        apiSignature: 'if cond: ... elif cond: ... else: ...',
+        skeleton: `def ____(score):
+    if score >= ____:
+        return "A"
+    elif score >= ____:
+        return "B"
+    elif score >= ____:
+        return "C"
+    elif score >= ____:
+        return "D"
+    else:
+        return "F"
+
+____(____(95))
+____(____(83))
+____(____(74))
+____(____(61))
+____(____(45))`,
+      },
       explanation: 'When conditions are ordered from highest to lowest, you only need `>=` checks — if you reach `elif score >= 80`, you already know the score is below 90. The `else` clause handles everything that didn\'t match any condition.',
       hints: [
         'Order conditions from highest score down',
@@ -1703,6 +1821,13 @@ count = 1
 while count <= 5:
     print(count)
     count += 1`,
+      tieredHints: {
+        apiSignature: 'while condition: ...',
+        skeleton: `count = ____
+while count ____ ____:
+    ____(count)
+    count ____ 1`,
+      },
       explanation: 'The loop starts with `count = 1`. The condition `count <= 5` checks before each iteration. After printing, `count += 1` increments the counter (this is essential — without it, the loop would run forever). When `count` reaches 6, `6 <= 5` is False and the loop ends.',
       hints: [
         'Start with `count = 1` and loop while `count <= 5`',
@@ -1793,6 +1918,11 @@ while count <= 5:
       ],
       solution: `for i in range(1, 11):
       print(f"3 x {i} = {3 * i}")`,
+      tieredHints: {
+        apiSignature: 'range(start, stop, step=1) -> range',
+        skeleton: `for i in ____(1, ____):
+      ____(____"3 x {i} = {____ * i}")`,
+      },
       explanation: '`range(1, 11)` generates numbers 1 through 10. Inside the loop, `i` takes each value in turn. The f-string `f"3 x {i} = {3 * i}"` formats the output. Note: `range(1, 11)` not `range(1, 10)` because the stop value is exclusive.',
       hints: [
         'Use `range(1, 11)` to get 1 through 10',
@@ -1820,6 +1950,11 @@ while count <= 5:
       ],
       solution: `for n in range(2, 21, 2):
       print(n)`,
+      tieredHints: {
+        apiSignature: 'range(start, stop, step=1) -> range',
+        skeleton: `for n in ____(____, ____, ____):
+      ____(n)`,
+      },
       explanation: '`range(start, stop, step)` takes three arguments. `range(2, 21, 2)` starts at 2, goes up to (not including) 21, in steps of 2 — giving 2, 4, 6, ..., 20. Using a step in `range()` is more Pythonic than checking `if n % 2 == 0` inside the loop.',
       hints: [
         '`range()` can take a step as the third argument',
@@ -1893,6 +2028,14 @@ scores = [85, 92, 78]
 
 for name, score in zip(names, scores):
     print(f"{name}: {score}")`,
+      tieredHints: {
+        apiSignature: 'zip(*iterables) -> zip',
+        skeleton: `names = ["Alice", "Bob", "Charlie"]
+scores = [____, ____, ____]
+
+for name, score in ____(names, scores):
+    print(____"{name}: {score}")`,
+      },
       explanation: '`zip(names, scores)` creates pairs: `("Alice", 85)`, `("Bob", 92)`, etc. The `for name, score in zip(...)` unpacks each pair into two variables. This is clean and Pythonic — no index manipulation needed.',
       hints: [
         'Use `for name, score in zip(names, scores):`',
@@ -1944,6 +2087,13 @@ for name, score in zip(names, scores):
 
 print(sorted(words))
 print(sorted(words, key=len))`,
+      tieredHints: {
+        apiSignature: 'sorted(iterable, key=None, reverse=False) -> list',
+        skeleton: `words = ["banana", "apple", "cherry", "date"]
+
+print(____(words))
+print(____(words, ____=len))`,
+      },
       explanation: '`sorted(words)` sorts alphabetically by default. `sorted(words, key=len)` sorts by string length using `len` as the sorting function. The `key` parameter accepts any function — you can sort by any attribute or transformation. The original `words` list is unchanged.',
       hints: [
         '`sorted(words)` for alphabetical',
@@ -1997,6 +2147,13 @@ quantity = 3
 quantity = 3
 total = price * quantity
 print(f"Total: €{total:.2f}")`,
+      tieredHints: {
+        apiSignature: 'f"{value:.2f}" -> str',
+        skeleton: `price = ____
+quantity = ____
+total = price ____ quantity
+print(____"Total: €{total:____}")`,
+      },
       explanation: '`price * quantity` gives `59.7`. The f-string `f"Total: €{total:.2f}"` formats `59.7` as `59.70` with exactly 2 decimal places. The `:.2f` format spec ensures currency-style formatting. Note: for serious financial calculations, use Python\'s `decimal` module to avoid floating-point precision issues.',
       hints: [
         'Calculate `total = price * quantity` first',
@@ -2084,6 +2241,16 @@ print(f"Total: €{total:.2f}")`,
 print(is_palindrome("racecar"))
 print(is_palindrome("hello"))
 print(is_palindrome("Madam"))`,
+      tieredHints: {
+        apiSignature: 's[start:stop:step] -> str',
+        skeleton: `def ____(word):
+    cleaned = word.____()
+    return cleaned == cleaned[____]
+
+print(____("racecar"))
+print(____("hello"))
+print(____("Madam"))`,
+      },
       explanation: '`.lower()` makes it case-insensitive. `cleaned[::-1]` uses slicing with step `-1` to reverse the string — `[::-1]` means "all characters, from end to start". Comparing the string to its reverse tells you if it\'s a palindrome. This is a classic Python idiom for reversing sequences.',
       hints: [
         'Use `.lower()` for case-insensitive comparison',
@@ -2123,6 +2290,17 @@ print(is_palindrome("Madam"))`,
 
 print(flatten([[1, 2], [3, 4], [5]]))
 print(flatten([[10, 20], [], [30]]))`,
+      tieredHints: {
+        apiSignature: 'list.extend(iterable) -> None',
+        skeleton: `def ____(nested):
+    result = []
+    for sublist in nested:
+        result.____(sublist)
+    return result
+
+____(____([[1, 2], [3, 4], [5]]))
+____(____([[10, 20], [], [30]]))`,
+      },
       explanation: '`.extend()` adds all items from one list to another. For each sublist in the nested list, we extend the result. An alternative using list comprehension: `[item for sublist in nested for item in sublist]`. Both are valid — the comprehension is more compact, the loop version is more readable.',
       hints: [
         'Use `.extend()` to add all items from each sublist',

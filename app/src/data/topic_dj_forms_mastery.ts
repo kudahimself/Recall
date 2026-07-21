@@ -214,6 +214,10 @@ def create_article(request):
         form = ArticleForm()
     return render(request, "articles/new.html", {"form": form})`,
       explanation: 'Because `commit=False` defers the M2M, the order is strict: build the instance, attach the server-set `author`, `article.save()` to get a pk, then `form.save_m2m()` to write the `tags` through-rows. Skipping `save_m2m()` silently drops the tags.',
+      tieredHints: {
+        apiSignature: 'ModelForm.save_m2m()',
+        skeleton: 'from django.shortcuts import render, redirect\nfrom .forms import ____\n\ndef ____(request):\n    if request.method == ____:\n        form = ____(request.POST)\n        if form.____():\n            article = form.____(____=False)\n            article.____ = request.user\n            article.____()\n            form.____()\n            return ____("article-detail", pk=article.pk)\n    else:\n        form = ____()\n    return ____(request, ____, {"form": form})',
+      },
       hints: [
         'article = form.save(commit=False); article.author = request.user; article.save()',
         'Then form.save_m2m() for the deferred tags',

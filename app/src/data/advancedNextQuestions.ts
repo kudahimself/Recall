@@ -185,6 +185,30 @@ export default function SearchBar() {
       'Use setTimeout + clearTimeout for debounce',
       'router.replace prevents adding a history entry per keystroke',
     ],
+    tieredHints: {
+      apiSignature: 'function SearchBar()',
+      skeleton: `export default function SearchBar() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [query, setQuery] = useState(searchParams.____("q") || "");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new ____(searchParams.toString());
+      if (query) {
+        params.____("q", query);
+      } else {
+        params.____("q");
+      }
+      router.____(\`\${pathname}?\${params.toString()}\`);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, router, pathname, searchParams]);
+
+  return <input value={query} onChange={(e) => setQuery(e.target.value)} />;
+}`,
+    },
     tags: ['next.js', 'url-state', 'useSearchParams', 'useRouter', 'debounce'],
     concepts: ['next-url-state'],
   },
@@ -273,6 +297,24 @@ export default function FilterBar({ category, sort }) {
       'Client Components use useRouter to update the URL',
       'new URLSearchParams preserves existing params when adding new ones',
     ],
+    tieredHints: {
+      apiSignature: 'async function ProductsPage({ searchParams })',
+      skeleton: `// page.tsx
+export default async function ProductsPage({ searchParams }) {
+  const category = searchParams.____ || "all";
+  const sort = searchParams.____ || "newest";
+  return <FilterBar category={category} sort={sort} />;
+}
+
+// FilterBar.tsx
+export default function FilterBar({ category, sort }) {
+  function updateParam(key, value) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(key, value);
+    router.____(\`\${pathname}?\${params.toString()}\`);
+  }
+}`,
+    },
     tags: ['next.js', 'url-state', 'server-components', 'searchParams', 'filters'],
     concepts: ['next-url-state', 'next-server-vs-client'],
   },
@@ -464,6 +506,23 @@ export default function Pager({ currentPage, totalPages }) {
       'Only overwrite the "page" key, leave everything else untouched',
       'Conditionally render each Link based on currentPage vs 1 and totalPages',
     ],
+    tieredHints: {
+      apiSignature: 'function Pager({ currentPage, totalPages })',
+      skeleton: `export default function Pager({ currentPage, totalPages }) {
+  function buildHref(page) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.____("page", String(page));
+    return \`\${pathname}?\${params.toString()}\`;
+  }
+
+  return (
+    <div>
+      {currentPage ____ 1 && <Link href={buildHref(currentPage - 1)}>Previous</Link>}
+      {currentPage ____ totalPages && <Link href={buildHref(currentPage + 1)}>Next</Link>}
+    </div>
+  );
+}`,
+    },
     tags: ['next.js', 'pagination', 'Link', 'URLSearchParams', 'app-router'],
     concepts: ['next-url-state'],
   },
@@ -640,6 +699,23 @@ export default function ErrorBoundary({
       'error has a message property and optional digest',
       'reset() re-renders the segment without a full page reload',
     ],
+    tieredHints: {
+      apiSignature: 'function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void })',
+      skeleton: `"use client";
+
+export default function ErrorBoundary({ error, reset }) {
+  useEffect(() => {
+    console.error("Route error:", error);
+  }, [____]);
+
+  return (
+    <div>
+      <p>{error.____}</p>
+      <button onClick={() => ____()}>Try Again</button>
+    </div>
+  );
+}`,
+    },
     tags: ['next.js', 'error-handling', 'error.tsx', 'error-boundary'],
     concepts: ['js-error-handling', 'next-error-boundary'],
   },
@@ -709,6 +785,23 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
       'error.flatten().fieldErrors gives { fieldName: ["message"] }',
       'Return the result — never throw for validation errors',
     ],
+    tieredHints: {
+      apiSignature: 'async function createUser(formData: FormData): Promise<ActionResult>',
+      skeleton: `"use server";
+
+export async function createUser(formData: FormData): Promise<ActionResult> {
+  const result = userSchema.____(rawData);
+
+  if (!result.success) {
+    return {
+      success: false,
+      errors: result.error.____().fieldErrors as Record<string, string[]>,
+    };
+  }
+  await saveUser(result.____);
+  return { success: true };
+}`,
+    },
     tags: ['next.js', 'server-actions', 'zod', 'validation', 'error-handling'],
     concepts: ['next-server-actions', 'forms-zod-schema', 'js-error-handling'],
   },
@@ -828,6 +921,19 @@ export async function GET(
       'Log the real error server-side, but return a stable, minimal error shape to the client',
       'NextResponse.json takes the body first, then an options object with status',
     ],
+    tieredHints: {
+      apiSignature: 'async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> })',
+      skeleton: `export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  try {
+    const order = await ____(id);
+    return NextResponse.json(order, { status: 200 });
+  } catch (error) {
+    console.error("Failed to fetch order:", error);
+    return NextResponse.json({ error: "____" }, { status: ____ });
+  }
+}`,
+    },
     tags: ['next.js', 'route-handlers', 'try-catch', 'error-handling', 'NextResponse'],
     concepts: ['next-error-boundary', 'next-api-routes', 'js-error-handling'],
   },
@@ -1056,6 +1162,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       'Always validate credentials before querying the database',
       'bcrypt.compare needs bcryptjs imported at the top of the file',
     ],
+    tieredHints: {
+      apiSignature: 'const { handlers, auth, signIn, signOut } = NextAuth(config)',
+      skeleton: `export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    Google({
+      clientId: process.env.____,
+      clientSecret: process.env.____,
+    }),
+    Credentials({
+      async authorize(credentials) {
+        const user = await getUserByEmail(parsed.data.email);
+        const match = await bcrypt.____(parsed.data.password, user.hashedPassword);
+        if (!match) return null;
+        return { id: user.id, email: user.email };
+      },
+    }),
+  ],
+});`,
+    },
     tags: ['next-auth', 'authentication', 'google-oauth', 'credentials', 'auth.js'],
     concepts: ['web-security-auth-tokens'],
   },
@@ -1104,6 +1229,18 @@ export default async function DashboardPage() {
       'redirect() immediately stops execution and sends a redirect response',
       'session.user contains name, email, and image from the provider',
     ],
+    tieredHints: {
+      apiSignature: 'async function DashboardPage()',
+      skeleton: `export default async function DashboardPage() {
+  const session = await ____();
+
+  if (!session) {
+    ____("/login");
+  }
+
+  return <div>Welcome, {session.____?.name}!</div>;
+}`,
+    },
     tags: ['next-auth', 'protected-routes', 'server-components', 'auth', 'redirect'],
     concepts: ['web-security-auth-tokens', 'next-server-vs-client'],
   },
@@ -1345,6 +1482,21 @@ export function AuthButtons() {
       'user is only defined in jwt() on the initial sign-in call - stash what you need onto the token then',
       'session() controls what auth()/useSession() actually return - token data is invisible to the client until copied here',
     ],
+    tieredHints: {
+      apiSignature: 'callbacks: { jwt({ token, user }), session({ session, token }) }',
+      skeleton: `callbacks: {
+  async jwt({ token, user }) {
+    if (user) {
+      token.____ = user.role;
+    }
+    return ____;
+  },
+  async session({ session, token }) {
+    session.user.____ = token.role;
+    return ____;
+  },
+}`,
+    },
     tags: ['next-auth', 'callbacks', 'jwt', 'session', 'rbac'],
     concepts: ['web-security-auth-tokens'],
   },

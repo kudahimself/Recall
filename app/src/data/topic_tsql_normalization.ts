@@ -9,7 +9,6 @@ import {
   Difficulty,
   Topic,
   Course,
-  CodeLanguage,
 } from '../types';
 
 export const tsql_normalization_questions: Question[] = [

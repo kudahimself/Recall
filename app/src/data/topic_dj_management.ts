@@ -118,6 +118,10 @@ class Command(BaseCommand):
         Product.objects.bulk_create(products)
         self.stdout.write(self.style.SUCCESS(f'Successfully imported {len(products)} products'))`,
       explanation: 'Management commands are Python classes that extend BaseCommand and live in yourapp/management/commands/. Django discovers them automatically via the directory convention — the __init__.py files in management/ and commands/ directories are required. add_arguments() uses argparse under the hood, so you get built-in validation, help text, and type conversion. handle() is the entry point that Django calls when you run the command. bulk_create() is critical for performance: instead of N individual INSERT statements, it typically generates a single INSERT with multiple value sets, reducing database round-trips from hundreds/thousands to one. Use self.stdout.write() with self.style.SUCCESS/ERROR for colored terminal output that respects Django\'s verbosity settings.',
+      tieredHints: {
+        apiSignature: 'BaseCommand.add_arguments(parser)',
+        skeleton: 'import csv\nfrom django.core.management.base import BaseCommand\nfrom myapp.models import Product\n\nclass Command(____):\n    help = \'Import products from a CSV file\'\n\n    def ____(self, parser):\n        parser.add_argument(\'--file\', type=str, required=True, help=\'Path to CSV file\')\n\n    def ____(self, *args, **options):\n        file_path = options[\'file\']\n        products = []\n\n        with open(file_path, \'r\') as f:\n            reader = csv.DictReader(f)\n            for row in reader:\n                products.append(Product(\n                    name=row[\'name\'],\n                    category=row[\'category\'],\n                    price=row[\'price\'],\n                ))\n\n        Product.objects.bulk_create(products)\n        self.stdout.write(self.style.SUCCESS(f\'Successfully imported {len(products)} products\'))',
+      },
       hints: [
         'The class must be named Command and extend BaseCommand',
         'add_arguments receives an argparse parser',

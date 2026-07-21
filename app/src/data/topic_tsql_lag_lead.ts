@@ -127,7 +127,7 @@ ORDER BY v.d;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.FactOrders` (CustomerKey, OrderDate, Amount), return CustomerKey, OrderDate, Amount and the previous order\'s Amount for that customer (ordered by OrderDate), aliased `PrevAmount`, using 0 when there is no previous order.',
-    starterCode: `-- LAG(Amount, 1, 0) OVER (PARTITION BY ... ORDER BY ...) AS PrevAmount
+    starterCode: `-- Return CustomerKey, OrderDate, Amount, and PrevAmount (previous order Amount per customer, defaulting to 0)
 `,
     testCases: [
       {
@@ -139,6 +139,12 @@ ORDER BY v.d;`,
     solution: `SELECT CustomerKey, OrderDate, Amount,
        LAG(Amount, 1, 0) OVER (PARTITION BY CustomerKey ORDER BY OrderDate) AS PrevAmount
 FROM dbo.FactOrders;`,
+    tieredHints: {
+      apiSignature: 'LAG(scalar_expression, offset, default) OVER (PARTITION BY col ORDER BY col ASC|DESC) -> scalar_value',
+      skeleton: `SELECT CustomerKey, OrderDate, Amount,
+       ____(Amount, ____, ____) OVER (____ ____ CustomerKey ____ ____ OrderDate) AS ____
+FROM dbo.FactOrders;`,
+    },
     explanation: 'LAG(Amount, 1, 0) fetches the prior row\'s Amount within each customer\'s date-ordered sequence, defaulting to 0 for each customer\'s first order. Subtracting `Amount - PrevAmount` would then give the period-over-period change.',
     hints: ['Offset 1 back, default 0', 'PARTITION BY CustomerKey ORDER BY OrderDate'],
     tags: ['tsql', 'lag-lead', 'lag', 'partition-by'],

@@ -107,6 +107,42 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
       'Trap focus by intercepting Tab and Shift+Tab on first/last focusable elements',
       'Listen for Escape key in a useEffect keydown handler',
     ],
+    tieredHints: {
+      apiSignature: 'function AccessibleModal({ isOpen, onClose, title, children })',
+      skeleton: `function AccessibleModal({ isOpen, onClose, title, children }) {
+  const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "____") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = modalRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (e.shiftKey && document.activeElement === focusable[0]) {
+          e.preventDefault();
+          focusable[focusable.length - 1].____();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div ref={modalRef} role="____" aria-modal="____" aria-labelledby="modal-title">
+        <h2 id="modal-title">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}`,
+    },
     tags: ['accessibility', 'modal', 'dialog', 'focus-trap', 'aria', 'react'],
     concepts: ['a11y-aria-roles'],
   },
@@ -258,6 +294,21 @@ function SkipNav() {
       'On :focus, reset position to fixed at top: 0 to make it visible',
       'The target element needs id="main-content" and tabIndex={-1}',
     ],
+    tieredHints: {
+      apiSignature: 'function SkipNav()',
+      skeleton: `// SkipNav.jsx
+function SkipNav() {
+  return (
+    <a href="#____" className="____">
+      ____
+    </a>
+  );
+}
+
+// styles.css
+// .skip-nav { position: absolute; left: -9999px; }
+// .skip-nav:____ { position: fixed; left: 0; top: 0; }`,
+    },
     tags: ['skip-nav', 'keyboard', 'navigation', 'accessibility', 'WCAG'],
     concepts: ['a11y-keyboard-nav', 'a11y-aria-roles'],
   },
@@ -431,6 +482,29 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       'Track activeIndex for keyboard navigation with ArrowUp/ArrowDown',
       'Return focus to the trigger button when closing',
     ],
+    tieredHints: {
+      apiSignature: 'function AccessibleDropdown({ options, value, onChange, label })',
+      skeleton: `function AccessibleDropdown({ options, value, onChange, label }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div onKeyDown={handleKeyDown}>
+      <button aria-haspopup="____" aria-expanded={____} onClick={() => setIsOpen(!isOpen)}>
+        {value || "Select an option"}
+      </button>
+      {isOpen && (
+        <ul role="____" aria-labelledby="dropdown-label">
+          {options.map((option) => (
+            <li key={option} role="____" aria-selected={option === value}>
+              {option}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}`,
+    },
     tags: ['dropdown', 'listbox', 'keyboard', 'aria', 'accessibility', 'react'],
     concepts: ['a11y-keyboard-nav', 'a11y-aria-roles'],
   },
@@ -895,6 +969,19 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       'aria-atomic="true" re-reads the whole updated text, not just the changed part',
       'Use the visually-hidden pattern, not display: none, so it stays announceable',
     ],
+    tieredHints: {
+      apiSignature: 'function SearchResults({ count, results })',
+      skeleton: `function SearchResults({ count, results }) {
+  return (
+    <div>
+      <div aria-live="____" aria-atomic="____" className="____">
+        {count} results found
+      </div>
+      {/* results list unchanged from starterCode */}
+    </div>
+  );
+}`,
+    },
     tags: ['aria-live', 'live-region', 'screen-reader', 'accessibility', 'react'],
     concepts: ['a11y-live-regions'],
   },
@@ -943,6 +1030,16 @@ function CardDetails({ detailsRef, children }) {
       'Programmatic-focus-only, skipped by Tab: tabIndex={-1}',
       'Positive values (1, 2, ...) override natural order - this is why they are avoided',
     ],
+    tieredHints: {
+      apiSignature: 'function Card({ title })',
+      skeleton: `function Card({ title }) {
+  return <div tabIndex={____}>{title}</div>;
+}
+
+function CardDetails(props) {
+  return <div ref={____} tabIndex={____}>{____}</div>;
+}`,
+    },
     tags: ['tabindex', 'keyboard', 'focus', 'accessibility', 'react'],
     concepts: ['a11y-tabindex'],
   },
@@ -1145,6 +1242,13 @@ export function cn(...inputs: ClassValue[]) {
       'twMerge handles Tailwind conflicts: twMerge("p-2 p-4") → "p-4"',
       'The function is just: twMerge(clsx(inputs))',
     ],
+    tieredHints: {
+      apiSignature: 'function cn(...inputs: ClassValue[])',
+      skeleton: `// imports: clsx (with the ClassValue type) and twMerge from tailwind-merge
+export function cn(...inputs: ____[]) {
+  return ____(____(inputs));
+}`,
+    },
     tags: ['cn', 'clsx', 'tailwind-merge', 'utility', 'shadcn'],
     concepts: ['shadcn-cn-utility', 'shadcn-radix-primitives'],
   },
@@ -1253,6 +1357,27 @@ export function cn(...inputs: ClassValue[]) {
       'Define CSS variables in :root (light) and .dark (dark)',
       'next-themes provides useTheme() hook with theme and setTheme',
     ],
+    tieredHints: {
+      apiSignature: 'darkMode: "class"',
+      skeleton: `/* tailwind.config.js */
+/* module.exports = {
+  darkMode: "____",
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  theme: { extend: { colors: { background: "hsl(var(--background))" } } },
+}; */
+
+/* globals.css */
+@layer base {
+  :root { --background: 0 0% 100%; }
+  .____ { --background: 222 47% 11%; }
+}
+
+/* ThemeToggle.jsx */
+/* const { theme, setTheme } = useTheme();
+ * <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+ *   {theme === "____" ? "Light" : "Dark"}
+ * </button> */`,
+    },
     tags: ['dark-mode', 'tailwind', 'next-themes', 'css-variables', 'shadcn'],
     concepts: ['web-tailwind-utility', 'shadcn-radix-primitives'],
   },
@@ -1394,6 +1519,17 @@ export const buttonVariants = cva(
       'defaultVariants supplies the classes used when a caller omits that prop',
       'The generated function returns the base classes plus the resolved variant classes',
     ],
+    tieredHints: {
+      apiSignature: 'const buttonVariants = cva(base, options)',
+      skeleton: `import { cva } from "class-variance-authority";
+
+export const buttonVariants = cva("inline-flex items-center justify-center rounded-md", {
+  variants: {
+    variant: { default: "____", destructive: "____" },
+  },
+  defaultVariants: { variant: "____" },
+});`,
+    },
     tags: ['cva', 'class-variance-authority', 'variants', 'shadcn'],
     concepts: ['shadcn-cva'],
   },
@@ -1465,6 +1601,15 @@ function Button({ asChild, className, variant, size, ...props }) {
       'Slot comes from @radix-ui/react-slot',
       'Slot merges props onto its child instead of rendering its own element',
     ],
+    tieredHints: {
+      apiSignature: 'function Button({ asChild, className, variant, size, ...props })',
+      skeleton: `import { Slot } from "@radix-ui/react-slot";
+
+function Button({ asChild, className, variant, size, ...props }) {
+  const Comp = asChild ? ____ : "____";
+  return <Comp className={cn(buttonVariants({ variant, size }), className)} {...____} />;
+}`,
+    },
     tags: ['asChild', 'radix-slot', 'composition', 'shadcn', 'next-link'],
     concepts: ['shadcn-aschild'],
   },
@@ -1523,6 +1668,18 @@ function Button({ asChild, className, variant, size, ...props }) {
       'Same variable name in :root and .dark, different lightness',
       'Tailwind config wraps it as hsl(var(--brand)) so opacity modifiers still work',
     ],
+    tieredHints: {
+      apiSignature: 'var(--brand)',
+      skeleton: `// globals.css
+// @layer base { :root { --brand: light-value } .dark { --brand: dark-value } }
+:root {
+  --brand: ____;
+}
+.dark {
+  --brand: ____;
+}
+// tailwind.config.js colors.brand maps to hsl(var(____))`,
+    },
     tags: ['theming', 'css-variables', 'dark-mode', 'tailwind', 'shadcn'],
     concepts: ['web-tailwind-utility'],
   },
@@ -1560,6 +1717,14 @@ interface ButtonProps
       'Extend BOTH ButtonHTMLAttributes<HTMLButtonElement> and VariantProps<typeof buttonVariants>',
       'This avoids hand-typing variant/size unions that could drift from the cva() source of truth',
     ],
+    tieredHints: {
+      apiSignature: 'interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}',
+      skeleton: `import { type VariantProps } from "class-variance-authority";
+
+interface ButtonProps
+  extends ButtonHTMLAttributes<____>,
+    ____<typeof ____> {}`,
+    },
     tags: ['VariantProps', 'cva', 'typescript', 'shadcn'],
     concepts: ['shadcn-cva'],
   },

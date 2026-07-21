@@ -118,7 +118,7 @@ WITH (
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'In Synapse, use CTAS to build `dbo.FactSalesByCustomer` from a query that selects `CustomerKey` and `SUM(Amount) AS TotalAmount` from `dbo.FactSales` grouped by `CustomerKey`. The new table must be HASH-distributed on `CustomerKey` and stored as a clustered columnstore. Write the CREATE TABLE AS SELECT.',
-    starterCode: `-- CREATE TABLE dbo.FactSalesByCustomer WITH ( DISTRIBUTION = ..., CLUSTERED COLUMNSTORE INDEX ) AS SELECT ...;
+    starterCode: `-- Create dbo.FactSalesByCustomer using CTAS with HASH distribution on CustomerKey and a clustered columnstore index
 `,
     testCases: [
       {
@@ -138,6 +138,18 @@ FROM dbo.FactSales
 GROUP BY CustomerKey;`,
     explanation: 'CTAS creates and bulk-populates the new table in one parallel operation, with the physical design declared up front in `WITH (...)`: `DISTRIBUTION = HASH(CustomerKey)` keeps each customer\'s data co-located, and `CLUSTERED COLUMNSTORE INDEX` compresses it for scan/aggregate. This is the canonical Synapse pattern for materialising an aggregate.',
     hints: ['CREATE TABLE name WITH (DISTRIBUTION = HASH(CustomerKey), CLUSTERED COLUMNSTORE INDEX) AS SELECT …', 'GROUP BY CustomerKey, SUM(Amount)'],
+    tieredHints: {
+      apiSignature: 'SELECT col, agg_func(expr) AS alias FROM table GROUP BY col',
+      skeleton: `CREATE TABLE dbo.FactSalesByCustomer
+WITH (
+    DISTRIBUTION = ____ (CustomerKey),
+    ____
+)
+AS
+SELECT CustomerKey, ____(Amount) AS TotalAmount
+FROM dbo.FactSales
+GROUP BY ____;`,
+    },
     tags: ['tsql', 'synapse', 'ctas', 'distribution', 'columnstore'],
   },
 ];

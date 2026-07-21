@@ -66,6 +66,15 @@ print(data["url"])`,
       ],
       tags: ['requests', 'GET', 'json', 'basics'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'requests.get(url, params=None, timeout=None) -> Response',
+        skeleton: `import requests
+
+r = ____.____("https://httpbin.org/get")
+r.____()
+data = r.____()
+print(data["____"])`,
+      },
     },
   {
       id: 'py-http-3',
@@ -101,6 +110,18 @@ print(r.json()["json"])`,
       ],
       tags: ['requests', 'POST', 'json', 'timeout'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'Response.json() -> Any',
+        skeleton: `import requests
+
+r = ____.____(
+    "https://httpbin.org/post",
+    ____={"name": "Alice", "age": 30},
+    ____=10,
+)
+r.____()
+print(r.____()["____"])`,
+      },
     },
   {
       id: 'py-http-4',
@@ -136,6 +157,18 @@ with requests.Session() as session:
       ],
       tags: ['requests', 'Session', 'auth', 'headers'],
       concepts: ['dj-auth-token-vs-session'],
+      tieredHints: {
+        apiSignature: 'session.headers.update(dict) -> None',
+        skeleton: `import requests
+
+with ____.____() as session:
+    session.____.____({"Authorization": "____"})
+    r1 = session.____("https://httpbin.org/headers")
+    r1.____()
+    r2 = session.____("https://httpbin.org/bearer")
+    r2.____()
+    print(r2.json()["____"])`,
+      },
     },
   {
       id: 'py-http-5',
@@ -173,6 +206,20 @@ except requests.ConnectionError:
       ],
       tags: ['requests', 'error-handling', 'HTTPError', 'Timeout'],
       concepts: ['py-exception-hierarchy'],
+      tieredHints: {
+        apiSignature: 'HTTPError.response -> Response',
+        skeleton: `import requests
+
+try:
+    r = ____.____("https://httpbin.org/status/500", timeout=5)
+    r.____()
+except ____.____ as e:
+    print(f"http error: {e.____.____}")
+except requests.____:
+    print("timeout")
+except requests.____:
+    print("connection refused")`,
+      },
     },
   {
       id: 'py-http-6',
@@ -373,6 +420,16 @@ print(args["page"])`,
       ],
       tags: ['requests', 'GET', 'params', 'query-string'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'requests.get(url, params=None, timeout=None) -> Response',
+        skeleton: `import requests
+
+r = ____.____("https://httpbin.org/get", ____={"q": "recall", "page": "2"})
+r.____()
+args = r.____()["____"]
+print(args["q"])
+print(args["____"])`,
+      },
     },
   {
       id: 'py-http-statuscode-cloze-1',
@@ -427,6 +484,14 @@ print(r.ok)`,
       ],
       tags: ['requests', 'status_code', 'ok', 'response'],
       concepts: ['py-exception-hierarchy'],
+      tieredHints: {
+        apiSignature: 'requests.get(url, params=None, timeout=None) -> Response',
+        skeleton: `import requests
+
+r = requests.____("https://httpbin.org/status/200")
+print(r.____)
+print(r.____)`,
+      },
     },
   {
       id: 'py-http-9',
@@ -458,6 +523,14 @@ print(r.json()["json"])`,
       ],
       tags: ['requests', 'PUT', 'json', 'idempotent'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'Response.json() -> Any',
+        skeleton: `import requests
+
+r = ____.____("https://httpbin.org/put", ____={"title": "Draft"})
+r.____()
+print(r.json()["____"])`,
+      },
     },
   {
       id: 'py-http-cloze-4',
@@ -512,6 +585,15 @@ with httpx.Client() as client:
       ],
       tags: ['httpx', 'Client', 'GET', 'json'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'httpx.Client(base_url="", timeout=5.0) -> Client',
+        skeleton: `import httpx
+
+with httpx.____() as client:
+    r = client.____("https://httpbin.org/get")
+    r.____()
+    print(r.____()["____"])`,
+      },
     },
   {
       id: 'py-http-12',
@@ -546,6 +628,17 @@ print(r.json()["files"]["document"])`,
       ],
       tags: ['requests', 'POST', 'files', 'multipart'],
       concepts: ['py-json-serialization'],
+      tieredHints: {
+        apiSignature: 'requests.post(url, data=None, files=None, json=None) -> Response',
+        skeleton: `import requests
+
+r = ____.____(
+    "https://httpbin.org/post",
+    ____={"document": ("notes.txt", b"hello")},
+)
+r.____()
+print(r.json()["files"]["____"])`,
+      },
     },
   {
       id: 'py-http-parsons-4',
@@ -612,6 +705,17 @@ print(total)`,
         'Sum len(chunk) for the byte total',
       ],
       tags: ['requests', 'stream', 'iter_content', 'download'],
+      tieredHints: {
+        apiSignature: 'Response.iter_content(chunk_size=1) -> Iterator[bytes]',
+        skeleton: `import requests
+
+r = ____.____("https://httpbin.org/bytes/1024", ____=True)
+r.raise_for_status()
+total = 0
+for chunk in r.____(chunk_size=____):
+    total ____ ____(chunk)
+print(total)`,
+      },
     },
   {
       id: 'py-http-14',
@@ -698,6 +802,27 @@ print(r.json()["url"])`,
       ],
       tags: ['requests', 'Session', 'HTTPAdapter', 'Retry', 'backoff', 'resilience'],
       concepts: ['py-exception-hierarchy'],
+      tieredHints: {
+        apiSignature: 'Response.json() -> Any',
+        skeleton: `import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+session = ____.____()
+retry = ____(
+    total=____,
+    backoff_factor=____,
+    status_forcelist=____,
+    respect_retry_after_header=____,
+)
+adapter = ____(max_retries=retry)
+session.____("http://", adapter)
+session.____("https://", adapter)
+
+r = session.____("https://httpbin.org/get", timeout=10)
+r.____()
+print(r.json()["____"])`,
+      },
     },
   {
       id: 'py-http-retry-cloze-1',

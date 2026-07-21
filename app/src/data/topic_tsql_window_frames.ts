@@ -100,7 +100,7 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.FactOrders` (CustomerKey, OrderDate, Amount), return CustomerKey, OrderDate, Amount and a per-customer running total of Amount ordered by OrderDate, aliased `RunningTotal`.',
-    starterCode: `-- SUM(Amount) OVER (PARTITION BY ... ORDER BY ...) AS RunningTotal
+    starterCode: `-- dbo.FactOrders (CustomerKey, OrderDate, Amount); return CustomerKey, OrderDate, Amount, and RunningTotal per customer
 `,
     testCases: [
       {
@@ -114,6 +114,12 @@ FROM dbo.FactOrders;`,
 FROM dbo.FactOrders;`,
     explanation: '`PARTITION BY CustomerKey` restarts the accumulation for each customer; `ORDER BY OrderDate` with the default frame makes it a running total of that customer\'s spend over time.',
     hints: ['PARTITION BY CustomerKey to reset per customer', 'ORDER BY OrderDate for the cumulative effect'],
+    tieredHints: {
+      apiSignature: 'SUM(expression) OVER ([PARTITION BY column] [ORDER BY column])',
+      skeleton: `SELECT ____, ____, ____,
+       ____(____) OVER (PARTITION BY ____ ORDER BY ____) AS ____
+FROM dbo.FactOrders;`,
+    },
     tags: ['tsql', 'window-frames', 'running-total', 'partition-by'],
   },
   {
@@ -142,6 +148,16 @@ FROM dbo.FactOrders;`,
 FROM dbo.FactOrders;`,
     explanation: 'This combines three primitives: PARTITION BY to keep each customer\'s sequence separate, ORDER BY to define "before," and an explicit ROWS BETWEEN 2 PRECEDING AND CURRENT ROW frame to slide a fixed 3-row window instead of accumulating everything since the start.',
     hints: ['Partition per customer, order by date', 'A fixed-size sliding window needs an explicit ROWS BETWEEN frame, not the default'],
+    tieredHints: {
+      apiSignature: 'AVG(expression) OVER (PARTITION BY column ORDER BY column ROWS BETWEEN n PRECEDING AND CURRENT ROW)',
+      skeleton: `SELECT ____, ____, ____,
+       ____(____) OVER (
+           PARTITION BY ____
+           ORDER BY ____
+           ____ BETWEEN ____ PRECEDING AND CURRENT ____
+       ) AS ____
+FROM dbo.FactOrders;`,
+    },
     tags: ['tsql', 'window-frames', 'moving-average', 'rows-between', 'partition-by'],
   },
 ];

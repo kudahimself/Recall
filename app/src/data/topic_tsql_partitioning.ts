@@ -134,6 +134,11 @@ SWITCH TO dbo.FactSales PARTITION 2;`,
     ],
     solution: `ALTER TABLE dbo.FactSales_Stash
 SWITCH TO dbo.FactSales PARTITION 3;`,
+    tieredHints: {
+      apiSignature: 'ALTER TABLE staging_table SWITCH [PARTITION source_partition_num] TO target_table [PARTITION target_partition_num];',
+      skeleton: `____ TABLE dbo.FactSales_Stash
+____ ____ dbo.FactSales ____ 3;`,
+    },
     explanation: '`ALTER TABLE <staging> SWITCH TO <partitioned> PARTITION <n>` reassigns the staging table\'s data into partition 3 of the target as a metadata-only operation — instant and minimally logged no matter how many rows. The staging table must match schema/indexes/filegroup and carry a CHECK constraint proving its rows belong in that partition\'s range.',
     hints: ['ALTER TABLE staging SWITCH TO target PARTITION n', 'Metadata-only, needs a matching CHECK constraint'],
     tags: ['tsql', 'partitioning', 'partition-switching'],

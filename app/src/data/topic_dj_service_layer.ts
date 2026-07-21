@@ -85,6 +85,10 @@ def create_order(user, items):
         'select_for_update() locks the row to prevent race conditions',
         'Celery task is called after the transaction commits',
       ],
+      tieredHints: {
+        apiSignature: 'transaction.atomic(); select_for_update(); task.delay(*args)',
+        skeleton: 'from django.db import ____\nfrom myapp.models import ____, ____, ____\nfrom myapp.tasks import ____\n\n\nclass InsufficientStockError(____):\n    def ____(self, product_name, requested, available):\n        self.____ = ____\n        self.____ = ____\n        self.____ = ____\n        super().____(f"Not enough stock for {product_name}")\n\n\ndef create_order(user, items):\n    for ____ in items:\n        product = ____.____.____(id=____["____"])\n        if product.____ < ____["____"]:\n            raise ____(product.____, ____["____"], product.____)\n\n    with ____.____():\n        order = ____.____.____(user=____, status="____")\n\n        for ____ in items:\n            product = ____.____.____().____(id=____["____"])\n            ____.____.____(\n                order=____,\n                product=____,\n                quantity=____["____"],\n                price=____.____,\n            )\n            product.____ -= ____["____"]\n            product.____()\n\n    ____.____(____.id)\n\n    return ____',
+      },
       tags: ['service-layer', 'architecture', 'transactions', 'celery'],
       concepts: ['dj-transaction-atomic', 'ce-task-idempotency'],
     },

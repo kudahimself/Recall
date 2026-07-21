@@ -677,6 +677,12 @@ print(labels)`,
       """Flatten, square, and filter in one comprehension."""
       return [x * x for sublist in nested for x in sublist if x * x > 10]
   `,
+      tieredHints: {
+        apiSignature: '[expr for outer in seq for inner in outer if cond]',
+        skeleton: `def ____(nested: list[list[int]]) -> list[int]:
+    """Flatten, square, and filter in one comprehension."""
+    return [x ____ x for sublist in nested for x in sublist if x * x ____ ____]`,
+      },
       explanation: 'Nested list comprehensions read left-to-right in the same order as equivalent nested for loops. `for sublist in nested` is the outer loop, `for x in sublist` is the inner loop. The `if` clause filters after each element. A common mistake is writing `for x in sublist for sublist in nested` (wrong order). This is more concise than itertools.chain + filter, but for deeply nested structures or complex logic, explicit loops are more readable.',
       hints: [
         'Outer for clause comes first: for sublist in nested',
@@ -710,6 +716,16 @@ print(labels)`,
         if len(word) > 3
     }
 `,
+      tieredHints: {
+        apiSignature: '{k: v for outer in seq for inner in outer if cond}',
+        skeleton: `def ____(sentences: list[str]) -> dict[str, int]:
+    return {
+        word.____(): ____(word)
+        for sentence in sentences
+        for word in sentence.____()
+        if ____(word) > ____
+    }`,
+      },
       explanation: 'Dict comprehensions use {key_expr: value_expr for item in iterable if condition}. They can nest for-clauses just like list comprehensions — here, one iterates sentences and the next splits each into words. Duplicate keys naturally deduplicate (last one wins).',
       hints: [
         '{key: value for item in iterable if condition}',
@@ -779,6 +795,10 @@ print(labels)`,
         },
       ],
       solution: `print([x * x for x in range(10) if x % 2 == 0])`,
+      tieredHints: {
+        apiSignature: '[expr for x in iterable if cond]',
+        skeleton: `print([x ____ x for x in ____(10) if x % ____ == ____])`,
+      },
       explanation: 'The `if` clause at the end filters which items reach the expression. Order: iterate `range(10)`, keep only where `x % 2 == 0`, then apply `x * x`. Equivalent to `filter` + `map` but usually more readable: `list(map(lambda x: x*x, filter(lambda x: x % 2 == 0, range(10))))` is the same result, less fun.',
       hints: [
         '[expr for x in iter if cond]',
@@ -807,6 +827,12 @@ print(labels)`,
       solution: `prices = {"apple": 1, "banana": 2, "cherry": 3}
 doubled = {k: v * 2 for k, v in prices.items()}
 print(doubled)`,
+      tieredHints: {
+        apiSignature: '{k: v for k, v in d.items()}',
+        skeleton: `prices = {"apple": ____, "banana": ____, "cherry": ____}
+doubled = {k: v ____ ____ for k, v in prices.____()}
+____(doubled)`,
+      },
       explanation: 'Dict comprehensions: `{key_expr: value_expr for ... in ...}`. Use `.items()` to unpack both key and value in one loop. Filter with `if`: `{k: v for k, v in prices.items() if v > 1}`. Great for renaming keys, filtering, applying transformations at the boundary between data sources.',
       hints: [
         '{key: value for k, v in source.items()}',
@@ -835,6 +861,12 @@ print(doubled)`,
       solution: `sentence = "the quick brown fox jumps over the lazy dog the fox"
 words = {w.lower() for w in sentence.split()}
 print(len(words))`,
+      tieredHints: {
+        apiSignature: '{expr for x in iterable}',
+        skeleton: `sentence = "the quick brown fox jumps over the lazy dog the fox"
+words = ___w.____() for w in sentence.____()___
+print(____(words))`,
+      },
       explanation: 'Set comprehensions use `{expr for ...}` — single expression, not `k: v`. Ideal for deduplication during a transformation. For "just unique things" without a transformation, `set(sentence.split())` is shorter. Compare dict vs set literal disambiguation: `{}` is an empty dict, `set()` is an empty set — comprehensions have expressions so the parser knows which to build.',
       hints: [
         '{expr for x in iter} = set comprehension',
@@ -863,6 +895,12 @@ print(len(words))`,
       solution: `matrix = [[1, 2, 3], [4, 5, 6]]
 transposed = [[row[i] for row in matrix] for i in range(3)]
 print(transposed)`,
+      tieredHints: {
+        apiSignature: '[[expr for row in matrix] for i in range(n)]',
+        skeleton: `matrix = [[____, ____, ____], [____, ____, ____]]
+transposed = [[row[____] for row in ____] for i in ____(____)]
+____(transposed)`,
+      },
       explanation: 'Nested comprehensions read OUTER-first: `[[inner] for i in range(3)]` builds 3 outer lists; each inner `[row[i] for row in matrix]` collects column `i` from every row. The equivalent using `zip`: `list(map(list, zip(*matrix)))` — shorter but less explicit. Go with whichever is clearer to the reader; both are idiomatic.',
       hints: [
         'Read outer loop first, inner loop second',
@@ -890,6 +928,11 @@ print(transposed)`,
       ],
       solution: `total = sum(x * x for x in range(1000))
 print(total)`,
+      tieredHints: {
+        apiSignature: 'sum(iterable, start=0) -> number',
+        skeleton: `total = ____(x ____ x for x in ____(____))
+print(total)`,
+      },
       explanation: 'Generator expressions use `(expr for ...)` — produce values lazily instead of building the whole list in memory. When passed directly as the only argument to a function, the parentheses can be dropped: `sum(x * x for x in range(1000))` works without the outer `()`. Use them with `sum`, `max`, `min`, `any`, `all` whenever intermediate materialisation is wasteful. For tiny collections it doesn\'t matter — but becomes important over millions of items.',
       hints: [
         '(expr for x in iter) = generator expression',
@@ -918,6 +961,12 @@ print(total)`,
       solution: `nested = [[1, 2], [3, 4, 5], [6]]
 flat = [item for sub in nested for item in sub]
 print(flat)`,
+      tieredHints: {
+        apiSignature: '[expr for outer in seq for inner in outer]',
+        skeleton: `nested = [[____, ____], [____, ____, ____], [____]]
+flat = [item for sub in ____ for item in sub]
+____(flat)`,
+      },
       explanation: 'Two `for` clauses in a single comprehension read left-to-right, same as nested loops: `for sub in nested → for item in sub → item`. Equivalent to `result = []; for sub in nested: for item in sub: result.append(item)`. Shorter alternatives: `itertools.chain.from_iterable(nested)`, `sum(nested, [])` (quadratic — avoid on large inputs), or `functools.reduce(lambda a, b: a + b, nested)`.',
       hints: [
         'Multiple `for` clauses read left-to-right (outer to inner)',
@@ -946,6 +995,12 @@ print(flat)`,
       solution: `nums = [1, -2, 3, -4, 5]
 signs = ["+" if n >= 0 else "-" for n in nums]
 print(signs)`,
+      tieredHints: {
+        apiSignature: 'value_if_true if cond else value_if_false',
+        skeleton: `nums = [____, ____, ____, ____, ____]
+signs = ["+" ____ n ____ 0 else "-" for n in nums]
+____(signs)`,
+      },
       explanation: 'Two uses of `if` in comprehensions: (1) FILTER at the end — `[x for x in nums if x >= 0]` drops items; (2) VALUE selection via ternary expression — `["+" if x >= 0 else "-" for x in nums]` transforms every item. Common confusion: putting both is fine — `[x*2 for x in nums if x > 0]` filters then transforms. Readability rule: if it needs more than one ternary inside a comprehension, switch to a regular loop.',
       hints: [
         '"expr_if_true if cond else expr_if_false" is the ternary value',
@@ -996,6 +1051,12 @@ print(signs)`,
       solution: `colors = {"apple": "red", "strawberry": "red", "banana": "yellow"}
 inverted = {v: k for k, v in colors.items()}
 print(inverted)`,
+      tieredHints: {
+        apiSignature: '{v: k for k, v in d.items()}',
+        skeleton: `colors = {"apple": "red", "strawberry": "red", "banana": "yellow"}
+inverted = {____: ____ for k, v in ____.____()}
+____(inverted)`,
+      },
       explanation: 'Dict comprehension assignments overwrite existing keys — last one wins. For duplicate values, iteration order determines the surviving pair (3.7+: insertion order). If you need ALL keys that share a value, build a `defaultdict(list)` instead: `inverted[v].append(k)`. If you need the FIRST winner, reverse iteration or check membership first.',
       hints: [
         'Dict comp with duplicate keys → last assignment wins',
@@ -1025,6 +1086,12 @@ print(inverted)`,
       solution: `scores = {"alice": 85, "bob": 60, "carol": 92, "dan": 55}
 passing = {name: score for name, score in scores.items() if score >= 80}
 print(passing)`,
+      tieredHints: {
+        apiSignature: '{k: v for k, v in d.items() if cond}',
+        skeleton: `scores = {"alice": ____, "bob": ____, "carol": ____, "dan": ____}
+passing = {name: score for name, score in ____.____() if score ____ ____}
+____(passing)`,
+      },
       explanation:
         'Dict comprehensions accept an `if` filter just like list comps. The filter runs BEFORE the key/value expressions, so rejected entries never reach the new dict — no need for a second pass. This is one of the most common real-world dict-comp shapes: "take this source dict, project a subset based on a predicate". Combine with value transformation for the canonical ETL line: `{k: transform(v) for k, v in src.items() if keep(k, v)}`.',
       hints: [
@@ -1085,6 +1152,12 @@ print(result)
       solution: `result = [n**2 for n in range(10) if n % 2 == 0]
 
 print(result)  # [0, 4, 16, 36, 64]`,
+      tieredHints: {
+        apiSignature: '[expr for x in iterable if cond]',
+        skeleton: `result = [n____2 for n in ____(10) if n % ____ == ____]
+
+____(result)`,
+      },
       explanation: 'The comprehension `[n**2 for n in range(10) if n % 2 == 0]` reads almost like English: "square of n, for each n in 0-9, if n is even." The structure maps directly from the loop: the `append(n**2)` becomes the expression, the `for` stays, and the `if` condition moves to the end. This is more concise and typically faster than the loop version.',
       hints: [
         'The expression (`n**2`) comes first, before the `for`',

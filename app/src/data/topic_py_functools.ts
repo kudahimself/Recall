@@ -828,6 +828,18 @@ def fib(n):
 
 print(fib(30))`,
       explanation: 'Each `fib(k)` is computed once; all other calls hit the cache. Goes from exponential to linear time. For a cleaner spelling on 3.9+: `@functools.cache` (no maxsize). Never use lru_cache on instance methods directly — cached `self` keeps instances alive forever; use `functools.cached_property` for per-instance caching.',
+      tieredHints: {
+        apiSignature: 'functools.lru_cache(maxsize=128, typed=False)',
+        skeleton: `import functools
+
+@functools.____
+def ____(n):
+    if ____:
+        return n
+    return ____(____) + ____(____)
+
+print(____(30))`,
+      },
       hints: [
         '@functools.lru_cache (no args) is fine — default maxsize is 128',
         'Base case: n < 2 returns n',
@@ -866,6 +878,20 @@ log2 = functools.partial(log_base, 2)
 print(round(log10(1000), 1))
 print(round(log2(8), 1))`,
       explanation: 'partial(fn, *args, **kwargs) returns a new callable with those arguments pre-applied. Great for plugging into APIs that take callbacks (e.g. `map(partial(json.loads, parse_float=Decimal), rows)`), for currying-style helpers, and for turning a 2-arg function into a 1-arg one without writing a lambda.',
+      tieredHints: {
+        apiSignature: 'functools.partial(func, /, *args, **keywords)',
+        skeleton: `import math
+import functools
+
+def log_base(base, x):
+    return ____(____, ____)
+
+log10 = functools.____(____, ____)
+log2 = functools.____(____, ____)
+
+print(____(log10(1000), 1))
+print(____(log2(8), 1))`,
+      },
       hints: [
         'functools.partial(fn, fixed_arg) → new callable that only needs the remaining args',
         'You can bind by keyword too: partial(fn, base=2)',
@@ -908,6 +934,25 @@ def add(a, b):
 print(add.__name__)
 print(add(2, 3))`,
       explanation: 'Without `@wraps`, the decorated function takes on the wrapper\'s identity — `add.__name__` would be `"wrapper"`, `help(add)` would be confusing, Sphinx docs would break. `functools.wraps(func)` copies `__name__`, `__doc__`, `__qualname__`, `__module__`, `__dict__`, `__wrapped__` onto the wrapper. Always use it in decorators that wrap a function.',
+      tieredHints: {
+        apiSignature: 'functools.wraps(wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)',
+        skeleton: `import functools
+
+def log_calls(func):
+    @functools.____(____)
+    def ____(*args, **kwargs):
+        print(____)
+        return ____(*args, **kwargs)
+    return ____
+
+@____
+def add(a, b):
+    """sum two numbers"""
+    return a + b
+
+print(____.__name__)
+print(____(2, 3))`,
+      },
       hints: [
         '@functools.wraps(func) on the inner wrapper',
         'Copies __name__, __doc__, __qualname__, __wrapped__',
@@ -944,6 +989,18 @@ print(result)
 result2 = reduce(lambda a, b: a * b, nums)
 print(result2)`,
       explanation: 'reduce(fn, iterable, [initial]) folds a binary function over the iterable, accumulating a single value. Use `operator.mul` / `operator.add` instead of a lambda when you can — it is slightly faster and reads more clearly. Note: for sum use `sum()`; for product on 3.8+ use `math.prod()` which is clearer than `reduce`.',
+      tieredHints: {
+        apiSignature: 'functools.reduce(function, iterable, initial=...)',
+        skeleton: `from functools import reduce
+import operator
+
+nums = [1, 2, 3, 4, 5]
+result = ____
+print(____)
+
+result2 = ____
+print(____)`,
+      },
       hints: [
         'reduce is from functools, mul is from operator',
         'reduce(fn, iterable) without initial uses the first element as the seed',
@@ -989,6 +1046,27 @@ c = Circle(5)
 print(round(c.area, 2))
 print(round(c.circumference, 2))`,
       explanation: '`cached_property` turns a method into a read-only attribute whose value is computed on first access and stored in the instance `__dict__`. Subsequent accesses skip the computation. Unlike `@property`, there is no setter and no per-instance cache invalidation — if `self.radius` changes, `area` will NOT update. Use it only when inputs are immutable or you explicitly `del instance.area` to invalidate.',
+      tieredHints: {
+        apiSignature: 'functools.cached_property(func)',
+        skeleton: `import math
+import functools
+
+class Circle:
+    def __init__(self, radius):
+        self.radius = radius
+
+    @functools.____
+    def area(self):
+        return ____
+
+    @functools.____
+    def circumference(self):
+        return ____
+
+c = Circle(5)
+print(____(c.____, 2))
+print(____(c.____, 2))`,
+      },
       hints: [
         '@functools.cached_property turns a method into a cached attribute',
         'Access with `c.area` (no parentheses) — NOT `c.area()`',

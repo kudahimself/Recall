@@ -89,6 +89,30 @@
   line-height: 1.6;
 }
 
+.tiered-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tiered-hint-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tiered-hint-code {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 6px;
+  font-family: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
 .results {
   padding: 12px 24px;
   margin: 0;

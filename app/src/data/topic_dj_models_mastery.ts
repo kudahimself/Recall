@@ -132,6 +132,10 @@ True
         'Inherit from `Order` and set `class Meta: proxy = True`',
         'Add `ordering = ["-created_at"]` in the same Meta',
       ],
+      tieredHints: {
+        apiSignature: 'class Meta: proxy = True; ordering = []',
+        skeleton: 'class RecentOrder(____):\n    class ____:\n        ____ = ____\n        ____ = ["____"]',
+      },
       tags: ['django', 'models', 'inheritance', 'proxy', 'ordering'],
       concepts: ['dj-model-construction'],
     },
@@ -251,6 +255,10 @@ class Event(models.Model):
         'Override `def clean(self):`',
         'Compare `self.end < self.start` and `raise ValidationError(...)`',
       ],
+      tieredHints: {
+        apiSignature: 'def clean(self) -> None',
+        skeleton: 'from django.core.exceptions import ____\nfrom django.db import models\n\nclass Event(models.____):\n    start = models.____()\n    end = models.____()\n\n    def ____(self):\n        if self.____ ____ self.____:\n            ____ ____("End date cannot be before start date.")',
+      },
       tags: ['django', 'models', 'validation', 'clean'],
       concepts: ['dj-model-construction'],
     },

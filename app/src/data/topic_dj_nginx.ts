@@ -113,6 +113,10 @@ server {
         'proxy_set_header X-Forwarded-For passes real client IPs',
         'client_max_body_size limits upload size at the Nginx level',
       ],
+      tieredHints: {
+        apiSignature: 'proxy_pass URL; proxy_set_header Field Value;',
+        skeleton: '# /etc/nginx/sites-available/myproject\n\n____ gunicorn_backend {\n    server unix:/run/gunicorn.sock;\n}\n\nserver {\n    listen 80;\n    server_name example.com www.example.com;\n    return 301 https://$host$request_uri;\n}\n\nserver {\n    listen 443 ssl;\n    server_name example.com www.example.com;\n\n    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;\n\n    client_max_body_size 10M;\n\n    location /static/ {\n        ____ /var/www/myproject/staticfiles/;\n        expires 30d;\n        add_header Cache-Control "public, immutable";\n    }\n\n    location /media/ {\n        alias /var/www/myproject/media/;\n        expires 7d;\n    }\n\n    location / {\n        ____ http://gunicorn_backend;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_redirect off;\n    }\n}',
+      },
       tags: ['nginx', 'gunicorn', 'deployment', 'ssl', 'proxy'],
       concepts: ['dj-deployment-cicd'],
     },

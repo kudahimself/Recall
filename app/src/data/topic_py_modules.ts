@@ -699,12 +699,10 @@ True`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Use `pickle` to serialise a Python dictionary to bytes, then deserialise it back and verify it\'s identical to the original. Use `pickle.dumps()` and `pickle.loads()` (no file needed).',
-      starterCode: `# Import pickle
-# Build data = {"name": "Alice", "scores": [95, 87, 92], "active": True}
+      starterCode: `import pickle
 
-
-# Serialise with pickle.dumps to bytes, then pickle.loads back to an object
-# Print the restored object, then print whether it equals the original
+# Create dictionary: {"name": "Alice", "scores": [95, 87, 92], "active": True}
+# Serialise data to bytes, deserialise it back, and print the restored object and equality check
 `,
       testCases: [
         { input: '', expectedOutput: "{'name': 'Alice', 'scores': [95, 87, 92], 'active': True}\nTrue", description: 'Should restore identical object' },
@@ -727,6 +725,22 @@ print(restored == data)`,
         '`pickle.dumps()` (plural s) → bytes; `pickle.loads()` → object',
         'For files use `pickle.dump()` / `pickle.load()` with `"wb"` / `"rb"` mode',
       ],
+      tieredHints: {
+        apiSignature: 'pickle.dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None) -> bytes',
+        skeleton: `import pickle
+
+data = {
+    "name": "Alice",
+    "scores": [95, 87, 92],
+    "active": True,
+}
+
+serialised = ____.____(data)
+restored = pickle.____(____)
+
+print(____)
+____(restored == ____)`,
+      },
       tags: ['pickle', 'serialisation', 'dumps', 'loads', 'persistence'],
       concepts: ['py-pickle-serialization'],
     },
@@ -802,6 +816,18 @@ with shelve.open("user_data") as shelf:
         'Keys are strings; values are any picklable objects',
         'Use `with shelve.open(filename) as shelf:` for automatic closing',
       ],
+      tieredHints: {
+        apiSignature: 'shelve.open(filename, flag="c", protocol=None, writeback=False) -> Shelf',
+        skeleton: `import shelve
+
+with ____.____("user_data") as shelf:
+    shelf["user_1"] = {"name": "Alice", "score": 95}
+
+with shelve.____("user_data") as ____:
+    profile = shelf[____]
+    print(____["name"])
+    ____(profile["score"])`,
+      },
       tags: ['shelve', 'persistence', 'context-manager', 'with', 'pickle'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -859,6 +885,14 @@ print(math.ceil(4.3))`,
         'Use `math.sqrt()`, `math.pi`, and `math.ceil()`',
         'Use `round(math.pi, 4)` to round to 4 decimal places',
       ],
+      tieredHints: {
+        apiSignature: 'math.sqrt(x) -> float',
+        skeleton: `import math
+
+print(____.____(144))
+____(round(math.____, 4))
+print(math.____(4.3))`,
+      },
       tags: ['math', 'modules', 'import', 'sqrt', 'pi', 'ceil'],
       concepts: ['py-modules-imports'],
     },
@@ -891,6 +925,15 @@ print(random.choice(options))`,
         'Use `random.randint(1, 10)` for a random integer',
         'Use `random.choice(options)` for a random list item',
       ],
+      tieredHints: {
+        apiSignature: 'random.randint(a, b) -> int',
+        skeleton: `import random
+
+options = ["rock", "paper", "scissors"]
+
+print(random.____(1, 10))
+print(____.choice(____))`,
+      },
       tags: ['random', 'modules', 'randint', 'choice', 'basics'],
       concepts: ['py-modules-imports'],
     },

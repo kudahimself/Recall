@@ -93,6 +93,16 @@ def test_add():
       'Use `assert` followed by a boolean expression',
       'Each `assert` checks one condition',
     ],
+    tieredHints: {
+      apiSignature: 'def test_<name>() -> None',
+      skeleton: `def add(____, ____):
+    return ____ + ____
+
+def ____():
+    ____ add(2, 3) == ____
+    ____ add(-1, 1) == ____
+    ____ add(0, 0) == ____`,
+    },
     tags: ['testing', 'pytest', 'assert', 'basics'],
     concepts: ['py-test-isolation'],
   },
@@ -267,6 +277,22 @@ def test_square(value, expected):
     solution: `import pytest\n\ndef calculate_tax(amount, rate=0.2):\n    return amount * rate\n\ndef test_normal_tax():\n    assert calculate_tax(100) == 20.0\n\ndef test_zero_amount():\n    assert calculate_tax(0) == 0.0\n\ndef test_custom_rate():\n    assert calculate_tax(100, 0.1) == 10.0`,
     explanation: 'pytest uses plain assert statements — no special assertion methods needed. Test functions must start with test_. Run with "pytest" command. pytest auto-discovers test files (test_*.py) and test functions. Simpler than unittest.',
     hints: ['Test functions start with test_', 'Use plain assert', 'pytest auto-discovers tests'],
+    tieredHints: {
+      apiSignature: 'def calculate_tax(amount, rate=0.2) -> float',
+      skeleton: `import pytest
+
+def calculate_tax(amount, rate=____):
+    return amount ____ rate
+
+def test_normal_tax():
+    assert calculate_tax(100) == ____
+
+def test_zero_amount():
+    assert calculate_tax(____) == 0.0
+
+def ____():
+    assert calculate_tax(100, ____) == 10.0`,
+    },
     tags: ['pytest', 'testing', 'assert', 'python'],
     concepts: ['py-test-isolation'],
   },
@@ -317,6 +343,24 @@ def test_divide_normal():
       'The `match` parameter accepts a regex pattern to check the error message',
       'Don\'t forget to test the normal (non-error) case too',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.raises(expected_exception, match=None) -> ContextManager',
+      skeleton: `def divide(a, b):
+    if b ____ 0:
+        raise ____("Cannot divide by zero")
+    return a ____ b
+
+def test_divide_by_zero():
+    with ____.____(____):
+        divide(10, 0)
+
+def test_divide_by_zero_message():
+    with pytest.raises(____, ____="zero"):
+        divide(____, ____)
+
+def test_divide_normal():
+    assert ____(10, 2) == ____`,
+    },
     tags: ['testing', 'pytest', 'exceptions', 'raises'],
     concepts: ['py-test-isolation', 'py-exception-hierarchy'],
   },
@@ -352,6 +396,16 @@ def test_add(a, b, expected):
       'Or pass a callable id_func to derive ids from each row',
       'pytest.param(..., id=..., marks=...) for per-row markers',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.mark.parametrize(argnames, argvalues, ids=None, indirect=False)',
+      skeleton: `@pytest.mark.____(
+    "____",
+    [(____, ____, ____), (____, ____, ____), (____, ____, ____)],
+    ____=["positive", "zeros", "negative"],
+)
+def test_add(a, b, expected):
+    assert a ____ b == ____`,
+    },
     tags: ['pytest', 'parametrize', 'ids'],
     concepts: ['py-test-isolation'],
   },
@@ -418,6 +472,16 @@ def test_wip():
       'Always give a reason= so the skip is self-documenting',
       'sys.platform.startswith("win") detects Windows',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.mark.skipif(condition, *, reason="")',
+      skeleton: `@pytest.mark.____(sys.platform.____("win"), reason="____")
+def ____():
+    assert True
+
+@pytest.mark.____(reason="____")
+def ____():
+    assert True`,
+    },
     tags: ['pytest', 'markers', 'skip', 'skipif'],
     concepts: ['py-test-isolation'],
   },
@@ -483,6 +547,19 @@ def test_divide(a, b, expected):
       'pytest.mark.xfail(raises=ZeroDivisionError) scopes the tolerated error',
       'A whole-function marker would affect all rows — not what you want here',
     ],
+    tieredHints: {
+      apiSignature: 'pytest.mark.xfail(condition=None, *, reason="", raises=None, strict=False)',
+      skeleton: `def divide(a, b):
+    return a ____ b
+
+@pytest.mark.____("a, b, expected", [
+    (____, ____, ____),
+    (____, ____, ____),
+    pytest.____(____, ____, ____, marks=pytest.mark.____(____=ZeroDivisionError)),
+])
+def test_divide(a, b, expected):
+    assert ____(a, b) == expected`,
+    },
     tags: ['pytest', 'parametrize', 'xfail', 'pytest.param'],
     concepts: ['py-test-isolation'],
   },

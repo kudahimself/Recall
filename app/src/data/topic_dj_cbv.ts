@@ -28,6 +28,18 @@ export const dj_cbv_questions: Question[] = [
         },
       ],
       solution: `from django.views.generic import ListView\nfrom .models import Article\n\nclass ArticleListView(ListView):\n    model = Article\n    template_name = "articles/list.html"\n    context_object_name = "articles"\n    ordering = ["-published_date"]\n    paginate_by = 10`,
+      tieredHints: {
+        apiSignature: 'ListView(model=None, template_name=None, paginate_by=None)',
+        skeleton: `from django.views.generic import ____
+from .models import Article
+
+class ArticleListView(____):
+    ____ = Article
+    template_name = "articles/list.html"
+    ____ = "articles"
+    ____ = ["-published_date"]
+    ____ = 10`,
+      },
       explanation: 'ListView handles: querying the model, paginating results, rendering a template. model = what to query. ordering = ORDER BY. paginate_by = items per page. context_object_name = template variable name. Much less boilerplate than function-based views.',
       hints: ['model for automatic queryset', 'ordering with - prefix for descending', 'paginate_by for automatic pagination'],
       tags: ['listview', 'cbv', 'pagination', 'django'],
@@ -100,6 +112,15 @@ class ArticleListView(ListView):
 
 # In urls.py:
 # path('articles/', ArticleListView.as_view(), name='article-list')`,
+      tieredHints: {
+        apiSignature: 'ListView(model=None, template_name=None, context_object_name=None)',
+        skeleton: `from django.views.generic import ____
+
+class ArticleListView(____):
+    ____ = Article
+    template_name = 'articles/list.html'
+    ____ = 'articles'`,
+      },
       explanation: '`ListView` automatically calls `Article.objects.all()` and passes it to the template. `context_object_name = "articles"` names the variable in the template (default would be `article_list`). Note `as_view()` in urls.py — CBVs must be converted to a callable. You can override `get_queryset()` to customise filtering.',
       hints: [
         'Set `model`, `template_name`, and `context_object_name` as class attributes',
@@ -156,6 +177,18 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
     fields = ['title', 'body']
     template_name = 'articles/create.html'
     success_url = reverse_lazy('article-list')`,
+      tieredHints: {
+        apiSignature: 'reverse_lazy(viewname, urlconf=None, args=None, kwargs=None)',
+        skeleton: `from django.contrib.auth.mixins import ____
+from django.views.generic.edit import ____
+from django.urls import ____
+
+class ArticleCreateView(____, ____):
+    ____ = Article
+    ____ = ['title', 'body']
+    template_name = 'articles/create.html'
+    ____ = ____('article-list')`,
+      },
       explanation: '`CreateView` handles GET (render empty form) and POST (validate, save, redirect) automatically. `fields` lists which model fields appear in the form. `LoginRequiredMixin` (always first in MRO) redirects unauthenticated users. `reverse_lazy` is needed because URLs aren\'t loaded at class definition time. Override `form_valid()` to set the owner: `form.instance.owner = self.request.user`.',
       hints: [
         '`LoginRequiredMixin` must be first in the inheritance list',
@@ -192,6 +225,22 @@ class ArticleDeleteView(DeleteView):
     model = Article
     template_name = 'articles/confirm_delete.html'
     success_url = reverse_lazy('article-list')`,
+      tieredHints: {
+        apiSignature: 'UpdateView(model=None, fields=None, success_url=None)',
+        skeleton: `from django.views.generic.edit import ____, ____
+from django.urls import ____
+
+class ArticleUpdateView(____):
+    ____ = Article
+    ____ = ['title', 'body']
+    template_name = 'articles/update.html'
+    ____ = ____('article-list')
+
+class ArticleDeleteView(____):
+    ____ = Article
+    template_name = 'articles/confirm_delete.html'
+    ____ = ____('article-list')`,
+      },
       explanation: '`UpdateView` is like `CreateView` but pre-populates the form with existing data and calls `.save()` on the existing instance. `DeleteView` shows a confirmation page (GET) and deletes on POST — always use a confirmation template to prevent accidental deletion. In urls.py: `path("articles/<int:pk>/edit/", ArticleUpdateView.as_view())`.',
       hints: [
         'Both views need `model`, `template_name`, and `success_url`',
@@ -248,6 +297,20 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_queryset(self):
         return super().get_queryset().filter(owner=self.request.user)`,
+      tieredHints: {
+        apiSignature: 'view.get_queryset() -> QuerySet',
+        skeleton: `from django.contrib.auth.mixins import ____
+from django.views.generic.edit import ____
+from django.urls import ____
+
+class ArticleUpdateView(____, ____):
+    model = Article
+    fields = ['title', 'body']
+    success_url = ____('article-list')
+
+    def ____(self):
+        return super().____().____(owner=self.____.____)`,
+      },
       explanation: 'Overriding `get_queryset()` is the cleanest ownership enforcement pattern for CBVs. `super().get_queryset()` returns `Article.objects.all()` by default — we further filter it to the current user\'s articles. If a non-owner requests `/articles/5/edit/`, the object lookup fails with 404. No explicit `if obj.owner != request.user` check needed.',
       hints: [
         '`super().get_queryset().filter(owner=self.request.user)`',
@@ -316,6 +379,33 @@ urlpatterns = [
     path('articles/<int:pk>/', ArticleDetailView.as_view(), name='article-detail'),
     path('articles/new/', ArticleCreateView.as_view(), name='article-create'),
 ]`,
+      tieredHints: {
+        apiSignature: 'View.as_view(**initkwargs)',
+        skeleton: `from django.views.generic import ____, ____
+from django.views.generic.edit import ____
+from django.contrib.auth.mixins import ____
+from django.urls import path, ____
+
+class ArticleListView(____):
+    model = Article
+    template_name = 'articles/list.html'
+    context_object_name = 'articles'
+
+class ArticleDetailView(____):
+    model = Article
+    template_name = 'articles/detail.html'
+
+class ArticleCreateView(____, ____):
+    model = Article
+    fields = ['title', 'body']
+    success_url = ____('article-list')
+
+urlpatterns = [
+    path('articles/', ArticleListView.____(), name='article-list'),
+    path('articles/<int:pk>/', ArticleDetailView.____(), name='article-detail'),
+    path('articles/new/', ArticleCreateView.____(), name='article-create'),
+]`,
+      },
       explanation: 'All CBVs use `.as_view()` in urlpatterns. `DetailView` and `UpdateView`/`DeleteView` need `<int:pk>` to identify the object. `reverse_lazy` is used instead of `reverse` for class-level `success_url` attributes. `LoginRequiredMixin` on `CreateView` ensures only logged-in users can create articles.',
       hints: [
         'Remember `.as_view()` in urlpatterns — CBVs are classes, not callables',
@@ -399,6 +489,27 @@ class PublishedArticlesView(LoginRequiredMixin, ListView):
             .select_related("author")
             .order_by("-created_at")
         )`,
+      tieredHints: {
+        apiSignature: 'queryset.select_related(*fields) -> QuerySet',
+        skeleton: `from django.contrib.auth.mixins import ____
+from django.views.generic import ____
+from .models import Article
+
+
+class PublishedArticlesView(____, ____):
+    ____ = Article
+    template_name = "articles/list.html"
+    context_object_name = "articles"
+    paginate_by = 20
+
+    def ____(self):
+        return (
+            Article.objects
+            .____(status="published")
+            .____("author")
+            .____("-created_at")
+        )`,
+      },
       explanation: 'Mixin order matters: LoginRequiredMixin must come BEFORE ListView (left-to-right MRO) so its `dispatch()` override runs first and bounces unauthenticated users. `get_queryset()` is overridden (not the class-level `queryset`) so the queryset is reconstructed per-request — important if you later filter by `self.request.user`. `select_related("author")` does the JOIN at the SQL level, eliminating one query per article in templates that read `article.author.username`.',
       hints: [
         'LoginRequiredMixin must come BEFORE ListView (MRO order)',
@@ -455,6 +566,27 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse("article_detail", kwargs={"pk": self.object.pk})`,
+      tieredHints: {
+        apiSignature: 'FormView.form_valid(form) -> HttpResponseRedirect',
+        skeleton: `from django.contrib.auth.mixins import ____
+from django.urls import ____
+from django.views.generic.edit import ____
+from .forms import ArticleForm
+from .models import Article
+
+
+class ArticleCreateView(____, ____):
+    model = Article
+    form_class = ArticleForm
+    template_name = "articles/form.html"
+
+    def ____(self, form):
+        form.instance.author = self.____.____
+        return super().____(form)
+
+    def ____(self):
+        return ____("article_detail", kwargs={"pk": self.____.pk})`,
+      },
       explanation: 'The pattern of setting an attribute on `form.instance` before calling `super().form_valid()` is canonical for "the request user owns this row" scenarios — the form never sees the field, so it can\'t be tampered with. `super().form_valid(form)` saves the instance and returns an HttpResponseRedirect to `get_success_url()`. `self.object` is set by `super().form_valid()` so it\'s available in `get_success_url`.',
       hints: [
         'Set form.instance.<field> BEFORE super().form_valid()',
@@ -737,6 +869,19 @@ class ArticleDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context["comment_count"] = self.object.comments.count()
         return context`,
+      tieredHints: {
+        apiSignature: 'ContextMixin.get_context_data(**kwargs) -> dict',
+        skeleton: `from django.views.generic import ____
+from .models import Article
+
+class ArticleDetailView(____):
+    model = Article
+
+    def ____(self, **kwargs):
+        context = ____.get_context_data(**kwargs)
+        context["comment_count"] = self.____.comments.____()
+        return ____`,
+      },
       explanation: 'Override `get_context_data`, seed it from `super()` (so `object`/`article` survive), add `comment_count`, and return the dict. `self.object` is the article DetailView already fetched; `.comments.count()` issues a `COUNT(*)` rather than loading rows.',
       hints: [
         'context = super().get_context_data(**kwargs)',
@@ -868,6 +1013,21 @@ class ContactView(FormView):
     def form_valid(self, form):
         form.send_email()
         return super().form_valid(form)`,
+      tieredHints: {
+        apiSignature: 'FormView.form_valid(form) -> HttpResponseRedirect',
+        skeleton: `from django.views.generic.edit import ____
+from django.urls import ____
+from .forms import ContactForm
+
+class ContactView(____):
+    ____ = ContactForm
+    template_name = "contact.html"
+    ____ = ____("contact-done")
+
+    def ____(self, form):
+        form.send_email()
+        return super().____(form)`,
+      },
       explanation: '`FormView` gives you the GET/POST form lifecycle for free. The side effect (`form.send_email()`) goes in `form_valid`, before `super().form_valid(form)` issues the redirect to `success_url`. `reverse_lazy` defers URL resolution until request time, which is necessary for a class-level attribute.',
       hints: [
         'form_class, template_name, success_url = reverse_lazy("contact-done")',

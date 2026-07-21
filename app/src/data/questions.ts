@@ -26,6 +26,12 @@ import { jsMisconceptionMCQs } from './jsMisconceptionMCQs';
 import { sqlMisconceptionMCQs } from './sqlMisconceptionMCQs';
 // Data Modeling & Warehousing Design — dimensional modeling, SCD, pipeline design
 import { dataModelingQuestions } from './dataModelingQuestions';
+// Lakehouse Architecture & Engineering Practice — orchestration/quality-gate design
+import { orchestrationDesignQuestions } from './orchestrationDesignQuestions';
+import { goldLayerDesignQuestions } from './goldLayerDesignQuestions';
+import { ingestionArchitectureQuestions } from './ingestionArchitectureQuestions';
+import { DATABRICKS_PLATFORM_EXPANSION_QUESTIONS } from './databricksPlatformQuestions';
+import { UNITY_CATALOG_QUESTIONS } from './unityCatalogQuestions';
 // Data Engineering Concepts course (tool-agnostic, MCQ-only)
 import { dataEngineeringFoundationsQuestions } from './dataEngineeringFoundationsQuestions';
 import { dataEngineeringArchitectureQuestions } from './dataEngineeringArchitectureQuestions';
@@ -161,12 +167,12 @@ const baseQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_BASICS,
-    question: 'What is Databricks primarily built on?',
+    question: 'Which underlying distributed computing engine powers the core processing capabilities of Databricks?',
     options: [
-      { id: 'a', text: 'Apache Spark', isCorrect: true },
-      { id: 'b', text: 'Hadoop MapReduce', isCorrect: false },
-      { id: 'c', text: 'Apache Kafka', isCorrect: false },
-      { id: 'd', text: 'Apache Flink', isCorrect: false },
+      { id: 'a', text: 'Apache Hadoop MapReduce batch processing framework.', isCorrect: false },
+      { id: 'b', text: 'Apache Spark unified distributed data processing engine.', isCorrect: true },
+      { id: 'c', text: 'Apache Flink real-time stateful stream processing engine.', isCorrect: false },
+      { id: 'd', text: 'Apache Kafka distributed event streaming messaging log.', isCorrect: false },
     ],
     explanation: 'Databricks is a unified analytics platform built on top of Apache Spark, providing a collaborative environment for big data processing and machine learning.',
     tags: ['fundamentals', 'architecture'],
@@ -177,12 +183,12 @@ const baseQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_BASICS,
-    question: 'Which component in Databricks is responsible for executing Spark jobs?',
+    question: 'Which Databricks architectural component executes Spark jobs and processes distributed DataFrames?',
     options: [
-      { id: 'a', text: 'Notebook', isCorrect: false },
-      { id: 'b', text: 'Cluster', isCorrect: true },
-      { id: 'c', text: 'Workspace', isCorrect: false },
-      { id: 'd', text: 'DBFS', isCorrect: false },
+      { id: 'a', text: 'Interactive workspace notebook interface.', isCorrect: false },
+      { id: 'b', text: 'Databricks secret scope credential store.', isCorrect: false },
+      { id: 'c', text: 'Databricks compute cluster (Driver & Worker nodes).', isCorrect: true },
+      { id: 'd', text: 'Unity Catalog metadata governance catalog.', isCorrect: false },
     ],
     explanation: 'Clusters are groups of computers that work together to execute Spark jobs. They contain a driver node and worker nodes.',
     tags: ['cluster', 'execution'],
@@ -193,12 +199,12 @@ const baseQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_BASICS,
-    question: 'What does DBFS stand for in Databricks?',
+    question: 'What does DBFS stand for in the Databricks Lakehouse ecosystem?',
     options: [
-      { id: 'a', text: 'Database File Storage', isCorrect: false },
-      { id: 'b', text: 'Distributed Binary File System', isCorrect: false },
-      { id: 'c', text: 'Databricks File System', isCorrect: true },
-      { id: 'd', text: 'Data Block File System', isCorrect: false },
+      { id: 'a', text: 'Database File Storage layer.', isCorrect: false },
+      { id: 'b', text: 'Distributed Binary File System.', isCorrect: false },
+      { id: 'c', text: 'Databricks File System.', isCorrect: true },
+      { id: 'd', text: 'Data Block File Storage.', isCorrect: false },
     ],
     explanation: 'DBFS (Databricks File System) is a distributed file system mounted into a Databricks workspace and available on Databricks clusters.',
     tags: ['storage', 'dbfs'],
@@ -211,14 +217,14 @@ const baseQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
-    question: 'What is the entry point for PySpark applications?',
+    question: 'What is the primary entry point for PySpark DataFrame and SQL applications in Spark 2.0+?',
     options: [
-      { id: 'a', text: 'SparkContext', isCorrect: false },
-      { id: 'b', text: 'SQLContext', isCorrect: false },
-      { id: 'c', text: 'HiveContext', isCorrect: false },
-      { id: 'd', text: 'SparkSession', isCorrect: true },
+      { id: 'a', text: 'SparkContext (legacy entry point for RDD operations prior to Spark 2.0).', isCorrect: false },
+      { id: 'b', text: 'SQLContext (legacy entry point for Hive and Spark SQL table queries).', isCorrect: false },
+      { id: 'c', text: 'HiveContext (legacy entry point for HQL metastore catalog queries).', isCorrect: false },
+      { id: 'd', text: 'SparkSession (unified entry point combining DataFrame and SQL APIs).', isCorrect: true },
     ],
-    explanation: 'SparkSession is the unified entry point for Spark applications in Spark 2.0+. It combines SQLContext, HiveContext, and SparkContext.',
+    explanation: 'SparkSession is the unified entry point for Spark applications in Spark 2.0+. It combines SQLContext, HiveContext, and SparkContext into a single interface.',
     tags: ['spark-session', 'entry-point'],
     concepts: ['ps-session-init'],
   },
@@ -228,9 +234,8 @@ const baseQuestions: Question[] = [
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: 'Create a SparkSession with the app name "MyFirstApp".',
-    starterCode: `# Import SparkSession and assign 'spark' to a newly built session with appName "MyFirstApp"
-`,
+    question: 'Write a PySpark script to initialize a SparkSession with application name "MyFirstApp" and assign it to variable "spark".',
+    starterCode: `# Create SparkSession with appName "MyFirstApp"\n`,
     testCases: [
       {
         input: '',
@@ -238,10 +243,14 @@ const baseQuestions: Question[] = [
         description: 'Should create a SparkSession with app name MyFirstApp',
       },
     ],
-    solution: `from pyspark.sql import SparkSession
-
-spark = SparkSession.builder.appName("MyFirstApp").getOrCreate()`,
+    solution: `from pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName("MyFirstApp").getOrCreate()`,
     explanation: 'SparkSession.builder provides a fluent API to configure and create a SparkSession. appName() sets the application name, and getOrCreate() creates a new session or returns an existing one.',
+    tieredHints: {
+      apiSignature: 'SparkSession.builder.appName(name: str).getOrCreate() -> SparkSession',
+      skeleton: `from pyspark.sql import SparkSession
+
+spark = SparkSession.____.____("MyFirstApp").____()`,
+    },
     hints: ['Use SparkSession.builder', 'Chain appName() and getOrCreate() methods'],
     tags: ['spark-session', 'initialization'],
     concepts: ['ps-session-init'],
@@ -252,10 +261,8 @@ spark = SparkSession.builder.appName("MyFirstApp").getOrCreate()`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: 'Create a simple DataFrame from a list of tuples: [(1, "Alice"), (2, "Bob"), (3, "Charlie")] with columns "id" and "name".',
-    starterCode: `# Build a SparkSession, declare the list of tuples from the prompt,
-# and assign df to a DataFrame created from that data with columns "id" and "name"
-`,
+    question: 'Write a PySpark script to create a DataFrame "df" with columns "id" and "name" from a list of tuples: [(1, "Alice"), (2, "Bob"), (3, "Charlie")].',
+    starterCode: `# Create DataFrame from list of tuples\n`,
     testCases: [
       {
         input: 'data = [(1, "Alice"), (2, "Bob"), (3, "Charlie")]',
@@ -263,13 +270,14 @@ spark = SparkSession.builder.appName("MyFirstApp").getOrCreate()`,
         description: 'Should create DataFrame with id and name columns',
       },
     ],
-    solution: `from pyspark.sql import SparkSession
-
-spark = SparkSession.builder.appName("DataFrameExample").getOrCreate()
-data = [(1, "Alice"), (2, "Bob"), (3, "Charlie")]
-df = spark.createDataFrame(data, ["id", "name"])`,
-    explanation: 'The createDataFrame() method can accept a list of tuples and a list of column names to create a DataFrame.',
-    hints: ['Use spark.createDataFrame()', 'Pass the data and column names as arguments'],
+    solution: `from pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName("DataFrameExample").getOrCreate()\ndata = [(1, "Alice"), (2, "Bob"), (3, "Charlie")]\ndf = spark.createDataFrame(data, ["id", "name"])\n# OR\ndf = spark.createDataFrame([(1, "Alice"), (2, "Bob"), (3, "Charlie")], ["id", "name"])`,
+    explanation: 'The createDataFrame() method accepts a list of tuples and a list of column name strings to instantiate a DataFrame.',
+    tieredHints: {
+      apiSignature: 'SparkSession.createDataFrame(data: List[tuple], schema: List[str]) -> DataFrame',
+      skeleton: `data = [(1, "Alice"), (2, "Bob"), (3, "Charlie")]
+df = ____.____(data, ["____", "____"])`,
+    },
+    hints: ['Use spark.createDataFrame()', 'Pass the data list and column name list as arguments'],
     tags: ['dataframe', 'creation'],
     concepts: ['ps-dataframe-create'],
   },
@@ -280,14 +288,14 @@ df = spark.createDataFrame(data, ["id", "name"])`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_DATAFRAMES,
-    question: 'Which method is used to display the first n rows of a DataFrame?',
+    question: 'Which method displays the top rows of a DataFrame directly in tabular format on stdout?',
     options: [
-      { id: 'a', text: 'show()', isCorrect: true },
-      { id: 'b', text: 'head()', isCorrect: false },
-      { id: 'c', text: 'display()', isCorrect: false },
-      { id: 'd', text: 'print()', isCorrect: false },
+      { id: 'a', text: 'The show(n) method displays tabular rows in stdout, while head(n) returns Row objects.', isCorrect: true },
+      { id: 'b', text: 'The collect() method brings all DataFrame rows to driver RAM for printing in text grids.', isCorrect: false },
+      { id: 'c', text: 'The display() method is a standard open-source Python method available across all IDEs.', isCorrect: false },
+      { id: 'd', text: 'The print() function natively formats distributed Spark DataFrames into ASCII tables.', isCorrect: false },
     ],
-    explanation: 'show(n) displays the first n rows of a DataFrame in tabular format. head(n) returns rows as Row objects, while display() is Databricks-specific.',
+    explanation: 'show(n) prints the first n rows in tabular ASCII format to console output. head(n) returns an array of Row objects to Python.',
     tags: ['dataframe', 'display'],
     concepts: ['ps-dataframe-create', 'ps-actions-vs-transforms'],
   },
@@ -297,10 +305,8 @@ df = spark.createDataFrame(data, ["id", "name"])`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (columns: id, name, age, email, department), select only the "name" and "age" columns.',
-    starterCode: `# Assuming df exists with columns: id, name, age, city
-# Select name and age columns
-result = df.`,
+    question: 'Write a PySpark statement to select only columns "name" and "age" from DataFrame "df".',
+    starterCode: `# Select name and age columns\nresult = `,
     testCases: [
       {
         input: 'df with columns: id, name, age, city',
@@ -308,8 +314,12 @@ result = df.`,
         description: 'Should select only name and age columns',
       },
     ],
-    solution: `result = df.select("name", "age")`,
-    explanation: 'The select() method is used to choose specific columns from a DataFrame. You can pass column names as strings.',
+    solution: `result = df.select("name", "age")\n# OR\nresult = df.select(df.name, df.age)`,
+    explanation: 'The select() method chooses specific columns from a DataFrame using string names or column objects.',
+    tieredHints: {
+      apiSignature: 'DataFrame.select(*cols: str | Column) -> DataFrame',
+      skeleton: `result = df.____("____", "____")`,
+    },
     hints: ['Use the select() method', 'Pass column names as strings'],
     tags: ['dataframe', 'select', 'columns'],
     concepts: ['ps-dataframe-create', 'ps-select-filter'],
@@ -320,9 +330,8 @@ result = df.`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Filter the DataFrame "df" (which has an "age" column) to show only rows where age is greater than 25.',
-    starterCode: `# Filter for age > 25
-result = df.`,
+    question: 'Write a PySpark statement to filter DataFrame "df" to keep only records where column "age" is strictly greater than 25.',
+    starterCode: `# Filter rows where age > 25\nresult = `,
     testCases: [
       {
         input: 'df with age column',
@@ -330,13 +339,14 @@ result = df.`,
         description: 'Should filter rows where age > 25',
       },
     ],
-    solution: `result = df.filter(df.age > 25)
-# OR
-result = df.where(df.age > 25)
-# OR using SQL expression
-result = df.filter("age > 25")`,
-    explanation: 'filter() and where() are aliases - they work identically. You can use column expressions (df.age > 25) or SQL strings ("age > 25").',
-    hints: ['Use filter() or where()', 'You can use column notation or SQL strings'],
+    solution: `result = df.filter(df.age > 25)\n# OR\nresult = df.where(df.age > 25)\n# OR\nresult = df.filter("age > 25")`,
+    explanation: 'filter() and where() are identical aliases for filtering rows based on a column condition or SQL predicate string.',
+    tieredHints: {
+      apiSignature: 'DataFrame.filter(condition: Column | str) -> DataFrame',
+      skeleton: `-- ____ filter age > 25
+result = ____.____(____.____ > 25)`,
+    },
+    hints: ['Use filter() or where()', 'You can use column notation (df.age > 25) or SQL strings ("age > 25")'],
     tags: ['dataframe', 'filter', 'where'],
     concepts: ['ps-dataframe-create', 'ps-select-filter'],
   },
@@ -346,10 +356,8 @@ result = df.filter("age > 25")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Given DataFrame "df" with an "age" column, add a new column "age_group" that contains "adult" if age >= 18, else "minor".',
-    starterCode: `# Import the conditional helper from pyspark.sql.functions
-# Assign result = df with "age_group" column: "adult" when age >= 18, else "minor"
-`,
+    question: 'Write a PySpark statement using conditional logic to add a column "age_group" to DataFrame "df", setting value to "adult" if "age" >= 18, else "minor".',
+    starterCode: `# Add age_group column with conditional logic\n`,
     testCases: [
       {
         input: 'df with age column',
@@ -357,11 +365,15 @@ result = df.filter("age > 25")`,
         description: 'Should create age_group column with conditional logic',
       },
     ],
-    solution: `from pyspark.sql.functions import when
+    solution: `from pyspark.sql.functions import when\n\nresult = df.withColumn("age_group", when(df.age >= 18, "adult").otherwise("minor"))\n# OR\nfrom pyspark.sql.functions import when, col\n\nresult = df.withColumn("age_group", when(col("age") >= 18, "adult").otherwise("minor"))`,
+    explanation: 'withColumn() adds or replaces a column. when(condition, value).otherwise(default) implements conditional CASE WHEN logic.',
+    tieredHints: {
+      apiSignature: 'when(condition: Column, value: Any).otherwise(value: Any) -> Column',
+      skeleton: `from pyspark.sql.functions import when
 
-result = df.withColumn("age_group", when(df.age >= 18, "adult").otherwise("minor"))`,
-    explanation: 'withColumn() adds or replaces a column. The when() function provides conditional logic similar to CASE WHEN in SQL.',
-    hints: ['Use when() function for conditional logic', 'Chain with otherwise() for the else case'],
+result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
+    },
+    hints: ['Use when() function for conditional logic', 'Chain with otherwise() for the default case'],
     tags: ['dataframe', 'withColumn', 'when', 'conditional'],
     concepts: ['ps-dataframe-create', 'ps-with-column', 'ps-when-otherwise'],
   },
@@ -371,9 +383,8 @@ result = df.withColumn("age_group", when(df.age >= 18, "adult").otherwise("minor
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (which has a "department" column), group by department and count the number of employees in each department.',
-    starterCode: `# Group by department and count
-result = df.`,
+    question: 'Write a PySpark statement to group DataFrame "df" by column "department" and calculate the number of employees per department as "count".',
+    starterCode: `# Group by department and count\nresult = `,
     testCases: [
       {
         input: 'df with department column',
@@ -382,7 +393,11 @@ result = df.`,
       },
     ],
     solution: `result = df.groupBy("department").count()`,
-    explanation: 'groupBy() groups rows by one or more columns, and count() returns the number of rows in each group.',
+    explanation: 'groupBy("column") groups rows by key, and count() calculates the row count per group.',
+    tieredHints: {
+      apiSignature: 'GroupedData.count() -> DataFrame',
+      skeleton: `result = df.____("____").____()`,
+    },
     hints: ['Use groupBy() on the department column', 'Chain with count()'],
     tags: ['dataframe', 'groupBy', 'aggregation'],
     concepts: ['ps-dataframe-create', 'ps-groupby-agg'],
@@ -394,14 +409,14 @@ result = df.`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
-    question: 'Which of the following is a transformation (not an action)?',
+    question: 'Which of the following is a PySpark transformation (lazy evaluation) rather than an action?',
     options: [
-      { id: 'a', text: 'count()', isCorrect: false },
-      { id: 'b', text: 'map()', isCorrect: true },
-      { id: 'c', text: 'collect()', isCorrect: false },
-      { id: 'd', text: 'show()', isCorrect: false },
+      { id: 'a', text: 'count() action (triggers immediate job execution across cluster nodes).', isCorrect: false },
+      { id: 'b', text: 'map() transformation (lazily builds RDD transformation lineage graph).', isCorrect: true },
+      { id: 'c', text: 'collect() action (transfers all distributed partitions to driver RAM).', isCorrect: false },
+      { id: 'd', text: 'show() action (formats and prints top DataFrame rows to driver console).', isCorrect: false },
     ],
-    explanation: 'map() is a transformation - it is lazy and returns a new RDD/DataFrame. count(), collect(), and show() are actions that trigger execution.',
+    explanation: 'map() is a lazy transformation that appends an operation to the execution DAG without triggering immediate Spark job execution.',
     tags: ['transformations', 'actions', 'lazy-evaluation'],
     concepts: ['ps-actions-vs-transforms'],
   },
@@ -411,9 +426,8 @@ result = df.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
     language: CodeLanguage.PYTHON,
-    question: 'Join two DataFrames — df1 (columns: id, name, age) and df2 (columns: id, department, salary) — on the "id" column using an inner join.',
-    starterCode: `# Join df1 and df2 on 'id' column
-result = df1.`,
+    question: 'Write a PySpark statement to perform an inner join between DataFrame "df1" (columns: id, name, age) and "df2" (columns: id, department, salary) on column "id".',
+    starterCode: `# Inner join df1 and df2 on id\nresult = `,
     testCases: [
       {
         input: 'df1 and df2 with id columns',
@@ -421,11 +435,13 @@ result = df1.`,
         description: 'Should perform inner join on id column',
       },
     ],
-    solution: `result = df1.join(df2, "id", "inner")
-# OR
-result = df1.join(df2, on="id", how="inner")`,
-    explanation: 'The join() method combines DataFrames. Parameters are: other DataFrame, join column(s), and join type (inner, left, right, outer).',
-    hints: ['Use the join() method', 'Specify the column name and join type'],
+    solution: `result = df1.join(df2, "id", "inner")\n# OR\nresult = df1.join(df2, on="id", how="inner")\n# OR\nresult = df1.join(df2, "id")`,
+    explanation: 'join(df2, "id", "inner") performs an inner join on the specified key column across DataFrames.',
+    tieredHints: {
+      apiSignature: 'DataFrame.join(other: DataFrame, on: str, how: str = "inner") -> DataFrame',
+      skeleton: `result = ____.____(____, "____", "____")`,
+    },
+    hints: ['Use the join() method', 'Specify the column name and join type ("inner")'],
     tags: ['dataframe', 'join', 'transformation'],
     concepts: ['ps-dataframe-create', 'sql-joins-inner-outer', 'ps-actions-vs-transforms'],
   },
@@ -435,9 +451,8 @@ result = df1.join(df2, on="id", how="inner")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
     language: CodeLanguage.PYTHON,
-    question: 'Remove duplicate rows from a DataFrame based on all columns.',
-    starterCode: `# Remove duplicates
-result = df.`,
+    question: 'Write a PySpark statement to remove duplicate rows from DataFrame "df" based on all columns.',
+    starterCode: `# Remove duplicate rows\nresult = `,
     testCases: [
       {
         input: 'df with duplicate rows',
@@ -445,10 +460,14 @@ result = df.`,
         description: 'Should remove duplicate rows',
       },
     ],
-    solution: `result = df.distinct()
-# OR
-result = df.dropDuplicates()`,
-    explanation: 'distinct() and dropDuplicates() both remove duplicate rows. dropDuplicates() can also take specific columns as parameters.',
+    solution: `result = df.distinct()\n# OR\nresult = df.dropDuplicates()`,
+    explanation: 'distinct() and dropDuplicates() both return a new DataFrame with duplicate rows removed across all columns.',
+    tieredHints: {
+      apiSignature: 'DataFrame.distinct() -> DataFrame',
+      skeleton: `-- ____ duplicate rows
+result = df.____()
+-- ____`,
+    },
     hints: ['Use distinct() or dropDuplicates()'],
     tags: ['dataframe', 'distinct', 'deduplication'],
     concepts: ['ps-dataframe-create', 'ps-distinct-drop-dup'],
@@ -459,9 +478,8 @@ result = df.dropDuplicates()`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
     language: CodeLanguage.PYTHON,
-    question: 'Sort a DataFrame by "salary" in descending order.',
-    starterCode: `# Sort by salary descending
-result = df.`,
+    question: 'Write a PySpark statement to sort DataFrame "df" by column "salary" in descending order.',
+    starterCode: `# Sort by salary descending\nresult = `,
     testCases: [
       {
         input: 'df with salary column',
@@ -469,14 +487,14 @@ result = df.`,
         description: 'Should sort by salary in descending order',
       },
     ],
-    solution: `from pyspark.sql.functions import desc
+    solution: `from pyspark.sql.functions import desc\n\nresult = df.orderBy(desc("salary"))\n# OR\nresult = df.orderBy(df.salary.desc())\n# OR\nresult = df.sort(desc("salary"))`,
+    explanation: 'orderBy() and sort() are aliases. Pass desc("column") or col.desc() to order descending.',
+    tieredHints: {
+      apiSignature: 'DataFrame.orderBy(*cols: str | Column, ascending: bool = True) -> DataFrame',
+      skeleton: `from pyspark.sql.functions import desc
 
-result = df.orderBy(desc("salary"))
-# OR
-result = df.orderBy(df.salary.desc())
-# OR
-result = df.sort(desc("salary"))`,
-    explanation: 'orderBy() and sort() are aliases. Use desc() function or .desc() method on columns for descending order.',
+result = df.____(____("____"))`,
+    },
     hints: ['Use orderBy() or sort()', 'Use desc() for descending order'],
     tags: ['dataframe', 'orderBy', 'sort'],
     concepts: ['ps-dataframe-create', 'ps-orderby-sort'],
@@ -489,9 +507,8 @@ result = df.sort(desc("salary"))`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Write a SQL query to select all columns from the "employees" table (which has columns: id, name, department, salary, age, email) where department is "Sales".',
-    starterCode: `-- Write your SQL query here
-`,
+    question: 'Write a SQL query to select all columns from the "employees" table (columns: id, emp_name, department, salary, age, email) where department is "Sales".',
+    starterCode: `-- Write your SQL query here\n`,
     testCases: [
       {
         input: 'employees table with department column',
@@ -499,8 +516,12 @@ result = df.sort(desc("salary"))`,
         description: 'Should select all Sales employees',
       },
     ],
-    solution: `SELECT * FROM employees WHERE department = 'Sales'`,
+    solution: `SELECT * FROM employees WHERE department = 'Sales'\n-- OR\nselect * from employees where department = "Sales"`,
     explanation: 'Basic SQL SELECT statement with WHERE clause to filter rows.',
+    tieredHints: {
+      apiSignature: 'SELECT * FROM table WHERE condition',
+      skeleton: `SELECT * FROM ____ WHERE ____ = "____"`,
+    },
     hints: ['Use SELECT * to get all columns', 'Use WHERE to filter'],
     tags: ['sql', 'select', 'where'],
     concepts: ['ps-select-filter'],
@@ -511,9 +532,8 @@ result = df.sort(desc("salary"))`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.PYTHON,
-    question: 'Register a DataFrame as a temporary view named "employees" so you can query it with SQL.',
-    starterCode: `# Register df as temporary view
-df.`,
+    question: 'Register a DataFrame "df" as a temporary view named "employees" so you can query it with Spark SQL.',
+    starterCode: `# Register df as temporary view named "employees"\n`,
     testCases: [
       {
         input: 'df DataFrame',
@@ -521,8 +541,13 @@ df.`,
         description: 'Should create temp view named employees',
       },
     ],
-    solution: `df.createOrReplaceTempView("employees")`,
+    solution: `df.createOrReplaceTempView("employees")\n# OR\ndf.createTempView("employees")`,
     explanation: 'createOrReplaceTempView() registers a DataFrame as a temporary view that can be queried using SQL. The view is session-scoped.',
+    tieredHints: {
+      apiSignature: 'DataFrame.createOrReplaceTempView(name: str) -> None',
+      skeleton: `-- ____ create temp view
+____.____("____")`,
+    },
     hints: ['Use createOrReplaceTempView()', 'Pass the view name as a string'],
     tags: ['sql', 'temp-view', 'dataframe'],
     concepts: ['sql-temp-views', 'ps-dataframe-create'],
@@ -533,9 +558,8 @@ df.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Query the "employees" table (which has department and salary columns) to find the average salary by department, ordered by average salary descending.',
-    starterCode: `-- Write your SQL query here
-`,
+    question: 'Query the "employees" table (columns: department, salary) to find the average salary by department, ordered by average salary descending. Name the calculated column "avg_salary".',
+    starterCode: `-- Write your SQL query here\n`,
     testCases: [
       {
         input: 'employees table with department and salary columns',
@@ -543,11 +567,15 @@ df.`,
         description: 'Should calculate average salary by department',
       },
     ],
-    solution: `SELECT department, AVG(salary) as avg_salary
-FROM employees
-GROUP BY department
-ORDER BY avg_salary DESC`,
+    solution: `SELECT department, AVG(salary) as avg_salary\nFROM employees\nGROUP BY department\nORDER BY avg_salary DESC\n-- OR\nSELECT department, AVG(salary) AS avg_salary\nFROM employees\nGROUP BY department\nORDER BY AVG(salary) DESC`,
     explanation: 'This uses GROUP BY to aggregate by department, AVG() to calculate average salary, and ORDER BY to sort results.',
+    tieredHints: {
+      apiSignature: 'SELECT group_col, AVG(val_col) AS alias FROM table GROUP BY group_col ORDER BY alias DESC',
+      skeleton: `SELECT ____, ____(salary) as ____
+FROM ____
+GROUP BY ____
+ORDER BY ____ DESC`,
+    },
     hints: ['Use GROUP BY department', 'Use AVG() function', 'Use ORDER BY with DESC'],
     tags: ['sql', 'groupby', 'aggregate', 'orderby'],
     concepts: ['ps-groupby-agg', 'ps-aggregate-fns', 'ps-orderby-sort'],
@@ -558,8 +586,8 @@ ORDER BY avg_salary DESC`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, emp_name, department, salary), find all employees whose salary is above the company-wide average salary.\n\nIMPORTANT: You cannot use WHERE salary > AVG(salary) directly — SQL does not allow aggregate functions in the WHERE clause because WHERE filters rows one at a time before any aggregation happens. To solve this, you need a subquery that calculates the average first, then compare against it.',
-    starterCode: `-- Find employees paid above average\n-- Hint: WHERE cannot use AVG() directly — use a subquery\n`,
+    question: 'Given an "employees" table with columns "id", "emp_name", "department", and "salary", write a SQL query to filter and return all employee rows where salary exceeds the overall average employee salary.',
+    starterCode: `-- Find employees paid above average\n`,
     testCases: [
       {
         input: 'employees table with salary column',
@@ -567,9 +595,13 @@ ORDER BY avg_salary DESC`,
         description: 'Should find employees with above-average salary',
       },
     ],
-    solution: `SELECT * FROM employees
-WHERE salary > (SELECT AVG(salary) FROM employees)`,
+    solution: `SELECT * FROM employees\nWHERE salary > (SELECT AVG(salary) FROM employees)\n-- OR\nSELECT id, emp_name, department, salary\nFROM employees\nWHERE salary > (SELECT AVG(salary) FROM employees)`,
     explanation: 'WHERE filters rows before aggregation, so AVG(salary) cannot appear directly in a WHERE clause. The subquery (SELECT AVG(salary) FROM employees) runs first and returns a single number (a "scalar subquery"), which the outer WHERE then uses to filter each row.',
+    tieredHints: {
+      apiSignature: 'WHERE col > (SELECT AVG(col) FROM table)',
+      skeleton: `SELECT * FROM employees
+WHERE ____ > (SELECT ____(salary) FROM ____)`,
+    },
     hints: ['WHERE salary > AVG(salary) won\'t work — aggregates can\'t go in WHERE', 'Use a subquery: (SELECT AVG(salary) FROM employees) returns a single number', 'The outer query then filters: WHERE salary > (that number)'],
     tags: ['sql', 'subquery', 'aggregate'],
     concepts: ['sql-subqueries', 'ps-aggregate-fns'],
@@ -581,12 +613,12 @@ WHERE salary > (SELECT AVG(salary) FROM employees)`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
-    question: 'Which operation triggers a shuffle in Spark?',
+    question: 'Which PySpark DataFrame transformation forces a data shuffle across cluster worker nodes?',
     options: [
-      { id: 'a', text: 'select()', isCorrect: false },
-      { id: 'b', text: 'filter()', isCorrect: false },
-      { id: 'c', text: 'groupBy()', isCorrect: true },
-      { id: 'd', text: 'withColumn()', isCorrect: false },
+      { id: 'a', text: 'select() — projects specified columns without altering partition boundaries', isCorrect: false },
+      { id: 'b', text: 'filter() — evaluates boolean row predicates within local partitions', isCorrect: false },
+      { id: 'c', text: 'groupBy() — redistributes row keys across nodes to aggregate partitions', isCorrect: true },
+      { id: 'd', text: 'withColumn() — computes new column expressions within existing partitions', isCorrect: false },
     ],
     explanation: 'groupBy() triggers a shuffle because data needs to be redistributed across partitions to group by keys. select(), filter(), and withColumn() are narrow transformations.',
     tags: ['shuffle', 'performance', 'partitioning'],
@@ -598,11 +630,8 @@ WHERE salary > (SELECT AVG(salary) FROM employees)`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (columns: id, name, department, salary), use a window function to add a "rank" column that ranks employees by salary (highest first) within each department.',
-    starterCode: `# Import Window and the ranking + descending helpers from pyspark
-# Build a windowSpec partitioned by department and ordered by salary descending
-# Assign result = df with a "rank" column derived from that window
-`,
+    question: 'Using DataFrame "df" (columns: id, name, department, salary), write a PySpark statement to add a "rank" column that ranks employees by salary descending within each department.',
+    starterCode: `# Create rank column partitioned by department and ordered by salary desc\n`,
     testCases: [
       {
         input: 'df with department and salary columns',
@@ -610,12 +639,16 @@ WHERE salary > (SELECT AVG(salary) FROM employees)`,
         description: 'Should rank by salary within department',
       },
     ],
-    solution: `from pyspark.sql.window import Window
+    solution: `from pyspark.sql.window import Window\nfrom pyspark.sql.functions import rank, desc\n\nwindowSpec = Window.partitionBy("department").orderBy(desc("salary"))\nresult = df.withColumn("rank", rank().over(windowSpec))\n# OR\nfrom pyspark.sql.window import Window\nfrom pyspark.sql.functions import rank, col\n\nwindowSpec = Window.partitionBy("department").orderBy(col("salary").desc())\nresult = df.withColumn("rank", rank().over(windowSpec))`,
+    explanation: 'Window functions operate on a group of rows and return a value for each row. partitionBy() defines the partition, orderBy() defines the order within each partition.',
+    tieredHints: {
+      apiSignature: 'rank().over(windowSpec: WindowSpec) -> Column',
+      skeleton: `from pyspark.sql.window import Window
 from pyspark.sql.functions import rank, desc
 
-windowSpec = Window.partitionBy("department").orderBy(desc("salary"))
-result = df.withColumn("rank", rank().over(windowSpec))`,
-    explanation: 'Window functions operate on a group of rows and return a value for each row. partitionBy() defines the partition, orderBy() defines the order within each partition.',
+windowSpec = ____.____("____").____(____("____"))
+result = ____.____("____", ____().____(windowSpec))`,
+    },
     hints: ['Use Window.partitionBy() for grouping', 'Use orderBy() to define ranking order', 'Apply rank() over the window'],
     tags: ['window-functions', 'rank', 'advanced'],
     concepts: ['sql-window-ranking'],
@@ -626,9 +659,8 @@ result = df.withColumn("rank", rank().over(windowSpec))`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Cache a DataFrame that will be reused multiple times to improve performance.',
-    starterCode: `# Cache the DataFrame
-df_cached = df.`,
+    question: 'Persist DataFrame "df" in memory using PySpark DataFrame caching so it can be efficiently reused across multiple actions.',
+    starterCode: `# Cache DataFrame df for reuse\n`,
     testCases: [
       {
         input: 'df DataFrame',
@@ -636,10 +668,14 @@ df_cached = df.`,
         description: 'Should cache the DataFrame',
       },
     ],
-    solution: `df_cached = df.cache()
-# OR
-df_cached = df.persist()`,
+    solution: `df_cached = df.cache()\n# OR\ndf.cache()\n# OR\ndf_cached = df.persist()\n# OR\ndf.persist()`,
     explanation: 'cache() stores the DataFrame in memory for faster access on repeated operations. persist() allows more control over storage levels.',
+    tieredHints: {
+      apiSignature: 'DataFrame.cache() -> DataFrame',
+      skeleton: `-- ____ DataFrame for reuse
+df_cached = df.____()
+-- ____`,
+    },
     hints: ['Use cache() method', 'cache() is an alias for persist(StorageLevel.MEMORY_ONLY)'],
     tags: ['caching', 'performance', 'optimization'],
     concepts: ['ps-cache-persist', 'ps-execution-plans'],
@@ -650,8 +686,8 @@ df_cached = df.persist()`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Join streaming DataFrame "impressions_df" (columns: ad_id, impression_time) with streaming DataFrame "clicks_df" (columns: ad_id, click_time) where the click happened within 1 hour after the impression. Both have watermarks of 2 hours.',
-    starterCode: ``,
+    question: 'Join streaming DataFrame "impressions_df" (columns: ad_id, impression_time) with streaming DataFrame "clicks_df" (columns: ad_id, click_time) where click_time occurs within 1 hour after impression_time. Apply a 2 hour watermark on both streams.',
+    starterCode: `# Perform stream-stream join with watermarks\n`,
     testCases: [
       {
         input: 'impressions_df and clicks_df streaming DataFrames',
@@ -659,21 +695,25 @@ df_cached = df.persist()`,
         description: 'Should join streams with watermarks and time range condition',
       },
     ],
-    solution: `from pyspark.sql.functions import expr
+    solution: `from pyspark.sql.functions import expr\n\nimpressions = impressions_df.withWatermark("impression_time", "2 hours")\nclicks = clicks_df.withWatermark("click_time", "2 hours")\n\nresult = impressions.join(\n    clicks,\n    expr("""\n        impressions.ad_id = clicks.ad_id AND\n        click_time >= impression_time AND\n        click_time <= impression_time + interval 1 hour\n    """),\n    "inner"\n)\n# OR\nfrom pyspark.sql.functions import expr\n\nimpressions = impressions_df.withWatermark("impression_time", "2 hours")\nclicks = clicks_df.withWatermark("click_time", "2 hours")\n\nresult = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + INTERVAL 1 HOUR"), "inner")`,
+    explanation: 'Stream-stream joins require watermarks on both sides and a time range condition so Spark knows how long to buffer state. The watermark tells Spark when data is "too late" to matter, and the interval condition bounds how far apart matching events can be.',
+    tieredHints: {
+      apiSignature: 'DataFrame.withWatermark(timeCol, delay).join(other, expr_condition, how)',
+      skeleton: `from pyspark.sql.functions import expr
 
-impressions = impressions_df.withWatermark("impression_time", "2 hours")
-clicks = clicks_df.withWatermark("click_time", "2 hours")
+impressions = impressions_df.____("____", "2 hours")
+clicks = clicks_df.____("____", "2 hours")
 
-result = impressions.join(
+result = impressions.____(
     clicks,
-    expr("""
+    ____("""
         impressions.ad_id = clicks.ad_id AND
         click_time >= impression_time AND
         click_time <= impression_time + interval 1 hour
     """),
-    "inner"
+    "____"
 )`,
-    explanation: 'Stream-stream joins require watermarks on both sides and a time range condition so Spark knows how long to buffer state. The watermark tells Spark when data is "too late" to matter, and the interval condition bounds how far apart matching events can be.',
+    },
     hints: [
       'Use withWatermark() on both DataFrames before joining',
       'The join condition needs both the key match (ad_id) and a time range',
@@ -691,8 +731,7 @@ result = impressions.join(
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
     question: 'Read a CSV file from "/data/employees.csv" into a DataFrame with header.',
-    starterCode: `# Read CSV file
-df = spark.`,
+    starterCode: `# Read CSV file\ndf = spark.`,
     testCases: [
       {
         input: 'CSV file at /data/employees.csv',
@@ -700,10 +739,12 @@ df = spark.`,
         description: 'Should read CSV with header',
       },
     ],
-    solution: `df = spark.read.csv("/data/employees.csv", header=True)
-# OR
-df = spark.read.format("csv").option("header", "true").load("/data/employees.csv")`,
+    solution: `df = spark.read.csv("/data/employees.csv", header=True)\n# OR\ndf = spark.read.format("csv").option("header", "true").load("/data/employees.csv")`,
     explanation: 'spark.read.csv() reads CSV files. The header=True option indicates the first row contains column names.',
+    tieredHints: {
+      apiSignature: 'DataFrameReader.csv(path: str, header: bool = None) -> DataFrame',
+      skeleton: `df = ____.____.____("/data/employees.csv", ____=True)`,
+    },
     hints: ['Use spark.read.csv()', 'Set header=True to use first row as column names'],
     tags: ['io', 'csv', 'read'],
     concepts: ['ps-io-csv'],
@@ -715,8 +756,7 @@ df = spark.read.format("csv").option("header", "true").load("/data/employees.csv
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Using DataFrame "df" (which has columns: id, name, age, email), show the schema (column names, data types, and nullable info).',
-    starterCode: `# Print the schema
-df.`,
+    starterCode: `# Print the schema\ndf.`,
     testCases: [
       {
         input: 'df DataFrame',
@@ -724,10 +764,14 @@ df.`,
         description: 'Should access the schema',
       },
     ],
-    solution: `df.printSchema()
-# OR
-df.schema`,
+    solution: `df.printSchema()\n# OR\ndf.schema`,
     explanation: 'printSchema() displays the schema of a DataFrame in a tree format. Alternatively, df.schema returns the StructType schema object.',
+    tieredHints: {
+      apiSignature: 'DataFrame.printSchema() -> None',
+      skeleton: `-- ____ DataFrame schema
+df.____()
+-- ____`,
+    },
     hints: ['Use printSchema() method or access the schema attribute'],
     tags: ['dataframe', 'schema'],
     concepts: ['ps-dataframe-create'],
@@ -739,8 +783,7 @@ df.schema`,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Count the total number of rows in a DataFrame.',
-    starterCode: `# Count rows
-row_count = df.`,
+    starterCode: `# Count rows\nrow_count = df.`,
     testCases: [
       {
         input: 'df DataFrame',
@@ -750,6 +793,12 @@ row_count = df.`,
     ],
     solution: `row_count = df.count()`,
     explanation: 'count() is an action that returns the number of rows in a DataFrame.',
+    tieredHints: {
+      apiSignature: 'DataFrame.count() -> int',
+      skeleton: `-- ____ total rows
+row_count = df.____()
+-- ____`,
+    },
     hints: ['Use count() method'],
     tags: ['dataframe', 'count', 'action'],
     concepts: ['ps-dataframe-create', 'ps-actions-vs-transforms'],
@@ -761,8 +810,7 @@ row_count = df.`,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Rename column "old_name" to "new_name".',
-    starterCode: `# Rename column
-result = df.`,
+    starterCode: `# Rename column\nresult = df.`,
     testCases: [
       {
         input: 'df with old_name column',
@@ -772,6 +820,10 @@ result = df.`,
     ],
     solution: `result = df.withColumnRenamed("old_name", "new_name")`,
     explanation: 'withColumnRenamed() returns a new DataFrame with a column renamed.',
+    tieredHints: {
+      apiSignature: 'DataFrame.withColumnRenamed(existing: str, new: str) -> DataFrame',
+      skeleton: `result = df.____("____", "____")`,
+    },
     hints: ['Use withColumnRenamed()', 'Pass old name and new name as arguments'],
     tags: ['dataframe', 'rename', 'columns'],
     concepts: ['ps-dataframe-create', 'ps-with-column', 'ps-select-filter'],
@@ -783,8 +835,7 @@ result = df.`,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Drop the "temp_column" from a DataFrame.',
-    starterCode: `# Drop column
-result = df.`,
+    starterCode: `# Drop column\nresult = df.`,
     testCases: [
       {
         input: 'df with temp_column',
@@ -794,6 +845,11 @@ result = df.`,
     ],
     solution: `result = df.drop("temp_column")`,
     explanation: 'drop() removes one or more columns from a DataFrame and returns a new DataFrame.',
+    tieredHints: {
+      apiSignature: 'DataFrame.drop(*cols: str) -> DataFrame',
+      skeleton: `-- ____ drop column
+result = ____.____("____")`,
+    },
     hints: ['Use drop() method', 'Pass the column name as a string'],
     tags: ['dataframe', 'drop', 'columns'],
     concepts: ['ps-dataframe-create', 'ps-distinct-drop-dup', 'ps-select-filter'],
@@ -805,8 +861,7 @@ result = df.`,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Using DataFrame "df" (columns: id, name, country, city), select only the distinct values from the "country" column.',
-    starterCode: `# Get distinct countries
-result = df.select("country").`,
+    starterCode: `# Get distinct countries\nresult = df.select("country").`,
     testCases: [
       {
         input: 'df with country column',
@@ -816,6 +871,10 @@ result = df.select("country").`,
     ],
     solution: `result = df.select("country").distinct()`,
     explanation: 'Combining select() with distinct() returns unique values from specified columns.',
+    tieredHints: {
+      apiSignature: 'DataFrame.distinct() -> DataFrame',
+      skeleton: `result = df.____("____").____()`,
+    },
     hints: ['Use select() first', 'Chain with distinct()'],
     tags: ['dataframe', 'distinct', 'select'],
     concepts: ['ps-dataframe-create', 'ps-distinct-drop-dup', 'ps-select-filter'],
@@ -828,9 +887,8 @@ result = df.select("country").`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, name, department, salary), write a query to find the top 5 highest paid employees. Return all columns.',
-    starterCode: `-- Write your SQL query here
-`,
+    question: 'Using the "employees" table (columns: id, emp_name, department, salary), write a query to find the top 5 highest paid employees. Return all columns.',
+    starterCode: `-- Write your SQL query here\n`,
     testCases: [
       {
         input: 'employees table',
@@ -838,10 +896,14 @@ result = df.select("country").`,
         description: 'Should get top 5 by salary',
       },
     ],
-    solution: `SELECT * FROM employees
-ORDER BY salary DESC
-LIMIT 5`,
+    solution: `SELECT * FROM employees\nORDER BY salary DESC\nLIMIT 5\n-- OR\nSELECT id, emp_name, department, salary\nFROM employees\nORDER BY salary DESC\nLIMIT 5`,
     explanation: 'ORDER BY sorts rows, DESC for descending order, and LIMIT restricts the number of results.',
+    tieredHints: {
+      apiSignature: 'SELECT cols FROM table ORDER BY col DESC LIMIT n',
+      skeleton: `SELECT * FROM ____
+ORDER BY ____ ____
+LIMIT 5`,
+    },
     hints: ['Use ORDER BY salary DESC', 'Use LIMIT 5'],
     tags: ['sql', 'orderby', 'limit'],
     concepts: ['ps-orderby-sort'],
@@ -852,9 +914,8 @@ LIMIT 5`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, name, department, salary), write a query to select the department and count of employees in each department, showing only departments with more than 10 employees.',
-    starterCode: `-- Write your SQL query here
-`,
+    question: 'Using the "employees" table (columns: id, emp_name, department, salary), write a query to select the department and count of employees in each department, showing only departments with more than 10 employees. Name the count column "employee_count".',
+    starterCode: `-- Write your SQL query here\n`,
     testCases: [
       {
         input: 'employees table with department',
@@ -862,16 +923,15 @@ LIMIT 5`,
         description: 'Should count employees by department, filter by HAVING',
       },
     ],
-    solution: `SELECT department, COUNT(*) as employee_count
-FROM employees
-GROUP BY department
-HAVING employee_count > 10
--- OR
-SELECT department, COUNT(*) as employee_count
-FROM employees
-GROUP BY department
-HAVING COUNT(*) > 10`,
+    solution: `SELECT department, COUNT(*) as employee_count\nFROM employees\nGROUP BY department\nHAVING employee_count > 10\n-- OR\nSELECT department, COUNT(*) as employee_count\nFROM employees\nGROUP BY department\nHAVING COUNT(*) > 10`,
     explanation: 'HAVING filters groups after aggregation, unlike WHERE which filters before. Use it with GROUP BY to filter aggregated results.',
+    tieredHints: {
+      apiSignature: 'SELECT col, COUNT(*) AS alias FROM table GROUP BY col HAVING COUNT(*) > n',
+      skeleton: `SELECT department, ____(*) as employee_count
+FROM ____
+GROUP BY ____
+HAVING ____ > 10`,
+    },
     hints: ['Use GROUP BY and COUNT()', 'Use HAVING to filter aggregated results'],
     tags: ['sql', 'groupby', 'having', 'aggregate'],
     concepts: ['ps-groupby-agg', 'sql-where-having', 'ps-aggregate-fns'],
@@ -882,9 +942,8 @@ HAVING COUNT(*) > 10`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Query the "sales" table (columns: sale_date, amount) using a window function to calculate the running total of sales ordered by sale_date.',
-    starterCode: `-- Write your SQL query here
-`,
+    question: 'Query the "sales" table (columns: sale_date, amount) using a window function to calculate the running total of sales ordered by sale_date. Alias the output column as "running_total".',
+    starterCode: `-- Write your SQL query here\n`,
     testCases: [
       {
         input: 'sales table with sale_date and amount',
@@ -892,10 +951,14 @@ HAVING COUNT(*) > 10`,
         description: 'Should calculate running total',
       },
     ],
-    solution: `SELECT sale_date, amount,
-       SUM(amount) OVER (ORDER BY sale_date) as running_total
-FROM sales`,
+    solution: `SELECT sale_date, amount,\n       SUM(amount) OVER (ORDER BY sale_date) as running_total\nFROM sales\n-- OR\nSELECT sale_date, amount,\n       SUM(amount) OVER (ORDER BY sale_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as running_total\nFROM sales`,
     explanation: 'Window functions use OVER clause. SUM(amount) OVER (ORDER BY sale_date) calculates cumulative sum ordered by sale_date.',
+    tieredHints: {
+      apiSignature: 'SUM(col) OVER (ORDER BY date_col) AS alias',
+      skeleton: `SELECT sale_date, amount,
+       ____(amount) OVER (ORDER BY ____) as ____
+FROM ____`,
+    },
     hints: ['Use SUM() with OVER clause', 'ORDER BY sale_date in the window'],
     tags: ['sql', 'window-functions', 'advanced'],
     concepts: ['sql-window-ranking'],
@@ -907,12 +970,12 @@ FROM sales`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_BASICS,
-    question: 'What is Delta Lake?',
+    question: 'What is Delta Lake in a Databricks Lakehouse architecture?',
     options: [
-      { id: 'a', text: 'A data visualization tool', isCorrect: false },
-      { id: 'b', text: 'A machine learning framework', isCorrect: false },
-      { id: 'c', text: 'A SQL query engine', isCorrect: false },
-      { id: 'd', text: 'An open-source storage layer that brings ACID transactions to Apache Spark', isCorrect: true },
+      { id: 'a', text: 'A dashboard visualization framework for publishing SQL query charts to workspace business users.', isCorrect: false },
+      { id: 'b', text: 'An open-source storage layer that brings ACID transactions and time travel to Apache Spark object storage.', isCorrect: true },
+      { id: 'c', text: 'A cluster resource manager that dynamically scales virtual machine instances across worker node pools.', isCorrect: false },
+      { id: 'd', text: 'A distributed stream ingestion bus that replaces external Apache Kafka message brokers.', isCorrect: false },
     ],
     explanation: 'Delta Lake is an open-source storage layer that provides ACID transactions, scalable metadata handling, and unified streaming/batch data processing on top of existing data lakes.',
     tags: ['delta-lake', 'storage', 'acid'],
@@ -923,12 +986,12 @@ FROM sales`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_BASICS,
-    question: 'What is the purpose of Auto Loader in Databricks?',
+    question: 'What is the primary function of Auto Loader in Databricks data pipelines?',
     options: [
-      { id: 'a', text: 'Efficiently processes new data files as they arrive in cloud storage', isCorrect: true },
-      { id: 'b', text: 'Automatically scales clusters', isCorrect: false },
-      { id: 'c', text: 'Automatically optimizes queries', isCorrect: false },
-      { id: 'd', text: 'Loads data into memory automatically', isCorrect: false },
+      { id: 'a', text: 'Incrementally and efficiently ingesting new data files as they arrive in cloud object storage.', isCorrect: true },
+      { id: 'b', text: 'Automatically provisioning ephemeral worker clusters when job schedules trigger.', isCorrect: false },
+      { id: 'c', text: 'Compacting small Parquet files into larger optimal file sizes during background execution.', isCorrect: false },
+      { id: 'd', text: 'Caching frequently queried DataFrames into driver RAM memory automatically.', isCorrect: false },
     ],
     explanation: 'Auto Loader incrementally and efficiently processes new data files as they arrive in cloud storage, without having to manually track which files have been processed.',
     tags: ['auto-loader', 'streaming', 'incremental'],
@@ -943,8 +1006,7 @@ FROM sales`,
     topic: Topic.SQL_JOINS,
     language: CodeLanguage.PYTHON,
     question: 'Perform a left join between df1 (columns: id, name, dept_id) and df2 (columns: id, department_name) on the "id" column.',
-    starterCode: `# Left join df1 and df2
-result = df1.`,
+    starterCode: `# Left join df1 and df2\nresult = df1.`,
     testCases: [
       {
         input: 'df1 and df2 with id column',
@@ -954,6 +1016,10 @@ result = df1.`,
     ],
     solution: `result = df1.join(df2, "id", "left")`,
     explanation: 'Left join keeps all rows from the left DataFrame (df1) and matching rows from the right DataFrame (df2).',
+    tieredHints: {
+      apiSignature: 'DataFrame.join(other: DataFrame, on: str, how: str = "left") -> DataFrame',
+      skeleton: `result = df1.____(____, "____", "____")`,
+    },
     hints: ['Use join() with "left" as the join type'],
     tags: ['dataframe', 'join', 'left-join'],
     concepts: ['ps-dataframe-create', 'sql-joins-inner-outer'],
@@ -965,9 +1031,7 @@ result = df1.`,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Using DataFrame "df" (columns: id, product, amount), calculate the sum of the "amount" column.',
-    starterCode: `# Import the sum aggregate from pyspark.sql.functions
-# Assign result to the aggregation of df returning the total of "amount"
-`,
+    starterCode: `# Import the sum aggregate from pyspark.sql.functions\n# Assign result to the aggregation of df returning the total of "amount"\n`,
     testCases: [
       {
         input: 'df with amount column',
@@ -975,12 +1039,14 @@ result = df1.`,
         description: 'Should calculate sum of amount',
       },
     ],
-    solution: `from pyspark.sql.functions import sum
-
-result = df.agg(sum("amount"))
-# OR
-result = df.select(sum("amount"))`,
+    solution: `from pyspark.sql.functions import sum\n\nresult = df.agg(sum("amount"))\n# OR\nresult = df.select(sum("amount"))`,
     explanation: 'agg() performs aggregations. sum() is an aggregate function that calculates the total of a numeric column.',
+    tieredHints: {
+      apiSignature: 'DataFrame.agg(*exprs: Column) -> DataFrame',
+      skeleton: `from pyspark.sql.functions import sum
+
+result = ____.____(____("____"))`,
+    },
     hints: ['Use agg() with sum() function', 'Or use select() with sum()'],
     tags: ['dataframe', 'aggregate', 'sum'],
     concepts: ['ps-dataframe-create', 'ps-aggregate-fns'],
@@ -992,8 +1058,7 @@ result = df.select(sum("amount"))`,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
     question: 'Fill null values in the "age" column with 0.',
-    starterCode: `# Fill null values in age column
-result = df.`,
+    starterCode: `# Fill null values in age column\nresult = df.`,
     testCases: [
       {
         input: 'df with age column containing nulls',
@@ -1001,10 +1066,13 @@ result = df.`,
         description: 'Should fill nulls with 0',
       },
     ],
-    solution: `result = df.fillna(0, subset=["age"])
-# OR
-result = df.na.fill(0, subset=["age"])`,
+    solution: `result = df.fillna(0, subset=["age"])\n# OR\nresult = df.na.fill(0, subset=["age"])`,
     explanation: 'fillna() or na.fill() replaces null values. The subset parameter specifies which columns to fill.',
+    tieredHints: {
+      apiSignature: 'DataFrame.fillna(value: Any, subset: List[str] = None) -> DataFrame',
+      skeleton: `-- ____ fill nulls
+result = ____.____(0, subset=["____"])`,
+    },
     hints: ['Use fillna() or na.fill()', 'Use subset parameter to specify columns'],
     tags: ['dataframe', 'null-handling', 'fillna'],
     concepts: ['ps-dataframe-create', 'ps-null-handling'],
@@ -1043,6 +1111,10 @@ export const questions: Question[] = dedupeById([
   ...sqlMisconceptionMCQs,
   // Data Modeling & Warehousing Design (Databricks)
   ...dataModelingQuestions,
+  // Lakehouse Architecture & Engineering Practice (Databricks)
+  ...orchestrationDesignQuestions,
+  ...goldLayerDesignQuestions,
+  ...ingestionArchitectureQuestions,
   // Data Engineering Concepts course
   ...dataEngineeringFoundationsQuestions,
   ...dataEngineeringArchitectureQuestions,
@@ -1165,4 +1237,6 @@ export const questions: Question[] = dedupeById([
   ...py_fixtures_questions,
   ...py_mocking_questions,
   ...py_type_hints_questions,
+  ...DATABRICKS_PLATFORM_EXPANSION_QUESTIONS,
+  ...UNITY_CATALOG_QUESTIONS,
 ]);

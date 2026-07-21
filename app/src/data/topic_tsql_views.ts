@@ -75,6 +75,14 @@ JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey
 GROUP BY c.CustomerKey, c.FullName;`,
     explanation: 'The view wraps an aggregating join: `SUM(o.Amount)` per customer, with both non-aggregated columns in `GROUP BY`. Consumers then `SELECT … FROM dbo.vSalesByCustomer` without re-deriving the rollup each time.',
     hints: ['CREATE VIEW … AS SELECT … SUM(Amount) AS TotalAmount', 'GROUP BY every non-aggregated column'],
+    tieredHints: {
+      apiSignature: 'SUM([ALL | DISTINCT] expression)',
+      skeleton: `CREATE VIEW dbo.vSalesByCustomer AS
+SELECT c.CustomerKey, c.FullName, ____(o.Amount) AS ____
+FROM dbo.DimCustomer c
+JOIN dbo.FactOrders o ON o.CustomerKey = ____
+GROUP BY ____, ____;`,
+    },
     tags: ['tsql', 'views', 'create-view', 'aggregation'],
   },
   {

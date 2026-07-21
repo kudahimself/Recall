@@ -139,7 +139,7 @@ END CATCH`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Write a transactional block that, inside a TRY, opens a transaction, INSERTs into `dbo.FactSales (CustomerKey, Amount)` the values `(5, 100)` then `(6, 200)`, and COMMITs. In the CATCH, ROLLBACK the transaction and re-raise the original error with a bare THROW.',
-    starterCode: `-- BEGIN TRY ... BEGIN TRAN ... COMMIT; END TRY  BEGIN CATCH ... END CATCH
+    starterCode: `-- dbo.FactSales(CustomerKey, Amount); wrap two inserts in a transaction; roll back and re-raise on error
 `,
     testCases: [
       {
@@ -158,6 +158,19 @@ BEGIN CATCH
     ROLLBACK;
     THROW;
 END CATCH`,
+    tieredHints: {
+      apiSignature: 'INSERT INTO table (col1, col2, ...) VALUES (val1, val2, ...);',
+      skeleton: `BEGIN TRY
+    ____;
+    INSERT INTO dbo.FactSales (CustomerKey, Amount) ____ (5, 100);
+    INSERT INTO dbo.FactSales (CustomerKey, Amount) ____ (6, 200);
+    ____;
+END TRY
+BEGIN CATCH
+    ____;
+    ____;
+END CATCH`,
+    },
     explanation: 'Both inserts must land together, so they sit inside `BEGIN TRAN … COMMIT` within the TRY. If either fails, control jumps to CATCH, which `ROLLBACK`s so neither row persists and `THROW`s the original error to the caller — the load fails loudly and atomically rather than leaving one orphan row.',
     hints: ['TRY: BEGIN TRAN, two INSERTs, COMMIT', 'CATCH: ROLLBACK then THROW'],
     tags: ['tsql', 'error-handling', 'try-catch', 'transactions'],

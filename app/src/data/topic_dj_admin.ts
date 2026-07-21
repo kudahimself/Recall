@@ -125,6 +125,39 @@ class ArticleAdmin(admin.ModelAdmin):
         '@admin.action decorator + actions list',
         'get_queryset filter for multi-tenant scoping',
       ],
+      tieredHints: {
+        apiSignature: '@admin.display(description=None, ordering=None)',
+        skeleton: `from django.contrib import admin
+from django.db.models import Count
+from .models import Article, Comment
+
+
+class ____(admin.____):
+    model = ____
+    extra = ____
+
+
+@admin.register(Article)
+class ____(admin.____):
+    list_display = (____, ____, ____, ____)
+    ____ = [____]
+    ____ = [____]
+
+    def ____(self, ____):
+        qs = super().____(request).____(____=____("comment"))
+        if request.user.____:
+            return qs
+        return qs.filter(____=request.user)
+
+    @admin.____(description="Comments", ordering=____)
+    def ____(self, ____):
+        return obj.____
+
+    @admin.____(description="Mark selected as published")
+    def ____(self, ____, ____):
+        updated = ____.____(status="published")
+        self.____(request, f"Marked {updated} articles as published")`,
+      },
       tags: ['django', 'admin', 'TabularInline', 'admin-action', 'get_queryset', 'advanced'],
       concepts: ['dj-admin', 'dj-view-patterns'],
     },
@@ -182,6 +215,16 @@ class PostAdmin(admin.ModelAdmin):
         'Alternative: admin.site.register(Model, ModelAdmin)',
         'Must happen at import time — use admin.py',
       ],
+      tieredHints: {
+        apiSignature: '@admin.register(modelOrIterable, *models, site=site)',
+        skeleton: `# blog/admin.py
+from django.contrib import admin
+from .models import Post
+
+@____.____(____)
+class ____(admin.____):
+    pass`,
+      },
       tags: ['django', 'admin', 'register'],
       concepts: ['dj-admin'],
     },
@@ -218,6 +261,18 @@ class PostAdmin(admin.ModelAdmin):
         'list_filter = sidebar filters; supports FK traversal',
         'search_fields uses LIKE across listed columns',
       ],
+      tieredHints: {
+        apiSignature: 'admin.ModelAdmin.list_display = (), list_filter = (), search_fields = (), ordering = ()',
+        skeleton: `from django.contrib import admin
+from .models import Post
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    ____ = (____, ____, ____, ____)
+    ____ = (____, ____)
+    ____ = (____, ____)
+    ____ = (____,)`,
+      },
       tags: ['django', 'admin', 'list_display', 'ModelAdmin'],
       concepts: ['dj-admin'],
     },
@@ -280,6 +335,19 @@ class PostAdmin(admin.ModelAdmin):
         'Requires FK from child to parent',
         'extra = N blank rows for new children',
       ],
+      tieredHints: {
+        apiSignature: 'admin.TabularInline(parent_model, admin_site)',
+        skeleton: `from django.contrib import admin
+from .models import Post, Comment
+
+class CommentInline(admin.____):
+    model = ____
+    extra = ____
+
+@admin.____(Post)
+class PostAdmin(admin.____):
+    ____ = [____]`,
+      },
       tags: ['django', 'admin', 'inline', 'TabularInline'],
       concepts: ['dj-admin'],
     },
@@ -339,6 +407,19 @@ class PostAdmin(admin.ModelAdmin):
         '.update() is bulk — no signals, no save() per row',
         '@admin.action(description="...") sets the label',
       ],
+      tieredHints: {
+        apiSignature: '@admin.action(description=None, permissions=None)',
+        skeleton: `from django.contrib import admin
+from .models import Post
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    ____ = [____]
+
+    @admin.____(description=____)
+    def publish(self, ____, ____):
+        ____.____(is_published=True)`,
+      },
       tags: ['django', 'admin', 'actions', 'bulk'],
       concepts: ['dj-admin'],
     },
@@ -396,6 +477,19 @@ class PostAdmin(admin.ModelAdmin):
         'readonly_fields renders as text, not input',
         'get_readonly_fields for conditional logic',
       ],
+      tieredHints: {
+        apiSignature: 'admin.ModelAdmin.readonly_fields = (), fieldsets = []',
+        skeleton: `from django.contrib import admin
+from .models import Post
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    ____ = (____, ____)
+    ____ = [
+        (____, {____: (____, ____)}),
+        (____, {____: (____, ____, ____, ____)}),
+    ]`,
+      },
       tags: ['django', 'admin', 'fieldsets', 'readonly_fields'],
       concepts: ['dj-admin'],
     },

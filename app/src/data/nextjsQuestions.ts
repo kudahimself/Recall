@@ -87,6 +87,26 @@ export const nextjsQuestions: Question[] = [
     solution: `import Link from "next/link";\n\nexport const metadata = {\n  title: "My App",\n  description: "A Next.js application",\n};\n\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode;\n}) {\n  return (\n    <html lang="en">\n      <body>\n        <nav>\n          <Link href="/">Home</Link>\n        </nav>\n        {children}\n      </body>\n    </html>\n  );\n}`,
     explanation: 'layout.tsx is the only REQUIRED file in the app directory. The root layout must render <html> and <body> tags — Next.js does not add them automatically. Layouts persist across navigations and do NOT re-render when the user navigates between sibling routes. This is why layouts are ideal for navbars, sidebars, and providers that should not unmount.',
     hints: ['The root layout must render <html> and <body>', 'Use next/link for client-side navigation', 'metadata export is a static object at the module level'],
+    tieredHints: {
+      apiSignature: 'function RootLayout({ children }: { children: React.ReactNode })',
+      skeleton: `export const metadata = {
+  title: "My App",
+  description: "____",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <nav>
+          <Link href="____">Home</Link>
+        </nav>
+        {____}
+      </body>
+    </html>
+  );
+}`,
+    },
     tags: ['layout', 'app-router', 'metadata', 'next/link'],
     concepts: ['next-app-router'],
   },
@@ -110,6 +130,20 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/blog/[slug]/page.tsx\n\nexport default async function BlogPost({\n  params,\n}: {\n  params: Promise<{ slug: string }>;\n}) {\n  const { slug } = await params;\n  const title = slug.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());\n\n  return (\n    <article>\n      <h1>{title}</h1>\n      <p>Loading content for: {slug}</p>\n    </article>\n  );\n}`,
     explanation: 'Dynamic routes use [paramName] folder syntax. In Next.js 15, params is a Promise to support streaming — the framework can start rendering the layout before the dynamic segment is resolved. This is different from Next.js 13-14 where params was a plain object. The folder name [slug] determines the key name in the params object.',
     hints: ['params is a Promise in Next.js 15 — you must await it', 'The folder name [slug] becomes the key in params', 'The component must be async to use await'],
+    tieredHints: {
+      apiSignature: 'async function BlogPost({ params }: { params: Promise<{ slug: string }> })',
+      skeleton: `export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await ____;
+  const title = slug.replace(/-/g, " ");
+
+  return (
+    <article>
+      <h1>{____}</h1>
+      <p>Loading content for: {____}</p>
+    </article>
+  );
+}`,
+    },
     tags: ['dynamic-routes', 'params', 'async-component'],
     concepts: ['next-app-router', 'next-data-fetching'],
   },
@@ -192,6 +226,19 @@ export const nextjsQuestions: Question[] = [
     solution: `import { notFound } from "next/navigation";\nimport { getProduct } from "@/lib/products";\n\nexport default async function ProductPage({\n  params,\n}: {\n  params: Promise<{ id: string }>;\n}) {\n  const { id } = await params;\n  const product = await getProduct(id);\n\n  if (!product) {\n    notFound();\n  }\n\n  return <h1>{product.name}</h1>;\n}`,
     explanation: 'notFound() works in Server Components, Route Handlers, and Server Actions. It is the App Router equivalent of returning a 404 status — calling it stops execution and Next.js renders the nearest not-found.tsx boundary (or its own default 404 page if none exists).',
     hints: ['notFound() comes from next/navigation', 'call it when the fetched data is missing, before rendering', 'it throws internally — nothing after it executes'],
+    tieredHints: {
+      apiSignature: 'async function ProductPage({ params }: { params: Promise<{ id: string }> })',
+      skeleton: `export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const product = await getProduct(id);
+
+  if (!product) {
+    ____();
+  }
+
+  return <h1>{product.____}</h1>;
+}`,
+    },
     tags: ['notFound', 'dynamic-routes', '404'],
     concepts: ['next-app-router'],
   },
@@ -235,6 +282,20 @@ export const nextjsQuestions: Question[] = [
     solution: `"use client";\n\nimport { useRouter } from "next/navigation";\n\nexport default function GoToDashboardButton() {\n  const router = useRouter();\n\n  return (\n    <button onClick={() => router.push("/dashboard")}>\n      Go to Dashboard\n    </button>\n  );\n}`,
     explanation: 'useRouter() from next/navigation (App Router) gives Client Components imperative navigation methods like push and replace, for cases a declarative <Link> cannot cover — e.g. navigating after a non-link event like a form submission or timer. It requires "use client" since it is a hook, and it is a different, smaller API than the Pages Router\'s next/router (no query or asPath).',
     hints: ['this hook only works in a Client Component', 'the import path is next/navigation, not next/router', 'push takes the destination path as a string'],
+    tieredHints: {
+      apiSignature: 'function GoToDashboardButton()',
+      skeleton: `"use client";
+
+export default function GoToDashboardButton() {
+  const router = ____();
+
+  return (
+    <button onClick={() => router.____("/dashboard")}>
+      Go to Dashboard
+    </button>
+  );
+}`,
+    },
     tags: ['useRouter', 'client-component', 'navigation'],
     concepts: ['next-app-router'],
   },
@@ -392,6 +453,22 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/users/page.tsx\nimport { getUsers } from "@/lib/db";\n\nexport default async function UsersPage() {\n  const users = await getUsers();\n\n  return (\n    <ul>\n      {users.map((user) => (\n        <li key={user.id}>\n          {user.name} — {user.email}\n        </li>\n      ))}\n    </ul>\n  );\n}`,
     explanation: 'Server Components can be async functions and directly await data fetching — no useEffect, no loading state management, no client-side fetch. The HTML is generated on the server with the data already embedded, so the user sees content immediately. This also means your database credentials and queries never reach the browser. Server Components are the default in the App Router; you only add "use client" when you need interactivity.',
     hints: ['Server Components can be async — just use await directly', 'No useState or useEffect needed for data fetching', 'The component runs entirely on the server'],
+    tieredHints: {
+      apiSignature: 'async function UsersPage()',
+      skeleton: `export default async function UsersPage() {
+  const users = await ____();
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.____}>
+          {user.name} — {user.email}
+        </li>
+      ))}
+    </ul>
+  );
+}`,
+    },
     tags: ['server-component', 'async', 'data-fetching', 'database'],
     concepts: ['next-server-vs-client', 'js-promises-async', 'next-data-fetching'],
   },
@@ -420,6 +497,23 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/components/AddToCartButton.tsx\n"use client";\n\nimport { useState } from "react";\n\nexport default function AddToCartButton({\n  productId,\n  price,\n}: {\n  productId: string;\n  price: number;\n}) {\n  const [added, setAdded] = useState(false);\n\n  return (\n    <button onClick={() => setAdded(true)}>\n      {added ? "Added ✓" : \`Add to Cart — $\${price}\`}\n    </button>\n  );\n}\n\n// app/product/[id]/page.tsx\nimport { getProduct } from "@/lib/db";\nimport AddToCartButton from "@/components/AddToCartButton";\n\nexport default async function ProductPage({\n  params,\n}: {\n  params: Promise<{ id: string }>;\n}) {\n  const { id } = await params;\n  const product = await getProduct(id);\n\n  return (\n    <div>\n      <h1>{product.name}</h1>\n      <AddToCartButton productId={product.id} price={product.price} />\n    </div>\n  );\n}`,
     explanation: 'The key pattern is: Server Components can import and render Client Components, but NOT vice versa. The Server Component fetches data and passes serializable props (strings, numbers, booleans, plain objects) down to Client Components. This means the database query runs on the server, while the interactive button runs in the browser. The "use client" directive marks the boundary — everything imported by a "use client" file also becomes client-side.',
     hints: ['Server Components can render Client Components by importing them', 'Props passed across the boundary must be serializable (no functions, no classes)', '"use client" must be at the top of the file, before any imports'],
+    tieredHints: {
+      apiSignature: 'function AddToCartButton({ productId, price }: { productId: string; price: number })',
+      skeleton: `// AddToCartButton.tsx
+"use client";
+
+export default function AddToCartButton({ productId, price }) {
+  const [added, setAdded] = useState(false);
+  return <button onClick={() => setAdded(true)}>{added ? "Added ✓" : \`Add to Cart — \\\$\${price}\`}</button>;
+}
+
+// page.tsx
+export default async function ProductPage({ params }) {
+  const { id } = await params;
+  const product = await ____(id);
+  return <AddToCartButton productId={product.id} price={product.price} />;
+}`,
+    },
     tags: ['server-client-composition', 'use-client', 'props-boundary'],
     concepts: ['next-server-vs-client'],
   },
@@ -548,6 +642,22 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/posts/page.tsx\n\nexport default async function PostsPage() {\n  const res = await fetch("https://api.example.com/posts", {\n    next: { revalidate: 3600 },\n  });\n  const data = await res.json();\n\n  return (\n    <div>\n      <h1>Blog Posts</h1>\n      <ul>\n        {data.posts.map((post: { id: number; title: string }) => (\n          <li key={post.id}>{post.title}</li>\n        ))}\n      </ul>\n    </div>\n  );\n}`,
     explanation: 'Next.js extends the native fetch() API with a `next` option. Setting `next: { revalidate: 3600 }` implements Incremental Static Regeneration (ISR): the page is statically generated at build time, then regenerated in the background at most once every 3600 seconds when a request comes in. This gives you the performance of static pages with near-real-time data. Setting revalidate to 0 is equivalent to dynamic rendering, and omitting it entirely means the page is cached indefinitely (fully static).',
     hints: ['Next.js extends fetch() with a next option object', 'revalidate is in seconds, not milliseconds', 'Server Components can use fetch() directly — no useEffect needed'],
+    tieredHints: {
+      apiSignature: 'async function PostsPage()',
+      skeleton: `export default async function PostsPage() {
+  const res = await fetch("https://api.example.com/posts", {
+    next: { revalidate: ____ },
+  });
+  const data = await res.____();
+
+  return (
+    <div>
+      <h1>Blog Posts</h1>
+      <ul>{data.posts.map((post) => <li key={post.id}>{post.title}</li>)}</ul>
+    </div>
+  );
+}`,
+    },
     tags: ['fetch', 'revalidation', 'isr', 'static-generation'],
     concepts: ['js-promises-async', 'next-data-fetching'],
   },
@@ -576,6 +686,17 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/dashboard/loading.tsx\n\nexport default function DashboardLoading() {\n  return (\n    <div className="animate-pulse">\n      <p>Loading dashboard...</p>\n      <div className="skeleton-card" style={{ height: 120 }} />\n      <div className="skeleton-card" style={{ height: 120 }} />\n      <div className="skeleton-card" style={{ height: 120 }} />\n    </div>\n  );\n}`,
     explanation: 'loading.tsx leverages React Suspense under the hood. When a user navigates to /dashboard, Next.js immediately streams the loading.tsx content while the async page.tsx is still fetching data. This is NOT a client-side spinner — the loading UI is sent as part of the initial HTML response via streaming, then swapped with the real content once ready. This dramatically improves perceived performance because the user sees layout + skeleton instead of a blank page. Under the hood, Next.js wraps page.tsx in a <Suspense fallback={<Loading />}> boundary automatically.',
     hints: ['loading.tsx is automatically used as a Suspense boundary', 'This is a regular React component — no special API needed', 'It runs on the server and streams immediately'],
+    tieredHints: {
+      apiSignature: 'function DashboardLoading()',
+      skeleton: `export default function DashboardLoading() {
+  return (
+    <div className="____">
+      <p>Loading dashboard...</p>
+      <div className="____" style={{ height: 120 }} />
+    </div>
+  );
+}`,
+    },
     tags: ['loading', 'streaming', 'suspense', 'skeleton-ui'],
     concepts: ['next-streaming-suspense'],
   },
@@ -658,6 +779,18 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/blog/[slug]/page.tsx\nimport { getAllPosts } from '@/lib/posts';\n\nexport async function generateStaticParams() {\n  const posts = await getAllPosts();\n  return posts.map((post) => ({ slug: post.slug }));\n}\n\nexport default async function Page({ params }: { params: Promise<{ slug: string }> }) {\n  const { slug } = await params;\n  return <h1>{slug}</h1>;\n}`,
     explanation: 'generateStaticParams tells Next.js which [slug] values exist so it can pre-render each one at build time (SSG) instead of rendering on every request. Any slug not in the returned list either 404s or falls back to on-demand generation, depending on dynamicParams config.',
     hints: ['generateStaticParams runs at build time, separate from the page component', 'return one { slug } object per post', 'the key name must match the folder: [slug]'],
+    tieredHints: {
+      apiSignature: 'async function generateStaticParams()',
+      skeleton: `export async function generateStaticParams() {
+  const posts = await getAllPosts();
+  return posts.map((post) => ({ ____: post.slug }));
+}
+
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await ____;
+  return <h1>{slug}</h1>;
+}`,
+    },
     tags: ['generateStaticParams', 'ssg', 'static-generation'],
     concepts: ['next-app-router', 'next-data-fetching'],
   },
@@ -739,6 +872,18 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/product/[id]/page.tsx\n\nexport default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {\n  const { id } = await params;\n\n  const [productRes, reviewsRes] = await Promise.all([\n    fetch(\`https://api.example.com/products/\${id}\`),\n    fetch(\`https://api.example.com/reviews?productId=\${id}\`),\n  ]);\n  const product = await productRes.json();\n  const reviews = await reviewsRes.json();\n\n  return (\n    <div>\n      <h1>{product.name}</h1>\n      <p>{product.price}</p>\n      <ul>\n        {reviews.map((review: { id: number; text: string }) => (\n          <li key={review.id}>{review.text}</li>\n        ))}\n      </ul>\n    </div>\n  );\n}`,
     explanation: 'Starting both fetch calls before awaiting either one (via Promise.all) lets them run concurrently, so the page waits only as long as the slower request. Awaiting the product fetch fully before starting the reviews fetch would create a waterfall, doubling the wait for no reason since the two requests do not depend on each other.',
     hints: ['start both fetch() calls before awaiting either', 'Promise.all takes an array of promises and resolves once all of them do', 'the two requests are independent - neither needs the other\'s result'],
+    tieredHints: {
+      apiSignature: 'async function ProductPage({ params }: { params: Promise<{ id: string }> })',
+      skeleton: `export default async function ProductPage({ params }) {
+  const { id } = await params;
+  const [productRes, reviewsRes] = await ____([
+    fetch(\`https://api.example.com/products/\${id}\`),
+    fetch(\`https://api.example.com/reviews?productId=\${id}\`),
+  ]);
+  const product = await productRes.json();
+  const reviews = await reviewsRes.json();
+}`,
+    },
     tags: ['parallel-fetch', 'promise-all', 'waterfall'],
     concepts: ['next-data-fetching', 'js-promises-async'],
   },
@@ -767,6 +912,19 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/dashboard/page.tsx\nimport { Suspense } from 'react';\nimport SlowStats from './SlowStats';\n\nexport default function DashboardPage() {\n  return (\n    <div>\n      <h1>Dashboard</h1>\n      <Suspense fallback={<p>Loading stats...</p>}>\n        <SlowStats />\n      </Suspense>\n    </div>\n  );\n}`,
     explanation: 'Wrapping a slow async Server Component in <Suspense> lets Next.js stream the rest of the page immediately and send the fallback UI first, then swap in SlowStats once its data arrives - without blocking on it. This is the same mechanism loading.tsx uses automatically for a whole route, applied here to just one section of a page.',
     hints: ['Suspense comes from the react package, not next/server', 'everything outside the Suspense boundary renders without waiting for SlowStats', 'fallback is shown until the wrapped component resolves'],
+    tieredHints: {
+      apiSignature: 'function DashboardPage()',
+      skeleton: `export default function DashboardPage() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <____ fallback={<p>Loading stats...</p>}>
+        <SlowStats />
+      </____>
+    </div>
+  );
+}`,
+    },
     tags: ['suspense', 'streaming', 'granular-loading'],
     concepts: ['next-streaming-suspense'],
   },
@@ -898,6 +1056,21 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/providers/ThemeProvider.tsx\n"use client";\n\nimport { createContext } from "react";\n\nexport const ThemeContext = createContext<string>("light");\n\nexport default function ThemeProvider({\n  children,\n}: {\n  children: React.ReactNode;\n}) {\n  return <ThemeContext.Provider value="dark">{children}</ThemeContext.Provider>;\n}\n\n// app/layout.tsx\nimport ThemeProvider from "./providers/ThemeProvider";\n\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode;\n}) {\n  return (\n    <html lang="en">\n      <body>\n        <ThemeProvider>{children}</ThemeProvider>\n      </body>\n    </html>\n  );\n}`,
     explanation: 'Context providers depend on client-side React internals, so they must live in their own "use client" file. But the root layout - a Server Component - can still import and render that provider, then pass its own (server-rendered) children into it as the children prop. This is the standard pattern: isolate the client-only piece to the smallest possible file, and let everything else, including deeply nested Server Components further down the tree, stay server-rendered while still being wrapped by the context.',
     hints: ['the provider file needs its own "use client" - the layout does not', 'a Server Component can render a Client Component and hand it children, same composition pattern as Client Components receiving Server Component children'],
+    tieredHints: {
+      apiSignature: 'function ThemeProvider({ children }: { children: React.ReactNode })',
+      skeleton: `// ThemeProvider.tsx
+"use client";
+export const ThemeContext = ____<string>("light");
+
+export default function ThemeProvider({ children }) {
+  return <ThemeContext.Provider value="dark">{children}</ThemeContext.Provider>;
+}
+
+// layout.tsx
+export default function RootLayout({ children }) {
+  return <ThemeProvider>{____}</ThemeProvider>;
+}`,
+    },
     tags: ['context-provider', 'client-wrapper', 'root-layout', 'composition'],
     concepts: ['next-server-vs-client', 'react-context'],
   },
@@ -991,6 +1164,17 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/api/users/route.ts\nimport { NextRequest, NextResponse } from "next/server";\n\nexport async function GET() {\n  const users = [\n    { id: 1, name: "Alice" },\n    { id: 2, name: "Bob" },\n  ];\n  return NextResponse.json(users);\n}\n\nexport async function POST(request: NextRequest) {\n  const body = await request.json();\n  const newUser = { id: 3, name: body.name };\n  return NextResponse.json(newUser, { status: 201 });\n}`,
     explanation: 'Route Handlers in the App Router replace the old pages/api pattern. Each HTTP method is a named export (GET, POST, PUT, DELETE, PATCH). The file must be named route.ts (not page.ts) and you cannot have both route.ts and page.ts in the same folder. NextResponse.json() is a convenience method that sets Content-Type: application/json automatically. The second argument to NextResponse.json() lets you set status codes and headers.',
     hints: ['Export named functions matching HTTP methods: GET, POST, etc.', 'Use NextResponse.json() for JSON responses', 'request.json() returns a Promise — remember to await it'],
+    tieredHints: {
+      apiSignature: 'async function GET() / async function POST(request: NextRequest)',
+      skeleton: `export async function GET() {
+  return NextResponse.____(users);
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.____();
+  return NextResponse.json({ id: 3, name: body.name }, { status: ____ });
+}`,
+    },
     tags: ['route-handler', 'api', 'GET', 'POST', 'NextResponse'],
     concepts: ['next-route-handlers'],
   },
@@ -1041,6 +1225,24 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/todos/page.tsx\nimport { revalidatePath } from "next/cache";\nimport { db } from "@/lib/db";\n\nexport default async function TodosPage() {\n  const todos = await db.todos.findMany();\n\n  async function addTodo(formData: FormData) {\n    "use server";\n    const title = formData.get("title") as string;\n    await db.todos.create({ title });\n    revalidatePath("/todos");\n  }\n\n  return (\n    <div>\n      <ul>\n        {todos.map((todo: { id: number; title: string }) => (\n          <li key={todo.id}>{todo.title}</li>\n        ))}\n      </ul>\n      <form action={addTodo}>\n        <input name="title" required />\n        <button type="submit">Add</button>\n      </form>\n    </div>\n  );\n}`,
     explanation: 'Server Actions are async functions that run on the server, triggered by form submissions or programmatic calls. The "use server" directive inside a function body marks it as a Server Action. When the form submits, the browser sends a POST request to the server, the action runs, and Next.js re-renders the page with fresh data. This is progressive enhancement — the form works even without JavaScript! The key benefit over traditional API routes: Server Actions are colocated with the UI, type-safe, and automatically handle the request/response cycle.',
     hints: ['"use server" goes inside the function body to mark it as a Server Action', 'Server Actions receive FormData as their first argument', 'revalidatePath clears the cache so the page shows updated data'],
+    tieredHints: {
+      apiSignature: 'async function addTodo(formData: FormData)',
+      skeleton: `export default async function TodosPage() {
+  async function addTodo(formData: FormData) {
+    "use ____";
+    const title = formData.get("title") as string;
+    await db.todos.create({ title });
+    ____("/todos");
+  }
+
+  return (
+    <form action={____}>
+      <input name="title" required />
+      <button type="submit">Add</button>
+    </form>
+  );
+}`,
+    },
     tags: ['server-action', 'form', 'mutation', 'revalidation'],
     concepts: ['web-html-forms-a11y', 'js-object-mutation', 'next-data-fetching'],
   },
@@ -1123,6 +1325,16 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/api/users/[id]/route.ts\nimport { NextRequest, NextResponse } from "next/server";\n\nexport async function GET(\n  request: NextRequest,\n  { params }: { params: Promise<{ id: string }> }\n) {\n  const { id } = await params;\n\n  if (id === "1") {\n    return NextResponse.json({ id, name: "Alice" });\n  }\n\n  return NextResponse.json({ error: "Not found" }, { status: 404 });\n}`,
     explanation: 'A folder named [id] creates a dynamic segment; the route handler receives its value through the second argument\'s params, which in Next.js 15 is a Promise you must await. This is the same pattern used everywhere dynamic segments appear - page components, generateMetadata, and route handlers all take an awaited params object.',
     hints: ['params must be awaited before you can read id off it', 'a missing/unmatched id is a 404, not a thrown error'],
+    tieredHints: {
+      apiSignature: 'async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> })',
+      skeleton: `export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await ____;
+  if (id === "1") {
+    return NextResponse.json({ id, name: "Alice" });
+  }
+  return NextResponse.json({ error: "Not found" }, { status: ____ });
+}`,
+    },
     tags: ['route-handler', 'dynamic-params', 'app-api', '404'],
     concepts: ['next-route-handlers'],
   },
@@ -1168,6 +1380,16 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/api/products/route.ts\nimport { NextRequest, NextResponse } from "next/server";\n\nexport async function POST(request: NextRequest) {\n  const body = await request.json();\n\n  if (!body.name) {\n    return NextResponse.json({ error: "name is required" }, { status: 400 });\n  }\n\n  return NextResponse.json({ id: 1, name: body.name }, { status: 201 });\n}`,
     explanation: 'Route Handlers are responsible for their own validation and status codes - nothing does this automatically. NextResponse.json(body, { status }) is the same helper for both success and error paths; only the status and payload shape differ. Returning a structured { error } body alongside 400 lets the client distinguish "bad request" from a network failure.',
     hints: ['both branches use the same NextResponse.json helper, just different status codes', 'check for a missing/empty name before doing anything else'],
+    tieredHints: {
+      apiSignature: 'async function POST(request: NextRequest)',
+      skeleton: `export async function POST(request: NextRequest) {
+  const body = await request.json();
+  if (!body.name) {
+    return NextResponse.json({ error: "name is required" }, { status: ____ });
+  }
+  return NextResponse.json({ id: 1, name: body.name }, { status: ____ });
+}`,
+    },
     tags: ['route-handler', 'validation', 'error-response', 'status-code'],
     concepts: ['next-route-handlers'],
   },
@@ -1299,6 +1521,20 @@ export const nextjsQuestions: Question[] = [
     solution: `// middleware.ts\nimport { NextResponse, NextRequest } from "next/server";\n\nexport function middleware(request: NextRequest) {\n  const token = request.cookies.get("auth-token");\n\n  if (!token) {\n    return NextResponse.redirect(new URL("/login", request.url));\n  }\n\n  return NextResponse.next();\n}\n\nexport const config = {\n  matcher: ["/dashboard/:path*"],\n};`,
     explanation: 'Middleware runs BEFORE the request reaches your route — it sits at the edge, executing before any page or API route renders. The matcher config is critical for performance: without it, middleware runs on EVERY request including static assets (_next/static, images, etc.). The :path* syntax is a pattern that matches any sub-path, so /dashboard, /dashboard/settings, and /dashboard/users/123 are all covered. new URL("/login", request.url) creates an absolute URL based on the current host, which is required by NextResponse.redirect().',
     hints: ['middleware.ts must be at the project root (next to package.json), not inside app/', 'request.cookies.get() returns undefined if the cookie does not exist', 'NextResponse.redirect() requires an absolute URL'],
+    tieredHints: {
+      apiSignature: 'function middleware(request: NextRequest)',
+      skeleton: `export function middleware(request: NextRequest) {
+  const token = request.cookies.____("auth-token");
+  if (!token) {
+    return NextResponse.____(new URL("/login", request.url));
+  }
+  return NextResponse.____();
+}
+
+export const config = {
+  ____: ["/dashboard/:path*"],
+};`,
+    },
     tags: ['middleware', 'auth', 'cookies', 'redirect', 'matcher'],
     concepts: ['next-middleware', 'web-security-auth-tokens', 'web-security-csrf'],
   },
@@ -1343,6 +1579,17 @@ export const nextjsQuestions: Question[] = [
     solution: `// middleware.ts\nimport { NextResponse, NextRequest } from "next/server";\n\nexport function middleware(request: NextRequest) {\n  const response = NextResponse.next();\n\n  if (!request.cookies.get("theme")) {\n    response.cookies.set("theme", "light");\n    response.headers.set("x-theme-source", "default");\n  }\n\n  return response;\n}`,
     explanation: 'Middleware can mutate the outgoing response as well as redirect/rewrite requests. Reading request.cookies.get() checks what the visitor already sent; writing to response.cookies.set() and response.headers.set() attaches new state to the response Next.js actually sends back, before the route even renders.',
     hints: ['read from request.cookies, write to response.cookies', 'both mutations only happen in the missing-cookie branch'],
+    tieredHints: {
+      apiSignature: 'function middleware(request: NextRequest)',
+      skeleton: `export function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+  if (!request.cookies.get("theme")) {
+    response.cookies.____("theme", "light");
+    response.headers.____("x-theme-source", "default");
+  }
+  return response;
+}`,
+    },
     tags: ['middleware', 'cookies', 'headers', 'NextResponse'],
     concepts: ['next-middleware'],
   },
@@ -1489,6 +1736,22 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/components/HeroImage.tsx\nimport Image from "next/image";\n\nexport default function HeroImage() {\n  return (\n    <Image\n      src="/hero.jpg"\n      alt="Mountain landscape at sunset"\n      width={1200}\n      height={600}\n      priority\n      className="hero-image"\n      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 1200px"\n    />\n  );\n}`,
     explanation: 'next/image automatically optimizes images: converts to WebP/AVIF, resizes for the device, lazy-loads by default, and prevents layout shift by reserving space. The `priority` prop disables lazy loading and adds a preload hint — use it ONLY for the Largest Contentful Paint (LCP) image (usually the hero image). The `sizes` prop tells the browser which image width to download at each viewport width, preventing mobile devices from downloading the full 1200px image. Without sizes, the browser assumes the image is 100vw at all sizes, which wastes bandwidth on smaller screens.',
     hints: ['priority should only be used for above-the-fold images', 'sizes controls which srcset image the browser downloads', 'width/height prevent layout shift, not set the display size'],
+    tieredHints: {
+      apiSignature: 'function HeroImage()',
+      skeleton: `export default function HeroImage() {
+  return (
+    <Image
+      src="/hero.jpg"
+      alt="Mountain landscape at sunset"
+      width={1200}
+      height={600}
+      ____
+      className="hero-image"
+      sizes="____"
+    />
+  );
+}`,
+    },
     tags: ['next/image', 'optimization', 'responsive', 'priority', 'sizes'],
     concepts: ['web-css-responsive'],
   },
@@ -1536,6 +1799,22 @@ export const nextjsQuestions: Question[] = [
     solution: `// app/blog/[slug]/page.tsx\nimport { Metadata } from "next";\nimport { getPost } from "@/lib/db";\n\nexport async function generateMetadata({\n  params,\n}: {\n  params: Promise<{ slug: string }>;\n}): Promise<Metadata> {\n  const { slug } = await params;\n  const post = await getPost(slug);\n\n  return {\n    title: post.title,\n    description: post.excerpt,\n    openGraph: {\n      title: post.title,\n      description: post.excerpt,\n      images: [{ url: post.image }],\n    },\n  };\n}\n\nexport default async function BlogPost({\n  params,\n}: {\n  params: Promise<{ slug: string }>;\n}) {\n  const { slug } = await params;\n  return <article><h1>{slug}</h1></article>;\n}`,
     explanation: 'generateMetadata is Next.js Metadata API for dynamic pages. It runs on the server before the page renders, ensuring correct <title> and <meta> tags are in the initial HTML response — critical for SEO and social sharing. Next.js automatically deduplicates the fetch: if both generateMetadata and the page component call getPost(slug), the request is made only once. OpenGraph metadata controls how your page appears when shared on Twitter, Facebook, Slack, etc. The Metadata type from "next" provides full TypeScript autocompletion for all supported meta tags.',
     hints: ['generateMetadata runs on the server alongside the page', 'Next.js deduplicates fetch calls between generateMetadata and the page', 'openGraph.images expects an array of objects with url property'],
+    tieredHints: {
+      apiSignature: 'async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata>',
+      skeleton: `export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPost(slug);
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      images: [{ url: post.image }],
+    },
+  };
+}`,
+    },
     tags: ['metadata', 'seo', 'opengraph', 'generateMetadata', 'dynamic'],
     concepts: ['web-html-semantics', 'next-data-fetching'],
   },

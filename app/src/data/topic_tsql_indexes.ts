@@ -120,6 +120,12 @@ INCLUDE (Amount);`,
     solution: `CREATE NONCLUSTERED INDEX IX_FactOrders_Cust_Date
 ON dbo.FactOrders (CustomerKey, OrderDate)
 INCLUDE (Amount);`,
+    tieredHints: {
+      apiSignature: 'CREATE NONCLUSTERED INDEX index_name ON tbl (key_col1, key_col2, ...) INCLUDE (included_col1, ...);',
+      skeleton: `CREATE ____ INDEX IX_FactOrders_Cust_Date
+ON dbo.FactOrders (____, ____)
+____ (Amount);`,
+    },
     explanation: 'The composite key `(CustomerKey, OrderDate)` supports a seek that filters on CustomerKey (and narrows by OrderDate), and `INCLUDE (Amount)` puts the returned measure at the leaf so the query is fully covered — no lookup back to the base table. Key order matters: CustomerKey leads because it is the primary filter.',
     hints: ['Key on (CustomerKey, OrderDate) — leading column is the main filter', 'INCLUDE (Amount) to cover the SELECT'],
     tags: ['tsql', 'indexes', 'composite', 'include', 'covering-index'],

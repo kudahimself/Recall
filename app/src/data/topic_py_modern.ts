@@ -88,6 +88,35 @@ def get_next_status(current: OrderStatus) -> OrderStatus:
         'Use match current: followed by case OrderStatus.VALUE:',
         'The wildcard case _: acts as the default case to match any other values',
       ],
+      tieredHints: {
+        apiSignature: 'Enum(value, names=None, *, module=None, qualname=None, type=None, start=1, boundary=None)',
+        skeleton: `from enum import Enum
+
+class InvalidTransitionError(Exception):
+    pass
+
+class OrderStatus(str, ____):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+def get_next_status(current: OrderStatus) -> OrderStatus:
+    ____ current:
+        ____ ____.PENDING:
+            return ____.PROCESSING
+        ____ OrderStatus.____:
+            return ____.____
+        ____ ____.SHIPPED:
+            return ____.DELIVERED
+        ____ ____.DELIVERED:
+            ____ ____("Order already delivered")
+        ____ OrderStatus.____:
+            ____ ____("Cannot transition from cancelled")
+        ____ _:
+            raise ____(f"Unknown status: {current}")`,
+      },
       tags: ['enum', 'pattern-matching', 'type-safety', 'match-case'],
       concepts: ['py-modern-syntax'],
     },

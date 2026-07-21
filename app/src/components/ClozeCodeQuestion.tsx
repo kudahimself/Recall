@@ -19,7 +19,7 @@ const BLANK_MARKER = '___';
 // string literals is preserved — we walk single/double-quoted regions and skip
 // them. Whitespace between two word characters (e.g. `for x in range`) is also
 // preserved, since the collapse only fires around non-word non-space characters.
-function normalizeBlank(s: string): string {
+function normalizeBlank(s: string, caseInsensitive = false): string {
   const segments: { quoted: boolean; text: string }[] = [];
   let buf = '';
   let quote: string | null = null;
@@ -43,9 +43,14 @@ function normalizeBlank(s: string): string {
   }
   if (buf) segments.push({ quoted: !!quote, text: buf });
   return segments
-    .map(seg =>
-      seg.quoted ? seg.text : seg.text.replace(/\s*([^\w\s])\s*/g, '$1'),
-    )
+    .map(seg => {
+      // Quoted string literals are preserved verbatim (case-sensitive data).
+      if (seg.quoted) return seg.text;
+      const collapsed = seg.text.replace(/\s*([^\w\s])\s*/g, '$1');
+      // SQL keywords/identifiers are case-insensitive, so lowercase the
+      // unquoted code so `select` ≡ `SELECT` while string data stays exact.
+      return caseInsensitive ? collapsed.toLowerCase() : collapsed;
+    })
     .join('')
     .trim();
 }
@@ -118,10 +123,11 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
   const checkBlank = (idx: number, value: string | undefined): boolean => {
     const expected = question.blanks[idx];
     if (expected === undefined) return false;
-    const got = normalizeBlank(value ?? '');
-    if (got === normalizeBlank(expected)) return true;
+    const ci = question.language === CodeLanguage.SQL;
+    const got = normalizeBlank(value ?? '', ci);
+    if (got === normalizeBlank(expected, ci)) return true;
     const alts = question.blankAlternates?.[idx];
-    if (alts && alts.some(a => normalizeBlank(a) === got)) return true;
+    if (alts && alts.some(a => normalizeBlank(a, ci) === got)) return true;
     return false;
   };
 

@@ -107,6 +107,10 @@ class RequestContextMiddleware:
         response["X-Correlation-ID"] = request.correlation_id
         response["X-Response-Time-Ms"] = str(elapsed_ms)
         return response`,
+      tieredHints: {
+        apiSignature: 'uuid.uuid4().hex; time.perf_counter(); response[header] = str(val)',
+        skeleton: 'import time\nimport uuid\n\n\nclass RequestContextMiddleware:\n    def ____(self, get_response):\n        self.get_response = ____\n\n    def ____(self, request):\n        request.____ = ____.____().____\n        start = ____.____()\n        response = self.____(request)\n        elapsed_ms = ____((____.____() - start) * ____)\n        response[____] = request.____  # "X-Correlation-ID"\n        response[____] = ____(elapsed_ms)  # "X-Response-Time-Ms"\n        return ____',
+      },
       explanation: 'Three primitives in one pass: pre-view code attaches state to `request`, the view runs in between, post-view code reads timing and stamps the response. `time.perf_counter()` (not `time.time()`) is monotonic and meant for measuring intervals — `time.time()` can jump backward on NTP adjustments. Response headers must be strings — Django\'s `HttpResponse` rejects non-string values silently in some places. Setting `correlation_id` on `request` makes it readable from views and downstream middleware (logging filters, especially).',
       hints: [
         'Pre-view code → call get_response → post-view code',
@@ -162,6 +166,10 @@ def line_saved(sender, instance, **kwargs):
 @receiver(post_delete, sender=OrderLine)
 def line_deleted(sender, instance, **kwargs):
     _recompute_total(instance.order_id)`,
+      tieredHints: {
+        apiSignature: '@receiver(signal, sender=Model); aggregate(Sum(...)); queryset.update(...)',
+        skeleton: 'from decimal import Decimal\nfrom django.db.models import Sum\nfrom django.db.models.signals import post_save, post_delete\nfrom django.dispatch import receiver\nfrom .models import Order, OrderLine\n\n\ndef ____(____):\n    total = ____.____.____(order_id=____).____(\n        s=____("____"),\n    )["____"] or ____("0")\n    ____.____.____(pk=____).____(total=____)\n\n\n@____(____, sender=____)\ndef ____(sender, ____, **kwargs):\n    ____(____.____)\n\n\n@____(____, sender=____)\ndef ____(sender, ____, **kwargs):\n    ____(____.____)',
+      },
       explanation: 'The denormalisation pattern: store the rolled-up value, recompute on every change to the source rows. `aggregate(s=Sum(...))` returns `{"s": value}` — `value` is `None` when no rows, hence `or Decimal("0")`. Use `Order.objects.filter(...).update(...)` (queryset update, single SQL) instead of `order.save()` — avoids triggering Order\'s own signals (which could cascade). Both `post_save` AND `post_delete` are needed: deleting a line otherwise leaves the cached total stale. `instance.order_id` (not `.order`) avoids one extra query to hydrate the FK.',
       hints: [
         'aggregate returns dict — extract by key',
@@ -243,6 +251,10 @@ from .models import Profile
 def create_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)`,
+      tieredHints: {
+        apiSignature: '@receiver(post_save, sender=Model); instance; created',
+        skeleton: 'from django.db.models.signals import ____\nfrom django.dispatch import receiver\nfrom django.conf import settings\nfrom .models import ____\n\n@____(____, sender=settings.____)\ndef ____(____, ____, ____, **kwargs):\n    if ____:\n        ____.____.____(user=____)',
+      },
       explanation: 'Classic pattern. `created` is `True` on the first save, `False` on updates — without the check you\'d try to re-create on every User save. IMPORTANT: Signals DON\'T fire for `bulk_create`, `update()`, raw SQL. For data integrity a DB-level default / trigger is stronger. Also: over-use of signals creates invisible action chains (save User → create Profile → signal X → ...) — reach for explicit code first, signals only when the trigger truly is "a model saved".',
       hints: [
         'receiver decorator binds handler to signal',
@@ -304,6 +316,10 @@ class BlogConfig(AppConfig):
 
 # blog/signals.py
 # @receiver(...) functions go here`,
+      tieredHints: {
+        apiSignature: 'class AppConfig; def ready(self)',
+        skeleton: '# blog/apps.py\nfrom django.apps import AppConfig\n\nclass BlogConfig(____):\n    name = "blog"\n\n    def ____(self):\n        from . import ____  # noqa\n\n# blog/signals.py\n# @receiver(...) functions go here',
+      },
       explanation: 'Signals only fire if their `@receiver` decorators have been evaluated. Putting them at the top of `models.py` works but couples models to signal logic. Better: separate `signals.py`, imported in `AppConfig.ready()` so Django loads it automatically. `INSTALLED_APPS` must use the `AppConfig` path (`"blog.apps.BlogConfig"`) for `ready()` to run.',
       hints: [
         'Signals must be imported at startup to be active',
@@ -366,6 +382,10 @@ class TimingMiddleware:
         response = self.get_response(request)
         response["X-Response-Time"] = f"{(time.perf_counter() - t0) * 1000:.1f}ms"
         return response`,
+      tieredHints: {
+        apiSignature: 'class Middleware: __init__(self, get_response), __call__(self, request)',
+        skeleton: 'import time\n\nclass TimingMiddleware:\n    def ____(self, ____):\n        self.____ = ____\n\n    def ____(self, request):\n        ____ = time.____()\n        response = self.____(request)\n        response[____] = f"{(time.____() - ____) * ____:.1f}ms"\n        return ____',
+      },
       explanation: 'Modern middleware shape: callable class with `__init__(self, get_response)` (run once at app start) and `__call__(self, request)` (run per request — wraps `get_response(request)`). Code before the `get_response` call runs on the way IN; code after runs on the way OUT. For view/template/exception-specific hooks, add `process_view`, `process_template_response`, `process_exception` methods. Keep middleware fast — it runs on EVERY request.',
       hints: [
         '__init__(get_response) runs once; __call__ runs per request',

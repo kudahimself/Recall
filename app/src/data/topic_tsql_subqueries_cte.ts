@@ -142,6 +142,17 @@ FROM CustomerTotals
 WHERE Total >= 500;`,
     explanation: 'The CTE computes per-customer totals once; the outer query then filters them with a simple `WHERE Total >= 500`. This is cleaner than repeating the aggregate, and you can reference `Total` directly because the CTE already named it.',
     hints: ['Define the rollup in WITH … AS ( … )', 'Filter the CTE in the outer query'],
+    tieredHints: {
+      apiSignature: 'WITH cte_name AS ( SELECT col, agg_func(col) FROM table GROUP BY col )',
+      skeleton: `WITH ____ AS (
+    SELECT ____, ____(Amount) AS Total
+    FROM dbo.FactOrders
+    GROUP BY ____
+)
+SELECT CustomerKey, Total
+FROM ____
+WHERE Total ____ ____;`,
+    },
     tags: ['tsql', 'subqueries', 'cte', 'aggregation'],
   },
   {
@@ -185,7 +196,7 @@ SELECT * FROM EmpChain;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'From `dbo.DimCustomer c` (FullName, CustomerKey), return each FullName and their number of orders — using a correlated scalar subquery against `dbo.FactOrders` (matched on CustomerKey) aliased `OrderCount`.',
-    starterCode: `-- SELECT c.FullName, (SELECT COUNT(*) ...) AS OrderCount FROM dbo.DimCustomer c;
+    starterCode: `-- Return FullName and OrderCount for each customer using a correlated scalar subquery
 `,
     testCases: [
       {
@@ -201,6 +212,14 @@ SELECT * FROM EmpChain;`,
 FROM dbo.DimCustomer c;`,
     explanation: 'A scalar subquery in the SELECT list returns one value per outer row. Because it references `c.CustomerKey`, it is correlated — evaluated per customer — yielding that customer\'s order count (0 for customers with none, unlike an INNER JOIN which would drop them).',
     hints: ['Put (SELECT COUNT(*) … WHERE o.CustomerKey = c.CustomerKey) in the SELECT list', 'It returns 0 for customers with no orders'],
+    tieredHints: {
+      apiSignature: '(SELECT agg_func(*) FROM table alias WHERE outer_alias.col = inner_alias.col) AS alias',
+      skeleton: `SELECT c.____,
+       (SELECT ____(*)
+        FROM ____ ____
+        WHERE ____.CustomerKey ____ c.CustomerKey) AS ____
+FROM dbo.DimCustomer c;`,
+    },
     tags: ['tsql', 'subqueries', 'correlated', 'scalar-subquery'],
   },
 ];

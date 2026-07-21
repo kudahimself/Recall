@@ -893,6 +893,25 @@ class Timer:
         '__exit__ receives exception info — return False to propagate',
         'time.perf_counter() for high-precision timing',
       ],
+      tieredHints: {
+        apiSignature: 'time.perf_counter() -> float',
+        skeleton: `import time
+
+class Timer:
+    def __init__(self, label: str = "block"):
+        self.label = label
+        self.elapsed: float = 0.0
+        self._start: float = 0.0
+
+    def ____(self):
+        self._start = time.____()
+        return ____
+
+    def ____(self, exc_type, exc_val, exc_tb):
+        self.elapsed = time.perf_counter() - self.____
+        print(f"[Timer] {self.label}: {self.elapsed:.4f}s")
+        return ____`,
+      },
       tags: ['context-manager', 'enter', 'exit', 'timing', 'protocol'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -966,6 +985,14 @@ with open("/tmp/ctx.txt") as f:
         'Works on success and on exception',
         'Prevents file descriptor / lock leaks',
       ],
+      tieredHints: {
+        apiSignature: 'open(file, mode="r", encoding=None) -> file object',
+        skeleton: `____ open("/tmp/ctx.txt", "____") ____ f:
+    f.____("hello")
+
+____ open("/tmp/ctx.txt") ____ f:
+    print(f.____())`,
+      },
       tags: ['context-manager', 'with', 'file', 'open'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -1001,6 +1028,19 @@ with Traced() as t:
         '__exit__ gets (exc_type, exc_val, tb); None on success',
         'Return True from __exit__ to suppress the exception',
       ],
+      tieredHints: {
+        apiSignature: 'def __exit__(self, exc_type, exc_val, tb) -> bool | None',
+        skeleton: `class ____:
+    def ____(self):
+        print("____")
+        return ____
+
+    def ____(self, ____, ____, ____):
+        print("____")
+
+with ____() as t:
+    print("inside")`,
+      },
       tags: ['context-manager', 'class-based', '__enter__', '__exit__'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -1037,6 +1077,19 @@ with timer():
         'Before yield = enter; after yield = exit',
         'Use try/except around yield to handle block exceptions',
       ],
+      tieredHints: {
+        apiSignature: '@contextmanager  # decorates a single-yield generator function',
+        skeleton: `from contextlib import ____
+
+@____
+def timer():
+    print("____")
+    ____
+    print("____")
+
+with timer():
+    print("work")`,
+      },
       tags: ['context-manager', 'contextmanager', 'generator', 'decorator'],
       concepts: ['py-context-manager-protocol', 'py-generator-yield', 'py-decorator-application'],
     },
@@ -1069,6 +1122,16 @@ with open("/tmp/a.txt") as fa, open("/tmp/b.txt") as fb:
         'Python 3.10+ allows parenthesised form over multiple lines',
         'For a DYNAMIC number of CMs, use contextlib.ExitStack',
       ],
+      tieredHints: {
+        apiSignature: 'with A as a, B as b: ...  # comma-separated, one with-statement',
+        skeleton: `with open("____", "____") as f:
+    f.____("hello")
+with open("____", "____") as f:
+    f.____("____")
+
+with ____("____") as fa____ ____("____") as fb:
+    print(fa.____() ____ "____" ____ fb.____())`,
+      },
       tags: ['context-manager', 'multiple', 'with'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -1101,6 +1164,15 @@ print("done")`,
         'Only swallows matching exceptions — others propagate',
         'Clean one-liner for "if exists, ignore"-style logic',
       ],
+      tieredHints: {
+        apiSignature: 'suppress(*exceptions) -> context manager',
+        skeleton: `from contextlib import ____
+
+with ____(____):
+    open("/tmp/does-not-exist.txt")
+
+print("____")`,
+      },
       tags: ['contextlib', 'suppress', 'exception'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -1137,6 +1209,19 @@ with ExitStack() as stack:
         'stack.callback(fn) registers an arbitrary teardown',
         'All teardowns run on ExitStack exit in reverse order',
       ],
+      tieredHints: {
+        apiSignature: 'stack.enter_context(cm) -> cm.__enter__() return value',
+        skeleton: `with open("/tmp/ex1.txt", "____") as f:
+    f.____("A")
+with open("____", "w") as f:
+    f.____("____")
+
+from contextlib import ____
+
+with ____() as stack:
+    files = [stack.____(open(p)) for p in ["____", "____"]]
+    print("".____(f.____() for f in files))`,
+      },
       tags: ['contextlib', 'ExitStack', 'dynamic'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -1225,6 +1310,20 @@ print("after")`,
         'Always gate on exc_type — never blanket True',
         'Use sparingly; prefer explicit except where possible',
       ],
+      tieredHints: {
+        apiSignature: 'def __exit__(self, exc_type, exc, tb) -> bool',
+        skeleton: `class ____:
+    def ____(self):
+        return ____
+
+    def ____(self, exc_type, exc, tb):
+        return exc_type is ____
+
+with ____():
+    raise ValueError("oops")
+
+print("____")`,
+      },
       tags: ['context-manager', 'exit', 'exception-handling'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -1287,6 +1386,23 @@ with safe_section("A"):
         'try/except around yield to handle it',
         'finally for unconditional teardown',
       ],
+      tieredHints: {
+        apiSignature: '@contextmanager  # try/except/finally wraps a single yield',
+        skeleton: `from contextlib import contextmanager
+
+@contextmanager
+def ____(label):
+    print(f"[{label}] ____")
+    ____:
+        ____
+    ____ Exception as e:
+        print(f"[{label}] caught {type(e).____}")
+    ____:
+        print(f"[{label}] ____")
+
+with safe_section("A"):
+    raise ____("x")`,
+      },
       tags: ['context-manager', 'contextmanager', 'exception-handling'],
       concepts: ['py-context-manager-protocol'],
     },
@@ -1373,6 +1489,19 @@ with open("example.txt", "r") as f:
         'Approach 2 uses `with open(...) as f:` — cleanup is automatic',
         'Both are equivalent, but `with` is the Pythonic way',
       ],
+      tieredHints: {
+        apiSignature: 'f.close() -> None',
+        skeleton: `# Approach 1: WITHOUT context manager (try/finally)
+f = open("example.txt", "r")
+____:
+    content = f.____()
+____:
+    f.____()
+
+# Approach 2: WITH context manager
+____ open("example.txt", "r") ____ f:
+    content = f.read()`,
+      },
       tags: ['context-managers', 'with', 'files', 'try-finally', 'basics'],
       concepts: ['py-context-manager-protocol', 'py-try-finally-ordering'],
     },

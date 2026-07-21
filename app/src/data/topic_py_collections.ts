@@ -743,6 +743,21 @@ def analyze_text(text: str, top_n: int = 5) -> dict:
         "hapax": [word for word, count in counter.items() if count == 1],
     }
 `,
+      tieredHints: {
+        apiSignature: 'Counter(iterable); counter.most_common(n)',
+        skeleton: `from collections import ____
+import ____
+
+def ____(text: ____, top_n: ____ = ____) -> ____:
+    """Analyze word frequencies in text."""
+    ____ = ____.____(r'____', text.____())  # words = re.findall, r'[a-z]+'
+    counter = ____(____)
+    return {
+        ____: ____(counter),  # "total_unique"
+        ____: counter.____(top_n),  # "top_words"
+        ____: [word for word, count in counter.____() if count == ____],  # "hapax"
+    }`,
+      },
       explanation: 'Counter is a dict subclass designed for counting hashable objects. Counter(iterable) counts occurrences of each element. most_common(n) returns the n highest counts as (element, count) tuples, sorted by count descending. Counter also supports arithmetic: Counter("aab") - Counter("ab") == Counter({"a": 1}). Using re.findall(r"[a-z]+", text.lower()) is a robust way to extract words while stripping punctuation and normalizing case.',
       hints: [
         'Tokenize with re.findall(r\'[a-z]+\', text.lower()) to strip punctuation and normalize case',
@@ -786,6 +801,24 @@ def build_index(entries: list[tuple[str, int]]) -> dict[str, list[int]]:
         index[word].add(page)
     return {word: sorted(pages) for word, pages in index.items()}
 `,
+      tieredHints: {
+        apiSignature: 'defaultdict(default_factory)',
+        skeleton: `from collections import ____
+
+def ____(records: ____) -> ____:
+    """Group items by category."""
+    groups = ____(____)  # list
+    for category, item in records:
+        groups[category].____(item)
+    return ____(groups)
+
+def ____(entries: ____) -> ____:
+    """Build inverted index: word -> sorted unique page numbers."""
+    index = ____(____)  # set
+    for word, page in entries:
+        index[word].____(page)
+    return {word: ____(pages) for word, pages in index.____()}`,
+      },
       explanation: 'defaultdict(list) auto-creates an empty list for any new key, eliminating the need for `if key not in dict: dict[key] = []` checks. defaultdict(set) similarly creates empty sets, perfect for collecting unique values. The factory function (list, set, int, etc.) is called with no arguments whenever a missing key is accessed. This pattern is central to grouping, indexing, and counting operations. Converting back to dict() at the end ensures the return type matches the annotation.',
       hints: [
         'defaultdict(list) creates a new list for each missing key',
@@ -865,6 +898,17 @@ for w in words:
     groups[w[0]].append(w)
 
 print(dict(groups))`,
+      tieredHints: {
+        apiSignature: 'defaultdict(default_factory)',
+        skeleton: `from collections import ____
+
+words = ____  # ["apple", "ant", "banana", "berry", "cherry"]
+groups = ____(____)  # list
+for w in words:
+    groups[w[____]].____(w)  # 0, append
+
+print(____(groups))`,
+      },
       explanation: 'Without `defaultdict`, you\'d need `if w[0] not in groups: groups[w[0]] = []; groups[w[0]].append(w)` or use `.setdefault()`. Factory can be any callable: `defaultdict(int)` for a counter, `defaultdict(set)` for unique grouping, `defaultdict(lambda: [0, 0])` for multi-counter. Print as `dict(...)` to strip the default_factory from the repr.',
       hints: [
         'defaultdict(factory) auto-inits missing keys',
@@ -901,6 +945,19 @@ q.append("c")
 print(q.popleft())
 print(q.popleft())
 print(list(q))`,
+      tieredHints: {
+        apiSignature: 'deque().append(x); deque().popleft() -> x',
+        skeleton: `from collections import deque
+
+q = ____()
+q.____(____)  # "a"
+q.____(____)  # "b"
+q.____(____)  # "c"
+
+print(q.____())
+print(q.____())
+print(____(q))`,
+      },
       explanation: '`deque` (double-ended queue) gives O(1) inserts and removes at BOTH ends. `list.pop(0)` is O(n) because it shifts every remaining element. Use `deque` for breadth-first search, sliding windows, producer/consumer buffers, and any fair-order processing queue. Also supports `appendleft` / `pop` (from right) for LIFO.',
       hints: [
         'append + popleft = FIFO queue',
@@ -934,6 +991,16 @@ for n in range(1, 6):
     tail.append(n)
 
 print(list(tail))`,
+      tieredHints: {
+        apiSignature: 'deque(maxlen=N)',
+        skeleton: `from collections import ____
+
+tail = ____(____=____)  # maxlen=3
+for n in ____(____, ____):  # 1, 6
+    tail.____(n)
+
+print(____(tail))`,
+      },
       explanation: 'A bounded deque is the cleanest way to "keep the last N items" — no manual slicing, no size checks. Common uses: keeping the last N log lines for a diagnostic endpoint, moving averages over fixed windows, last-N-events buffers. Appending to a full deque automatically discards the other end.',
       hints: [
         'deque(maxlen=N) — append to full deque drops from the other end',
@@ -967,6 +1034,16 @@ p = Point(3, 4)
 print(p.x)
 print(p.y)
 print(p)`,
+      tieredHints: {
+        apiSignature: 'namedtuple(typename, field_names)',
+        skeleton: `from collections import ____
+
+Point = ____(____, ____)  # "Point", ["x", "y"]
+p = ____(____, ____)  # Point(3, 4)
+print(p.____)
+print(p.____)
+print(p)`,
+      },
       explanation: 'namedtuples are tuples with field names — `p.x` works alongside `p[0]`. Immutable, hashable, pickleable, tiny memory footprint. Since Python 3.6+ consider `typing.NamedTuple` for type-annotated fields, or `dataclasses.dataclass(frozen=True)` if you want methods. For purely structural records, `typing.NamedTuple` is the modern go-to.',
       hints: [
         'namedtuple("Name", ["field1", "field2"])',
@@ -1001,6 +1078,17 @@ overrides = {"port": 9000}
 cfg = ChainMap(overrides, defaults)
 print(cfg["debug"])
 print(cfg["port"])`,
+      tieredHints: {
+        apiSignature: 'ChainMap(*maps)',
+        skeleton: `from collections import ChainMap
+
+defaults = {____: ____, ____: ____}  # "debug": False, "port": 8000
+overrides = {____: ____}  # "port": 9000
+
+cfg = ____(____, ____)  # overrides, defaults
+print(cfg[____])  # "debug"
+print(cfg[____])  # "port"`,
+      },
       explanation: '`ChainMap(*maps)` looks up keys left-to-right — first match wins. Great for layered config (CLI flags > env > file > defaults), scope resolution (locals → enclosing → globals → builtins — actually how Python resolves names), or diff-style overlays. `cfg.maps` exposes the underlying list. Mutations (`cfg["x"] = 1`) only ever touch `maps[0]` — the underlying dicts stay pristine.',
       hints: [
         'ChainMap(first, second, ...) — first wins',
@@ -1040,6 +1128,15 @@ a = Counter(apple=5, banana=2)
 b = Counter(apple=3, cherry=1)
 
 print(a + b)`,
+      tieredHints: {
+        apiSignature: 'Counter(mapping); counter_a + counter_b',
+        skeleton: `from collections import Counter
+
+a = ____({____: 5, ____: 2})  # "apple", "banana"
+b = ____({____: 3, ____: 1})  # "apple", "cherry"
+
+print(a ____ b)  # +`,
+      },
       explanation: 'Counters overload arithmetic: `a + b` sums counts, `a - b` subtracts (drops non-positive counts), `a & b` element-wise min (intersection of multisets), `a | b` element-wise max (union of multisets). Useful for bag-of-words math, voting / tallying systems, diffing event counts across time windows. `a - b` is especially handy — "what changed, and by how much".',
       hints: [
         'a + b adds counts',
@@ -1095,6 +1192,16 @@ d.rotate(2)
 print(list(d))
 d.rotate(-3)
 print(list(d))`,
+      tieredHints: {
+        apiSignature: 'deque.rotate(n)',
+        skeleton: `from collections import ____
+
+d = ____(____)  # [1, 2, 3, 4, 5]
+d.____(____)  # 2
+print(____(d))
+d.____(____)  # -3
+print(____(d))`,
+      },
       explanation: '`rotate(n)` shifts elements circularly — positive n rotates right, negative n rotates left. O(n) in the number of steps. Much faster than slice-reassignment `d = d[-n:] + d[:-n]` which allocates two new slices. Use for circular buffers, round-robin dispatch, Caesar-cipher-style encodings.',
       hints: [
         'd.rotate(n) rotates right (positive) or left (negative)',
@@ -1131,6 +1238,18 @@ for e in events:
 
 counter = Counter(window)
 print(counter.most_common(1))`,
+      tieredHints: {
+        apiSignature: 'deque(maxlen=N); Counter(iterable).most_common(n)',
+        skeleton: `from collections import ____, ____
+
+events = ____  # ["hit", "miss", "hit", "hit", "miss", "hit"]
+window = ____(____=____)  # maxlen=3
+for e in events:
+    window.____(e)
+
+counter = ____(window)
+print(counter.____(____))  # 1`,
+      },
       explanation:
         '`deque(maxlen=N)` auto-discards the oldest item once the cap is reached, giving you an O(1) sliding window without bookkeeping. Piping the window into `Counter` gives you frequency over "the recent past" — canonical shape for rate-limiting decisions, rolling dashboards, anomaly detection, or "most common recent request" style heuristics. For a true streaming version (update the counter on each push/pop instead of rebuilding), increment on append and decrement on the evicted item — the deque makes that easy because you can inspect `window[0]` before it falls off.',
       hints: [

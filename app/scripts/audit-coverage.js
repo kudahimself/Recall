@@ -2,7 +2,7 @@
 /**
  * Coverage-gap auditor.
  *
- * Enforces the faded-layer convention (see HOW_TO_CONSTRUCT_TOPIC.md):
+ * Enforces the faded-layer convention (see the /construct-topic skill):
  * every primitive a learner must COLD-WRITE in a CODING question should first
  * appear in a lower-cognitive-load form — a PARSONS, CLOZE_CODE, or
  * PREDICT_OUTPUT "faded" question — so the ramp is worked -> faded -> cold,

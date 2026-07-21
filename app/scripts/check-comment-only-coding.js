@@ -14,7 +14,7 @@
  * This is the gap NEITHER existing script catches:
  *   - check-leaks.js strips comments first, so a comment-only solution looks like
  *     a tiny solution (ratio noise), not a leak.
- *   - check-commented-solution.js only compares STARTER comments to SOLUTION code.
+ *   - check-leaks.js lane A only compares STARTER comments to SOLUTION code.
  *
  * Metric: strip # / // / -- line comments, /* *​/ and ''' """ blocks, and all
  * whitespace from `solution`. Report the residual "real code" length.

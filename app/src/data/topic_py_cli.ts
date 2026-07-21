@@ -219,6 +219,18 @@ parser.add_argument("-c", "--count", type=int, default=1, help="number of greeti
 args = parser.parse_args(["alice", "-c", "3"])
 print(args.name)
 print(args.count)`,
+      tieredHints: {
+        apiSignature: 'parser.add_argument(name_or_flags, type=None, default=None, help=None)',
+        skeleton: `import argparse
+
+parser = argparse.____(____=____)  # description="Greet someone"
+parser.____(____, ____=____)  # "name", help="who to greet"
+parser.____(____, ____, ____=____, ____=____, ____=____)  # "-c", "--count", type=int, default=1, help="number of greetings"
+
+args = parser.____(____)  # ["alice", "-c", "3"]
+print(args.____)
+print(args.____)`,
+      },
       explanation: 'argparse is the stdlib CLI parser. Positional args (no dash prefix) are required by default; optional args (`-c`/`--count`) can have defaults and `type=` coercion. `parser.parse_args()` reads from `sys.argv` — pass a list to parse a specific arg vector (essential for tests). Free bonus: `--help` is auto-generated from your descriptions and help strings.',
       hints: [
         'Positional: `add_argument("name")`',
@@ -259,6 +271,23 @@ delete_p.add_argument("name")
 args = parser.parse_args(["create", "widget"])
 print(args.cmd)
 print(args.name)`,
+      tieredHints: {
+        apiSignature: 'parser.add_subparsers(dest=None, required=False); subparsers.add_parser(name)',
+        skeleton: `import argparse
+
+parser = argparse.____()
+subparsers = parser.____(____=____, ____=____)  # dest="cmd", required=True
+
+create_p = subparsers.____(____)  # "create"
+create_p.____(____)  # "name"
+
+delete_p = subparsers.____(____)  # "delete"
+delete_p.____(____)  # "name"
+
+args = parser.____(____)  # ["create", "widget"]
+print(args.____)
+print(args.____)`,
+      },
       explanation: 'Subparsers give you "git-style" CLIs: `mytool create <name>`, `mytool delete <name>`. `dest="cmd"` stores the chosen subcommand name in `args.cmd` so you can dispatch on it. `required=True` (3.7+) forces the user to pick one. Each subparser can have its own arguments. For richer CLIs (types, auto-complete, colors) graduate to `click` or `typer`.',
       hints: [
         'parser.add_subparsers(dest="cmd", required=True)',
@@ -314,6 +343,16 @@ with open("config.toml", "rb") as fh:
 
 print(config["app"]["name"])
 print(config["app"]["port"])`,
+      tieredHints: {
+        apiSignature: 'tomllib.load(file_obj) -> dict',
+        skeleton: `import ____
+
+with ____(____, ____) as ____:  # "config.toml", "rb"
+    config = ____.____(____)
+
+print(config[____][____])  # "app", "name"
+print(config[____][____])  # "app", "port"`,
+      },
       explanation: 'TOML is the standard Python config format now — `pyproject.toml`, Poetry, Ruff, Pytest all use it. 3.11 ships `tomllib` in stdlib (read-only); for 3.10 and earlier, use `tomli`. For writing, use `tomli-w` or `tomlkit`. Open in BINARY mode (TOML spec requires UTF-8 bytes). Returns plain nested dicts — nothing special to learn.',
       hints: [
         'tomllib.load takes a binary file handle ("rb")',
@@ -650,6 +689,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument("ports", nargs="+", type=int)
 args = parser.parse_args(["8000", "8001", "9000"])
 print(sum(args.ports))`,
+      tieredHints: {
+        apiSignature: 'parser.add_argument(name, nargs=None, type=None)',
+        skeleton: `import argparse
+
+parser = argparse.____()
+parser.____(____, ____=____, ____=____)  # "ports", nargs="+", type=int
+args = parser.____(____)  # ["8000", "8001", "9000"]
+print(____(args.____))`,
+      },
       explanation:
         'nargs="+" collects one or more values into a list (and errors if none are given); type=int is applied to EACH element, so args.ports is [8000, 8001, 9000] — real ints — and sum() works directly. Without type=int you would get ["8000", ...] and sum() would raise a TypeError.',
       hints: [
@@ -695,6 +743,26 @@ print(args.service)
 print(args.env)
 print(args.replicas)
 print(args.dry_run)`,
+      tieredHints: {
+        apiSignature: 'subparser.add_argument(name_or_flags, choices=None, type=None, default=None, action=None)',
+        skeleton: `import argparse
+
+parser = argparse.____()
+sub = parser.____(____=____, ____=____)  # dest="cmd", required=True
+
+deploy = sub.____(____)  # "deploy"
+deploy.____(____)  # "service"
+deploy.____(____, ____=____)  # "--env", choices=["staging", "prod"]
+deploy.____(____, ____=____, ____=____)  # "--replicas", type=int, default=1
+deploy.____(____, ____=____)  # "--dry-run", action="store_true"
+
+args = parser.____(____)  # ["deploy", "api", "--env", "prod", "--replicas", "3", "--dry-run"]
+print(args.____)
+print(args.____)
+print(args.____)
+print(args.____)
+print(args.____)`,
+      },
       explanation:
         'A production CLI composes the primitives: add_subparsers(dest="cmd", required=True) records which subcommand ran and forces a choice; the subparser owns its own positional (service) and options. choices validates --env, type=int coerces --replicas (with default 1), and store_true makes --dry-run a flag. Note argparse turns the --dry-run option name into the attribute args.dry_run (dash becomes underscore).',
       hints: [

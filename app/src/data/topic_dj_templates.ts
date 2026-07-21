@@ -24,6 +24,10 @@ export const dj_templates_questions: Question[] = [
       starterCode: `<!-- Django template -->\n`,
       testCases: [{ input: 'template variables', expectedOutput: '{{ title }}, {% for article in articles %}', description: 'Should use template tags' }],
       solution: `<h1>{{ title }}</h1>\n\n{% for article in articles %}\n  <div>\n    <h2>{{ article.title }}</h2>\n    <p>By {{ article.author }}</p>\n  </div>\n{% empty %}\n  <p>No articles found.</p>\n{% endfor %}`,
+      tieredHints: {
+        apiSignature: '{{ variable }}; {% for item in items %}...{% empty %}...{% endfor %}',
+        skeleton: '<h1>{{ ____ }}</h1>\n\n{% ____ article ____ ____ %}\n  <____>\n    <h2>{{ article.____ }}</h2>\n    <p>____ {{ article.____ }}</p>\n  </____>\n{% ____ %}\n  <p>____</p>\n{% ____ %}',
+      },
       explanation: '{{ variable }} outputs a value. {% tag %} is a template tag for logic. {% for %} loops. {% empty %} renders when the list is empty. Django auto-escapes HTML in variables to prevent XSS.',
       hints: ['{{ var }} for output', '{% for item in list %}...{% endfor %} for loops', '{% empty %} for empty list fallback'],
       tags: ['template', 'for', 'variables', 'django'],
@@ -63,6 +67,10 @@ export const dj_templates_questions: Question[] = [
       starterCode: `<!-- Conditional -->\n`,
       testCases: [{ input: 'auth check', expectedOutput: '{% if user.is_authenticated %}', description: 'Should use conditional template tag' }],
       solution: `{% if user.is_authenticated %}\n  <p>Welcome, {{ user.username }}!</p>\n  <a href="{% url 'logout' %}">Logout</a>\n{% else %}\n  <a href="{% url 'login' %}">Login</a>\n{% endif %}`,
+      tieredHints: {
+        apiSignature: '{% if user.is_authenticated %}...{% else %}...{% endif %}; {% url "name" %}',
+        skeleton: '{% ____ user.____ %}\n  <p>____ {{ user.____ }}!</p>\n  <a href="{% ____ ____ %}">____</a>\n{% ____ %}\n  <a href="{% ____ ____ %}">____</a>\n{% ____ %}',
+      },
       explanation: '{% if condition %} for conditionals. user is automatically available in templates (from context processors). {% url "name" %} generates URLs from named URL patterns (reverse URL resolution). Always use {% url %} instead of hardcoded paths.',
       hints: ['{% if %}...{% else %}...{% endif %}', 'user.is_authenticated checks login', '{% url "name" %} for reverse URL'],
       tags: ['template', 'if', 'url', 'auth', 'django'],
@@ -99,6 +107,10 @@ export const dj_templates_questions: Question[] = [
       starterCode: `<!-- Template filters -->\n`,
       testCases: [{ input: 'filters', expectedOutput: '{{ date|date:"M d, Y" }}, {{ text|truncatechars:100 }}, {{ text|title }}', description: 'Should use template filters' }],
       solution: `<p>{{ article.published_date|date:"M d, Y" }}</p>\n<p>{{ article.body|truncatechars:100 }}</p>\n<h2>{{ article.title|title }}</h2>`,
+      tieredHints: {
+        apiSignature: '{{ value|date:"M d, Y" }}; {{ value|truncatechars:N }}; {{ value|title }}',
+        skeleton: '<p>{{ article.____|____:"M d, Y" }}</p>\n<p>{{ article.____|____:100 }}</p>\n<h2>{{ article.____|____ }}</h2>',
+      },
       explanation: 'Filters modify variables: {{ var|filter:arg }}. date formats dates. truncatechars limits length (adds ...). title capitalises each word. Other useful filters: default, length, pluralize, linebreaks, safe (disable auto-escaping).',
       hints: ['{{ var|filter:arg }} syntax', 'date:"M d, Y" for formatting', 'truncatechars:N adds ... if longer'],
       tags: ['template', 'filters', 'date', 'truncate', 'django'],
@@ -127,6 +139,13 @@ export const dj_templates_questions: Question[] = [
   <a href="{% url 'home' %}">Home</a>
   <a href="{% url 'blog:detail' post.pk %}">{{ post.title }}</a>
 </nav>`,
+      tieredHints: {
+        apiSignature: '{% url "name" [arg1 arg2] %}',
+        skeleton: `<____>
+  <____ href="{% ____ ____ %}">____</____>
+  <____ href="{% ____ ____ ____.____ %}">{{ ____.____ }}</____>
+</____>`,
+      },
       explanation: 'Templates should NEVER hardcode paths — use `{% url %}` and rename URLs freely. Multiple args: `{% url "archive" year month %}`. Keyword args: `{% url "archive" year=2024 month=1 %}`. To save the result to a variable for reuse: `{% url "detail" post.pk as detail_url %}` then use `{{ detail_url }}` multiple times.',
       hints: [
         '{% url "name" positional_args %}',
@@ -164,6 +183,16 @@ export const dj_templates_questions: Question[] = [
 {% block content %}
   <article>{{ article.body }}</article>
 {% endblock %}`,
+      tieredHints: {
+        apiSignature: '{% extends "base.html" %}; {% block name %}...{% endblock %}',
+        skeleton: `{% ____ "base.html" %}
+
+{% ____ title %}{{ article.____ }}{% ____ %}
+
+{% ____ content %}
+  <____>{{ article.____ }}</____>
+{% ____ %}`,
+      },
       explanation: '`{% extends %}` makes the child load the parent, then the `{% block %}` tags in the child override the corresponding blocks in the parent. Unnamed content (outside blocks) in the child is ignored. Use `{{ block.super }}` to insert the parent\'s block content and extend rather than replace. Typical hierarchy: `base.html` → `site_layout.html` → specific page templates. Keeps common chrome (nav, footer, scripts) in one place.',
       hints: [
         '{% extends "base.html" %} at the top',
@@ -194,6 +223,12 @@ export const dj_templates_questions: Question[] = [
       solution: `{% for item in items %}
   {% include "_card.html" with item=item %}
 {% endfor %}`,
+      tieredHints: {
+        apiSignature: '{% include "partial.html" with var=val %}',
+        skeleton: `{% ____ item ____ items %}
+  {% ____ "_card.html" ____ item=____ %}
+{% ____ %}`,
+      },
       explanation: '`{% include %}` renders another template inline with access to the full context (or a restricted one via `with ... only`). Perfect for card grids, form rows, common header snippets. Alternative: custom template tags (more power, more ceremony). Prefix partials with `_` by convention to signal they\'re not standalone pages. For highly reusable components across Django projects consider `django-components` / template `cotton`.',
       hints: [
         '{% include "partial.html" with x=y z=w %}',
@@ -231,6 +266,10 @@ register = template.Library()
 @register.filter
 def currency(value):
     return f"\${value:,.2f}"`,
+      tieredHints: {
+        apiSignature: 'register = template.Library(); @register.filter',
+        skeleton: '# blog/templatetags/blog_extras.py\nfrom django import template\n\nregister = template.____()\n\n@register.____\ndef ____(____):\n    return f"\\${____:,.2f}"',
+      },
       explanation: 'Custom filters live in `<app>/templatetags/<name>.py`. Always add `__init__.py` (empty) to that directory. Load in a template with `{% load blog_extras %}` (no `.py` or directory prefix). Filter signature: `(value, arg=None)` — use as `{{ x|filter }}` or `{{ x|filter:arg }}`. For tags that render blocks or need template access, use `@register.simple_tag` or `@register.inclusion_tag`.',
       hints: [
         'Directory: app/templatetags/ with __init__.py',

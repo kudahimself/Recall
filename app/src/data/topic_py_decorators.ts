@@ -24,6 +24,10 @@ export const py_decorators_questions: Question[] = [
       starterCode: `def cache(func):\n`,
       testCases: [{ input: 'expensive function', expectedOutput: 'decorator with dict cache keyed by args', description: 'Should cache function results' }],
       solution: `def cache(func):\n    memo = {}\n    def wrapper(*args):\n        if args not in memo:\n            memo[args] = func(*args)\n        return memo[args]\n    return wrapper`,
+      tieredHints: {
+        apiSignature: 'dict.get(key, default=None)',
+        skeleton: `def ____(func):\n    ____ = {}\n    def wrapper(*args):\n        if args ____ ____ memo:\n            memo[args] = ____(*args)\n        return memo[____]\n    return ____`,
+      },
       explanation: 'This is manual memoization. The memo dict stores args → result. On subsequent calls with the same args, the cached result is returned instantly. Python has a built-in: @functools.lru_cache(maxsize=128) does this automatically with LRU eviction.',
       hints: ['Use dict with args tuple as key', 'Check if args in memo before calling', '@functools.lru_cache is the built-in version'],
       tags: ['decorator', 'cache', 'memoization', 'python'],
@@ -40,6 +44,10 @@ export const py_decorators_questions: Question[] = [
       starterCode: `def validate_types(*types):\n`,
       testCases: [{ input: 'type validation', expectedOutput: 'decorator factory with *types and isinstance checks', description: 'Should validate argument types' }],
       solution: `def validate_types(*types):\n    def decorator(func):\n        def wrapper(*args):\n            for arg, expected in zip(args, types):\n                if not isinstance(arg, expected):\n                    raise TypeError(f"Expected {expected.__name__}, got {type(arg).__name__}")\n            return func(*args)\n        return wrapper\n    return decorator\n\n@validate_types(int, int)\ndef add(a, b):\n    return a + b`,
+      tieredHints: {
+        apiSignature: 'isinstance(object, classinfo) -> bool',
+        skeleton: `def validate_types(*____):\n    def decorator(func):\n        def wrapper(*args):\n            for arg, expected in ____(args, types):\n                if not ____(arg, ____):\n                    raise ____(f"Expected {expected.____}, got {____(arg).____}")\n            return func(____)\n        return wrapper\n    return ____\n\n@validate_types(____, ____)\ndef add(a, b):\n    return a ____ b`,
+      },
       explanation: 'This is a decorator factory — a function that returns a decorator. Three levels: validate_types(types) → decorator(func) → wrapper(args). zip pairs each arg with its expected type. isinstance() checks the type.',
       hints: ['Three nested functions: factory → decorator → wrapper', 'zip(args, types) pairs them up', 'isinstance(value, type) for checking'],
       tags: ['decorator', 'factory', 'validation', 'python'],
@@ -62,6 +70,10 @@ export const py_decorators_questions: Question[] = [
         },
       ],
       solution: `import time\n\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        elapsed = time.time() - start\n        print(f"{func.__name__} took {elapsed:.4f}s")\n        return result\n    return wrapper`,
+      tieredHints: {
+        apiSignature: 'time.time() -> float',
+        skeleton: `import ____\n\ndef timer(____):\n    def wrapper(*args, **kwargs):\n        start = ____.____()\n        result = ____(*args, **kwargs)\n        elapsed = ____.____() ____ start\n        ____(f"{func.____} took {elapsed:.____f}s")\n        return ____\n    return wrapper`,
+      },
       explanation: 'A decorator wraps a function with extra behaviour. timer(func) returns wrapper, which calls the original func and adds timing. Usage: @timer above a function definition. *args/**kwargs pass through any arguments.',
       hints: ['Decorator takes func, returns wrapper', 'wrapper calls func(*args, **kwargs)', '@decorator is syntactic sugar for func = decorator(func)'],
       tags: ['decorator', 'timer', 'pattern', 'python'],
@@ -1040,6 +1052,10 @@ def flaky_function():
 
 print(flaky_function())
 print(attempt)`,
+      tieredHints: {
+        apiSignature: 'range(start, stop, step=1) -> range',
+        skeleton: `import ____\n\ndef ____(____):\n    def ____(____):\n        @functools.____(____)\n        def ____(*____, **____):\n            ____ = ____\n            for _ in ____(____):\n                try:\n                    return ____(*____, **____)\n                except ____ as ____:\n                    ____ = ____\n            ____ ____\n        return ____\n    return ____\n\n____ = ____\n\n@____(____)\ndef ____():\n    ____ attempt\n    attempt ____ ____\n    if attempt ____ ____:\n        raise ____("____")\n    return "____"\n\n____(____())\n____(____)`,
+      },
       explanation: 'A parameterised decorator has three levels: the outer function takes parameters (`times`), the `decorator` wraps the function, and `wrapper` runs the logic. The retry loop tries the function `times` times, catching any `Exception`. If all attempts fail, it re-raises the last exception. `@functools.wraps(func)` preserves metadata.',
       hints: [
         'Three levels: `retry(times)` → `decorator(func)` → `wrapper(*args, **kwargs)`',
@@ -1087,6 +1103,10 @@ def fibonacci(n):
 
 print(fibonacci(10))
 print(fibonacci(30))`,
+      tieredHints: {
+        apiSignature: 'functools.wraps(wrapped) -> callable',
+        skeleton: `import ____\n\ndef ____(____):\n    ____ = ____\n\n    @functools.____(____)\n    def ____(*____):\n        if ____ ____ ____ ____:\n            ____[args] = ____(*____)\n        return ____[____]\n\n    return ____\n\n@____\ndef fibonacci(____):\n    if n ____ ____:\n        return ____\n    return fibonacci(n ____ ____) ____ fibonacci(n ____ ____)\n\n____(fibonacci(____))\n____(fibonacci(____))`,
+      },
       explanation: 'The `cache` dict lives in the closure — it persists across calls. `args` is a tuple (tuples are hashable, so they work as dict keys). If the result is already cached, we skip recomputation. Memoising Fibonacci turns it from exponential O(2^n) to linear O(n). Python also provides this as `functools.lru_cache`.',
       hints: [
         'Use `args` (tuple) as the dict key — tuples are hashable',
@@ -1150,6 +1170,10 @@ def greet():
     return "hello"
 
 print(greet())  # HELLO`,
+      tieredHints: {
+        apiSignature: 'str.upper() -> str',
+        skeleton: `def uppercase(____):\n    def ____():\n        result = ____()\n        return result.____()\n    return ____\n\n@____\ndef ____():\n    return "____"\n\n____(greet())`,
+      },
       explanation: 'The `uppercase` decorator defines an inner `wrapper` function that calls the original function, transforms its result with `.upper()`, and returns the modified value. The `@uppercase` syntax above `greet` is equivalent to writing `greet = uppercase(greet)`. The key pattern is: decorator takes a function, returns a wrapper that adds behavior around the original call.',
       hints: [
         'A decorator is a function that takes a function and returns a new function',
