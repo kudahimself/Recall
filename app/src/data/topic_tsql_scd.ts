@@ -55,7 +55,9 @@ export const tsql_scd_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the MERGE clauses for a Type 1 (overwrite) load of a customer dimension from staging.',
-    template: `MERGE dbo.DimCustomer AS tgt
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+MERGE dbo.DimCustomer AS tgt
 USING stg.Customer AS src
     ON tgt.CustomerId = src.CustomerId
 WHEN ___ THEN
@@ -143,6 +145,7 @@ WHEN NOT MATCHED BY TARGET THEN
     },
     explanation: 'A single `MERGE` performs the whole Type 1 load: join target to source on the natural key, overwrite the descriptive columns for existing products (`WHEN MATCHED`), and insert rows for brand-new product codes (`WHEN NOT MATCHED BY TARGET`). Type 1 keeps no history — the dimension simply reflects the latest source values.',
     hints: ['ON ProductCode; WHEN MATCHED → UPDATE SET both columns', 'WHEN NOT MATCHED BY TARGET → INSERT the three columns'],
+    requires: [/MERGE/i],
     tags: ['tsql', 'scd', 'merge', 'type-1'],
   },
   {
@@ -177,6 +180,7 @@ WHERE tgt.____ = 1 AND tgt.Category ____ src.Category;`,
     },
     explanation: 'This mirrors the earlier expire-step pattern: join the current dimension rows to staging on the natural key, and for rows where the tracked attribute actually changed, stamp EndDate and clear IsCurrent. A separate INSERT (not shown here) would then add each product\'s new current version - the expire step never DELETEs, since that would destroy history.',
     hints: ['UPDATE ... FROM dbo.DimProduct JOIN stg.Product ON ProductCode', 'WHERE IsCurrent = 1 AND the tracked column differs'],
+    requires: [/UPDATE/i, /JOIN/i],
     tags: ['tsql', 'scd', 'type-2', 'effective-dates'],
   },
   {
@@ -187,7 +191,9 @@ WHERE tgt.____ = 1 AND tgt.Category ____ src.Category;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the value for a freshly-inserted current row's IsCurrent flag, and the predicate that skips products which already have a current row.",
-    template: `INSERT INTO dbo.DimProduct (ProductCode, Category, EffectiveDate, EndDate, IsCurrent)
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, EffectiveDate, EndDate, IsCurrent)
+-- stg.Product(ProductCode, ProductName, Category, Price)
+INSERT INTO dbo.DimProduct (ProductCode, Category, EffectiveDate, EndDate, IsCurrent)
 SELECT src.ProductCode, src.Category, CAST(GETDATE() AS DATE), NULL, ___
 FROM stg.Product AS src
 WHERE ___ (
@@ -195,7 +201,9 @@ WHERE ___ (
     WHERE tgt.ProductCode = src.ProductCode AND tgt.IsCurrent = 1
 );`,
     blanks: ['1', 'NOT EXISTS'],
-    solution: `INSERT INTO dbo.DimProduct (ProductCode, Category, EffectiveDate, EndDate, IsCurrent)
+    solution: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, EffectiveDate, EndDate, IsCurrent)
+-- stg.Product(ProductCode, ProductName, Category, Price)
+INSERT INTO dbo.DimProduct (ProductCode, Category, EffectiveDate, EndDate, IsCurrent)
 SELECT src.ProductCode, src.Category, CAST(GETDATE() AS DATE), NULL, 1
 FROM stg.Product AS src
 WHERE NOT EXISTS (

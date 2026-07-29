@@ -9,6 +9,13 @@ import { generateAllVariations } from '../utils/questionVariations';
 import { expandedQuestions } from './expandedQuestions';
 import { certificationQuestions } from './certificationQuestions';
 import { masteryQuestions } from './masteryQuestions';
+// PySpark transformations — narrow/wide, union, dedup, array higher-order functions
+import { pysparkTransformationsQuestions } from './pysparkTransformationsQuestions';
+// Pivot / unpivot ramp — beginner rung, gotchas, and the PySpark side of unpivot
+import { pysparkPivotQuestions } from './pysparkPivotQuestions';
+import { pysparkFunctionLibraryQuestions } from './pysparkFunctionLibraryQuestions';
+// selectExpr / SQL-expression strings — introduced in DataFrame Basics
+import { pysparkSelectExprQuestions } from './pysparkSelectExprQuestions';
 // Ordered question banks — progressive within each topic
 import { webdevOrderedQuestions } from './webdevOrderedQuestions';
 import { advancedWebdevOrderedQuestions } from './advancedWebdevOrderedQuestions';
@@ -383,17 +390,17 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to group DataFrame "df" by column "department" and calculate the number of employees per department as "count".',
+    question: 'Write a PySpark statement to group DataFrame "df" (columns: emp_id, emp_name, department, salary) by column "department" and calculate the number of employees per department. The result column must be named "count".',
     starterCode: `# Group by department and count\nresult = `,
     testCases: [
       {
-        input: 'df with department column',
+        input: 'df with columns: emp_id, emp_name, department, salary',
         expectedOutput: 'df.groupBy("department").count()',
         description: 'Should group by department and count rows',
       },
     ],
-    solution: `result = df.groupBy("department").count()`,
-    explanation: 'groupBy("column") groups rows by key, and count() calculates the row count per group.',
+    solution: `result = df.groupBy("department").count()\n# OR\nfrom pyspark.sql.functions import count\n\nresult = df.groupBy("department").agg(count("*").alias("count"))`,
+    explanation: 'groupBy("column") groups rows by key, and count() calculates the row count per group - it names the output column "count" for you. The agg(count("*").alias("count")) form is equivalent and is what you reach for when you need extra aggregates or a different column name.',
     tieredHints: {
       apiSignature: 'GroupedData.count() -> DataFrame',
       skeleton: `result = df.____("____").____()`,
@@ -409,22 +416,25 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
-    question: 'Which of the following is a PySpark transformation (lazy evaluation) rather than an action?',
+    question: 'Which of the following is a PySpark transformation (lazily evaluated) rather than an action?',
     options: [
-      { id: 'a', text: 'count() action (triggers immediate job execution across cluster nodes).', isCorrect: false },
-      { id: 'b', text: 'map() transformation (lazily builds RDD transformation lineage graph).', isCorrect: true },
-      { id: 'c', text: 'collect() action (transfers all distributed partitions to driver RAM).', isCorrect: false },
-      { id: 'd', text: 'show() action (formats and prints top DataFrame rows to driver console).', isCorrect: false },
+      { id: 'a', text: 'count()', isCorrect: false },
+      { id: 'b', text: 'map()', isCorrect: true },
+      { id: 'c', text: 'collect()', isCorrect: false },
+      { id: 'd', text: 'show()', isCorrect: false },
     ],
-    explanation: 'map() is a lazy transformation that appends an operation to the execution DAG without triggering immediate Spark job execution.',
+    explanation: 'map() is a lazy transformation that appends an operation to the execution DAG without triggering immediate Spark job execution. In contrast, count(), collect(), and show() are actions that force Spark to execute jobs.',
     tags: ['transformations', 'actions', 'lazy-evaluation'],
     concepts: ['ps-actions-vs-transforms'],
   },
   {
     id: 'ps-transform-2',
+    // No "inner" literal: it is the default `how`, so `df1.join(df2, "id")` is
+    // a correct answer and must not be hard-failed by the gate.
+    requires: [/\.join\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SQL_JOINS,
+    topic: Topic.PYSPARK_TRANSFORMATIONS,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to perform an inner join between DataFrame "df1" (columns: id, name, age) and "df2" (columns: id, department, salary) on column "id".',
     starterCode: `# Inner join df1 and df2 on id\nresult = `,
@@ -464,9 +474,8 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     explanation: 'distinct() and dropDuplicates() both return a new DataFrame with duplicate rows removed across all columns.',
     tieredHints: {
       apiSignature: 'DataFrame.distinct() -> DataFrame',
-      skeleton: `-- ____ duplicate rows
-result = df.____()
--- ____`,
+      skeleton: `# Remove duplicate rows
+result = df.____()`,
     },
     hints: ['Use distinct() or dropDuplicates()'],
     tags: ['dataframe', 'distinct', 'deduplication'],
@@ -478,17 +487,17 @@ result = df.____()
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to sort DataFrame "df" by column "salary" in descending order.',
+    question: 'Write a PySpark statement to sort DataFrame "df" (columns: emp_id, emp_name, department, salary) by column "salary" in descending order.',
     starterCode: `# Sort by salary descending\nresult = `,
     testCases: [
       {
-        input: 'df with salary column',
-        expectedOutput: 'df.orderBy(df.salary.desc()) or df.sort(df.salary.desc())',
+        input: 'df with columns: emp_id, emp_name, department, salary',
+        expectedOutput: 'df.orderBy(desc("salary")) or df.orderBy("salary", ascending=False)',
         description: 'Should sort by salary in descending order',
       },
     ],
-    solution: `from pyspark.sql.functions import desc\n\nresult = df.orderBy(desc("salary"))\n# OR\nresult = df.orderBy(df.salary.desc())\n# OR\nresult = df.sort(desc("salary"))`,
-    explanation: 'orderBy() and sort() are aliases. Pass desc("column") or col.desc() to order descending.',
+    solution: `from pyspark.sql.functions import desc\n\nresult = df.orderBy(desc("salary"))\n# OR\nresult = df.orderBy(df.salary.desc())\n# OR\nresult = df.orderBy("salary", ascending=False)\n# OR\nresult = df.sort(desc("salary"))\n# OR\nresult = df.sort("salary", ascending=False)`,
+    explanation: 'orderBy() and sort() are aliases. Three equivalent ways to go descending: the desc("column") function, the column method df.salary.desc(), or the ascending=False keyword argument.',
     tieredHints: {
       apiSignature: 'DataFrame.orderBy(*cols: str | Column, ascending: bool = True) -> DataFrame',
       skeleton: `from pyspark.sql.functions import desc
@@ -502,32 +511,8 @@ result = df.____(____("____"))`,
 
   // ===== SPARK SQL - BEGINNER TO INTERMEDIATE =====
   {
-    id: 'sql-1',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.SPARK_SQL,
-    language: CodeLanguage.SQL,
-    question: 'Write a SQL query to select all columns from the "employees" table (columns: id, emp_name, department, salary, age, email) where department is "Sales".',
-    starterCode: `-- Write your SQL query here\n`,
-    testCases: [
-      {
-        input: 'employees table with department column',
-        expectedOutput: 'SELECT * FROM employees WHERE department = "Sales"',
-        description: 'Should select all Sales employees',
-      },
-    ],
-    solution: `SELECT * FROM employees WHERE department = 'Sales'\n-- OR\nselect * from employees where department = "Sales"`,
-    explanation: 'Basic SQL SELECT statement with WHERE clause to filter rows.',
-    tieredHints: {
-      apiSignature: 'SELECT * FROM table WHERE condition',
-      skeleton: `SELECT * FROM ____ WHERE ____ = "____"`,
-    },
-    hints: ['Use SELECT * to get all columns', 'Use WHERE to filter'],
-    tags: ['sql', 'select', 'where'],
-    concepts: ['ps-select-filter'],
-  },
-  {
     id: 'sql-2',
+    requires: [/create(OrReplace)?TempView\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.SPARK_SQL,
@@ -554,9 +539,10 @@ ____.____("____")`,
   },
   {
     id: 'sql-3',
+    requires: [/AVG\s*\(/i, /GROUP\s+BY/i, /ORDER\s+BY/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.SQL_AGGREGATIONS,
     language: CodeLanguage.SQL,
     question: 'Query the "employees" table (columns: department, salary) to find the average salary by department, ordered by average salary descending. Name the calculated column "avg_salary".',
     starterCode: `-- Write your SQL query here\n`,
@@ -579,32 +565,6 @@ ORDER BY ____ DESC`,
     hints: ['Use GROUP BY department', 'Use AVG() function', 'Use ORDER BY with DESC'],
     tags: ['sql', 'groupby', 'aggregate', 'orderby'],
     concepts: ['ps-groupby-agg', 'ps-aggregate-fns', 'ps-orderby-sort'],
-  },
-  {
-    id: 'sql-4',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
-    language: CodeLanguage.SQL,
-    question: 'Given an "employees" table with columns "id", "emp_name", "department", and "salary", write a SQL query to filter and return all employee rows where salary exceeds the overall average employee salary.',
-    starterCode: `-- Find employees paid above average\n`,
-    testCases: [
-      {
-        input: 'employees table with salary column',
-        expectedOutput: 'SELECT * FROM employees WHERE salary > (SELECT AVG(salary) FROM employees)',
-        description: 'Should find employees with above-average salary',
-      },
-    ],
-    solution: `SELECT * FROM employees\nWHERE salary > (SELECT AVG(salary) FROM employees)\n-- OR\nSELECT id, emp_name, department, salary\nFROM employees\nWHERE salary > (SELECT AVG(salary) FROM employees)`,
-    explanation: 'WHERE filters rows before aggregation, so AVG(salary) cannot appear directly in a WHERE clause. The subquery (SELECT AVG(salary) FROM employees) runs first and returns a single number (a "scalar subquery"), which the outer WHERE then uses to filter each row.',
-    tieredHints: {
-      apiSignature: 'WHERE col > (SELECT AVG(col) FROM table)',
-      skeleton: `SELECT * FROM employees
-WHERE ____ > (SELECT ____(salary) FROM ____)`,
-    },
-    hints: ['WHERE salary > AVG(salary) won\'t work — aggregates can\'t go in WHERE', 'Use a subquery: (SELECT AVG(salary) FROM employees) returns a single number', 'The outer query then filters: WHERE salary > (that number)'],
-    tags: ['sql', 'subquery', 'aggregate'],
-    concepts: ['sql-subqueries', 'ps-aggregate-fns'],
   },
 
   // ===== ADVANCED PYSPARK =====
@@ -882,37 +842,11 @@ result = ____.____("____")`,
 
   // ===== MORE SQL QUESTIONS =====
   {
-    id: 'sql-5',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
-    language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, emp_name, department, salary), write a query to find the top 5 highest paid employees. Return all columns.',
-    starterCode: `-- Write your SQL query here\n`,
-    testCases: [
-      {
-        input: 'employees table',
-        expectedOutput: 'SELECT * FROM employees ORDER BY salary DESC LIMIT 5',
-        description: 'Should get top 5 by salary',
-      },
-    ],
-    solution: `SELECT * FROM employees\nORDER BY salary DESC\nLIMIT 5\n-- OR\nSELECT id, emp_name, department, salary\nFROM employees\nORDER BY salary DESC\nLIMIT 5`,
-    explanation: 'ORDER BY sorts rows, DESC for descending order, and LIMIT restricts the number of results.',
-    tieredHints: {
-      apiSignature: 'SELECT cols FROM table ORDER BY col DESC LIMIT n',
-      skeleton: `SELECT * FROM ____
-ORDER BY ____ ____
-LIMIT 5`,
-    },
-    hints: ['Use ORDER BY salary DESC', 'Use LIMIT 5'],
-    tags: ['sql', 'orderby', 'limit'],
-    concepts: ['ps-orderby-sort'],
-  },
-  {
     id: 'sql-6',
+    requires: [/GROUP\s+BY/i, /\bHAVING\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.SQL_AGGREGATIONS,
     language: CodeLanguage.SQL,
     question: 'Using the "employees" table (columns: id, emp_name, department, salary), write a query to select the department and count of employees in each department, showing only departments with more than 10 employees. Name the count column "employee_count".',
     starterCode: `-- Write your SQL query here\n`,
@@ -935,33 +869,6 @@ HAVING ____ > 10`,
     hints: ['Use GROUP BY and COUNT()', 'Use HAVING to filter aggregated results'],
     tags: ['sql', 'groupby', 'having', 'aggregate'],
     concepts: ['ps-groupby-agg', 'sql-where-having', 'ps-aggregate-fns'],
-  },
-  {
-    id: 'sql-7',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.SPARK_SQL,
-    language: CodeLanguage.SQL,
-    question: 'Query the "sales" table (columns: sale_date, amount) using a window function to calculate the running total of sales ordered by sale_date. Alias the output column as "running_total".',
-    starterCode: `-- Write your SQL query here\n`,
-    testCases: [
-      {
-        input: 'sales table with sale_date and amount',
-        expectedOutput: 'SELECT sale_date, amount, SUM(amount) OVER (ORDER BY sale_date) as running_total FROM sales',
-        description: 'Should calculate running total',
-      },
-    ],
-    solution: `SELECT sale_date, amount,\n       SUM(amount) OVER (ORDER BY sale_date) as running_total\nFROM sales\n-- OR\nSELECT sale_date, amount,\n       SUM(amount) OVER (ORDER BY sale_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as running_total\nFROM sales`,
-    explanation: 'Window functions use OVER clause. SUM(amount) OVER (ORDER BY sale_date) calculates cumulative sum ordered by sale_date.',
-    tieredHints: {
-      apiSignature: 'SUM(col) OVER (ORDER BY date_col) AS alias',
-      skeleton: `SELECT sale_date, amount,
-       ____(amount) OVER (ORDER BY ____) as ____
-FROM ____`,
-    },
-    hints: ['Use SUM() with OVER clause', 'ORDER BY sale_date in the window'],
-    tags: ['sql', 'window-functions', 'advanced'],
-    concepts: ['sql-window-ranking'],
   },
 
   // ===== MORE DATABRICKS QUESTIONS =====
@@ -1001,6 +908,7 @@ FROM ____`,
   // ===== ADDITIONAL PRACTICE QUESTIONS =====
   {
     id: 'ps-transform-5',
+    requires: [/\.join\s*\(/, /['"]left['"]/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1092,6 +1000,10 @@ const variationQuestions = generateAllVariations(5);
 export const questions: Question[] = dedupeById([
   // Databricks (ordered in source files)
   ...baseQuestions, ...expandedQuestions, ...certificationQuestions, ...masteryQuestions, ...variationQuestions,
+  ...pysparkTransformationsQuestions,
+  ...pysparkSelectExprQuestions,
+  ...pysparkPivotQuestions,
+  ...pysparkFunctionLibraryQuestions,
   // Web Dev — basics (HTML/CSS/JS/TS/React) then advanced (Next.js → Projects)
   ...webdevOrderedQuestions,
   ...advancedWebdevOrderedQuestions,

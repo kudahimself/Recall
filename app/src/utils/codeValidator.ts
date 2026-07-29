@@ -66,26 +66,38 @@ function normalizeCode(code: string, language: CodeLanguage): string {
     n = n.replace(/#.*$/gm, '');
   }
 
-  // Strip import/from lines
-  n = n.replace(/^(from|import)\s+.*$/gm, '');
+  // Strip import/from lines (Python `from x import y`, JS `import x from 'y'`).
+  // NEVER for SQL: `from` is a clause keyword there, and this pattern is
+  // lowercase-only, so lowercase SQL lost its entire FROM line (table name
+  // included) while the uppercase reference solution kept its own. Spark SQL is
+  // case-insensitive, so both spellings must validate identically.
+  if (language !== CodeLanguage.SQL) {
+    n = n.replace(/^(from|import)\s+.*$/gm, '');
+  }
 
   // Strip variable assignments but keep RHS: `result = expr` → `expr`.
   // Also collect the names bound by those assignments so we can scrub their
   // usages elsewhere — that way the user is free to rename local variables
   // (e.g. `a, b, c` vs `list_a, list_b, list_c`) without the token-set check
   // penalising them for the mismatch.
-  const boundNames = new Set<string>();
-  n = n.replace(/^\s*(\w+)\s*=\s*/gm, (_m, name: string) => {
-    boundNames.add(name);
-    return '';
-  });
-  boundNames.forEach(name => {
-    // Only remove whole-word occurrences; multi-char names only (avoid
-    // stripping single-letter tokens like `a` from tokens like `a.b`).
-    if (name.length >= 2) {
-      n = n.replace(new RegExp(`\\b${name}\\b`, 'g'), '');
-    }
-  });
+  // Skipped for SQL, which has no assignment statement: there the pattern only
+  // ever fires on a wrapped predicate (`WHERE\n  department = 'Sales'`) and
+  // would scrub that column name out of the entire query, while the same
+  // predicate written on one line keeps it.
+  if (language !== CodeLanguage.SQL) {
+    const boundNames = new Set<string>();
+    n = n.replace(/^\s*(\w+)\s*=\s*/gm, (_m, name: string) => {
+      boundNames.add(name);
+      return '';
+    });
+    boundNames.forEach(name => {
+      // Only remove whole-word occurrences; multi-char names only (avoid
+      // stripping single-letter tokens like `a` from tokens like `a.b`).
+      if (name.length >= 2) {
+        n = n.replace(new RegExp(`\\b${name}\\b`, 'g'), '');
+      }
+    });
+  }
 
   // Normalize join named params → positional
   // join(df2, on="id", how="left") → join(df2, "id", "left")
@@ -201,7 +213,7 @@ const PYSPARK_MISTAKES: MistakeCheck[] = [
 ];
 
 function isPysparkSolution(solution: string): boolean {
-  return /pyspark|SparkSession|\bspark\.(read|sql|table)\b/.test(solution);
+  return /pyspark|SparkSession|\bspark\.(read|sql|table)\b|\bdf\.(write|select|filter|where|withColumn|groupBy|join)\b|\bsaveAsTable\b/.test(solution);
 }
 
 /**
@@ -244,6 +256,14 @@ function detectAlternativeApproach(
     if (/["'](inner|left)["']/.test(userCode) && /\.(dropDuplicates|distinct)\s*\(/.test(userCode)) {
       return 'Inner join + distinct works but duplicates effort — this question asks for the left semi join idiom. Use df.join(other_df, condition, "left_semi").';
     }
+  }
+
+  // Catalog table vs path-based save — solution explicitly uses saveAsTable()
+  if (/\bsaveAsTable\s*\(/.test(solution) && !/\bsaveAsTable\s*\(/.test(userCode)) {
+    if (/\bsave\s*\(/.test(userCode)) {
+      return 'Your .save() writes to a file path, but saving to a catalog table requires .saveAsTable("table_name").';
+    }
+    return 'Saving to a catalog Delta table requires .saveAsTable("table_name").';
   }
 
   return null;
@@ -308,7 +328,25 @@ export function validateAnswer(
   language: CodeLanguage,
   testDescription: string,
   starterCode?: string,
+  options?: { requiredKeywords?: (string | RegExp)[]; requires?: (string | RegExp)[] },
 ): ValidationResult {
+  const reqs = options?.requires || options?.requiredKeywords;
+  if (reqs && reqs.length > 0) {
+    for (const kw of reqs) {
+      const isMatch = typeof kw === 'string'
+        ? userCode.toLowerCase().includes(kw.toLowerCase())
+        : kw.test(userCode);
+      if (!isMatch) {
+        const keywordName = typeof kw === 'string' ? `"${kw}"` : kw.toString();
+        return {
+          passed: false,
+          verdict: 'fail',
+          description: testDescription,
+          error: `Your answer is missing the required keyword or pattern: ${keywordName}`,
+        };
+      }
+    }
+  }
   // 1. Check common mistakes first — these are definitive fails (we know
   // exactly what's wrong), never uncertain. PySpark mistakes only fire when
   // the reference solution itself is PySpark, so stdlib Python (e.g.

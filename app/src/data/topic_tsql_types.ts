@@ -71,7 +71,8 @@ export const tsql_types_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the column types: exact money with 2 decimals, a modern timestamp, and a 0/1 flag.',
-    template: `CREATE TABLE dbo.FactSale (
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+CREATE TABLE dbo.FactSale (
     SaleKey    INT,
     Amount     ___(10, 2),   -- exact money, 2 decimals
     SoldAt     ___,          -- date + time, modern type

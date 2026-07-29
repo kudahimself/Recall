@@ -794,3 +794,145 @@ describe('drain supersession retirement (DRAIN_SUPERSEDED_SECTIONS)', () => {
     expect(s.mode).toBe('drain');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+/**
+ * Drain-cooldown stall regression.
+ *
+ * The reviews-first gate used to close on a MERELY-PENDING drain
+ * (hasPendingDrain over the uncooled reviewQuestions) while the serve path read
+ * the COOLED reviewPool. The generic cooldown is sized off the whole review pool
+ * and saturates at REVIEW_COOLDOWN_MAX on a mature course, so a queue smaller
+ * than that window had every member benched at once: new content was hard-gated,
+ * no queue card was reachable, and the pick landed on non-queue review filler
+ * while drainQueueCount sat frozen on a correct answer.
+ *
+ * This bites latest-wrong cards specifically — a card is queued BECAUSE it was
+ * just missed, so it is nearly always inside the window, whereas an interval-due
+ * card is due BECAUSE it has not been seen in days and never is. That is why the
+ * all-due DE/SQL queues never showed the stall and an all-wrong Databricks queue did.
+ *
+ * The cooldown itself is correct (re-showing a card missed three minutes ago is
+ * massing, and shortening the window for small queues reintroduces the pinned
+ * repeat loop the pool-scaled cooldown was built to kill — see
+ * selectorDistribution.sim). So the gate now closes only while the drain can
+ * actually SERVE, and the learner gets real new content through the gap.
+ */
+describe('the drain gate closes only while it can actually serve', () => {
+  /**
+   * Mature-course shape: a review pool large enough to saturate the cooldown at
+   * REVIEW_COOLDOWN_MAX, a mastered PY_BASICS whose coding cards were missed
+   * within the window, and unseen PY_TYPE_HINTS cards so new content exists.
+   * PY_TYPE_HINTS keeping unseen cards also stops Python Advanced from counting
+   * as finished, so PY_BASICS is never supersession-retired out of the drain.
+   */
+  function matureCourse(missed: number, missedMsAgo = 3_600_000) {
+    const pool: Question[] = [];
+    for (let i = 0; i < 160; i++) {
+      pool.push(makeQ(`mcq-${i}`, Topic.PY_BASICS, Difficulty.BEGINNER));
+    }
+    const coding: Question[] = [];
+    for (let i = 0; i < missed; i++) {
+      const q = {
+        id: `code-${i}`,
+        topic: Topic.PY_BASICS,
+        difficulty: Difficulty.INTERMEDIATE,
+        type: QuestionType.CODING,
+        question: `coding prompt ${i}`,
+        explanation: 'e',
+      } as unknown as Question;
+      questionRegistry.push(q);
+      coding.push(q);
+      pool.push(q);
+    }
+    const unseen: Question[] = [];
+    for (let i = 0; i < 10; i++) {
+      unseen.push(makeQ(`new-${i}`, Topic.PY_TYPE_HINTS, Difficulty.BEGINNER));
+    }
+    pool.push(...unseen);
+
+    const p = emptyProgress();
+    for (let i = 0; i < 160; i++) recordAttempt(p, `mcq-${i}`, true, 30 * DAY);
+    // Coding cards: mastered a month ago, then MISSED inside the cooldown window.
+    for (let i = 0; i < missed; i++) recordAttempt(p, `code-${i}`, true, 30 * DAY);
+    for (let i = 0; i < missed; i++) recordAttempt(p, `code-${i}`, false, missedMsAgo);
+    const queueIds = new Set(coding.map(q => q.id));
+    const unseenIds = new Set(unseen.map(q => q.id));
+    return { pool, p, queueIds, unseenIds };
+  }
+
+  /** Math.random() === 0 makes every `Math.random() < prob` fire for prob > 0. */
+  let rng: jest.SpyInstance;
+  const forceRandom = (v: number) => { rng = jest.spyOn(Math, 'random').mockReturnValue(v); };
+  afterEach(() => { rng?.mockRestore(); });
+
+  test('an unreachable queue lets NEW content through instead of non-queue filler', () => {
+    const { pool, p, queueIds, unseenIds } = matureCourse(4);
+    recordAttempt(p, 'mcq-0', true, 60_000); // clean answer last → resurface block runs
+
+    // All 4 queue cards are inside the 12-attempt window, so none is servable.
+    const status = SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy);
+    expect(status.mode).toBe('drain');
+    expect(status.drainQueueCount).toBe(4);
+
+    forceRandom(0);
+    const pick = SpacedRepetitionSystem.selectNextQuestion(pool, p, undefined, backendPolicy);
+    // Was: newProb pinned to 0, so this returned a non-queue review card.
+    expect(unseenIds.has(pick?.id ?? '')).toBe(true);
+    expect(queueIds.has(pick?.id ?? '')).toBe(false);
+  });
+
+  test('a reachable queue still hard-gates new content', () => {
+    // Missed 12 picks ago in history order but only 4 cards, so with 20 they
+    // cannot all fit inside the window — some stay servable and the gate holds.
+    const { pool, p, queueIds } = matureCourse(20);
+    recordAttempt(p, 'mcq-0', true, 60_000);
+
+    expect(SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy).drainQueueCount).toBe(20);
+    forceRandom(0);
+    const pick = SpacedRepetitionSystem.selectNextQuestion(pool, p, undefined, backendPolicy);
+    expect(queueIds.has(pick?.id ?? '')).toBe(true);
+  });
+
+  test('a fresh miss still cannot leak new content, reachable or not', () => {
+    const { pool, p, unseenIds } = matureCourse(4);
+    // No clean answer after the misses: lastAttemptWrong is true.
+    forceRandom(0);
+    const pick = SpacedRepetitionSystem.selectNextQuestion(pool, p, undefined, backendPolicy);
+    expect(unseenIds.has(pick?.id ?? '')).toBe(false);
+  });
+
+  test('the queue still drains to zero once its cards age out of the window', () => {
+    const { pool, p, queueIds } = matureCourse(4);
+    recordAttempt(p, 'mcq-0', true, 60_000);
+    expect(SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy).drainQueueCount).toBe(4);
+
+    let picks = 0;
+    let drained = 0;
+    while (SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy).drainQueueCount > 0) {
+      const pick = SpacedRepetitionSystem.selectNextQuestion(pool, p, undefined, backendPolicy);
+      expect(pick).not.toBeNull();
+      if (queueIds.has(pick!.id)) drained++;
+      recordAttempt(p, pick!.id, true, 0);
+      picks++;
+      expect(picks).toBeLessThanOrEqual(60); // guard against a permanent stall
+    }
+    expect(drained).toBe(4);          // every queue card was answered exactly once
+    expect(picks).toBeGreaterThan(4); // the cooldown gap is real, and that is correct
+  });
+
+  test('a queue larger than the cooldown window drains with no wasted picks', () => {
+    const { pool, p, queueIds } = matureCourse(20);
+    recordAttempt(p, 'mcq-0', true, 60_000);
+
+    let picks = 0;
+    while (SpacedRepetitionSystem.getReviewStatus(pool, p, backendPolicy).drainQueueCount > 0) {
+      const pick = SpacedRepetitionSystem.selectNextQuestion(pool, p, undefined, backendPolicy);
+      expect(queueIds.has(pick!.id)).toBe(true);
+      recordAttempt(p, pick!.id, true, 0);
+      picks++;
+      expect(picks).toBeLessThanOrEqual(40);
+    }
+    expect(picks).toBe(20);
+  });
+});

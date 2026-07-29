@@ -58,7 +58,8 @@ SELECT COUNT(*) FROM #t;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords that open the transaction and make both updates permanent together.',
-    template: `BEGIN ___;
+    template: `-- dbo.Account(AccountId, Balance)
+BEGIN ___;
     UPDATE dbo.Account SET Balance = Balance - 100 WHERE AccountId = 1;
     UPDATE dbo.Account SET Balance = Balance + 100 WHERE AccountId = 2;
 ___;`,
@@ -113,6 +114,7 @@ COMMIT;`,
     topic: Topic.TSQL_TRANSACTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/BEGIN\s+TRAN/i, /COMMIT/i],
     question: 'Wrap two updates in a single explicit transaction so they apply atomically: subtract 250 from `Balance` for `AccountId = 10` and add 250 to `Balance` for `AccountId = 20` in `dbo.Account`, then commit.',
     starterCode: `-- BEGIN TRAN; ... COMMIT;
 `,
@@ -146,7 +148,8 @@ COMMIT;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement that marks a savepoint, and the clause that rolls back only to it (undoing the bad update but keeping the first one and the open transaction).',
-    template: `BEGIN TRAN;
+    template: `-- dbo.Account(AccountId, Balance)
+BEGIN TRAN;
     UPDATE dbo.Account SET Balance = Balance - 50 WHERE AccountId = 1;
     ___ TRAN BeforeBonus;
     UPDATE dbo.Account SET Balance = Balance + 1000000 WHERE AccountId = 1; -- wrong amount

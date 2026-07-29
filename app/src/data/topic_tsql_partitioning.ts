@@ -106,7 +106,8 @@ AS PARTITION pf_Month ALL TO ([PRIMARY]);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the statement that instantly reassigns a staging table's rows into a target partition.",
-    template: `___ TABLE dbo.FactSales_Stash
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+___ TABLE dbo.FactSales_Stash
 SWITCH ___ dbo.FactSales PARTITION 2;`,
     blanks: ['ALTER', 'TO'],
     solution: `ALTER TABLE dbo.FactSales_Stash
@@ -141,6 +142,7 @@ ____ ____ dbo.FactSales ____ 3;`,
     },
     explanation: '`ALTER TABLE <staging> SWITCH TO <partitioned> PARTITION <n>` reassigns the staging table\'s data into partition 3 of the target as a metadata-only operation — instant and minimally logged no matter how many rows. The staging table must match schema/indexes/filegroup and carry a CHECK constraint proving its rows belong in that partition\'s range.',
     hints: ['ALTER TABLE staging SWITCH TO target PARTITION n', 'Metadata-only, needs a matching CHECK constraint'],
+    requires: [/SWITCH/i, /PARTITION/i],
     tags: ['tsql', 'partitioning', 'partition-switching'],
   },
 ];

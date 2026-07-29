@@ -388,12 +388,7 @@ df = ____.____.____(schema).____("header", "true").____("/data/users.csv")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to define a schema variable "schema" using a concise DDL formatted string for columns: id (INT), name (STRING), amount (DOUBLE).
-
-DDL Schema Format Target:
-\`\`\`text
-"id INT, name STRING, amount DOUBLE"
-\`\`\``,
+    question: 'Write a PySpark statement to define a schema variable `schema` using a concise DDL-formatted string for columns: `id` (INT), `name` (STRING), and `amount` (DOUBLE).\n\nFormat pattern: `"col1 TYPE1, col2 TYPE2, ..."`',
     starterCode: `# Define DDL schema string\nschema = `,
     testCases: [
       {
@@ -503,6 +498,7 @@ result = df.withColumn("salary_band",
 
   {
     id: 'casewhen-2',
+    requires: [/\bCASE\b/i, /\bWHEN\b/i, /\bELSE\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
@@ -567,6 +563,7 @@ result = ____.____("____",
 
   {
     id: 'casewhen-4',
+    requires: [/\bCASE\b/i, /\bWHEN\b/i, /\bELSE\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -603,9 +600,10 @@ FROM ____`,
 
   {
     id: 'cte-1',
+    requires: [/\bWITH\b/i, /AVG\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.SQL_SUBQUERIES,
     language: CodeLanguage.SQL,
     question: 'Using the "employees" table (columns: id, emp_name, department, salary), write a CTE named "dept_avg" that calculates average salary per department, then select departments where average salary exceeds 60000. Name the aggregate column "avg_salary".',
     starterCode: `-- Write query using a CTE\n`,
@@ -634,9 +632,10 @@ SELECT * FROM ____ WHERE ____ > 60000`,
 
   {
     id: 'cte-2',
+    requires: [/\bWITH\b/i, /SUM\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.SQL_SUBQUERIES,
     language: CodeLanguage.SQL,
     question: 'Write a query with two CTEs: "active_orders" (orders where order_status = "active" from "orders" table with columns: id, customer_id, amount, order_status) and "customer_totals" (sum of amount per customer_id from active_orders named "total"). Select customer_id and total where total exceeds 5000.',
     starterCode: `-- Multiple CTEs\n`,
@@ -670,7 +669,7 @@ SELECT * FROM ____ WHERE ____ > 5000`,
     id: 'cte-3',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.SQL_SUBQUERIES,
     question: 'What primary architectural advantage do Common Table Expressions (CTEs via WITH) offer compared to inline nested subqueries?',
     options: [
       { id: 'a', text: 'CTEs force Spark SQL to materialise intermediate tables to persistent disk storage automatically', isCorrect: false },
@@ -805,6 +804,7 @@ result = ____.____("____", ____(____.____))`,
 
   {
     id: 'setop-1',
+    requires: [/\bUNION\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
@@ -834,6 +834,7 @@ SELECT * FROM ____`,
 
   {
     id: 'setop-2',
+    requires: [/UNION\s+ALL/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
@@ -863,6 +864,7 @@ SELECT * FROM ____`,
 
   {
     id: 'setop-3',
+    requires: [/\bINTERSECT\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
@@ -892,6 +894,7 @@ SELECT * FROM ____`,
 
   {
     id: 'setop-4',
+    requires: [/\bEXCEPT\b|\bMINUS\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
@@ -921,6 +924,7 @@ SELECT * FROM ____`,
 
   {
     id: 'setop-5',
+    requires: [/\.union(ByName)?\s*\(/i, /\.distinct\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
@@ -969,6 +973,7 @@ result = ____.____(____).____()`,
 
   {
     id: 'semijoin-2',
+    requires: [/left_semi|leftsemi/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -996,6 +1001,7 @@ result = ____.____(____, "____", "____")`,
 
   {
     id: 'semijoin-3',
+    requires: [/left_anti|leftanti/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1024,6 +1030,7 @@ result = ____.____(____, ____.____ ____ order_items_df.____, "____")`,
 
   {
     id: 'semijoin-4',
+    requires: [/\bEXISTS\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1053,7 +1060,8 @@ ____ ____ (
   },
 
   // =====================================================================
-  // PIVOT / UNPIVOT (4 questions)
+  // PIVOT / UNPIVOT (6 questions; the beginner ramp and the PySpark-side
+  // unpivot live in pysparkPivotQuestions.ts)
   // =====================================================================
 
   {
@@ -1086,6 +1094,9 @@ result = df.groupBy("year").pivot("quarter").agg({"revenue": "sum"})`,
 
   {
     id: 'pivot-2',
+    // Conditional aggregation is an equally correct answer to "pivot into columns",
+    // so the gate accepts either idiom (same rule as topic_tsql_pivot.ts).
+    requires: [/\bPIVOT\b|CASE\s+WHEN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -1117,6 +1128,7 @@ ____ (
 
   {
     id: 'pivot-3',
+    requires: [/stack\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -1172,6 +1184,7 @@ result = df.groupBy("region").pivot("product_type", ["Electronics", "Clothing", 
 
   {
     id: 'pivot-5',
+    requires: [/stack\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -1199,6 +1212,8 @@ FROM ____`,
 
   {
     id: 'pivot-6',
+    // Conditional aggregation is an equally correct answer to "pivot into columns".
+    requires: [/\bPIVOT\b|CASE\s+WHEN/i, /MAX\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -1262,6 +1277,7 @@ result = ____.____("____", ____("____").____("____"))`,
 
   {
     id: 'cast-2',
+    requires: [/CAST\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
@@ -1434,6 +1450,7 @@ first_three = ____.____(3)`,
   {
     id: 'restore-1',
     type: QuestionType.CODING,
+    requires: [/RESTORE/i],
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_TIME_TRAVEL,
     language: CodeLanguage.SQL,
@@ -1463,6 +1480,7 @@ ____ TABLE orders ____ ____ AS OF 5`,
   {
     id: 'restore-2',
     type: QuestionType.CODING,
+    requires: [/RESTORE/i],
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_TIME_TRAVEL,
     language: CodeLanguage.SQL,
@@ -1492,6 +1510,7 @@ ____ TABLE users ____ ____ AS OF "2024-01-15T10:00:00"`,
   {
     id: 'restore-3',
     type: QuestionType.CODING,
+    requires: [/DESCRIBE\s+HISTORY/i],
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DELTA_TIME_TRAVEL,
     language: CodeLanguage.SQL,
@@ -1530,6 +1549,7 @@ ____ ____ transactions`,
   {
     id: 'constraint-1',
     type: QuestionType.CODING,
+    requires: [/ALTER\s+TABLE/i],
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
@@ -1556,6 +1576,7 @@ ____ ____ transactions`,
   {
     id: 'constraint-2',
     type: QuestionType.CODING,
+    requires: [/ALTER\s+TABLE/i, /ALTER\s+COLUMN/i, /SET\s+NOT\s+NULL/i],
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
@@ -1572,7 +1593,7 @@ ____ ____ transactions`,
     explanation: 'ALTER TABLE users ALTER COLUMN email SET NOT NULL verifies existing data for NULLs and prevents any future writes containing NULL values in the email column.',
     tieredHints: {
       apiSignature: 'ALTER TABLE table_name ALTER COLUMN col_name SET NOT NULL',
-      skeleton: `____ TABLE users ____ ____ email ____ ____ ____`,
+      skeleton: `ALTER TABLE users ALTER COLUMN email ____ NOT NULL`,
     },
     hints: ['Use ALTER TABLE table_name ALTER COLUMN column_name SET NOT NULL'],
     tags: ['constraint', 'not-null', 'delta', 'data-quality'],
@@ -1582,6 +1603,7 @@ ____ ____ transactions`,
   {
     id: 'constraint-3',
     type: QuestionType.CODING,
+    requires: [/ALTER\s+TABLE/i],
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
@@ -1628,6 +1650,7 @@ ____ ____ transactions`,
 
   {
     id: 'subq-1',
+    requires: [/AVG\s*\(/i, /\(\s*SELECT/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SUBQUERIES,
@@ -1655,6 +1678,7 @@ WHERE salary > (____ ____(salary) ____ ____)`,
 
   {
     id: 'subq-2',
+    requires: [/AVG\s*\(/i, /\(\s*SELECT/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_SUBQUERIES,
@@ -1686,6 +1710,7 @@ WHERE salary > (
 
   {
     id: 'subq-3',
+    requires: [/\bIN\s*\(\s*SELECT/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SUBQUERIES,
@@ -1713,6 +1738,7 @@ WHERE id ____ (____ ____ ____ ____)`,
 
   {
     id: 'subq-4',
+    requires: [/NOT\s+IN\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SUBQUERIES,
@@ -1740,6 +1766,7 @@ WHERE id ____ ____ (SELECT ____ FROM ____ WHERE ____ ____ ____ ____)`,
 
   {
     id: 'subq-5',
+    requires: [/NOT\s+EXISTS/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_SUBQUERIES,
@@ -1770,6 +1797,7 @@ ____ ____ ____ (
 
   {
     id: 'subq-6',
+    requires: [/ROW_NUMBER\s*\(/i, /\(\s*SELECT/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_SUBQUERIES,
@@ -1834,9 +1862,10 @@ result = sizes_df.____(colors_df)
 
   {
     id: 'crossjoin-2',
+    requires: [/CROSS\s+JOIN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.SQL_JOINS,
     language: CodeLanguage.SQL,
     question: 'Using the "dates" table (columns: cal_date) and "stores" table (columns: store_id, store_name), generate all date-store combinations using a cross join in SQL.',
     starterCode: `-- All date-store combinations\n`,
@@ -1929,6 +1958,7 @@ result = ____.____(100)
 
   {
     id: 'winfn-2',
+    requires: [/percent_rank\s*\(/, /\.over\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
@@ -1959,6 +1989,7 @@ result = ____.____("____", ____().____(____))`,
 
   {
     id: 'winfn-3',
+    requires: [/AVG\s*\(/i, /OVER\s*\(/i, /ROWS\s+BETWEEN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_WINDOW_FUNCTIONS,
@@ -1985,6 +2016,7 @@ result = ____.____("____", ____().____(____))`,
 
   {
     id: 'winfn-4',
+    requires: [/SUM\s*\(/i, /OVER\s*\(/i, /PARTITION\s+BY/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_WINDOW_FUNCTIONS,
@@ -2028,6 +2060,7 @@ result = ____.____("____", ____().____(____))`,
 
   {
     id: 'winfn-6',
+    requires: [/first\s*\(/, /last\s*\(/, /\.over\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
@@ -2097,6 +2130,7 @@ result = ____.____("____", ____("____").____(____)).____("____", ____("____").__
   {
     id: 'stream-adv-3',
     type: QuestionType.CODING,
+    requires: ['withWatermark'],
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
@@ -2125,6 +2159,7 @@ result = ____.____("event_time", "15 minutes").____(____(col("____"), "1 hour"),
   {
     id: 'stream-adv-4',
     type: QuestionType.CODING,
+    requires: ['withWatermark'],
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
@@ -2186,6 +2221,7 @@ result = ____.____("event_time", "1 hour").____(["order_id"])`,
   {
     id: 'stream-adv-7',
     type: QuestionType.CODING,
+    requires: ['withWatermark'],
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,

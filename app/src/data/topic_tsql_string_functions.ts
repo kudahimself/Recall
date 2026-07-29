@@ -38,7 +38,8 @@ export const tsql_string_functions_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the function that returns a string's character count.",
-    template: `SELECT ProductName, ___(ProductName) AS NameLength
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ProductName, ___(ProductName) AS NameLength
 FROM dbo.DimProduct;`,
     blanks: ['LEN'],
     solution: `SELECT ProductName, LEN(ProductName) AS NameLength
@@ -55,7 +56,8 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the two case-conversion functions.',
-    template: `SELECT ___(Category) AS UpperCategory, ___(Category) AS LowerCategory
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ___(Category) AS UpperCategory, ___(Category) AS LowerCategory
 FROM dbo.DimProduct;`,
     blanks: ['UPPER', 'LOWER'],
     solution: `SELECT UPPER(Category) AS UpperCategory, LOWER(Category) AS LowerCategory
@@ -72,7 +74,8 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the function that strips both leading and trailing spaces in one call.',
-    template: `SELECT ___(Email) AS CleanEmail
+    template: `-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+SELECT ___(Email) AS CleanEmail
 FROM stg.Customer;`,
     blanks: ['TRIM'],
     solution: `SELECT TRIM(Email) AS CleanEmail
@@ -103,7 +106,8 @@ FROM stg.Customer;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the functions that grab the first 4 characters and the last 3 characters.',
-    template: `SELECT ___(ProductName, 4) AS Prefix, ___(ProductName, 3) AS Suffix
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ___(ProductName, 4) AS Prefix, ___(ProductName, 3) AS Suffix
 FROM dbo.DimProduct;`,
     blanks: ['LEFT', 'RIGHT'],
     solution: `SELECT LEFT(ProductName, 4) AS Prefix, RIGHT(ProductName, 3) AS Suffix
@@ -151,7 +155,8 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the function that computes how many characters to keep, dropping a fixed 3-character suffix.',
-    template: `SELECT ProductCode, SUBSTRING(ProductCode, 1, ___(ProductCode) - 3) AS BaseCode
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ProductCode, SUBSTRING(ProductCode, 1, ___(ProductCode) - 3) AS BaseCode
 FROM dbo.DimProduct;`,
     blanks: ['LEN'],
     solution: `SELECT ProductCode, SUBSTRING(ProductCode, 1, LEN(ProductCode) - 3) AS BaseCode
@@ -167,6 +172,7 @@ FROM dbo.DimProduct;`,
     topic: Topic.TSQL_STRING_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/UPPER/i, /CONCAT/i],
     question: "From `dbo.DimProduct` (ProductName, Category), return one column `Label` that combines Category and ProductName separated by ' - ', with the whole result in uppercase (e.g. 'BOOKS - THE GREAT NOVEL').",
     starterCode: `-- dbo.DimProduct(ProductName, Category); return one Label column
 `,
@@ -198,6 +204,7 @@ FROM dbo.DimProduct;`,
     topic: Topic.TSQL_STRING_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/LEN/i, /TRIM/i],
     question: 'From `stg.Customer` (Email), return Email and a column `EmailLength` giving the length of Email with leading/trailing whitespace excluded from the count.',
     starterCode: `-- stg.Customer(Email); return Email and EmailLength
 `,
@@ -227,7 +234,8 @@ FROM stg.Customer;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the function that extracts everything after the '@', and the one that locates it.",
-    template: `SELECT Email,
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+SELECT Email,
        ___(Email, ___('@', Email) + 1, LEN(Email)) AS Domain
 FROM dbo.DimCustomer;`,
     blanks: ['SUBSTRING', 'CHARINDEX'],
@@ -245,6 +253,7 @@ FROM dbo.DimCustomer;`,
     topic: Topic.TSQL_STRING_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/TRIM/i, /REPLACE/i],
     question: "Staged phone numbers in `stg.Customer` (CustomerId, Phone) sometimes contain hyphens and stray leading/trailing whitespace, e.g. ' 555-123-4567 '. Return CustomerId and a cleaned `Phone` with every hyphen removed and the whitespace trimmed.",
     starterCode: `-- clean the Phone column: remove hyphens, trim whitespace
 `,

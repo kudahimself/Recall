@@ -38,7 +38,8 @@ export const tsql_ddl_tables_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement keyword that defines a new table, and the Unicode string type for the product name.',
-    template: `___ TABLE dbo.DimProduct (
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+___ TABLE dbo.DimProduct (
     ProductKey  INT,
     ProductName ___(100)
 );`,
@@ -59,6 +60,7 @@ export const tsql_ddl_tables_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Write a `CREATE TABLE` statement for `dbo.DimCustomer` with these columns: `CustomerKey` (INT), `FullName` (Unicode text up to 100 chars), `Email` (Unicode text up to 255 chars), and `CreatedAt` (a modern date-and-time type).',
+    requires: [/CREATE\s+TABLE/i],
     starterCode: `-- CREATE TABLE dbo.DimCustomer ( ... )
 `,
     testCases: [
@@ -129,7 +131,8 @@ export const tsql_ddl_tables_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the two ALTER TABLE sub-clauses: one widens an existing column\'s type, the other removes a column.',
-    template: `-- widen the Email column
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- widen the Email column
 ALTER TABLE dbo.DimCustomer ___ COLUMN Email NVARCHAR(320);
 -- remove the Phone column
 ALTER TABLE dbo.DimCustomer DROP ___ Phone;`,
@@ -167,7 +170,8 @@ ALTER TABLE dbo.DimCustomer DROP COLUMN Phone;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the clause that materializes the query result into a brand-new staging temp table in a single statement.',
-    template: `SELECT CustomerKey, FullName
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+SELECT CustomerKey, FullName
 ___ #StageCustomer
 FROM dbo.DimCustomer
 WHERE IsActive = 1;`,
@@ -188,6 +192,7 @@ WHERE IsActive = 1;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Using a single `SELECT … INTO` statement, build a staging temp table `#StageOrders` holding `OrderId`, `CustomerKey`, and `Amount` for every row in `dbo.FactOrders` with `OrderDate` on or after 2026-01-01.',
+    requires: [/SELECT/i, /INTO/i],
     starterCode: `-- SELECT ... INTO #StageOrders FROM dbo.FactOrders ...
 `,
     testCases: [

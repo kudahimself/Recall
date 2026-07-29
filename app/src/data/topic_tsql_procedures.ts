@@ -38,7 +38,8 @@ export const tsql_procedures_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords that create a procedure with one input parameter.',
-    template: `CREATE ___ dbo.GetCustomerOrders
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+CREATE ___ dbo.GetCustomerOrders
     ___ CustomerKey INT
 AS
 BEGIN
@@ -120,7 +121,8 @@ END;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keyword that marks a parameter as returning a value to the caller.',
-    template: `CREATE PROCEDURE dbo.GetOrderTotal
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+CREATE PROCEDURE dbo.GetOrderTotal
     @CustomerKey INT,
     @Total DECIMAL(10, 2) ___
 AS
@@ -171,7 +173,8 @@ SELECT @cnt AS Orders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement that exits the procedure early with status 1 when the order is missing, and the one that exits with status 0 on success.',
-    template: `CREATE PROCEDURE dbo.GetOrderAmount
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+CREATE PROCEDURE dbo.GetOrderAmount
     @OrderId INT,
     @Amount DECIMAL(10, 2) OUTPUT
 AS
@@ -207,6 +210,7 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+PROCEDURE/i],
     question: 'Create a stored procedure `dbo.GetOrdersSince` with one input parameter `@FromDate DATE` that returns `OrderId`, `OrderDate`, and `Amount` from `dbo.FactOrders` where `OrderDate >= @FromDate`, ordered by `OrderDate`.',
     starterCode: `-- CREATE PROCEDURE dbo.GetOrdersSince @FromDate DATE AS ...
 `,
@@ -249,6 +253,7 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/OUTPUT/i],
     question: 'Create a stored procedure `dbo.CountOrdersForCustomer` with an input parameter `@CustomerKey INT` and an output parameter `@OrderCount INT` that sets the output parameter to the number of rows in `dbo.FactOrders` for that customer.',
     starterCode: `-- CREATE PROCEDURE dbo.CountOrdersForCustomer ( ... ) AS ...
 `,

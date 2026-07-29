@@ -57,7 +57,9 @@ export const tsql_etl_proc_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the proc header and the transaction control around the MERGE load.',
-    template: `CREATE ___ dbo.LoadDimCustomer
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+CREATE ___ dbo.LoadDimCustomer
 AS
 BEGIN
     SET XACT_ABORT ON;
@@ -163,7 +165,9 @@ WHERE TableName = 'FactSales';`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the function that captures how many rows the MERGE just affected, and the status value logged on success.",
-    template: `MERGE dbo.DimProduct AS tgt
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+-- stg.Product(ProductCode, ProductName, Category, Price)
+MERGE dbo.DimProduct AS tgt
 USING stg.Product AS src
     ON tgt.ProductCode = src.ProductCode
 WHEN MATCHED THEN UPDATE SET tgt.ProductName = src.ProductName
@@ -252,6 +256,7 @@ END;`,
     },
     explanation: 'This is the topic\'s keystone: a single procedure that loads staging into the target via an idempotent `MERGE` (safe to retry), made atomic by `BEGIN TRAN … COMMIT`, with `SET XACT_ABORT ON` and a `ROLLBACK`/`THROW` CATCH so any failure undoes the partial load and surfaces the error to the scheduler. Every production warehouse load follows this shape.',
     hints: ['SET XACT_ABORT ON, then TRY: BEGIN TRAN → MERGE → COMMIT', 'CATCH: ROLLBACK then THROW'],
+    requires: [/CREATE\s+PROCEDURE/i],
     tags: ['tsql', 'etl-proc', 'merge', 'transactions', 'try-catch'],
   },
   {
@@ -302,6 +307,7 @@ WHERE TableName = ____;`,
     },
     explanation: 'The high-watermark pattern: load only rows newer than the last recorded watermark (`UpdatedAt > @lastLoaded`), then advance the watermark to the new maximum actually loaded. Reading and storing the watermark in a control table makes each run process just the delta — the standard way to load a large, append-heavy fact incrementally.',
     hints: ['Read @lastLoaded from EtlControl', 'INSERT rows WHERE UpdatedAt > @lastLoaded, then advance LastLoadedAt to MAX'],
+    requires: [/INSERT\s+INTO/i, /UPDATE/i],
     tags: ['tsql', 'etl-proc', 'incremental', 'watermark'],
   },
   {
@@ -380,6 +386,7 @@ END;`,
     },
     explanation: 'This ties together three already-learned patterns: the expire step (UPDATE ... FROM ... JOIN ... WHERE IsCurrent = 1 AND changed) from the SCD topic, an INSERT ... SELECT ... WHERE NOT EXISTS to add new current versions (it naturally covers both brand-new CustomerIds and just-expired ones, since both now have zero current rows), and the transactional TRY/CATCH proc wrapper from earlier in this topic. Doing the expire before the insert, in the same transaction, is what makes NOT EXISTS see the freshly-closed rows.',
     hints: ['Expire step first: UPDATE ... JOIN stg.Customer WHERE IsCurrent = 1 AND City differs', 'Insert step: WHERE NOT EXISTS a current row for that CustomerId'],
+    requires: [/CREATE\s+PROCEDURE/i, /BEGIN\s+TRY/i],
     tags: ['tsql', 'etl-proc', 'scd', 'type-2', 'transactions', 'try-catch'],
   },
 ];

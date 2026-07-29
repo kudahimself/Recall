@@ -135,7 +135,12 @@ const STORAGE_KEYS = {
 // '1' = original one-shot migration (loadConceptProgress fallback).
 // '2' = rebackfill credits historical attempts to concepts whose tags were
 //        added after the initial migration ran (interpreted-language fix).
-const CONCEPT_MIGRATION_VERSION = '2';
+// '3' = singleton-concept consolidation (scripts/consolidate-concepts.js): the
+//        Databricks compute-admin / storage-repos topics had ~one unique concept
+//        per question, so 38 hyper-specific ids folded into the broader concepts
+//        they were facets of. The rebackfill re-credits history to the surviving
+//        ids; state stranded on a retired id is simply no longer read.
+const CONCEPT_MIGRATION_VERSION = '3';
 
 const LEGACY_STORAGE_KEYS = {
   progress: 'databricks-progress',

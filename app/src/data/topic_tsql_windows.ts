@@ -76,7 +76,8 @@ ORDER BY drnk;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the window keywords: number each customer\'s orders from their largest amount down.',
-    template: `SELECT CustomerKey, OrderId, Amount,
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT CustomerKey, OrderId, Amount,
        ROW_NUMBER() ___ (___ ___ CustomerKey ORDER BY Amount DESC) AS rn
 FROM dbo.FactOrders;`,
     blanks: ['OVER', 'PARTITION', 'BY'],
@@ -112,7 +113,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the argument that splits the rows into four equal buckets (quartiles).',
-    template: `SELECT ProductName, Price,
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ProductName, Price,
        NTILE(___) OVER (ORDER BY Price DESC) AS Quartile
 FROM dbo.DimProduct;`,
     blanks: ['4'],
@@ -151,6 +153,7 @@ FROM dbo.DimProduct;`,
        ____() OVER (PARTITION BY ____ ORDER BY ____ ____) AS ____
 FROM dbo.DimProduct;`,
     },
+    requires: [/OVER/i, /\bRANK\s*\(/i],
     tags: ['tsql', 'windows', 'rank', 'partition-by'],
   },
 ];

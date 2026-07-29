@@ -55,7 +55,8 @@ export const tsql_isolation_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement that sets the session to SNAPSHOT isolation (readers see a consistent committed version without blocking writers).',
-    template: `SET TRANSACTION ___ LEVEL ___;
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+SET TRANSACTION ___ LEVEL ___;
 BEGIN TRAN;
     SELECT SUM(Amount) FROM dbo.FactSales;
 COMMIT;`,

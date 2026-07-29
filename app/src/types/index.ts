@@ -402,6 +402,9 @@ export interface CodingQuestion extends BaseQuestion {
   starterCode: string;
   testCases: TestCase[];
   solution: string;
+  // Optional static keyword or pattern assertions run against learner submission prior to execution.
+  requires?: (string | RegExp)[];
+  requiredKeywords?: string[];
   // Markup the learner's CSS renders against in the live preview pane (CSS questions).
   // HTML questions preview their own code and don't need this field.
   previewHtml?: string;

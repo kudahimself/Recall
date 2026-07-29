@@ -39,6 +39,7 @@ import {
   QuestionAttempt,
   UserProgress,
 } from '../../types';
+import { withSeededRandom } from './simHarness';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -52,23 +53,7 @@ const CONCEPT_BETAS: Record<string, number> = (() => {
 
 // Seeded PRNG so runs are reproducible — otherwise Math.random would mix
 // concept-aware bucket sampling differently each invocation and the stream
-// would jitter.
-function seededRandom(seed: number): () => number {
-  let s = seed >>> 0;
-  return function () {
-    s = (s + 0x6D2B79F5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function withSeededRandom<T>(seed: number, fn: () => T): T {
-  const original = Math.random;
-  Math.random = seededRandom(seed);
-  try { return fn(); } finally { Math.random = original; }
-}
+// would jitter. Shared with selectorDistribution.sim.test.ts.
 
 /**
  * Build a UserProgress that mimics "user has fully completed every topic

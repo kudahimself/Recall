@@ -38,7 +38,8 @@ export const tsql_date_functions_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the two functions that extract the year and the month from a date.',
-    template: `SELECT OrderId, ___(OrderDate) AS OrderYear, ___(OrderDate) AS OrderMonth
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT OrderId, ___(OrderDate) AS OrderYear, ___(OrderDate) AS OrderMonth
 FROM dbo.FactOrders;`,
     blanks: ['YEAR', 'MONTH'],
     solution: `SELECT OrderId, YEAR(OrderDate) AS OrderYear, MONTH(OrderDate) AS OrderMonth
@@ -98,7 +99,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the function and the part name that extract which quarter an order falls in.',
-    template: `SELECT OrderId, ___(___, OrderDate) AS OrderQuarter
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT OrderId, ___(___, OrderDate) AS OrderQuarter
 FROM dbo.FactOrders;`,
     blanks: ['DATEPART', 'quarter'],
     solution: `SELECT OrderId, DATEPART(quarter, OrderDate) AS OrderQuarter
@@ -115,7 +117,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the function that computes how many years have passed since SignupDate, using today's date.",
-    template: `SELECT CustomerKey, ___(YEAR, SignupDate, GETDATE()) AS YearsSinceSignup
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+SELECT CustomerKey, ___(YEAR, SignupDate, GETDATE()) AS YearsSinceSignup
 FROM dbo.DimCustomer;`,
     blanks: ['DATEDIFF'],
     solution: `SELECT CustomerKey, DATEDIFF(YEAR, SignupDate, GETDATE()) AS YearsSinceSignup
@@ -149,7 +152,8 @@ FROM dbo.DimCustomer;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the function that renders OrderDate as a custom-formatted string.',
-    template: `SELECT OrderId, ___(OrderDate, 'yyyy-MM-dd') AS OrderDateText
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT OrderId, ___(OrderDate, 'yyyy-MM-dd') AS OrderDateText
 FROM dbo.FactOrders;`,
     blanks: ['FORMAT'],
     solution: `SELECT OrderId, FORMAT(OrderDate, 'yyyy-MM-dd') AS OrderDateText
@@ -166,7 +170,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the function that finds the last day of OrderDate's month, used to compute the days remaining in that month.",
-    template: `SELECT OrderId,
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT OrderId,
        DATEDIFF(DAY, OrderDate, ___(OrderDate)) AS DaysLeftInMonth
 FROM dbo.FactOrders;`,
     blanks: ['EOMONTH'],
@@ -184,6 +189,7 @@ FROM dbo.FactOrders;`,
     topic: Topic.TSQL_DATE_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/YEAR/i, /MONTH/i],
     question: 'From `dbo.FactOrders` (OrderId, OrderDate), return OrderId and two columns: `OrderYear` (the year of OrderDate) and `OrderMonth` (the month of OrderDate).',
     starterCode: `-- Table: dbo.FactOrders (OrderId, OrderDate)
 -- Return OrderId, OrderYear, and OrderMonth
@@ -213,6 +219,7 @@ FROM dbo.FactOrders;`,
     topic: Topic.TSQL_DATE_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/DATEDIFF/i, /GETDATE/i],
     question: 'From `dbo.DimCustomer` (CustomerKey, SignupDate), return CustomerKey and a column `DaysSinceSignup` giving the number of days between SignupDate and today.',
     starterCode: `-- Table: dbo.DimCustomer (CustomerKey, SignupDate)
 -- Return CustomerKey and DaysSinceSignup (days between SignupDate and today)
@@ -242,6 +249,7 @@ FROM dbo.DimCustomer;`,
     topic: Topic.TSQL_DATE_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/DATEDIFF/i, /CAST/i, /GETDATE/i],
     question: 'From `dbo.FactOrders` (OrderId, OrderDate, Amount), return OrderId and Amount for orders placed more than 30 days before today, comparing only the calendar date and ignoring time-of-day.',
     starterCode: `-- filter FactOrders to orders more than 30 days old, ignoring time-of-day
 `,

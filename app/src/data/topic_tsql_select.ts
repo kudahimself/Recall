@@ -56,7 +56,8 @@ Cairo`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the clause that filters rows, and the keyword that sorts highest-first.',
-    template: `SELECT TOP (10) ProductName, Price
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT TOP (10) ProductName, Price
 FROM dbo.DimProduct
 ___ Price > 100
 ORDER BY Price ___;`,
@@ -111,7 +112,8 @@ ORDER BY Price DESC;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the paging keywords: skip 20 rows, then return the next 10.',
-    template: `SELECT ProductName, Price
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ProductName, Price
 FROM dbo.DimProduct
 ORDER BY Price DESC
 OFFSET 20 ___ FETCH ___ 10 ROWS ONLY;`,
@@ -131,6 +133,7 @@ OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;`,
     topic: Topic.TSQL_SELECT,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/TOP/i, /ORDER\s+BY/i],
     question: "From `dbo.DimProduct` (ProductName, Category, Price), return the ProductName and Price of the 5 most expensive products in the 'Books' category, highest price first.",
     starterCode: `-- SELECT TOP (5) ...
 `,
@@ -163,6 +166,7 @@ ORDER BY ____ ____;`,
     topic: Topic.TSQL_SELECT,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/OFFSET/i, /FETCH/i],
     question: 'From `dbo.DimProduct` (ProductName), return the second page of 20 rows (rows 21–40) ordered by ProductName ascending, using OFFSET/FETCH.',
     starterCode: `-- SELECT ProductName ... OFFSET ... FETCH ...
 `,

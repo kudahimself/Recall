@@ -50,7 +50,7 @@ export const tsql_control_flow_questions: Question[] = [
   {
     id: 'tsql-flow-predict-1',
     type: QuestionType.PREDICT_OUTPUT,
-    difficulty: Difficulty.BEGINNER,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.TSQL_CONTROL_FLOW,
     course: Course.SQL,
     language: CodeLanguage.SQL,
@@ -88,7 +88,7 @@ PRINT @sum;`,
   {
     id: 'tsql-flow-cloze-1',
     type: QuestionType.CLOZE_CODE,
-    difficulty: Difficulty.INTERMEDIATE,
+    difficulty: Difficulty.BEGINNER,
     topic: Topic.TSQL_CONTROL_FLOW,
     course: Course.SQL,
     language: CodeLanguage.SQL,
@@ -159,6 +159,7 @@ END;`,
     topic: Topic.TSQL_CONTROL_FLOW,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+FUNCTION/i, /RETURNS/i],
     question: 'Create a scalar function `dbo.NetAmount` that takes `@Gross DECIMAL(10,2)` and `@DiscountPct DECIMAL(5,2)` (a percentage like 10 for 10%) and RETURNS the discounted amount as `DECIMAL(10,2)`: gross minus gross times the percentage.',
     starterCode: `-- CREATE FUNCTION dbo.NetAmount (...) RETURNS DECIMAL(10,2) AS BEGIN ... END
 `,
@@ -198,7 +199,8 @@ END;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the return type and the statement that supplies an inline table-valued function's result set.",
-    template: `CREATE FUNCTION dbo.OrdersForCustomer (@CustomerKey INT)
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+CREATE FUNCTION dbo.OrdersForCustomer (@CustomerKey INT)
 RETURNS ___
 AS
 ___ (

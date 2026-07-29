@@ -1,0 +1,387 @@
+[
+  {
+    "id": "tsql-agg-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_AGGREGATION",
+    "file": "topic_tsql_aggregation.ts",
+    "req": "[\"GROUP BY\",\"HAVING\"]"
+  },
+  {
+    "id": "tsql-anti-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_ANTIPATTERNS",
+    "file": "topic_tsql_antipatterns.ts",
+    "req": "[\"NOT EXISTS\"]"
+  },
+  {
+    "id": "tsql-col-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_COLUMNSTORE",
+    "file": "topic_tsql_columnstore.ts",
+    "req": "[\"CREATE CLUSTERED COLUMNSTORE INDEX\"]"
+  },
+  {
+    "id": "tsql-constraints-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_CONSTRAINTS",
+    "file": "topic_tsql_constraints.ts",
+    "req": "[\"ALTER TABLE\",\"ADD CONSTRAINT\"]"
+  },
+  {
+    "id": "tsql-flow-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_CONTROL_FLOW",
+    "file": "topic_tsql_control_flow.ts",
+    "req": "[\"IF\",\"ELSE\"]"
+  },
+  {
+    "id": "tsql-dt-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_DATE_FUNCTIONS",
+    "file": "topic_tsql_date_functions.ts",
+    "req": "[\"DATEDIFF\"]"
+  },
+  {
+    "id": "tsql-dt-2",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_DATE_FUNCTIONS",
+    "file": "topic_tsql_date_functions.ts",
+    "req": "[\"DATEADD\"]"
+  },
+  {
+    "id": "tsql-dt-3",
+    "diff": "ADVANCED",
+    "topic": "TSQL_DATE_FUNCTIONS",
+    "file": "topic_tsql_date_functions.ts",
+    "req": "[\"EOMONTH\"]"
+  },
+  {
+    "id": "tsql-ddl-create-1",
+    "diff": "BEGINNER",
+    "topic": "TSQL_DDL_TABLES",
+    "file": "topic_tsql_ddl_tables.ts",
+    "req": "[\"CREATE TABLE\"]"
+  },
+  {
+    "id": "tsql-ddl-selectinto-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_DDL_TABLES",
+    "file": "topic_tsql_ddl_tables.ts",
+    "req": "[\"SELECT\",\"INTO\"]"
+  },
+  {
+    "id": "tsql-dedup-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_DEDUP",
+    "file": "topic_tsql_dedup.ts",
+    "req": "[\"WITH\",\"ROW_NUMBER\"]"
+  },
+  {
+    "id": "tsql-dml-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_DML",
+    "file": "topic_tsql_dml.ts",
+    "req": "[\"INSERT INTO\"]"
+  },
+  {
+    "id": "tsql-dml-2",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_DML",
+    "file": "topic_tsql_dml.ts",
+    "req": "[\"UPDATE\"]"
+  },
+  {
+    "id": "tsql-dml-3",
+    "diff": "ADVANCED",
+    "topic": "TSQL_DML",
+    "file": "topic_tsql_dml.ts",
+    "req": "[\"DELETE\"]"
+  },
+  {
+    "id": "tsql-dml-4",
+    "diff": "ADVANCED",
+    "topic": "TSQL_DML",
+    "file": "topic_tsql_dml.ts",
+    "req": "[\"OUTPUT\"]"
+  },
+  {
+    "id": "tsql-err-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_ERROR_HANDLING",
+    "file": "topic_tsql_error_handling.ts",
+    "req": "[\"TRY\",\"CATCH\"]"
+  },
+  {
+    "id": "tsql-etlproc-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_ETL_PROC",
+    "file": "topic_tsql_etl_proc.ts",
+    "req": "[\"CREATE PROCEDURE\"]"
+  },
+  {
+    "id": "tsql-etlproc-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_ETL_PROC",
+    "file": "topic_tsql_etl_proc.ts",
+    "req": "[\"OUTPUT\"]"
+  },
+  {
+    "id": "tsql-etlproc-3",
+    "diff": "ADVANCED",
+    "topic": "TSQL_ETL_PROC",
+    "file": "topic_tsql_etl_proc.ts",
+    "req": "[\"MERGE INTO\"]"
+  },
+  {
+    "id": "tsql-facts-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_FACTS_DIMS",
+    "file": "topic_tsql_facts_dims.ts",
+    "req": "[\"CREATE TABLE\"]"
+  },
+  {
+    "id": "tsql-filter-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_FILTERING",
+    "file": "topic_tsql_filtering.ts",
+    "req": "[\"WHERE\"]"
+  },
+  {
+    "id": "tsql-gs-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_GROUPING_SETS",
+    "file": "topic_tsql_grouping_sets.ts",
+    "req": "[\"GROUPING SETS\"]"
+  },
+  {
+    "id": "tsql-gs-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_GROUPING_SETS",
+    "file": "topic_tsql_grouping_sets.ts",
+    "req": "[\"CUBE\"]"
+  },
+  {
+    "id": "tsql-incr-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_INCREMENTAL",
+    "file": "topic_tsql_incremental.ts",
+    "req": "[\"WHERE\"]"
+  },
+  {
+    "id": "tsql-idx-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_INDEXES",
+    "file": "topic_tsql_indexes.ts",
+    "req": "[\"CREATE INDEX\"]"
+  },
+  {
+    "id": "tsql-insert-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_INSERT",
+    "file": "topic_tsql_insert.ts",
+    "req": "[\"INSERT INTO\"]"
+  },
+  {
+    "id": "tsql-joins-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_JOINS",
+    "file": "topic_tsql_joins.ts",
+    "req": "[\"INNER JOIN\"]"
+  },
+  {
+    "id": "tsql-joins-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_JOINS",
+    "file": "topic_tsql_joins.ts",
+    "req": "[\"LEFT JOIN\"]"
+  },
+  {
+    "id": "tsql-joins-3",
+    "diff": "ADVANCED",
+    "topic": "TSQL_JOINS",
+    "file": "topic_tsql_joins.ts",
+    "req": "[\"FULL OUTER JOIN\"]"
+  },
+  {
+    "id": "tsql-laglead-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_LAG_LEAD",
+    "file": "topic_tsql_lag_lead.ts",
+    "req": "[\"LAG\",\"LEAD\"]"
+  },
+  {
+    "id": "tsql-merge-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_MERGE",
+    "file": "topic_tsql_merge.ts",
+    "req": "[\"MERGE INTO\"]"
+  },
+  {
+    "id": "tsql-part-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_PARTITIONING",
+    "file": "topic_tsql_partitioning.ts",
+    "req": "[\"CREATE PARTITION FUNCTION\"]"
+  },
+  {
+    "id": "tsql-pivot-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_PIVOT",
+    "file": "topic_tsql_pivot.ts",
+    "req": "[\"PIVOT\"]"
+  },
+  {
+    "id": "tsql-proc-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_PROCEDURES",
+    "file": "topic_tsql_procedures.ts",
+    "req": "[\"CREATE PROCEDURE\"]"
+  },
+  {
+    "id": "tsql-proc-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_PROCEDURES",
+    "file": "topic_tsql_procedures.ts",
+    "req": "[\"OUTPUT\"]"
+  },
+  {
+    "id": "tsql-quality-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_QUALITY",
+    "file": "topic_tsql_quality.ts",
+    "req": "[\"CASE\",\"WHEN\"]"
+  },
+  {
+    "id": "tsql-quality-2",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_QUALITY",
+    "file": "topic_tsql_quality.ts",
+    "req": "[\"CASE\",\"WHEN\"]"
+  },
+  {
+    "id": "tsql-scd-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_SCD",
+    "file": "topic_tsql_scd.ts",
+    "req": "[\"MERGE INTO\"]"
+  },
+  {
+    "id": "tsql-scd-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_SCD",
+    "file": "topic_tsql_scd.ts",
+    "req": "[\"MERGE INTO\"]"
+  },
+  {
+    "id": "tsql-select-1",
+    "diff": "BEGINNER",
+    "topic": "TSQL_SELECT",
+    "file": "topic_tsql_select.ts",
+    "req": "[\"TOP\",\"ORDER BY\"]"
+  },
+  {
+    "id": "tsql-select-2",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_SELECT",
+    "file": "topic_tsql_select.ts",
+    "req": "[\"OFFSET\",\"FETCH\"]"
+  },
+  {
+    "id": "tsql-setops-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_SET_OPS",
+    "file": "topic_tsql_set_ops.ts",
+    "req": "[\"UNION ALL\"]"
+  },
+  {
+    "id": "tsql-star-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_STAR_SCHEMA",
+    "file": "topic_tsql_star_schema.ts",
+    "req": "[\"CREATE TABLE\"]"
+  },
+  {
+    "id": "tsql-str-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_STRING_FUNCTIONS",
+    "file": "topic_tsql_string_functions.ts",
+    "req": "[\"UPPER\",\"LEN\"]"
+  },
+  {
+    "id": "tsql-str-2",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_STRING_FUNCTIONS",
+    "file": "topic_tsql_string_functions.ts",
+    "req": "[\"SUBSTRING\",\"CHARINDEX\"]"
+  },
+  {
+    "id": "tsql-str-3",
+    "diff": "ADVANCED",
+    "topic": "TSQL_STRING_FUNCTIONS",
+    "file": "topic_tsql_string_functions.ts",
+    "req": "[\"TRANSLATE\"]"
+  },
+  {
+    "id": "tsql-subq-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_SUBQUERIES_CTE",
+    "file": "topic_tsql_subqueries_cte.ts",
+    "req": "[\"WHERE\",\"IN\"]"
+  },
+  {
+    "id": "tsql-subq-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_SUBQUERIES_CTE",
+    "file": "topic_tsql_subqueries_cte.ts",
+    "req": "[\"WITH\"]"
+  },
+  {
+    "id": "tsql-surr-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_SURROGATE_KEYS",
+    "file": "topic_tsql_surrogate_keys.ts",
+    "req": "[\"IDENTITY\"]"
+  },
+  {
+    "id": "tsql-syn-1",
+    "diff": "ADVANCED",
+    "topic": "TSQL_SYNAPSE_FABRIC",
+    "file": "topic_tsql_synapse_fabric.ts",
+    "req": "[\"DISTRIBUTION\"]"
+  },
+  {
+    "id": "tsql-tran-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_TRANSACTIONS",
+    "file": "topic_tsql_transactions.ts",
+    "req": "[\"BEGIN TRANSACTION\",\"COMMIT TRANSACTION\"]"
+  },
+  {
+    "id": "tsql-views-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_VIEWS",
+    "file": "topic_tsql_views.ts",
+    "req": "[\"CREATE VIEW\"]"
+  },
+  {
+    "id": "tsql-windows-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_WINDOWS",
+    "file": "topic_tsql_windows.ts",
+    "req": "[\"OVER\",\"ROW_NUMBER\"]"
+  },
+  {
+    "id": "tsql-frames-1",
+    "diff": "INTERMEDIATE",
+    "topic": "TSQL_WINDOW_FRAMES",
+    "file": "topic_tsql_window_frames.ts",
+    "req": "[\"ROWS BETWEEN\"]"
+  },
+  {
+    "id": "tsql-frames-2",
+    "diff": "ADVANCED",
+    "topic": "TSQL_WINDOW_FRAMES",
+    "file": "topic_tsql_window_frames.ts",
+    "req": "[\"RANGE BETWEEN\"]"
+  }
+]

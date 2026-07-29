@@ -218,6 +218,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
+    requires: ['withWatermark'],
     question: 'Given streaming DataFrame "stream_df" containing event records, configure a 10-minute threshold on column "event_time" to manage late-arriving records during stateful operations.',
     starterCode: `result = stream_df`,
     testCases: [
@@ -702,6 +703,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.CHANGE_DATA_CAPTURE,
     language: CodeLanguage.SQL,
+    requires: [/ALTER\s+TABLE/i],
     question: 'Enable Change Data Feed on an existing Delta table named "customers".',
     starterCode: `-- Enable CDF on customers table\n`,
     testCases: [
@@ -797,6 +799,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.CHANGE_DATA_CAPTURE,
     language: CodeLanguage.SQL,
+    requires: [/MERGE\s+INTO/i],
     question: 'Write a MERGE statement to apply CDC changes from "customers_changes" into target table "customers" on matching customer_id. Exclude "update_preimage" rows from the source. Delete rows when _change_type is "delete", update matching rows when _change_type is "update_postimage", and insert unmatched rows when _change_type is "insert".',
     starterCode: `-- MERGE CDC changes into target table customers\n`,
     testCases: [
@@ -1367,6 +1370,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Grant SELECT privilege on table "sales.orders" to principal group "analysts".',
     starterCode: `-- Grant table access\n`,
     testCases: [
@@ -1393,6 +1397,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Grant ALL PRIVILEGES on schema "analytics" to principal group "data_engineers".',
     starterCode: `-- Grant schema access\n`,
     testCases: [
@@ -1419,6 +1424,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/REVOKE/i],
     question: 'Revoke INSERT privilege on table "production.customers" from principal group "interns".',
     starterCode: `-- Revoke permissions\n`,
     testCases: [
@@ -1445,6 +1451,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/SHOW\s+GRANTS/i],
     question: 'Write a SQL query to list all privilege grants applied to schema "sales".',
     starterCode: `-- View permissions\n`,
     testCases: [
@@ -1471,6 +1478,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+CATALOG/i],
     question: 'Write a SQL statement to create a new top-level catalog named "development" in Unity Catalog.',
     starterCode: `-- Create catalog\n`,
     testCases: [
@@ -1497,6 +1505,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+SCHEMA/i],
     question: 'Write a SQL statement to create a new schema named "raw_data" within catalog "production".',
     starterCode: `-- Create schema in catalog\n`,
     testCases: [
@@ -1557,6 +1566,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Grant permissions to group "data_engineers" allowing them to navigate to schema "analytics" and create tables within it.',
     starterCode: `-- Grant schema access and table creation\n`,
     testCases: [
@@ -1723,6 +1733,9 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
+    // One alternation, not two entries: `requires` is an AND list, so
+    // [/EXTENDED/, /DETAIL/] demanded both spellings at once and failed everything.
+    requires: [/DESCRIBE\s+(EXTENDED|DETAIL)/i],
     question: 'Write a SQL query to inspect detailed metadata, storage location, and table properties of table "sales.orders".',
     starterCode: `-- Inspect detailed table metadata\n`,
     testCases: [
@@ -1733,7 +1746,7 @@ export const certificationQuestions: Question[] = [
       },
     ],
     solution: `DESCRIBE EXTENDED sales.orders
-# OR
+-- OR
 DESCRIBE DETAIL sales.orders`,
     explanation: 'DESCRIBE EXTENDED shows column names, types, comments, plus detailed table metadata including location, provider, properties, and statistics. DESCRIBE TABLE gives only column info.',
     hints: ['Use DESCRIBE EXTENDED or DESCRIBE DETAIL'],
@@ -1787,7 +1800,7 @@ DESCRIBE DETAIL sales.orders`,
       },
     ],
     solution: `CREATE OR REPLACE TEMP VIEW active_users AS\nSELECT * FROM users WHERE account_status = "active"
-# OR
+-- OR
 CREATE TEMP VIEW active_users AS\nSELECT * FROM users WHERE account_status = "active"`,
     explanation: 'CREATE OR REPLACE TEMP VIEW creates a session-scoped view that disappears when the cluster restarts. "OR REPLACE" overwrites the view if it already exists, avoiding errors on re-run.',
     hints: ['Use CREATE OR REPLACE TEMP VIEW view_name AS SELECT ...'],

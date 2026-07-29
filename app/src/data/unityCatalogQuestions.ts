@@ -29,6 +29,7 @@ export const UNITY_CATALOG_QUESTIONS: Question[] = [
     difficulty: Difficulty.BEGINNER,
     topic: Topic.UNITY_CATALOG_BASICS,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+CATALOG/i],
     question: 'Write a SQL statement to define a new top-level catalog container named "analytics_prod" if it does not already exist.',
     starterCode: `-- Create catalog container\n`,
     testCases: [
@@ -39,7 +40,7 @@ export const UNITY_CATALOG_QUESTIONS: Question[] = [
       },
     ],
     solution: `CREATE CATALOG IF NOT EXISTS analytics_prod
-# OR
+-- OR
 CREATE CATALOG analytics_prod`,
     explanation: 'CREATE CATALOG creates a top-level container in Unity Catalog. Using IF NOT EXISTS prevents errors if the catalog already exists.',
     tieredHints: {
@@ -75,6 +76,7 @@ CREATE CATALOG analytics_prod`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.UNITY_CATALOG_BASICS,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+VOLUME/i],
     question: 'Write a SQL statement to define a managed volume named "raw_landing" inside schema "main.ingestion".',
     starterCode: `-- Define managed volume\n`,
     testCases: [
@@ -85,7 +87,7 @@ CREATE CATALOG analytics_prod`,
       },
     ],
     solution: `CREATE VOLUME main.ingestion.raw_landing
-# OR
+-- OR
 CREATE VOLUME IF NOT EXISTS main.ingestion.raw_landing`,
     explanation: 'CREATE VOLUME creates a Unity Catalog Volume for non-tabular data files (images, JSONs, CSVs). Managed volumes store files in the schema default storage location.',
     tieredHints: {
@@ -131,7 +133,7 @@ CREATE VOLUME IF NOT EXISTS main.ingestion.raw_landing`,
       },
     ],
     solution: `CREATE TABLE main.sales.orders (\n  order_id INT,\n  amount DOUBLE\n)\nUSING DELTA
-# OR
+-- OR
 CREATE TABLE IF NOT EXISTS main.sales.orders (\n  order_id INT,\n  amount DOUBLE\n)`,
     explanation: 'Creating tables with 3-tier names (main.sales.orders) ensures tables are registered directly in the specified catalog and schema.',
     tieredHints: {
@@ -263,6 +265,7 @@ df = spark.table("prod.finance.orders")`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.UNITY_CATALOG_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Write a SQL statement to grant SELECT privilege on table "main.gold.metrics" to principal group "analysts".',
     starterCode: `-- Grant table access\n`,
     testCases: [
@@ -272,7 +275,7 @@ df = spark.table("prod.finance.orders")`,
         description: 'Should grant SELECT on table to analysts group',
       },
     ],
-    solution: `GRANT SELECT ON TABLE main.gold.metrics TO analysts\n# OR\nGRANT SELECT ON main.gold.metrics TO analysts`,
+    solution: `GRANT SELECT ON TABLE main.gold.metrics TO analysts\n-- OR\nGRANT SELECT ON main.gold.metrics TO analysts`,
     explanation: 'GRANT SELECT ON TABLE object TO principal grants read access to a specific table in Unity Catalog.',
     tieredHints: {
       apiSignature: 'GRANT privilege_type ON object_type object_name TO principal',
@@ -289,6 +292,7 @@ df = spark.table("prod.finance.orders")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.UNITY_CATALOG_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Write a SQL statement to grant USAGE privilege on schema "main.gold" to principal group "data_engineers".',
     starterCode: `-- Grant schema usage\n`,
     testCases: [
@@ -298,7 +302,7 @@ df = spark.table("prod.finance.orders")`,
         description: 'Should grant USAGE on schema to data_engineers',
       },
     ],
-    solution: `GRANT USAGE ON SCHEMA main.gold TO data_engineers\n# OR\nGRANT USAGE ON main.gold TO data_engineers`,
+    solution: `GRANT USAGE ON SCHEMA main.gold TO data_engineers\n-- OR\nGRANT USAGE ON main.gold TO data_engineers`,
     explanation: 'USAGE privilege on a Schema allows principals to traverse the schema to access child tables and functions.',
     tieredHints: {
       apiSignature: 'GRANT privilege_type ON SCHEMA schema_name TO principal',
@@ -315,6 +319,7 @@ df = spark.table("prod.finance.orders")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.UNITY_CATALOG_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Write a SQL statement to grant READ VOLUME privilege on volume "main.raw.landing" to principal group "ingestion_service".',
     starterCode: `-- Grant volume read permission\n`,
     testCases: [
@@ -324,7 +329,7 @@ df = spark.table("prod.finance.orders")`,
         description: 'Should grant READ VOLUME on volume to ingestion_service',
       },
     ],
-    solution: `GRANT READ VOLUME ON VOLUME main.raw.landing TO ingestion_service\n# OR\nGRANT READ VOLUME ON main.raw.landing TO ingestion_service`,
+    solution: `GRANT READ VOLUME ON VOLUME main.raw.landing TO ingestion_service\n-- OR\nGRANT READ VOLUME ON main.raw.landing TO ingestion_service`,
     explanation: 'READ VOLUME allows principals to read files stored in a Unity Catalog Volume.',
     tieredHints: {
       apiSignature: 'GRANT privilege_type ON VOLUME volume_name TO principal',
@@ -359,6 +364,7 @@ df = spark.table("prod.finance.orders")`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.UNITY_CATALOG_GOVERNANCE,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Write a SQL statement to grant CREATE TABLE privilege on external location "s3_sales_data" to group "de_team".',
     starterCode: `-- Grant privilege on external location\n`,
     testCases: [

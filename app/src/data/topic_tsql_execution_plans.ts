@@ -89,7 +89,8 @@ export const tsql_execution_plans_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the SET statements that report page reads and timing for the query that follows.',
-    template: `SET STATISTICS ___ ON;
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+SET STATISTICS ___ ON;
 SET STATISTICS ___ ON;
 SELECT CustomerKey, SUM(Amount) AS Total
 FROM dbo.FactSales

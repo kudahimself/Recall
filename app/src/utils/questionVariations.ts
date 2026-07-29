@@ -111,6 +111,11 @@ export const variationTemplates: VariationTemplate[] = [
     conceptId: 'pyspark-join-inner',
     baseQuestion: {
       id: 'ps-transform-2',
+      // Spread onto every generated variation, so all five var* questions inherit it.
+      // The variation engine rewrites column and entity names in `solution` only,
+      // which is why this gate names no columns. No "inner" literal either: it is
+      // the default `how`, so omitting it is still a correct answer.
+      requires: [/\.join\s*\(/],
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,
       topic: Topic.SQL_JOINS,

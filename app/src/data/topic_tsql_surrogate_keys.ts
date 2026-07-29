@@ -55,7 +55,8 @@ export const tsql_surrogate_keys_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keyword that auto-generates a surrogate key starting at 1, incrementing by 1.',
-    template: `CREATE TABLE dbo.DimCustomer (
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+CREATE TABLE dbo.DimCustomer (
     CustomerKey INT ___(1, 1) PRIMARY KEY,
     CustomerId  NVARCHAR(20) NOT NULL,   -- natural/business key
     FullName    NVARCHAR(100) NOT NULL
@@ -78,7 +79,8 @@ export const tsql_surrogate_keys_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the object type that defines a standalone key generator, and the expression that fetches its next value.',
-    template: `CREATE ___ dbo.OrderKeySeq AS INT START WITH 1 INCREMENT BY 1;
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+CREATE ___ dbo.OrderKeySeq AS INT START WITH 1 INCREMENT BY 1;
 
 INSERT INTO dbo.FactOrders (OrderKey, Amount)
 VALUES (NEXT VALUE ___ dbo.OrderKeySeq, 100);`,
@@ -133,6 +135,7 @@ VALUES (NEXT VALUE FOR dbo.OrderKeySeq, 100);`,
 );`,
     explanation: 'The surrogate `ProductKey` (`IDENTITY(1,1)`) is the warehouse-owned join key the facts use; the natural `ProductCode` is kept as a `UNIQUE` attribute so loads can look up the surrogate by business key. Separating the two is what later enables SCD Type 2 — one ProductCode can map to several ProductKeys over time.',
     hints: ['IDENTITY(1,1) PRIMARY KEY for the surrogate', 'ProductCode NVARCHAR(30) NOT NULL UNIQUE for the natural key'],
+    requires: [/IDENTITY/i],
     tags: ['tsql', 'surrogate-keys', 'identity', 'natural-key'],
     tieredHints: {
       apiSignature: 'column_name INT IDENTITY(seed, increment) PRIMARY KEY',

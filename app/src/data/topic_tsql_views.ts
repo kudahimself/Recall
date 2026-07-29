@@ -38,7 +38,9 @@ export const tsql_views_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords that define a view over a join.',
-    template: `___ VIEW dbo.vCustomerOrders ___
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+___ VIEW dbo.vCustomerOrders ___
 SELECT c.FullName, o.OrderId, o.Amount
 FROM dbo.DimCustomer c
 JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey;`,
@@ -59,6 +61,7 @@ JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Create a view `dbo.vSalesByCustomer` that, joining `dbo.DimCustomer` (CustomerKey, FullName) to `dbo.FactOrders` (CustomerKey, Amount), returns each customer\'s `CustomerKey`, `FullName`, and total order amount aliased as `TotalAmount`.',
+    requires: [/CREATE\s+VIEW/i],
     starterCode: `-- CREATE VIEW dbo.vSalesByCustomer AS ...
 `,
     testCases: [
@@ -93,7 +96,8 @@ GROUP BY ____, ____;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keyword that makes a computed column store its value physically (rather than recompute on read).',
-    template: `CREATE TABLE dbo.FactSale (
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+CREATE TABLE dbo.FactSale (
     SaleKey   INT PRIMARY KEY,
     Quantity  INT NOT NULL,
     Price     DECIMAL(10, 2) NOT NULL,

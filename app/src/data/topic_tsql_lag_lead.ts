@@ -56,7 +56,8 @@ ORDER BY v.d;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the window keywords so PrevAmount is each customer\'s previous order amount by date.',
-    template: `SELECT CustomerKey, OrderDate, Amount,
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT CustomerKey, OrderDate, Amount,
        LAG(Amount, 1, 0) ___ (PARTITION BY CustomerKey ___ ___ OrderDate) AS PrevAmount
 FROM dbo.FactOrders;`,
     blanks: ['OVER', 'ORDER', 'BY'],
@@ -147,6 +148,7 @@ FROM dbo.FactOrders;`,
     },
     explanation: 'LAG(Amount, 1, 0) fetches the prior row\'s Amount within each customer\'s date-ordered sequence, defaulting to 0 for each customer\'s first order. Subtracting `Amount - PrevAmount` would then give the period-over-period change.',
     hints: ['Offset 1 back, default 0', 'PARTITION BY CustomerKey ORDER BY OrderDate'],
+    requires: [/LAG/i],
     tags: ['tsql', 'lag-lead', 'lag', 'partition-by'],
   },
 ];

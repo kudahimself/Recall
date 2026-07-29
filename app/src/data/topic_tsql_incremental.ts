@@ -55,7 +55,8 @@ export const tsql_incremental_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the function that pulls the watermark back by 4 hours, widening the filter into a lookback window.',
-    template: `SELECT OrderId, Amount, UpdatedAt
+    template: `-- stg.Sales(OrderId, CustomerId, ProductCode, Amount, UpdatedAt)
+SELECT OrderId, Amount, UpdatedAt
 FROM stg.Sales
 WHERE UpdatedAt > ___(HOUR, -4, @lastLoaded);`,
     blanks: ['DATEADD'],
@@ -74,7 +75,9 @@ WHERE UpdatedAt > DATEADD(HOUR, -4, @lastLoaded);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the predicate that selects only the rows newer than the stored watermark.',
-    template: `INSERT INTO dbo.FactSales (OrderId, Amount, UpdatedAt)
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+-- stg.Sales(OrderId, CustomerId, ProductCode, Amount, UpdatedAt)
+INSERT INTO dbo.FactSales (OrderId, Amount, UpdatedAt)
 SELECT OrderId, Amount, UpdatedAt
 FROM stg.Sales
 WHERE UpdatedAt ___ @lastLoaded;`,
@@ -116,6 +119,7 @@ FROM dbo.FactSales;`,
     },
     explanation: '`MAX(UpdatedAt)` returns NULL on an empty table, which would break a `> NULL` comparison on the next run (everything compares false). Wrapping it in `ISNULL(…, \'1900-01-01\')` (or `COALESCE`) supplies a safe floor so the first incremental run still pulls all rows.',
     hints: ["ISNULL(MAX(UpdatedAt), '1900-01-01')", 'Guards against NULL on an empty table'],
+    requires: [/MAX/i, /ISNULL|COALESCE/i],
     tags: ['tsql', 'incremental', 'watermark', 'null-handling'],
   },
 ];

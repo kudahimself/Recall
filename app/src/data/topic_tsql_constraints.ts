@@ -38,7 +38,8 @@ export const tsql_constraints_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the inline constraints: make CustomerKey the primary key, FullName required, and IsActive default to 1.',
-    template: `CREATE TABLE dbo.DimCustomer (
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+CREATE TABLE dbo.DimCustomer (
     CustomerKey INT ___ KEY,
     FullName    NVARCHAR(100) ___ NULL,
     IsActive    BIT ___ 1
@@ -61,7 +62,9 @@ export const tsql_constraints_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the foreign-key clause: it must point at the parent table, and cascade deletes to children.',
-    template: `CREATE TABLE dbo.FactOrders (
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+CREATE TABLE dbo.FactOrders (
     OrderId     INT PRIMARY KEY,
     CustomerKey INT NOT NULL,
     CONSTRAINT FK_Orders_Customer FOREIGN KEY (CustomerKey)
@@ -88,7 +91,8 @@ export const tsql_constraints_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the constraint type that rejects rows whose Amount is negative.',
-    template: `CREATE TABLE dbo.FactSale (
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+CREATE TABLE dbo.FactSale (
     SaleKey INT PRIMARY KEY,
     Amount  DECIMAL(10, 2) NOT NULL,
     CONSTRAINT CK_Sale_Amount ___ (Amount >= 0)
@@ -111,7 +115,8 @@ export const tsql_constraints_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the constraint that forbids duplicate OrderRef values (but still allows one NULL).',
-    template: `CREATE TABLE dbo.FactOrders (
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+CREATE TABLE dbo.FactOrders (
     OrderId  INT PRIMARY KEY,
     OrderRef NVARCHAR(40) ___
 );`,
@@ -132,6 +137,7 @@ export const tsql_constraints_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Create `dbo.FactOrders` with: `OrderId` INT as PRIMARY KEY; `CustomerKey` INT NOT NULL with a FOREIGN KEY referencing `dbo.DimCustomer (CustomerKey)` that cascades on delete; `OrderRef` NVARCHAR(40) with a UNIQUE constraint; `Amount` DECIMAL(10,2) NOT NULL with a CHECK that it is `>= 0`; and `IsShipped` BIT defaulting to 0.',
+    requires: [/CREATE\s+TABLE/i, /CONSTRAINT/i],
     starterCode: `-- CREATE TABLE dbo.FactOrders ( ... )
 `,
     testCases: [

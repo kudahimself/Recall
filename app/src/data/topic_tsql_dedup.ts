@@ -59,7 +59,8 @@ ORDER BY amt;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the window and filter so only the most recent row per CustomerId survives.',
-    template: `WITH ranked AS (
+    template: `-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+WITH ranked AS (
     SELECT *,
            ROW_NUMBER() OVER (___ CustomerId ORDER BY LoadedAt DESC) AS rn
     FROM stg.Customer
@@ -88,7 +89,8 @@ WHERE rn = 1;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement that removes rows directly through a CTE reference (rather than selecting from it).',
-    template: `WITH d AS (
+    template: `-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+WITH d AS (
     SELECT ROW_NUMBER() OVER (PARTITION BY CustomerId ORDER BY LoadedAt DESC) AS rn
     FROM stg.Customer
 )
@@ -139,6 +141,7 @@ WHERE rn > ____;`,
     },
     explanation: 'You can DELETE directly through a CTE in T-SQL: number the rows per `OrderId` (newest first), then delete every row with `rn > 1`, leaving exactly the latest per key. This is the in-place cleanup of a staging table before it feeds the target load.',
     hints: ['ROW_NUMBER() PARTITION BY OrderId ORDER BY UpdatedAt DESC', 'DELETE FROM the CTE WHERE rn > 1'],
+    requires: [/WITH/i, /ROW_NUMBER/i],
     tags: ['tsql', 'dedup', 'row-number', 'delete'],
   },
 ];

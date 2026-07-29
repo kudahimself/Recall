@@ -112,7 +112,9 @@ export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Recor
   'Lakehouse Platform': {
     weight: '24%',
     topics: {
-      'Compute & Cluster Administration': ['databricks_compute_admin', 'databricks_platform', 'databricks_basics'],
+      'Databricks Fundamentals': ['databricks_basics'],
+      'Compute & Cluster Administration': ['databricks_compute_admin'],
+      'Databricks Platform Essentials': ['databricks_platform'],
       'Storage Architecture, DBFS & Git Repos': ['databricks_storage_repos'],
       'Unity Catalog Foundations & Volumes (3-tier namespaces, volumes, managed/external tables)': ['unity_catalog_basics'],
       'Notebook Mechanics, Secrets & Security': ['databricks_notebooks_security', 'databricks_utilities'],
@@ -126,16 +128,18 @@ export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Recor
     weight: '29%',
     topics: {
       'DataFrame Basics (select, filter, withColumn)': ['pyspark_basics', 'pyspark_dataframes'],
-      'Transformations (map, flatMap, groupBy)': ['pyspark_transformations', 'pyspark_actions'],
+      'Transformations & Actions (groupBy, orderBy, dropDuplicates, repartition, collect)': ['pyspark_transformations', 'pyspark_actions'],
       'String Functions (upper, lower, concat, trim, regexp)': ['string_functions'],
       'Date & Time Functions (date_format, datediff, to_date)': ['datetime_functions'],
       'Collection Functions (arrays, maps, explode)': ['collection_functions'],
       'Math & Aggregate Functions (sum, avg, round)': ['math_functions'],
       'Null Handling (coalesce, isNull, fillna)': ['null_handling'],
       'SQL Joins (inner, left, right, cross, self)': ['sql_joins'],
-      'SQL Aggregations & GROUP BY': ['sql_aggregations', 'sql_subqueries'],
+      'SQL Aggregations & GROUP BY': ['sql_aggregations'],
+      'Subqueries & CTEs (correlated, EXISTS, WITH)': ['sql_subqueries'],
       'Window Functions (row_number, rank, lag, lead)': ['window_functions', 'sql_window_functions'],
-      'Spark SQL & Set Operations': ['spark_sql', 'sql_set_operations'],
+      'Set Operations (UNION, INTERSECT, EXCEPT)': ['sql_set_operations'],
+      'Spark SQL Constructs (temp views, PIVOT, CASE, CAST)': ['spark_sql'],
     },
   },
   'Incremental Data Processing': {

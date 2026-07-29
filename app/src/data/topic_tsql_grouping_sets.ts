@@ -37,7 +37,8 @@ export const tsql_grouping_sets_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the operator that adds per-Category subtotals and a grand total to the group.',
-    template: `SELECT Category, SubCategory, SUM(Amount) AS Total
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+SELECT Category, SubCategory, SUM(Amount) AS Total
 FROM dbo.FactSale
 GROUP BY ___(Category, SubCategory);`,
     blanks: ['ROLLUP'],
@@ -56,7 +57,8 @@ GROUP BY ROLLUP(Category, SubCategory);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the operator that computes every combination of Category and SubCategory (not just the hierarchical ones).',
-    template: `SELECT Category, SubCategory, SUM(Amount) AS Total
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+SELECT Category, SubCategory, SUM(Amount) AS Total
 FROM dbo.FactSale
 GROUP BY ___(Category, SubCategory);`,
     blanks: ['CUBE'],
@@ -75,7 +77,8 @@ GROUP BY CUBE(Category, SubCategory);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the two-word operator that lets you list exactly the groupings to compute.',
-    template: `SELECT Category, SubCategory, SUM(Amount) AS Total
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+SELECT Category, SubCategory, SUM(Amount) AS Total
 FROM dbo.FactSale
 GROUP BY ___ ___ ((Category, SubCategory), (Category), ());`,
     blanks: ['GROUPING', 'SETS'],
@@ -94,7 +97,8 @@ GROUP BY GROUPING SETS ((Category, SubCategory), (Category), ());`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the function that flags whether SubCategory's NULL is a real value or a ROLLUP subtotal placeholder.",
-    template: `SELECT Category, SubCategory, SUM(Amount) AS Total,
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+SELECT Category, SubCategory, SUM(Amount) AS Total,
        ___(SubCategory) AS IsSubtotal
 FROM dbo.FactSale
 GROUP BY ROLLUP(Category, SubCategory);`,
@@ -135,6 +139,7 @@ ____ ____ ____(Category, ____);`,
     },
     explanation: 'ROLLUP(Category, SubCategory) emits the detail level, a subtotal row per Category (with SubCategory NULL), and a final grand-total row (both NULL) — exactly the shape of a hierarchical sales report.',
     hints: ['One operator does subtotals + grand total'],
+    requires: [/ROLLUP/i],
     tags: ['tsql', 'grouping-sets', 'rollup'],
   },
   {
@@ -165,6 +170,7 @@ ____ ____ ____ ____ ((Category, ____), (____), ());`,
     },
     explanation: 'ROLLUP(Category, SubCategory) would produce this same shape here, but GROUPING SETS lets you specify precisely which groupings to compute - useful when the groupings you need are not a strict hierarchy (e.g. you want (Category) subtotals but not (SubCategory) subtotals, which CUBE would also include).',
     hints: ['Explicit grouping-list operator, not ROLLUP or CUBE', 'List each grouping as its own parenthesized tuple, with () for the grand total'],
+    requires: [/GROUPING\s+SETS/i],
     tags: ['tsql', 'grouping-sets'],
   },
 ];

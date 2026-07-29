@@ -357,6 +357,7 @@ CREATE TABLE fact_sales (
     question: `Write a SQL MERGE statement to perform an SCD Type 1 upsert from staging table "stg_customer_updates" into dimension table "dim_customer" matching on natural key "customer_id".
 
 Update name, email, city, and last_updated_at (current_timestamp()) when matched. Insert all columns plus current_timestamp() as last_updated_at when not matched.`,
+    requires: [/MERGE\s+INTO/i],
     starterCode: `-- Perform SCD Type 1 MERGE\n`,
     testCases: [
       {
@@ -425,6 +426,7 @@ WHEN NOT MATCHED THEN INSERT (
 
 dim_customer schema: (customer_sk, customer_id, name, email, city, effective_from, effective_to, is_current).
 stg_customer_updates schema: (customer_id, name, email, city).`,
+    requires: [/MERGE\s+INTO/i],
     starterCode: `-- Step 1: MERGE to close current rows\n-- Step 2: INSERT new versions\n`,
     testCases: [
       {
@@ -641,6 +643,7 @@ WHERE dim.customer_id IS ____
     question: `Convert a non-idempotent INSERT into an idempotent MERGE statement on target Delta table "fct_orders" using staging table "stg_orders" matched on "order_id".
 
 Insert new records with current_timestamp() as inserted_at when not matched. Do nothing on match (orders are immutable once inserted).`,
+    requires: [/MERGE\s+INTO/i],
     starterCode: `-- Convert INSERT to MERGE\n`,
     testCases: [
       {

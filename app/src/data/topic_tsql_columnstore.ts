@@ -72,7 +72,8 @@ export const tsql_columnstore_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords to turn a fact table into a clustered columnstore.',
-    template: `CREATE ___ ___ INDEX CCI_FactSales
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+CREATE ___ ___ INDEX CCI_FactSales
 ON dbo.FactSales;`,
     blanks: ['CLUSTERED', 'COLUMNSTORE'],
     solution: `CREATE CLUSTERED COLUMNSTORE INDEX CCI_FactSales
@@ -107,6 +108,7 @@ ____ dbo.FactOrders;`,
     },
     explanation: 'A clustered columnstore makes column-oriented storage the table\'s primary structure, giving the heavy compression and column-scan efficiency that analytical aggregations over a big fact need. No key columns are specified — the index reorganises all columns into compressed rowgroups/segments.',
     hints: ['CREATE CLUSTERED COLUMNSTORE INDEX name ON table', 'No column list'],
+    requires: [/CREATE\s+CLUSTERED\s+COLUMNSTORE\s+INDEX/i],
     tags: ['tsql', 'columnstore', 'clustered-columnstore'],
   },
   {

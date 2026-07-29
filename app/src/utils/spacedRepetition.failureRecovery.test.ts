@@ -295,11 +295,10 @@ describe('selectNextQuestion — recent-failure pivot', () => {
   });
 });
 
-describe('selectNextQuestion — cooldown exemption', () => {
-  test('the just-failed question is eligible for the next review pick', () => {
-    // Seed with several seen questions so the standard cooldown excludes the
-    // last 3. Without the exemption, the just-failed question would be in
-    // that set and could never come back.
+describe('selectNextQuestion — cooldown spacing after a failure', () => {
+  test('the just-failed question is NOT re-served on the adjacent pick', () => {
+    // Spacing beats massing: after a miss, the next pick should surface a
+    // DIFFERENT card (so Next never feels stuck), not the card just failed.
     const seen = Array.from({ length: 6 }, (_, i) =>
       makeQ(`q${i}`, Topic.PY_BASICS, Difficulty.BEGINNER),
     );
@@ -310,15 +309,49 @@ describe('selectNextQuestion — cooldown exemption', () => {
     }
     recordAttempt(progress, seen[0].id, false, 30_000);
 
-    // Force the review path: simulate that no new picks exist by passing only
-    // seen questions. Run many trials — the just-failed q0 should be returned
-    // on a non-trivial fraction of picks (no exemption → exactly zero).
+    // Force the review path (all questions already seen → no new picks). The
+    // just-failed q0 sits in the REVIEW_COOLDOWN window, so it can never be the
+    // very next pick while other review cards remain.
     let q0Picks = 0;
     for (let i = 0; i < 500; i++) {
       const q = SpacedRepetitionSystem.selectNextQuestion(seen, progress, undefined, backendPolicy);
       if (q?.id === seen[0].id) q0Picks++;
     }
-    expect(q0Picks).toBeGreaterThan(50); // ≥10% of picks — well above zero
+    expect(q0Picks).toBe(0);
+  });
+
+  test('the just-failed question returns once it clears the cooldown window', () => {
+    const seen = Array.from({ length: 6 }, (_, i) =>
+      makeQ(`q${i}`, Topic.PY_BASICS, Difficulty.BEGINNER),
+    );
+    const progress = emptyProgress();
+    for (let i = 1; i <= 5; i++) {
+      recordAttempt(progress, seen[i].id, true, (10 - i) * 60_000);
+    }
+    recordAttempt(progress, seen[0].id, false, 30_000);
+    // Answer three OTHER cards so q0 falls out of the last-REVIEW_COOLDOWN
+    // window. q0's latest attempt is still wrong, so top priority pulls it back.
+    recordAttempt(progress, seen[1].id, true, 25_000);
+    recordAttempt(progress, seen[2].id, true, 20_000);
+    recordAttempt(progress, seen[3].id, true, 15_000);
+
+    let q0Picks = 0;
+    for (let i = 0; i < 500; i++) {
+      const q = SpacedRepetitionSystem.selectNextQuestion(seen, progress, undefined, backendPolicy);
+      if (q?.id === seen[0].id) q0Picks++;
+    }
+    expect(q0Picks).toBeGreaterThan(50); // resurfaces via latest-wrong priority
+  });
+
+  test('a just-failed card IS re-served when it is the only review option', () => {
+    // Fallback: if cooldown would empty the pool, the failed card comes back
+    // immediately rather than leaving nothing to serve.
+    const seen = [makeQ('solo', Topic.PY_BASICS, Difficulty.BEGINNER)];
+    const progress = emptyProgress();
+    recordAttempt(progress, seen[0].id, false, 30_000);
+
+    const q = SpacedRepetitionSystem.selectNextQuestion(seen, progress, undefined, backendPolicy);
+    expect(q?.id).toBe('solo');
   });
 });
 

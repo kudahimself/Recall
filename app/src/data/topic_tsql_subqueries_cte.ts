@@ -38,7 +38,8 @@ export const tsql_subqueries_cte_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords that define a common table expression (CTE).',
-    template: `___ HighValue ___ (
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+___ HighValue ___ (
     SELECT CustomerKey, SUM(Amount) AS Total
     FROM dbo.FactOrders
     GROUP BY CustomerKey
@@ -81,7 +82,9 @@ ORDER BY n;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the operator for a correlated existence test: customers having at least one order.',
-    template: `SELECT c.FullName
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT c.FullName
 FROM dbo.DimCustomer c
 WHERE ___ (
     SELECT 1 FROM dbo.FactOrders o
@@ -122,6 +125,7 @@ WHERE EXISTS (
     topic: Topic.TSQL_SUBQUERIES_CTE,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/WITH/i, /SUM/i],
     question: 'Using a CTE named `CustomerTotals` that sums `Amount` per `CustomerKey` from `dbo.FactOrders`, return the CustomerKey and Total for customers whose total is at least 500.',
     starterCode: `-- WITH CustomerTotals AS ( ... ) SELECT ... WHERE Total >= 500;
 `,
@@ -163,7 +167,8 @@ WHERE Total ____ ____;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the operator joining anchor and recursive members, and the join that walks each employee back to their manager.',
-    template: `WITH EmpChain AS (
+    template: `-- dbo.Employee(EmployeeId, ManagerId, FullName)
+WITH EmpChain AS (
     SELECT EmployeeId, ManagerId, 0 AS Lvl
     FROM dbo.Employee
     WHERE ManagerId IS NULL
@@ -195,6 +200,7 @@ SELECT * FROM EmpChain;`,
     topic: Topic.TSQL_SUBQUERIES_CTE,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/SELECT/i, /COUNT/i],
     question: 'From `dbo.DimCustomer c` (FullName, CustomerKey), return each FullName and their number of orders — using a correlated scalar subquery against `dbo.FactOrders` (matched on CustomerKey) aliased `OrderCount`.',
     starterCode: `-- Return FullName and OrderCount for each customer using a correlated scalar subquery
 `,

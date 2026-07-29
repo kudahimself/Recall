@@ -68,11 +68,13 @@ FROM (VALUES (10), (20), (30)) AS v(amt);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the aggregate function and the clause that groups rows by category.',
-    template: `SELECT Category, ___(*) AS NumProducts
+    template: `-- dbo.DimProduct(ProductKey, ProductName, Category, Price)
+SELECT Category, ___(*) AS NumProducts
 FROM dbo.DimProduct
 ___ ___ Category;`,
     blanks: ['COUNT', 'GROUP', 'BY'],
-    solution: `SELECT Category, COUNT(*) AS NumProducts
+    solution: `-- dbo.DimProduct(ProductKey, ProductName, Category, Price)
+SELECT Category, COUNT(*) AS NumProducts
 FROM dbo.DimProduct
 GROUP BY Category;`,
     explanation: '`COUNT(*)` counts rows per group; `GROUP BY Category` defines the groups. Because `Category` is selected un-aggregated, it must appear in `GROUP BY`.',
@@ -87,7 +89,8 @@ GROUP BY Category;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the clause that filters groups by their aggregated total.',
-    template: `SELECT CustomerKey, SUM(Amount) AS Total
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT CustomerKey, SUM(Amount) AS Total
 FROM dbo.FactOrders
 GROUP BY CustomerKey
 ___ SUM(Amount) > 1000;`,
@@ -122,6 +125,7 @@ FROM (VALUES ('x'), ('y'), ('x'), ('z'), ('y')) AS v(c);`,
     topic: Topic.TSQL_AGGREGATION,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/GROUP\s+BY/i, /HAVING/i],
     question: 'From `dbo.FactOrders` (CustomerKey, Amount), return each CustomerKey and their total Amount (aliased `Total`), keeping only customers whose total exceeds 1000, ordered by Total descending.',
     starterCode: `-- dbo.FactOrders(CustomerKey, Amount)
 -- Return CustomerKey and total Amount (aliased Total) for customers with total > 1000, ordered by Total DESC

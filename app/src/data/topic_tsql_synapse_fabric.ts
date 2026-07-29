@@ -89,7 +89,8 @@ export const tsql_synapse_fabric_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the Synapse table options: hash-distribute the fact on CustomerKey and store it as a clustered columnstore.',
-    template: `CREATE TABLE dbo.FactSales (
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+CREATE TABLE dbo.FactSales (
     CustomerKey INT NOT NULL,
     Amount      DECIMAL(12, 2) NOT NULL
 )
@@ -150,6 +151,7 @@ SELECT CustomerKey, ____(Amount) AS TotalAmount
 FROM dbo.FactSales
 GROUP BY ____;`,
     },
+    requires: [/DISTRIBUTION/i],
     tags: ['tsql', 'synapse', 'ctas', 'distribution', 'columnstore'],
   },
 ];

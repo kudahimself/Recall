@@ -87,9 +87,52 @@ The ramp: `Worked Example → Faded (Predict/Cloze/Parsons) → Cold (Coding)`. 
 3. Prompt specifies variable names, function/class signatures, expected output shape.
 4. Use `# OR` (Python) / `-- OR` (SQL) in `solution` for genuine alternate implementations.
 5. Run `node scripts/check-leaks.js` before calling it done (its Lane A catches comment-only starters that uncomment to the solution; Lane B catches heavy code scaffolding).
+6. **Every CODING question carries `requires`.** Not optional - see the section below.
 
 ❌ `prompt: 'Use asyncio.gather.'` + starter comment `# Use asyncio.gather here` - names the answer twice
 ✔ Prose prompt describing behavior/constraints only; starter is a bare signature; solution captures both `asyncio.gather` and `TaskGroup` forms via `# OR`
+
+### 4a. Required keywords (`requires`) - mandatory on CODING questions
+
+`requires` is a field on the question object, not an argument you pass anywhere.
+`CodingQuestion.tsx` forwards it to the validator; `requiredKeywords: string[]` is a legacy alias, prefer `requires`.
+
+```ts
+requires: ['unionByName'],                     // string: literal substring
+requires: [/dropDuplicates|drop_duplicates/],  // RegExp: alternation or case-insensitivity
+```
+
+**Why it is mandatory.** Token-set matching scores a valid-but-off-target idiom somewhere in the 20-40% band, which surfaces to the learner as "your code is wildly wrong" when they actually wrote working code that dodged the skill being taught.
+`requires` runs first and fails with `Your answer is missing the required keyword or pattern: X`, which tells them what the question is actually about.
+A question teaching `unionByName` that silently accepts a positional `union` has taught nothing.
+
+**How matching works - read this before choosing tokens.**
+The check is a raw `userCode.includes(kw)` (or `kw.test(userCode)`) against the **unnormalized** submission.
+No equivalence expansion, no comment stripping, no whitespace collapse, no case folding.
+Three consequences:
+
+- **Case-insensitive for strings, as written for RegExps.** String entries are compared lowercase-to-lowercase, matching the rest of the validator (`normalizeCode` lowercases everything). A RegExp is used exactly as written, so add `/i` yourself - every SQL entry in the repo does.
+- **A `requires` entry cannot enforce camelCase.** `'unionByName'` accepts `unionbyname`. To teach the casing of a PySpark identifier, add a rule to `PYSPARK_MISTAKES` in `codeValidator.ts` (where `groupby(` and `order_by(` already live) - it is case-sensitive by design and gives a better message.
+- **Whitespace-literal.** `'GROUP  BY'` (two spaces) never matches. Use `\s+` in a RegExp when a token spans words.
+- **Comments count.** A keyword mentioned in a comment satisfies the gate. `requires` is a floor that blocks wrong idioms - it is not proof of correctness, and it never replaces the token-similarity pass that runs after it.
+
+**The satisfiability rule - the one that actually bites.**
+Every `# OR` / `-- OR` branch in `solution` must contain every required token.
+A string token that appears in only one branch makes the other branches unreachable: the learner writes an answer you explicitly listed as correct and gets hard-failed.
+
+Real example still in the repo - `topic_tsql_pivot.ts:141` sets `requires: ['PIVOT']`, but the prompt asks for **conditional aggregation** and the primary solution is `SUM(CASE WHEN …)` with no `PIVOT` token in it.
+The intended answer cannot pass. Use `/PIVOT|CASE\s+WHEN/i` when two idioms are both accepted.
+
+**Choosing tokens.** List only the idiom the question exists to teach, and nothing incidental.
+
+| Question teaches | Good | Bad |
+| :--- | :--- | :--- |
+| Name-matched union | `['unionByName']` | `['union']` - a positional `union` passes |
+| Subset dedup | `[/dropDuplicates\|drop_duplicates/]` | `['dropDuplicates']` - rejects the snake_case alias |
+| Per-partition sort | `['sortWithinPartitions']` | `['sort']` - a global `orderBy`/`sort` passes |
+| Array map | `['transform']` | `['transform', 'lambda']` - blocks the valid `expr("transform(x, y -> …)")` branch |
+
+Verify before shipping: for each `# OR` branch, confirm every `requires` entry matches that branch's text.
 
 ## 5. Multiple Choice (`MULTIPLE_CHOICE`)
 
@@ -133,6 +176,7 @@ Cite the question ID and the specific rule violated - not a vague "could be bett
 | Faded on-ramp | Every cold-CODING primitive first appears as PREDICT/PARSONS/CLOZE in the same topic |
 | Formatting safety | PREDICT_OUTPUT never prints engine-dependent/dynamic values |
 | Alternate formats | `acceptableOutputs` for predicts; `# OR`/`-- OR` for coding |
+| Required keywords | Every CODING question has `requires`, and every `# OR` branch satisfies every entry (see 4a) |
 | Leak-clean | No keyword/commented-solution leaks - run the leak scripts |
 | Syntax guard | No reserved-word identifiers (`date`, `name`, `status`, `type`) |
 | Output instruction | If asserting printed output, prompt says "print the result" |

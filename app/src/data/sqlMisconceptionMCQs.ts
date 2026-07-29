@@ -19,7 +19,7 @@ export const sqlMisconceptionMCQs: Question[] = [
     id: 'sql-misc-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
-    topic: Topic.SPARK_SQL,
+    topic: Topic.NULL_HANDLING,
     course: Course.DATABRICKS,
     question: 'A `users` table has a nullable `manager_id` column. Which query returns the rows where `manager_id` is NULL?',
     options: [

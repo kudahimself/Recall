@@ -72,7 +72,10 @@ export const tsql_facts_dims_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the column roles: the fact references the customer and product dimensions, and stores a measure.',
-    template: `CREATE TABLE dbo.FactSales (
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+CREATE TABLE dbo.FactSales (
     SalesKey    BIGINT IDENTITY PRIMARY KEY,
     CustomerKey INT NOT NULL ___ dbo.DimCustomer (CustomerKey),
     ProductKey  INT NOT NULL REFERENCES dbo.DimProduct (ProductKey),
@@ -146,6 +149,7 @@ export const tsql_facts_dims_questions: Question[] = [
     },
     explanation: 'The grain (one product per order) drives the design: a surrogate `IDENTITY` PK, foreign keys to the customer and product dimensions, the `OrderNumber` as a degenerate dimension (an ID with no attributes of its own, so it stays in the fact), and the additive measures `Quantity` and `LineAmount`. Every column is consistent with the stated grain.',
     hints: ['IDENTITY surrogate PK, two REFERENCES FKs', 'OrderNumber stays inline (degenerate); measures are Quantity + LineAmount'],
+    requires: [/CREATE\s+TABLE/i],
     tags: ['tsql', 'facts-dims', 'grain', 'degenerate-dimension'],
   },
 ];

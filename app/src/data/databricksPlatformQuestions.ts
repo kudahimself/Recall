@@ -162,7 +162,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Databricks Runtime ML provides a ready-to-use cluster environment pre-installed with popular machine learning libraries (PyTorch, TensorFlow, MLflow, scikit-learn, XGBoost) and hardware acceleration drivers (CUDA/GPU).',
     hints: ['Focus on pre-bundled ML packages and GPU drivers.'],
     tags: ['clusters', 'databricks-runtime', 'ml'],
-    concepts: ['dbx-runtime-ml'],
+    concepts: ['dbx-runtime-selection'],
   },
 
   {
@@ -198,7 +198,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'LTS releases are supported for 3 years, offering a stable environment with critical security updates and bug fixes without breaking changes, making them ideal for mission-critical production pipelines.',
     hints: ['Think about support lifecycle duration and enterprise stability.'],
     tags: ['clusters', 'databricks-runtime', 'lts'],
-    concepts: ['dbx-runtime-lts'],
+    concepts: ['dbx-runtime-selection'],
   },
 
   {
@@ -216,7 +216,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Single Node clusters run driver-only without worker nodes (with Spark running in local mode). They minimize cloud compute costs for non-distributed jobs, pandas/scikit-learn analysis, or lightweight data processing.',
     hints: ['Consider workloads that do not require distributed processing across workers.'],
     tags: ['clusters', 'single-node', 'compute'],
-    concepts: ['dbx-single-node-compute'],
+    concepts: ['dbx-architecture'],
   },
 
   {
@@ -234,7 +234,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Databricks recommends storing init scripts in Workspace Files or Unity Catalog Volumes (/Volumes/...), where access can be controlled using workspace permissions or Unity Catalog SQL GRANTs, avoiding legacy DBFS root credential exposures.',
     hints: ['Look for secure storage mechanisms backed by Unity Catalog or workspace permissions.'],
     tags: ['clusters', 'init-scripts', 'security'],
-    concepts: ['dbx-init-scripts-security'],
+    concepts: ['dbx-init-scripts'],
   },
 
   {
@@ -252,7 +252,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Databricks Container Services (DCS) allows administrators to build and deploy custom Docker images containing specialized OS packages, CUDA drivers, or custom C++ libraries directly onto cluster driver and worker nodes.',
     hints: ['Think about containerized base image customization for clusters.'],
     tags: ['clusters', 'docker', 'dcs'],
-    concepts: ['dbx-container-services'],
+    concepts: ['dbx-runtime-selection'],
   },
 
   {
@@ -270,7 +270,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Shared access mode provides Python and SQL user isolation under Unity Catalog. Because JVM-level execution allows arbitrary memory/class access, Scala notebooks are restricted to Single User compute for security isolation.',
     hints: ['Consider language isolation boundaries on multi-tenant Unity Catalog compute.'],
     tags: ['clusters', 'access-modes', 'scala'],
-    concepts: ['dbx-access-modes-limitations'],
+    concepts: ['dbx-access-modes'],
   },
 
   {
@@ -288,7 +288,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: '%pip commands install notebook-scoped Python libraries. They isolate dependencies to the current notebook session without modifying global cluster libraries or breaking other users sharing the compute.',
     hints: ['Focus on dependency isolation across interactive notebook sessions.'],
     tags: ['clusters', 'pip', 'libraries'],
-    concepts: ['dbx-notebook-scoped-libraries'],
+    concepts: ['dbx-runtime-selection'],
   },
 
   {
@@ -306,7 +306,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Serverless SQL Warehouses run compute in Databricks-managed cloud accounts, providing instant startup (seconds vs minutes) and automatic resource management without cluster warm-up delays.',
     hints: ['Think about instant start times and serverless compute elasticity.'],
     tags: ['sql-warehouses', 'serverless', 'compute'],
-    concepts: ['dbx-sql-warehouses-serverless'],
+    concepts: ['dbx-sql-warehouses'],
   },
 
   {
@@ -324,7 +324,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Multi-cluster auto-scaling provisions additional clusters to handle concurrent query queues (scale-out), maintaining fast response times without requiring larger instance sizing (scale-up).',
     hints: ['Distinguish between scaling out for concurrency vs scaling up for query speed.'],
     tags: ['sql-warehouses', 'auto-scaling', 'concurrency'],
-    concepts: ['dbx-sql-warehouses-scaling'],
+    concepts: ['dbx-sql-warehouses'],
   },
 
   {
@@ -342,7 +342,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Cluster policy definitions use "type": "fixed" for locked property values and "type": "max" (or "max_value") to cap numeric attributes like autoscale worker counts.',
     hints: ['Look for valid Databricks Cluster Policy JSON rule types.'],
     tags: ['cluster-policies', 'json', 'governance'],
-    concepts: ['dbx-cluster-policy-schema'],
+    concepts: ['dbx-cluster-policies'],
   },
 
   {
@@ -360,7 +360,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Databricks auto-scaling considers local disk storage containing Spark shuffle files. De-provisioning a node holding shuffle data would force costly re-computation, so scale-down delays until shuffle files are cleared or unneeded.',
     hints: ['Think about Spark task shuffle data stored on local worker disks.'],
     tags: ['clusters', 'auto-scaling', 'shuffle'],
-    concepts: ['dbx-autoscale-shuffle-retention'],
+    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -378,7 +378,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Global init scripts are managed by Workspace Administrators in Admin Settings. They run on every cluster (all-purpose and job clusters) created in the workspace, ensuring uniform workspace configuration.',
     hints: ['Identify the highest workspace administrative tier and global scope.'],
     tags: ['init-scripts', 'global', 'admin'],
-    concepts: ['dbx-global-init-scripts'],
+    concepts: ['dbx-init-scripts'],
   },
 
   {
@@ -396,7 +396,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Photon seamlessly falls back to standard JVM Spark execution for unsupported features (such as Python UDFs, RDD operations, or custom Scala code), while keeping native C++ vectorized execution for supported operators.',
     hints: ['Think about graceful fallback to standard Spark JVM execution.'],
     tags: ['photon', 'udf', 'jvm-fallback'],
-    concepts: ['dbx-photon-fallback'],
+    concepts: ['dbx-runtime-selection'],
   },
 
   {
@@ -414,7 +414,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Spark configuration properties and environment variables are set in the Cluster UI under Advanced Options -> Spark Config and Environment Variables fields, or defined in cluster policies.',
     hints: ['Look for the Advanced Options section in cluster configuration UI.'],
     tags: ['clusters', 'spark-config', 'env-vars'],
-    concepts: ['dbx-cluster-advanced-config'],
+    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -432,7 +432,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'When an instance eviction notice is received, Databricks gracefully decommissions the worker node: stopping new task assignments on that node, migrating cached/shuffle data to healthy nodes, and requesting new worker capacity.',
     hints: ['Focus on graceful worker node decommissioning and data migration.'],
     tags: ['clusters', 'spot-eviction', 'resilience'],
-    concepts: ['dbx-spot-decommissioning'],
+    concepts: ['dbx-spot-on-demand'],
   },
 
   {
@@ -450,7 +450,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Instance Pools maintain warm, pre-allocated cloud instances. When a cluster starts or scales up, it acquires instances from the pool instantly without waiting for cloud VM provisioning times.',
     hints: ['Think about warm pre-allocated VM instances.'],
     tags: ['clusters', 'instance-pools', 'performance'],
-    concepts: ['dbx-instance-pools'],
+    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -468,7 +468,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'When Cluster Log Delivery is enabled, init script execution logs (stdout/stderr) are delivered to the specified storage destination (e.g. DBFS or cloud storage bucket) under the init script log folder.',
     hints: ['Look for Cluster Log Delivery configuration under Advanced Options.'],
     tags: ['init-scripts', 'logging', 'troubleshooting'],
-    concepts: ['dbx-cluster-log-delivery'],
+    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -486,7 +486,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Databricks allows choosing different cloud VM instance types for the Driver and Workers. If driver tasks need high RAM (for broadcast joins/collects) while workers need high CPU, configuring a memory-optimized driver with compute-optimized workers optimizes performance and cost.',
     hints: ['Match instance hardware types to specific driver vs worker duties.'],
     tags: ['clusters', 'node-sizing', 'optimization'],
-    concepts: ['dbx-driver-worker-heterogeneous-sizing'],
+    concepts: ['dbx-driver-worker-sizing'],
   },
 
   {
@@ -504,7 +504,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'No Isolation Shared mode lacks isolation boundaries between user processes running on the same cluster nodes, risking credential exposure and bypassing Unity Catalog SQL security controls in multi-tenant environments.',
     hints: ['Consider user process isolation security boundaries.'],
     tags: ['clusters', 'access-modes', 'security'],
-    concepts: ['dbx-access-modes-security'],
+    concepts: ['dbx-access-modes'],
   },
 
   {
@@ -522,7 +522,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Custom cluster tags are key-value pairs assigned during cluster creation that propagate to cloud provider VM billing metrics and Databricks DBU usage reports for precise cost allocation.',
     hints: ['Look for key-value tagging mechanisms propagated to cloud billing.'],
     tags: ['clusters', 'custom-tags', 'cost-management'],
-    concepts: ['dbx-cluster-tags'],
+    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -540,7 +540,7 @@ export const DATABRICKS_PLATFORM_EXPANSION_QUESTIONS: Question[] = [
     explanation: 'Auto-termination monitors active commands (notebook cell runs, scheduled job tasks, REST API requests, JDBC/ODBC queries). Internal system heartbeats or background status checks do not reset the timer.',
     hints: ['Identify user or job command execution actions.'],
     tags: ['clusters', 'auto-termination', 'inactivity'],
-    concepts: ['dbx-auto-termination-reset'],
+    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -558,7 +558,7 @@ print(is_valid)`,
     explanation: 'The requested 16 worker nodes exceed the policy max_value limit of 8, causing cluster policy validation to evaluate to False.',
     hints: ['Compare requested_workers with policy limit value.'],
     tags: ['cluster-policies', 'validation', 'python'],
-    concepts: ['dbx-cluster-policy-validation'],
+    concepts: ['dbx-cluster-policies'],
   },
 
   {
@@ -576,7 +576,7 @@ print(f"{user_email}:{cluster_id}")`,
     explanation: 'The notebook execution context dictionary exposes metadata attributes including the workspace user email and cluster ID.',
     hints: ['Format the user email and cluster ID separated by a colon.'],
     tags: ['dbutils', 'context', 'tags'],
-    concepts: ['dbx-execution-context-extraction'],
+    concepts: ['dbx-utilities'],
   },
 
   {
@@ -603,7 +603,7 @@ print(f"{user_email}:{cluster_id}")`,
     explanation: 'Cluster policy JSON schema uses rule type "fixed" for locked runtime versions and "max" for upper numeric bounds on worker counts.',
     hints: ['Use "fixed" for exact values and "max" for upper limits.'],
     tags: ['cluster-policies', 'json', 'parsons'],
-    concepts: ['dbx-cluster-policy-json-construction'],
+    concepts: ['dbx-cluster-policies'],
   },
 
   {
@@ -612,23 +612,23 @@ print(f"{user_email}:{cluster_id}")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_COMPUTE_ADMIN,
     language: CodeLanguage.PYTHON,
-    question: 'Rearrange the lines to construct a Python script that creates a cluster init shell script in a Unity Catalog Volume using dbutils.fs.put.',
+    question: 'Rearrange the lines to construct a Python script that creates a cluster init shell script in a Unity Catalog Volume using dbutils.fs.put. Assign the volume path first, then the script content, then write the file.',
     correctOrder: [
-      `script_content = "#!/bin/bash\\napt-get update && apt-get install -y curl\\n"`,
       `volume_path = "/Volumes/main/default/scripts/env_setup.sh"`,
+      `script_content = "#!/bin/bash\\napt-get update && apt-get install -y curl\\n"`,
       `dbutils.fs.put(volume_path, script_content, overwrite=True)`,
     ],
     distractorLines: [
       `dbutils.fs.put(volume_path, script_content, force=True)`,
-      `script_content = "CREATE INIT SCRIPT /Volumes/main/default/scripts/env_setup.sh"`,
+      `dbutils.fs.write(volume_path, script_content, overwrite=True)`,
     ],
-    solution: `script_content = "#!/bin/bash\\napt-get update && apt-get install -y curl\\n"
-volume_path = "/Volumes/main/default/scripts/env_setup.sh"
+    solution: `volume_path = "/Volumes/main/default/scripts/env_setup.sh"
+script_content = "#!/bin/bash\\napt-get update && apt-get install -y curl\\n"
 dbutils.fs.put(volume_path, script_content, overwrite=True)`,
     explanation: 'dbutils.fs.put writes file contents to path destinations in Unity Catalog Volumes or DBFS. The overwrite=True parameter enables replacing existing files.',
     hints: ['Use dbutils.fs.put with overwrite=True.'],
     tags: ['init-scripts', 'dbutils', 'volumes'],
-    concepts: ['dbx-init-script-volume-creation'],
+    concepts: ['dbx-init-scripts'],
   },
 
   {
@@ -644,7 +644,7 @@ dbutils.fs.put(volume_path, script_content, overwrite=True)`,
     explanation: 'dbutils.fs.put(file, contents, overwrite) creates or updates file content at a specified filesystem destination.',
     hints: ['Use put and True.'],
     tags: ['dbutils', 'fs', 'cloze'],
-    concepts: ['dbx-utilities-fs-put'],
+    concepts: ['dbx-utilities'],
   },
 
   {
@@ -660,32 +660,7 @@ dbutils.fs.put(volume_path, script_content, overwrite=True)`,
     explanation: 'The dbutils execution context exposes getContext() and tags() to access runtime properties such as clusterId.',
     hints: ['Fill getContext and tags.'],
     tags: ['dbutils', 'context', 'cluster-id', 'cloze'],
-    concepts: ['dbx-context-tag-retrieval'],
-  },
-
-  {
-    id: 'dbx-compute-admin-37',
-    type: QuestionType.PARSONS,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_COMPUTE_ADMIN,
-    language: CodeLanguage.PYTHON,
-    question: 'Rearrange the lines to construct a Python statement that writes an init shell script to a UC Volume path, overwriting existing files.',
-    correctOrder: [
-      `path = "/Volumes/main/utils/scripts/install_pkg.sh"`,
-      `content = "#!/bin/bash\\npip install requests"`,
-      `dbutils.fs.put(path, content, overwrite=True)`,
-    ],
-    distractorLines: [
-      `dbutils.fs.write(path, content, force=True)`,
-      `dbutils.fs.put(path, content, replace=True)`,
-    ],
-    solution: `path = "/Volumes/main/utils/scripts/install_pkg.sh"
-content = "#!/bin/bash\\npip install requests"
-dbutils.fs.put(path, content, overwrite=True)`,
-    explanation: 'dbutils.fs.put accepts path, content string, and overwrite=True to persist init scripts to Volumes.',
-    hints: ['Use dbutils.fs.put with overwrite=True.'],
-    tags: ['dbutils', 'fs', 'put', 'init-scripts', 'parsons'],
-    concepts: ['dbx-init-script-file-writing'],
+    concepts: ['dbx-utilities'],
   },
 
   {
@@ -701,7 +676,7 @@ dbutils.fs.put(path, content, overwrite=True)`,
     explanation: 'Databricks Cluster Policy JSON rules specify "type": "fixed" for locked runtime values and "type": "max" for maximum worker thresholds.',
     hints: ['Use "fixed" for exact values and "max" for upper bounds.'],
     tags: ['cluster-policies', 'json', 'cloze'],
-    concepts: ['dbx-cluster-policy-dict-builder'],
+    concepts: ['dbx-cluster-policies'],
   },
 
 
@@ -947,7 +922,7 @@ dbutils.fs.head("/mnt/logs/app.log", maxBytes=500)`,
     explanation: 'The abfss:// (Azure Blob File System Secure) URI scheme connects directly to ADLS Gen2 storage accounts over TLS using native driver optimizations.',
     hints: ['Identify the secure Azure Blob File System (ABFS) protocol prefix.'],
     tags: ['azure', 'adls', 'abfss', 'storage'],
-    concepts: ['dbx-azure-adls-abfss'],
+    concepts: ['dbx-adls-access'],
   },
 
   {
@@ -965,7 +940,7 @@ dbutils.fs.head("/mnt/logs/app.log", maxBytes=500)`,
     explanation: 'Unity Catalog Storage Credentials on Azure utilize Azure Access Connectors coupled with Managed Identities, eliminating the need to embed or manage long-lived storage keys in code.',
     hints: ['Look for Azure Access Connector and Managed Identity integration with Unity Catalog.'],
     tags: ['azure', 'unity-catalog', 'managed-identity', 'security'],
-    concepts: ['dbx-azure-managed-identity-uc'],
+    concepts: ['dbx-adls-access'],
   },
 
   {
@@ -983,7 +958,7 @@ dbutils.fs.head("/mnt/logs/app.log", maxBytes=500)`,
     explanation: 'Azure Databricks automatically provisions an Azure Blob Storage account inside the managed resource group during workspace creation to serve as the DBFS root container.',
     hints: ['Identify the Azure Storage Account created in the managed resource group.'],
     tags: ['azure', 'dbfs', 'storage-root'],
-    concepts: ['dbx-azure-dbfs-root'],
+    concepts: ['dbx-dbfs'],
   },
 
   {
@@ -1001,7 +976,7 @@ dbutils.fs.head("/mnt/logs/app.log", maxBytes=500)`,
     explanation: 'The local POSIX FUSE mount (/dbfs/...) forces single-threaded file reads on the driver node, bottlenecking performance. Using native Spark DataFrames (dbfs:/ or abfss://) distributes parallel reads across all worker executors.',
     hints: ['Consider single-threaded driver bottleneck vs distributed executor parallel reading.'],
     tags: ['fuse', 'dbfs', 'performance'],
-    concepts: ['dbx-fuse-vs-spark-read'],
+    concepts: ['dbx-dbfs-mounts-vs-volumes'],
   },
 
   {
@@ -1019,7 +994,7 @@ dbutils.fs.head("/mnt/logs/app.log", maxBytes=500)`,
     explanation: 'Databricks Git Folders (Repos) integrate with Azure DevOps using Personal Access Tokens (PAT) or Azure Active Directory (Azure AD) tokens configured in User Settings under Git Integrations.',
     hints: ['Look for Azure DevOps PAT or Azure AD authentication tokens.'],
     tags: ['azure-devops', 'git', 'repos', 'auth'],
-    concepts: ['dbx-azure-devops-repos-auth'],
+    concepts: ['dbx-repos'],
   },
 
   {
@@ -1036,7 +1011,7 @@ print(protocol)`,
     explanation: 'The abfss protocol prefix denotes Azure Data Lake Storage Gen2 secure URI endpoints.',
     hints: ['Extract the string before "://".'],
     tags: ['azure', 'adls', 'abfss', 'python'],
-    concepts: ['dbx-azure-uri-parsing'],
+    concepts: ['dbx-dbfs'],
   },
 
   {
@@ -1063,7 +1038,7 @@ import config_loader`,
     explanation: 'Appending relative module directories to Python sys.path allows importing modular Python files in Databricks Git Folders without %run.',
     hints: ['Import sys/os, append path, then import module.'],
     tags: ['repos', 'sys-path', 'python', 'parsons'],
-    concepts: ['dbx-repo-python-path'],
+    concepts: ['dbx-git-repos-modules'],
   },
 
   {
@@ -1079,7 +1054,7 @@ import config_loader`,
     explanation: 'The abfss protocol URI scheme connects Spark to ADLS Gen2 storage endpoints in Azure.',
     hints: ['Use abfss.'],
     tags: ['azure', 'abfss', 'cloze', 'pyspark'],
-    concepts: ['dbx-pyspark-abfss-read'],
+    concepts: ['dbx-adls-access'],
   },
 
   {
@@ -1107,48 +1082,64 @@ df = spark.read.parquet("abfss://analytics@mystorage.dfs.core.windows.net/events
       skeleton: 'df = ____.____.format(____).load(____)',
     },
     tags: ['pyspark', 'adls', 'abfss', 'parquet'],
-    concepts: ['dbx-adls-parquet-loading'],
+    concepts: ['dbx-adls-access'],
+  },
+
+
+
+  {
+    id: 'dbx-storage-repos-21',
+    type: QuestionType.PARSONS,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATABRICKS_STORAGE_REPOS,
+    language: CodeLanguage.PYTHON,
+    question: 'Rearrange the lines to construct a Python statement that mounts an Azure ADLS Gen2 storage container "data" in storage account "mystorage" to "/mnt/data" using Service Principal OAuth credentials in extra_configs.',
+    correctOrder: [
+      `configs = {"fs.azure.account.auth.type.mystorage.dfs.core.windows.net": "OAuth", "fs.azure.account.oauth.provider.type.mystorage.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"}`,
+      `dbutils.fs.mount(source="abfss://data@mystorage.dfs.core.windows.net/", mount_point="/mnt/data", extra_configs=configs)`,
+    ],
+    distractorLines: [
+      `dbutils.fs.mount(source="s3a://data@mystorage/", mount_point="/mnt/data", extra_configs=configs)`,
+      `dbutils.fs.mount(path="/mnt/data", source="abfss://data@mystorage.dfs.core.windows.net/")`,
+    ],
+    solution: `configs = {"fs.azure.account.auth.type.mystorage.dfs.core.windows.net": "OAuth", "fs.azure.account.oauth.provider.type.mystorage.dfs.core.windows.net": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"}
+dbutils.fs.mount(source="abfss://data@mystorage.dfs.core.windows.net/", mount_point="/mnt/data", extra_configs=configs)`,
+    explanation: 'dbutils.fs.mount() mounts cloud storage (such as ADLS Gen2 via abfss://) to DBFS by passing source, mount_point, and extra_configs dictionary with authentication settings.',
+    hints: ['Specify source with abfss:// protocol, mount_point, and pass extra_configs dictionary.'],
+    tags: ['dbutils', 'fs', 'mount', 'azure', 'parsons'],
+    concepts: ['dbx-adls-access'],
   },
 
   {
-    id: 'dbx-storage-repos-20',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.ADVANCED,
+    id: 'dbx-storage-repos-22',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_STORAGE_REPOS,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python function configure_adls_credentials(spark_session, storage_account, client_id, secret, tenant_id) that sets Azure Service Principal OAuth 2.0 Spark configurations on spark_session for accessing f"{storage_account}.dfs.core.windows.net". Set OAuth auth type, ClientCredsTokenProvider class, client.id, client.secret, and Microsoft login endpoint.',
-    starterCode: `def configure_adls_credentials(spark_session, storage_account, client_id, secret, tenant_id):\n    pass\n`,
-    testCases: [
-      {
-        input: '',
-        expectedOutput: '',
-        description: 'Should configure ADLS Gen2 Service Principal Spark configs',
-      },
-    ],
-    solution: `def configure_adls_credentials(spark_session, storage_account, client_id, secret, tenant_id):
-    host = f"{storage_account}.dfs.core.windows.net"
-    spark_session.conf.set(f"fs.azure.account.auth.type.{host}", "OAuth")
-    spark_session.conf.set(f"fs.azure.account.oauth.provider.type.{host}", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
-    spark_session.conf.set(f"fs.azure.account.oauth2.client.id.{host}", client_id)
-    spark_session.conf.set(f"fs.azure.account.oauth2.client.secret.{host}", secret)
-    spark_session.conf.set(f"fs.azure.account.oauth2.client.endpoint.{host}", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")
-# OR
-def configure_adls_credentials(spark_session, storage_account, client_id, secret, tenant_id):
-    conf = spark_session.conf
-    h = f"{storage_account}.dfs.core.windows.net"
-    conf.set(f"fs.azure.account.auth.type.{h}", "OAuth")
-    conf.set(f"fs.azure.account.oauth.provider.type.{h}", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")
-    conf.set(f"fs.azure.account.oauth2.client.id.{h}", client_id)
-    conf.set(f"fs.azure.account.oauth2.client.secret.{h}", secret)
-    conf.set(f"fs.azure.account.oauth2.client.endpoint.{h}", f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")`,
-    explanation: 'Azure ADLS Gen2 direct access uses fs.azure.account.auth.type and ClientCredsTokenProvider Spark configuration keys mapped to the storage account FQDN.',
-    hints: ['Set fs.azure.account.auth.type, provider.type, client.id, client.secret, and endpoint.'],
-    tieredHints: {
-      apiSignature: 'RuntimeConfig.set(key: str, value: str) -> None',
-      skeleton: 'def configure_adls_credentials(spark_session, storage_account, client_id, secret, tenant_id):\n    host = f"{storage_account}.dfs.core.windows.net"\n    spark_session.conf.set(f"fs.azure.account.auth.type.{host}", ____)\n    spark_session.conf.set(f"fs.azure.account.oauth.provider.type.{host}", ____)\n    spark_session.conf.set(____, client_id)\n    spark_session.conf.set(____, secret)\n    spark_session.conf.set(____, f"https://login.microsoftonline.com/{tenant_id}/oauth2/token")',
-    },
-    tags: ['azure', 'adls', 'oauth', 'spark-config'],
-    concepts: ['dbx-azure-adls-service-principal-config'],
+    question: 'Complete the dbutils statement to mount an ADLS Gen2 storage container "raw" from storage account "store1" to "/mnt/raw".',
+    template: `dbutils.fs.___(\n  source = "abfss://raw@store1.dfs.core.windows.net/",\n  mount_point = "___",\n  extra_configs = configs\n)`,
+    blanks: ['mount', '/mnt/raw'],
+    solution: `dbutils.fs.mount(\n  source = "abfss://raw@store1.dfs.core.windows.net/",\n  mount_point = "/mnt/raw",\n  extra_configs = configs\n)`,
+    explanation: 'dbutils.fs.mount() takes source URL, mount_point path, and extra_configs dictionary to mount cloud storage.',
+    hints: ['Use mount method and specify /mnt/raw as mount_point.'],
+    tags: ['dbutils', 'mount', 'adls', 'cloze'],
+    concepts: ['dbx-adls-access'],
+  },
+
+  {
+    id: 'dbx-storage-repos-23',
+    type: QuestionType.CLOZE_CODE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATABRICKS_STORAGE_REPOS,
+    language: CodeLanguage.PYTHON,
+    question: 'Complete the Spark configuration key prefix and OAuth token provider class for configuring ADLS Gen2 Service Principal credentials.',
+    template: `spark.conf.set("fs.azure.account.auth.type.account.dfs.core.windows.net", "___")\nspark.conf.set("fs.azure.account.oauth.provider.type.account.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.___")`,
+    blanks: ['OAuth', 'ClientCredsTokenProvider'],
+    solution: `spark.conf.set("fs.azure.account.auth.type.account.dfs.core.windows.net", "OAuth")\nspark.conf.set("fs.azure.account.oauth.provider.type.account.dfs.core.windows.net", "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider")`,
+    explanation: 'ADLS Gen2 Service Principal OAuth configuration requires setting auth.type to "OAuth" and provider.type to "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider".',
+    hints: ['Set auth type to OAuth and token provider to ClientCredsTokenProvider.'],
+    tags: ['spark-config', 'adls', 'oauth', 'cloze'],
+    concepts: ['dbx-adls-access'],
   },
 
 

@@ -89,7 +89,8 @@ export const tsql_indexes_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords to create a nonclustered index that covers a lookup on CustomerKey returning Amount.',
-    template: `CREATE ___ INDEX IX_FactSales_Customer
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+CREATE ___ INDEX IX_FactSales_Customer
 ON dbo.FactSales (CustomerKey)
 ___ (Amount);`,
     blanks: ['NONCLUSTERED', 'INCLUDE'],
@@ -128,6 +129,7 @@ ____ (Amount);`,
     },
     explanation: 'The composite key `(CustomerKey, OrderDate)` supports a seek that filters on CustomerKey (and narrows by OrderDate), and `INCLUDE (Amount)` puts the returned measure at the leaf so the query is fully covered — no lookup back to the base table. Key order matters: CustomerKey leads because it is the primary filter.',
     hints: ['Key on (CustomerKey, OrderDate) — leading column is the main filter', 'INCLUDE (Amount) to cover the SELECT'],
+    requires: [/CREATE\s+(NONCLUSTERED\s+)?INDEX/i, /INCLUDE/i],
     tags: ['tsql', 'indexes', 'composite', 'include', 'covering-index'],
   },
   {

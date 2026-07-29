@@ -58,7 +58,8 @@ END CATCH`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the block keywords that wrap risky work and catch any error.',
-    template: `BEGIN ___
+    template: `-- dbo.Account(AccountId, Balance)
+BEGIN ___
     UPDATE dbo.Account SET Balance = Balance - 100 WHERE AccountId = 1;
 END TRY
 BEGIN ___
@@ -138,6 +139,7 @@ END CATCH`,
     topic: Topic.TSQL_ERROR_HANDLING,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/TRY/i, /CATCH/i],
     question: 'Write a transactional block that, inside a TRY, opens a transaction, INSERTs into `dbo.FactSales (CustomerKey, Amount)` the values `(5, 100)` then `(6, 200)`, and COMMITs. In the CATCH, ROLLBACK the transaction and re-raise the original error with a bare THROW.',
     starterCode: `-- dbo.FactSales(CustomerKey, Amount); wrap two inserts in a transaction; roll back and re-raise on error
 `,

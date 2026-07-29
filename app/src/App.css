@@ -1673,8 +1673,8 @@ code, pre, .mono { font-family: var(--font-mono); }
 
 /* Selection */
 ::selection {
-  background: var(--primary-soft);
-  color: var(--text);
+  background: var(--primary-glow);
+  color: #ffffff;
 }
 
 a {

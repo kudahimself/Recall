@@ -53,7 +53,8 @@ FROM (VALUES ('A', 10), ('B', 5), ('A', 20)) AS v(cat, amt);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the CASE branch keyword that contributes 0 when the category does not match.',
-    template: `SELECT
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+SELECT
     SUM(CASE WHEN Category = 'Books' THEN Amount ___ 0 END) AS Books,
     SUM(CASE WHEN Category = 'Toys'  THEN Amount ELSE 0 END) AS Toys
 FROM dbo.FactSale;`,
@@ -74,7 +75,8 @@ FROM dbo.FactSale;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the native pivot clause and the keyword that names the columns to create.",
-    template: `SELECT Books, Toys
+    template: `-- dbo.FactSale(SaleId, Category, SubCategory, Amount, SaleDate)
+SELECT Books, Toys
 FROM dbo.FactSale
 ___ (SUM(Amount) ___ Category IN ([Books], [Toys])) AS p;`,
     blanks: ['PIVOT', 'FOR'],
@@ -136,6 +138,10 @@ FROM dbo.FactSale;`,
     },
     explanation: 'Conditional aggregation collapses all rows into a single pivoted row: one `SUM(CASE …)` per target category. The native `PIVOT` operator (shown as the alternate) is more compact but requires you to hard-code the category list in `FOR Category IN (…)` either way.',
     hints: ['One SUM(CASE WHEN Category = …) per output column', 'no GROUP BY needed for a single summary row'],
+    // Both accepted branches must satisfy this: the conditional-aggregation
+    // form the prompt asks for has no PIVOT token, the native form has no CASE.
+    // Case-insensitive so lowercase SQL is not rejected.
+    requires: [/PIVOT|CASE\s+WHEN/i],
     tags: ['tsql', 'pivot', 'conditional-aggregation'],
   },
 ];

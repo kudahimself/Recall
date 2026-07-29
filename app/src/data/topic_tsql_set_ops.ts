@@ -56,7 +56,9 @@ ORDER BY n;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the operator that stacks both result sets and keeps duplicate rows.',
-    template: `-- combine both lists, keeping duplicates
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.DimSupplier(SupplierKey, SupplierId, SupplierName, Country)
+-- combine both lists, keeping duplicates
 SELECT Country FROM dbo.DimCustomer
 ___ ___
 SELECT Country FROM dbo.DimSupplier;`,
@@ -94,7 +96,9 @@ SELECT Country FROM dbo.DimSupplier;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the operator that returns rows from the first query with no match in the second.',
-    template: `-- countries with customers but no suppliers
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.DimSupplier(SupplierKey, SupplierId, SupplierName, Country)
+-- countries with customers but no suppliers
 SELECT Country FROM dbo.DimCustomer
 ___
 SELECT Country FROM dbo.DimSupplier;`,
@@ -114,6 +118,7 @@ SELECT Country FROM dbo.DimSupplier;`,
     topic: Topic.TSQL_SET_OPS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/EXCEPT/i],
     question: 'Both `dbo.DimCustomer` and `dbo.DimSupplier` have a `Country` column. Return the distinct Country values that appear in `dbo.DimCustomer` but NOT in `dbo.DimSupplier`.',
     starterCode: `-- SELECT Country FROM ... EXCEPT SELECT Country FROM ...
 `,

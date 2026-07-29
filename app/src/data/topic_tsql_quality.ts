@@ -55,7 +55,9 @@ export const tsql_quality_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the set operator that returns rows in the source but NOT in the target (a load-diff check).',
-    template: `SELECT CustomerId, FullName FROM stg.Customer
+    template: `-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+SELECT CustomerId, FullName FROM stg.Customer
 ___
 SELECT CustomerId, FullName FROM dbo.DimCustomer;`,
     blanks: ['EXCEPT'],
@@ -94,6 +96,7 @@ WHERE Amount ____ ____ OR Amount ____ 0;`,
     },
     explanation: 'A data-quality assertion counts the rows that break a rule; a load gate then fails (or quarantines) when `BadRows > 0`. Note `Amount IS NULL` must be tested explicitly — `Amount < 0` alone would silently ignore NULLs because any comparison with NULL is unknown, not true.',
     hints: ['COUNT(*) of the rule-breakers', 'WHERE Amount IS NULL OR Amount < 0'],
+    requires: [/COUNT/i, /IS\s+NULL/i],
     tags: ['tsql', 'quality', 'null-handling', 'assertion'],
   },
   {
@@ -126,6 +129,7 @@ HAVING COUNT(*) ____ 1;`,
     },
     explanation: 'The uniqueness assertion is the same GROUP BY/HAVING shape used everywhere else in the course: group by the key, and any group with `COUNT(*) > 1` is a violation. A load gate fails when this query returns any rows.',
     hints: ['GROUP BY CustomerId', 'HAVING COUNT(*) > 1'],
+    requires: [/GROUP\s+BY/i, /HAVING/i],
     tags: ['tsql', 'quality', 'uniqueness', 'having'],
   },
 ];

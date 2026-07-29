@@ -56,7 +56,8 @@ ORDER BY v.d;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the clause that turns SUM into a running total ordered by date.',
-    template: `SELECT OrderDate, Amount,
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT OrderDate, Amount,
        SUM(Amount) ___ (ORDER BY OrderDate) AS RunningTotal
 FROM dbo.FactOrders;`,
     blanks: ['OVER'],
@@ -75,7 +76,8 @@ FROM dbo.FactOrders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the frame clause for a 3-row moving average (current row plus the two before it).',
-    template: `SELECT OrderDate, Amount,
+    template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT OrderDate, Amount,
        AVG(Amount) OVER (
            ORDER BY OrderDate
            ___ BETWEEN 2 ___ AND CURRENT ___
@@ -120,6 +122,7 @@ FROM dbo.FactOrders;`,
        ____(____) OVER (PARTITION BY ____ ORDER BY ____) AS ____
 FROM dbo.FactOrders;`,
     },
+    requires: [/OVER/i, /SUM/i],
     tags: ['tsql', 'window-frames', 'running-total', 'partition-by'],
   },
   {
@@ -158,6 +161,7 @@ FROM dbo.FactOrders;`,
        ) AS ____
 FROM dbo.FactOrders;`,
     },
+    requires: [/ROWS\s+BETWEEN/i],
     tags: ['tsql', 'window-frames', 'moving-average', 'rows-between', 'partition-by'],
   },
 ];

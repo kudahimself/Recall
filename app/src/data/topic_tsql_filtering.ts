@@ -56,7 +56,8 @@ ORDER BY v.n;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the predicates: an inclusive range, a set membership test, and a prefix match.',
-    template: `SELECT ProductName
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ProductName
 FROM dbo.DimProduct
 WHERE Price ___ 10 AND 100
   AND Category ___ ('Books', 'Toys')
@@ -127,17 +128,18 @@ WHERE Price BETWEEN 10 AND 100
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords that open a searched conditional, give its default, and close it.',
-    template: `SELECT ProductName,
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT ProductName,
        ___ WHEN Price >= 100 THEN 'Premium'
-            WHEN Price >= 20  THEN 'Standard'
-            ___ 'Budget'
+             WHEN Price >= 20  THEN 'Standard'
+             ___ 'Budget'
        ___ AS PriceBand
 FROM dbo.DimProduct;`,
     blanks: ['CASE', 'ELSE', 'END'],
     solution: `SELECT ProductName,
        CASE WHEN Price >= 100 THEN 'Premium'
-            WHEN Price >= 20  THEN 'Standard'
-            ELSE 'Budget'
+             WHEN Price >= 20  THEN 'Standard'
+             ELSE 'Budget'
        END AS PriceBand
 FROM dbo.DimProduct;`,
     explanation: 'A searched `CASE` evaluates each `WHEN` top-down and returns the first matching `THEN`; `ELSE` supplies the fallback and `END` closes the expression. Without `ELSE`, unmatched rows get NULL.',
@@ -151,6 +153,7 @@ FROM dbo.DimProduct;`,
     topic: Topic.TSQL_FILTERING,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/WHERE/i],
     question: "From `dbo.DimCustomer` (FullName, Email, Country), return FullName and a column `ContactEmail` that shows Email, or the text 'none' when Email is NULL — for customers in country 'NO' or 'SE' whose FullName is not NULL.",
     starterCode: `-- dbo.DimCustomer(FullName, Email, Country); return FullName, ContactEmail
 `,

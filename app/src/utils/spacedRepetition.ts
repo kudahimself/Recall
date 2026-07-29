@@ -59,6 +59,25 @@ export const CANDIDATE_POOL_SIZE = 10;         // weighted-random pool for revie
 export const REVIEW_COOLDOWN = 3;              // avoid re-serving a question shown in the last N attempts
 export const INCORRECT_PRIORITY_WEIGHT = 15;   // priority bump per recent wrong answer (per-question)
 
+// Cooldown scales with how many alternatives the review pool actually offers.
+// A FIXED cooldown of 3 sets a metronome: a high-priority card is benched for
+// exactly 3 picks, then its dominant score wins the very next weighted draw, so
+// it returns on a rigid every-4th-pick beat no matter how big the pool is. The
+// simulations show exactly that signature (repeat gaps clustering on 4). Scaling
+// by pool size means a 300-card pool spaces repeats properly while a small pool
+// keeps the old behaviour: below ~38 cards the floor of 3 still applies, so the
+// existing small-pool tests and the "failure comes back quickly" guarantee are
+// unchanged.
+export const REVIEW_COOLDOWN_MAX = 12;
+export const REVIEW_COOLDOWN_POOL_FRACTION = 0.08;
+
+export function reviewCooldown(reviewPoolSize: number): number {
+  return Math.min(
+    REVIEW_COOLDOWN_MAX,
+    Math.max(REVIEW_COOLDOWN, Math.floor(reviewPoolSize * REVIEW_COOLDOWN_POOL_FRACTION)),
+  );
+}
+
 // Completion push: when ≤ this many unseen questions remain in the unlocked
 // pool, drop the new-vs-review coin flip and ALWAYS serve a new question.
 // Without this, the 30% review chance compounds near the end of a topic and
@@ -1182,6 +1201,35 @@ export class SpacedRepetitionSystem {
       ? (topicToQs.get(leadTopic) ?? []).some(q => progress.questionsAttempted.has(q.id))
       : false;
 
+    // Cooldown: avoid re-serving a question shown in the last REVIEW_COOLDOWN
+    // attempts, unless the pool has nothing else. Spacing beats massing, so the
+    // just-failed question is kept in cooldown TOO — a miss is not re-served on
+    // the adjacent pick (which felt like a stuck Next button, especially on a
+    // fresh topic). It still returns fast: a latest-wrong card carries top
+    // review priority, so it resurfaces the moment it clears cooldown rather
+    // than immediately. EXCEPTION: only space the miss when its topic has
+    // another review card to interleave with; if it is the only card in its
+    // topic, keep it eligible so the failure stays in focus instead of
+    // diverting the learner to an out-of-topic / mastered review.
+    // Computed BEFORE the drain gate below (which must agree with the pool the
+    // serve path will actually search) and before the concept-aware call (so the
+    // mastered-resurface roll can exclude just-seen cards too). Window scales
+    // with the pool (see reviewCooldown) so a large pool does not settle into a
+    // fixed repeat beat.
+    const recentIds = new Set(
+      recentAttempts(progress.attemptHistory, reviewCooldown(reviewQuestions.length))
+        .map(a => a.questionId),
+    );
+    if (lastAttemptWrong && lastAttempt) {
+      const failedTopic = availableQuestions.find(q => q.id === lastAttempt.questionId)?.topic;
+      const hasSameTopicAlt = failedTopic !== undefined && reviewQuestions.some(
+        q => q.id !== lastAttempt.questionId && q.topic === failedTopic && !recentIds.has(q.id),
+      );
+      if (!hasSameTopicAlt) recentIds.delete(lastAttempt.questionId);
+    }
+    const cooled = reviewQuestions.filter(q => !recentIds.has(q.id));
+    const reviewPool = cooled.length > 0 ? cooled : reviewQuestions;
+
     // Reviews-first hard drain (Anki-style). Recall on already-learned topics
     // outranks new material: whenever ANY mastered-topic CODING+ADVANCED card
     // is due — mid-topic included, not just at a topic boundary — hard-gate new
@@ -1196,8 +1244,33 @@ export class SpacedRepetitionSystem {
     // mirrors getReviewStatus's count exactly, so the pill and the gate never
     // disagree, and a missed card keeps new content hard-gated (the drain does
     // not "leak" a new question on a wrong answer) until it's answered right.
-    const drainDueReviews =
+    const drainPending =
       this.hasPendingDrain(reviewQuestions, topicToQs, progress, cardDifficulty);
+
+    // ...but only hard-gate while the drain can actually SERVE. The gate must be
+    // computed over `reviewPool` — the exact set the resurface below searches —
+    // not over the uncooled reviewQuestions. A queue card inside the cooldown is
+    // unreachable this pick, and because the window saturates at
+    // REVIEW_COOLDOWN_MAX on a mature course, a queue SMALLER than the window can
+    // have every member benched at once. Gating on merely-pending then strands
+    // the selector: new content is blocked, no queue card is reachable, and the
+    // pick lands on non-queue review filler while the pill sits frozen on a
+    // correct answer. Latest-wrong cards are what trip this — a card is queued
+    // BECAUSE it was just missed, so it is nearly always inside the window,
+    // whereas an interval-due card is due BECAUSE it has not been seen in days
+    // and never is. Re-showing a card missed three minutes ago is massing, so the
+    // cooldown is right (shrinking it for small queues reintroduces the pinned
+    // repeat loop the pool-scaled window was built to kill — see
+    // selectorDistribution.sim) and the fix is to let real NEW content through
+    // the gap instead of filler; the queue resumes draining as its cards age out.
+    // reviewPool's own "cooled.length > 0" fallback keeps small pools honest: a
+    // tiny synthetic pool where the window covers all of history falls back to
+    // the full set, so the drain card stays reachable and the gate still closes.
+    // After a miss the gate stays shut regardless of servability, so a fresh
+    // failure still cannot leak a new question (the priority path owns that pick).
+    const drainServable = drainPending
+      && this.hasPendingDrain(reviewPool, topicToQs, progress, cardDifficulty);
+    const drainDueReviews = drainPending && (drainServable || lastAttemptWrong);
 
     // ── DECISION: New content or reinforcement? ──
     // Normally: 70% new (sequential), 30% review.
@@ -1264,22 +1337,6 @@ export class SpacedRepetitionSystem {
       // gate has no candidate at all.
       return firstUnlockedNew ?? (newQuestions.length > 0 ? newQuestions[0] : sortedAvailable[0]);
     }
-
-    // Cooldown: avoid re-serving a question shown in the last REVIEW_COOLDOWN
-    // attempts, unless the pool has nothing else. Exemption: when the very
-    // last attempt was wrong, that question is allowed back into the pool
-    // immediately — otherwise the recent-failure pivot (above) would route
-    // to a review path that explicitly excludes the failure we want to
-    // surface. Other cooldown entries stay cool so we don't slam the user
-    // with the question right before the failure.
-    // Computed BEFORE the concept-aware call so the mastered-resurface roll
-    // below can exclude just-seen cards too.
-    const recentIds = new Set(
-      recentAttempts(progress.attemptHistory, REVIEW_COOLDOWN).map(a => a.questionId),
-    );
-    if (lastAttemptWrong && lastAttempt) recentIds.delete(lastAttempt.questionId);
-    const cooled = reviewQuestions.filter(q => !recentIds.has(q.id));
-    const reviewPool = cooled.length > 0 ? cooled : reviewQuestions;
 
     // Mastered resurface (due-driven, Anki-style). Runs BEFORE the concept-aware
     // call so its DUE/IDLE buckets can't starve high-stability advanced mastered
@@ -1417,16 +1474,25 @@ export class SpacedRepetitionSystem {
     // only 2 tagged questions) can flip back to the just-answered card on the
     // very next pick — which to the user looks like the Next button is broken.
     // If excluding cooled cards drains the pool, we fall back to the full set.
-    // Exemption: when the very last attempt was wrong, that question is
-    // allowed back into the pool immediately so the DUE bucket can surface
-    // it via the recent-failure pivot in the caller.
+    // The just-failed card is cooled too (spacing beats massing) so it is not
+    // re-served on the adjacent pick — EXCEPT when its topic has no other
+    // review card to interleave with, in which case it stays eligible so the
+    // failure keeps focus rather than diverting to an out-of-topic review.
     const recentIds = new Set(
-      recentAttempts(progress.attemptHistory, REVIEW_COOLDOWN).map(a => a.questionId),
+      recentAttempts(progress.attemptHistory, reviewCooldown(candidateIds?.size ?? available.length))
+        .map(a => a.questionId),
     );
     const lastAttempt = progress.attemptHistory.length > 0
       ? progress.attemptHistory[progress.attemptHistory.length - 1]
       : null;
-    if (lastAttempt && !lastAttempt.isCorrect) recentIds.delete(lastAttempt.questionId);
+    if (lastAttempt && !lastAttempt.isCorrect) {
+      const failedTopic = available.find(q => q.id === lastAttempt.questionId)?.topic;
+      const hasSameTopicAlt = failedTopic !== undefined && available.some(
+        q => q.id !== lastAttempt.questionId && q.topic === failedTopic
+          && !recentIds.has(q.id) && (!candidateIds || candidateIds.has(q.id)),
+      );
+      if (!hasSameTopicAlt) recentIds.delete(lastAttempt.questionId);
+    }
 
     type Bucketed = { q: Question; weight: number };
     const buckets: Record<CardBucket, Bucketed[]> = {
@@ -1444,7 +1510,21 @@ export class SpacedRepetitionSystem {
       const lastReviewed = progress.lastAttempt.get(q.id) ?? 0;
       const elapsedDays = lastReviewed > 0 ? (now - lastReviewed) / MS_PER_DAY : 0;
 
-      const bucket = bucketCard(conceptIds, ctx.progress, elapsedDays, ctx.betas, now);
+      // Unlock blockers are graded at the CARD level (topic fully covered, THIS
+      // card latest-wrong) — that is what holds the section lock. Concept-level
+      // bucketing, however, keys off concept retrievability, so a blocker whose
+      // concepts are otherwise well-retrieved lands in IDLE/SPOT_CHECK and never
+      // resurfaces — the learner is stuck below the unlock bar with no way to
+      // clear the exact card that is blocking them (feels like a stuck Next).
+      // Force blockers into DUE so card-level unlock and concept-level selection
+      // agree, and keep the priority boost that was previously dead code for any
+      // blocker that failed to reach DUE on its own.
+      const topicQs = topicToQs.get(q.topic);
+      const isBlocker = topicQs !== undefined
+        && this.isUnlockBlocker(q.id, progress, topicQs);
+      const bucket: CardBucket = isBlocker
+        ? 'DUE'
+        : bucketCard(conceptIds, ctx.progress, elapsedDays, ctx.betas, now);
 
       let weight = 1;
       if (bucket === 'DUE') {
@@ -1452,8 +1532,7 @@ export class SpacedRepetitionSystem {
         // 1−R measures how "due" the card is. Floor at a small positive value
         // so an unusual 0-weight card can still be picked.
         weight = Math.max(1 - (r ?? 0), 0.01);
-        const topicQs = topicToQs.get(q.topic);
-        if (topicQs && this.isUnlockBlocker(q.id, progress, topicQs)) {
+        if (isBlocker) {
           weight *= CONCEPT_UNLOCK_BLOCKER_WEIGHT_MULT;
         }
       }
@@ -1478,11 +1557,22 @@ export class SpacedRepetitionSystem {
     const totalShare = dueShare + fringeShare + spotShare;
     if (totalShare === 0) return null;
 
+    // The fractions are ABSOLUTE shares of the pick budget, not weights to be
+    // renormalized against whichever buckets happen to be occupied. Rolling over
+    // `totalShare` instead of 1 used to hand an empty bucket's share to its
+    // neighbours: with DUE and SPOT_CHECK empty (everything freshly reviewed,
+    // so R≈1), FRINGE's 10% became 100%. Combined with a FRINGE bucket holding a
+    // single card — which happens whenever that card's concepts have no sibling
+    // questions — the learner got the SAME question two picks out of three.
+    // Rolling over 1 keeps each bucket at its intended share and lets the
+    // unfilled remainder fall through to the legacy scorer, which spreads across
+    // the whole pool (including IDLE cards, which no bucket ever samples).
     let bucketChoice: CardBucket;
-    const roll = Math.random() * totalShare;
+    const roll = Math.random();
     if (roll < dueShare) bucketChoice = 'DUE';
     else if (roll < dueShare + fringeShare) bucketChoice = 'FRINGE';
-    else bucketChoice = 'SPOT_CHECK';
+    else if (roll < totalShare) bucketChoice = 'SPOT_CHECK';
+    else return null; // unfilled share → legacy scheduling
 
     const pool = buckets[bucketChoice];
     if (pool.length === 0) return null;

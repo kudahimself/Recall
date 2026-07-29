@@ -16,7 +16,7 @@ export const tsql_star_schema_questions: Question[] = [
   {
     id: 'tsql-star-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
+    difficulty: Difficulty.BEGINNER,
     topic: Topic.TSQL_STAR_SCHEMA,
     course: Course.SQL,
     question: 'What is the defining shape of a star schema?',
@@ -72,7 +72,9 @@ export const tsql_star_schema_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the join keywords for a star query: total sales amount per product category.',
-    template: `SELECT p.Category, SUM(f.Amount) AS TotalSales
+    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
+-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+SELECT p.Category, SUM(f.Amount) AS TotalSales
 FROM dbo.FactSales AS f
 ___ dbo.DimProduct AS p ___ p.ProductKey = f.ProductKey
 GROUP BY p.Category;`,
@@ -120,6 +122,7 @@ ORDER BY c.____, p.____;`,
     },
     explanation: 'FactSales joins directly to DimCustomer and DimProduct via their foreign keys (CustomerKey and ProductKey) - both star joins. `SUM(Amount)` is aggregated at the `(Country, Category)` level.',
     hints: ['Fact JOIN DimCustomer ON CustomerKey, JOIN DimProduct ON ProductKey', 'GROUP BY c.Country, p.Category; SUM(f.Amount)'],
+    requires: [/JOIN/i, /GROUP\s+BY/i],
     tags: ['tsql', 'star-schema', 'join'],
   },
 ];

@@ -40,7 +40,8 @@ export const tsql_dml_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the two-word statement opener that adds one literal row.',
-    template: `___ ___ dbo.DimProduct (ProductName, Price)
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+___ ___ dbo.DimProduct (ProductName, Price)
 VALUES ('Gadget', 14.50);`,
     blanks: ['INSERT', 'INTO'],
     solution: `INSERT INTO dbo.DimProduct (ProductName, Price)
@@ -57,7 +58,8 @@ VALUES ('Gadget', 14.50);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement and clause that change one product\'s Price.',
-    template: `___ dbo.DimProduct
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+___ dbo.DimProduct
 ___ Price = 12.99
 WHERE ProductKey = 101;`,
     blanks: ['UPDATE', 'SET'],
@@ -76,7 +78,8 @@ WHERE ProductKey = 101;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement that removes a single product row.',
-    template: `___ FROM dbo.DimProduct
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+___ FROM dbo.DimProduct
 WHERE ProductKey = 101;`,
     blanks: ['DELETE'],
     solution: `DELETE FROM dbo.DimProduct
@@ -146,7 +149,8 @@ SELECT id FROM #t ORDER BY id;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the separator that lets one INSERT add two rows at once.',
-    template: `INSERT INTO dbo.DimProduct (ProductName, Price)
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+INSERT INTO dbo.DimProduct (ProductName, Price)
 VALUES ('Widget', 9.99)___
        ('Gadget', 14.50);`,
     blanks: [','],
@@ -165,7 +169,8 @@ VALUES ('Widget', 9.99),
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the operator that raises every Book's price by 10% using the column's own current value.",
-    template: `UPDATE dbo.DimProduct
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+UPDATE dbo.DimProduct
 SET Price = Price ___ 1.1
 WHERE Category = 'Books';`,
     blanks: ['*'],
@@ -201,6 +206,7 @@ WHERE Category = 'Books';`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'In `dbo.DimCustomer` (CustomerKey, Email, IsActive), set `IsActive` to 0 for the customer with `CustomerKey = 42`.',
+    requires: [/UPDATE/i],
     starterCode: `-- UPDATE dbo.DimCustomer SET ... WHERE ...
 `,
     testCases: [
@@ -231,6 +237,7 @@ ____ CustomerKey ____ 42;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Remove every row from `stg.Customer` (IsActive) where `IsActive = 0` (stale staging rows already processed).',
+    requires: [/DELETE/i],
     starterCode: `-- DELETE FROM stg.Customer WHERE ...
 `,
     testCases: [
@@ -259,7 +266,9 @@ ____ IsActive ____ 0;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the predicate that deletes staging rows whose CustomerId no longer exists in the dimension.',
-    template: `DELETE FROM stg.Customer
+    template: `-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+DELETE FROM stg.Customer
 WHERE CustomerId ___ (
     SELECT CustomerId FROM dbo.DimCustomer
 );`,
@@ -280,7 +289,9 @@ WHERE CustomerId NOT IN (
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the clause that lets UPDATE pull its new value from a joined table, and the join predicate.',
-    template: `UPDATE tgt
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+UPDATE tgt
     SET tgt.City = src.City
 ___ dbo.DimCustomer AS tgt
     JOIN stg.Customer AS src ___ src.CustomerId = tgt.CustomerId;`,
@@ -301,6 +312,7 @@ FROM dbo.DimCustomer AS tgt
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Update `dbo.DimProduct` (ProductKey, ProductName) so `ProductName` matches the latest value from `stg.Product` (ProductKey, ProductName), for every row where the two currently differ. Use UPDATE...FROM...JOIN.',
+    requires: [/UPDATE/i, /FROM/i, /JOIN/i],
     starterCode: `-- dbo.DimProduct(ProductKey, ProductName), stg.Product(ProductKey, ProductName)
 -- Update DimProduct.ProductName to match stg.Product.ProductName where they differ using UPDATE...FROM...JOIN
 `,
@@ -336,6 +348,7 @@ WHERE tgt.ProductName ____ src.ProductName;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Delete every row from `dbo.FactOrders` (ProductKey) whose `ProductKey` belongs to a product in `dbo.DimProduct` (ProductKey, Discontinued) that has been discontinued (`Discontinued = 1`). Use DELETE...FROM...JOIN.',
+    requires: [/DELETE/i, /FROM/i, /JOIN/i],
     starterCode: `-- DELETE f FROM dbo.FactOrders AS f JOIN dbo.DimProduct AS p ON ... WHERE p.Discontinued = 1;
 `,
     testCases: [

@@ -21,6 +21,7 @@ export const expandedQuestions: Question[] = [
   // UPPER / LOWER
   {
     id: 'string-1',
+    requires: [/lower\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.STRING_FUNCTIONS,
@@ -59,6 +60,7 @@ result = ____.withColumn("email_lower", ____(df.____))`,
 
   {
     id: 'string-2',
+    requires: [/upper\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.STRING_FUNCTIONS,
@@ -98,6 +100,7 @@ result = ____.withColumn("name_upper", ____(df.____))`,
   // CONCAT
   {
     id: 'string-3',
+    requires: [/concat\w*\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.STRING_FUNCTIONS,
@@ -132,6 +135,7 @@ result = df.withColumn("full_name", ____(df.first_name, ____(" "), df.____))`,
 
   {
     id: 'string-4',
+    requires: [/concat_ws\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -171,6 +175,7 @@ result = ____.withColumn("location", ____(", ", df.city, df.state, df.____))`,
   // SUBSTRING
   {
     id: 'string-5',
+    requires: [/substr/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -210,6 +215,7 @@ result = df.withColumn("category", ____(df.product_code, ____, ____))`,
   // TRIM
   {
     id: 'string-6',
+    requires: [/trim\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.STRING_FUNCTIONS,
@@ -249,6 +255,7 @@ result = ____.withColumn("description_clean", ____(df.____))`,
   // SPLIT
   {
     id: 'string-7',
+    requires: [/split\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -288,6 +295,7 @@ result = ____.withColumn("tags_array", ____(df.tags, "____"))`,
   // REGEXP_REPLACE
   {
     id: 'string-8',
+    requires: [/regexp_replace\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -326,6 +334,7 @@ result = df.withColumn("masked_text", ____(df.text, "____", "____"))`,
 
   {
     id: 'string-9',
+    requires: [/regexp_replace\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -365,6 +374,7 @@ result = df.withColumn("username_clean", ____(df.username, "____", "____"))`,
   // REGEXP_EXTRACT
   {
     id: 'string-10',
+    requires: [/regexp_extract\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRING_FUNCTIONS,
@@ -404,6 +414,7 @@ result = df.withColumn("domain", ____(df.email, "____", ____))`,
   // LENGTH
   {
     id: 'string-11',
+    requires: [/length\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.STRING_FUNCTIONS,
@@ -445,6 +456,7 @@ result = ____.withColumn("comment_length", ____(df.____))`,
   // CURRENT_DATE, CURRENT_TIMESTAMP
   {
     id: 'datetime-1',
+    requires: [/current_date\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -479,6 +491,7 @@ result = ____.____("today", ____())`,
 
   {
     id: 'datetime-2',
+    requires: [/current_timestamp\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -514,6 +527,7 @@ result = ____.____("now", ____())`,
   // TO_DATE, TO_TIMESTAMP
   {
     id: 'datetime-3',
+    requires: [/to_date\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -552,6 +566,7 @@ result = ____.withColumn("date_parsed", ____(df.____, "____"))`,
 
   {
     id: 'datetime-4',
+    requires: [/to_timestamp\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -591,6 +606,7 @@ result = ____.withColumn("event_time", ____(df.____, "____"))`,
   // DATE_ADD, DATE_SUB
   {
     id: 'datetime-5',
+    requires: [/date_add\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -629,6 +645,7 @@ result = ____.withColumn("due_date", ____(df.order_date, ____))`,
 
   {
     id: 'datetime-6',
+    requires: [/date_sub\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -668,6 +685,7 @@ result = ____.withColumn("reminder_date", ____(df.end_date, ____))`,
   // DATEDIFF
   {
     id: 'datetime-7',
+    requires: [/datediff\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -707,6 +725,7 @@ result = ____.withColumn("duration_days", ____(df.end_date, df.____))`,
   // YEAR, MONTH, DAY
   {
     id: 'datetime-8',
+    requires: [/year\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -745,6 +764,7 @@ result = ____.withColumn("birth_year", ____(df.____))`,
 
   {
     id: 'datetime-9',
+    requires: [/month\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -783,6 +803,7 @@ result = ____.withColumn("txn_month", ____(df.____))`,
 
   {
     id: 'datetime-10',
+    requires: [/dayofmonth\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -822,6 +843,7 @@ result = ____.withColumn("event_day", ____(df.____))`,
   // DATE_FORMAT
   {
     id: 'datetime-11',
+    requires: [/date_format\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -863,6 +885,7 @@ result = ____.withColumn("order_date_str", ____(df.order_date, "____"))`,
   // EXPLODE
   {
     id: 'collection-1',
+    requires: [/explode\w*\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.COLLECTION_FUNCTIONS,
@@ -901,6 +924,7 @@ result = ____.select("id", ____(df.tags).____("tag"))`,
 
   {
     id: 'collection-2',
+    requires: [/explode_outer\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.COLLECTION_FUNCTIONS,
@@ -940,38 +964,17 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
   // ARRAY_CONTAINS
   {
     id: 'collection-3',
-    type: QuestionType.CODING,
+    type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.COLLECTION_FUNCTIONS,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to filter DataFrame "df" to rows where array column "skills" contains element "Python".',
-    starterCode: `# Filter rows where skills array contains Python\nresult = `,
-    testCases: [
-      {
-        input: 'df with skills array column',
-        expectedOutput: 'array_contains(df.skills, "Python")',
-        description: 'Should filter arrays containing Python',
-      },
+    question: 'DataFrame "df" has an ArrayType column "skills". Which expression keeps only the rows whose skills array includes the element "Python"?',
+    options: [
+      { id: 'a', text: 'df.filter(df.skills.contains("Python")) — contains() does substring matching on StringType columns, not element lookup', isCorrect: false },
+      { id: 'b', text: 'df.filter(array_contains(df.skills, "Python")) — array_contains() tests an ArrayType column for one specific element', isCorrect: true },
+      { id: 'c', text: 'df.filter(df.skills.isin("Python")) — isin() tests whether a scalar column equals any of the listed values', isCorrect: false },
+      { id: 'd', text: 'df.filter(arrays_overlap(df.skills, "Python")) — arrays_overlap() compares two array columns, not an array and a scalar', isCorrect: false },
     ],
-    solution: `from pyspark.sql.functions import array_contains
-
-result = df.filter(array_contains(df.skills, "Python"))
-# OR
-from pyspark.sql.functions import array_contains, col
-
-result = df.filter(array_contains(col("skills"), "Python"))
-# OR
-from pyspark.sql.functions import array_contains
-
-result = df.filter(array_contains("skills", "Python"))`,
-    explanation: 'array_contains(column, value) returns True if the specified array contains value.',
-    tieredHints: {
-      apiSignature: 'array_contains(col: Column | str, value: Any) -> Column',
-      skeleton: `from pyspark.sql.functions import array_contains
-
-result = ____.filter(____(df.skills, "____"))`,
-    },
-    hints: ['Use array_contains()', 'Returns boolean for filtering'],
+    explanation: 'array_contains(col, value) returns true when the array holds that element. contains() is the string-substring test and silently returns null on an array column; isin() compares a scalar against a value list; arrays_overlap() needs a second array as its argument.',
     tags: ['collection', 'array_contains', 'array', 'filter', 'functions'],
     concepts: ['ps-collection-fns', 'ps-select-filter'],
   },
@@ -1088,196 +1091,92 @@ result = ____.filter(____(df.skills, "____"))`,
 
   {
     id: 'math-1',
-    type: QuestionType.CODING,
+    type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.MATH_FUNCTIONS,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to add a column "price_rounded" to DataFrame "df" (which has column "price"), rounding numeric values to 2 decimal places.',
-    starterCode: `# Round price to 2 decimal places\nresult = `,
-    testCases: [
-      {
-        input: 'df with price column',
-        expectedOutput: 'round(df.price, 2)',
-        description: 'Should round to 2 decimal places',
-      },
+    question: 'DataFrame "df" has a DoubleType column "price". Which expression produces a numeric column holding price rounded to 2 decimal places?',
+    options: [
+      { id: 'a', text: 'format_number("price", 2) — produces the right digits but returns a StringType column, not a number', isCorrect: false },
+      { id: 'b', text: 'floor(col("price") * 100) / 100 — truncates the third decimal downward instead of rounding it', isCorrect: false },
+      { id: 'c', text: 'bround("price", 2) — rounds half to even, so a trailing 5 lands on the nearest even digit', isCorrect: false },
+      { id: 'd', text: 'round("price", 2) — rounds half away from zero to the requested number of decimal places', isCorrect: true },
     ],
-    solution: `from pyspark.sql.functions import round
-
-result = df.withColumn("price_rounded", round(df.price, 2))
-# OR
-from pyspark.sql.functions import round, col
-
-result = df.withColumn("price_rounded", round(col("price"), 2))
-# OR
-from pyspark.sql.functions import round
-
-result = df.withColumn("price_rounded", round("price", 2))`,
-    explanation: 'round(column, scale) rounds numeric values to the specified decimal places.',
-    tieredHints: {
-      apiSignature: 'round(col: Column | str, scale: int = 0) -> Column',
-      skeleton: `from pyspark.sql.functions import round
-
-result = ____.withColumn("price_rounded", ____(df.price, ____))`,
-    },
-    hints: ['Use round() function', 'Second parameter is number of decimal places'],
+    explanation: 'round(col, scale) is the numeric rounding function. format_number() returns a formatted string and breaks any downstream arithmetic; floor()-based scaling always rounds down; bround() uses banker\'s rounding, which differs from round() only on exact halves.',
     tags: ['math', 'round', 'functions'],
     concepts: ['ps-math-fns'],
   },
 
   {
     id: 'math-2',
-    type: QuestionType.CODING,
+    type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.MATH_FUNCTIONS,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to add a column "score_ceil" to DataFrame "df" (which has column "score"), rounding values up to the nearest integer.',
-    starterCode: `# Round score up to ceiling integer\nresult = `,
-    testCases: [
-      {
-        input: 'df with score column',
-        expectedOutput: 'ceil(df.score)',
-        description: 'Should round up to nearest integer',
-      },
+    question: 'A column holds the value -2.5. What does ceil() return for that row, and why?',
+    options: [
+      { id: 'a', text: '-2, because ceil() rounds toward positive infinity, which moves a negative value closer to zero', isCorrect: true },
+      { id: 'b', text: '-3, because ceil() rounds away from zero, which increases the magnitude of a negative value', isCorrect: false },
+      { id: 'c', text: '-2.5, because ceil() only adjusts positive values and passes negative values through unchanged', isCorrect: false },
+      { id: 'd', text: '-3, because ceil() behaves as an alias for floor() whenever the input value is negative', isCorrect: false },
     ],
-    solution: `from pyspark.sql.functions import ceil
-
-result = df.withColumn("score_ceil", ceil(df.score))
-# OR
-from pyspark.sql.functions import ceil, col
-
-result = df.withColumn("score_ceil", ceil(col("score")))
-# OR
-from pyspark.sql.functions import ceil
-
-result = df.withColumn("score_ceil", ceil("score"))`,
-    explanation: 'ceil(column) rounds numeric values up to the nearest integer.',
-    tieredHints: {
-      apiSignature: 'ceil(col: Column | str) -> Column',
-      skeleton: `from pyspark.sql.functions import ceil
-
-result = ____.____("score_ceil", ____(df.____))`,
-    },
-    hints: ['Use ceil() function'],
-    tags: ['math', 'ceil', 'functions'],
+    explanation: 'ceil() always rounds toward positive infinity, so ceil(-2.5) is -2 and ceil(2.5) is 3. floor() is the mirror image, rounding toward negative infinity. Neither is defined in terms of distance from zero, which is why negative inputs surprise people.',
+    tags: ['math', 'ceil', 'floor', 'functions'],
     concepts: ['ps-math-fns'],
   },
 
   {
     id: 'math-3',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.MATH_FUNCTIONS,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to add a column "abs_balance" to DataFrame "df" (which has column "balance"), computing absolute values.',
-    starterCode: `# Compute absolute value of balance\nresult = `,
-    testCases: [
-      {
-        input: 'df with balance column',
-        expectedOutput: 'abs(df.balance)',
-        description: 'Should get absolute value',
-      },
+    question: 'A notebook runs "from pyspark.sql.functions import abs" near the top. Further down, unrelated code calls abs(-5) on a plain Python integer. What is the result?',
+    options: [
+      { id: 'a', text: 'It returns 5, because the imported abs() detects non-Column input and delegates to the built-in', isCorrect: false },
+      { id: 'b', text: 'It raises ImportError, because pyspark.sql.functions does not export a function named abs', isCorrect: false },
+      { id: 'c', text: 'It returns a Column expression, because the import shadowed the built-in for the whole module', isCorrect: true },
+      { id: 'd', text: 'It returns 5, because Python resolves built-in names ahead of module-level imported names', isCorrect: false },
     ],
-    solution: `from pyspark.sql.functions import abs
-
-result = df.withColumn("abs_balance", abs(df.balance))
-# OR
-from pyspark.sql.functions import abs, col
-
-result = df.withColumn("abs_balance", abs(col("balance")))
-# OR
-from pyspark.sql.functions import abs
-
-result = df.withColumn("abs_balance", abs("balance"))`,
-    explanation: 'abs(column) computes non-negative absolute values.',
-    tieredHints: {
-      apiSignature: 'abs(col: Column | str) -> Column',
-      skeleton: `from pyspark.sql.functions import abs
-
-result = ____.____("abs_balance", ____(df.____))`,
-    },
-    hints: ['Use abs() function'],
-    tags: ['math', 'abs', 'functions'],
+    explanation: 'A bare "from ... import abs" rebinds the name for the entire module, so the built-in is gone. PySpark wraps the literal and hands back Column<\'abs(-5)\'> instead of 5, which then fails somewhere far from the import. The same trap applies to round, max, min, sum, and filter. Import the module as F and call F.abs() to keep both.',
+    tags: ['math', 'abs', 'imports', 'functions'],
     concepts: ['ps-math-fns'],
   },
 
   {
     id: 'math-4',
-    type: QuestionType.CODING,
+    type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.MATH_FUNCTIONS,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to add a column "side_length" to DataFrame "df" (which has column "area"), computing square root values.',
-    starterCode: `# Calculate square root of area\nresult = `,
-    testCases: [
-      {
-        input: 'df with area column',
-        expectedOutput: 'sqrt(df.area)',
-        description: 'Should calculate square root',
-      },
+    question: 'Column "area" is a DoubleType that contains a few negative values from bad upstream data. What does sqrt("area") produce for those rows?',
+    options: [
+      { id: 'a', text: 'null, because Spark maps every undefined math result onto null before returning the column', isCorrect: false },
+      { id: 'b', text: 'NaN, because the square root of a negative double is Not-a-Number under IEEE 754 rules', isCorrect: true },
+      { id: 'c', text: 'An AnalysisException, because sqrt() validates its input domain while planning the query', isCorrect: false },
+      { id: 'd', text: 'The root of the absolute value, because sqrt() takes the magnitude of its input first', isCorrect: false },
     ],
-    solution: `from pyspark.sql.functions import sqrt
-
-result = df.withColumn("side_length", sqrt(df.area))
-# OR
-from pyspark.sql.functions import sqrt, col
-
-result = df.withColumn("side_length", sqrt(col("area")))
-# OR
-from pyspark.sql.functions import sqrt
-
-result = df.withColumn("side_length", sqrt("area"))`,
-    explanation: 'sqrt(column) calculates the square root of numeric column values.',
-    tieredHints: {
-      apiSignature: 'sqrt(col: Column | str) -> Column',
-      skeleton: `from pyspark.sql.functions import sqrt
-
-result = ____.____("side_length", ____(df.____))`,
-    },
-    hints: ['Use sqrt() function'],
-    tags: ['math', 'sqrt', 'functions'],
+    explanation: 'sqrt() of a negative double yields NaN, not null and not an error. This matters because NaN survives filters written as isNotNull() and sorts as larger than any other value in Spark, so bad rows travel further downstream than people expect. Guard with a when() on the sign, or filter on isnan().',
+    tags: ['math', 'sqrt', 'nan', 'functions'],
     concepts: ['ps-math-fns'],
   },
 
   {
     id: 'math-5',
-    type: QuestionType.CODING,
+    type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.MATH_FUNCTIONS,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to add a column "result" to DataFrame "df" (which has column "exponent"), computing 2 raised to the power of exponent.',
-    starterCode: `# Compute 2 raised to exponent\nresult = `,
-    testCases: [
-      {
-        input: 'df with exponent column',
-        expectedOutput: 'pow(lit(2), df.exponent)',
-        description: 'Should calculate 2 to the power of exponent',
-      },
+    question: 'Which pair of pyspark.sql.functions computes "e raised to x" and "x raised to y" respectively?',
+    options: [
+      { id: 'a', text: 'exp(x) and pow(x, y) — exp() is the natural exponential; pow() takes an explicit base and exponent', isCorrect: true },
+      { id: 'b', text: 'power(x) and pow(x, y) — power() is the Spark SQL spelling and is not exported to the Python API', isCorrect: false },
+      { id: 'c', text: 'log(x) and pow(x, y) — log() computes the natural logarithm, which is the inverse of exponentiation', isCorrect: false },
+      { id: 'd', text: 'exp(x) and multiply(x, y) — multiply() is not a PySpark function; column products use the * operator', isCorrect: false },
     ],
-    solution: `from pyspark.sql.functions import pow, lit
-
-result = df.withColumn("result", pow(lit(2), df.exponent))
-# OR
-from pyspark.sql.functions import pow, lit, col
-
-result = df.withColumn("result", pow(lit(2), col("exponent")))
-# OR
-from pyspark.sql.functions import pow, lit
-
-result = df.withColumn("result", pow(lit(2), "exponent"))`,
-    explanation: 'pow(base, exp) raises base value to exp power. Use lit(2) to supply constant base.',
-    tieredHints: {
-      apiSignature: 'pow(col1: Column | str | float, col2: Column | str | float) -> Column',
-      skeleton: `from pyspark.sql.functions import pow, lit
-
-result = ____.withColumn("result", ____(____(2), df.____))`,
-    },
-    hints: ['Use pow() function', 'Use lit(2) for the base'],
-    tags: ['math', 'pow', 'functions'],
+    explanation: 'exp(x) is e**x with the base fixed; pow(base, exponent) takes both. A constant base needs lit(), as in pow(lit(2), df.exponent), because a bare Python number on the left of a two-Column function is ambiguous. POWER is the SQL name for the same function and only works inside spark.sql() or expr().',
+    tags: ['math', 'pow', 'exp', 'functions'],
     concepts: ['ps-math-fns'],
   },
 
   {
     id: 'math-6',
+    requires: [/greatest\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.MATH_FUNCTIONS,
@@ -1318,6 +1217,7 @@ result = ____.withColumn("max_price", ____(df.price1, df.____))`,
 
   {
     id: 'window-1',
+    requires: [/row_number\s*\(/, /\.over\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
@@ -1348,6 +1248,7 @@ result = ____.____("____", ____().over(____))`,
 
   {
     id: 'window-2',
+    requires: [/dense_rank\s*\(/, /\.over\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
@@ -1378,6 +1279,7 @@ result = ____.____("____", ____().over(____))`,
 
   {
     id: 'window-3',
+    requires: [/lag\s*\(/, /\.over\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
@@ -1586,6 +1488,7 @@ UPDATE employees SET price = 100 WHERE department = "Sales"`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
+    requires: [/MERGE\s+INTO/i],
     question: `Write a SQL MERGE statement to upsert records from source table "updates" into target Delta table "customers" matching on "id" (both tables have columns: id, name, email, city). Update all columns when matched, and insert all columns when unmatched.
 
 Table Schemas & Operational Flow:
@@ -1692,6 +1595,7 @@ SELECT * FROM customers@v10`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPTIMIZATION,
     language: CodeLanguage.SQL,
+    requires: [/OPTIMIZE/i],
     question: `Frequent small inserts into Delta table "transactions" have created thousands of small Parquet files. Write a SQL command to compact these small files into larger target files to improve read performance.`,
     starterCode: `-- Compact small files\n`,
     testCases: [
@@ -1718,6 +1622,7 @@ SELECT * FROM customers@v10`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPTIMIZATION,
     language: CodeLanguage.SQL,
+    requires: [/ZORDER\s+BY/i],
     question: `Write a SQL command to optimize Delta table "events" and apply multi-dimensional clustering on columns "user_id" and "timestamp" to maximize file skipping efficiency during filtering queries.`,
     starterCode: `-- Optimize table with multi-dimensional clustering\n`,
     testCases: [
@@ -1744,6 +1649,8 @@ OPTIMIZE events ZORDER BY user_id, timestamp`,
 
   {
     id: 'sql-join-1',
+    // Bare JOIN is an inner join in SQL, so the INNER keyword cannot be required.
+    requires: [/\bJOIN\b/i, /\bON\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1778,6 +1685,7 @@ ____ e.department_id ____ d.id`,
 
   {
     id: 'sql-join-2',
+    requires: [/LEFT\s+(OUTER\s+)?JOIN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1812,6 +1720,7 @@ ____ o.customer_id ____ c.id`,
 
   {
     id: 'sql-join-3',
+    requires: [/RIGHT\s+(OUTER\s+)?JOIN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1846,6 +1755,7 @@ ____ p.category_id ____ c.id`,
 
   {
     id: 'sql-join-4',
+    requires: [/FULL\s+(OUTER\s+)?JOIN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1880,6 +1790,7 @@ ____ u.id ____ p.user_id`,
 
   {
     id: 'sql-join-5',
+    requires: [/LEFT\s+(OUTER\s+)?JOIN/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_JOINS,
@@ -1912,6 +1823,7 @@ ____ e.____ ____ m.id`,
 
   {
     id: 'sql-join-6',
+    requires: [/\.join\s*\(/, /['"]left['"]/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1942,6 +1854,7 @@ result = orders_df.join(customers_df, orders_df["customer_id"] == customers_df["
 
   {
     id: 'grouping-1',
+    requires: [/ROLLUP\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_AGGREGATIONS,
@@ -1976,6 +1889,7 @@ ____ BY ____(region)`,
 
   {
     id: 'grouping-2',
+    requires: [/CUBE\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_AGGREGATIONS,
@@ -2010,6 +1924,7 @@ ____ BY ____(region, ____)`,
 
   {
     id: 'grouping-3',
+    requires: [/GROUPING\s+SETS/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_AGGREGATIONS,
@@ -2044,6 +1959,7 @@ ____ BY ____ ____ ((region, product), (region))`,
 
   {
     id: 'grouping-4',
+    requires: [/GROUP\s+BY/i, /COUNT\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_AGGREGATIONS,
@@ -2206,6 +2122,7 @@ result = df.____("category").____(
 
   {
     id: 'window-adv-1',
+    requires: [/ROW_NUMBER\s*\(/i, /OVER\s*\(/i, /PARTITION\s+BY/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_WINDOW_FUNCTIONS,
@@ -2234,6 +2151,7 @@ FROM ____`,
 
   {
     id: 'window-adv-2',
+    requires: [/SUM\s*\(/i, /OVER\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_WINDOW_FUNCTIONS,
@@ -2262,6 +2180,7 @@ FROM ____`,
 
   {
     id: 'window-adv-3',
+    requires: [/LAG\s*\(/i, /OVER\s*\(/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_WINDOW_FUNCTIONS,
@@ -2364,6 +2283,7 @@ FROM ____`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+CATALOG/i],
     question: 'Write a SQL query to create a top-level Unity Catalog container named "analytics".',
     starterCode: `-- Create top-level catalog\n`,
     testCases: [
@@ -2374,7 +2294,7 @@ FROM ____`,
       },
     ],
     solution: `CREATE CATALOG analytics
-# OR
+-- OR
 CREATE CATALOG IF NOT EXISTS analytics`,
     explanation: 'Catalogs are the top level of the Unity Catalog namespace. They organize schemas (databases) and tables.',
     tieredHints: {
@@ -2392,6 +2312,7 @@ CREATE CATALOG IF NOT EXISTS analytics`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
+    requires: [/CREATE\s+SCHEMA/i],
     question: 'Write a SQL query to create a schema named "sales" inside the existing "analytics" catalog.',
     starterCode: `-- Create schema inside analytics catalog\n`,
     testCases: [
@@ -2402,7 +2323,7 @@ CREATE CATALOG IF NOT EXISTS analytics`,
       },
     ],
     solution: `CREATE SCHEMA analytics.sales
-# OR
+-- OR
 CREATE SCHEMA IF NOT EXISTS analytics.sales`,
     explanation: 'Schemas are created within catalogs using the catalog.schema notation.',
     tieredHints: {
@@ -2446,6 +2367,7 @@ CREATE SCHEMA IF NOT EXISTS analytics.sales`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
+    requires: [/GRANT/i],
     question: 'Write a SQL statement to grant read access on the "sales" schema to user principal group "analysts".',
     starterCode: `-- Grant read access on schema\n`,
     testCases: [
@@ -2456,7 +2378,7 @@ CREATE SCHEMA IF NOT EXISTS analytics.sales`,
       },
     ],
     solution: `GRANT SELECT ON SCHEMA sales TO analysts
-# OR
+-- OR
 GRANT SELECT ON SCHEMA analytics.sales TO analysts`,
     explanation: 'Unity Catalog uses GRANT statements to manage permissions. Privileges can be granted on catalogs, schemas, tables, or views.',
     tieredHints: {
@@ -2498,6 +2420,7 @@ GRANT SELECT ON SCHEMA analytics.sales TO analysts`,
 
   {
     id: 'null-1',
+    requires: [/coalesce\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NULL_HANDLING,
@@ -2536,104 +2459,58 @@ result = df.withColumn("primary_contact", ____(df.email, df.____, df.____))`,
 
   {
     id: 'null-2',
-    type: QuestionType.CODING,
+    type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NULL_HANDLING,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to filter DataFrame "df" (which has column "email") to rows where email is null.',
-    starterCode: `# Filter for null email rows\nresult = `,
-    testCases: [
-      {
-        input: 'df with email column',
-        expectedOutput: 'df.email.isNull()',
-        description: 'Should filter null values',
-      },
+    question: 'Which expression filters DataFrame "df" down to the rows where column "email" is null?',
+    options: [
+      { id: 'a', text: 'df.filter(df.email.isNull()) — isNull() builds the per-row null test that Spark evaluates', isCorrect: true },
+      { id: 'b', text: 'df.filter(df.email == None) — comparing a Column to None yields null, so no row is ever kept', isCorrect: false },
+      { id: 'c', text: 'df.filter(df.email is None) — Python identity runs once on the Column object and returns False', isCorrect: false },
+      { id: 'd', text: 'df.filter(isnan("email")) — isnan() detects the float NaN value, which is not the same as null', isCorrect: false },
     ],
-    solution: `result = df.filter(df.email.isNull())
-# OR
-from pyspark.sql.functions import col
-
-result = df.filter(col("email").isNull())
-# OR
-from pyspark.sql.functions import isnull
-
-result = df.filter(isnull("email"))`,
-    explanation: 'isNull() filters DataFrame rows containing null values in the target column.',
-    tieredHints: {
-      apiSignature: 'Column.isNull() -> Column',
-      skeleton: `result = ____.filter(df.____.____())`,
-    },
-    hints: ['Use .isNull() method on column'],
+    explanation: 'isNull() (or the isnull() function, or the SQL string "email IS NULL") is the null test. Equality against None returns null rather than true, so the filter drops everything; "is None" is evaluated by Python before Spark ever sees it; isnan() only matches NaN, which is a float value and distinct from a missing one.',
     tags: ['null-handling', 'filter', 'isnull'],
     concepts: ['ps-null-handling', 'ps-select-filter'],
   },
 
   {
     id: 'null-3',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NULL_HANDLING,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to filter DataFrame "df" (which has column "phone") to rows where phone is NOT null.',
-    starterCode: `# Filter for non-null phone rows\nresult = `,
-    testCases: [
-      {
-        input: 'df with phone column',
-        expectedOutput: 'df.phone.isNotNull()',
-        description: 'Should filter non-null values',
-      },
+    question: 'DataFrame "df" has 100 rows. 30 of them hold a null in column "phone", and no row holds the literal "555-0000". How many rows does df.filter(df.phone != "555-0000") return?',
+    options: [
+      { id: 'a', text: '100, because a null is never equal to the literal, so the inequality holds on every row', isCorrect: false },
+      { id: 'b', text: '30, because Spark reads a null column value as not matching any string literal at all', isCorrect: false },
+      { id: 'c', text: '70, because comparing null to a literal yields null, and filter() keeps only true rows', isCorrect: true },
+      { id: 'd', text: '0, because a null anywhere in the column poisons the predicate for the whole DataFrame', isCorrect: false },
     ],
-    solution: `result = df.filter(df.phone.isNotNull())
-# OR
-from pyspark.sql.functions import col
-
-result = df.filter(col("phone").isNotNull())
-# OR
-from pyspark.sql.functions import isnotnull
-
-result = df.filter(isnotnull("phone"))`,
-    explanation: 'isNotNull() filters DataFrame rows containing non-null values in the target column.',
-    tieredHints: {
-      apiSignature: 'Column.isNotNull() -> Column',
-      skeleton: `result = ____.filter(df.____.____())`,
-    },
-    hints: ['Use .isNotNull() method'],
-    tags: ['null-handling', 'filter', 'isnotnull'],
+    explanation: 'Spark uses three-valued logic: null != "555-0000" evaluates to null, not true, and filter() keeps only rows that evaluate to true. The 30 null rows are silently dropped by a predicate that never mentioned nulls. Write df.filter((df.phone != "555-0000") | df.phone.isNull()) to keep them, or use eqNullSafe() for a null-aware comparison.',
+    tags: ['null-handling', 'filter', 'three-valued-logic', 'isnotnull'],
     concepts: ['ps-null-handling', 'ps-select-filter'],
   },
 
   {
     id: 'null-4',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
     topic: Topic.NULL_HANDLING,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to drop rows from DataFrame "df" that contain null values in any column.',
-    starterCode: `# Drop rows containing any null values\nresult = `,
-    testCases: [
-      {
-        input: 'df with possible null values',
-        expectedOutput: 'df.na.drop() or df.dropna()',
-        description: 'Should drop rows with any null',
-      },
+    question: 'A wide DataFrame is cleaned with df.na.drop(), called with no arguments. Which rows does that remove?',
+    options: [
+      { id: 'a', text: 'Rows where every column is null, because "all" is the default value of the how parameter', isCorrect: false },
+      { id: 'b', text: 'Rows where any column is null, because "any" is the default value of the how parameter', isCorrect: true },
+      { id: 'c', text: 'Nothing, because drop() needs an explicit how or subset argument before it removes rows', isCorrect: false },
+      { id: 'd', text: 'Duplicate rows that contain nulls, because drop() deduplicates before it removes them', isCorrect: false },
     ],
-    solution: `result = df.na.drop()
-# OR
-result = df.dropna()
-# OR
-result = df.na.drop(how="any")`,
-    explanation: 'na.drop() or dropna() removes rows containing null values across columns (default how="any").',
-    tieredHints: {
-      apiSignature: 'DataFrameNaFunctions.drop(how: str = "any", thresh: int = None, subset: List[str] = None) -> DataFrame',
-      skeleton: `result = ____.____.____()`,
-    },
-    hints: ['Use na.drop() or dropna()'],
+    explanation: 'how defaults to "any", so a single null in any column discards the row. On a wide table that can delete most of the data unintentionally. Pass how="all" to require every column to be null, subset=[...] to limit which columns count, or thresh=n to keep rows with at least n non-null values.',
     tags: ['null-handling', 'drop', 'na'],
     concepts: ['ps-null-handling', 'ps-distinct-drop-dup'],
   },
 
   {
     id: 'null-5',
+    requires: [/dropna\s*\(|na\s*\.\s*drop\s*\(/, /how\s*=\s*['"]all['"]/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NULL_HANDLING,
@@ -3223,6 +3100,7 @@ keys = dbutils.secrets.list("prod")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
+    requires: [/DEEP\s+CLONE/i],
     question: 'Write a SQL statement to create an independent DEEP CLONE named "dev_orders" from the production Delta table "prod_orders".',
     starterCode: `-- Create independent deep clone\n`,
     testCases: [
@@ -3251,6 +3129,7 @@ CREATE OR REPLACE TABLE dev_orders DEEP CLONE prod_orders`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
+    requires: [/SHALLOW\s+CLONE/i],
     question: 'Write a SQL statement to create a zero-copy SHALLOW CLONE named "test_users" from the Delta table "prod_users".',
     starterCode: `-- Create zero-copy shallow clone\n`,
     testCases: [
@@ -3315,6 +3194,7 @@ CREATE OR REPLACE TABLE test_users SHALLOW CLONE prod_users`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
+    requires: [/MERGE\s+INTO/i],
     question: `Write a SQL MERGE statement to upsert data from table "updates" (alias u) into Delta table "customers" (alias c) matching on "customer_id". On match, update "name" and "email"; on no match, insert all columns.
 
 Table Schemas & Operation Summary:
@@ -3388,6 +3268,7 @@ WHEN ____ ____ THEN
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPTIMIZATION,
     language: CodeLanguage.SQL,
+    requires: [/OPTIMIZE/i],
     question: 'Write a SQL statement to run file compaction on Delta table "events".',
     starterCode: `-- Optimize events table\n`,
     testCases: [
@@ -3414,6 +3295,7 @@ WHEN ____ ____ THEN
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPTIMIZATION,
     language: CodeLanguage.SQL,
+    requires: [/ZORDER\s+BY/i],
     question: 'Write a SQL statement to optimize Delta table "sales" and apply Z-Ordering clustering on column "customer_id".',
     starterCode: `-- Optimize sales with ZORDER\n`,
     testCases: [
@@ -3478,6 +3360,7 @@ OPTIMIZE sales ZORDER BY customer_id`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
+    requires: [/VACUUM/i],
     question: 'Write a SQL statement to run VACUUM on Delta table "orders" using the default 7-day retention period.',
     starterCode: `-- Vacuum orders table\n`,
     testCases: [
@@ -3504,6 +3387,7 @@ OPTIMIZE sales ZORDER BY customer_id`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
+    requires: [/VACUUM/i],
     question: 'Write a SQL statement to run VACUUM on Delta table "transactions" with a custom retention period of 168 hours.',
     starterCode: `-- Vacuum transactions with retention\n`,
     testCases: [

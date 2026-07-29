@@ -151,7 +151,7 @@ export const CodingQuestion: React.FC<Props> = ({
         'editor.background': '#12121a',
         'editor.foreground': '#fafafa',
         'editor.lineHighlightBackground': '#1a1a2420',
-        'editor.selectionBackground': '#0ea5e920',
+        'editor.selectionBackground': '#0ea5e950',
         'editorLineNumber.foreground': '#6b6b75',
         'editorLineNumber.activeForeground': '#fafafa',
         'editorCursor.foreground': '#0ea5e9',
@@ -203,6 +203,7 @@ export const CodingQuestion: React.FC<Props> = ({
           question.language,
           testCase.description,
           question.starterCode,
+          { requires: question.requires, requiredKeywords: question.requiredKeywords },
         );
       } catch (error) {
         return {

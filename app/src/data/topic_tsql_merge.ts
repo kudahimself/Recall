@@ -55,7 +55,9 @@ export const tsql_merge_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the MERGE skeleton: target, source, join key, then the matched/not-matched actions.',
-    template: `___ dbo.DimCustomer AS tgt
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+___ dbo.DimCustomer AS tgt
 ___ stg.Customer AS src
     ___ tgt.CustomerId = src.CustomerId
 WHEN MATCHED THEN
@@ -82,7 +84,9 @@ WHEN NOT MATCHED BY TARGET THEN
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the extra predicate so matched rows are only UPDATEd when a tracked column actually changed (avoids pointless writes).',
-    template: `MERGE dbo.DimCustomer AS tgt
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
+MERGE dbo.DimCustomer AS tgt
 USING stg.Customer AS src
     ON tgt.CustomerId = src.CustomerId
 WHEN MATCHED ___ tgt.City <> src.City THEN
@@ -105,7 +109,9 @@ WHEN MATCHED AND tgt.City <> src.City THEN
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the branch that fires for target rows no longer present in the source, and the action that removes them.',
-    template: `MERGE dbo.DimProduct AS tgt
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+-- stg.Product(ProductCode, ProductName, Category, Price)
+MERGE dbo.DimProduct AS tgt
 USING stg.Product AS src
     ON tgt.ProductCode = src.ProductCode
 WHEN MATCHED THEN
@@ -132,7 +138,9 @@ WHEN NOT MATCHED BY SOURCE THEN
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: "Fill in the clause and the pseudo-column that report which action MERGE took for each row.",
-    template: `MERGE dbo.DimProduct AS tgt
+    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
+-- stg.Product(ProductCode, ProductName, Category, Price)
+MERGE dbo.DimProduct AS tgt
 USING stg.Product AS src
     ON tgt.ProductCode = src.ProductCode
 WHEN MATCHED THEN
@@ -197,6 +205,7 @@ ____ NOT MATCHED BY SOURCE THEN
     },
     explanation: 'All three branches make this a full sync: matched products are refreshed, source-only products are inserted (`BY TARGET`), and target-only products — gone from the source — are deleted (`BY SOURCE`). One statement keeps the dimension a faithful mirror of staging. (A `MERGE` statement must end with a semicolon.)',
     hints: ['Three WHEN clauses: MATCHED, NOT MATCHED BY TARGET, NOT MATCHED BY SOURCE', 'BY SOURCE → DELETE'],
+    requires: [/MERGE/i],
     tags: ['tsql', 'merge', 'upsert', 'sync'],
   },
 ];

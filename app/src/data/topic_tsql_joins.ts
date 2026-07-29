@@ -110,7 +110,9 @@ ORDER BY c.id;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keywords that join customers to their orders on the matching key.',
-    template: `SELECT c.FullName, o.Amount
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT c.FullName, o.Amount
 FROM dbo.DimCustomer c
 ___ ___ dbo.FactOrders o ___ o.CustomerKey = c.CustomerKey;`,
     blanks: ['INNER', 'JOIN', 'ON'],
@@ -129,7 +131,9 @@ INNER JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the join type and the predicate that together return customers with no orders (an anti-join).',
-    template: `SELECT c.FullName
+    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
+SELECT c.FullName
 FROM dbo.DimCustomer c
 ___ JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey
 WHERE o.OrderId ___;`,
@@ -166,6 +170,7 @@ WHERE o.OrderId IS NULL;`,
     topic: Topic.TSQL_JOINS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/INNER\s+JOIN/i],
     question: 'Join `dbo.DimCustomer c` (CustomerKey, FullName) to `dbo.FactOrders o` (CustomerKey, Amount) and return each customer\'s FullName and Amount, for orders with Amount over 100.',
     starterCode: `-- Join dbo.DimCustomer and dbo.FactOrders to return FullName and Amount for orders over 100
 `,
@@ -198,8 +203,9 @@ WHERE o.Amount ____ ____;`,
     topic: Topic.TSQL_JOINS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Return the FullName of every customer in `dbo.DimCustomer` who has NO matching rows in `dbo.FactOrders` (matched on CustomerKey).',
-    starterCode: `-- anti-join: LEFT JOIN ... WHERE right key IS NULL
+    requires: [/LEFT\s+JOIN|NOT\s+EXISTS/i],
+    question: 'From `dbo.DimCustomer` (CustomerKey, FullName) and `dbo.FactOrders` (OrderId, CustomerKey, Amount), return the FullName of every customer who has NO matching rows in FactOrders (matched on CustomerKey).',
+    starterCode: `-- dbo.DimCustomer(CustomerKey, FullName); return customers with no dbo.FactOrders(OrderId, CustomerKey) match
 `,
     testCases: [
       {
@@ -236,6 +242,7 @@ WHERE o.____ ____ ____;`,
     topic: Topic.TSQL_JOINS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
+    requires: [/JOIN/i],
     question: "Join `dbo.FactOrders o` (CustomerKey, ProductKey, Amount) to both `dbo.DimCustomer c` (CustomerKey, FullName, Country) and `dbo.DimProduct p` (ProductKey, ProductName, Category). Return FullName, ProductName, and Amount for orders where the customer's Country is 'NO' and the product's Category is 'Books', ordered by Amount descending.",
     starterCode: `-- join across three tables
 `,
