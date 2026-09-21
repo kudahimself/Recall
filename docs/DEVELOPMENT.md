@@ -259,6 +259,7 @@ Used by all 5 drain due-checks:
 NOT in `CodingQuestion.tsx`.
 `CodingQuestion` calls `gradeCodingSubmission(question, code)`, which validates once per test case.
 A question with an empty `testCases` list is still checked once against `solution`, so it never accepts arbitrary code.
+The bank itself must not ship empty `testCases`; `src/data/questionBankIntegrity.test.ts` enforces this along with one correct option per MCQ and cloze keys that fill to their solution.
 Regression suite: `codeValidator.mutants.test.ts` (every reference passes; flipped, truncated and unfinished mutants do not).
 
 **Process:**

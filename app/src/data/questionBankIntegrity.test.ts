@@ -5,7 +5,7 @@ import { QuestionType, CodeLanguage } from '../types';
 // three "unanswerable question" faults found in the bug hunt (report bugs #2
 // and #11): an MCQ with no (or several) correct options, a cloze whose answer
 // key contradicts its template, and a coding question with no test cases (which
-// the grader treats as a vacuous pass, so any submission is "correct").
+// leaves it without any described, per-case check of what is being graded).
 //
 // These checks read structural data only - they do not run the grader - so they
 // stay valid regardless of how CodingQuestion / MultipleChoiceQuestion /
