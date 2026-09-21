@@ -23,6 +23,16 @@
  *
  * Skips itself when REAL_STATE is unset, so it never breaks a normal test run.
  * The state file is only ever read.
+ *
+ * It also pins the chosen behaviour after time away - reviews first:
+ *   - no new question is served before the drain queue has first emptied
+ *   - every card whose latest answer was wrong at the start is shown again by
+ *     the next day's session, and every miss during the replay within two
+ *     days' sessions
+ * On the real Backend state of 2026-09-21 (336 cards queued after seven weeks
+ * away, defaults above) that gives 0 new questions over days 0-9, the queue
+ * first empty at the end of day 12, all 41 failed cards back by the next
+ * session and in-replay misses back within two days.
  */
 import { SpacedRepetitionSystem as SRS, ConceptSelectionContext } from '../spacedRepetition';
 import { applyReview, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty, ConceptProgress } from '../conceptSRS';
@@ -248,5 +258,17 @@ maybe('drain forward replay', () => {
     console.log(report);
     if (process.env.OUT) fs.writeFileSync(process.env.OUT, report);
     expect(newPerDay.length).toBe(DAYS);
+    // Reviews first: nothing new until the backlog has cleared once. A day that
+    // clears the queue may serve new questions after it clears.
+    if (firstNewDay >= 0) {
+      expect(firstClearDay).toBeGreaterThanOrEqual(0);
+      expect(firstNewDay).toBeGreaterThanOrEqual(firstClearDay);
+    }
+    // Every failed card comes back, and soon. Sessions are a day apart and
+    // last about an hour, so "by the next session" is under 1.5 days.
+    expect(failedAtStart.size).toBe(0);
+    expect(Math.max(0, ...startFailWaits)).toBeLessThan(1.5);
+    expect(Math.max(0, ...simFailWaits)).toBeLessThan(2.5);
+    expect(Math.max(0, ...openSim.map(w => w.days))).toBeLessThan(2.5);
   });
 });
