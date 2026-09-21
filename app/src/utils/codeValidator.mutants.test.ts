@@ -57,12 +57,9 @@ const FLIPS: [RegExp, string][] = [
 
 interface Mutant { kind: string; id: string; code: string }
 
-// The reference with its comment-only lines (and HTML/CSS block comments) removed. Deleting or truncating a
+// The reference with its comment-only lines removed. Deleting or truncating a
 // comment does not make an answer wrong, so mutants are cut from code only.
 function codeOnly(q: CodingQuestion, solution: string): string {
-  if (q.language === CodeLanguage.HTML || q.language === CodeLanguage.CSS) {
-    solution = solution.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  }
   const marker = q.language === CodeLanguage.SQL ? '--'
     : [CodeLanguage.JAVASCRIPT, CodeLanguage.TYPESCRIPT, CodeLanguage.JSX].includes(q.language) ? '//'
     : '#';
@@ -155,5 +152,13 @@ describe('coding grader over the whole question bank', () => {
       if (gradeCodingSubmission(m, code).some(r => /bracket/.test(r.error ?? ''))) bracketErrors.push(m.id);
     }
     expect(bracketErrors).toEqual([]);
+  });
+
+  it('does not pass a multi-part CSS answer that holds only one part', () => {
+    const q = coding.find(c => c.id === 'shadcn-dark-mode-1')!;
+    const ref = alternatives(q)[0];
+    const globalsOnly = ref.slice(ref.indexOf('/* globals.css */'), ref.indexOf('/* ThemeToggle'));
+    expect(globalsOnly).toContain('@layer base');
+    expect(passes(q, globalsOnly)).toBe(false);
   });
 });

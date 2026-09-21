@@ -1301,7 +1301,7 @@ export function cn(...inputs: ____[]) {
     solution: `/* tailwind.config.js */
 /* module.exports = {
   darkMode: "class",
-  content: ["./src/**"],
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -1362,7 +1362,7 @@ export function cn(...inputs: ____[]) {
       skeleton: `/* tailwind.config.js */
 /* module.exports = {
   darkMode: "____",
-  content: ["./src/**"],
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
   theme: { extend: { colors: { background: "hsl(var(--background))" } } },
 }; */
 

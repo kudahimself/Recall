@@ -78,9 +78,6 @@ function stripLineComments(code: string, marker: string): string {
  */
 function stripComments(code: string, language: CodeLanguage): string {
   if (language === CodeLanguage.SQL) return stripLineComments(code, '--');
-  if (language === CodeLanguage.HTML || language === CodeLanguage.CSS) {
-    return code.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  }
   if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
     return stripLineComments(code.replace(/\/\*[\s\S]*?\*\//g, ''), '//');
   }
@@ -243,15 +240,17 @@ function containsAsTokens(haystack: string, needle: string): boolean {
 }
 
 /**
- * True when every (, [ and { in the code is closed in order. String literals
- * are skipped. Expects comments already stripped.
- * In HTML and CSS quotes are not tracked at all, and in JS/TS/JSX a `'` right
- * after a letter is an apostrophe in text (`You're`), not a string opening.
+ * True when every (, [ and { in the code is closed in order. Comments and
+ * string literals are skipped, except in HTML and CSS: there quotes are not
+ * tracked and nothing is stripped, since `#333` is not a comment. In JS/TS/JSX
+ * a `'` right after a letter is an apostrophe in text (`You're`), not a string
+ * opening.
  */
-function bracketsBalanced(code: string, language: CodeLanguage): boolean {
+function bracketsBalanced(rawCode: string, language: CodeLanguage): boolean {
   const close: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
   const stack: string[] = [];
   const markup = language === CodeLanguage.HTML || language === CodeLanguage.CSS;
+  const code = markup ? rawCode : stripComments(rawCode, language);
   const apostrophes = language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX;
   let quote: string | null = null;
   for (let i = 0; i < code.length; i++) {
@@ -509,8 +508,8 @@ export function validateAnswer(
   // 3b. Unclosed brackets mean unfinished code - an answer cut off mid-call or
   // missing its closing `]` can share every token with the solution. Only
   // enforced when the reference itself is balanced.
-  if (!bracketsBalanced(stripComments(userCode, language), language)
-      && alternatives.some(alt => bracketsBalanced(stripComments(alt, language), language))) {
+  if (!bracketsBalanced(userCode, language)
+      && alternatives.some(alt => bracketsBalanced(alt, language))) {
     return {
       passed: false,
       verdict: 'fail',
