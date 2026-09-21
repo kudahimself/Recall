@@ -120,6 +120,23 @@ test('a tab stops saving once another tab has saved answers (bug 6)', async () =
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(otherTabRecord);
 });
 
+test('a stale tab cannot export its older copy and is told to reload', () => {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
+  const download = jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation(() => {});
+  render(<App />);
+  expect(screen.getByRole('button', { name: /Export/ })).toBeEnabled();
+
+  act(() => {
+    window.dispatchEvent(new StorageEvent('storage', { key: PROGRESS_KEY, newValue: '{}' }));
+  });
+
+  const exportButton = screen.getByRole('button', { name: /Export/ });
+  expect(exportButton).toBeDisabled();
+  expect(screen.getByText(/Reload this tab to export the latest progress/)).toBeInTheDocument();
+  fireEvent.click(exportButton);
+  expect(download).not.toHaveBeenCalled();
+});
+
 test('an export imports back to identical state', async () => {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
   localStorage.setItem('recall-profile', JSON.stringify({

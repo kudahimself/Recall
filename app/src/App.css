@@ -384,6 +384,12 @@ body::after {
   color: var(--text);
 }
 
+.header-note {
+  color: var(--warning);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+}
+
 .header-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;

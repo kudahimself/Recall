@@ -552,6 +552,9 @@ function App() {
   }, [activeCourse, persist]);
 
   // ── Export / import ──
+  // A stale tab holds older answers than storage, and an unreadable load holds
+  // nothing; exporting either and re-importing it would replace newer progress.
+  const canExport = !progressUnreadable && !staleTab;
   // The export is built from in-memory state, which is at least as new as
   // storage (a failed write leaves memory ahead), plus the orphaned history.
   const exportProgress = () => {
@@ -1318,13 +1321,18 @@ function App() {
             <Target className="stat-icon" size={14} />
             {overallRecentAccuracy}%
           </span>
+          {staleTab && (
+            <span className="header-note">Reload this tab to export the latest progress</span>
+          )}
           <button
             className="header-action"
             onClick={exportProgress}
-            disabled={progressUnreadable}
+            disabled={!canExport}
             title={progressUnreadable
               ? 'Stored progress could not be read, so there is nothing to export yet'
-              : 'Save all your progress to a file'}
+              : staleTab
+                ? 'Another tab saved newer answers; reload this tab to export the latest'
+                : 'Save all your progress to a file'}
           >
             <Download size={14} />
             <span>Export</span>
@@ -1370,8 +1378,13 @@ function App() {
         <div className="storage-banner storage-banner-error" role="alert">
           <strong>Your progress is not being saved</strong>
           {' '}({Object.entries(writeErrors).map(([k, msg]) => `${k}: ${msg}`).join('; ')}).
-          {' '}Your answers are kept in this tab until you close it. Export now to keep them.
-          {' '}<button className="storage-banner-button" onClick={exportProgress}>Export now</button>
+          {' '}Your answers are kept in this tab until you close it.
+          {canExport && (
+            <>
+              {' '}Export now to keep them.
+              {' '}<button className="storage-banner-button" onClick={exportProgress}>Export now</button>
+            </>
+          )}
         </div>
       )}
       {importError && (
