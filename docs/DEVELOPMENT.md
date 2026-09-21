@@ -236,12 +236,13 @@ Auto-graded Anki easy/hard.
 **Formula:**
 `getEffectiveInterval = getTargetInterval(streak) * easeFactor(cardDifficulty[id])`
 
-Used by all 5 drain due-checks:
+Used by every due-check:
 - `hasDueMastered`
 - `countPendingDrain` (behind `hasPendingDrain`)
 - `pickMasteredResurface`
 - `getReviewStatus`
-- `drainPred`
+- `isIntervalDue` (the due branch's filter, also behind `drainPred`)
+- `pickDueRelearn` (at streak 0, the relearn interval)
 
 **Ease factor:**
 - Constants: `EASE_MID_DIFFICULTY=5.5`, `EASE_MAX_FACTOR=2.5`, `EASE_MIN_FACTOR=0.4`

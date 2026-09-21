@@ -269,10 +269,9 @@ maybe('drain forward replay', () => {
     expect(newPerDay.length).toBe(DAYS);
     // Reviews first: nothing new until the backlog has cleared once. A day that
     // clears the queue may serve new questions after it clears.
-    if (firstNewDay >= 0) {
-      expect(firstClearDay).toBeGreaterThanOrEqual(0);
-      expect(firstNewDay).toBeGreaterThanOrEqual(firstClearDay);
-    }
+    // (Both hold trivially when no new question was served.)
+    expect(firstNewDay < 0 ? 0 : firstClearDay).toBeGreaterThanOrEqual(0);
+    expect(firstNewDay < 0 ? Infinity : firstNewDay).toBeGreaterThanOrEqual(firstClearDay);
     // Every failed card comes back, and soon. Sessions are a day apart and
     // last about an hour, so "by the next session" is under 1.5 days.
     expect(failedAtStart.size).toBe(0);
@@ -281,8 +280,7 @@ maybe('drain forward replay', () => {
     expect(Math.max(0, ...openSim.map(w => w.days))).toBeLessThan(2.5);
     // Well-known cards shown before due come back at no less than about 40
     // percent of their interval (baseline 50.3% on the real state).
-    if (earlyRatios.length > 0) {
-      expect(quantile(earlyRatios, 0.5)).toBeGreaterThanOrEqual(0.4);
-    }
+    // (Holds trivially when none were shown.)
+    expect(earlyRatios.length === 0 ? 1 : quantile(earlyRatios, 0.5)).toBeGreaterThanOrEqual(0.4);
   });
 });
