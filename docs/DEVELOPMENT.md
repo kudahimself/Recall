@@ -348,7 +348,7 @@ Distractors can carry optional `misconceptionTag` (string from registry in `src/
 Examples: `py-off-by-one-range`, `py-list-aliasing`
 
 When user picks tagged distractor:
-- Platform records event to localStorage (`databricks-misconceptions`)
+- Platform records event to localStorage (`recall-misconceptions`)
 - Surfaces top hits in ProgressTracker
 
 **Authoring rule:** Only tag distractor when wrong answer corresponds to SPECIFIC named misconception in registry.
