@@ -144,13 +144,20 @@ function isAllowedSkeletonLine(line) {
   const t = line.trim();
   if (t === '') return true;
   if (/^import\s+/.test(t)) return true;
-  if (/^export\s+(default\s+)?(function|const|class)\s+\w+/.test(t)) {
+  if (/^export\s+(default\s+)?(async\s+)?(function|const|class)\s+\w+/.test(t)) {
     // signature start only — no body code
     return /[{(]\s*$/.test(t) || /=>\s*{?\s*$/.test(t);
   }
   if (/^(const|let|var)\s+\w+\s*=\s*require\(/.test(t)) return true;
   if (/^['"`]use (client|server)['"`];?$/.test(t)) return true;
-  if (/^function\s+\w+\s*\(/.test(t) && /[{]\s*$/.test(t)) return true;
+  if (/^(async\s+)?function\s+\w+\s*\(/.test(t) && /[{(]\s*$/.test(t)) return true;
+  // Multi-line signature continuation. A DESTRUCTURED+TYPED parameter line
+  // (`{ params }: { params: Promise<{ id: string }> }`) — the plain `name: Type`
+  // form is already covered by the TS-field rule below. Neither `=` nor a call
+  // can appear here, so this can only be a signature, never logic.
+  if (/^\{[^{}]*\}\s*:\s*[\w<>[\]|&\s,'"{}:.]+,?$/.test(t)) return true;
+  // ...and its closer, with or without a declared return type: `) {`, `): Promise<Response> {`.
+  if (/^\)\s*(:\s*[\w<>[\]|&\s,'".]+)?\s*\{\s*$/.test(t)) return true;
   if (/^(const|let|var)\s+\w+\s*=\s*(async\s*)?\(.*\)\s*=>\s*{?\s*$/.test(t)) return true;
   if (/^(const|let|var)\s+\w+\s*=\s*\(.*\)\s*=>\s*{?\s*$/.test(t)) return true;
   if (t === '}' || t === '};' || t === ')' || t === ');') return true;

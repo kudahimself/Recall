@@ -329,7 +329,7 @@ def reset_counter():
 def test_increment():
     counter["n"] += 1
     assert counter["n"] == 1`,
-    explanation: '`autouse=True` applies the fixture to every test in its scope without the test needing to declare it as a parameter. Use sparingly — implicit setup makes tests harder to read. Good cases: reset a global cache, rotate a log handler, clear a singleton, enter a global feature flag. Pair with `conftest.py` to make an autouse fixture apply to every test in a directory tree.',
+    explanation: '`autouse=True` applies the fixture to every test in its scope without the test needing to declare it as a parameter. The bare `yield` is deliberate: it marks the setup/teardown boundary, not a value handoff. Nothing here can receive a value, because `test_increment` takes no parameters and reaches `counter` by its module-level name. You write `yield counter` only in the injected style, where the fixture is not autouse and the test declares `def test_increment(reset_counter):` to use what the fixture hands back. Use sparingly — implicit setup makes tests harder to read. Good cases: reset a global cache, rotate a log handler, clear a singleton, enter a global feature flag. Pair with `conftest.py` to make an autouse fixture apply to every test in a directory tree.',
     hints: [
       'autouse=True applies without explicit parameter injection',
       'Use sparingly — hidden setup hurts readability',

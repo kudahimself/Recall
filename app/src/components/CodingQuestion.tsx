@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { CodingQuestion as CQQuestion, CodeLanguage, Topic, AnswerMeta } from '../types';
 import { validateAnswer, ValidationResult, ValidationVerdict } from '../utils/codeValidator';
+import { CREDIT_CORRECT_THRESHOLD } from '../utils/spacedRepetition';
 import { validateByComputedStyle } from '../utils/computedStyleValidator';
 import { LivePreview } from './visual/LivePreview';
 import { StyledButton } from './StyledButton';
@@ -152,7 +153,7 @@ export const CodingQuestion: React.FC<Props> = ({
         'editor.foreground': '#fafafa',
         'editor.lineHighlightBackground': '#1a1a2420',
         'editor.selectionBackground': '#0ea5e950',
-        'editorLineNumber.foreground': '#6b6b75',
+        'editorLineNumber.foreground': '#8c8c98',
         'editorLineNumber.activeForeground': '#fafafa',
         'editorCursor.foreground': '#0ea5e9',
         'editorWhitespace.foreground': '#2a2a30',
@@ -335,6 +336,15 @@ export const CodingQuestion: React.FC<Props> = ({
   const isHtmlQuestion = question.language === CodeLanguage.HTML;
   const previewActive = isHtmlQuestion || Boolean(question.previewHtml);
   const usesTailwind = question.topic === Topic.TAILWIND;
+
+  // Post-answer credit disclosure. The pre-reveal buttons quote the discount, but
+  // until this the result panel said nothing afterwards - so a hinted pass looked
+  // like a clean pass while the SR engine had already discounted it. Derived from
+  // the results rather than new state: a give-up leaves failing rows, and a
+  // self-grade has already been flipped to pass/fail by then.
+  const passedThisVisit = testResults.length > 0 && testResults.every(r => r.verdict === 'pass');
+  const earnedCredit = schedule[hintTier];
+  const fullSpacing = earnedCredit >= CREDIT_CORRECT_THRESHOLD;
 
   return (
     <div className="coding-question">
@@ -561,6 +571,15 @@ export const CodingQuestion: React.FC<Props> = ({
             </div>
           )}
         </div>
+
+        {phase === 'done' && passedThisVisit && hintTier > 0 && (
+          <div className="hint-credit-notice">
+            <strong>Tier {hintTier} hint used:</strong> this pass earns{' '}
+            {earnedCredit} credit{fullSpacing
+              ? `, at or above the ${CREDIT_CORRECT_THRESHOLD} bar - full spacing, so it moves to its next interval.`
+              : `, below the ${CREDIT_CORRECT_THRESHOLD} bar. Your streak on this card resets, so it comes back tomorrow.`}
+          </div>
+        )}
 
         {/* Explanation and solution are gated to `done` so they can't leak the
             answer into a retry (review-fail / awaiting-self-grade). */}

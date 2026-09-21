@@ -351,12 +351,10 @@ print(repr(rest))`,
       topic: Topic.PY_FILE_IO,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write code that: (1) writes three lines to a file called `notes.txt`, (2) reads the file back and prints its contents. Use `with open(...)` for both operations.',
-      starterCode: `# Step 1: Open "notes.txt" in write mode using a context manager
-# Write three lines ("Line one\\n", "Line two\\n", "Line three\\n") to the file
+      question: 'Write the three lines `"Line one\\n"`, `"Line two\\n"`, `"Line three\\n"` to a file called `notes.txt`, then read the whole file back and print its contents. Use `with open(...)` for both operations.',
+      starterCode: `# Step 1: write the three lines to the file
 
-# Step 2: Open "notes.txt" in read mode using a context manager
-# Read the file contents and print them
+# Step 2: read it back and print what you wrote
 `,
       testCases: [
         {

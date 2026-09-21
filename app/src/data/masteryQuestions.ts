@@ -1138,18 +1138,22 @@ ____ (
     testCases: [
       {
         input: 'wide_scores table',
-        expectedOutput: 'stack(3, "math", math, "science", science, "english", english)',
-        description: 'Should unpivot using stack',
+        expectedOutput: 'FROM wide_scores, LATERAL stack(3, "math", math, "science", science, "english", english) AS t(subject, score)',
+        description: 'Should unpivot using stack as a table reference',
       },
     ],
-    solution: `SELECT student, stack(3, "math", math, "science", science, "english", english) AS (subject, score)\nFROM wide_scores\n-- OR\nSELECT student, stack(3, 'math', math, 'science', science, 'english', english) as (subject, score)\nFROM wide_scores`,
-    explanation: 'stack(n, label1, col1, label2, col2, ...) converts n columns from wide format to long format. The first argument is the number of column pairs. Each pair is a label string and the column value.',
+    solution: `SELECT student, subject, score
+FROM wide_scores, LATERAL stack(3, 'math', math, 'science', science, 'english', english) AS t(subject, score)
+-- OR
+SELECT student, stack(3, 'math', math, 'science', science, 'english', english) AS (subject, score)
+FROM wide_scores`,
+    explanation: 'stack(n, label1, col1, label2, col2, ...) goes wide -> long. The first argument counts the (label, value) PAIRS that follow, and the alias names the two generated columns. Placement matters on Databricks: since Runtime 12.2 LTS, invoking a generator function from the SELECT list - or from a LATERAL VIEW clause, which is deprecated by the same note - is no longer the supported form. Invoke stack() as a table reference in FROM instead, with LATERAL so it can read wide_scores columns. The SELECT-list form is still accepted here because it remains valid on open-source Spark and on runtimes below 12.2.',
     tieredHints: {
-      apiSignature: 'stack(n: int, expr1, expr2, ...) AS (col1, col2, ...)',
-      skeleton: `SELECT student, ____(3, "____", math, "____", science, "____", english) AS (____, ____)
-FROM ____`,
+      apiSignature: 'FROM table, LATERAL stack(n, label1, col1, ...) AS alias(labelCol, valueCol)',
+      skeleton: `SELECT student, ____, ____
+FROM wide_scores, ____ ____(3, "____", math, "____", science, "____", english) AS t(____, ____)`,
     },
-    hints: ['stack(n, label, col, label, col, ...)', 'First arg is the number of columns to unpivot'],
+    hints: ['On Databricks the generator belongs in FROM as a table reference, not in the SELECT list', 'LATERAL is what lets stack() read columns from wide_scores', 'stack(n, label, col, label, col, ...) - n counts the pairs, not the arguments'],
     tags: ['unpivot', 'stack', 'reshape', 'sql'],
     concepts: ['ps-pivot-unpivot'],
   },
@@ -1194,18 +1198,22 @@ result = df.groupBy("region").pivot("product_type", ["Electronics", "Clothing", 
     testCases: [
       {
         input: 'employee_ratings table',
-        expectedOutput: 'stack(4, "Q1", q1_rating, "Q2", q2_rating, "Q3", q3_rating, "Q4", q4_rating)',
-        description: 'Should unpivot 4 quarters using stack',
+        expectedOutput: 'FROM employee_ratings, LATERAL stack(4, "Q1", q1_rating, "Q2", q2_rating, "Q3", q3_rating, "Q4", q4_rating) AS t(quarter, rating)',
+        description: 'Should unpivot 4 quarters using stack as a table reference',
       },
     ],
-    solution: `SELECT emp_id, emp_name, stack(4, "Q1", q1_rating, "Q2", q2_rating, "Q3", q3_rating, "Q4", q4_rating) AS (quarter, rating)\nFROM employee_ratings\n-- OR\nSELECT emp_id, emp_name, stack(4, 'Q1', q1_rating, 'Q2', q2_rating, 'Q3', q3_rating, 'Q4', q4_rating) as (quarter, rating)\nFROM employee_ratings`,
-    explanation: 'stack(4, ...) creates 4 rows per input row, each with a label and the corresponding column value. The AS (quarter, rating) names the output columns. Non-pivoted columns (emp_id, emp_name) are carried along unchanged.',
+    solution: `SELECT emp_id, emp_name, quarter, rating
+FROM employee_ratings, LATERAL stack(4, 'Q1', q1_rating, 'Q2', q2_rating, 'Q3', q3_rating, 'Q4', q4_rating) AS t(quarter, rating)
+-- OR
+SELECT emp_id, emp_name, stack(4, 'Q1', q1_rating, 'Q2', q2_rating, 'Q3', q3_rating, 'Q4', q4_rating) AS (quarter, rating)
+FROM employee_ratings`,
+    explanation: 'stack(4, ...) emits 4 rows per input row, each carrying a label and the matching column value, and the alias names those two output columns. Columns the generator never touches - emp_id, emp_name - are carried along and repeated on every generated row. On Databricks Runtime 12.2 LTS and above, calling a generator from the SELECT list (or from LATERAL VIEW) is deprecated, so the generator goes in FROM as a table reference; LATERAL is required because it reads employee_ratings columns. The SELECT-list form still validates here since it works on open-source Spark and on older runtimes.',
     tieredHints: {
-      apiSignature: 'stack(n: int, expr1, expr2, ...) AS (col1, col2, ...)',
-      skeleton: `SELECT emp_id, emp_name, ____(4, "Q1", ____, "Q2", ____, "Q3", ____, "Q4", ____) AS (____, ____)
-FROM ____`,
+      apiSignature: 'FROM table, LATERAL stack(n, label1, col1, ...) AS alias(labelCol, valueCol)',
+      skeleton: `SELECT emp_id, emp_name, ____, ____
+FROM employee_ratings, ____ ____(4, "Q1", ____, "Q2", ____, "Q3", ____, "Q4", ____) AS t(____, ____)`,
     },
-    hints: ['n=4 because there are 4 quarter columns to unpivot', 'Each pair: "Q1", q1_rating gives the label and the value', 'AS (quarter, rating) names the two output columns'],
+    hints: ['n=4 because there are 4 quarter columns to unpivot', 'The generator is a table reference in FROM, correlated to employee_ratings with LATERAL', 'The alias after AS names the two generated columns'],
     tags: ['unpivot', 'stack', 'reshape', 'sql'],
     concepts: ['ps-pivot-unpivot'],
   },
@@ -1591,10 +1599,9 @@ ____ ____ transactions`,
     ],
     solution: `ALTER TABLE users ALTER COLUMN email SET NOT NULL`,
     explanation: 'ALTER TABLE users ALTER COLUMN email SET NOT NULL verifies existing data for NULLs and prevents any future writes containing NULL values in the email column.',
-    tieredHints: {
-      apiSignature: 'ALTER TABLE table_name ALTER COLUMN col_name SET NOT NULL',
-      skeleton: `ALTER TABLE users ALTER COLUMN email ____ NOT NULL`,
-    },
+    // No tieredHints: the solution is a single clause, so the apiSignature tier
+    // already hands over the whole form and a skeleton tier can only blank one
+    // token (retention 0.93). The untiered `hints` path is the right scaffold here.
     hints: ['Use ALTER TABLE table_name ALTER COLUMN column_name SET NOT NULL'],
     tags: ['constraint', 'not-null', 'delta', 'data-quality'],
     concepts: ['delta-constraints', 'delta-acid', 'dlt-expectations'],

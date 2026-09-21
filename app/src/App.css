@@ -12,8 +12,8 @@
 
   /* Text - Higher contrast */
   --text: #fafafa;
-  --text-dim: #94949d;
-  --text-muted: #6b6b75;
+  --text-dim: #b0b0ba;
+  --text-muted: #8c8c98;
 
   /* Primary - Default (overridden by course themes) */
   --primary: #0ea5e9;

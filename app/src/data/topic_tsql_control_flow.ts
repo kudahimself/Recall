@@ -160,8 +160,8 @@ END;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/CREATE\s+FUNCTION/i, /RETURNS/i],
-    question: 'Create a scalar function `dbo.NetAmount` that takes `@Gross DECIMAL(10,2)` and `@DiscountPct DECIMAL(5,2)` (a percentage like 10 for 10%) and RETURNS the discounted amount as `DECIMAL(10,2)`: gross minus gross times the percentage.',
-    starterCode: `-- CREATE FUNCTION dbo.NetAmount (...) RETURNS DECIMAL(10,2) AS BEGIN ... END
+    question: 'Create a scalar function `dbo.NetAmount` taking a gross amount and a discount percentage (10 means 10%), and returning the discounted amount - gross minus gross times the percentage. Name the parameters `@Gross` and `@DiscountPct`. Money values are `DECIMAL` with precision (10, 2); the percentage uses (5, 2).',
+    starterCode: `-- Scalar function: declare the parameters, state the return type, return one value
 `,
     testCases: [
       {

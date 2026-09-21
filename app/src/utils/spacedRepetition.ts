@@ -117,7 +117,10 @@ export const MASTERY_PROFICIENT_STREAK = 3;
 export const HINT_CREDIT_MATURE = [1, 0.5, 0.25] as const;   // streak >= HINT_MATURITY_STREAK or topic mastered
 export const HINT_CREDIT_IMMATURE = [1, 0.8, 0.6] as const;  // new / still-struggling cards
 export const HINT_MATURITY_STREAK = 2;                       // streak at/above which a card counts as mature
-export const CREDIT_CORRECT_THRESHOLD = 0.75;                // credit >= this "counts as correct" downstream
+// credit >= this earns FULL SPACING (continues the correct streak). It does NOT
+// gate drain-queue membership — a hinted pass under the bar still clears the
+// card off the queue, it just comes back tomorrow. See latestCorrectness.
+export const CREDIT_CORRECT_THRESHOLD = 0.75;
 export const HINT_GRADE_CAP = [4, 2, 1] as const;            // FSRS grade ceiling by hint tier (tier 2 = lapse)
 
 // Mastered-resurface model (Anki-style, due-driven). Without this, mastered
@@ -484,16 +487,23 @@ export class SpacedRepetitionSystem {
 
   /**
    * Latest-attempt correctness per question, one pass over attemptHistory.
-   * Single source for the drain's "latest-wrong" membership test. A hinted pass
-   * counts as correct only when its credit clears CREDIT_CORRECT_THRESHOLD, so a
-   * heavily-hinted pass (e.g. tier-2 skeleton) stays "wrong" for the drain and
-   * the card keeps resurfacing until answered cleanly.
+   * Single source for the drain's "latest-wrong" membership test, and
+   * deliberately NOT credit-gated: queue membership asks "was the card
+   * answered", spacing asks "was it earned unaided". Those are split.
+   *
+   * A hinted pass therefore RELEASES the card from the drain queue, while
+   * getCorrectStreak still resets its streak to 0 — so the card returns
+   * tomorrow (getTargetInterval(0) === 1 day) instead of being pinned.
+   *
+   * Before the split this was `credit >= CREDIT_CORRECT_THRESHOLD`, which made
+   * hinted passes unable to clear a drain card AT ALL: drain membership requires
+   * a mastered topic, mastery forces HINT_CREDIT_MATURE, and both of its hinted
+   * tiers (0.5, 0.25) fall under the 0.75 bar. The card stayed queued no matter
+   * how cleanly it was then solved, and the queue counter froze.
    */
   static latestCorrectness(progress: UserProgress): Map<string, boolean> {
     const latest = new Map<string, boolean>();
-    for (const a of progress.attemptHistory) {
-      latest.set(a.questionId, this.attemptCredit(a) >= CREDIT_CORRECT_THRESHOLD);
-    }
+    for (const a of progress.attemptHistory) latest.set(a.questionId, a.isCorrect);
     return latest;
   }
 
@@ -506,6 +516,9 @@ export class SpacedRepetitionSystem {
    * A failed drain card therefore stays in the queue — regardless of how many
    * other questions were answered since — until it is answered correctly: the
    * count genuinely HOLDS on a miss and falls by one per correct answer.
+   * "Correctly" includes a hint-assisted pass (see latestCorrectness): it leaves
+   * the queue but with a reset streak, so it is due again tomorrow rather than
+   * pinned until answered unaided.
    * Because mastery is sticky, a rough session can never demote a topic and
    * silently drop its other due cards from the queue.
    * Topics retired by supersession (getRetiredDrainTopics) are excluded: once

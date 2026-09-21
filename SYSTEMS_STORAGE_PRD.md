@@ -1,6 +1,6 @@
 # PRD: Machines, Memory and Disks (Data Engineering, Section 7)
 
-Status: not started.
+Status: IMPLEMENTED 2026-07-30 (all acceptance criteria met; see section 7).
 Written 2026-07-29.
 Owner: solo learner (repo owner).
 
@@ -206,18 +206,34 @@ DE is not an ordered-bank course, so there is no `*OrderedQuestions.ts` append s
 
 ## 7. Acceptance criteria
 
-- [ ] Phase 0a: a tier-1 hinted pass on a mastered-topic drain card leaves the drain queue, with a test covering it.
-- [ ] Phase 0a: the result panel names the credit discount after a hinted pass.
-- [ ] Phase 0b: all seven HIGH leak violations at MEDIUM or below; the five untracked ones added to `LEAK_AUDIT_TRACKER.md`.
-- [ ] 8 topics wired through all four files in section 6.
-- [ ] 80-95 questions, every topic with a BEGINNER through ADVANCED ramp.
-- [ ] `/audit-mcq` clean on the new section (distractor length parity, no positional bias).
-- [ ] `/topic-stats` shows no coverage gaps across the 8 topics.
-- [ ] `/verify` passes: tests, `tsc --noEmit`, lint, all four leak scripts with no NEW HIGH findings.
-- [ ] The section appears as Step 7 in the DE path and unlocks only after "Operations, Quality & Modern DE" is mastered.
-- [ ] Existing DE progress is unchanged: no previously-unlocked section becomes locked.
+- [x] Phase 0a: a tier-1 hinted pass on a mastered-topic drain card leaves the drain queue, with a test covering it.
+      `latestCorrectness` is no longer credit-gated (queue membership asks "was it answered", spacing asks "was it earned unaided"); `getCorrectStreak` still resets, so the card returns tomorrow. 6 new cases in `spacedRepetition.hints.test.ts`.
+- [x] Phase 0a: the result panel names the credit discount after a hinted pass.
+      New `.hint-credit-notice` block in `CodingQuestion.tsx`, stating the earned credit, the bar, and whether the streak reset.
+- [x] Phase 0b: all seven HIGH leak violations at MEDIUM or below; the five untracked ones added to `LEAK_AUDIT_TRACKER.md`.
+      Five are now unflagged outright and `tsql-flow-1` sits at MEDIUM (its residual score is the two `@Param` names, which the Python-shaped scorer reads as decorators). The two web-dev HIGHs were **detector** bugs, not question defects: `isAllowedSkeletonLine` rejected `export async function` and multi-line signatures. An eighth pre-existing HIGH (`constraint-2`, `check-hint-leaks.js`) was cleared too - out of scope as written, but it was the only remaining HIGH in the repo.
+- [x] 8 topics wired through all four files in section 6. Gated by `dataEngSystemsSection.test.ts`.
+- [x] 88 questions - 11 per topic, each B5 / I4 / A2. 84 MULTIPLE_CHOICE + 4 PREDICT_OUTPUT, no CODING.
+- [x] Distractor length parity and positional bias both audited and fixed. Correct-letter distribution is exactly 21/21/21/21 (was 13/26/32/13), 1-4 per letter within every topic. "Correct option is strictly longest" is down to 23 of 84 (27%, i.e. chance) from 32, with no margin above 4 characters and no option spread above 16.
+- [x] No coverage gaps: every topic has all three difficulty tiers and 11 questions.
+- [x] `/verify` passes: 240 tests green, `tsc --noEmit` clean, lint clean, and all four leak scripts at HIGH=0 (not merely "no new").
+- [x] The section appears as Step 7 in the DE path and unlocks only after "Operations, Quality & Modern DE" is mastered.
+- [x] Existing DE progress is unchanged: no previously-unlocked section becomes locked. Asserted directly against `getUnlockedSections` for a learner mastered through step 6, through step 5, and brand new.
 
-The last item is worth checking explicitly rather than assuming.
+The last item was worth checking explicitly rather than assuming - it holds.
+
+### Deviations from the plan as written
+
+- The two web-dev starter HIGHs (`next-api-dynamic-1`, `next-error-handling-6`) were false
+  positives. Both starters are imports + an empty-bodied signature + a `// your code here` marker,
+  which is the detector's own documented allowed baseline. The fix was to `check-starter-leaks-webdev.js`,
+  not to the questions; the report diff confirms exactly those two rows disappeared and nothing else.
+- `tsql-flow-1` lands at MEDIUM rather than clean. The residual score is two bare `@Param` names read
+  as Python decorators, and those names are required for the validator to match. MEDIUM was the stated bar.
+- `constraint-2` was fixed although the PRD did not list it - it was the last HIGH in the repo across
+  all four detectors, and a single-clause solution cannot support a skeleton tier at all.
+- `check-hint-leaks.js` reports 465 MEDIUMs. That is a calibration artifact of its `retention` metric
+  rather than a backlog, and is now noted as such in `LEAK_AUDIT_TRACKER.md` so it is not mistaken for work.
 
 ---
 

@@ -113,6 +113,22 @@
   overflow-x: auto;
 }
 
+/* Post-answer credit disclosure. Deliberately reads as an advisory note, not a
+   failure: the pass stood, it just earned less than full spacing. */
+.hint-credit-notice {
+  padding: 10px 24px;
+  background: var(--warning-soft);
+  border-top: 1px solid rgba(245, 158, 11, 0.25);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: var(--warning);
+  flex: 0 0 auto;
+}
+
+.hint-credit-notice strong {
+  color: var(--warning);
+}
+
 .results {
   padding: 12px 24px;
   margin: 0;

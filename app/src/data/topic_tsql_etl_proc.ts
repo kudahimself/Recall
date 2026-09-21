@@ -266,8 +266,8 @@ END;`,
     topic: Topic.TSQL_ETL_PROC,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Write the body of an incremental load: declare `@lastLoaded DATETIME2`, read it from `dbo.EtlControl` (WHERE `TableName = \'FactSales\'` into the variable from column `LastLoadedAt`), INSERT into `dbo.FactSales (OrderId, Amount, UpdatedAt)` the rows from `stg.Sales` whose `UpdatedAt` is greater than `@lastLoaded`, then UPDATE `dbo.EtlControl.LastLoadedAt` to `MAX(UpdatedAt)` from `dbo.FactSales` for that table.',
-    starterCode: `-- DECLARE @lastLoaded DATETIME2; SELECT @lastLoaded = ...; INSERT ... WHERE UpdatedAt > @lastLoaded; UPDATE dbo.EtlControl ...
+    question: 'Write the body of a high-watermark incremental load: read the stored watermark into a `DATETIME2` variable named `@lastLoaded`, load only the source rows newer than it, then advance the stored watermark to the newest value now present in the target. Schema - control table `dbo.EtlControl` with columns `TableName` and `LastLoadedAt`, whose row for this load has `TableName` \'FactSales\'; target `dbo.FactSales` with columns `OrderId`, `Amount`, `UpdatedAt`; source `stg.Sales` with the same three columns, aliased `s`.',
+    starterCode: `-- Three statements: read the watermark, load the delta, advance the watermark
 `,
     testCases: [
       {

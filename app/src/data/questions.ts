@@ -46,6 +46,7 @@ import { dataEngineeringModelingQuestions } from './dataEngineeringModelingQuest
 import { dataEngineeringStreamingQuestions } from './dataEngineeringStreamingQuestions';
 import { dataEngineeringDistributedQuestions } from './dataEngineeringDistributedQuestions';
 import { dataEngineeringOpsQuestions } from './dataEngineeringOpsQuestions';
+import { dataEngineeringSystemsQuestions } from './dataEngineeringSystemsQuestions';
 import { tsql_select_questions } from './topic_tsql_select';
 import { tsql_filtering_questions } from './topic_tsql_filtering';
 import { tsql_string_functions_questions } from './topic_tsql_string_functions';
@@ -1034,6 +1035,7 @@ export const questions: Question[] = dedupeById([
   ...dataEngineeringStreamingQuestions,
   ...dataEngineeringDistributedQuestions,
   ...dataEngineeringOpsQuestions,
+  ...dataEngineeringSystemsQuestions,
   ...tsql_select_questions,
   ...tsql_filtering_questions,
   ...tsql_string_functions_questions,

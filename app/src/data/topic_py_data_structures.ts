@@ -1248,9 +1248,8 @@ ____(high)`,
       topic: Topic.PY_DATA_STRUCTURES,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a dictionary `person` with keys `"name"`, `"age"`, and `"city"`. Then: (1) print the name, (2) add a key `"email"` with a value, (3) print all keys, (4) print all values.',
-      starterCode: `# Create a 'person' dictionary with name="Alice", age=30, city="Dublin"
-# Print the name, add email="alice@example.com", then print all keys and all values`,
+      question: 'Build a dictionary `person` holding `"name": "Alice"`, `"age": 30`, `"city": "Dublin"`. Print the name, then add `"email": "alice@example.com"`, then print the dictionary\'s keys and its values (three printed lines: name, keys, values).',
+      starterCode: `# Build the dictionary, then print / add / print the two views`,
       testCases: [
         {
           input: '',

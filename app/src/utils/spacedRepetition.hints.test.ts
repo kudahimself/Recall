@@ -5,6 +5,7 @@
  * Run: npm test -- --testPathPattern=hints --watchAll=false
  */
 import {
+  Course,
   Difficulty,
   Question,
   QuestionAttempt,
@@ -70,13 +71,96 @@ describe('attemptCredit - legacy fallback', () => {
   });
 });
 
-describe('latestCorrectness - credit threshold', () => {
-  it('counts a >=0.75 credit as correct and a lower one as wrong', () => {
+// A hint-assisted PASS as the app actually records it: isCorrect true (the tests
+// went green) with a discounted credit. Distinct from `credited`, which derives
+// the boolean from the credit and so can never express this case.
+function hintedPass(qid: string, credit: number, msAgo: number): QuestionAttempt {
+  return {
+    questionId: qid,
+    isCorrect: true,
+    credit,
+    hintTierUsed: credit === 0.5 ? 1 : 2,
+    attempts: 1,
+    timeSpent: 5_000,
+    timestamp: Date.now() - msAgo,
+  };
+}
+
+describe('latestCorrectness - queue membership is not credit-gated', () => {
+  it('a discounted hinted pass still reads as correct', () => {
     const p = emptyProgress();
-    p.attemptHistory = [credited('hi', 0.8, 10), credited('lo', 0.5, 10)];
+    p.attemptHistory = [hintedPass('hi', 0.8, 10), hintedPass('lo', 0.5, 10)];
     const latest = SpacedRepetitionSystem.latestCorrectness(p);
     expect(latest.get('hi')).toBe(true);
-    expect(latest.get('lo')).toBe(false);
+    expect(latest.get('lo')).toBe(true);
+  });
+
+  it('a genuine miss still reads as wrong', () => {
+    const p = emptyProgress();
+    p.attemptHistory = [legacy('q', false, 10)];
+    expect(SpacedRepetitionSystem.latestCorrectness(p).get('q')).toBe(false);
+  });
+});
+
+// Regression: drain membership requires a mastered topic, mastery forces
+// HINT_CREDIT_MATURE, and both of its hinted tiers (0.5, 0.25) sit under
+// CREDIT_CORRECT_THRESHOLD. When latestCorrectness was credit-gated, that made
+// it impossible for ANY hint tier to clear a drain card - the card stayed queued
+// however cleanly it was then solved, freezing the queue counter.
+describe('drain queue - a hinted pass releases the card but resets its spacing', () => {
+  const TOPIC = Topic.PY_BASICS;
+
+  function drainCard(id: string): Question {
+    return {
+      ...makeQ(id, TOPIC),
+      difficulty: Difficulty.ADVANCED,
+      type: QuestionType.CODING,
+      course: Course.BACKEND,
+    } as Question;
+  }
+
+  function masteredState(attempt: QuestionAttempt) {
+    const q = drainCard('drain-1');
+    const progress = emptyProgress();
+    progress.masteredTopics = new Set([TOPIC]);
+    progress.attemptHistory = [attempt];
+    progress.lastAttempt = new Map([[q.id, attempt.timestamp]]);
+    return { pool: [q], topicToQs: new Map([[TOPIC as string, [q]]]), progress };
+  }
+
+  it('a tier-1 hinted pass leaves the drain queue', () => {
+    const { pool, topicToQs, progress } = masteredState(hintedPass('drain-1', 0.5, 60_000));
+    expect(SpacedRepetitionSystem.countPendingDrain(pool, topicToQs, progress)).toBe(0);
+    expect(SpacedRepetitionSystem.hasPendingDrain(pool, topicToQs, progress)).toBe(false);
+  });
+
+  it('a tier-2 hinted pass leaves the drain queue too', () => {
+    const { pool, topicToQs, progress } = masteredState(hintedPass('drain-1', 0.25, 60_000));
+    expect(SpacedRepetitionSystem.countPendingDrain(pool, topicToQs, progress)).toBe(0);
+  });
+
+  it('a miss still holds the card in the queue', () => {
+    const { pool, topicToQs, progress } = masteredState(legacy('drain-1', false, 60_000));
+    expect(SpacedRepetitionSystem.countPendingDrain(pool, topicToQs, progress)).toBe(1);
+  });
+
+  it('the released card is due at the streak-reset interval, not the full one', () => {
+    const hinted = emptyProgress();
+    hinted.attemptHistory = [
+      credited('drain-1', 1, 40 * 86_400_000),
+      credited('drain-1', 1, 30 * 86_400_000),
+      hintedPass('drain-1', 0.5, 60_000),
+    ];
+    // Streak broken by the discounted pass -> interval index 0 -> 1 day, so the
+    // card returns tomorrow instead of riding the 3-clean-pass interval (14d).
+    expect(SpacedRepetitionSystem.getCorrectStreak('drain-1', hinted)).toBe(0);
+    expect(SpacedRepetitionSystem.getEffectiveInterval('drain-1', hinted)).toBe(1);
+
+    const clean = emptyProgress();
+    clean.attemptHistory = hinted.attemptHistory
+      .slice(0, 2)
+      .concat(credited('drain-1', 1, 60_000));
+    expect(SpacedRepetitionSystem.getEffectiveInterval('drain-1', clean)).toBe(14);
   });
 });
 

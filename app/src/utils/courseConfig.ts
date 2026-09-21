@@ -70,6 +70,10 @@ const DATA_ENG_TOPICS = new Set<string>([
   Topic.DE_WHAT_IS_ORCHESTRATION, Topic.DE_AIRFLOW_DAGSTER, Topic.DE_RETRIES_IDEMPOTENCY,
   Topic.DE_DATA_QUALITY_BASICS, Topic.DE_OBSERVABILITY_LINEAGE, Topic.DE_GOVERNANCE,
   Topic.DE_FOR_AI,
+  // Machines, Memory & Disks
+  Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
+  Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
+  Topic.DE_SSD_VS_HDD, Topic.DE_SPILL_TO_DISK,
 ]);
 
 const SQL_TOPICS = new Set<string>([
@@ -550,6 +554,24 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Data Engineering for AI': ['de_for_ai'],
     },
   },
+  // Appended LAST deliberately. getUnlockedSections walks DATA_ENG_PATH_ORDER and
+  // `break`s at the first unmastered section, so inserting this foundational
+  // material earlier would hard-lock every later step for a learner already past
+  // it. Appending disrupts no existing unlock state; the cost is that the
+  // hardware layer arrives as a deepening pass over material already seen.
+  'Machines, Memory & Disks': {
+    weight: 'Step 7',
+    topics: {
+      'The Memory Hierarchy': ['de_memory_hierarchy'],
+      'RAM vs Disk': ['de_ram_vs_disk'],
+      'Sequential vs Random I/O': ['de_sequential_vs_random_io'],
+      'The Page Cache': ['de_page_cache'],
+      'Virtual Memory & Paging': ['de_virtual_memory'],
+      'CPU Cache & Locality': ['de_cpu_cache_locality'],
+      'SSD vs HDD': ['de_ssd_vs_hdd'],
+      'Spill to Disk': ['de_spill_to_disk'],
+    },
+  },
 };
 
 export const DATA_ENG_PATH_ORDER = [
@@ -559,6 +581,7 @@ export const DATA_ENG_PATH_ORDER = [
   'Streaming',
   'Distributed Systems & Storage',
   'Operations, Quality & Modern DE',
+  'Machines, Memory & Disks',
 ];
 
 /**

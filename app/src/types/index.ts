@@ -129,6 +129,17 @@ export enum Topic {
   DE_OBSERVABILITY_LINEAGE = 'de_observability_lineage',
   DE_GOVERNANCE = 'de_governance',
   DE_FOR_AI = 'de_for_ai',
+  // Machines, Memory & Disks - the hardware/OS layer under everything above.
+  // Ordered hardware facts -> OS abstractions built on them -> the two
+  // applications (cache locality explains columnar, spill explains Spark).
+  DE_MEMORY_HIERARCHY = 'de_memory_hierarchy',
+  DE_RAM_VS_DISK = 'de_ram_vs_disk',
+  DE_SEQUENTIAL_VS_RANDOM_IO = 'de_sequential_vs_random_io',
+  DE_PAGE_CACHE = 'de_page_cache',
+  DE_VIRTUAL_MEMORY = 'de_virtual_memory',
+  DE_CPU_CACHE_LOCALITY = 'de_cpu_cache_locality',
+  DE_SSD_VS_HDD = 'de_ssd_vs_hdd',
+  DE_SPILL_TO_DISK = 'de_spill_to_disk',
 
   // ── Web Development ──
   // HTML & CSS

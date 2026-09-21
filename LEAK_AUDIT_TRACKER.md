@@ -1,18 +1,39 @@
 # Starter-Code Leak Audit & Fix Tracker
 
-This document tracks every **CODING** question flagged by `app/scripts/check-leaks.js` for handing the learner too much of the solution in its `starterCode`.
-It is a fix backlog: clean questions are not listed. A row leaves the tracker (marked 🟢 Fixed) once the starter no longer leaks and the detector agrees.
+This document tracks every **CODING** question flagged for handing the learner too much of the solution - whether the giveaway sits in the `starterCode`, the `question` prompt, or a `tieredHints` skeleton.
+It is a fix backlog: clean questions are not listed. A row leaves the tracker (marked 🟢 Fixed) once the leak is gone and the detector agrees.
 
 ## 🤖 Agent Operating Instructions (SOP for Any Agent / Subagent)
 
-**Flagged Coding Questions:** `141` | **Fixed:** `27` | **Accepted:** `118` | **Pending:** `0`
-(HIGH `2` · MEDIUM `34` · LOW `85` — regenerate counts by re-running the detector.)
+**Baseline as of 2026-07-30 — all four detectors, HIGH = 0 across the board:**
 
-The single source of truth is the detector. This tracker is a snapshot; always re-run it, do not trust stale rows:
+| Detector | What it reads | HIGH | MEDIUM | LOW |
+|---|---|---|---|---|
+| `check-leaks.js` | `starterCode` (all courses, two-lane) | 0 | 34 | 85 |
+| `check-prompt-leaks.js` | `question` prompt | 0 | 30 | 82 |
+| `check-starter-leaks-webdev.js` | `starterCode` (web dev, JS/TS-aware) | 0 | 8 | 26 |
+| `check-hint-leaks.js` | `tieredHints.skeleton` | 0 | 465 | 0 |
+
+Until 2026-07-30 this tracker recorded only the `check-leaks.js` column, which understated the real
+backlog: three prompt-leak HIGHs and two web-dev starter HIGHs existed and were tracked nowhere.
+All five are now listed below. Keep every detector's HIGH count in this table when you regenerate it.
+
+`check-hint-leaks.js`'s 465 MEDIUMs are a **calibration artifact, not a backlog**: its `retention`
+metric flags any skeleton that keeps most of the solution's shape, which is what a skeleton tier is
+*for*. Triage its HIGHs only. Its one HIGH (`constraint-2`) was cleared on 2026-07-30 by dropping
+`tieredHints` from a single-clause solution, where the skeleton tier could add nothing over the
+signature tier. Do not treat the MEDIUM column as work until the metric is recalibrated.
+
+`check-leaks.js` row counts: Flagged `141` | Fixed `27` | Accepted `118` | Pending `0`.
+
+The single source of truth is the detectors. This tracker is a snapshot; always re-run them, do not trust stale rows:
 
 ```powershell
 # from app/
 node scripts/check-leaks.js
+node scripts/check-prompt-leaks.js
+node scripts/check-starter-leaks-webdev.js
+node scripts/check-hint-leaks.js
 ```
 
 ### 1. Workflow Sequence
@@ -36,6 +57,12 @@ node scripts/check-leaks.js
   - `recall=X` — the starter reveals X of the solution's *distinctive* tokens, scoring only tokens the **prompt did not already give** (so schema restatement and "rewrite this" starters are not false-positived). HIGH ≥0.80, MED ≥0.55.
 - **Lane B — real-code starter** (Web Dev / Next.js / Python: imports, signatures, JSX shells). Stripped-char ratio of non-comment code vs solution. HIGH ≥0.70, MED ≥0.40, LOW ≥0.20.
 
+The other three detectors do not have lanes:
+
+- **`check-prompt-leaks.js`** scores the backticked segments of the `question`: a decorator or `def`/`class` is +3, a call with arguments +2, an assignment +2, a concrete type annotation +2. HIGH ≥10, MED ≥6, LOW ≥3. Bare identifiers, strings, numbers and data literals score 0 - so naming a variable, table, column, or expected output value is free, and only *syntax* costs. That is the same background-vs-answer line the fix guidance below uses: pushing given values INTO the prompt lowers both this score and lane A's recall at once.
+- **`check-starter-leaks-webdev.js`** is JS/TS-aware. It allows a baseline of imports, `'use client'`/`'use server'`, an empty-bodied signature stub, a data literal copied from the prompt, and `// TODO`-style markers; anything else scores. HIGH ≥6, MED ≥3, LOW ≥1. Because it works line by line, a *multi-line* signature needs each of its lines to be recognised - if a legitimate signature form is flagged, check `isAllowedSkeletonLine` before rewriting the question.
+- **`check-hint-leaks.js`** scores `tieredHints.skeleton` for leaking what the blanks are meant to hide.
+
 ### 3. Triage guidance by tier
 - **🔴 HIGH** — fix. These are genuine "the answer is in the starter" leaks.
 - **🟠 MEDIUM** — review. Lane A MED is often approved intent-prose; Lane B MED is real but sometimes intentional scaffolding (config-artifact, signature-only). Fix or mark ⚪ Accepted with a reason.
@@ -55,10 +82,29 @@ node scripts/check-leaks.js
 > - ⚪ `Accepted` — Reviewed and left as-is (intentional scaffolding / config-artifact / approved intent-prose); note the reason
 
 > **Severity:** 🔴 HIGH (fix) · 🟠 MEDIUM (review) · 🟡 LOW (usually acceptable)
-> **Lane:** A = comment-only starter · B = real-code scaffolding
+> **Lane:** A = comment-only starter · B = real-code scaffolding · P = prompt · W = web-dev starter
 > Files are ordered by their worst finding.
 
-## Flagged Questions
+## Prompt Leaks (`check-prompt-leaks.js`)
+
+These were HIGH and tracked nowhere until 2026-07-30.
+
+| ID | File | Severity | Lane | Signal | Status | Notes |
+|---|---|---|---|---|---|---|
+| `tsql-flow-1` | `topic_tsql_control_flow.ts` | 🔴 HIGH | P | `score=12` | 🟢 Fixed | Prompt dictated the full signature (`@Gross DECIMAL(10,2)` etc.) and the return type, leaving only the RETURN expression. Reworded to name the parameters and state the precisions as prose. Residual `score=6` is the two bare `@Param` names, which the scorer reads as Python decorators - a T-SQL false positive, and the names are required for validation |
+| `tsql-etlproc-2` | `topic_tsql_etl_proc.ts` | 🔴 HIGH | P | `score=11` | 🟢 Fixed | Prompt was a clause-by-clause walkthrough of all three statements. Rewritten to state the high-watermark *goal* plus the schema; the starter comment (which sketched the whole solution) cut to one intent line. Now `score=3` |
+| `py-adv-magic-1` | `topic_py_magic_methods.ts` | 🔴 HIGH | P | `score=10` | 🟢 Fixed | Prompt body was already well-written (describes the dunders instead of naming them); the leak was the driver snippets. Replaced with prose naming the instances and casings. Now unflagged |
+
+## Web Dev Starter Leaks (`check-starter-leaks-webdev.js`)
+
+Also untracked until 2026-07-30. Both turned out to be **detector** bugs, not question defects.
+
+| ID | File | Severity | Lane | Signal | Status | Notes |
+|---|---|---|---|---|---|---|
+| `next-api-dynamic-1` | `nextjsQuestions.ts` | 🔴 HIGH | W | `score=6` | 🟢 Fixed | Starter was imports + empty-bodied signature + intent comment - the detector's own documented baseline. `isAllowedSkeletonLine` did not accept `export async function` (no `async` in the pattern), nor the two continuation lines of a multi-line signature, so each scored +2. Fixed the detector; question untouched |
+| `next-error-handling-6` | `advancedNextQuestions.ts` | 🔴 HIGH | W | `score=6` | 🟢 Fixed | Same detector gap, same starter shape (imports + signature + `// your code here`). Question untouched |
+
+## Flagged Questions (`check-leaks.js`)
 
 ### `topic_dj_rest.ts`
 
@@ -75,14 +121,14 @@ node scripts/check-leaks.js
 
 | ID | Severity | Lane | Signal | Status | Notes |
 |---|---|---|---|---|---|
-| `pe1-m4-11` | 🔴 HIGH | A | `recall=1.00` | 🟢 Fixed | Replaced exact method calls in comments with intent description |
+| `pe1-m4-11` | 🔴 HIGH | A | `recall=1.00` | 🟢 Fixed | 2026-07-30: earlier pass left recall at 1.00 (the starter still spelled out every literal). Moved the concrete values into the prompt as given context and cut the starter to one intent line - now unflagged |
 | `pe1-m4-12` | 🔴 HIGH | A | `recall=0.80` | 🟢 Fixed | Removed solution details (dict.get increment logic) from starter comments |
 
 ### `topic_py_file_io.ts`
 
 | ID | Severity | Lane | Signal | Status | Notes |
 |---|---|---|---|---|---|
-| `pe1-fileio-3` | 🔴 HIGH | A | `recall=1.00` | 🟢 Fixed | Replaced solution methods f.writelines and f.read in starterCode with intent-only comments |
+| `pe1-fileio-3` | 🔴 HIGH | A | `recall=1.00` | 🟢 Fixed | 2026-07-30: earlier pass left recall at 0.83 (starter still named the modes, the context manager, and the three line strings). Line contents moved into the prompt as expected-output context; starter cut to two intent lines - now unflagged |
 
 ### `topic_py_metaclasses.ts`
 
