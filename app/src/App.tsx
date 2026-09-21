@@ -26,6 +26,8 @@ import {
   ProgressLoad,
   PROGRESS_KEY,
   loadProgressFrom,
+  listBackupKeys,
+  PROGRESS_BACKUP_PREFIX,
   studyWritesBlocked,
   serializeProgress,
   safeSetItem,
@@ -387,6 +389,14 @@ function App() {
   // Keys whose last write failed, with the browser's error.
   const [writeErrors, setWriteErrors] = useState<Record<string, string>>({});
   const [importError, setImportError] = useState<string | null>(null);
+  const [backupKeys] = useState<string[]>(() => {
+    try {
+      return listBackupKeys(localStorage);
+    } catch {
+      return [];
+    }
+  });
+  const [backupNoticeDismissed, setBackupNoticeDismissed] = useState(false);
   const importingRef = useRef(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -569,6 +579,7 @@ function App() {
       [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
       [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
+      ...Object.fromEntries(listBackupKeys(localStorage).map(k => [k, localStorage.getItem(k)])),
     });
     downloadTextFile(`recall-progress-${getToday()}.json`, text);
   };
@@ -1367,8 +1378,11 @@ function App() {
                 {' '}Saving has resumed from a fresh start.
               </>
             : <>
-                {' '}The old data is still under <code>{STORAGE_KEYS.progress}</code>, but no backup copy could be made,
+                {' '}The old data is still under <code>{STORAGE_KEYS.progress}</code>, but a backup copy of it could not be saved,
                 {' '}so saving is off to protect it and answers in this session will not be saved.
+                {backupKeys.length > 0
+                  ? <>{' '}Earlier backups are still kept: {backupKeys.map(k => <code key={k}>{k} </code>)}.</>
+                  : <>{' '}There is no earlier backup.</>}
               </>}
           {' '}Use Import to restore from an export file.
           {initialLoad.raw !== null && (
@@ -1381,6 +1395,23 @@ function App() {
               </button>
             </>
           )}
+        </div>
+      )}
+      {initialLoad.status !== 'unreadable' && backupKeys.length > 0 && !backupNoticeDismissed && (
+        <div className="storage-banner storage-banner-warning" role="status">
+          Recall keeps {backupKeys.length === 1 ? 'a backup' : `${backupKeys.length} backups`} of progress it could not read.
+          {' '}Export includes them.
+          {backupKeys.map(k => (
+            <React.Fragment key={k}>
+              {' '}<button
+                className="storage-banner-button"
+                onClick={() => downloadTextFile(`${k.replace(/[:.]/g, '-')}.json`, localStorage.getItem(k) ?? '')}
+              >
+                Download backup {k.slice(PROGRESS_BACKUP_PREFIX.length)}
+              </button>
+            </React.Fragment>
+          ))}
+          {' '}<button className="storage-banner-button" onClick={() => setBackupNoticeDismissed(true)}>Dismiss</button>
         </div>
       )}
       {staleTab && (

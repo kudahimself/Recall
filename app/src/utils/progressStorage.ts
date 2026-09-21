@@ -2,8 +2,10 @@
  * Safe persistence for the study record.
  *
  * Everything here exists so a single bad event cannot destroy history:
- * - an unreadable `recall-progress` is never overwritten; its raw text is left
- *   in place, copied to a backup key, and the app runs from empty in memory only;
+ * - an unreadable `recall-progress` is never overwritten until its raw text is
+ *   copied to its own timestamped backup key; then the app saves again from empty.
+ *   Backups are never deleted and travel with every export. If the copy cannot be
+ *   made, the app runs from empty in memory only;
  * - attempts for question ids the running build does not know are set aside on
  *   read and written back unchanged, so a renamed or temporarily missing question
  *   keeps its history and gets it back when the id returns;
@@ -13,7 +15,19 @@
 import { QuestionAttempt, UserProgress } from '../types';
 
 export const PROGRESS_KEY = 'recall-progress';
-export const PROGRESS_BACKUP_KEY = 'recall-progress-unreadable-backup';
+// One backup per unreadable text: PROGRESS_BACKUP_PREFIX + ISO timestamp.
+export const PROGRESS_BACKUP_PREFIX = 'recall-progress-unreadable-backup-';
+export const isBackupKey = (k: string): boolean => k.startsWith(PROGRESS_BACKUP_PREFIX);
+
+/** Every backup key in storage, oldest first. */
+export function listBackupKeys(storage: Storage): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < storage.length; i++) {
+    const k = storage.key(i);
+    if (k !== null && isBackupKey(k)) out.push(k);
+  }
+  return out.sort();
+}
 
 export const EXPORT_FORMAT = 'recall-progress-export';
 export const EXPORT_VERSION = 1;
@@ -177,15 +191,16 @@ const describeError = (e: unknown): string => (e instanceof Error ? e.message : 
 
 /**
  * Read progress. A failed read NEVER writes to the progress key: the raw text
- * stays where it is, a copy goes to PROGRESS_BACKUP_KEY (unless that key already
- * holds a different earlier copy, which is left alone), and the caller gets
- * empty progress to run with in memory. Once the copy exists the caller may
- * save over the progress key again; without it, it must not.
+ * stays where it is, a copy goes to a new timestamped backup key (or an existing
+ * backup already holding the same text is reused), and the caller gets empty
+ * progress to run with in memory. Once the copy exists the caller may save over
+ * the progress key again; without it, it must not.
  */
 export function loadProgressFrom(
   storage: Storage,
   knownIds: ReadonlySet<string>,
   seedMastered: (history: QuestionAttempt[]) => Set<string>,
+  now: Date = new Date(),
 ): ProgressLoad {
   let raw: string | null;
   try {
@@ -203,12 +218,15 @@ export function loadProgressFrom(
   } catch (e) {
     let backupKey: string | null = null;
     try {
-      const existing = storage.getItem(PROGRESS_BACKUP_KEY);
-      if (existing === null) {
-        storage.setItem(PROGRESS_BACKUP_KEY, raw);
-        backupKey = PROGRESS_BACKUP_KEY;
-      } else if (existing === raw) {
-        backupKey = PROGRESS_BACKUP_KEY;
+      const same = listBackupKeys(storage).find(k => storage.getItem(k) === raw);
+      if (same !== undefined) {
+        backupKey = same;
+      } else {
+        const base = PROGRESS_BACKUP_PREFIX + now.toISOString();
+        let key = base;
+        for (let n = 2; storage.getItem(key) !== null; n++) key = `${base}-${n}`;
+        storage.setItem(key, raw);
+        backupKey = key;
       }
     } catch { /* no room for a copy; the original is still untouched */ }
     return {
@@ -261,7 +279,10 @@ export function buildExport(keys: Record<string, string | null>, now: Date = new
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: now.toISOString(),
-    keys: Object.fromEntries(EXPORT_KEYS.map(k => [k, keys[k] ?? null])),
+    keys: {
+      ...Object.fromEntries(EXPORT_KEYS.map(k => [k, keys[k] ?? null])),
+      ...Object.fromEntries(Object.entries(keys).filter(([k]) => isBackupKey(k))),
+    },
   };
   return JSON.stringify(file);
 }
@@ -291,9 +312,10 @@ export function validateExport(text: string): ImportCheck {
   if (!isPlainObject(keys)) return { ok: false, error: 'the file has no stored keys' };
 
   for (const k of Object.keys(keys)) {
-    if (!EXPORT_KEYS.includes(k)) return { ok: false, error: `unexpected key "${k}"` };
+    if (!EXPORT_KEYS.includes(k) && !isBackupKey(k)) return { ok: false, error: `unexpected key "${k}"` };
   }
-  for (const k of EXPORT_KEYS) {
+  const backupKeys = Object.keys(keys).filter(isBackupKey);
+  for (const k of [...EXPORT_KEYS, ...backupKeys]) {
     const v = keys[k];
     if (v !== null && v !== undefined && typeof v !== 'string') {
       return { ok: false, error: `"${k}" is not stored text` };
@@ -324,24 +346,27 @@ export function validateExport(text: string): ImportCheck {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : '',
-    keys: Object.fromEntries(EXPORT_KEYS.map(k => [k, (keys[k] as string | null | undefined) ?? null])),
+    keys: Object.fromEntries([...EXPORT_KEYS, ...backupKeys].map(k => [k, (keys[k] as string | null | undefined) ?? null])),
   };
   return { ok: true, file, attemptCount };
 }
 
 /**
  * Write a validated export into storage, all or nothing: if any write fails,
- * every key is restored to what it held before.
+ * every key is restored to what it held before. Backups in the file are added;
+ * backups already in storage are never removed.
  */
 export function applyImport(storage: Storage, file: ProgressExport): WriteResult {
+  const backupKeys = Object.keys(file.keys).filter(k => isBackupKey(k) && file.keys[k] !== null);
   const previous = new Map<string, string | null>();
-  for (const k of EXPORT_KEYS) previous.set(k, storage.getItem(k));
+  for (const k of [...EXPORT_KEYS, ...backupKeys]) previous.set(k, storage.getItem(k));
   try {
     for (const k of EXPORT_KEYS) {
       const v = file.keys[k];
       if (v === null || v === undefined) storage.removeItem(k);
       else storage.setItem(k, v);
     }
+    for (const k of backupKeys) storage.setItem(k, file.keys[k] as string);
     return { ok: true };
   } catch (e) {
     previous.forEach((v, k) => {

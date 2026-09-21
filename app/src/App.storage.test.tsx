@@ -7,7 +7,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import App from './App';
 import * as progressStorage from './utils/progressStorage';
-import { PROGRESS_KEY, PROGRESS_BACKUP_KEY, EXPORT_KEYS } from './utils/progressStorage';
+import { PROGRESS_KEY, PROGRESS_BACKUP_PREFIX, EXPORT_KEYS, listBackupKeys } from './utils/progressStorage';
 
 const KNOWN_ID = 'py-functools-parsons-5';
 const GONE_ID = 'py-functools-renamed-away';
@@ -25,6 +25,8 @@ const seeded = {
   repetitionQueue: {},
   masteredTopics: [],
 };
+
+const backups = () => listBackupKeys(localStorage).map(k => localStorage.getItem(k));
 
 const historyIds = () =>
   JSON.parse(localStorage.getItem(PROGRESS_KEY) as string).attemptHistory.map((a: { questionId: string }) => a.questionId);
@@ -55,12 +57,12 @@ test('a corrupted store survives two loads untouched, with a backup and an on-sc
   expect(screen.getByText(/Your saved progress could not be read/)).toBeInTheDocument();
   expect(screen.getByText(/Saving has resumed from a fresh start/)).toBeInTheDocument();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
-  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
+  expect(backups()).toEqual([raw]);
   unmountFirst();
 
   render(<App />);
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
-  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
+  expect(backups()).toEqual([raw]);
 });
 
 test('once the backup is made, saving resumes and the backup keeps the original (bug 3)', async () => {
@@ -73,20 +75,67 @@ test('once the backup is made, saving resumes and the backup keeps the original 
   await resetActiveCourse();
   await waitFor(() => expect(localStorage.getItem(PROGRESS_KEY)).not.toBe(raw));
   expect(JSON.parse(localStorage.getItem(PROGRESS_KEY) as string).attemptHistory).toEqual([]);
-  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
+  expect(backups()).toEqual([raw]);
+});
+
+test('a second, different corruption gets its own backup and saving resumes again', async () => {
+  const first = '{"attemptHistory": [';
+  localStorage.setItem(PROGRESS_KEY, first);
+  const { unmount } = render(<App />);
+  await resetActiveCourse();
+  await waitFor(() => expect(localStorage.getItem(PROGRESS_KEY)).not.toBe(first));
+  unmount();
+
+  const second = '{"questionsAttempted": ';
+  localStorage.setItem(PROGRESS_KEY, second);
+  render(<App />);
+  expect(screen.getByText(/Saving has resumed from a fresh start/)).toBeInTheDocument();
+  expect(backups()).toEqual([first, second]);
+  await resetActiveCourse();
+  await waitFor(() => expect(localStorage.getItem(PROGRESS_KEY)).not.toBe(second));
+  expect(JSON.parse(localStorage.getItem(PROGRESS_KEY) as string).attemptHistory).toEqual([]);
+  expect(backups()).toEqual([first, second]);
+});
+
+test('the backup notice returns on a later clean load and Export carries the backups', () => {
+  const backupKey = `${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`;
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
+  localStorage.setItem(backupKey, 'old unreadable text');
+  const downloads: Array<[string, string]> = [];
+  jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation((n, t) => { downloads.push([n, t]); });
+
+  const { unmount } = render(<App />);
+  expect(screen.getByText(/Recall keeps a backup of progress it could not read/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Download backup/ }));
+  expect(downloads[0][1]).toBe('old unreadable text');
+  fireEvent.click(screen.getByRole('button', { name: /Export/ }));
+  expect(JSON.parse(downloads[1][1]).keys[backupKey]).toBe('old unreadable text');
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+  expect(screen.queryByText(/Recall keeps a backup/)).not.toBeInTheDocument();
+  unmount();
+
+  render(<App />);
+  expect(screen.getByText(/Recall keeps a backup of progress it could not read/)).toBeInTheDocument();
 });
 
 test('without a backup, a failed load never writes, even after the in-memory state changes (bug 3)', async () => {
   const raw = '{"attemptHistory": [';
   localStorage.setItem(PROGRESS_KEY, raw);
-  localStorage.setItem(PROGRESS_BACKUP_KEY, 'an older unreadable copy');
+  const olderKey = `${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`;
+  localStorage.setItem(olderKey, 'an older unreadable copy');
+  const realSet = Storage.prototype.setItem;
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k: string, v: string) {
+    if (k.startsWith(PROGRESS_BACKUP_PREFIX)) throw quotaError();
+    realSet.call(this, k, v);
+  });
   render(<App />);
   expect(screen.getByText(/saving is off to protect it/)).toBeInTheDocument();
+  expect(screen.getByText(/Earlier backups are still kept/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Export/ })).toBeDisabled();
 
   await resetActiveCourse();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
-  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe('an older unreadable copy');
+  expect(backups()).toEqual(['an older unreadable copy']);
   expect(localStorage.getItem('recall-card-difficulty')).toBeNull();
 });
 

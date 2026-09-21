@@ -1,6 +1,7 @@
 import {
   PROGRESS_KEY,
-  PROGRESS_BACKUP_KEY,
+  PROGRESS_BACKUP_PREFIX,
+  listBackupKeys,
   EXPORT_KEYS,
   loadProgressFrom,
   parseStoredProgress,
@@ -47,7 +48,10 @@ describe('unreadable progress (bug 3)', () => {
     expect(load.status).toBe('unreadable');
     expect(load.progress.attemptHistory).toEqual([]);
     expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
-    expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
+    const backups = listBackupKeys(localStorage);
+    expect(backups).toHaveLength(1);
+    expect(load.status === 'unreadable' && load.backupKey).toBe(backups[0]);
+    expect(localStorage.getItem(backups[0])).toBe(raw);
   });
 
   test('a wrongly shaped store counts as unreadable', () => {
@@ -57,12 +61,32 @@ describe('unreadable progress (bug 3)', () => {
     expect(loadProgressFrom(localStorage, KNOWN, noSeed).status).toBe('unreadable');
   });
 
-  test('an earlier, different backup is not replaced', () => {
-    localStorage.setItem(PROGRESS_BACKUP_KEY, 'older unreadable copy');
+  test('a different unreadable text gets its own backup; the same text reuses its backup', () => {
+    const older = `${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`;
+    localStorage.setItem(older, 'older unreadable copy');
     localStorage.setItem(PROGRESS_KEY, '{bad');
-    const load = loadProgressFrom(localStorage, KNOWN, noSeed);
-    expect(load.status === 'unreadable' && load.backupKey).toBeNull();
-    expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe('older unreadable copy');
+    const now = new Date('2026-09-21T10:00:00.000Z');
+    const load = loadProgressFrom(localStorage, KNOWN, noSeed, now);
+    const newer = `${PROGRESS_BACKUP_PREFIX}2026-09-21T10:00:00.000Z`;
+    expect(load.status === 'unreadable' && load.backupKey).toBe(newer);
+    expect(localStorage.getItem(older)).toBe('older unreadable copy');
+    expect(localStorage.getItem(newer)).toBe('{bad');
+    expect(localStorage.getItem(PROGRESS_KEY)).toBe('{bad');
+
+    const again = loadProgressFrom(localStorage, KNOWN, noSeed, new Date('2026-09-22T00:00:00.000Z'));
+    expect(again.status === 'unreadable' && again.backupKey).toBe(newer);
+    expect(listBackupKeys(localStorage)).toEqual([older, newer]);
+  });
+
+  test('a failed backup write leaves no backup key and the original untouched', () => {
+    localStorage.setItem(PROGRESS_KEY, '{bad');
+    const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw quotaError(); });
+    try {
+      const load = loadProgressFrom(localStorage, KNOWN, noSeed);
+      expect(load.status === 'unreadable' && load.backupKey).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
     expect(localStorage.getItem(PROGRESS_KEY)).toBe('{bad');
   });
 });
@@ -123,6 +147,17 @@ describe('export and import', () => {
     for (const k of EXPORT_KEYS) {
       expect(localStorage.getItem(k)).toBe((keys as Record<string, string>)[k] ?? null);
     }
+  });
+
+  test('backups travel as opaque text and are added without removing others', () => {
+    const exported = `${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`;
+    const kept = `${PROGRESS_BACKUP_PREFIX}2026-02-01T00:00:00.000Z`;
+    const check = validateExport(buildExport({ ...keys, [exported]: '{"attemptHistory": [' }));
+    if (!check.ok) throw new Error(check.error);
+    localStorage.setItem(kept, 'kept');
+    expect(applyImport(localStorage, check.file)).toEqual({ ok: true });
+    expect(localStorage.getItem(exported)).toBe('{"attemptHistory": [');
+    expect(localStorage.getItem(kept)).toBe('kept');
   });
 
   test.each([
