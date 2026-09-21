@@ -1369,6 +1369,7 @@ function App() {
         </div>
       </header>
 
+      <div className="storage-banners">
       {initialLoad.status === 'unreadable' && (
         <div className="storage-banner storage-banner-error" role="alert">
           <strong>Your saved progress could not be read</strong> ({initialLoad.error}).
@@ -1440,6 +1441,7 @@ function App() {
           {' '}<button className="storage-banner-button" onClick={() => setImportError(null)}>Dismiss</button>
         </div>
       )}
+      </div>
 
       {/* ── Main Body: Navigation Rail + Content ── */}
       <div className="app-body">

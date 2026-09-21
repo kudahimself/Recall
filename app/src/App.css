@@ -257,7 +257,7 @@ body::after {
    ============================================ */
 .App {
   display: grid;
-  grid-template-rows: 48px 1fr;
+  grid-template-rows: 48px auto 1fr;
   grid-template-columns: 1fr;
   height: 100vh;
   overflow: hidden;
@@ -2084,7 +2084,7 @@ a:hover { color: var(--accent); }
     height: 56px;
   }
   .App {
-    grid-template-rows: 56px 1fr 28px;
+    grid-template-rows: 56px auto 1fr 28px;
   }
   .statusbar {
     height: 28px;
