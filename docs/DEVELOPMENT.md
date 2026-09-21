@@ -314,13 +314,24 @@ Layouts target desktop viewport without scrolling.
 ### Persistence
 
 **localStorage keys** (defined in `App.tsx`):
-- `databricks-progress` - `UserProgress` (Set→Array serialized)
-- `databricks-profile` - streaks, sessions, time spent
-- `databricks-filters` - topic/difficulty/type filter state
-- `databricks-active-course` - currently selected `Course`
+- `recall-progress` - `UserProgress` (Set→Array serialized)
+- `recall-profile` - streaks, sessions, time spent
+- `recall-filters` - topic/difficulty/type filter state
+- `recall-active-course` - currently selected `Course`
+- `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
 
-Legacy `databricks-*` naming persists for backwards compatibility.
-Newer `recall-*` keys auto-migrate on first load and left in place as rollback safety net.
+Older `databricks-*` keys are copied to their `recall-*` names on first load and left in place as a rollback safety net.
+
+**Keeping progress safe** (`src/utils/progressStorage.ts`):
+- An unreadable `recall-progress` is never overwritten until a copy of it is safe.
+  The text is copied to its own `recall-progress-unreadable-backup-<ISO timestamp>` key (reused if a backup already holds the same text), a banner explains and offers the text as a download, and saving resumes from empty.
+  If that copy could not be written, the session runs from empty in memory with study-record writes switched off, and the banner says whether earlier backups exist.
+  Backups are never deleted automatically; while any exists a dismissible notice offers each as a download, Export carries them, and Import restores them as opaque text.
+- History for question ids missing from the build is set aside on read and written back unchanged, so a renamed or removed question gets its history back if the id returns.
+- Every write goes through `safeSetItem`; a failure (for example a full quota) shows a "not being saved" banner instead of crashing the app.
+- A tab that sees another tab save answers (`storage` event) stops writing and asks for a reload, so two tabs never overwrite each other.
+- Export and Import in the header round-trip every `recall-*` key as one JSON file.
+  Import validates the whole file first and writes all keys or none.
 
 ## Question Types
 
@@ -337,7 +348,7 @@ Distractors can carry optional `misconceptionTag` (string from registry in `src/
 Examples: `py-off-by-one-range`, `py-list-aliasing`
 
 When user picks tagged distractor:
-- Platform records event to localStorage (`databricks-misconceptions`)
+- Platform records event to localStorage (`recall-misconceptions`)
 - Surfaces top hits in ProgressTracker
 
 **Authoring rule:** Only tag distractor when wrong answer corresponds to SPECIFIC named misconception in registry.
