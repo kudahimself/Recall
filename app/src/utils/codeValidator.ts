@@ -78,6 +78,9 @@ function stripLineComments(code: string, marker: string): string {
  */
 function stripComments(code: string, language: CodeLanguage): string {
   if (language === CodeLanguage.SQL) return stripLineComments(code, '--');
+  if (language === CodeLanguage.HTML || language === CodeLanguage.CSS) {
+    return code.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  }
   if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
     return stripLineComments(code.replace(/\/\*[\s\S]*?\*\//g, ''), '//');
   }
@@ -222,13 +225,34 @@ function matchTokens(wanted: string[], have: string[]): string[] {
   });
 }
 
+const WORD_CHAR = /\w/;
+
+/**
+ * True when `needle` occurs in `haystack` without being glued onto a longer
+ * word or number at either end.
+ */
+function containsAsTokens(haystack: string, needle: string): boolean {
+  const gluedStart = WORD_CHAR.test(needle[0]);
+  const gluedEnd = WORD_CHAR.test(needle[needle.length - 1]);
+  for (let i = haystack.indexOf(needle); i !== -1; i = haystack.indexOf(needle, i + 1)) {
+    const before = haystack[i - 1] ?? '';
+    const after = haystack[i + needle.length] ?? '';
+    if ((!gluedStart || !WORD_CHAR.test(before)) && (!gluedEnd || !WORD_CHAR.test(after))) return true;
+  }
+  return false;
+}
+
 /**
  * True when every (, [ and { in the code is closed in order. String literals
  * are skipped. Expects comments already stripped.
+ * In HTML and CSS quotes are not tracked at all, and in JS/TS/JSX a `'` right
+ * after a letter is an apostrophe in text (`You're`), not a string opening.
  */
-function bracketsBalanced(code: string): boolean {
+function bracketsBalanced(code: string, language: CodeLanguage): boolean {
   const close: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
   const stack: string[] = [];
+  const markup = language === CodeLanguage.HTML || language === CodeLanguage.CSS;
+  const apostrophes = language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX;
   let quote: string | null = null;
   for (let i = 0; i < code.length; i++) {
     const c = code[i];
@@ -237,7 +261,8 @@ function bracketsBalanced(code: string): boolean {
       else if (c === quote) quote = null;
       continue;
     }
-    if (c === '"' || c === "'" || c === '`') quote = c;
+    const apostrophe = c === "'" && apostrophes && /[A-Za-z]/.test(code[i - 1] ?? '');
+    if (!markup && !apostrophe && (c === '"' || c === "'" || c === '`')) quote = c;
     else if (c === '(' || c === '[' || c === '{') stack.push(c);
     else if (c in close) {
       if (stack.pop() !== close[c]) return false;
@@ -484,8 +509,8 @@ export function validateAnswer(
   // 3b. Unclosed brackets mean unfinished code - an answer cut off mid-call or
   // missing its closing `]` can share every token with the solution. Only
   // enforced when the reference itself is balanced.
-  if (!bracketsBalanced(stripComments(userCode, language))
-      && alternatives.some(alt => bracketsBalanced(stripComments(alt, language)))) {
+  if (!bracketsBalanced(stripComments(userCode, language), language)
+      && alternatives.some(alt => bracketsBalanced(stripComments(alt, language), language))) {
     return {
       passed: false,
       verdict: 'fail',
@@ -504,7 +529,9 @@ export function validateAnswer(
     // Direct containment: a user who typed the full solution plus extras has
     // solved it. The reverse (the user's code is a fragment of the solution) is
     // NOT a pass: any unfinished prefix of the answer is such a fragment.
-    if (userNorm.includes(altNorm)) {
+    // The solution must sit on token boundaries, so `+=1` is not found inside
+    // `+=10` nor `1 while` inside `11 while`.
+    if (containsAsTokens(userNorm, altNorm)) {
       return { passed: true, verdict: 'pass', description: testDescription, output: 'Code validation passed', similarity: 1 };
     }
 
@@ -560,7 +587,7 @@ export function validateAnswer(
     const fullRecall = altTokens.length > 0
       ? matchTokens(altTokens, userTokens).length / altTokens.length
       : 0;
-    if (recall >= 1 && fullRecall >= 1 && precision >= 0.4) {
+    if (fullRecall >= 1 && precision >= 0.4) {
       return {
         passed: true,
         verdict: 'pass',

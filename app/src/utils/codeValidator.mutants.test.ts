@@ -57,9 +57,12 @@ const FLIPS: [RegExp, string][] = [
 
 interface Mutant { kind: string; id: string; code: string }
 
-// The reference with its comment-only lines removed. Deleting or truncating a
+// The reference with its comment-only lines (and HTML/CSS block comments) removed. Deleting or truncating a
 // comment does not make an answer wrong, so mutants are cut from code only.
 function codeOnly(q: CodingQuestion, solution: string): string {
+  if (q.language === CodeLanguage.HTML || q.language === CodeLanguage.CSS) {
+    solution = solution.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  }
   const marker = q.language === CodeLanguage.SQL ? '--'
     : [CodeLanguage.JAVASCRIPT, CodeLanguage.TYPESCRIPT, CodeLanguage.JSX].includes(q.language) ? '//'
     : '#';
@@ -128,5 +131,29 @@ describe('coding grader over the whole question bank', () => {
       expect(passes(q, 'print("I have no idea")')).toBe(false);
       expect(passes(q, alternatives(q)[0])).toBe(true);
     }
+  });
+
+  it('does not pass a solution with a literal glued onto a longer number', () => {
+    const q = coding.find(c => c.id === 'pe1-m3-9')!;
+    const ref = alternatives(q)[0];
+    expect(passes(q, ref)).toBe(true);
+    expect(passes(q, ref.replace('count += 1', 'count += 10'))).toBe(false);
+    expect(passes(q, ref.replace('count = 1', 'count = 11'))).toBe(false);
+    expect(passes(q, `${ref}\nprint("done")`)).toBe(true);
+  });
+
+  it('does not read an apostrophe in markup text as an unclosed string', () => {
+    const q = coding.find(c => c.id === 'dj-tmpl-3')!;
+    expect(passes(q, `${alternatives(q)[0]}\n<p>You're logged in.</p>`)).toBe(true);
+
+    const bracketErrors: string[] = [];
+    const markup = [CodeLanguage.HTML, CodeLanguage.JSX, CodeLanguage.CSS];
+    for (const m of coding.filter(c => markup.includes(c.language))) {
+      const code = m.language === CodeLanguage.CSS
+        ? `${alternatives(m)[0]}\n.note { color: #333; }`
+        : `${alternatives(m)[0]}\n<p>Don't stop, you're close.</p>`;
+      if (gradeCodingSubmission(m, code).some(r => /bracket/.test(r.error ?? ''))) bracketErrors.push(m.id);
+    }
+    expect(bracketErrors).toEqual([]);
   });
 });
