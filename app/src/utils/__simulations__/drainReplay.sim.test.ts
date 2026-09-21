@@ -33,6 +33,15 @@
  * away, defaults above) that gives 0 new questions over days 0-9, the queue
  * first empty at the end of day 12, all 41 failed cards back by the next
  * session and in-replay misses back within two days.
+ *
+ * Early reviews of well-known cards are only partly fixed. The due branch now
+ * serves due cards only, which removes the 2 percent-of-interval reviews it
+ * used to produce. Streak >= 5 cards still come back before due through the
+ * mastered-resurface floor interleave and the concept-aware picker, at a
+ * median of about 50 percent of their interval on the real state (50.3%).
+ * Those two paths are deliberately left for a follow-up; the assertion below
+ * records the current figure (median at or above 0.4) so a later change can
+ * be measured against it.
  */
 import { SpacedRepetitionSystem as SRS, ConceptSelectionContext } from '../spacedRepetition';
 import { applyReview, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty, ConceptProgress } from '../conceptSRS';
@@ -270,5 +279,10 @@ maybe('drain forward replay', () => {
     expect(Math.max(0, ...startFailWaits)).toBeLessThan(1.5);
     expect(Math.max(0, ...simFailWaits)).toBeLessThan(2.5);
     expect(Math.max(0, ...openSim.map(w => w.days))).toBeLessThan(2.5);
+    // Well-known cards shown before due come back at no less than about 40
+    // percent of their interval (baseline 50.3% on the real state).
+    if (earlyRatios.length > 0) {
+      expect(quantile(earlyRatios, 0.5)).toBeGreaterThanOrEqual(0.4);
+    }
   });
 });
