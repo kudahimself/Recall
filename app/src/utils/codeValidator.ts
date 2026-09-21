@@ -1,4 +1,4 @@
-import { CodeLanguage } from '../types';
+import { CodeLanguage, CodingQuestion } from '../types';
 
 /**
  * Code validation engine.
@@ -49,22 +49,50 @@ const SQL_EQUIVALENCES: [RegExp, string][] = [
 
 // ── normalization ──────────────────────────────────────────────────────
 
-function normalizeCode(code: string, language: CodeLanguage): string {
-  let n = code;
+/**
+ * Remove `marker`-to-end-of-line comments, ignoring markers inside a single-
+ * or double-quoted string on that line. A quote left open at the end of a line
+ * (an apostrophe in JSX text, say) just ends the scan for that line.
+ */
+function stripLineComments(code: string, marker: string): string {
+  return code.split('\n').map(line => {
+    let quote: string | null = null;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (quote) {
+        if (c === '\\') i++;
+        else if (c === quote) quote = null;
+      } else if (c === '"' || c === "'" || c === '`') {
+        quote = c;
+      } else if (line.startsWith(marker, i)) {
+        return line.slice(0, i);
+      }
+    }
+    return line;
+  }).join('\n');
+}
 
-  // Strip comments
-  if (language === CodeLanguage.SQL) {
-    n = n.replace(/--.*$/gm, '');
-  } else if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
-    n = n.replace(/\/\/.*$/gm, '');
-    n = n.replace(/\/\*[\s\S]*?\*\//g, '');
-  } else {
-    // Python: strip triple-quoted docstrings first so their prose doesn't
-    // inflate the solution's token count vs. a user answer that omits them.
-    n = n.replace(/"""[\s\S]*?"""/g, '');
-    n = n.replace(/'''[\s\S]*?'''/g, '');
-    n = n.replace(/#.*$/gm, '');
+/**
+ * Strip comments. Line comments are cut only outside string literals, so a
+ * URL (`fetch("https://...")`) or a `"#id"` selector keeps its text.
+ */
+function stripComments(code: string, language: CodeLanguage): string {
+  if (language === CodeLanguage.SQL) return stripLineComments(code, '--');
+  if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
+    return stripLineComments(code.replace(/\/\*[\s\S]*?\*\//g, ''), '//');
   }
+  // Python: strip docstrings first so their prose doesn't inflate the
+  // solution's token count vs. a user answer that omits them. Only a
+  // triple-quoted string that opens its line is a docstring; one passed as an
+  // argument (`expr("""a >= b""")`) is code and stays.
+  const n = code
+    .replace(/^(\s*)"""[\s\S]*?"""/gm, '$1')
+    .replace(/^(\s*)'''[\s\S]*?'''/gm, '$1');
+  return stripLineComments(n, '#');
+}
+
+function normalizeCode(code: string, language: CodeLanguage): string {
+  let n = stripComments(code, language);
 
   // Strip import/from lines (Python `from x import y`, JS `import x from 'y'`).
   // NEVER for SQL: `from` is a clause keyword there, and this pattern is
@@ -133,11 +161,12 @@ function normalizeCode(code: string, language: CodeLanguage): string {
   // Collapse whitespace, normalize quotes, lowercase
   n = n.replace(/\s+/g, ' ').replace(/["']/g, '"').trim().toLowerCase();
 
-  // Strip spaces around Python operators/separators so "x+y" ≡ "x + y",
-  // "y:" ≡ "y :", "a,b" ≡ "a, b", "x==5" ≡ "x == 5".
-  if (language === CodeLanguage.PYTHON) {
-    n = n.replace(/\s*([,:+\-*/=<>])\s*/g, '$1');
-  }
+  // Strip spaces around operators/separators so "x+y" ≡ "x + y",
+  // "y:" ≡ "y :", "a,b" ≡ "a, b", "x==5" ≡ "x == 5". Every language, so an
+  // operator is always glued to its operands and survives tokenization as part
+  // of a meaningful token (`age>25`) instead of a bare `>` that says nothing
+  // about which way the comparison points.
+  n = n.replace(/\s*([,:+\-*/=<>!])\s*/g, '$1');
 
   return n;
 }
@@ -171,8 +200,50 @@ const NOISE_TOKENS = new Set([
   'pyspark.sql.functions', 'pyspark.sql', 'select', '*',
 ]);
 
+// Single-character tokens are kept: a lone digit, sign or operator is often
+// exactly what distinguishes a right answer from a wrong one (`> 5` vs `< 5`,
+// `LIMIT 1` vs `LIMIT 5`).
 function essentialTokens(tokens: string[]): string[] {
-  return tokens.filter(t => !NOISE_TOKENS.has(t) && t.length > 1);
+  return tokens.filter(t => !NOISE_TOKENS.has(t));
+}
+
+/**
+ * The tokens of `wanted` found in `have`, matched per occurrence: a token the
+ * solution uses twice needs two occurrences in the user's code.
+ */
+function matchTokens(wanted: string[], have: string[]): string[] {
+  const available = new Map<string, number>();
+  for (const t of have) available.set(t, (available.get(t) ?? 0) + 1);
+  return wanted.filter(t => {
+    const n = available.get(t) ?? 0;
+    if (n === 0) return false;
+    available.set(t, n - 1);
+    return true;
+  });
+}
+
+/**
+ * True when every (, [ and { in the code is closed in order. String literals
+ * are skipped. Expects comments already stripped.
+ */
+function bracketsBalanced(code: string): boolean {
+  const close: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+  const stack: string[] = [];
+  let quote: string | null = null;
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    if (quote) {
+      if (c === '\\') i++;
+      else if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') quote = c;
+    else if (c === '(' || c === '[' || c === '{') stack.push(c);
+    else if (c in close) {
+      if (stack.pop() !== close[c]) return false;
+    }
+  }
+  return stack.length === 0 && quote === null;
 }
 
 // ── common-mistake detectors ───────────────────────────────────────────
@@ -410,26 +481,31 @@ export function validateAnswer(
     };
   }
 
+  // 3b. Unclosed brackets mean unfinished code - an answer cut off mid-call or
+  // missing its closing `]` can share every token with the solution. Only
+  // enforced when the reference itself is balanced.
+  if (!bracketsBalanced(stripComments(userCode, language))
+      && alternatives.some(alt => bracketsBalanced(stripComments(alt, language)))) {
+    return {
+      passed: false,
+      verdict: 'fail',
+      description: testDescription,
+      error: 'Your code has an unclosed or mismatched bracket - check every (, [ and { is closed.',
+    };
+  }
+
   // 4. Try each alternative
   let bestSimilarity = 0;
 
   for (const alt of alternatives) {
     const altNorm = normalizeCode(alt, language);
+    if (altNorm.length === 0) continue; // nothing to compare against
 
-    // Direct containment check. Only accept `altNorm.includes(userNorm)` when
-    // the user wrote something meaningfully beyond the starter — otherwise a
-    // starter that pre-declares setup (and is a prefix of the solution) would
-    // trivially pass. `userNorm.includes(altNorm)` is always safe: a user who
-    // typed the full solution plus extras has solved it.
+    // Direct containment: a user who typed the full solution plus extras has
+    // solved it. The reverse (the user's code is a fragment of the solution) is
+    // NOT a pass: any unfinished prefix of the answer is such a fragment.
     if (userNorm.includes(altNorm)) {
       return { passed: true, verdict: 'pass', description: testDescription, output: 'Code validation passed', similarity: 1 };
-    }
-    if (altNorm.includes(userNorm) && (starterNorm.length === 0 || !altNorm.includes(starterNorm) || userNorm.length > starterNorm.length)) {
-      // Guard: if the starter is itself a prefix of the solution, require that
-      // the user code extends beyond the starter.
-      if (starterNorm.length === 0 || userNorm !== starterNorm) {
-        return { passed: true, verdict: 'pass', description: testDescription, output: 'Code validation passed', similarity: 1 };
-      }
     }
 
     // Token-set matching: what fraction of solution tokens appear in user code?
@@ -452,8 +528,12 @@ export function validateAnswer(
     const scoredAltTokens = novelAltTokens.length > 0 ? novelAltTokens : altTokens;
     const scoredUserTokens = novelAltTokens.length > 0 ? novelUserTokens : userTokens;
 
-    // How many (novel) solution tokens does the user code contain?
-    const matchedFromSolution = scoredAltTokens.filter(t => userNorm.includes(t));
+    // How many (novel) solution tokens does the user code contain? Whole-token
+    // membership, not substring: `asc` must not be found inside `desc`, nor
+    // `x>=1` inside `x>=10`. Counted per occurrence, so a solution that says
+    // `true` twice is not matched by user code that says it once (a flipped
+    // `True` -> `False` beside another `True` used to score full recall).
+    const matchedFromSolution = matchTokens(scoredAltTokens, userTokens);
     // How many (novel) user tokens does the solution contain?
     const matchedFromUser = scoredUserTokens.filter(t => altNorm.includes(t));
 
@@ -469,9 +549,18 @@ export function validateAnswer(
 
     bestSimilarity = Math.max(bestSimilarity, score);
 
-    // Pass if ≥ 75% of solution tokens are present AND the user hasn't written
-    // wildly different code (precision ≥ 40%)
-    if (recall >= 0.75 && precision >= 0.4) {
+    // Pass only if EVERY solution token is present AND the user hasn't written
+    // wildly different code (precision ≥ 40%). A partial match is never a pass:
+    // one flipped operator or one missing clause leaves a token unmatched, and
+    // at 75% recall those answers used to be accepted. Near misses fall through
+    // to the honest 'uncertain' self-grade below.
+    // Full recall is measured over ALL solution tokens, starter-provided ones
+    // included: deleting a line the starter handed over (the final `print`)
+    // leaves the answer incomplete even though the learner typed nothing wrong.
+    const fullRecall = altTokens.length > 0
+      ? matchTokens(altTokens, userTokens).length / altTokens.length
+      : 0;
+    if (recall >= 1 && fullRecall >= 1 && precision >= 0.4) {
       return {
         passed: true,
         verdict: 'pass',
@@ -504,4 +593,38 @@ export function validateAnswer(
     error: `Code does not match the expected solution. Match: ${Math.round(bestSimilarity * 100)}%`,
     similarity: bestSimilarity,
   };
+}
+
+/**
+ * Grade a coding submission the way the quiz does: once per test case, against
+ * the reference solution. The submission passes only when every result is a
+ * 'pass'. A question authored with no test cases is still checked once against
+ * the reference solution - an empty result list would read as "all passed" and
+ * accept any submission.
+ */
+export function gradeCodingSubmission(question: CodingQuestion, code: string): ValidationResult[] {
+  const solution = question.solution || question.testCases[0]?.expectedOutput || '';
+  const testCases = question.testCases.length > 0
+    ? question.testCases
+    : [{ input: '', expectedOutput: '', description: 'Matches the reference solution' }];
+
+  return testCases.map(testCase => {
+    try {
+      return validateAnswer(
+        code,
+        solution,
+        question.language,
+        testCase.description,
+        question.starterCode,
+        { requires: question.requires, requiredKeywords: question.requiredKeywords },
+      );
+    } catch (error) {
+      return {
+        passed: false,
+        verdict: 'fail' as ValidationVerdict,
+        description: testCase.description,
+        error: error instanceof Error ? error.message : 'Validation error',
+      };
+    }
+  });
 }
