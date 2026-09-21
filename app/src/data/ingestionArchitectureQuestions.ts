@@ -816,6 +816,7 @@ page_views_df.write \\
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
+    requires: ['replaceWhere'],
     question:
       "A nightly job currently does a naked full `.mode(\"overwrite\")` of a 400 GB `warehouse_inventory` table (partitioned by `warehouse_id`), even though `updated_df` only contains rows for `warehouse_id = 'WH-42'`. Rewrite the write so it only overwrites the `WH-42` partition, leaving every other warehouse's data untouched.",
     starterCode: `# updated_df: recomputed rows for warehouse_id = 'WH-42' only
@@ -835,7 +836,7 @@ updated_df.write \\
         expectedOutput:
           'updated_df.write \\\n    .format("delta") \\\n    .mode("overwrite") \\\n    .option("replaceWhere", "warehouse_id = \'WH-42\'") \\\n    .saveAsTable("warehouse_inventory")',
         description:
-          'Overwrites warehouse_inventory scoped to just warehouse_id = \'WH-42\' via mode overwrite plus a replaceWhere option, so the starter\'s naked full overwrite (no replaceWhere) fails.',
+          'Must use mode overwrite with the replaceWhere option, so a naked overwrite with no replaceWhere fails outright. The grader checks that replaceWhere is present but does not itself verify the warehouse_id literal, so an answer that has replaceWhere but names the wrong warehouse (e.g. WH-7) reaches the self-grade panel rather than failing.',
       },
     ],
     explanation: 'replaceWhere scopes the overwrite to just the matching partition, avoiding the Naked Overwrites write amplification of rewriting all 400 GB.',

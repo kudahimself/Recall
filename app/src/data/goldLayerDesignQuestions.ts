@@ -817,6 +817,7 @@ result = orders_df.join(
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
+    requires: ['replaceWhere'],
     question: `A gold sales_summary table partitioned by sales_date has a bug affecting only sales_date = '2024-03-15'.
 
 Write PySpark code to overwrite ONLY the sales_date = '2024-03-15' partition in sales_summary using corrected_df via Delta replaceWhere.`,
@@ -834,7 +835,7 @@ corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sal
         expectedOutput:
           'corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = \'2024-03-15\'").saveAsTable("sales_summary")',
         description:
-          'Writes corrected_df to sales_summary as Delta with mode overwrite AND a replaceWhere option scoped to sales_date = \'2024-03-15\', so only that one partition is rewritten (a naked overwrite with no replaceWhere fails).',
+          'Must use mode overwrite with the replaceWhere option, so a naked overwrite with no replaceWhere fails outright. The grader checks that replaceWhere is present but does not itself verify the sales_date literal, so an answer that has replaceWhere but names a wrong partition value reaches the self-grade panel rather than failing.',
       },
     ],
     explanation: 'replaceWhere overwrites only the matching partition slice without affecting existing historical partitions.',
