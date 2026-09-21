@@ -634,6 +634,36 @@ export class SpacedRepetitionSystem {
   }
 
   /**
+   * The missed card owed a relearn: among `pool`, the cards whose latest answer
+   * was wrong and whose relearn interval (getEffectiveInterval at streak 0, so
+   * about a day, scaled by card difficulty) has passed. Returns the one missed
+   * longest ago, so every missed card comes back within a bounded window
+   * instead of waiting on a weighted draw it can keep losing. Any topic and any
+   * type: the drain covers only coding/advanced cards in mastered topics.
+   * Returns null when nothing is owed.
+   */
+  static pickDueRelearn(
+    pool: Question[],
+    progress: UserProgress,
+    cardDifficulty: Record<string, number> = {},
+  ): Question | null {
+    const latest = this.latestCorrectness(progress);
+    const now = Date.now();
+    let best: Question | null = null;
+    let bestLast = Infinity;
+    for (const q of pool) {
+      if (latest.get(q.id) !== false) continue;
+      const last = progress.lastAttempt.get(q.id) ?? 0;
+      if (last > 0 && (now - last) / MS_PER_DAY < this.getEffectiveInterval(q.id, progress, cardDifficulty)) continue;
+      if (last < bestLast) {
+        best = q;
+        bestLast = last;
+      }
+    }
+    return best;
+  }
+
+  /**
    * Lightweight, read-only snapshot of what selectNextQuestion is currently
    * doing — for a UI mode indicator. Mirrors the same drain-first logic:
    *   - `drain`  : a mastered-topic CODING+ADVANCED backlog is due (anywhere,
@@ -1357,6 +1387,16 @@ export class SpacedRepetitionSystem {
     // pickMasteredResurface is SR-driven (spacing/due-ratio, least-recently-
     // reviewed fallback) and advanced-weighted — never random across topics.
     if (!lastAttemptWrong) {
+      // Relearn first: a missed card comes back as soon as its relearn interval
+      // has passed, whatever its type. Without this a missed MCQ / parsons /
+      // cloze / predict card in a mastered topic had no branch that owned it:
+      // the drain serves only coding/advanced cards, and the concept-aware path
+      // picks by concept retrievability, not by the miss. Replaying a real
+      // history, 39 such cards went 50-91 days unseen while the learner kept
+      // studying. Review slots only - the new-question draw above already ran.
+      const relearn = this.pickDueRelearn(reviewPool, progress, cardDifficulty);
+      if (relearn) return relearn;
+
       // Defer to current progress ONLY when the learner is genuinely STUCK:
       // a covered topic is still in review (isTopicInReview — covered but < 95%,
       // which also captures its unlock blockers) AND there is no servable new
@@ -1387,25 +1427,34 @@ export class SpacedRepetitionSystem {
         const latestForDrain = drainDueReviews
           ? this.latestCorrectness(progress)
           : null;
+        const isIntervalDue = (q: Question): boolean => {
+          const lastTs = progress.lastAttempt.get(q.id) ?? 0;
+          if (lastTs === 0) return true; // never timestamped → maximally due
+          const daysSince = (Date.now() - lastTs) / MS_PER_DAY;
+          return daysSince >= this.getEffectiveInterval(q.id, progress, cardDifficulty);
+        };
         const drainPred = drainDueReviews
           ? (q: Question): boolean => {
               if (!SpacedRepetitionSystem.isDrainCard(q)) return false;
               if (retiredDrainTopics && retiredDrainTopics.has(q.topic)) return false;
               if (latestForDrain && latestForDrain.get(q.id) === false) return true; // failed → back until cleared
-              const lastTs = progress.lastAttempt.get(q.id) ?? 0;
-              if (lastTs === 0) return true; // never timestamped → maximally due
-              const daysSince = (Date.now() - lastTs) / MS_PER_DAY;
-              return daysSince >= this.getEffectiveInterval(q.id, progress, cardDifficulty);
+              return isIntervalDue(q);
             }
           : undefined;
-        if (this.hasDueMastered(reviewPool, topicToQs, progress, drainPred, cardDifficulty)) {
+        // The due branch serves ONLY due cards. Without a filter here
+        // pickMasteredResurface weighs every mastered card by its due ratio,
+        // so one due card among a few hundred recently reviewed ones lost the
+        // draw to not-yet-due cards most of the time, and well-known cards
+        // came back at a fraction of their interval.
+        const duePred = drainPred ?? isIntervalDue;
+        if (this.hasDueMastered(reviewPool, topicToQs, progress, duePred, cardDifficulty)) {
           // Due cards surface whenever due. Reduced (not off) ONLY while mid-
           // onboarding a started topic; full rate (1) when caught up or draining
           // the due queue at a topic boundary.
           const dueProb = (inOnboarding && leadStarted && !drainDueReviews)
             ? ONBOARDING_DUE_RESURFACE_PROB : 1;
           if (Math.random() < dueProb) {
-            const pick = this.pickMasteredResurface(reviewPool, topicToQs, progress, drainPred, cardDifficulty);
+            const pick = this.pickMasteredResurface(reviewPool, topicToQs, progress, duePred, cardDifficulty);
             if (pick) return pick;
           }
         } else if (!inOnboarding && Math.random() < MASTERED_RESURFACE_FLOOR_FRACTION) {
