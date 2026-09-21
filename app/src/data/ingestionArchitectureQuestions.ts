@@ -792,7 +792,15 @@ page_views_df.write \\
     .format("delta") \\
     .partitionBy("day") \\
     .saveAsTable("page_views")`,
-    testCases: [],
+    testCases: [
+      {
+        input: '',
+        expectedOutput:
+          'page_views_df.write \\\n    .format("delta") \\\n    .partitionBy("year", "month", "day") \\\n    .saveAsTable("page_views")',
+        description:
+          'Writes page_views as Delta partitioned down to day granularity only (drops the "hour" level), so the starter\'s four-level partitionBy including "hour" fails.',
+      },
+    ],
     explanation: 'Dropping the hourly partition level brings the partition count back in line with what a 20 GB table needs, fixing the Hive Time-Machine.',
     tieredHints: {
       apiSignature: 'dfWriter.partitionBy(*cols)',
@@ -821,7 +829,15 @@ updated_df.write \\
     .mode("overwrite") \\
     .option("replaceWhere", "warehouse_id = 'WH-42'") \\
     .saveAsTable("warehouse_inventory")`,
-    testCases: [],
+    testCases: [
+      {
+        input: '',
+        expectedOutput:
+          'updated_df.write \\\n    .format("delta") \\\n    .mode("overwrite") \\\n    .option("replaceWhere", "warehouse_id = \'WH-42\'") \\\n    .saveAsTable("warehouse_inventory")',
+        description:
+          'Overwrites warehouse_inventory scoped to just warehouse_id = \'WH-42\' via mode overwrite plus a replaceWhere option, so the starter\'s naked full overwrite (no replaceWhere) fails.',
+      },
+    ],
     explanation: 'replaceWhere scopes the overwrite to just the matching partition, avoiding the Naked Overwrites write amplification of rewriting all 400 GB.',
     tieredHints: {
       apiSignature: 'dfWriter.option(key, value)',

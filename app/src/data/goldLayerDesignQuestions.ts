@@ -793,7 +793,15 @@ result = orders_df.join(
     on="order_id",
     how="left"
 )`,
-    testCases: [],
+    testCases: [
+      {
+        input: '',
+        expectedOutput:
+          'line_item_totals = line_items_df.groupBy("order_id").agg(F.sum("quantity").alias("total_items"))\nresult = orders_df.join(line_item_totals, on="order_id", how="left")',
+        description:
+          'Pre-aggregates line_items_df by order_id with SUM(quantity) aliased total_items, then LEFT-joins those per-order totals to orders_df on order_id (so order_amount is not fanned out).',
+      },
+    ],
     explanation: 'Pre-aggregating line_items_df by order_id before joining prevents fan-out inflation of order_amount.',
     tieredHints: {
       apiSignature: 'df.groupBy(*cols).agg(*exprs)',
@@ -820,7 +828,15 @@ Write PySpark code to overwrite ONLY the sales_date = '2024-03-15' partition in 
     .saveAsTable("sales_summary")
 # OR
 corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = '2024-03-15'").saveAsTable("sales_summary")`,
-    testCases: [],
+    testCases: [
+      {
+        input: '',
+        expectedOutput:
+          'corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = \'2024-03-15\'").saveAsTable("sales_summary")',
+        description:
+          'Writes corrected_df to sales_summary as Delta with mode overwrite AND a replaceWhere option scoped to sales_date = \'2024-03-15\', so only that one partition is rewritten (a naked overwrite with no replaceWhere fails).',
+      },
+    ],
     explanation: 'replaceWhere overwrites only the matching partition slice without affecting existing historical partitions.',
     tieredHints: {
       apiSignature: 'dfWriter.option(key, value)',
