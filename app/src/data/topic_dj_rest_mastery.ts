@@ -160,7 +160,7 @@ print(Article.objects.count())`,
     course: Course.BACKEND,
     question: 'A `HyperlinkedModelSerializer` raises an assertion about a missing `request` when instantiated inside a plain `APIView`. Why — and what fixes it?',
     options: [
-      { id: 'a', text: 'Hyperlinked fields build absolute URLs and need `request` in the serializer context; generic views supply it automatically, but a hand-instantiated serializer must be passed `context={"request": request}`', isCorrect: false },
+      { id: 'a', text: 'Hyperlinked fields build absolute URLs and need `request` in the serializer context; generic views supply it automatically, but a hand-instantiated serializer must be passed `context={"request": request}`', isCorrect: true },
       { id: 'b', text: 'Hyperlinked serializers only work behind a `DefaultRouter`; they cannot be used with `path()` entries in a URLConf under any circumstances', isCorrect: false },
       { id: 'c', text: 'The model is missing a `get_absolute_url` method, which every hyperlinked serializer calls internally to render the value of its `url` field', isCorrect: false },
       { id: 'd', text: 'Hyperlinked relation fields are write-only by default, so they error unless the inbound request body already includes a fully-qualified URL', isCorrect: false },

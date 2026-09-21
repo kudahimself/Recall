@@ -793,7 +793,15 @@ result = orders_df.join(
     on="order_id",
     how="left"
 )`,
-    testCases: [],
+    testCases: [
+      {
+        input: '',
+        expectedOutput:
+          'line_item_totals = line_items_df.groupBy("order_id").agg(F.sum("quantity").alias("total_items"))\nresult = orders_df.join(line_item_totals, on="order_id", how="left")',
+        description:
+          'Pre-aggregates line_items_df by order_id with SUM(quantity) aliased total_items, then LEFT-joins those per-order totals to orders_df on order_id (so order_amount is not fanned out).',
+      },
+    ],
     explanation: 'Pre-aggregating line_items_df by order_id before joining prevents fan-out inflation of order_amount.',
     tieredHints: {
       apiSignature: 'df.groupBy(*cols).agg(*exprs)',
@@ -809,6 +817,7 @@ result = orders_df.join(
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
+    requires: ['replaceWhere'],
     question: `A gold sales_summary table partitioned by sales_date has a bug affecting only sales_date = '2024-03-15'.
 
 Write PySpark code to overwrite ONLY the sales_date = '2024-03-15' partition in sales_summary using corrected_df via Delta replaceWhere.`,
@@ -820,7 +829,15 @@ Write PySpark code to overwrite ONLY the sales_date = '2024-03-15' partition in 
     .saveAsTable("sales_summary")
 # OR
 corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = '2024-03-15'").saveAsTable("sales_summary")`,
-    testCases: [],
+    testCases: [
+      {
+        input: '',
+        expectedOutput:
+          'corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = \'2024-03-15\'").saveAsTable("sales_summary")',
+        description:
+          'Must use mode overwrite with the replaceWhere option, so a naked overwrite with no replaceWhere fails outright. The grader checks that replaceWhere is present but does not itself verify the sales_date literal, so an answer that has replaceWhere but names a wrong partition value reaches the self-grade panel rather than failing.',
+      },
+    ],
     explanation: 'replaceWhere overwrites only the matching partition slice without affecting existing historical partitions.',
     tieredHints: {
       apiSignature: 'dfWriter.option(key, value)',
