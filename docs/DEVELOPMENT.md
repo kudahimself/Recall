@@ -114,6 +114,8 @@ Two distinct review states a topic can be in:
 - `hasDueMastered` checks this via `progress.lastAttempt` for O(1) timestamps
 
 **Selection when due:**
+- The due branch passes a due-only filter to `hasDueMastered`/`pickMasteredResurface` (the drain filter while draining, otherwise `isIntervalDue`), so it draws from due cards only.
+  Without the filter one due card among hundreds of recently reviewed ones lost the draw to not-yet-due cards, and well-known cards came back at about 2 percent of their interval.
 - `pickMasteredResurface` picks one - **most-overdue first**
 - Scored by `daysSinceLastReview / targetInterval`
 - Least-recently-reviewed as fallback
@@ -130,6 +132,17 @@ Two distinct review states a topic can be in:
 - Drops to `ONBOARDING_DUE_RESURFACE_PROB = 0.25` while new topic is still being onboarded
 - Exception: a due DRAIN card (coding/advanced) overrides onboarding and hard-gates new content (see Reviews-First Hard Drain)
 - When nothing is strictly due, light `MASTERED_RESURFACE_FLOOR_FRACTION = 0.20` interleave keeps not-yet-due advanced cards warm (only outside onboarding)
+
+**Early reviews that remain:**
+The floor interleave above is unfiltered, and the concept-aware picker chooses by concept retrievability rather than card intervals, so both still serve well-known cards before they are due.
+On the reference learner's real state `drainReplay.sim.test.ts` measures these at a median of about 50 percent of interval for streak >= 5 cards, against the 2 percent the due branch used to produce.
+Making those two paths respect card intervals is left for a follow-up; the replay asserts the median stays at or above 40 percent.
+
+**Relearn step:**
+- `pickDueRelearn` runs first in the review slot (whenever the latest attempt was not a miss), before the `consolidationPending` deferral and before the drain.
+- It serves a card whose latest answer was wrong once its relearn interval (`getEffectiveInterval` at streak 0, about a day scaled by card difficulty) has passed - any topic, any type, the one missed longest ago first.
+- Without it a missed MCQ / parsons / cloze / predict card in a mastered topic had no branch that owned it: the drain serves only coding/advanced cards and the concept-aware picker ignores the miss, so 39 such cards in the reference history went 50-91 days unseen.
+- It only fills review slots; the new-question draw has already run, so it does not reopen new content during a drain.
 
 **Deferral safeguard:**
 - Resurface skipped on fresh failure (`lastAttemptWrong`)
@@ -223,12 +236,13 @@ Auto-graded Anki easy/hard.
 **Formula:**
 `getEffectiveInterval = getTargetInterval(streak) * easeFactor(cardDifficulty[id])`
 
-Used by all 5 drain due-checks:
+Used by every due-check:
 - `hasDueMastered`
 - `countPendingDrain` (behind `hasPendingDrain`)
 - `pickMasteredResurface`
 - `getReviewStatus`
-- `drainPred`
+- `isIntervalDue` (the due branch's filter, also behind `drainPred`)
+- `pickDueRelearn` (at streak 0, the relearn interval)
 
 **Ease factor:**
 - Constants: `EASE_MID_DIFFICULTY=5.5`, `EASE_MAX_FACTOR=2.5`, `EASE_MIN_FACTOR=0.4`
