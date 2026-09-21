@@ -257,6 +257,9 @@ Used by all 5 drain due-checks:
 **Location:** `src/utils/codeValidator.ts`
 
 NOT in `CodingQuestion.tsx`.
+`CodingQuestion` calls `gradeCodingSubmission(question, code)`, which validates once per test case.
+A question with an empty `testCases` list is still checked once against `solution`, so it never accepts arbitrary code.
+Regression suite: `codeValidator.mutants.test.ts` (every reference passes; flipped, truncated and unfinished mutants do not).
 
 **Process:**
 
@@ -266,8 +269,11 @@ NOT in `CodingQuestion.tsx`.
    - Normalize quotes
    - Lowercase for SQL
 3. **Equivalence rewrites:** `filter`↔`where`, `sort`↔`orderBy`, `col("x")`↔`"x"`, `df["x"]`↔`"x"`, `F.func`→`func`, `INNER JOIN`↔`JOIN`, etc.
-4. **Token-set match:** Every essential token in alternative must appear somewhere in user code (order-independent). Pass if ANY alternative matches.
-5. **Return verdict:**
+4. **Bracket check:** user code with an unclosed or mismatched `(`, `[` or `{` is a `fail` when the reference itself is balanced (catches truncated answers).
+5. **Match each alternative:** pass if ANY alternative matches, either by:
+   - Containment - the whole normalized alternative appears in user code on token boundaries (full solution plus extras). A user fragment of the solution is never a pass.
+   - Token match - EVERY solution token (single-character operators and digits included) appears in user code, counted per occurrence and order-independent, with precision ≥ 40%. Partial recall never passes; it can only reach `uncertain`.
+6. **Return verdict:**
    - `pass` - confident
    - `fail` - confident wrong (common mistake matched, or similarity well below threshold)
    - `uncertain` - similarity ≥ `UNCERTAIN_SIMILARITY_THRESHOLD` but below pass thresholds (could be valid alternative validator can't recognize)
