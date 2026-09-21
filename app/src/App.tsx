@@ -1397,7 +1397,7 @@ function App() {
           )}
         </div>
       )}
-      {initialLoad.status !== 'unreadable' && backupKeys.length > 0 && !backupNoticeDismissed && (
+      {backupKeys.length > 0 && !backupNoticeDismissed && (
         <div className="storage-banner storage-banner-warning" role="status">
           Recall keeps {backupKeys.length === 1 ? 'a backup' : `${backupKeys.length} backups`} of progress it could not read.
           {' '}Export includes them.

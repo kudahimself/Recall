@@ -131,6 +131,9 @@ test('without a backup, a failed load never writes, even after the in-memory sta
   render(<App />);
   expect(screen.getByText(/saving is off to protect it/)).toBeInTheDocument();
   expect(screen.getByText(/Earlier backups are still kept/)).toBeInTheDocument();
+  const download = jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation(() => {});
+  fireEvent.click(screen.getByRole('button', { name: /Download backup/ }));
+  expect(download.mock.calls[0][1]).toBe('an older unreadable copy');
   expect(screen.getByRole('button', { name: /Export/ })).toBeDisabled();
 
   await resetActiveCourse();
