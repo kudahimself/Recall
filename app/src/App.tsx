@@ -26,6 +26,7 @@ import {
   ProgressLoad,
   PROGRESS_KEY,
   loadProgressFrom,
+  studyWritesBlocked,
   serializeProgress,
   safeSetItem,
   buildExport,
@@ -360,7 +361,7 @@ function App() {
   const [filters, setFilters] = useState<FilterOptions>(loadFilters);
   const [misconceptions, setMisconceptions] = useState<MisconceptionStore>(loadMisconceptions);
   const [conceptProgress, setConceptProgress] = useState<ConceptProgress>(
-    () => loadConceptProgress(initialLoad.progress, initialLoad.status !== 'unreadable'),
+    () => loadConceptProgress(initialLoad.progress, !studyWritesBlocked(initialLoad)),
   );
   const [cardDifficulty, setCardDifficulty] = useState<Record<string, number>>(loadCardDifficulty);
 
@@ -375,9 +376,10 @@ function App() {
   const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'topics' | 'heatmap'>('overview');
 
   // ── Persistence guards ──
-  // Unreadable stored progress: study-record writes stay off for this session so
-  // the original text is never replaced by the empty in-memory state.
-  const progressUnreadable = initialLoad.status === 'unreadable';
+  // Unreadable stored progress with no backup copy: study-record writes stay off
+  // for this session so the only copy is never replaced by the empty in-memory
+  // state. Once a backup exists, saving resumes from a fresh start.
+  const progressWritesBlocked = studyWritesBlocked(initialLoad);
   // Another tab saved answers after this one loaded: this tab's copy is stale,
   // so it stops writing rather than overwrite them (last writer never clobbers).
   const [staleTab, setStaleTab] = useState(false);
@@ -392,7 +394,7 @@ function App() {
   const persist = useCallback((key: string, value: string, kind: 'study' | 'session' | 'ui') => {
     if (importingRef.current) return;
     if (kind !== 'ui' && staleTabRef.current) return;
-    if (kind === 'study' && progressUnreadable) return;
+    if (kind === 'study' && progressWritesBlocked) return;
     const result = safeSetItem(localStorage, key, value);
     setWriteErrors(prev => {
       if (result.ok) {
@@ -404,7 +406,7 @@ function App() {
       const message = result.quotaExceeded ? 'browser storage is full' : result.error;
       return prev[key] === message ? prev : { ...prev, [key]: message };
     });
-  }, [progressUnreadable]);
+  }, [progressWritesBlocked]);
 
   useEffect(() => {
     const watched = new Set<string>([
@@ -552,9 +554,9 @@ function App() {
   }, [activeCourse, persist]);
 
   // ── Export / import ──
-  // A stale tab holds older answers than storage, and an unreadable load holds
-  // nothing; exporting either and re-importing it would replace newer progress.
-  const canExport = !progressUnreadable && !staleTab;
+  // A stale tab holds older answers than storage, and a blocked unreadable load
+  // holds nothing; exporting either and re-importing it would replace newer progress.
+  const canExport = !progressWritesBlocked && !staleTab;
   // The export is built from in-memory state, which is at least as new as
   // storage (a failed write leaves memory ahead), plus the orphaned history.
   const exportProgress = () => {
@@ -1328,7 +1330,7 @@ function App() {
             className="header-action"
             onClick={exportProgress}
             disabled={!canExport}
-            title={progressUnreadable
+            title={progressWritesBlocked
               ? 'Stored progress could not be read, so there is nothing to export yet'
               : staleTab
                 ? 'Another tab saved newer answers; reload this tab to export the latest'
@@ -1356,15 +1358,29 @@ function App() {
         </div>
       </header>
 
-      {progressUnreadable && initialLoad.status === 'unreadable' && (
+      {initialLoad.status === 'unreadable' && (
         <div className="storage-banner storage-banner-error" role="alert">
           <strong>Your saved progress could not be read</strong> ({initialLoad.error}).
-          {' '}Nothing has been deleted: the original is still stored under <code>{STORAGE_KEYS.progress}</code>
           {initialLoad.backupKey
-            ? <> and a copy is kept under <code>{initialLoad.backupKey}</code></>
-            : null}.
-          {' '}You are starting from empty for now, and answers in this session will not be saved,
-          so the original is never overwritten. Use Import to restore from an export file.
+            ? <>
+                {' '}The old data is safe in a backup under <code>{initialLoad.backupKey}</code>, which Recall never overwrites.
+                {' '}Saving has resumed from a fresh start.
+              </>
+            : <>
+                {' '}The old data is still under <code>{STORAGE_KEYS.progress}</code>, but no backup copy could be made,
+                {' '}so saving is off to protect it and answers in this session will not be saved.
+              </>}
+          {' '}Use Import to restore from an export file.
+          {initialLoad.raw !== null && (
+            <>
+              {' '}<button
+                className="storage-banner-button"
+                onClick={() => downloadTextFile(`recall-progress-unreadable-${getToday()}.json`, initialLoad.raw as string)}
+              >
+                Download unreadable data
+              </button>
+            </>
+          )}
         </div>
       )}
       {staleTab && (

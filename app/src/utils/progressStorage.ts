@@ -65,6 +65,8 @@ export type ProgressLoad =
       progress: UserProgress;
       orphans: OrphanedProgress;
       error: string;
+      // The unreadable text itself, or null if storage could not be read at all.
+      raw: string | null;
       // Key holding a copy of the unreadable text, or null if the copy could not be made.
       backupKey: string | null;
     };
@@ -177,7 +179,8 @@ const describeError = (e: unknown): string => (e instanceof Error ? e.message : 
  * Read progress. A failed read NEVER writes to the progress key: the raw text
  * stays where it is, a copy goes to PROGRESS_BACKUP_KEY (unless that key already
  * holds a different earlier copy, which is left alone), and the caller gets
- * empty progress to run with in memory.
+ * empty progress to run with in memory. Once the copy exists the caller may
+ * save over the progress key again; without it, it must not.
  */
 export function loadProgressFrom(
   storage: Storage,
@@ -190,7 +193,7 @@ export function loadProgressFrom(
   } catch (e) {
     return {
       status: 'unreadable', progress: emptyProgress(), orphans: emptyOrphans(),
-      error: `browser storage could not be read (${describeError(e)})`, backupKey: null,
+      error: `browser storage could not be read (${describeError(e)})`, raw: null, backupKey: null,
     };
   }
   if (raw === null) return { status: 'empty', progress: emptyProgress(), orphans: emptyOrphans() };
@@ -210,9 +213,14 @@ export function loadProgressFrom(
     } catch { /* no room for a copy; the original is still untouched */ }
     return {
       status: 'unreadable', progress: emptyProgress(), orphans: emptyOrphans(),
-      error: describeError(e), backupKey,
+      error: describeError(e), raw, backupKey,
     };
   }
+}
+
+/** True when saving must stay off: the stored text is unreadable and has no backup copy. */
+export function studyWritesBlocked(load: ProgressLoad): boolean {
+  return load.status === 'unreadable' && load.backupKey === null;
 }
 
 export type WriteResult = { ok: true } | { ok: false; error: string; quotaExceeded: boolean };

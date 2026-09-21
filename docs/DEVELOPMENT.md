@@ -323,8 +323,9 @@ Layouts target desktop viewport without scrolling.
 Older `databricks-*` keys are copied to their `recall-*` names on first load and left in place as a rollback safety net.
 
 **Keeping progress safe** (`src/utils/progressStorage.ts`):
-- An unreadable `recall-progress` is never overwritten.
-  Its text stays in place, a copy goes to `recall-progress-unreadable-backup`, a banner explains, and the session runs from empty in memory with study-record writes switched off.
+- An unreadable `recall-progress` is never overwritten until a copy of it is safe.
+  The text is copied to `recall-progress-unreadable-backup` (never overwritten), a banner explains and offers the text as a download, and saving resumes from empty.
+  If no copy could be made, the session runs from empty in memory with study-record writes switched off.
 - History for question ids missing from the build is set aside on read and written back unchanged, so a renamed or removed question gets its history back if the id returns.
 - Every write goes through `safeSetItem`; a failure (for example a full quota) shows a "not being saved" banner instead of crashing the app.
 - A tab that sees another tab save answers (`storage` event) stops writing and asks for a reload, so two tabs never overwrite each other.

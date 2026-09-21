@@ -53,21 +53,51 @@ test('a corrupted store survives two loads untouched, with a backup and an on-sc
 
   const { unmount: unmountFirst } = render(<App />);
   expect(screen.getByText(/Your saved progress could not be read/)).toBeInTheDocument();
+  expect(screen.getByText(/Saving has resumed from a fresh start/)).toBeInTheDocument();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
   expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
   unmountFirst();
 
   render(<App />);
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
-  expect(screen.getByRole('button', { name: /Export/ })).toBeDisabled();
+  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
 });
 
-test('a failed load never writes, even after the in-memory state changes (bug 3)', async () => {
+test('once the backup is made, saving resumes and the backup keeps the original (bug 3)', async () => {
   const raw = '{"attemptHistory": [';
   localStorage.setItem(PROGRESS_KEY, raw);
   render(<App />);
+  expect(screen.getByRole('button', { name: /Export/ })).toBeEnabled();
+  expect(localStorage.getItem('recall-card-difficulty')).not.toBeNull();
+
+  await resetActiveCourse();
+  await waitFor(() => expect(localStorage.getItem(PROGRESS_KEY)).not.toBe(raw));
+  expect(JSON.parse(localStorage.getItem(PROGRESS_KEY) as string).attemptHistory).toEqual([]);
+  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe(raw);
+});
+
+test('without a backup, a failed load never writes, even after the in-memory state changes (bug 3)', async () => {
+  const raw = '{"attemptHistory": [';
+  localStorage.setItem(PROGRESS_KEY, raw);
+  localStorage.setItem(PROGRESS_BACKUP_KEY, 'an older unreadable copy');
+  render(<App />);
+  expect(screen.getByText(/saving is off to protect it/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Export/ })).toBeDisabled();
+
   await resetActiveCourse();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
+  expect(localStorage.getItem(PROGRESS_BACKUP_KEY)).toBe('an older unreadable copy');
+  expect(localStorage.getItem('recall-card-difficulty')).toBeNull();
+});
+
+test('the banner downloads the unreadable text as a file', () => {
+  const raw = '{"attemptHistory": [';
+  localStorage.setItem(PROGRESS_KEY, raw);
+  const download = jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation(() => {});
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Download unreadable data' }));
+  expect(download).toHaveBeenCalledTimes(1);
+  expect(download.mock.calls[0][1]).toBe(raw);
 });
 
 test('history for an id missing from the build is kept in storage (bug 4)', async () => {
