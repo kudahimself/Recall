@@ -37,9 +37,11 @@ Question construction workflow and question writing quality standards live in sk
 - **Monaco editor disposal pattern required** - without explicit disposal, navigating away
   mid-edit throws "Canceled" promise errors.
   Pattern in `CodingQuestion.tsx` lines 143-147.
-- **localStorage keys use `databricks-*` prefix** - `databricks-progress`, `databricks-profile`,
-  `databricks-filters`, `databricks-active-course`.
-  Legacy naming persists for backwards compatibility (newer `recall-*` keys auto-migrate on first load).
+- **localStorage keys use the `recall-*` prefix** - `recall-progress`, `recall-profile`, and the rest of
+  `STORAGE_KEYS` in `App.tsx`; legacy `databricks-*` keys are copied over once and left in place.
+- **Never write progress except through `safeSetItem` / `serializeProgress`** (`src/utils/progressStorage.ts`).
+  They keep unreadable stores, unknown-id history and other tabs' answers from being overwritten.
+  Adding a new persisted key means adding it to `EXPORT_KEYS` so Export/Import still round-trips everything.
 
 ## Conventions
 

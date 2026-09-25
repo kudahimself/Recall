@@ -114,6 +114,8 @@ Two distinct review states a topic can be in:
 - `hasDueMastered` checks this via `progress.lastAttempt` for O(1) timestamps
 
 **Selection when due:**
+- The due branch passes a due-only filter to `hasDueMastered`/`pickMasteredResurface` (the drain filter while draining, otherwise `isIntervalDue`), so it draws from due cards only.
+  Without the filter one due card among hundreds of recently reviewed ones lost the draw to not-yet-due cards, and well-known cards came back at about 2 percent of their interval.
 - `pickMasteredResurface` picks one - **most-overdue first**
 - Scored by `daysSinceLastReview / targetInterval`
 - Least-recently-reviewed as fallback
@@ -130,6 +132,17 @@ Two distinct review states a topic can be in:
 - Drops to `ONBOARDING_DUE_RESURFACE_PROB = 0.25` while new topic is still being onboarded
 - Exception: a due DRAIN card (coding/advanced) overrides onboarding and hard-gates new content (see Reviews-First Hard Drain)
 - When nothing is strictly due, light `MASTERED_RESURFACE_FLOOR_FRACTION = 0.20` interleave keeps not-yet-due advanced cards warm (only outside onboarding)
+
+**Early reviews that remain:**
+The floor interleave above is unfiltered, and the concept-aware picker chooses by concept retrievability rather than card intervals, so both still serve well-known cards before they are due.
+On the reference learner's real state `drainReplay.sim.test.ts` measures these at a median of about 50 percent of interval for streak >= 5 cards, against the 2 percent the due branch used to produce.
+Making those two paths respect card intervals is left for a follow-up; the replay asserts the median stays at or above 40 percent.
+
+**Relearn step:**
+- `pickDueRelearn` runs first in the review slot (whenever the latest attempt was not a miss), before the `consolidationPending` deferral and before the drain.
+- It serves a card whose latest answer was wrong once its relearn interval (`getEffectiveInterval` at streak 0, about a day scaled by card difficulty) has passed - any topic, any type, the one missed longest ago first.
+- Without it a missed MCQ / parsons / cloze / predict card in a mastered topic had no branch that owned it: the drain serves only coding/advanced cards and the concept-aware picker ignores the miss, so 39 such cards in the reference history went 50-91 days unseen.
+- It only fills review slots; the new-question draw has already run, so it does not reopen new content during a drain.
 
 **Deferral safeguard:**
 - Resurface skipped on fresh failure (`lastAttemptWrong`)
@@ -223,12 +236,13 @@ Auto-graded Anki easy/hard.
 **Formula:**
 `getEffectiveInterval = getTargetInterval(streak) * easeFactor(cardDifficulty[id])`
 
-Used by all 5 drain due-checks:
+Used by every due-check:
 - `hasDueMastered`
 - `countPendingDrain` (behind `hasPendingDrain`)
 - `pickMasteredResurface`
 - `getReviewStatus`
-- `drainPred`
+- `isIntervalDue` (the due branch's filter, also behind `drainPred`)
+- `pickDueRelearn` (at streak 0, the relearn interval)
 
 **Ease factor:**
 - Constants: `EASE_MID_DIFFICULTY=5.5`, `EASE_MAX_FACTOR=2.5`, `EASE_MIN_FACTOR=0.4`
@@ -257,6 +271,10 @@ Used by all 5 drain due-checks:
 **Location:** `src/utils/codeValidator.ts`
 
 NOT in `CodingQuestion.tsx`.
+`CodingQuestion` calls `gradeCodingSubmission(question, code)`, which validates once per test case.
+A question with an empty `testCases` list is still checked once against `solution`, so it never accepts arbitrary code.
+The bank itself must not ship empty `testCases`; `src/data/questionBankIntegrity.test.ts` enforces this along with one correct option per MCQ and cloze keys that fill to their solution.
+Regression suite: `codeValidator.mutants.test.ts` (every reference passes; flipped, truncated and unfinished mutants do not).
 
 **Process:**
 
@@ -266,8 +284,11 @@ NOT in `CodingQuestion.tsx`.
    - Normalize quotes
    - Lowercase for SQL
 3. **Equivalence rewrites:** `filter`↔`where`, `sort`↔`orderBy`, `col("x")`↔`"x"`, `df["x"]`↔`"x"`, `F.func`→`func`, `INNER JOIN`↔`JOIN`, etc.
-4. **Token-set match:** Every essential token in alternative must appear somewhere in user code (order-independent). Pass if ANY alternative matches.
-5. **Return verdict:**
+4. **Bracket check:** user code with an unclosed or mismatched `(`, `[` or `{` is a `fail` when the reference itself is balanced (catches truncated answers).
+5. **Match each alternative:** pass if ANY alternative matches, either by:
+   - Containment - the whole normalized alternative appears in user code on token boundaries (full solution plus extras). A user fragment of the solution is never a pass.
+   - Token match - EVERY solution token (single-character operators and digits included) appears in user code, counted per occurrence and order-independent, with precision ≥ 40%. Partial recall never passes; it can only reach `uncertain`.
+6. **Return verdict:**
    - `pass` - confident
    - `fail` - confident wrong (common mistake matched, or similarity well below threshold)
    - `uncertain` - similarity ≥ `UNCERTAIN_SIMILARITY_THRESHOLD` but below pass thresholds (could be valid alternative validator can't recognize)
@@ -307,13 +328,24 @@ Layouts target desktop viewport without scrolling.
 ### Persistence
 
 **localStorage keys** (defined in `App.tsx`):
-- `databricks-progress` - `UserProgress` (Set→Array serialized)
-- `databricks-profile` - streaks, sessions, time spent
-- `databricks-filters` - topic/difficulty/type filter state
-- `databricks-active-course` - currently selected `Course`
+- `recall-progress` - `UserProgress` (Set→Array serialized)
+- `recall-profile` - streaks, sessions, time spent
+- `recall-filters` - topic/difficulty/type filter state
+- `recall-active-course` - currently selected `Course`
+- `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
 
-Legacy `databricks-*` naming persists for backwards compatibility.
-Newer `recall-*` keys auto-migrate on first load and left in place as rollback safety net.
+Older `databricks-*` keys are copied to their `recall-*` names on first load and left in place as a rollback safety net.
+
+**Keeping progress safe** (`src/utils/progressStorage.ts`):
+- An unreadable `recall-progress` is never overwritten until a copy of it is safe.
+  The text is copied to its own `recall-progress-unreadable-backup-<ISO timestamp>` key (reused if a backup already holds the same text), a banner explains and offers the text as a download, and saving resumes from empty.
+  If that copy could not be written, the session runs from empty in memory with study-record writes switched off, and the banner says whether earlier backups exist.
+  Backups are never deleted automatically; while any exists a dismissible notice offers each as a download, Export carries them, and Import restores them as opaque text.
+- History for question ids missing from the build is set aside on read and written back unchanged, so a renamed or removed question gets its history back if the id returns.
+- Every write goes through `safeSetItem`; a failure (for example a full quota) shows a "not being saved" banner instead of crashing the app.
+- A tab that sees another tab save answers (`storage` event) stops writing and asks for a reload, so two tabs never overwrite each other.
+- Export and Import in the header round-trip every `recall-*` key as one JSON file.
+  Import validates the whole file first and writes all keys or none.
 
 ## Question Types
 
@@ -330,7 +362,7 @@ Distractors can carry optional `misconceptionTag` (string from registry in `src/
 Examples: `py-off-by-one-range`, `py-list-aliasing`
 
 When user picks tagged distractor:
-- Platform records event to localStorage (`databricks-misconceptions`)
+- Platform records event to localStorage (`recall-misconceptions`)
 - Surfaces top hits in ProgressTracker
 
 **Authoring rule:** Only tag distractor when wrong answer corresponds to SPECIFIC named misconception in registry.

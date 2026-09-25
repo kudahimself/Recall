@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { CodingQuestion as CQQuestion, CodeLanguage, Topic, AnswerMeta } from '../types';
-import { validateAnswer, ValidationResult, ValidationVerdict } from '../utils/codeValidator';
+import { gradeCodingSubmission, ValidationResult, ValidationVerdict } from '../utils/codeValidator';
 import { CREDIT_CORRECT_THRESHOLD } from '../utils/spacedRepetition';
 import { validateByComputedStyle } from '../utils/computedStyleValidator';
 import { LivePreview } from './visual/LivePreview';
@@ -194,28 +194,7 @@ export const CodingQuestion: React.FC<Props> = ({
   };
 
   const validateCode = (): ValidationResult[] => {
-    const solution = question.solution || question.testCases[0]?.expectedOutput || '';
-
-    const results: ValidationResult[] = question.testCases.map(testCase => {
-      try {
-        return validateAnswer(
-          code,
-          solution,
-          question.language,
-          testCase.description,
-          question.starterCode,
-          { requires: question.requires, requiredKeywords: question.requiredKeywords },
-        );
-      } catch (error) {
-        return {
-          passed: false,
-          verdict: 'fail' as ValidationVerdict,
-          description: testCase.description,
-          error: error instanceof Error ? error.message : 'Validation error',
-        };
-      }
-    });
-
+    const results = gradeCodingSubmission(question, code);
     setTestResults(results);
     return results;
   };
@@ -260,7 +239,7 @@ export const CodingQuestion: React.FC<Props> = ({
       setPhase('awaiting-self-grade');
       return;
     }
-    if (results.every(r => r.verdict === 'pass')) {
+    if (results.length > 0 && results.every(r => r.verdict === 'pass')) {
       finalize(true, attemptNumber);
       return;
     }

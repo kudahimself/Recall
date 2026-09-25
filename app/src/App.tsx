@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Question,
   QuestionType,
@@ -22,6 +22,22 @@ import {
 import { BACKEND_CONCEPTS, WEBDEV_CONCEPTS, DATABRICKS_CONCEPTS } from './utils/conceptRegistry';
 import { isFeatureEnabled } from './utils/featureFlags';
 import './utils/resetProgressFromTopic';
+import {
+  ProgressLoad,
+  PROGRESS_KEY,
+  loadProgressFrom,
+  listBackupKeys,
+  PROGRESS_BACKUP_PREFIX,
+  studyWritesBlocked,
+  serializeProgress,
+  safeSetItem,
+  buildExport,
+  validateExport,
+  applyImport,
+  downloadTextFile,
+  readFileText,
+  reloadPage,
+} from './utils/progressStorage';
 import {
   getCourseForTopic,
   WEBDEV_PATH_ORDER,
@@ -63,6 +79,8 @@ import {
   Lock,
   CheckCircle2,
   PlayCircle,
+  Download,
+  Upload,
   LucideIcon,
 } from 'lucide-react';
 import './App.css';
@@ -120,7 +138,7 @@ interface FilterOptions {
 }
 
 const STORAGE_KEYS = {
-  progress: 'recall-progress',
+  progress: PROGRESS_KEY,
   profile: 'recall-profile',
   filters: 'recall-filters',
   activeCourse: 'recall-active-course',
@@ -232,52 +250,12 @@ function loadFilters(): FilterOptions {
   return defaults;
 }
 
-function loadProgress(): UserProgress {
-  const emptyProgress = (): UserProgress => ({
-    questionsAttempted: new Set(),
-    correctAnswers: new Set(),
-    attemptHistory: [],
-    topicScores: new Map(),
-    difficultyScores: new Map(),
-    lastAttempt: new Map(),
-    repetitionQueue: new Map(),
-    masteredTopics: new Set(),
-  });
-
-  const saved = localStorage.getItem(STORAGE_KEYS.progress);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-
-      // Clean up stale IDs from deleted questions (e.g. removed variations)
-      const currentQuestionIds = new Set(questions.map(q => q.id));
-      const cleanedAttempted = (parsed.questionsAttempted || []).filter((id: string) => currentQuestionIds.has(id));
-      const cleanedCorrect = (parsed.correctAnswers || []).filter((id: string) => currentQuestionIds.has(id));
-      const cleanedHistory = (parsed.attemptHistory || []).filter((a: { questionId: string }) => currentQuestionIds.has(a.questionId));
-
-      // Stored sticky mastery: use the persisted set when present; otherwise
-      // seed it once from history (existing users predate the set). Fresh
-      // installs have empty history → an empty set.
-      const masteredTopics = parsed.masteredTopics !== undefined
-        ? new Set<string>(parsed.masteredTopics)
-        : seedMasteredTopics(questions, cleanedHistory);
-
-      return {
-        ...parsed,
-        questionsAttempted: new Set(cleanedAttempted),
-        correctAnswers: new Set(cleanedCorrect),
-        attemptHistory: cleanedHistory,
-        topicScores: new Map(Object.entries(parsed.topicScores ?? {})),
-        difficultyScores: new Map(Object.entries(parsed.difficultyScores ?? {})),
-        lastAttempt: new Map(Object.entries(parsed.lastAttempt ?? {})),
-        repetitionQueue: new Map(Object.entries(parsed.repetitionQueue ?? {})),
-        masteredTopics,
-      };
-    } catch {
-      // Corrupted store; start fresh rather than crashing app init.
-    }
-  }
-  return emptyProgress();
+function loadProgress(): ProgressLoad {
+  return loadProgressFrom(
+    localStorage,
+    new Set(questions.map(q => q.id)),
+    history => seedMasteredTopics(questions, history),
+  );
 }
 
 /**
@@ -286,7 +264,7 @@ function loadProgress(): UserProgress {
  * unconditionally — concept progress is cheap to maintain (≈few KB) and
  * the feature flag only gates whether the SRS *uses* it for selection.
  */
-function loadConceptProgress(progress: UserProgress): ConceptProgress {
+function loadConceptProgress(progress: UserProgress, canWrite: boolean): ConceptProgress {
   let existing: ConceptProgress | null = null;
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.conceptProgress);
@@ -300,7 +278,7 @@ function loadConceptProgress(progress: UserProgress): ConceptProgress {
 
   if (existing === null) {
     // First time: original one-shot migration.
-    localStorage.setItem(STORAGE_KEYS.conceptMigrationVersion, CONCEPT_MIGRATION_VERSION);
+    if (canWrite) safeSetItem(localStorage, STORAGE_KEYS.conceptMigrationVersion, CONCEPT_MIGRATION_VERSION);
     return migrateProgressToConcepts(progress, questions);
   }
 
@@ -314,7 +292,7 @@ function loadConceptProgress(progress: UserProgress): ConceptProgress {
       if (c.beta !== undefined) betas[c.id] = c.beta;
     }
     const rebackfilled = rebackfillConceptProgress(existing, progress.attemptHistory, idx, betas);
-    localStorage.setItem(STORAGE_KEYS.conceptMigrationVersion, CONCEPT_MIGRATION_VERSION);
+    if (canWrite) safeSetItem(localStorage, STORAGE_KEYS.conceptMigrationVersion, CONCEPT_MIGRATION_VERSION);
     return rebackfilled;
   }
 
@@ -376,11 +354,17 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('home');
   const [activeCourse, setActiveCourse] = useState<Course>(loadActiveCourse);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-  const [progress, setProgress] = useState<UserProgress>(loadProgress);
+  // Read progress once. `orphans` holds history for ids this build does not
+  // know; it is written back untouched so that history is never lost.
+  const [initialLoad] = useState<ProgressLoad>(loadProgress);
+  const orphansRef = useRef(initialLoad.orphans);
+  const [progress, setProgress] = useState<UserProgress>(initialLoad.progress);
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [filters, setFilters] = useState<FilterOptions>(loadFilters);
   const [misconceptions, setMisconceptions] = useState<MisconceptionStore>(loadMisconceptions);
-  const [conceptProgress, setConceptProgress] = useState<ConceptProgress>(() => loadConceptProgress(loadProgress()));
+  const [conceptProgress, setConceptProgress] = useState<ConceptProgress>(
+    () => loadConceptProgress(initialLoad.progress, !studyWritesBlocked(initialLoad)),
+  );
   const [cardDifficulty, setCardDifficulty] = useState<Record<string, number>>(loadCardDifficulty);
 
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
@@ -392,6 +376,64 @@ function App() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState<'slide-left' | 'slide-right' | 'fade'>('fade');
   const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'topics' | 'heatmap'>('overview');
+
+  // ── Persistence guards ──
+  // Unreadable stored progress with no backup copy: study-record writes stay off
+  // for this session so the only copy is never replaced by the empty in-memory
+  // state. Once a backup exists, saving resumes from a fresh start.
+  const progressWritesBlocked = studyWritesBlocked(initialLoad);
+  // Another tab saved answers after this one loaded: this tab's copy is stale,
+  // so it stops writing rather than overwrite them (last writer never clobbers).
+  const [staleTab, setStaleTab] = useState(false);
+  const staleTabRef = useRef(false);
+  // Keys whose last write failed, with the browser's error.
+  const [writeErrors, setWriteErrors] = useState<Record<string, string>>({});
+  const [importError, setImportError] = useState<string | null>(null);
+  const [backupKeys] = useState<string[]>(() => {
+    try {
+      return listBackupKeys(localStorage);
+    } catch {
+      return [];
+    }
+  });
+  const [backupNoticeDismissed, setBackupNoticeDismissed] = useState(false);
+  const importingRef = useRef(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  // kind 'study' = answer-bearing record; 'session' = streak/time; 'ui' = view prefs.
+  const persist = useCallback((key: string, value: string, kind: 'study' | 'session' | 'ui') => {
+    if (importingRef.current) return;
+    if (kind !== 'ui' && staleTabRef.current) return;
+    if (kind === 'study' && progressWritesBlocked) return;
+    const result = safeSetItem(localStorage, key, value);
+    setWriteErrors(prev => {
+      if (result.ok) {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      const message = result.quotaExceeded ? 'browser storage is full' : result.error;
+      return prev[key] === message ? prev : { ...prev, [key]: message };
+    });
+  }, [progressWritesBlocked]);
+
+  useEffect(() => {
+    const watched = new Set<string>([
+      STORAGE_KEYS.progress,
+      STORAGE_KEYS.conceptProgress,
+      STORAGE_KEYS.cardDifficulty,
+      STORAGE_KEYS.misconceptions,
+    ]);
+    const onStorage = (e: StorageEvent) => {
+      // key === null means another tab cleared storage.
+      if (e.key !== null && !watched.has(e.key)) return;
+      staleTabRef.current = true;
+      setStaleTab(true);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // Get transition direction based on view hierarchy
   const getTransitionDirection = useCallback((from: ViewMode, to: ViewMode): 'slide-left' | 'slide-right' | 'fade' => {
@@ -469,50 +511,38 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save progress
+  // Save progress. Skipped for the state just read from storage (nothing
+  // changed), so merely opening the app never rewrites the record.
   useEffect(() => {
-    const toSave = {
-      ...progress,
-      questionsAttempted: Array.from(progress.questionsAttempted),
-      correctAnswers: Array.from(progress.correctAnswers),
-      topicScores: Object.fromEntries(progress.topicScores),
-      difficultyScores: Object.fromEntries(progress.difficultyScores),
-      lastAttempt: Object.fromEntries(progress.lastAttempt),
-      repetitionQueue: Object.fromEntries(progress.repetitionQueue),
-      masteredTopics: Array.from(progress.masteredTopics),
-    };
-    localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(toSave));
-  }, [progress]);
+    if (progress === initialLoad.progress) return;
+    persist(STORAGE_KEYS.progress, serializeProgress(progress, orphansRef.current), 'study');
+  }, [progress, initialLoad.progress, persist]);
 
   // Save profile
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(profile));
-  }, [profile]);
+    persist(STORAGE_KEYS.profile, JSON.stringify(profile), 'session');
+  }, [profile, persist]);
 
   // Save filters
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.filters, JSON.stringify(filters));
-  }, [filters]);
+    persist(STORAGE_KEYS.filters, JSON.stringify(filters), 'ui');
+  }, [filters, persist]);
 
   // Save misconception telemetry
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.misconceptions, JSON.stringify(misconceptions));
-  }, [misconceptions]);
+    persist(STORAGE_KEYS.misconceptions, JSON.stringify(misconceptions), 'study');
+  }, [misconceptions, persist]);
 
   // Save concept progress. Loaded unconditionally; the feature flag only
   // gates whether the SRS reads from it for selection.
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.conceptProgress, JSON.stringify(conceptProgress));
-    } catch { /* quota / private mode — non-fatal */ }
-  }, [conceptProgress]);
+    persist(STORAGE_KEYS.conceptProgress, JSON.stringify(conceptProgress), 'study');
+  }, [conceptProgress, persist]);
 
   // Save per-card FSRS difficulty.
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.cardDifficulty, JSON.stringify(cardDifficulty));
-    } catch { /* non-fatal */ }
-  }, [cardDifficulty]);
+    persist(STORAGE_KEYS.cardDifficulty, JSON.stringify(cardDifficulty), 'study');
+  }, [cardDifficulty, persist]);
 
   // Concept-aware selection context. Memoized so SpacedRepetitionSystem only
   // sees a new ctx when conceptProgress actually changes. Returns undefined
@@ -530,8 +560,62 @@ function App() {
 
   // Save active course so the home/welcome view reflects the last-used course
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.activeCourse, activeCourse);
-  }, [activeCourse]);
+    persist(STORAGE_KEYS.activeCourse, activeCourse, 'ui');
+  }, [activeCourse, persist]);
+
+  // ── Export / import ──
+  // A stale tab holds older answers than storage, and a blocked unreadable load
+  // holds nothing; exporting either and re-importing it would replace newer progress.
+  const canExport = !progressWritesBlocked && !staleTab;
+  // The export is built from in-memory state, which is at least as new as
+  // storage (a failed write leaves memory ahead), plus the orphaned history.
+  const exportProgress = () => {
+    const text = buildExport({
+      [STORAGE_KEYS.progress]: serializeProgress(progress, orphansRef.current),
+      [STORAGE_KEYS.profile]: JSON.stringify(profile),
+      [STORAGE_KEYS.filters]: JSON.stringify(filters),
+      [STORAGE_KEYS.activeCourse]: activeCourse,
+      [STORAGE_KEYS.misconceptions]: JSON.stringify(misconceptions),
+      [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
+      [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
+      [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
+      ...Object.fromEntries(listBackupKeys(localStorage).map(k => [k, localStorage.getItem(k)])),
+    });
+    downloadTextFile(`recall-progress-${getToday()}.json`, text);
+  };
+
+  const importProgress = async (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (importInputRef.current) importInputRef.current.value = '';
+    if (!file) return;
+    let text: string;
+    try {
+      text = await readFileText(file);
+    } catch (e) {
+      setImportError(`Import refused: could not read the file (${String(e)}). Nothing was changed.`);
+      return;
+    }
+    const check = validateExport(text);
+    if (!check.ok) {
+      setImportError(`Import refused: ${check.error}. Nothing was changed.`);
+      return;
+    }
+    const when = check.file.exportedAt ? ` exported ${check.file.exportedAt}` : '';
+    if (!window.confirm(
+      `Replace ALL Recall progress in this browser with ${file.name}${when} (${check.attemptCount} answers)? ` +
+      'Export your current progress first if you might want it back.',
+    )) return;
+    // Stop this tab's save effects from writing its old state over the import.
+    importingRef.current = true;
+    const result = applyImport(localStorage, check.file);
+    if (!result.ok) {
+      importingRef.current = false;
+      const reason = result.quotaExceeded ? 'browser storage is full' : result.error;
+      setImportError(`Import failed (${reason}). Your previous progress was restored.`);
+      return;
+    }
+    reloadPage();
+  };
 
   // Track session time on unmount / visibility change
   useEffect(() => {
@@ -1250,8 +1334,114 @@ function App() {
             <Target className="stat-icon" size={14} />
             {overallRecentAccuracy}%
           </span>
+          {staleTab && (
+            <span className="header-note">Reload this tab to export the latest progress</span>
+          )}
+          <button
+            className="header-action"
+            onClick={exportProgress}
+            disabled={!canExport}
+            title={progressWritesBlocked
+              ? 'Stored progress could not be read, so there is nothing to export yet'
+              : staleTab
+                ? 'Another tab saved newer answers; reload this tab to export the latest'
+                : 'Save all your progress to a file'}
+          >
+            <Download size={14} />
+            <span>Export</span>
+          </button>
+          <button
+            className="header-action"
+            onClick={() => importInputRef.current?.click()}
+            title="Replace progress in this browser with an exported file"
+          >
+            <Upload size={14} />
+            <span>Import</span>
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            data-testid="import-progress-input"
+            style={{ display: 'none' }}
+            onChange={e => { void importProgress(e.target.files); }}
+          />
         </div>
       </header>
+
+      <div className="storage-banners">
+      {initialLoad.status === 'unreadable' && (
+        <div className="storage-banner storage-banner-error" role="alert">
+          <strong>Your saved progress could not be read</strong> ({initialLoad.error}).
+          {initialLoad.backupKey
+            ? <>
+                {' '}The old data is safe in a backup under <code>{initialLoad.backupKey}</code>, which Recall never overwrites.
+                {' '}Saving has resumed from a fresh start.
+              </>
+            : <>
+                {' '}The old data is still under <code>{STORAGE_KEYS.progress}</code>, but a backup copy of it could not be saved,
+                {' '}so saving is off to protect it and answers in this session will not be saved.
+                {backupKeys.length > 0
+                  ? <>{' '}Earlier backups are still kept: {backupKeys.map(k => <code key={k}>{k} </code>)}.</>
+                  : <>{' '}There is no earlier backup.</>}
+              </>}
+          {' '}Use Import to restore from an export file.
+          {initialLoad.raw !== null && (
+            <>
+              {' '}<button
+                className="storage-banner-button"
+                onClick={() => downloadTextFile(`recall-progress-unreadable-${getToday()}.json`, initialLoad.raw as string)}
+              >
+                Download unreadable data
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {backupKeys.length > 0 && !backupNoticeDismissed && (
+        <div className="storage-banner storage-banner-warning" role="status">
+          Recall keeps {backupKeys.length === 1 ? 'a backup' : `${backupKeys.length} backups`} of progress it could not read.
+          {' '}Export includes them.
+          {backupKeys.map(k => (
+            <React.Fragment key={k}>
+              {' '}<button
+                className="storage-banner-button"
+                onClick={() => downloadTextFile(`${k.replace(/[:.]/g, '-')}.json`, localStorage.getItem(k) ?? '')}
+              >
+                Download backup {k.slice(PROGRESS_BACKUP_PREFIX.length)}
+              </button>
+            </React.Fragment>
+          ))}
+          {' '}<button className="storage-banner-button" onClick={() => setBackupNoticeDismissed(true)}>Dismiss</button>
+        </div>
+      )}
+      {staleTab && (
+        <div className="storage-banner storage-banner-warning" role="alert">
+          <strong>Recall is open in another tab, and it saved answers.</strong>
+          {' '}This tab has stopped saving so it cannot overwrite them. Answers you give here are not being saved.
+          {' '}<button className="storage-banner-button" onClick={reloadPage}>Reload to continue here</button>
+        </div>
+      )}
+      {Object.keys(writeErrors).length > 0 && (
+        <div className="storage-banner storage-banner-error" role="alert">
+          <strong>Your progress is not being saved</strong>
+          {' '}({Object.entries(writeErrors).map(([k, msg]) => `${k}: ${msg}`).join('; ')}).
+          {' '}Your answers are kept in this tab until you close it.
+          {canExport && (
+            <>
+              {' '}Export now to keep them.
+              {' '}<button className="storage-banner-button" onClick={exportProgress}>Export now</button>
+            </>
+          )}
+        </div>
+      )}
+      {importError && (
+        <div className="storage-banner storage-banner-error" role="alert">
+          {importError}
+          {' '}<button className="storage-banner-button" onClick={() => setImportError(null)}>Dismiss</button>
+        </div>
+      )}
+      </div>
 
       {/* ── Main Body: Navigation Rail + Content ── */}
       <div className="app-body">
