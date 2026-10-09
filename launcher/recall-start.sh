@@ -17,13 +17,8 @@ exec 9>"$STATE/start.lock"
 flock 9
 if listening; then exit 0; fi
 
-# NVM-style installs are not on PATH for non-interactive shells.
-if ! command -v node >/dev/null 2>&1; then
-  for f in "$HOME/.nvm/nvm.sh" "$HOME/.profile" "$HOME/.bashrc"; do
-    [ -f "$f" ] && . "$f" >/dev/null 2>&1
-    command -v node >/dev/null 2>&1 && break
-  done
-fi
+. "$ROOT/launcher/find-node.sh"
+recall_find_node
 command -v node >/dev/null 2>&1 || { echo "node not found in WSL" >>"$LOG"; exit 1; }
 
 APP="$ROOT/app"
@@ -35,6 +30,13 @@ fi
 if [ "$need_build" = 1 ]; then
   [ -d "$APP/node_modules" ] || (cd "$APP" && npm install >>"$LOG" 2>&1) || exit 1
   (cd "$APP" && CI=false npm run build >>"$LOG" 2>&1) || exit 1
+fi
+
+# WSL kills everything a wsl.exe session started once that session ends, even setsid/nohup children.
+# --foreground (used by recall-launch.ps1) keeps node as the hidden wsl.exe's own process so the server lives.
+if [ "${1:-}" = "--foreground" ]; then
+  echo $$ > "$STATE/server.pid"
+  PORT="$PORT" exec node "$ROOT/launcher/serve-build.js" "$PORT" >>"$LOG" 2>&1 9>&- </dev/null
 fi
 
 # Detach fully so no terminal stays attached; lock fd is closed for the child.
