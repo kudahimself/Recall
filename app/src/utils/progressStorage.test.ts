@@ -12,7 +12,7 @@ import {
   applyImport,
   backupBeforeImport,
   summarizeStoredProgress,
-  PRE_IMPORT_BACKUP_PREFIX,
+  PRE_IMPORT_BACKUP_KEY,
 } from './progressStorage';
 
 const KNOWN = new Set(['q-known']);
@@ -152,14 +152,30 @@ describe('export and import', () => {
     }
   });
 
-  test('settings read straight from storage are exported too', () => {
-    expect(EXPORT_KEYS).toEqual(expect.arrayContaining(['recall-concept-srs-enabled', 'recall-dev-unlock-all']));
-    const withSettings = { ...keys, 'recall-concept-srs-enabled': 'false', 'recall-dev-unlock-all': '1' };
-    const check = validateExport(buildExport(withSettings));
+  test('the concept SRS setting is exported, the developer unlock switch is not', () => {
+    const exported = JSON.parse(buildExport({ ...keys, 'recall-concept-srs-enabled': 'false', 'recall-dev-unlock-all': '1' }));
+    expect(exported.keys['recall-concept-srs-enabled']).toBe('false');
+    expect(exported.keys).not.toHaveProperty('recall-dev-unlock-all');
+
+    localStorage.setItem('recall-dev-unlock-all', '1');
+    const check = validateExport(JSON.stringify(exported));
     if (!check.ok) throw new Error(check.error);
     expect(applyImport(localStorage, check.file)).toEqual({ ok: true });
     expect(localStorage.getItem('recall-concept-srs-enabled')).toBe('false');
     expect(localStorage.getItem('recall-dev-unlock-all')).toBe('1');
+  });
+
+  test('a file from before settings were exported leaves stored settings as they are', () => {
+    const older = JSON.parse(buildExport(keys));
+    delete older.keys['recall-concept-srs-enabled'];
+    localStorage.setItem('recall-concept-srs-enabled', 'false');
+    localStorage.setItem('recall-filters', 'to be cleared');
+    const check = validateExport(JSON.stringify(older));
+    if (!check.ok) throw new Error(check.error);
+    expect(applyImport(localStorage, check.file)).toEqual({ ok: true });
+    expect(localStorage.getItem('recall-concept-srs-enabled')).toBe('false');
+    expect(localStorage.getItem('recall-filters')).toBeNull();
+    expect(localStorage.getItem('recall-progress')).toBe(keys['recall-progress']);
   });
 
   test('backups travel as opaque text and are added without removing others', () => {
@@ -183,8 +199,10 @@ describe('export and import', () => {
     ['an unknown key', buildExport(keys).replace('"recall-profile"', '"evil-key"'), 'unexpected key "evil-key"'],
     ['a value that is not text', buildExport(keys).replace('"backend"', '7'), '"recall-active-course" is not stored text'],
     ['a backup that is not text', JSON.stringify({ format: 'recall-progress-export', version: 1,
-      keys: { ...keys, [`${PRE_IMPORT_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`]: { nested: true } } }),
-    `"${PRE_IMPORT_BACKUP_PREFIX}2026-01-01T00:00:00.000Z" is not stored text`],
+      keys: { ...keys, [`${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`]: { nested: true } } }),
+    `"${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z" is not stored text`],
+    ['a pre-import backup', buildExport(keys).replace('"recall-profile"', `"${PRE_IMPORT_BACKUP_KEY}"`),
+      `unexpected key "${PRE_IMPORT_BACKUP_KEY}"`],
     ['unreadable progress', buildExport({ ...keys, 'recall-progress': '{"attemptHistory":' }), '"recall-progress" is not valid JSON'],
     ['malformed history', buildExport({ ...keys, 'recall-progress': '{"attemptHistory":[{"x":1}]}' }),
       'progress record: attemptHistory entry 0 is malformed'],
@@ -244,7 +262,7 @@ describe('replacing progress on import', () => {
 
     const backup = backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
     if (!backup.ok) throw new Error(backup.error);
-    expect(backup.key).toBe(`${PRE_IMPORT_BACKUP_PREFIX}2026-10-09T12:00:00.000Z`);
+    expect(backup.key).toBe(PRE_IMPORT_BACKUP_KEY);
     const check = validateExport(localStorage.getItem(backup.key) as string);
     if (!check.ok) throw new Error(check.error);
     // Earlier backups stay in storage; they are not nested inside the new one.
@@ -262,20 +280,27 @@ describe('replacing progress on import', () => {
     expect(localStorage.getItem(unreadableBackup)).toBe('old unreadable text');
   });
 
-  test('backing up the same state twice reuses the first backup', () => {
+  test('only one pre-import backup is kept: each later one replaces it, and export leaves it out', () => {
+    const unreadableBackup = `${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`;
+    localStorage.setItem(unreadableBackup, 'old unreadable text');
     localStorage.setItem('recall-progress', JSON.stringify(stored));
-    const first = backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
-    const second = backupBeforeImport(localStorage, new Date('2026-10-09T13:00:00Z'));
-    expect(second).toEqual(first);
-    expect(listBackupKeys(localStorage)).toHaveLength(1);
+    backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
+    localStorage.setItem('recall-profile', '{"currentStreak":1}');
+    backupBeforeImport(localStorage, new Date('2026-10-09T13:00:00Z'));
 
-    localStorage.setItem('recall-profile', '{}');
-    const third = backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
-    if (!third.ok) throw new Error(third.error);
-    expect(third.key).toBe(`${PRE_IMPORT_BACKUP_PREFIX}2026-10-09T12:00:00.000Z-2`);
+    expect(listBackupKeys(localStorage)).toEqual([PRE_IMPORT_BACKUP_KEY, unreadableBackup]);
+    const kept = validateExport(localStorage.getItem(PRE_IMPORT_BACKUP_KEY) as string);
+    if (!kept.ok) throw new Error(kept.error);
+    expect(kept.file.keys['recall-profile']).toBe('{"currentStreak":1}');
+
+    const all = Object.fromEntries(listBackupKeys(localStorage).map(k => [k, localStorage.getItem(k)]));
+    const exported = JSON.parse(buildExport({ 'recall-progress': JSON.stringify(stored), ...all }));
+    expect(exported.keys).not.toHaveProperty(PRE_IMPORT_BACKUP_KEY);
+    expect(exported.keys[unreadableBackup]).toBe('old unreadable text');
   });
 
-  test('a backup that cannot be written reports failure and writes nothing', () => {
+  test('a backup that cannot be written reports failure and keeps the earlier backup', () => {
+    localStorage.setItem(PRE_IMPORT_BACKUP_KEY, 'earlier backup');
     localStorage.setItem('recall-progress', JSON.stringify(stored));
     const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw quotaError(); });
     try {
@@ -284,7 +309,7 @@ describe('replacing progress on import', () => {
     } finally {
       spy.mockRestore();
     }
-    expect(listBackupKeys(localStorage)).toEqual([]);
+    expect(localStorage.getItem(PRE_IMPORT_BACKUP_KEY)).toBe('earlier backup');
     expect(localStorage.getItem('recall-progress')).toBe(JSON.stringify(stored));
   });
 });

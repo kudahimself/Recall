@@ -7,7 +7,6 @@ import {
   getRetrievability,
   ReviewGrade,
 } from './conceptSRS';
-import { DEV_UNLOCK_ALL_KEY } from './featureFlags';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -248,7 +247,7 @@ export function easeFactor(difficulty: number): number {
 export function isDevUnlockAll(): boolean {
   try {
     return typeof localStorage !== 'undefined'
-      && localStorage.getItem(DEV_UNLOCK_ALL_KEY) === '1';
+      && localStorage.getItem('recall-dev-unlock-all') === '1';
   } catch {
     return false;
   }

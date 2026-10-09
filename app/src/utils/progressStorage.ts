@@ -11,26 +11,27 @@
  *   keeps its history and gets it back when the id returns;
  * - every write goes through `safeSetItem`, which reports failure instead of throwing;
  * - export/import round-trips the whole record as one validated file, and an
- *   import that replaces existing progress first copies it to a backup key.
+ *   import that replaces existing progress first copies it to the one pre-import
+ *   backup key, replacing the copy an earlier import left there.
  */
 import { QuestionAttempt, UserProgress } from '../types';
-import { DEV_UNLOCK_ALL_KEY, FEATURE_FLAGS } from './featureFlags';
+import { FEATURE_FLAGS } from './featureFlags';
 
 export const PROGRESS_KEY = 'recall-progress';
 // One backup per unreadable text: PROGRESS_BACKUP_PREFIX + ISO timestamp.
 export const PROGRESS_BACKUP_PREFIX = 'recall-progress-unreadable-backup-';
-// One backup per import that replaced progress: PRE_IMPORT_BACKUP_PREFIX + ISO timestamp.
-// The value is itself an export file, so importing it restores what was replaced.
-export const PRE_IMPORT_BACKUP_PREFIX = 'recall-progress-pre-import-backup-';
-export const isBackupKey = (k: string): boolean =>
-  k.startsWith(PROGRESS_BACKUP_PREFIX) || k.startsWith(PRE_IMPORT_BACKUP_PREFIX);
+// The progress the latest replacing import overwrote, as an export file, so
+// importing it restores what was replaced. It stays in this browser: exports leave it out.
+export const PRE_IMPORT_BACKUP_KEY = 'recall-progress-pre-import-backup';
+// Backups that travel with every export.
+export const isBackupKey = (k: string): boolean => k.startsWith(PROGRESS_BACKUP_PREFIX);
 
 /** Every backup key in storage, oldest first. */
 export function listBackupKeys(storage: Storage): string[] {
   const out: string[] = [];
   for (let i = 0; i < storage.length; i++) {
     const k = storage.key(i);
-    if (k !== null && isBackupKey(k)) out.push(k);
+    if (k !== null && (isBackupKey(k) || k === PRE_IMPORT_BACKUP_KEY)) out.push(k);
   }
   return out.sort();
 }
@@ -50,7 +51,7 @@ export const EXPORT_JSON_KEYS = [
   'recall-card-difficulty',
 ] as const;
 // Settings the app reads straight from storage rather than holding in state.
-export const STORED_SETTING_KEYS: readonly string[] = [...Object.values(FEATURE_FLAGS), DEV_UNLOCK_ALL_KEY];
+export const STORED_SETTING_KEYS: readonly string[] = Object.values(FEATURE_FLAGS);
 export const EXPORT_STRING_KEYS: readonly string[] = [
   'recall-active-course',
   'recall-concept-migration-version',
@@ -228,7 +229,7 @@ export function loadProgressFrom(
   } catch (e) {
     let backupKey: string | null = null;
     try {
-      const same = listBackupKeys(storage).find(k => storage.getItem(k) === raw);
+      const same = listBackupKeys(storage).filter(isBackupKey).find(k => storage.getItem(k) === raw);
       if (same !== undefined) {
         backupKey = same;
       } else {
@@ -280,7 +281,8 @@ export interface ProgressExport {
   format: typeof EXPORT_FORMAT;
   version: typeof EXPORT_VERSION;
   exportedAt: string;
-  // Exact stored text per key; null means the key was not set.
+  // Exact stored text per key; null means the key was not set. A key missing
+  // from the file (an older export) is left as it is on import.
   keys: Record<string, string | null>;
 }
 
@@ -395,7 +397,9 @@ export function validateExport(text: string): ImportCheck {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : '',
-    keys: Object.fromEntries([...EXPORT_KEYS, ...backupKeys].map(k => [k, (keys[k] as string | null | undefined) ?? null])),
+    keys: Object.fromEntries([...EXPORT_KEYS, ...backupKeys]
+      .filter(k => keys[k] !== undefined)
+      .map(k => [k, keys[k] as string | null])),
   };
   return { ok: true, file, summary };
 }
@@ -403,29 +407,16 @@ export function validateExport(text: string): ImportCheck {
 export type BackupResult = { ok: true; key: string } | { ok: false; error: string; quotaExceeded: boolean };
 
 /**
- * Before an import replaces progress, copy every key it overwrites into one new
- * backup key, as an export file. Existing backups are not copied, since an import
- * never removes them. An earlier pre-import backup of the same state is reused.
- * On failure nothing is written and the import must not go ahead.
+ * Before an import replaces progress, copy every key it overwrites into
+ * PRE_IMPORT_BACKUP_KEY, as an export file, replacing any earlier pre-import
+ * backup. Other backups are not copied, since an import never removes them.
+ * On failure the earlier backup is left as it was and the import must not go ahead.
  */
 export function backupBeforeImport(storage: Storage, now: Date = new Date()): BackupResult {
   try {
     const current = Object.fromEntries(EXPORT_KEYS.map(k => [k, storage.getItem(k)]));
-    const sameState = (text: string | null) => {
-      try {
-        return JSON.stringify(JSON.parse(text ?? '').keys) === JSON.stringify(current);
-      } catch {
-        return false;
-      }
-    };
-    const same = listBackupKeys(storage)
-      .find(k => k.startsWith(PRE_IMPORT_BACKUP_PREFIX) && sameState(storage.getItem(k)));
-    if (same !== undefined) return { ok: true, key: same };
-    const base = PRE_IMPORT_BACKUP_PREFIX + now.toISOString();
-    let key = base;
-    for (let n = 2; storage.getItem(key) !== null; n++) key = `${base}-${n}`;
-    storage.setItem(key, buildExport(current, now));
-    return { ok: true, key };
+    storage.setItem(PRE_IMPORT_BACKUP_KEY, buildExport(current, now));
+    return { ok: true, key: PRE_IMPORT_BACKUP_KEY };
   } catch (e) {
     return { ok: false, error: describeError(e), quotaExceeded: isQuotaError(e) };
   }
@@ -433,17 +424,18 @@ export function backupBeforeImport(storage: Storage, now: Date = new Date()): Ba
 
 /**
  * Write a validated export into storage, all or nothing: if any write fails,
- * every key is restored to what it held before. Backups in the file are added;
- * backups already in storage are never removed.
+ * every key is restored to what it held before. Keys the file does not carry are
+ * left alone. Backups in the file are added; backups already in storage are never removed.
  */
 export function applyImport(storage: Storage, file: ProgressExport): WriteResult {
+  const importedKeys = EXPORT_KEYS.filter(k => file.keys[k] !== undefined);
   const backupKeys = Object.keys(file.keys).filter(k => isBackupKey(k) && file.keys[k] !== null);
   const previous = new Map<string, string | null>();
-  for (const k of [...EXPORT_KEYS, ...backupKeys]) previous.set(k, storage.getItem(k));
+  for (const k of [...importedKeys, ...backupKeys]) previous.set(k, storage.getItem(k));
   try {
-    for (const k of EXPORT_KEYS) {
+    for (const k of importedKeys) {
       const v = file.keys[k];
-      if (v === null || v === undefined) storage.removeItem(k);
+      if (v === null) storage.removeItem(k);
       else storage.setItem(k, v);
     }
     for (const k of backupKeys) storage.setItem(k, file.keys[k] as string);

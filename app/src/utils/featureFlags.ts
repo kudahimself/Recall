@@ -15,10 +15,6 @@ export const FEATURE_FLAGS = {
   conceptSrsEnabled: 'recall-concept-srs-enabled',
 } as const;
 
-// Developer switch read by `isDevUnlockAll` in spacedRepetition.ts; kept here so
-// Export/Import can carry it with the other stored settings.
-export const DEV_UNLOCK_ALL_KEY = 'recall-dev-unlock-all';
-
 const FLAG_DEFAULTS: Record<keyof typeof FEATURE_FLAGS, boolean> = {
   conceptSrsEnabled: true,
 };

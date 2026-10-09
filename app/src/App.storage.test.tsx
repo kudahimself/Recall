@@ -8,7 +8,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import App from './App';
 import * as progressStorage from './utils/progressStorage';
 import {
-  PROGRESS_KEY, PROGRESS_BACKUP_PREFIX, PRE_IMPORT_BACKUP_PREFIX, EXPORT_KEYS, listBackupKeys, buildExport, validateExport,
+  PROGRESS_KEY, PROGRESS_BACKUP_PREFIX, PRE_IMPORT_BACKUP_KEY, EXPORT_KEYS, listBackupKeys, buildExport, validateExport,
 } from './utils/progressStorage';
 
 const KNOWN_ID = 'py-functools-parsons-5';
@@ -331,31 +331,32 @@ test('confirming keeps a backup of the replaced progress, and importing that bac
 
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(incomingRecord);
   const backupKeys = listBackupKeys(localStorage);
-  expect(backupKeys).toHaveLength(1);
-  expect(backupKeys[0].startsWith(PRE_IMPORT_BACKUP_PREFIX)).toBe(true);
+  expect(backupKeys).toEqual([PRE_IMPORT_BACKUP_KEY]);
   const backup = validateExport(localStorage.getItem(backupKeys[0]) as string);
   if (!backup.ok) throw new Error(backup.error);
   expect(Object.fromEntries(EXPORT_KEYS.map(k => [k, backup.file.keys[k]]))).toEqual(replaced);
 
   // After the reload the notice offers the backup; importing it brings the old answers back.
   const { unmount: unmountSecond } = render(<App />);
-  expect(screen.getByText(/Recall keeps a backup of progress an import replaced/)).toBeInTheDocument();
+  expect(screen.getByText(/Recall keeps a backup of the progress the last import replaced/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Download backup/ }));
   importFile(new File([downloads[0]], 'backup.json', { type: 'application/json' }));
   await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
   unmountSecond();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(JSON.stringify(seeded));
   expect(localStorage.getItem('recall-card-difficulty')).toBe(before['recall-card-difficulty']);
-  // Restoring also backed up the imported state; the first backup is still there.
-  expect(listBackupKeys(localStorage)).toHaveLength(2);
-  expect(listBackupKeys(localStorage)).toContain(backupKeys[0]);
+  // Restoring backed up the imported state in place of the first backup.
+  expect(listBackupKeys(localStorage)).toEqual([PRE_IMPORT_BACKUP_KEY]);
+  const latest = validateExport(localStorage.getItem(PRE_IMPORT_BACKUP_KEY) as string);
+  if (!latest.ok) throw new Error(latest.error);
+  expect(latest.file.keys[PROGRESS_KEY]).toBe(incomingRecord);
 });
 
 test('an import is refused, with nothing changed, when the backup cannot be saved', async () => {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
   const realSet = Storage.prototype.setItem;
   jest.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k: string, v: string) {
-    if (k.startsWith(PRE_IMPORT_BACKUP_PREFIX)) throw quotaError();
+    if (k === PRE_IMPORT_BACKUP_KEY) throw quotaError();
     realSet.call(this, k, v);
   });
   const reload = jest.spyOn(progressStorage, 'reloadPage').mockImplementation(() => {});

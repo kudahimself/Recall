@@ -28,7 +28,8 @@ import {
   loadProgressFrom,
   listBackupKeys,
   PROGRESS_BACKUP_PREFIX,
-  PRE_IMPORT_BACKUP_PREFIX,
+  PRE_IMPORT_BACKUP_KEY,
+  isBackupKey,
   STORED_SETTING_KEYS,
   ProgressSummary,
   summarizeStoredProgress,
@@ -408,6 +409,7 @@ function App() {
       return [];
     }
   });
+  const unreadableBackupCount = backupKeys.filter(isBackupKey).length;
   const [backupNoticeDismissed, setBackupNoticeDismissed] = useState(false);
   const importingRef = useRef(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -592,7 +594,7 @@ function App() {
       [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
       ...Object.fromEntries(STORED_SETTING_KEYS.map(k => [k, localStorage.getItem(k)])),
-      ...Object.fromEntries(listBackupKeys(localStorage).map(k => [k, localStorage.getItem(k)])),
+      ...Object.fromEntries(listBackupKeys(localStorage).filter(isBackupKey).map(k => [k, localStorage.getItem(k)])),
     });
     downloadTextFile(`recall-progress-${getToday()}.json`, text);
   };
@@ -1425,22 +1427,25 @@ function App() {
       )}
       {backupKeys.length > 0 && !backupNoticeDismissed && (
         <div className="storage-banner storage-banner-warning" role="status">
-          Recall keeps {[
-            [PROGRESS_BACKUP_PREFIX, 'of progress it could not read'],
-            [PRE_IMPORT_BACKUP_PREFIX, 'of progress an import replaced'],
-          ].map(([prefix, what]) => {
-            const n = backupKeys.filter(k => k.startsWith(prefix)).length;
-            return n === 0 ? null : `${n === 1 ? 'a backup' : `${n} backups`} ${what}`;
-          }).filter(Boolean).join(' and ')}.
-          {' '}Export includes them.
+          {unreadableBackupCount > 0 && (
+            <>
+              Recall keeps {unreadableBackupCount === 1 ? 'a backup' : `${unreadableBackupCount} backups`} of progress it could not read.
+              {' '}Export includes them.
+            </>
+          )}
+          {backupKeys.includes(PRE_IMPORT_BACKUP_KEY) && (
+            <>
+              {unreadableBackupCount > 0 && ' '}Recall keeps a backup of the progress the last import replaced.
+            </>
+          )}
           {backupKeys.map(k => (
             <React.Fragment key={k}>
               {' '}<button
                 className="storage-banner-button"
                 onClick={() => downloadTextFile(`${k.replace(/[:.]/g, '-')}.json`, localStorage.getItem(k) ?? '')}
-                title={k.startsWith(PRE_IMPORT_BACKUP_PREFIX) ? 'Import the downloaded file to restore this progress' : undefined}
+                title={k === PRE_IMPORT_BACKUP_KEY ? 'Import the downloaded file to restore this progress' : undefined}
               >
-                Download backup {k.slice((k.startsWith(PRE_IMPORT_BACKUP_PREFIX) ? PRE_IMPORT_BACKUP_PREFIX : PROGRESS_BACKUP_PREFIX).length)}
+                {k === PRE_IMPORT_BACKUP_KEY ? 'Download backup from before the last import' : `Download backup ${k.slice(PROGRESS_BACKUP_PREFIX.length)}`}
               </button>
             </React.Fragment>
           ))}
