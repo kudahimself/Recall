@@ -333,6 +333,8 @@ Layouts target desktop viewport without scrolling.
 - `recall-filters` - topic/difficulty/type filter state
 - `recall-active-course` - currently selected `Course`
 - `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
+- `recall-concept-srs-enabled` (feature flag, `featureFlags.ts`) - a setting read straight from storage
+- `recall-dev-unlock-all` - developer unlock switch, not exported
 
 Older `databricks-*` keys are copied to their `recall-*` names on first load and left in place as a rollback safety net.
 
@@ -344,8 +346,13 @@ Older `databricks-*` keys are copied to their `recall-*` names on first load and
 - History for question ids missing from the build is set aside on read and written back unchanged, so a renamed or removed question gets its history back if the id returns.
 - Every write goes through `safeSetItem`; a failure (for example a full quota) shows a "not being saved" banner instead of crashing the app.
 - A tab that sees another tab save answers (`storage` event) stops writing and asks for a reload, so two tabs never overwrite each other.
-- Export and Import in the header round-trip every `recall-*` key as one JSON file.
-  Import validates the whole file first and writes all keys or none.
+- Export and Import in the header round-trip every `recall-*` key in `EXPORT_KEYS` and every unreadable-progress backup as one JSON file with a format version and export date.
+  This is also how progress moves to another origin (a different port or browser), since localStorage belongs to one origin.
+  Import validates the whole file first and writes all keys or none; keys missing from the file (an older export) are left as they are.
+  When this browser already holds answers, Import says what it would replace and asks first, then copies every key it overwrites to the single `recall-progress-pre-import-backup` key, itself an export file, replacing the copy any earlier import left there; if that copy cannot be written the import is refused.
+  Export leaves the pre-import backup out.
+  A browser with no answers yet takes the file without asking.
+  The page reloads after an import so the app shows the imported progress.
 
 ## Question Types
 
