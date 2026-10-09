@@ -28,6 +28,11 @@ import {
   loadProgressFrom,
   listBackupKeys,
   PROGRESS_BACKUP_PREFIX,
+  PRE_IMPORT_BACKUP_PREFIX,
+  STORED_SETTING_KEYS,
+  ProgressSummary,
+  summarizeStoredProgress,
+  backupBeforeImport,
   studyWritesBlocked,
   serializeProgress,
   safeSetItem,
@@ -198,6 +203,13 @@ function loadMisconceptions(): MisconceptionStore {
 
 function getToday(): string {
   return new Date().toISOString().split('T')[0];
+}
+
+function describeProgress(summary: ProgressSummary): string {
+  if (!summary.readable) return 'saved data that could not be read';
+  const answers = `${summary.answers} answer${summary.answers === 1 ? '' : 's'}`;
+  if (summary.lastAnsweredAt === null) return answers;
+  return `${answers}, the last on ${new Date(summary.lastAnsweredAt).toISOString().split('T')[0]}`;
 }
 
 function loadProfile(): UserProfile {
@@ -579,6 +591,7 @@ function App() {
       [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
       [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
+      ...Object.fromEntries(STORED_SETTING_KEYS.map(k => [k, localStorage.getItem(k)])),
       ...Object.fromEntries(listBackupKeys(localStorage).map(k => [k, localStorage.getItem(k)])),
     });
     downloadTextFile(`recall-progress-${getToday()}.json`, text);
@@ -600,11 +613,23 @@ function App() {
       setImportError(`Import refused: ${check.error}. Nothing was changed.`);
       return;
     }
-    const when = check.file.exportedAt ? ` exported ${check.file.exportedAt}` : '';
-    if (!window.confirm(
-      `Replace ALL Recall progress in this browser with ${file.name}${when} (${check.attemptCount} answers)? ` +
-      'Export your current progress first if you might want it back.',
-    )) return;
+    // Progress already in this browser is replaced only with consent, and only
+    // once a copy of it is kept. A browser with no answers yet is simply filled.
+    const current = summarizeStoredProgress(localStorage);
+    if (current !== null) {
+      const when = check.file.exportedAt ? `, exported ${check.file.exportedAt},` : '';
+      if (!window.confirm(
+        `This browser already has Recall progress: ${describeProgress(current)}.\n\n` +
+        `Importing ${file.name}${when} replaces it with ${describeProgress(check.summary)}.\n\n` +
+        'A backup of the current progress is kept in this browser first. Replace it?',
+      )) return;
+      const backup = backupBeforeImport(localStorage);
+      if (!backup.ok) {
+        const reason = backup.quotaExceeded ? 'browser storage is full' : backup.error;
+        setImportError(`Import refused: the current progress could not be backed up first (${reason}). Nothing was changed.`);
+        return;
+      }
+    }
     // Stop this tab's save effects from writing its old state over the import.
     importingRef.current = true;
     const result = applyImport(localStorage, check.file);
@@ -1400,15 +1425,22 @@ function App() {
       )}
       {backupKeys.length > 0 && !backupNoticeDismissed && (
         <div className="storage-banner storage-banner-warning" role="status">
-          Recall keeps {backupKeys.length === 1 ? 'a backup' : `${backupKeys.length} backups`} of progress it could not read.
+          Recall keeps {[
+            [PROGRESS_BACKUP_PREFIX, 'of progress it could not read'],
+            [PRE_IMPORT_BACKUP_PREFIX, 'of progress an import replaced'],
+          ].map(([prefix, what]) => {
+            const n = backupKeys.filter(k => k.startsWith(prefix)).length;
+            return n === 0 ? null : `${n === 1 ? 'a backup' : `${n} backups`} ${what}`;
+          }).filter(Boolean).join(' and ')}.
           {' '}Export includes them.
           {backupKeys.map(k => (
             <React.Fragment key={k}>
               {' '}<button
                 className="storage-banner-button"
                 onClick={() => downloadTextFile(`${k.replace(/[:.]/g, '-')}.json`, localStorage.getItem(k) ?? '')}
+                title={k.startsWith(PRE_IMPORT_BACKUP_PREFIX) ? 'Import the downloaded file to restore this progress' : undefined}
               >
-                Download backup {k.slice(PROGRESS_BACKUP_PREFIX.length)}
+                Download backup {k.slice((k.startsWith(PRE_IMPORT_BACKUP_PREFIX) ? PRE_IMPORT_BACKUP_PREFIX : PROGRESS_BACKUP_PREFIX).length)}
               </button>
             </React.Fragment>
           ))}

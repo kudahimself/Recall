@@ -7,7 +7,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import App from './App';
 import * as progressStorage from './utils/progressStorage';
-import { PROGRESS_KEY, PROGRESS_BACKUP_PREFIX, EXPORT_KEYS, listBackupKeys } from './utils/progressStorage';
+import {
+  PROGRESS_KEY, PROGRESS_BACKUP_PREFIX, PRE_IMPORT_BACKUP_PREFIX, EXPORT_KEYS, listBackupKeys, buildExport, validateExport,
+} from './utils/progressStorage';
 
 const KNOWN_ID = 'py-functools-parsons-5';
 const GONE_ID = 'py-functools-renamed-away';
@@ -227,6 +229,7 @@ test('an export imports back to identical state', async () => {
   }));
   localStorage.setItem('recall-card-difficulty', JSON.stringify({ [KNOWN_ID]: 6.5 }));
   localStorage.setItem('recall-active-course', 'backend');
+  localStorage.setItem('recall-concept-srs-enabled', 'false');
 
   const downloads: string[] = [];
   jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation((_name, text) => { downloads.push(text); });
@@ -237,16 +240,20 @@ test('an export imports back to identical state', async () => {
   fireEvent.click(screen.getByRole('button', { name: /Export/ }));
   expect(downloads).toHaveLength(1);
   const exported = JSON.parse(downloads[0]);
+  expect(exported).toEqual(expect.objectContaining({ format: 'recall-progress-export', version: 1, exportedAt: expect.any(String) }));
   expect(JSON.parse(exported.keys[PROGRESS_KEY]).attemptHistory).toHaveLength(2);
+  expect(exported.keys['recall-concept-srs-enabled']).toBe('false');
   const before = Object.fromEntries(EXPORT_KEYS.map(k => [k, localStorage.getItem(k)]));
   unmountFirst();
 
-  // Lose everything, then import the file.
+  // A browser with no answers yet (a new port) takes the file without asking.
   localStorage.clear();
   const { unmount: unmountSecond } = render(<App />);
   const file = new File([downloads[0]], 'recall-progress.json', { type: 'application/json' });
   fireEvent.change(screen.getByTestId('import-progress-input'), { target: { files: [file] } });
   await waitFor(() => expect(reload).toHaveBeenCalled());
+  expect(window.confirm).not.toHaveBeenCalled();
+  expect(listBackupKeys(localStorage)).toEqual([]);
   unmountSecond();
 
   const after = Object.fromEntries(EXPORT_KEYS.map(k => [k, localStorage.getItem(k)]));
@@ -268,6 +275,130 @@ test('a bad import file is refused and nothing is changed', async () => {
     target: { files: [new File([bad], 'bad.json', { type: 'application/json' })] },
   });
   expect(await screen.findByText(/Import refused/)).toBeInTheDocument();
+  expect(localStorage.getItem(PROGRESS_KEY)).toBe(JSON.stringify(seeded));
+  expect(reload).not.toHaveBeenCalled();
+});
+
+// One answer, as another browser would export it.
+const incomingRecord = JSON.stringify({
+  ...seeded,
+  questionsAttempted: [KNOWN_ID],
+  correctAnswers: [KNOWN_ID],
+  attemptHistory: [{ questionId: KNOWN_ID, timestamp: 1_760_000_000_000, isCorrect: true, attempts: 1, timeSpent: 1000 }],
+});
+const incomingFile = () => new File(
+  [buildExport({ [PROGRESS_KEY]: incomingRecord }, new Date('2026-10-01T00:00:00.000Z'))],
+  'recall-progress-2026-10-01.json',
+  { type: 'application/json' },
+);
+const importFile = (file: File) =>
+  fireEvent.change(screen.getByTestId('import-progress-input'), { target: { files: [file] } });
+
+test('importing over existing answers says what is replaced, and cancelling changes nothing', async () => {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
+  const reload = jest.spyOn(progressStorage, 'reloadPage').mockImplementation(() => {});
+  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+  render(<App />);
+
+  importFile(incomingFile());
+  await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+  const message = confirm.mock.calls[0][0] as string;
+  expect(message).toContain('This browser already has Recall progress: 2 answers, the last on 2023-11-14.');
+  expect(message).toContain('Importing recall-progress-2026-10-01.json, exported 2026-10-01T00:00:00.000Z, replaces it with 1 answer, the last on 2025-10-09.');
+  expect(message).toContain('A backup of the current progress is kept in this browser first.');
+
+  expect(localStorage.getItem(PROGRESS_KEY)).toBe(JSON.stringify(seeded));
+  expect(listBackupKeys(localStorage)).toEqual([]);
+  expect(reload).not.toHaveBeenCalled();
+});
+
+test('confirming keeps a backup of the replaced progress, and importing that backup restores it', async () => {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
+  localStorage.setItem('recall-card-difficulty', JSON.stringify({ [KNOWN_ID]: 6.5 }));
+  const before = Object.fromEntries(EXPORT_KEYS.map(k => [k, localStorage.getItem(k)]));
+  const reload = jest.spyOn(progressStorage, 'reloadPage').mockImplementation(() => {});
+  jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const downloads: string[] = [];
+  jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation((_name, text) => { downloads.push(text); });
+
+  const { unmount: unmountFirst } = render(<App />);
+  // What this tab stored on opening is part of what gets replaced.
+  const replaced = Object.fromEntries(EXPORT_KEYS.map(k => [k, localStorage.getItem(k)]));
+  expect(replaced[PROGRESS_KEY]).toBe(before[PROGRESS_KEY]);
+  importFile(incomingFile());
+  await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  unmountFirst();
+
+  expect(localStorage.getItem(PROGRESS_KEY)).toBe(incomingRecord);
+  const backupKeys = listBackupKeys(localStorage);
+  expect(backupKeys).toHaveLength(1);
+  expect(backupKeys[0].startsWith(PRE_IMPORT_BACKUP_PREFIX)).toBe(true);
+  const backup = validateExport(localStorage.getItem(backupKeys[0]) as string);
+  if (!backup.ok) throw new Error(backup.error);
+  expect(Object.fromEntries(EXPORT_KEYS.map(k => [k, backup.file.keys[k]]))).toEqual(replaced);
+
+  // After the reload the notice offers the backup; importing it brings the old answers back.
+  const { unmount: unmountSecond } = render(<App />);
+  expect(screen.getByText(/Recall keeps a backup of progress an import replaced/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Download backup/ }));
+  importFile(new File([downloads[0]], 'backup.json', { type: 'application/json' }));
+  await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
+  unmountSecond();
+  expect(localStorage.getItem(PROGRESS_KEY)).toBe(JSON.stringify(seeded));
+  expect(localStorage.getItem('recall-card-difficulty')).toBe(before['recall-card-difficulty']);
+  // Restoring also backed up the imported state; the first backup is still there.
+  expect(listBackupKeys(localStorage)).toHaveLength(2);
+  expect(listBackupKeys(localStorage)).toContain(backupKeys[0]);
+});
+
+test('an import is refused, with nothing changed, when the backup cannot be saved', async () => {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
+  const realSet = Storage.prototype.setItem;
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k: string, v: string) {
+    if (k.startsWith(PRE_IMPORT_BACKUP_PREFIX)) throw quotaError();
+    realSet.call(this, k, v);
+  });
+  const reload = jest.spyOn(progressStorage, 'reloadPage').mockImplementation(() => {});
+  jest.spyOn(window, 'confirm').mockReturnValue(true);
+  render(<App />);
+
+  importFile(incomingFile());
+  expect(await screen.findByText(
+    'Import refused: the current progress could not be backed up first (browser storage is full). Nothing was changed.',
+  )).toBeInTheDocument();
+  expect(localStorage.getItem(PROGRESS_KEY)).toBe(JSON.stringify(seeded));
+  expect(listBackupKeys(localStorage)).toEqual([]);
+  expect(reload).not.toHaveBeenCalled();
+});
+
+test('an import over unreadable progress with no backup copies it first', async () => {
+  const raw = '{"attemptHistory": [';
+  localStorage.setItem(PROGRESS_KEY, raw);
+  const realSet = Storage.prototype.setItem;
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k: string, v: string) {
+    if (k.startsWith(PROGRESS_BACKUP_PREFIX)) throw quotaError();
+    realSet.call(this, k, v);
+  });
+  const reload = jest.spyOn(progressStorage, 'reloadPage').mockImplementation(() => {});
+  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  render(<App />);
+  expect(screen.getByText(/saving is off to protect it/)).toBeInTheDocument();
+
+  importFile(incomingFile());
+  await waitFor(() => expect(reload).toHaveBeenCalled());
+  expect(confirm.mock.calls[0][0]).toContain('This browser already has Recall progress: saved data that could not be read.');
+  expect(localStorage.getItem(PROGRESS_KEY)).toBe(incomingRecord);
+  const [backupKey] = listBackupKeys(localStorage);
+  expect(JSON.parse(localStorage.getItem(backupKey) as string).keys[PROGRESS_KEY]).toBe(raw);
+});
+
+test('a file that cannot be read is refused and nothing is changed', async () => {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
+  jest.spyOn(progressStorage, 'readFileText').mockRejectedValue(new Error('NotReadableError'));
+  const reload = jest.spyOn(progressStorage, 'reloadPage').mockImplementation(() => {});
+  render(<App />);
+  importFile(incomingFile());
+  expect(await screen.findByText(/Import refused: could not read the file .*Nothing was changed\./)).toBeInTheDocument();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(JSON.stringify(seeded));
   expect(reload).not.toHaveBeenCalled();
 });

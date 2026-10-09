@@ -10,6 +10,9 @@ import {
   buildExport,
   validateExport,
   applyImport,
+  backupBeforeImport,
+  summarizeStoredProgress,
+  PRE_IMPORT_BACKUP_PREFIX,
 } from './progressStorage';
 
 const KNOWN = new Set(['q-known']);
@@ -140,13 +143,23 @@ describe('export and import', () => {
     const text = buildExport(keys, new Date('2026-09-21T00:00:00Z'));
     const check = validateExport(text);
     if (!check.ok) throw new Error(check.error);
-    expect(check.attemptCount).toBe(3);
+    expect(check.summary).toEqual({ readable: true, answers: 3, lastAnsweredAt: 3 });
 
     localStorage.setItem('recall-filters', 'to be cleared');
     expect(applyImport(localStorage, check.file)).toEqual({ ok: true });
     for (const k of EXPORT_KEYS) {
       expect(localStorage.getItem(k)).toBe((keys as Record<string, string>)[k] ?? null);
     }
+  });
+
+  test('settings read straight from storage are exported too', () => {
+    expect(EXPORT_KEYS).toEqual(expect.arrayContaining(['recall-concept-srs-enabled', 'recall-dev-unlock-all']));
+    const withSettings = { ...keys, 'recall-concept-srs-enabled': 'false', 'recall-dev-unlock-all': '1' };
+    const check = validateExport(buildExport(withSettings));
+    if (!check.ok) throw new Error(check.error);
+    expect(applyImport(localStorage, check.file)).toEqual({ ok: true });
+    expect(localStorage.getItem('recall-concept-srs-enabled')).toBe('false');
+    expect(localStorage.getItem('recall-dev-unlock-all')).toBe('1');
   });
 
   test('backups travel as opaque text and are added without removing others', () => {
@@ -161,16 +174,24 @@ describe('export and import', () => {
   });
 
   test.each([
-    ['not JSON', 'nope'],
-    ['another format', JSON.stringify({ format: 'other', version: 1, keys: {} })],
-    ['a newer version', JSON.stringify({ format: 'recall-progress-export', version: 2, keys: {} })],
-    ['no progress', JSON.stringify({ format: 'recall-progress-export', version: 1, keys: {} })],
-    ['an unknown key', buildExport(keys).replace('"recall-profile"', '"evil-key"')],
-    ['unreadable progress', buildExport({ ...keys, 'recall-progress': '{"attemptHistory":' })],
-    ['malformed history', buildExport({ ...keys, 'recall-progress': '{"attemptHistory":[{"x":1}]}' })],
-    ['a non-JSON profile', buildExport({ ...keys, 'recall-profile': 'x' })],
-  ])('refuses a file with %s', (_label, text) => {
-    expect(validateExport(text).ok).toBe(false);
+    ['not JSON', 'nope', 'the file is not valid JSON'],
+    ['another format', JSON.stringify({ format: 'other', version: 1, keys: {} }), 'the file is not a Recall progress export'],
+    ['a newer version', JSON.stringify({ format: 'recall-progress-export', version: 2, keys: {} }), 'unsupported export version 2'],
+    ['no version', JSON.stringify({ format: 'recall-progress-export', keys }), 'unsupported export version undefined'],
+    ['keys that are not an object', JSON.stringify({ format: 'recall-progress-export', version: 1, keys: [] }), 'the file has no stored keys'],
+    ['no progress', JSON.stringify({ format: 'recall-progress-export', version: 1, keys: {} }), 'the file has no progress record'],
+    ['an unknown key', buildExport(keys).replace('"recall-profile"', '"evil-key"'), 'unexpected key "evil-key"'],
+    ['a value that is not text', buildExport(keys).replace('"backend"', '7'), '"recall-active-course" is not stored text'],
+    ['a backup that is not text', JSON.stringify({ format: 'recall-progress-export', version: 1,
+      keys: { ...keys, [`${PRE_IMPORT_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`]: { nested: true } } }),
+    `"${PRE_IMPORT_BACKUP_PREFIX}2026-01-01T00:00:00.000Z" is not stored text`],
+    ['unreadable progress', buildExport({ ...keys, 'recall-progress': '{"attemptHistory":' }), '"recall-progress" is not valid JSON'],
+    ['malformed history', buildExport({ ...keys, 'recall-progress': '{"attemptHistory":[{"x":1}]}' }),
+      'progress record: attemptHistory entry 0 is malformed'],
+    ['a non-JSON profile', buildExport({ ...keys, 'recall-profile': 'x' }), '"recall-profile" is not valid JSON'],
+    ['a profile that is not an object', buildExport({ ...keys, 'recall-profile': '[1]' }), '"recall-profile" is not an object'],
+  ])('refuses a file with %s', (_label, text, error) => {
+    expect(validateExport(text)).toEqual({ ok: false, error });
   });
 
   test('a write failure mid-import restores every key', () => {
@@ -194,5 +215,76 @@ describe('export and import', () => {
     }
     expect(localStorage.getItem('recall-progress')).toBe('old progress');
     expect(localStorage.getItem('recall-profile')).toBe('old profile');
+  });
+});
+
+describe('replacing progress on import', () => {
+  test('a browser with no answers has nothing to replace', () => {
+    expect(summarizeStoredProgress(localStorage)).toBeNull();
+    localStorage.setItem('recall-progress', JSON.stringify({ questionsAttempted: [], attemptHistory: [] }));
+    expect(summarizeStoredProgress(localStorage)).toBeNull();
+  });
+
+  test('stored answers are counted, and unreadable data still counts as something to replace', () => {
+    localStorage.setItem('recall-progress', JSON.stringify(stored));
+    expect(summarizeStoredProgress(localStorage)).toEqual({ readable: true, answers: 3, lastAnsweredAt: 3 });
+    localStorage.setItem('recall-progress', '{"attemptHistory": [');
+    expect(summarizeStoredProgress(localStorage)).toEqual({ readable: false, answers: 0, lastAnsweredAt: null });
+  });
+
+  test('the backup holds every replaced key as an export that restores it', () => {
+    const before = {
+      'recall-progress': JSON.stringify(stored),
+      'recall-profile': JSON.stringify({ currentStreak: 9 }),
+      'recall-concept-srs-enabled': 'false',
+    };
+    Object.entries(before).forEach(([k, v]) => localStorage.setItem(k, v));
+    const unreadableBackup = `${PROGRESS_BACKUP_PREFIX}2026-01-01T00:00:00.000Z`;
+    localStorage.setItem(unreadableBackup, 'old unreadable text');
+
+    const backup = backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
+    if (!backup.ok) throw new Error(backup.error);
+    expect(backup.key).toBe(`${PRE_IMPORT_BACKUP_PREFIX}2026-10-09T12:00:00.000Z`);
+    const check = validateExport(localStorage.getItem(backup.key) as string);
+    if (!check.ok) throw new Error(check.error);
+    // Earlier backups stay in storage; they are not nested inside the new one.
+    expect(Object.keys(check.file.keys).filter(k => k.startsWith(PROGRESS_BACKUP_PREFIX))).toEqual([]);
+
+    const incoming = validateExport(buildExport({ 'recall-progress': JSON.stringify({ attemptHistory: [] }) }));
+    if (!incoming.ok) throw new Error(incoming.error);
+    applyImport(localStorage, incoming.file);
+    expect(localStorage.getItem('recall-concept-srs-enabled')).toBeNull();
+
+    applyImport(localStorage, check.file);
+    for (const k of EXPORT_KEYS) {
+      expect(localStorage.getItem(k)).toBe((before as Record<string, string>)[k] ?? null);
+    }
+    expect(localStorage.getItem(unreadableBackup)).toBe('old unreadable text');
+  });
+
+  test('backing up the same state twice reuses the first backup', () => {
+    localStorage.setItem('recall-progress', JSON.stringify(stored));
+    const first = backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
+    const second = backupBeforeImport(localStorage, new Date('2026-10-09T13:00:00Z'));
+    expect(second).toEqual(first);
+    expect(listBackupKeys(localStorage)).toHaveLength(1);
+
+    localStorage.setItem('recall-profile', '{}');
+    const third = backupBeforeImport(localStorage, new Date('2026-10-09T12:00:00Z'));
+    if (!third.ok) throw new Error(third.error);
+    expect(third.key).toBe(`${PRE_IMPORT_BACKUP_PREFIX}2026-10-09T12:00:00.000Z-2`);
+  });
+
+  test('a backup that cannot be written reports failure and writes nothing', () => {
+    localStorage.setItem('recall-progress', JSON.stringify(stored));
+    const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw quotaError(); });
+    try {
+      const result = backupBeforeImport(localStorage);
+      expect(result).toEqual({ ok: false, error: 'The quota has been exceeded.', quotaExceeded: true });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(listBackupKeys(localStorage)).toEqual([]);
+    expect(localStorage.getItem('recall-progress')).toBe(JSON.stringify(stored));
   });
 });

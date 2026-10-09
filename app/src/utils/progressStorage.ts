@@ -10,14 +10,20 @@
  *   read and written back unchanged, so a renamed or temporarily missing question
  *   keeps its history and gets it back when the id returns;
  * - every write goes through `safeSetItem`, which reports failure instead of throwing;
- * - export/import round-trips the whole record as one validated file.
+ * - export/import round-trips the whole record as one validated file, and an
+ *   import that replaces existing progress first copies it to a backup key.
  */
 import { QuestionAttempt, UserProgress } from '../types';
+import { DEV_UNLOCK_ALL_KEY, FEATURE_FLAGS } from './featureFlags';
 
 export const PROGRESS_KEY = 'recall-progress';
 // One backup per unreadable text: PROGRESS_BACKUP_PREFIX + ISO timestamp.
 export const PROGRESS_BACKUP_PREFIX = 'recall-progress-unreadable-backup-';
-export const isBackupKey = (k: string): boolean => k.startsWith(PROGRESS_BACKUP_PREFIX);
+// One backup per import that replaced progress: PRE_IMPORT_BACKUP_PREFIX + ISO timestamp.
+// The value is itself an export file, so importing it restores what was replaced.
+export const PRE_IMPORT_BACKUP_PREFIX = 'recall-progress-pre-import-backup-';
+export const isBackupKey = (k: string): boolean =>
+  k.startsWith(PROGRESS_BACKUP_PREFIX) || k.startsWith(PRE_IMPORT_BACKUP_PREFIX);
 
 /** Every backup key in storage, oldest first. */
 export function listBackupKeys(storage: Storage): string[] {
@@ -33,7 +39,8 @@ export const EXPORT_FORMAT = 'recall-progress-export';
 export const EXPORT_VERSION = 1;
 
 // Keys a Recall export carries. JSON-valued keys are validated as JSON objects
-// on import; the plain-string keys are stored as-is.
+// on import; the plain-string keys are stored as-is. Legacy `databricks-*` keys
+// are left out: they are only read to seed missing `recall-*` keys on first load.
 export const EXPORT_JSON_KEYS = [
   'recall-progress',
   'recall-profile',
@@ -42,10 +49,13 @@ export const EXPORT_JSON_KEYS = [
   'recall-concept-progress',
   'recall-card-difficulty',
 ] as const;
-export const EXPORT_STRING_KEYS = [
+// Settings the app reads straight from storage rather than holding in state.
+export const STORED_SETTING_KEYS: readonly string[] = [...Object.values(FEATURE_FLAGS), DEV_UNLOCK_ALL_KEY];
+export const EXPORT_STRING_KEYS: readonly string[] = [
   'recall-active-course',
   'recall-concept-migration-version',
-] as const;
+  ...STORED_SETTING_KEYS,
+];
 export const EXPORT_KEYS: readonly string[] = [...EXPORT_JSON_KEYS, ...EXPORT_STRING_KEYS];
 
 /** Stored entries whose question id is not in the running build. Never shown, never dropped. */
@@ -287,8 +297,47 @@ export function buildExport(keys: Record<string, string | null>, now: Date = new
   return JSON.stringify(file);
 }
 
+/** Size of a progress record, for telling the user what an import brings or replaces. */
+export interface ProgressSummary {
+  // False when the stored text could not be read as progress.
+  readable: boolean;
+  answers: number;
+  lastAnsweredAt: number | null;
+}
+
+const summarizeHistory = (history: readonly { timestamp: number }[]): ProgressSummary => ({
+  readable: true,
+  answers: history.length,
+  lastAnsweredAt: history.reduce<number | null>((t, a) => (t === null || a.timestamp > t ? a.timestamp : t), null),
+});
+
+/**
+ * What an import would replace: the stored progress record, or null when this
+ * browser holds no answers yet (opening the app alone records none).
+ */
+export function summarizeStoredProgress(storage: Storage): ProgressSummary | null {
+  const unreadable: ProgressSummary = { readable: false, answers: 0, lastAnsweredAt: null };
+  let raw: string | null;
+  try {
+    raw = storage.getItem(PROGRESS_KEY);
+  } catch {
+    return unreadable;
+  }
+  if (raw === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return unreadable;
+  }
+  if (validateStoredProgress(parsed) !== null || !isPlainObject(parsed)) return unreadable;
+  const summary = summarizeHistory((parsed.attemptHistory ?? []) as QuestionAttempt[]);
+  const attempted = (parsed.questionsAttempted ?? []) as string[];
+  return summary.answers === 0 && attempted.length === 0 ? null : summary;
+}
+
 export type ImportCheck =
-  | { ok: true; file: ProgressExport; attemptCount: number }
+  | { ok: true; file: ProgressExport; summary: ProgressSummary }
   | { ok: false; error: string };
 
 /**
@@ -324,7 +373,7 @@ export function validateExport(text: string): ImportCheck {
   const progressText = keys[PROGRESS_KEY];
   if (typeof progressText !== 'string') return { ok: false, error: 'the file has no progress record' };
 
-  let attemptCount = 0;
+  let summary = summarizeHistory([]);
   for (const k of EXPORT_JSON_KEYS) {
     const v = keys[k];
     if (typeof v !== 'string') continue;
@@ -338,7 +387,7 @@ export function validateExport(text: string): ImportCheck {
     if (k === PROGRESS_KEY) {
       const problem = validateStoredProgress(value);
       if (problem) return { ok: false, error: `progress record: ${problem}` };
-      attemptCount = Array.isArray(value.attemptHistory) ? value.attemptHistory.length : 0;
+      summary = summarizeHistory((value.attemptHistory ?? []) as QuestionAttempt[]);
     }
   }
 
@@ -348,7 +397,38 @@ export function validateExport(text: string): ImportCheck {
     exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : '',
     keys: Object.fromEntries([...EXPORT_KEYS, ...backupKeys].map(k => [k, (keys[k] as string | null | undefined) ?? null])),
   };
-  return { ok: true, file, attemptCount };
+  return { ok: true, file, summary };
+}
+
+export type BackupResult = { ok: true; key: string } | { ok: false; error: string; quotaExceeded: boolean };
+
+/**
+ * Before an import replaces progress, copy every key it overwrites into one new
+ * backup key, as an export file. Existing backups are not copied, since an import
+ * never removes them. An earlier pre-import backup of the same state is reused.
+ * On failure nothing is written and the import must not go ahead.
+ */
+export function backupBeforeImport(storage: Storage, now: Date = new Date()): BackupResult {
+  try {
+    const current = Object.fromEntries(EXPORT_KEYS.map(k => [k, storage.getItem(k)]));
+    const sameState = (text: string | null) => {
+      try {
+        return JSON.stringify(JSON.parse(text ?? '').keys) === JSON.stringify(current);
+      } catch {
+        return false;
+      }
+    };
+    const same = listBackupKeys(storage)
+      .find(k => k.startsWith(PRE_IMPORT_BACKUP_PREFIX) && sameState(storage.getItem(k)));
+    if (same !== undefined) return { ok: true, key: same };
+    const base = PRE_IMPORT_BACKUP_PREFIX + now.toISOString();
+    let key = base;
+    for (let n = 2; storage.getItem(key) !== null; n++) key = `${base}-${n}`;
+    storage.setItem(key, buildExport(current, now));
+    return { ok: true, key };
+  } catch (e) {
+    return { ok: false, error: describeError(e), quotaExceeded: isQuotaError(e) };
+  }
 }
 
 /**
