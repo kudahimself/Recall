@@ -63,3 +63,20 @@ Recall/
 
 - **Architecture, question schemas, and spaced-repetition mechanics:** `docs/DEVELOPMENT.md`
 - **Repo conventions and authoring workflow:** `CLAUDE.md`
+
+## Desktop shortcut (Windows + WSL)
+
+A double-click "Recall" icon on the Windows Desktop that starts a production build in the background and opens it in Firefox.
+
+- **Own port:** the shortcut serves the app at `http://localhost:4300` (set in `launcher/port`), separate from the dev server on 3000.
+- **Progress is per address:** localStorage belongs to one browser profile and one exact origin, so the desktop app starts with empty progress.
+  On first use, export progress from `http://localhost:3000` (dev server) and import it at `http://localhost:4300`.
+  Opening Recall in another browser, Firefox profile or address also starts empty.
+- **Install (once, in WSL):** `launcher/install-desktop-shortcut.sh` copies the launcher to `%LOCALAPPDATA%\Recall` and creates `Recall.lnk` on your Desktop.
+- **Use:** double-click Recall.
+  If nothing answers on the port it builds `app/build` when missing or older than the source, starts the server hidden, and opens a normal Firefox window (default profile).
+  Launching again while it runs just opens Firefox.
+  The first launch (or one after a code change) takes a few minutes for the build.
+- **Stop:** `launcher/recall-stop.sh` in WSL.
+  Logs are in `~/.local/state/recall/server.log`.
+- **Changing the port** means editing `launcher/port` and rerunning the installer - and it is a new origin, so import progress again.
