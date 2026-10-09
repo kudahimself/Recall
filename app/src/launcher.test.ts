@@ -37,7 +37,7 @@ describe('find-node.sh', () => {
       fs.mkdirSync(bin, { recursive: true });
       fs.writeFileSync(path.join(bin, 'node'), '#!/bin/sh\necho fake\n', { mode: 0o755 });
       const out = execFileSync('bash', ['-c', '. "$1"; recall_find_node && command -v node', 'x', path.join(LAUNCHER, 'find-node.sh')], {
-        env: { HOME: home, PATH: '/usr/bin:/bin' } as NodeJS.ProcessEnv, encoding: 'utf8',
+        env: { HOME: home, PATH: '/usr/bin:/bin' } as unknown as NodeJS.ProcessEnv, encoding: 'utf8',
       });
       expect(out.trim()).toBe(path.join(bin, 'node'));
     } finally {
@@ -49,7 +49,7 @@ describe('find-node.sh', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'recall-home-'));
     try {
       const r = spawnSync('bash', ['-c', '. "$1"; recall_find_node', 'x', path.join(LAUNCHER, 'find-node.sh')], {
-        env: { HOME: home, PATH: '/nonexistent' } as NodeJS.ProcessEnv, encoding: 'utf8',
+        env: { HOME: home, PATH: '/nonexistent' } as unknown as NodeJS.ProcessEnv, encoding: 'utf8',
       });
       // Only skip the negative case on machines that keep a node in /usr/local/bin.
       if (!fs.existsSync('/usr/local/bin/node')) expect(r.status).not.toBe(0);
