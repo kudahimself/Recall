@@ -14,8 +14,8 @@ function Test-Port {
 }
 
 if (-not (Test-Port)) {
-  # Hidden, detached; the script itself builds if needed and backgrounds the server.
-  Start-Process -WindowStyle Hidden -FilePath wsl.exe -ArgumentList @('-d', $Distro, '--', 'bash', $StartScript)
+  # Hidden. The script builds if needed, then stays alive as the server: WSL stops servers that outlive their wsl.exe session.
+  Start-Process -WindowStyle Hidden -FilePath wsl.exe -ArgumentList @('-d', $Distro, '--', 'bash', $StartScript, '--foreground')
   $deadline = (Get-Date).AddMinutes(10)   # first run may include a production build
   while (-not (Test-Port) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
   if (-not (Test-Port)) {
