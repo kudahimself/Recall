@@ -138,7 +138,8 @@ A card on a correct streak of `WELL_KNOWN_STREAK` (5) or more is resting until i
 The floor interleave, the concept-aware picker and the legacy priority scorer all choose among the review pool minus resting cards, so a concept that needs practice is practised through its other cards.
 Before this, the concept-aware picker brought streak >= 5 cards back at a median of about 50 percent of their interval on the reference learner's real state, because it chooses by concept retrievability rather than card intervals.
 Cards below the bar are still consolidating and stay eligible for the early interleave; due, missed and drain cards are never resting.
-When every review card outside the cooldown is resting, `pickNearestDue` serves the one closest to due.
+When every review card outside the cooldown is resting, the selector serves the next unlocked new card instead (unless the drain is forcing reviews).
+Only when no new content is left does `pickNearestDue` serve the resting card closest to due.
 `wellKnownReturn.sim.test.ts` and `drainReplay.sim.test.ts` assert that no streak >= 5 card is served before its interval, with no tolerance (the closest-to-due fallback aside).
 
 **Relearn step:**

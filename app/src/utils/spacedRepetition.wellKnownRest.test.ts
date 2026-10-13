@@ -28,6 +28,7 @@ import {
 } from './spacedRepetition';
 
 const backendPolicy = getSelectionPolicy(Course.BACKEND);
+const dataEngPolicy = getSelectionPolicy(Course.DATA_ENGINEERING);
 const DAY = 86_400_000;
 
 beforeAll(() => {
@@ -82,10 +83,12 @@ function streakOf(progress: UserProgress, qid: string, streak: number, lastDaysA
   for (let i = streak - 1; i >= 0; i--) record(progress, qid, true, (lastDaysAgo + i * 0.5) * DAY);
 }
 
-function draw(pool: Question[], progress: UserProgress, ctx?: ConceptSelectionContext, n = 1000) {
+function draw(
+  pool: Question[], progress: UserProgress, ctx?: ConceptSelectionContext, n = 1000, policy = backendPolicy,
+) {
   const counts = new Map<string, number>();
   for (let i = 0; i < n; i++) {
-    const q = SRS.selectNextQuestion(pool, progress, ctx, backendPolicy);
+    const q = SRS.selectNextQuestion(pool, progress, ctx, policy);
     if (q) counts.set(q.id, (counts.get(q.id) ?? 0) + 1);
   }
   return counts;
@@ -209,5 +212,25 @@ describe('selectNextQuestion - well-known cards rest until due', () => {
     p.masteredTopics.add(Topic.PY_BASICS);
     const counts = draw(pool, p, undefined, 200);
     expect(counts.get('wkA')).toBe(200);
+  });
+
+  /**
+   * Non-concept course, first card of a new topic just answered and in
+   * cooldown, every earlier card resting. The review share must go to the new
+   * topic's next card, not to a well-known card before its interval.
+   */
+  test('when only resting cards are left but new content remains it serves the new content', () => {
+    const wk = ['wk1', 'wk2', 'wk3', 'wk4', 'wk5', 'wk6'].map(id =>
+      makeQ(id, Topic.DE_WHAT_IS, Difficulty.BEGINNER));
+    const fresh = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'].map(id =>
+      makeQ(id, Topic.DE_BATCH_VS_STREAMING, Difficulty.BEGINNER));
+    const p = emptyProgress();
+    wk.forEach((q, i) => streakOf(p, q.id, 5, 10 + i));
+    record(p, 'n1', true, 60_000);
+    expect(SRS.restingWellKnown(wk, p).size).toBe(wk.length);
+
+    const counts = draw([...wk, ...fresh], p, undefined, 500, dataEngPolicy);
+    for (const q of wk) expect(counts.get(q.id) ?? 0).toBe(0);
+    expect(counts.get('n2')).toBe(500);
   });
 });

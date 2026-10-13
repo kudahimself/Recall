@@ -989,7 +989,8 @@ export class SpacedRepetitionSystem {
   /**
    * The card in `pool` closest to its due date (highest days-since / interval).
    * Used only when every review card outside the cooldown is a resting
-   * well-known card, so the one served is as little early as possible.
+   * well-known card and there is no unlocked new content to serve instead,
+   * so the one served is as little early as possible.
    */
   static pickNearestDue(
     pool: Question[],
@@ -1464,8 +1465,10 @@ export class SpacedRepetitionSystem {
     // Well-known cards rest until due (WELL_KNOWN_STREAK). The relearn step and
     // the due branch below serve only missed or due cards, so they need no
     // filter. The floor, the concept-aware picker and the legacy scorer choose
-    // among awakePool instead of the whole review pool, and when every card
-    // outside the cooldown is resting the one closest to due is served.
+    // among awakePool instead of the whole review pool. When every card
+    // outside the cooldown is resting, unlocked new content is served instead
+    // (unless the drain is forcing reviews), and only with no new content left
+    // does the one closest to due come back early.
     const resting = this.restingWellKnown(reviewQuestions, progress, cardDifficulty);
     const awakePool = reviewPool.filter(q => !resting.has(q.id));
 
@@ -1572,6 +1575,7 @@ export class SpacedRepetitionSystem {
     }
 
     if (awakePool.length === 0) {
+      if (firstUnlockedNew !== null && !drainDueReviews) return firstUnlockedNew;
       return this.pickNearestDue(reviewPool, progress, cardDifficulty) ?? reviewPool[0];
     }
 
