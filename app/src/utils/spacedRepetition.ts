@@ -149,7 +149,18 @@ export const HINT_GRADE_CAP = [4, 2, 1] as const;            // FSRS grade ceili
 //   2. When nothing is strictly due, a light MASTERED_RESURFACE_FLOOR_FRACTION
 //      interleave keeps not-yet-due advanced cards warm ("desirable
 //      difficulty", Bjork & Kornell) — applied only OUTSIDE onboarding.
+//      Well-known cards are left out of it (see WELL_KNOWN_STREAK).
 export const MASTERED_RESURFACE_FLOOR_FRACTION = 0.20;
+
+// Well-known cards rest until due. A card whose correct streak has reached
+// this many answers in a row waits out its own interval (getEffectiveInterval)
+// before it is served again: the floor interleave, the concept-aware picker
+// and the legacy scorer all skip it while it rests. Those three choose by
+// concept retrievability or loose priority, not by the card's interval, and
+// together they brought streak >= 5 cards back at about half their interval.
+// Cards below the bar are still consolidating, so they stay eligible for the
+// early interleave. Due, missed and drain cards are never resting.
+export const WELL_KNOWN_STREAK = MASTERY_EXPERT_STREAK;
 
 // Difficulty weights for the advanced-weighted mastered sampler. ADVANCED
 // dominates; INTERMEDIATE appears occasionally; BEGINNER rarely. Sampling
@@ -933,6 +944,76 @@ export class SpacedRepetitionSystem {
   }
 
   /**
+   * getCorrectStreak for every attempted card in one pass over the history,
+   * so a whole pool can be checked per pick without rescanning it per card.
+   * Walks oldest to newest; among equal timestamps the later array entry is
+   * the older one, matching getCorrectStreak's stable newest-first sort.
+   */
+  static correctStreaks(progress: UserProgress): Map<string, number> {
+    const ordered = progress.attemptHistory
+      .map((a, i) => ({ a, i }))
+      .sort((x, y) => x.a.timestamp - y.a.timestamp || y.i - x.i);
+    const streaks = new Map<string, number>();
+    for (const { a } of ordered) {
+      streaks.set(a.questionId,
+        this.attemptCredit(a) >= CREDIT_CORRECT_THRESHOLD ? (streaks.get(a.questionId) ?? 0) + 1 : 0);
+    }
+    return streaks;
+  }
+
+  /**
+   * Ids of the well-known cards in `pool` that are resting: correct streak at
+   * or above WELL_KNOWN_STREAK and their interval (getEffectiveInterval) not
+   * yet passed. A streak that long means the latest answer was right, so a
+   * missed card is never resting.
+   */
+  static restingWellKnown(
+    pool: Question[],
+    progress: UserProgress,
+    cardDifficulty: Record<string, number> = {},
+  ): Set<string> {
+    const streaks = this.correctStreaks(progress);
+    const now = Date.now();
+    const resting = new Set<string>();
+    for (const q of pool) {
+      const streak = streaks.get(q.id) ?? 0;
+      if (streak < WELL_KNOWN_STREAK) continue;
+      const last = progress.lastAttempt.get(q.id) ?? 0;
+      if (last === 0) continue; // never timestamped → treated as due everywhere
+      const interval = this.getTargetInterval(streak) * easeFactor(cardDifficulty[q.id] ?? 0);
+      if ((now - last) / MS_PER_DAY < interval) resting.add(q.id);
+    }
+    return resting;
+  }
+
+  /**
+   * The card in `pool` closest to its due date (highest days-since / interval).
+   * Used only when every review card outside the cooldown is a resting
+   * well-known card and there is no unlocked new content to serve instead,
+   * so the one served is as little early as possible.
+   */
+  static pickNearestDue(
+    pool: Question[],
+    progress: UserProgress,
+    cardDifficulty: Record<string, number> = {},
+  ): Question | null {
+    const now = Date.now();
+    let best: Question | null = null;
+    let bestRatio = -Infinity;
+    for (const q of pool) {
+      const last = progress.lastAttempt.get(q.id) ?? 0;
+      const ratio = last > 0
+        ? (now - last) / MS_PER_DAY / this.getEffectiveInterval(q.id, progress, cardDifficulty)
+        : Infinity;
+      if (ratio > bestRatio) {
+        best = q;
+        bestRatio = ratio;
+      }
+    }
+    return best;
+  }
+
+  /**
    * Roll a topic's per-card FSRS difficulties up to a single label for the UI.
    * Averages the difficulty of the topic's DRAIN cards that actually have a
    * recorded difficulty (>0); cards never answered under the difficulty code
@@ -1381,6 +1462,16 @@ export class SpacedRepetitionSystem {
       return firstUnlockedNew ?? (newQuestions.length > 0 ? newQuestions[0] : sortedAvailable[0]);
     }
 
+    // Well-known cards rest until due (WELL_KNOWN_STREAK). The relearn step and
+    // the due branch below serve only missed or due cards, so they need no
+    // filter. The floor, the concept-aware picker and the legacy scorer choose
+    // among awakePool instead of the whole review pool. When every card
+    // outside the cooldown is resting, unlocked new content is served instead
+    // (unless the drain is forcing reviews), and only with no new content left
+    // does the one closest to due come back early.
+    const resting = this.restingWellKnown(reviewQuestions, progress, cardDifficulty);
+    const awakePool = reviewPool.filter(q => !resting.has(q.id));
+
     // Mastered resurface (due-driven, Anki-style). Runs BEFORE the concept-aware
     // call so its DUE/IDLE buckets can't starve high-stability advanced mastered
     // cards (which concept-aware parks in IDLE for ~30 days). Selection inside
@@ -1459,14 +1550,17 @@ export class SpacedRepetitionSystem {
           }
         } else if (!inOnboarding && Math.random() < MASTERED_RESURFACE_FLOOR_FRACTION) {
           // Nothing strictly due and not onboarding → light desirable-difficulty
-          // interleave of not-yet-due mastered cards (advanced-weighted).
-          const pick = this.pickMasteredResurface(reviewPool, topicToQs, progress, undefined, cardDifficulty);
+          // interleave of not-yet-due mastered cards (advanced-weighted) that
+          // are not resting.
+          const pick = this.pickMasteredResurface(awakePool, topicToQs, progress, undefined, cardDifficulty);
           if (pick) return pick;
         }
       }
     }
 
-    // Concept-aware path runs against the REVIEW pool only. Pass full
+    // Concept-aware path runs against the REVIEW pool only, minus resting
+    // well-known cards: a concept that needs practice is practised through its
+    // other cards while those wait out their intervals. Pass full
     // availableQuestions for topic grouping so the unlock-blocker check still
     // sees uncovered cards in a half-done topic and doesn't fire prematurely.
     // When policy.useConceptSRS is false (e.g. Data Engineering — no concept
@@ -1474,13 +1568,18 @@ export class SpacedRepetitionSystem {
     const conceptSrsAllowed = policy ? policy.useConceptSRS : true;
     if (conceptCtx && conceptSrsAllowed) {
       const conceptPick = this.selectNextQuestionConceptAware(
-        availableQuestions, progress, conceptCtx, reviewQuestions,
+        availableQuestions, progress, conceptCtx, reviewQuestions.filter(q => !resting.has(q.id)),
       );
       if (conceptPick) return conceptPick;
       // else fall through to legacy review math below
     }
 
-    const scored = reviewPool.map(q => ({
+    if (awakePool.length === 0) {
+      if (firstUnlockedNew !== null && !drainDueReviews) return firstUnlockedNew;
+      return this.pickNearestDue(reviewPool, progress, cardDifficulty) ?? reviewPool[0];
+    }
+
+    const scored = awakePool.map(q => ({
       question: q,
       priority: this.calculatePriority(q.id, progress, q, topicToQs.get(q.topic), activeTopic),
     }));

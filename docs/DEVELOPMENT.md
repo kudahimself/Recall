@@ -131,12 +131,16 @@ Two distinct review states a topic can be in:
 - Rate is 1 (every review slot drains due queue) once learner is caught up
 - Drops to `ONBOARDING_DUE_RESURFACE_PROB = 0.25` while new topic is still being onboarded
 - Exception: a due DRAIN card (coding/advanced) overrides onboarding and hard-gates new content (see Reviews-First Hard Drain)
-- When nothing is strictly due, light `MASTERED_RESURFACE_FLOOR_FRACTION = 0.20` interleave keeps not-yet-due advanced cards warm (only outside onboarding)
+- When nothing is strictly due, light `MASTERED_RESURFACE_FLOOR_FRACTION = 0.20` interleave keeps not-yet-due advanced cards warm (only outside onboarding), leaving out resting well-known cards (below)
 
-**Early reviews that remain:**
-The floor interleave above is unfiltered, and the concept-aware picker chooses by concept retrievability rather than card intervals, so both still serve well-known cards before they are due.
-On the reference learner's real state `drainReplay.sim.test.ts` measures these at a median of about 50 percent of interval for streak >= 5 cards, against the 2 percent the due branch used to produce.
-Making those two paths respect card intervals is left for a follow-up; the replay asserts the median stays at or above 40 percent.
+**Well-known cards rest until due:**
+A card on a correct streak of `WELL_KNOWN_STREAK` (5) or more is resting until its own interval (`getEffectiveInterval`) has passed (`restingWellKnown`).
+The floor interleave, the concept-aware picker and the legacy priority scorer all choose among the review pool minus resting cards, so a concept that needs practice is practised through its other cards.
+Before this, the concept-aware picker brought streak >= 5 cards back at a median of about 50 percent of their interval on the reference learner's real state, because it chooses by concept retrievability rather than card intervals.
+Cards below the bar are still consolidating and stay eligible for the early interleave; due, missed and drain cards are never resting.
+When every review card outside the cooldown is resting, the selector serves the next unlocked new card instead (unless the drain is forcing reviews).
+Only when no new content is left does `pickNearestDue` serve the resting card closest to due.
+`wellKnownReturn.sim.test.ts` and `drainReplay.sim.test.ts` assert that no streak >= 5 card is served before its interval, with no tolerance (the closest-to-due fallback aside).
 
 **Relearn step:**
 - `pickDueRelearn` runs first in the review slot (whenever the latest attempt was not a miss), before the `consolidationPending` deferral and before the drain.
@@ -243,6 +247,7 @@ Used by every due-check:
 - `getReviewStatus`
 - `isIntervalDue` (the due branch's filter, also behind `drainPred`)
 - `pickDueRelearn` (at streak 0, the relearn interval)
+- `restingWellKnown` and `pickNearestDue`
 
 **Ease factor:**
 - Constants: `EASE_MID_DIFFICULTY=5.5`, `EASE_MAX_FACTOR=2.5`, `EASE_MIN_FACTOR=0.4`
