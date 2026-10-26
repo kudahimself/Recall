@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start Recall's production build on the port in launcher/port in the background (idempotent).
+# Start the server for Recall's production build on the port in launcher/port in the background (idempotent).
 # Runs inside WSL. Safe to run twice: if the port already answers it does nothing.
 set -u
 ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -21,16 +21,8 @@ if listening; then exit 0; fi
 recall_find_node
 command -v node >/dev/null 2>&1 || { echo "node not found in WSL" >>"$LOG"; exit 1; }
 
-APP="$ROOT/app"
-BUILD="$APP/build/index.html"
-need_build=0
-if [ ! -f "$BUILD" ]; then need_build=1
-elif [ -n "$(find "$APP/src" "$APP/public" "$APP/package.json" "$APP/package-lock.json" "$APP/tsconfig.json" -newer "$BUILD" -type f -print -quit 2>/dev/null)" ]; then need_build=1
-fi
-if [ "$need_build" = 1 ]; then
-  [ -d "$APP/node_modules" ] || (cd "$APP" && npm install >>"$LOG" 2>&1) || exit 1
-  (cd "$APP" && CI=false npm run build >>"$LOG" 2>&1) || exit 1
-fi
+# The server never waits for a build: it serves app/build when there is one, a "building" page otherwise,
+# and starts launcher/recall-build.sh itself (see serve-build.js), which swaps in a fresh build only on success.
 
 # WSL kills everything a wsl.exe session started once that session ends, even setsid/nohup children.
 # --foreground (used by recall-launch.ps1) keeps node as the hidden wsl.exe's own process so the server lives.
