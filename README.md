@@ -74,9 +74,15 @@ A double-click "Recall" icon on the Windows Desktop that starts a production bui
   Opening Recall in another browser, Firefox profile or address also starts empty.
 - **Install (once, in WSL):** `launcher/install-desktop-shortcut.sh` copies the launcher to `%LOCALAPPDATA%\Recall` and creates `Recall.lnk` on your Desktop.
 - **Use:** double-click Recall.
-  If nothing answers on the port it builds `app/build` when missing or older than the source, starts the server hidden, and opens a normal Firefox window (default profile).
+  If nothing answers on the port it starts the server hidden and opens a normal Firefox window (default profile).
+  The server answers immediately and never waits for a build: it serves the last good `app/build`, or a "Recall is building" page that refreshes itself into the app when no build exists yet (a few minutes, first time only).
+  When the sources are newer than `app/build`, `launcher/recall-build.sh` rebuilds in the background into `app/build.tmp` and swaps it in only if the build succeeds, so the last good build is never deleted and the new one shows on the next load.
+  Only one build runs at a time.
   Launching again while it runs just opens Firefox.
-  The first launch (or one after a code change) takes a few minutes for the build.
+  Tests: `launcher/test/run.sh`.
+  Manual check (double-click Recall each time):
+  with a build present it opens at once; with `app/build` removed it shows "Recall is building" and turns into the app when the build ends;
+  after `touch app/src/App.tsx` it opens the old build at once and serves the new one on a later reload.
 - **Stop:** `launcher/recall-stop.sh` in WSL.
   Logs are in `~/.local/state/recall/server.log`.
 - **Changing the port** means editing `launcher/port` and rerunning the installer - and it is a new origin, so import progress again.

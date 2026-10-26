@@ -25,25 +25,27 @@
  * The state file is only ever read.
  *
  * It also pins the chosen behaviour after time away - reviews first:
- *   - no new question is served before the drain queue has first emptied
+ *   - no new question is served while the drain gate is closed (a queued card
+ *     servable outside the cooldown, or the last answer a miss)
  *   - every card whose latest answer was wrong at the start is shown again by
  *     the next day's session, and every miss during the replay within two
  *     days' sessions
+ *   - no card on a correct streak of WELL_KNOWN_STREAK or more is served
+ *     before its interval (no tolerance), apart from the fallback that serves
+ *     the card closest to due when only resting cards are left
  * On the real Backend state of 2026-09-21 (336 cards queued after seven weeks
- * away, defaults above) that gives 0 new questions over days 0-9, the queue
- * first empty at the end of day 12, all 41 failed cards back by the next
- * session and in-replay misses back within two days.
+ * away, defaults above) that gives 0 new questions over days 0-9, all 41
+ * failed cards back by the next session and in-replay misses back within two
+ * days. Before well-known cards rested, 29 streak >= 5 reviews came back
+ * early, at a median of 50.3 percent of their interval, all through the
+ * concept-aware picker; with the rest, none do.
  *
- * Early reviews of well-known cards are only partly fixed. The due branch now
- * serves due cards only, which removes the 2 percent-of-interval reviews it
- * used to produce. Streak >= 5 cards still come back before due through the
- * mastered-resurface floor interleave and the concept-aware picker, at a
- * median of about 50 percent of their interval on the real state (50.3%).
- * Those two paths are deliberately left for a follow-up; the assertion below
- * records the current figure (median at or above 0.4) so a later change can
- * be measured against it.
+ * A later START models a longer break since the state's last answer
+ * (2026-09-21 10:35 UTC). The report also covers what is owed on return by
+ * streak band, how long each band waits to be shown, and the first session's
+ * mix.
  */
-import { SpacedRepetitionSystem as SRS, ConceptSelectionContext } from '../spacedRepetition';
+import { SpacedRepetitionSystem as SRS, ConceptSelectionContext, WELL_KNOWN_STREAK } from '../spacedRepetition';
 import { applyReview, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty, ConceptProgress } from '../conceptSRS';
 import { BACKEND_CONCEPTS, WEBDEV_CONCEPTS, DATABRICKS_CONCEPTS } from '../conceptRegistry';
 import { getSelectionPolicy, getTopicOrder } from '../courseConfig';
@@ -121,9 +123,9 @@ maybe('drain forward replay', () => {
     let clock = START;
     const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => clock);
 
-    // Attribute every pick to the branch that produced it: the mastered
-    // resurface (drain / due / floor), the concept-aware buckets, or the rest
-    // (new-question draw and the legacy priority scorer).
+    // Attribute every pick to the branch that produced it: the relearn step,
+    // the mastered resurface (drain / due / floor), the concept-aware buckets,
+    // the new-question draw, or the rest (the legacy priority scorer).
     let via = 'other';
     const srsAny = SRS as any;
     const realResurface = srsAny.pickMasteredResurface.bind(SRS);
@@ -138,6 +140,31 @@ maybe('drain forward replay', () => {
       if (pick) via = 'concept-aware';
       return pick;
     });
+    const realRelearn = srsAny.pickDueRelearn.bind(SRS);
+    const relearnSpy = jest.spyOn(srsAny, 'pickDueRelearn').mockImplementation((...args: any[]) => {
+      const pick = realRelearn(...args);
+      if (pick) via = 'relearn';
+      return pick;
+    });
+    const realNearest = srsAny.pickNearestDue.bind(SRS);
+    const nearestSpy = jest.spyOn(srsAny, 'pickNearestDue').mockImplementation((...args: any[]) => {
+      const pick = realNearest(...args);
+      if (pick) via = 'nearest-due';
+      return pick;
+    });
+    // The two hasPendingDrain calls of the pick (pending over the whole review
+    // pool, then servable outside the cooldown), to check the drain gate on
+    // every new question served.
+    let gateCalls: boolean[] = [];
+    const realPending = srsAny.hasPendingDrain.bind(SRS);
+    const pendingSpy = jest.spyOn(srsAny, 'hasPendingDrain').mockImplementation((...args: any[]) => {
+      const r = realPending(...args);
+      gateCalls.push(r);
+      return r;
+    });
+    let newWhileGated = 0;     // new questions served while the drain gate was closed
+    let newInCooldownGap = 0;  // new questions served while every queued card was in cooldown
+    const picksByPath: Record<string, number> = {};
     const notDueByPath: Record<string, number> = {};
     const earlyByPath: Record<string, number[]> = {};
 
@@ -153,30 +180,90 @@ maybe('drain forward replay', () => {
     }
     const startFailWaits: number[] = [];   // days from START until a start-failed card is shown
     const simFailWaits: number[] = [];     // days from an in-sim miss until the card is shown again
-    const earlyRatios: number[] = [];      // gap / interval for streak >= 5 cards shown while not due
+    const earlyRatios: number[] = [];      // gap / interval for streak >= 5 cards shown while not due (fallback excluded)
+
+    // What is owed on return: every unlocked seen card whose latest answer was
+    // wrong or whose interval has passed, by correct streak. Each one is
+    // followed until it is first shown, to see what order the backlog comes
+    // in and whether anything is left behind.
+    const band = (streak: number) => (streak >= WELL_KNOWN_STREAK ? '5+' : streak >= 3 ? '3-4' : '0-2');
+    const BANDS = ['missed', '0-2', '3-4', '5+'];
+    const owedNow = (): Map<string, { band: string; ratio: number }> => {
+      const unlocked = SRS.getUnlockedTopics(pool, progress);
+      const latest = SRS.latestCorrectness(progress);
+      const owed = new Map<string, { band: string; ratio: number }>();
+      for (const q of pool) {
+        if (unlocked && !unlocked.has(q.topic)) continue;
+        const ok = latest.get(q.id);
+        if (ok === undefined) continue;
+        const last = progress.lastAttempt.get(q.id) ?? 0;
+        const ratio = last > 0
+          ? (clock - last) / MS_PER_DAY / SRS.getEffectiveInterval(q.id, progress, cardDifficulty)
+          : Infinity;
+        if (ok === false) owed.set(q.id, { band: 'missed', ratio });
+        else if (ratio >= 1) owed.set(q.id, { band: band(SRS.getCorrectStreak(q.id, progress)), ratio });
+      }
+      return owed;
+    };
+    const owedAtStart = owedNow();
+    const owedWaiting = new Map(owedAtStart);
+    const owedWaits: Record<string, number[]> = {};       // band -> days from START until first shown
+    const owedWaitsByRatio: Record<string, number[]> = {}; // overdue band -> days until first shown
+    const ratioBand = (r: number) => (r >= 4 ? '4x+' : r >= 2 ? '2-4x' : '1-2x');
+    const firstDayMix: Record<string, number> = {};
+    const reviewsByBand: Record<string, number> = {};      // latest-correct reviews served, due or not
+    const earlyByBand: Record<string, number[]> = {};      // band -> gap/interval of not-due reviews
 
     const lines: string[] = [];
     const log = (s: string) => lines.push(s);
     log(`course=${course} pool=${pool.length} start=${new Date(START).toISOString()} days=${DAYS} perDay=${PER_DAY} pOk=${P_OK}`);
     log(`failed (latest answer wrong) at start: ${failedAtStart.size} `
       + `(drain cards ${Array.from(failedAtStart).filter(id => SRS.isDrainCard(byId.get(id)!)).length})`);
+    const countBy = (m: Map<string, { band: string }>) => BANDS
+      .map(b => `${b} ${Array.from(m.values()).filter(v => v.band === b).length}`).join(', ');
+    log(`owed at start (unlocked, missed or past interval): ${owedAtStart.size} - ${countBy(owedAtStart)}`);
 
     const newPerDay: number[] = [];
     let firstClearDay = -1;
     let firstNewDay = -1;
     for (let day = 0; day < DAYS; day++) {
       const q0 = SRS.getReviewStatus(pool, progress, policy, cardDifficulty).drainQueueCount;
+      const owed0 = owedNow().size;
       let newToday = 0;
       let failedToday = 0;
       for (let i = 0; i < PER_DAY; i++) {
         const ctx: ConceptSelectionContext = { progress: concepts, betas: CONCEPT_BETAS };
         via = 'other';
+        gateCalls = [];
+        const hist = progress.attemptHistory;
+        const lastWrong = hist.length > 0 && !hist[hist.length - 1].isCorrect;
         const q: Question | null = SRS.selectNextQuestion(
           pool, progress, policy.useConceptSRS ? ctx : undefined, policy, cardDifficulty,
         );
         if (!q) break;
         const seen = progress.questionsAttempted.has(q.id);
-        if (!seen) newToday++;
+        if (!seen) {
+          newToday++;
+          via = 'new';
+          const [pending = false, servable = false] = gateCalls;
+          if (pending && (servable || lastWrong)) newWhileGated++;
+          else if (pending) newInCooldownGap++;
+        }
+        picksByPath[via] = (picksByPath[via] ?? 0) + 1;
+        const owedEntry = owedWaiting.get(q.id);
+        if (owedEntry) {
+          const days = (clock - START) / MS_PER_DAY;
+          (owedWaits[owedEntry.band] = owedWaits[owedEntry.band] ?? []).push(days);
+          const rb = ratioBand(owedEntry.ratio);
+          (owedWaitsByRatio[rb] = owedWaitsByRatio[rb] ?? []).push(days);
+          owedWaiting.delete(q.id);
+        }
+        if (day === 0) {
+          const kind = !seen ? 'new'
+            : owedEntry ? (owedEntry.band === 'missed' ? 'owed-missed' : SRS.isDrainCard(q) ? 'owed-drain' : 'owed-other')
+            : 'not-owed';
+          firstDayMix[kind] = (firstDayMix[kind] ?? 0) + 1;
+        }
         const since = waitingSince.get(q.id);
         if (since !== undefined) {
           if (failedAtStart.has(q.id)) {
@@ -190,11 +277,16 @@ maybe('drain forward replay', () => {
         const prevTs = progress.lastAttempt.get(q.id) ?? 0;
         if (seen && prevTs > 0 && SRS.latestCorrectness(progress).get(q.id) === true) {
           const ratio = (clock - prevTs) / MS_PER_DAY / SRS.getEffectiveInterval(q.id, progress, cardDifficulty);
+          const streak = SRS.getCorrectStreak(q.id, progress);
+          const b = band(streak);
+          reviewsByBand[b] = (reviewsByBand[b] ?? 0) + 1;
           if (ratio < 1) {
+            (earlyByBand[b] = earlyByBand[b] ?? []).push(ratio);
             notDueByPath[via] = (notDueByPath[via] ?? 0) + 1;
-            if (SRS.getCorrectStreak(q.id, progress) >= 5) {
-              earlyRatios.push(ratio);
+            if (streak >= WELL_KNOWN_STREAK) {
               (earlyByPath[via] = earlyByPath[via] ?? []).push(ratio);
+              // Only-resting-cards-left fallback: early by necessity, reported apart.
+              if (via !== 'nearest-due') earlyRatios.push(ratio);
             }
           }
         }
@@ -230,7 +322,8 @@ maybe('drain forward replay', () => {
       newPerDay.push(newToday);
       if (firstNewDay < 0 && newToday > 0) firstNewDay = day;
       if (firstClearDay < 0 && q1 === 0) firstClearDay = day;
-      log(`day ${String(day).padStart(2)}: drain queue ${String(q0).padStart(3)} -> ${String(q1).padStart(3)}  new ${String(newToday).padStart(2)}/${PER_DAY}  missed ${failedToday}`);
+      log(`day ${String(day).padStart(2)}: drain queue ${String(q0).padStart(3)} -> ${String(q1).padStart(3)}  `
+        + `owed ${String(owed0).padStart(4)} -> ${String(owedNow().size).padStart(4)}  new ${String(newToday).padStart(2)}/${PER_DAY}  missed ${failedToday}`);
       clock = START + (day + 1) * MS_PER_DAY;
     }
     const end = clock;
@@ -257,9 +350,31 @@ maybe('drain forward replay', () => {
 
     log(`reviews of latest-correct cards shown before due, by branch: ${JSON.stringify(notDueByPath)}`);
     log(`  streak>=5 only: ${Object.entries(earlyByPath).map(([k, v]) => `${k} ${v.length} (p50 ${fmt(quantile(v, 0.5) * 100)}%)`).join(', ')}`);
+    log(`latest-correct reviews by streak: ${['0-2', '3-4', '5+'].map(b => {
+      const early = earlyByBand[b] ?? [];
+      return `${b} ${reviewsByBand[b] ?? 0} (before due ${early.length}, p50 ${fmt(quantile(early, 0.5) * 100)}%)`;
+    }).join(', ')}`);
+    log(`picks by branch: ${JSON.stringify(picksByPath)}`);
+    log('');
+    log(`owed at start, shown again: ${owedAtStart.size - owedWaiting.size}/${owedAtStart.size}; never shown ${owedWaiting.size} (${countBy(owedWaiting)})`);
+    for (const b of BANDS) {
+      const w = owedWaits[b] ?? [];
+      log(`  ${b.padEnd(6)} shown ${w.length}: days after return p50 ${fmt(quantile(w, 0.5))} p95 ${fmt(quantile(w, 0.95))} max ${fmt(Math.max(-1, ...w))}`);
+    }
+    for (const rb of ['1-2x', '2-4x', '4x+']) {
+      const w = owedWaitsByRatio[rb] ?? [];
+      log(`  overdue ${rb.padEnd(5)} shown ${w.length}: days after return p50 ${fmt(quantile(w, 0.5))} p95 ${fmt(quantile(w, 0.95))}`);
+    }
+    log(`day 0 mix: ${JSON.stringify(firstDayMix)}`);
+
+    log(`new questions while the drain gate was closed: ${newWhileGated}; `
+      + `while every queued card was in cooldown (let through by design): ${newInCooldownGap}`);
 
     resurfaceSpy.mockRestore();
+    pendingSpy.mockRestore();
     conceptSpy.mockRestore();
+    relearnSpy.mockRestore();
+    nearestSpy.mockRestore();
     nowSpy.mockRestore();
     Math.random = realRandom;
     const report = lines.join('\n');
@@ -267,20 +382,23 @@ maybe('drain forward replay', () => {
     console.log(report);
     if (process.env.OUT) fs.writeFileSync(process.env.OUT, report);
     expect(newPerDay.length).toBe(DAYS);
-    // Reviews first: nothing new until the backlog has cleared once. A day that
-    // clears the queue may serve new questions after it clears.
-    // (Both hold trivially when no new question was served.)
-    expect(firstNewDay < 0 ? 0 : firstClearDay).toBeGreaterThanOrEqual(0);
-    expect(firstNewDay < 0 ? Infinity : firstNewDay).toBeGreaterThanOrEqual(firstClearDay);
+    // Reviews first: no new question while the drain gate is closed, that is
+    // while a queued card can be served outside the cooldown, or right after a
+    // miss. When every queued card is inside the cooldown the gate opens by
+    // design, so the queue's last few cards can share a day with new material
+    // before it reads empty at the end of a day; the first-new and first-empty
+    // days above are reported, not asserted.
+    expect(newWhileGated).toBe(0);
     // Every failed card comes back, and soon. Sessions are a day apart and
     // last about an hour, so "by the next session" is under 1.5 days.
     expect(failedAtStart.size).toBe(0);
     expect(Math.max(0, ...startFailWaits)).toBeLessThan(1.5);
     expect(Math.max(0, ...simFailWaits)).toBeLessThan(2.5);
     expect(Math.max(0, ...openSim.map(w => w.days))).toBeLessThan(2.5);
-    // Well-known cards shown before due come back at no less than about 40
-    // percent of their interval (baseline 50.3% on the real state).
-    // (Holds trivially when none were shown.)
-    expect(earlyRatios.length === 0 ? 1 : quantile(earlyRatios, 0.5)).toBeGreaterThanOrEqual(0.4);
+    // Well-known cards rest until due: no streak >= 5 card comes back before
+    // its interval, with no tolerance. The only exception is the fallback that
+    // serves the card closest to due when nothing but resting cards is left
+    // outside the cooldown, which never happens on a full course.
+    expect(earlyRatios).toEqual([]);
   });
 });
