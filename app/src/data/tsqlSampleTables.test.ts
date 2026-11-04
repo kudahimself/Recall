@@ -257,3 +257,72 @@ describe('Transactions & Procedural questions show the tables they read and writ
     expect(offenders).toEqual([]);
   });
 });
+
+const DATA_MODELING = new Set<string>([
+  Topic.TSQL_FACTS_DIMS, Topic.TSQL_SURROGATE_KEYS, Topic.TSQL_STAR_SCHEMA, Topic.TSQL_SCD, Topic.TSQL_NORMALIZATION,
+]);
+
+const modelingSection: Question[] = questions.filter(q => DATA_MODELING.has(q.topic));
+
+// A REFERENCES, MERGE or USING target is a table the statement depends on, so it counts as one the question uses.
+const modelingSql = (q: Question) => questionSql(q).replace(/\b(REFERENCES|MERGE|USING)\b/gi, 'FROM');
+
+describe('Data Modeling in SQL questions show the tables they use', () => {
+  it('has the whole section to check', () => {
+    expect(modelingSection.length).toBe(34);
+  });
+
+  it('every existing table a question reads or writes is one of the tables it shows', () => {
+    // Concept MCQs ("a fact table...") run against no data; the ones that do show a table name it in the question.
+    const offenders = modelingSection
+      .filter(q => q.type !== QuestionType.MULTIPLE_CHOICE)
+      .flatMap(q => {
+        const sql = modelingSql(q);
+        const created = createdNames(sql);
+        const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+        return referencedTables(sql)
+          .filter(t => !created.has(t) && !shown.has(t))
+          .map(t => `${q.id} reads ${t} without showing it`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question uses, with rows that fit its columns', () => {
+    const offenders = modelingSection.flatMap(q => {
+      const refs = new Set(referencedTables(modelingSql(q)));
+      const named = (t: string) => q.type === QuestionType.MULTIPLE_CHOICE && q.question.toLowerCase().includes(t.toLowerCase());
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) || named(t.name) ? [] : [`${q.id} shows ${t.name} but never uses it`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('a table a question creates is not also described as already existing in its template', () => {
+    const offenders = modelingSection
+      .filter(q => q.type === QuestionType.CLOZE_CODE)
+      .filter(q => {
+        const tpl = (q as { template: string }).template;
+        const headers = Array.from(tpl.matchAll(/^--\s*([\w.]+)\(/gm)).map(m => m[1].toLowerCase());
+        return headers.some(h => createdNames(tpl).has(h));
+      })
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no question builds sample data inline with a VALUES derived table or a CTE', () => {
+    const offenders = modelingSection
+      .filter(q => /\(\s*VALUES\b/i.test(questionSql(q)) || /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(questionSql(q)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('every query predict that reads an existing table shows it', () => {
+    const offenders = modelingSection
+      .filter(q => q.type === QuestionType.PREDICT_OUTPUT && /\bFROM\b/i.test(questionSql(q)))
+      .filter(q => (q.tables ?? []).length === 0 && !/CREATE\s+TABLE/i.test(questionSql(q)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+});
