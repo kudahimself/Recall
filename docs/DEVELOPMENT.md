@@ -85,7 +85,9 @@ This file maps every `Topic` to its `Course` and defines:
 **Location:** `src/utils/spacedRepetition.ts`
 
 Single source of truth for learning-system tuning constants:
-- Section unlock thresholds: `UNLOCK_COVERAGE_PCT=100`, `UNLOCK_ACCURACY_PCT=80`
+- Unlock thresholds: `UNLOCK_ACCURACY_PCT=80`, `RAMP_CARDS_PER_STEP` (topic ramp), `UNLOCK_COVERAGE_PCT=100` (unit and section aggregates)
+- Today's session: `TODAY_SESSION_SIZE`, `TODAY_REVIEW_SHARE`, `NEW_PER_DRILL`, `REASK_SPACING`, `MAX_REASKS_PER_SESSION`
+- Card-family FSRS: `FSRS_REQUEST_RETENTION`, `FSRS_MAX_INTERVAL_DAYS`, `FAMILY_EASE_EXPONENT`, `LOAD_BALANCE_MIN_DAYS`, `LOAD_BALANCE_SPREAD`, `FSRS_STORE_VERSION`
 - Rolling windows: `RECENT_WINDOW`, `TOPIC_RECENT_WINDOW`
 - Priority weights: `UNLOCK_BLOCKER_BOOST`, `TOPIC_REVIEW_BOOST`, `INCORRECT_PRIORITY_WEIGHT`
 - Selection knobs
@@ -197,14 +199,31 @@ Recall on already-learned topics outranks new material (Anki-style reviews-first
    - Due beginner/intermediate MCQs keep the reduced onboarding-rate resurface (rate 1 when caught up) but never block new content
    - Keeps the forced-review burst short after a few days away
 
-**Reviews left today (`utils/reviewSession.ts`):**
-At session start one fixed list is built: missed cards past their relearn interval plus due cards in unlocked topics, every type, missed first, then most overdue, capped at `REVIEWS_PER_DAY`.
-The session serves that list before the selector (`selectSessionQuestion`), and the "Reviews left N" pill and Home show its length.
-An answered list card leaves the list, so the number drops by exactly one per answered review.
-A first miss puts the card back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
-Cards that fall due mid-session wait for the next session; a new day or a reload builds a new list.
-The list lives in memory only and changes no interval or stored data.
-Once it is empty the normal selector below picks; seen cards it serves show as "Practice" and do not move the count.
+**Today's session (`utils/reviewSession.ts`):**
+Each course has one bounded session a day, `TODAY_SESSION_SIZE` (20) questions by default, with an end and a summary.
+Size and review share are settings on the Today card on Home (`recall-today-size`, `recall-today-review-share`).
+When the session starts one fixed review list is built: due card families in unlocked topics, most overdue (lowest FSRS retrievability) first, each mapped to the one card it serves, capped at `TODAY_REVIEW_SHARE` of the session (12 of 20).
+The rest of the session is fresh slots: the next unanswered card of the current topic's ramp, with a drill of a family already met after every `NEW_PER_DRILL` new cards.
+When the ramp is held by its difficulty gate, or finished but below the unlock bar, drills go to that topic (missed cards first) so the bar can be reached.
+The session serves the list first, and the "Reviews left N" pill and the Today card show its length, so the number drops by exactly one per answered review.
+A first miss anywhere in the session comes back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
+Families due beyond the cap stay due and lead the next days' lists; "Keep going" lifts the bound and serves them, then fresh slots, for as long as the learner wants.
+Under topic, difficulty or type filters the plan serves what it can inside them, and the older selector below fills in as "Practice" without using a slot.
+The session lives in memory only; a new day or a reload builds it again.
+
+**Card families (`utils/familySchedule.ts`):**
+A family is one primitive of one topic: the topic plus the card's first concept tag (`familyOf`), about 625 across the courses.
+Each family has one FSRS state from `ts-fsrs` (no short-term steps, intervals in days), instead of every card having its own streak interval.
+A family review serves one card (`pickFamilyCard`): the card it missed last time, otherwise a seen card of a type not used last time, a missed one first, then the one seen longest ago.
+Resting well-known cards (`WELL_KNOWN_STREAK`) are never served early; a family with only resting cards waits for them.
+The FSRS grade is the same auto-grade card difficulty uses (correctness, response time, hint cap), and the answered card's difficulty scales the interval by `easeFactor ** FAMILY_EASE_EXPONENT`.
+Intervals of `LOAD_BALANCE_MIN_DAYS` or more move within `LOAD_BALANCE_SPREAD` to the day with the fewest families due.
+The first failed submit of a tiered coding card is recorded as a miss (`CodingQuestion` `onFirstMiss`) while retry stays open; the terminal pass or give-up is then a `retry` attempt that counts for accuracy but is not a second family review.
+
+**Topic unlock:**
+A topic's ramp (`topicRamp`) is the first card of each of its families plus up to `RAMP_CARDS_PER_STEP` cards of each difficulty x type step, in ramp order.
+The next topic opens when every ramp card is answered and the topic's answered cards are above `UNLOCK_ACCURACY_PCT` at their latest answer (`isRampDoneAtBar`, granted by `updateMasteredTopics`), instead of at 100% coverage.
+Inside the ramp, intermediate opens when the beginner ramp cards are answered at `IN_TOPIC_DIFFICULTY_GATE_PCT` (`isRampDifficultyOpen`), and advanced likewise.
 
 **Drain queue definition:**
 `countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
@@ -348,6 +367,8 @@ Layouts target desktop viewport without scrolling.
 - `recall-filters` - topic/difficulty/type filter state
 - `recall-active-course` - currently selected `Course`
 - `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
+- `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, or built from a different history (its `basis`); `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
+- `recall-today-size`, `recall-today-review-share` - Today's session settings, read straight from storage
 - `recall-concept-srs-enabled` (feature flag, `featureFlags.ts`) - a setting read straight from storage
 - `recall-dev-unlock-all` - developer unlock switch, not exported
 

@@ -18,6 +18,9 @@ type Phase = 'editing' | 'review-fail' | 'awaiting-self-grade' | 'done';
 interface Props {
   question: CQQuestion;
   onAnswer: (isCorrect: boolean, meta?: AnswerMeta) => void;
+  // Called once, on the first failed submit that opens the retry panel, so the
+  // miss counts for scheduling while the learner can still retry.
+  onFirstMiss?: (meta?: AnswerMeta) => void;
   onNext?: () => void;
   showHints: boolean;
   // Partial-credit this pass would earn per hint tier [none, signature, skeleton],
@@ -28,6 +31,7 @@ interface Props {
 export const CodingQuestion: React.FC<Props> = ({
   question,
   onAnswer,
+  onFirstMiss,
   onNext,
   showHints,
   hintCreditSchedule,
@@ -246,6 +250,7 @@ export const CodingQuestion: React.FC<Props> = ({
     // A real failure. Tiered-hints questions offer the scaffolded retry panel;
     // untiered questions keep the classic one-shot behavior exactly.
     if (tiered) {
+      if (attemptNumber === 1) onFirstMiss?.({ hintTierUsed: hintTier, attempts: 1 });
       setPhase('review-fail');
     } else {
       finalize(false, attemptNumber);

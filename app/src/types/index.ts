@@ -489,6 +489,10 @@ export interface QuestionAttempt {
   credit?: number;
   // Highest hint tier revealed before the terminal outcome (0 = none, 1 = signature, 2 = skeleton).
   hintTierUsed?: 0 | 1 | 2;
+  // The pass or give-up that ends a coding question after its first failed
+  // submit was already recorded as a miss. It still counts for accuracy and
+  // coverage, but not as a second scheduling event for the card's family.
+  retry?: boolean;
 }
 
 // Extra outcome data a question component may pass to the recorder alongside the

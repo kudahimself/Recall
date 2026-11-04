@@ -162,18 +162,67 @@ export const MASTERED_RESURFACE_FLOOR_FRACTION = 0.20;
 // early interleave. Due, missed and drain cards are never resting.
 export const WELL_KNOWN_STREAK = MASTERY_EXPERT_STREAK;
 
-// Reviews left today (utils/reviewSession.ts). At session start one fixed list
-// is built: missed cards past their relearn interval plus due cards in unlocked
-// topics, every type, most urgent first, capped at REVIEWS_PER_DAY. The session
-// serves that list before new content and the pill shows its length, so every
-// answered review takes the number down by exactly one. Cards that fall due
-// mid-session wait for the next session.
-export const REVIEWS_PER_DAY = 60;
-// A missed review is asked again once, REASK_SPACING cards later, and at most
+// Today's session (utils/reviewSession.ts). Each day has one bounded session
+// of TODAY_SESSION_SIZE cards: due card families first, at most
+// TODAY_REVIEW_SHARE of the session, then new ramp cards and drills of
+// families already met (a drill after every NEW_PER_DRILL new cards). The
+// reviews are one fixed list built when the session starts; the pill shows its
+// length, so every answered review takes the number down by exactly one.
+// Families due beyond the cap stay due and lead the next day's list (most
+// overdue first), and "Keep going" serves them after the session for anyone
+// who wants more. Size and share are learner settings (TODAY_SIZE_KEY,
+// TODAY_REVIEW_SHARE_KEY); these are the defaults and the offered choices.
+export const TODAY_SESSION_SIZE = 20;
+export const TODAY_SESSION_SIZE_CHOICES = [10, 20, 30, 40] as const;
+export const TODAY_REVIEW_SHARE = 0.6;
+export const TODAY_REVIEW_SHARE_CHOICES = [0.4, 0.5, 0.6, 0.7, 0.8] as const;
+export const NEW_PER_DRILL = 3;
+export const TODAY_SIZE_KEY = 'recall-today-size';
+export const TODAY_REVIEW_SHARE_KEY = 'recall-today-review-share';
+// A missed card is asked again once, REASK_SPACING cards later, and at most
 // MAX_REASKS_PER_SESSION times per session, so a run of misses cannot make the
-// list endless. A missed re-ask is not re-asked: it returns as tomorrow's relearn.
+// session endless. A missed re-ask is not re-asked: FSRS brings its family back.
 export const REASK_SPACING = 3;
 export const MAX_REASKS_PER_SESSION = 3;
+
+/** Reviews a session of `size` may hold: the review share, rounded down. */
+export function todayReviewCap(size: number = TODAY_SESSION_SIZE, share: number = TODAY_REVIEW_SHARE): number {
+  return Math.max(0, Math.floor(size * share));
+}
+
+// Card families (utils/familySchedule.ts). A family is one primitive of one
+// topic: the topic plus the card's first concept tag (the topic alone for
+// untagged cards). Each family has one FSRS state (ts-fsrs) instead of every
+// card having its own schedule; a family review serves one of its cards,
+// preferring a type not used last time. Days, not minutes: there are no
+// short-term learning steps, because a miss is already re-asked inside the
+// session and the family is due again the next day.
+export const FSRS_REQUEST_RETENTION = 0.9;
+export const FSRS_MAX_INTERVAL_DAYS = 365;
+// Card difficulty keeps tuning the family: the answered card's FSRS difficulty
+// scales the family's new interval by easeFactor(d) ** FAMILY_EASE_EXPONENT
+// (about 0.63x for the hardest card, 1.58x for the easiest), damped because
+// FSRS already has its own difficulty.
+export const FAMILY_EASE_EXPONENT = 0.5;
+// Load balancing: an interval of at least LOAD_BALANCE_MIN_DAYS may move up
+// to LOAD_BALANCE_SPREAD of its length either way, onto the day with the
+// fewest families already due, so reviews spread over the coming days instead
+// of landing together. Ties keep the day closest to the FSRS interval.
+export const LOAD_BALANCE_MIN_DAYS = 3;
+export const LOAD_BALANCE_SPREAD = 0.15;
+// Storage key and schema version of the family schedule. Bump the version to
+// rebuild every learner's schedule from attemptHistory on next load.
+export const FSRS_STORE_KEY = 'recall-fsrs';
+export const FSRS_STORE_VERSION = 1;
+
+// A topic's ramp (topicRamp): the cards that introduce it, combine and apply
+// it. Every family's first card plus up to RAMP_CARDS_PER_STEP cards of each
+// difficulty x type step, in ramp order (beginner -> advanced, MCQ -> predict
+// -> parsons -> cloze -> coding). The next topic unlocks when every ramp card
+// has been answered and the topic's attempted cards are above
+// UNLOCK_ACCURACY_PCT at their latest answer (updateMasteredTopics); the rest
+// of the topic's cards come as drills and reviews.
+export const RAMP_CARDS_PER_STEP = 2;
 
 // Difficulty weights for the advanced-weighted mastered sampler. ADVANCED
 // dominates; INTERMEDIATE appears occasionally; BEGINNER rarely. Sampling
@@ -307,6 +356,108 @@ export function isMastered(
   );
 }
 
+/** The card family a question belongs to: its topic plus its first concept tag. */
+export function familyOf(q: Pick<Question, 'topic' | 'concepts'>): string {
+  return `${q.topic}/${q.concepts?.[0] ?? '*'}`;
+}
+
+/** Ramp order inside a topic: difficulty first, then type (recognition -> cold write). */
+export const RAMP_DIFFICULTY_ORDER: readonly Difficulty[] = [Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED];
+export const RAMP_TYPE_ORDER: readonly QuestionType[] = [
+  QuestionType.MULTIPLE_CHOICE,
+  QuestionType.PREDICT_OUTPUT,
+  QuestionType.PARSONS,
+  QuestionType.CLOZE_CODE,
+  QuestionType.CODING,
+];
+
+/** Sort key for ramp order; equal keys keep the bank's order (stable sort). */
+export function rampRank(q: Question): number {
+  const d = RAMP_DIFFICULTY_ORDER.indexOf(q.difficulty);
+  const t = RAMP_TYPE_ORDER.indexOf(q.type);
+  return (d < 0 ? 9 : d) * 10 + (t < 0 ? 9 : t);
+}
+
+const rampCache = new Map<string, Question[]>();
+
+/**
+ * A topic's ramp, in ramp order: the first card of every family, plus up to
+ * RAMP_CARDS_PER_STEP cards of every difficulty x type step the topic has.
+ * Small topics are their whole ramp; a 90-card beginner topic is about 20.
+ */
+export function topicRamp(topicQuestions: Question[]): Question[] {
+  if (topicQuestions.length === 0) return [];
+  const key = `${topicQuestions[0].topic}:${topicQuestions.length}:${topicQuestions[0].id}:${topicQuestions[topicQuestions.length - 1].id}`;
+  const cached = rampCache.get(key);
+  if (cached) return cached;
+  const ordered = topicQuestions.map((q, i) => ({ q, i }))
+    .sort((a, b) => rampRank(a.q) - rampRank(b.q) || a.i - b.i)
+    .map(x => x.q);
+  const chosen = new Set<string>();
+  const perStep = new Map<number, number>();
+  const take = (q: Question) => {
+    chosen.add(q.id);
+    perStep.set(rampRank(q), (perStep.get(rampRank(q)) ?? 0) + 1);
+  };
+  const families = new Set<string>();
+  for (const q of ordered) {
+    const f = familyOf(q);
+    if (!families.has(f)) { families.add(f); take(q); }
+  }
+  for (const q of ordered) {
+    if (!chosen.has(q.id) && (perStep.get(rampRank(q)) ?? 0) < RAMP_CARDS_PER_STEP) take(q);
+  }
+  const ramp = ordered.filter(q => chosen.has(q.id));
+  rampCache.set(key, ramp);
+  return ramp;
+}
+
+/**
+ * Topic unlock bar: every ramp card answered, and the topic's attempted cards
+ * above UNLOCK_ACCURACY_PCT at their latest answer (partial credit for hinted
+ * passes). Drills and reviews of the topic's other cards count toward the bar.
+ */
+export function isRampDoneAtBar(topicQuestions: Question[], latestCredit: Map<string, number>): boolean {
+  const ramp = topicRamp(topicQuestions);
+  if (ramp.length === 0 || ramp.some(q => !latestCredit.has(q.id))) return false;
+  let credit = 0;
+  let answered = 0;
+  for (const q of topicQuestions) {
+    const c = latestCredit.get(q.id);
+    if (c === undefined) continue;
+    credit += c;
+    answered++;
+  }
+  return pct(credit, answered) > UNLOCK_ACCURACY_PCT;
+}
+
+/**
+ * The in-topic difficulty gate on the ramp: intermediate opens once the
+ * topic's beginner ramp cards are all answered and its answered beginner cards
+ * are at IN_TOPIC_DIFFICULTY_GATE_PCT or more at their latest answer; advanced
+ * likewise on intermediate. Unlike isDifficultyUnlockedInTopic it does not
+ * wait for every beginner card, only the ramp's.
+ */
+export function isRampDifficultyOpen(
+  topicQuestions: Question[],
+  latest: Map<string, boolean>,
+  difficulty: Difficulty,
+): boolean {
+  if (difficulty === Difficulty.BEGINNER) return true;
+  const prereq = difficulty === Difficulty.INTERMEDIATE ? Difficulty.BEGINNER : Difficulty.INTERMEDIATE;
+  const prereqRamp = topicRamp(topicQuestions).filter(q => q.difficulty === prereq);
+  if (prereqRamp.length === 0) return true;
+  if (prereqRamp.some(q => !latest.has(q.id))) return false;
+  let correct = 0;
+  let answered = 0;
+  for (const q of topicQuestions) {
+    if (q.difficulty !== prereq || !latest.has(q.id)) continue;
+    answered++;
+    if (latest.get(q.id)) correct++;
+  }
+  return pct(correct, answered) >= IN_TOPIC_DIFFICULTY_GATE_PCT;
+}
+
 export class SpacedRepetitionSystem {
   /**
    * Calculate priority score for a question (higher = should be shown sooner)
@@ -386,7 +537,9 @@ export class SpacedRepetitionSystem {
    * topic itself, its unit, and its section (aggregate bars, matching the
    * unlock gates) — and, for any scope now holding full coverage +
    * latest-correct > UNLOCK_ACCURACY_PCT, adds ALL of that scope's member
-   * topics to the set. Mastery is sticky: entries are only ever added.
+   * topics to the set. The topic itself is also granted once its ramp is
+   * done at that bar (isRampDoneAtBar), so the next topic opens without
+   * every card of this one. Mastery is sticky: entries are only ever added.
    * Returns the same Set reference when nothing changed (so React skips the
    * re-render/persist) and a new Set when a scope was newly crossed.
    */
@@ -407,6 +560,13 @@ export class SpacedRepetitionSystem {
       if (keys.every(k => current.has(k))) continue; // scope already granted
       const qs = allQuestions.filter(q => keys.includes(q.topic));
       if (qs.length === 0) continue;
+      // The topic itself opens the next one at ramp done (isRampDoneAtBar);
+      // its unit and section still grant all their members at full coverage.
+      if (keys.length === 1 && keys[0] === answeredTopic && isRampDoneAtBar(qs, latest)) {
+        if (!next) next = new Set(current);
+        next.add(answeredTopic);
+        continue;
+      }
       let covered = true;
       let credit = 0; // fractional: a hinted pass contributes its partial credit
       for (const q of qs) {

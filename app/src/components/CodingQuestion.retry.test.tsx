@@ -123,6 +123,38 @@ describe('tiered coding - retry panel and locked hints', () => {
   });
 });
 
+describe('tiered coding - the first failed submit counts as a miss (decision 7)', () => {
+  it('reports the first failed submit once, keeps retry open, and the pass still records the answer', async () => {
+    const onAnswer = jest.fn();
+    const onFirstMiss = jest.fn();
+    render(
+      <CodingQuestion
+        question={TIERED}
+        onAnswer={onAnswer}
+        onFirstMiss={onFirstMiss}
+        showHints={true}
+        hintCreditSchedule={[1, 0.5, 0.25]}
+      />,
+    );
+    setCode('nonsense unrelated tokens');
+    await clickRun();
+    expect(onFirstMiss).toHaveBeenCalledTimes(1);
+    expect(onFirstMiss).toHaveBeenCalledWith({ hintTierUsed: 0, attempts: 1 });
+    expect(onAnswer).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Try Again/ }));
+    setCode('still wrong tokens');
+    await clickRun();
+    expect(onFirstMiss).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /Try Again/ }));
+    setCode(SOLUTION);
+    await clickRun();
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(true, { hintTierUsed: 0, attempts: 3 });
+  });
+});
+
 describe('tiered coding - escalation then a clean pass', () => {
   it('records the highest hint tier and the attempt count', async () => {
     const onAnswer = jest.fn();

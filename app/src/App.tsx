@@ -9,19 +9,36 @@ import {
   Difficulty,
   MisconceptionStore,
   AnswerMeta,
+  QuestionAttempt,
 } from './types';
 import { questions } from './data/questions';
-import { SpacedRepetitionSystem, RECENT_WINDOW, pct, recentAttempts, ConceptSelectionContext } from './utils/spacedRepetition';
+import {
+  SpacedRepetitionSystem,
+  RECENT_WINDOW,
+  pct,
+  recentAttempts,
+  ConceptSelectionContext,
+  FSRS_STORE_KEY,
+  TODAY_REVIEW_SHARE_KEY,
+  TODAY_SIZE_KEY,
+  UNLOCK_ACCURACY_PCT,
+} from './utils/spacedRepetition';
+import { FsrsStore, loadOrRebuild, recordAttempt } from './utils/familySchedule';
 import { seedMasteredTopics } from './utils/masteryMigration';
 import {
   ReviewSession,
-  isInReviewList,
+  ServedKind,
+  SessionPick,
+  continueSession,
+  familyOf,
   isSessionCurrent,
   recordReviewAnswer,
   reviewsLeft,
   selectSessionQuestion,
   startReviewSession,
 } from './utils/reviewSession';
+import { loadSessionSettings, SessionSummary, TodayCard } from './components/TodayCard';
+import { SessionSettings } from './utils/reviewSession';
 import { applyReview, ConceptProgress, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
 import {
   migrateProgressToConcepts,
@@ -161,6 +178,7 @@ const STORAGE_KEYS = {
   conceptProgress: 'recall-concept-progress',
   cardDifficulty: 'recall-card-difficulty',
   conceptMigrationVersion: 'recall-concept-migration-version',
+  fsrs: FSRS_STORE_KEY,
 };
 
 // Bump when concept tags are added to existing questions, so previously-
@@ -321,6 +339,26 @@ function loadConceptProgress(progress: UserProgress, canWrite: boolean): Concept
   return existing;
 }
 
+const QUESTIONS_BY_ID = new Map(questions.map(q => [q.id, q]));
+
+/**
+ * The card-family schedule (`recall-fsrs`). Rebuilt from attemptHistory when
+ * the key is missing, unreadable, an older schema, or built from a different
+ * history (an import, or another tab's answers); the rebuild is written back
+ * through safeSetItem. The older recall-progress, recall-card-difficulty and
+ * recall-concept-progress keys are kept and still updated, so this change can
+ * be rolled back.
+ */
+function loadFsrsStore(progress: UserProgress, canWrite: boolean): FsrsStore {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEYS.fsrs);
+  } catch { /* unreadable storage: rebuild in memory */ }
+  const { store, rebuilt } = loadOrRebuild(raw, progress, QUESTIONS_BY_ID);
+  if (rebuilt && canWrite) safeSetItem(localStorage, STORAGE_KEYS.fsrs, JSON.stringify(store));
+  return store;
+}
+
 /** Per-card FSRS difficulty (1–10, 0=uninitialized). Persisted alongside concept progress. */
 function loadCardDifficulty(): Record<string, number> {
   try {
@@ -388,6 +426,13 @@ function App() {
     () => loadConceptProgress(initialLoad.progress, !studyWritesBlocked(initialLoad)),
   );
   const [cardDifficulty, setCardDifficulty] = useState<Record<string, number>>(loadCardDifficulty);
+  const [fsrsStore, setFsrsStore] = useState<FsrsStore>(
+    () => loadFsrsStore(initialLoad.progress, !studyWritesBlocked(initialLoad)),
+  );
+  const [sessionSettings, setSessionSettings] = useState(loadSessionSettings);
+  // The card on screen already had its first failed coding submit recorded as
+  // a miss (decision 7); its terminal answer is then a `retry` attempt.
+  const firstMissRecordedRef = useRef<string | null>(null);
 
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [sessionStartTime] = useState(Date.now());
@@ -398,7 +443,7 @@ function App() {
   const [reviewSessions, setReviewSessions] = useState<Partial<Record<Course, ReviewSession>>>({});
   // How the card on screen was served: from today's review list, unseen, or a
   // seen card outside the list (extra practice that does not move the count).
-  const [servedKind, setServedKind] = useState<'review' | 'new' | 'practice'>('new');
+  const [servedKind, setServedKind] = useState<ServedKind>('new');
   // True after a miss put the card back in today's list, until the next card.
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -455,6 +500,7 @@ function App() {
       STORAGE_KEYS.conceptProgress,
       STORAGE_KEYS.cardDifficulty,
       STORAGE_KEYS.misconceptions,
+      STORAGE_KEYS.fsrs,
     ]);
     const onStorage = (e: StorageEvent) => {
       // key === null means another tab cleared storage.
@@ -508,16 +554,14 @@ function App() {
     const existing = reviewSessions[course];
     if (isSessionCurrent(existing)) return existing;
     const pool = questions.filter(q => getCourseForTopic(q.topic) === course);
-    return startReviewSession(pool, progress, cardDifficulty);
-  }, [reviewSessions, progress, cardDifficulty]);
+    return startReviewSession(pool, progress, fsrsStore, cardDifficulty, Date.now(), sessionSettings);
+  }, [reviewSessions, progress, fsrsStore, cardDifficulty, sessionSettings]);
 
   // Put a picked card on screen and remember how it was served, for the pill.
-  const serveQuestion = useCallback((next: Question | null, session: ReviewSession, seen: Set<string>) => {
-    setCurrentQuestion(next);
-    setServedKind(!next ? 'new'
-      : isInReviewList(session, next.id) ? 'review'
-      : seen.has(next.id) ? 'practice'
-      : 'new');
+  const serveQuestion = useCallback((pick: SessionPick | null) => {
+    setCurrentQuestion(pick ? pick.question : null);
+    setServedKind(pick ? pick.kind : 'new');
+    firstMissRecordedRef.current = null;
     setReaskShown(false);
     setQuestionStartTime(Date.now());
     setShowNextButton(false);
@@ -596,6 +640,27 @@ function App() {
     persist(STORAGE_KEYS.cardDifficulty, JSON.stringify(cardDifficulty), 'study');
   }, [cardDifficulty, persist]);
 
+  useEffect(() => {
+    persist(STORAGE_KEYS.fsrs, JSON.stringify(fsrsStore), 'study');
+  }, [fsrsStore, persist]);
+
+  useEffect(() => {
+    persist(TODAY_SIZE_KEY, String(sessionSettings.size), 'ui');
+    persist(TODAY_REVIEW_SHARE_KEY, String(sessionSettings.reviewShare), 'ui');
+  }, [sessionSettings, persist]);
+
+  // New session settings apply at once to a session not yet started (it is
+  // rebuilt); a session already under way keeps its plan until tomorrow.
+  const changeSessionSettings = useCallback((next: SessionSettings) => {
+    setSessionSettings(next);
+    setReviewSessions(prev => {
+      const current = prev[activeCourse];
+      if (!current || current.answered > 0) return prev;
+      const { [activeCourse]: _dropped, ...rest } = prev;
+      return rest;
+    });
+  }, [activeCourse]);
+
   // Concept-aware selection context. Memoized so SpacedRepetitionSystem only
   // sees a new ctx when conceptProgress actually changes. Returns undefined
   // when the feature flag is off → existing legacy selection runs unchanged.
@@ -630,6 +695,7 @@ function App() {
       [STORAGE_KEYS.misconceptions]: JSON.stringify(misconceptions),
       [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
       [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
+      [STORAGE_KEYS.fsrs]: JSON.stringify(fsrsStore),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
       ...Object.fromEntries(STORED_SETTING_KEYS.map(k => [k, localStorage.getItem(k)])),
       ...Object.fromEntries(listBackupKeys(localStorage).filter(isBackupKey).map(k => [k, localStorage.getItem(k)])),
@@ -730,10 +796,10 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filteredQuestions, progress, conceptCtx, selectionPolicy, cardDifficulty);
-    serveQuestion(next, session, progress.questionsAttempted);
+    const next = selectSessionQuestion(session, filteredQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx, selectionPolicy);
+    serveQuestion(next);
     setQuestionLoadCount(c => c + 1);
-  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
+  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
 
   const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters);
@@ -747,9 +813,9 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filtered, progress, conceptCtx, selectionPolicy, cardDifficulty);
-    serveQuestion(next, session, progress.questionsAttempted);
-  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
+    const next = selectSessionQuestion(session, filtered, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx, selectionPolicy);
+    serveQuestion(next);
+  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     applyFiltersAndLoadQuestion(newFilters);
@@ -813,7 +879,10 @@ function App() {
     if (isCorrect) difficultyScore.correct += 1;
     newDifficultyScores.set(currentQuestion.difficulty, difficultyScore);
 
-    const newAttemptHistory = [...progress.attemptHistory, {
+    // After a first failed coding submit was recorded as the miss, this
+    // terminal answer is a retry: it counts for accuracy and coverage but is
+    // not a second review of the card's family.
+    const attempt: QuestionAttempt = {
       questionId: currentQuestion.id,
       timestamp: Date.now(),
       isCorrect,
@@ -821,7 +890,9 @@ function App() {
       timeSpent,
       credit,
       hintTierUsed,
-    }];
+      ...(firstMissRecordedRef.current === currentQuestion.id ? { retry: true } : {}),
+    };
+    const newAttemptHistory = [...progress.attemptHistory, attempt];
 
     const newLastAttempt = new Map(progress.lastAttempt);
     newLastAttempt.set(currentQuestion.id, Date.now());
@@ -847,13 +918,16 @@ function App() {
     };
 
     setProgress(newProgress);
+    const answered = currentQuestion;
+    setFsrsStore(prev => recordAttempt(prev, answered, attempt, newAttemptHistory));
 
-    // Today's review list: an answered list card leaves it (one fewer review),
-    // and a first miss puts it back once, a few cards later ("+1 again").
+    // Today's session: an answered list card leaves the list (one fewer
+    // review), a new card or drill uses a slot, and a first miss comes back
+    // once, a few cards later ("+1 again").
     const answeredCourse = getCourseForTopic(currentQuestion.topic);
     const session = reviewSessions[answeredCourse];
     if (session) {
-      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect);
+      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect, servedKind, familyOf(currentQuestion));
       setReviewSessions(prev => ({ ...prev, [answeredCourse]: result.session }));
       setReaskShown(result.requeued);
     }
@@ -910,7 +984,33 @@ function App() {
     }
   };
 
-  const startQuiz = (course?: Course) => {
+  // Decision 7: the first failed submit of a coding card is recorded as a miss
+  // for scheduling (its family is due again tomorrow) while the learner can
+  // still retry on screen. Recorded once per showing.
+  const handleFirstMiss = (meta?: AnswerMeta) => {
+    if (!currentQuestion || firstMissRecordedRef.current === currentQuestion.id) return;
+    firstMissRecordedRef.current = currentQuestion.id;
+    const now = Date.now();
+    const attempt: QuestionAttempt = {
+      questionId: currentQuestion.id,
+      timestamp: now,
+      isCorrect: false,
+      attempts: 1,
+      timeSpent: now - questionStartTime,
+      credit: 0,
+      hintTierUsed: meta?.hintTierUsed ?? 0,
+    };
+    const attemptHistory = [...progress.attemptHistory, attempt];
+    const questionsAttempted = new Set(progress.questionsAttempted);
+    questionsAttempted.add(currentQuestion.id);
+    const lastAttempt = new Map(progress.lastAttempt);
+    lastAttempt.set(currentQuestion.id, now);
+    setProgress({ ...progress, attemptHistory, questionsAttempted, lastAttempt });
+    const missed = currentQuestion;
+    setFsrsStore(prev => recordAttempt(prev, missed, attempt, attemptHistory));
+  };
+
+  const startQuiz = (course?: Course, keepGoing = false) => {
     const targetCourse = course || activeCourse;
     if (course) {
       setActiveCourse(course);
@@ -926,17 +1026,29 @@ function App() {
     // updated yet for this render either.
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
     const targetPolicy = getSelectionPolicy(targetCourse);
-    const session = reviewSessionFor(targetCourse);
+    const built = reviewSessionFor(targetCourse);
+    const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
     if (session !== reviewSessions[targetCourse]) {
       setReviewSessions(prev => ({ ...prev, [targetCourse]: session }));
     }
-    const next = selectSessionQuestion(session, pool, progress, conceptCtx, targetPolicy, cardDifficulty);
-    serveQuestion(next, session, progress.questionsAttempted);
+    const next = selectSessionQuestion(session, pool, pool, progress, fsrsStore, cardDifficulty, conceptCtx, targetPolicy);
+    serveQuestion(next);
     changeView('quiz');
     setSessionStats({ answered: 0, correct: 0 });
   };
 
   const renderQuestion = () => {
+    const todaySession = reviewSessions[activeCourse];
+    if (!currentQuestion && todaySession && getFilteredQuestions().length === courseQuestions.length) {
+      // The bounded session is over (or nothing in it is left to serve).
+      return (
+        <SessionSummary
+          session={todaySession}
+          onKeepGoing={() => startQuiz(activeCourse, true)}
+          onHome={() => changeView('home')}
+        />
+      );
+    }
     if (!currentQuestion) {
       // selectNextQuestion returned null — the unlocked pool is empty under
       // current filters. Tell the user clearly and offer a way out.
@@ -1007,6 +1119,7 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
+          onFirstMiss={handleFirstMiss}
           onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
           hintCreditSchedule={SpacedRepetitionSystem.getHintCreditSchedule(
@@ -1598,6 +1711,21 @@ function App() {
                       </section>
                     )}
 
+                    <TodayCard
+                      session={reviewSessionNow}
+                      settings={sessionSettings}
+                      courseLabel={meta.label}
+                      nextTopic={(() => {
+                        if (!current) return null;
+                        const unit = getSectionUnits(current.name)
+                          .find(([, keys]) => keys.some(k => !progress.masteredTopics.has(k)));
+                        return unit ? unit[0] : null;
+                      })()}
+                      onSettingsChange={changeSessionSettings}
+                      onStart={() => startQuiz(activeCourse)}
+                      onKeepGoing={() => startQuiz(activeCourse, true)}
+                    />
+
                     {/* Course-specific hero */}
                     <section
                       className="course-hero"
@@ -1656,7 +1784,7 @@ function App() {
                         <div className="hero-locked-hint">
                           <Lock size={13} />
                           <span>
-                            <strong>{nextLocked.name}</strong> unlocks once {current ? current.name : 'the current section'} reaches 100% coverage and 80%+ recent accuracy.
+                            <strong>{nextLocked.name}</strong> unlocks once each topic of {current ? current.name : 'the current section'} has its ramp done above {UNLOCK_ACCURACY_PCT}% accuracy.
                           </span>
                         </div>
                       )}
@@ -1795,11 +1923,22 @@ function App() {
                       servedKind === 'review'
                         ? 'A review from today\'s list.'
                         : servedKind === 'new'
-                        ? 'First time seeing this question.'
-                        : 'Extra practice on a card you have seen. It is not in today\'s review list, so the count does not change.'
+                        ? 'First time seeing this question: the next step of the topic\'s ramp.'
+                        : servedKind === 'drill'
+                        ? 'Practice on something you have already met. It is not in today\'s review list, so the count does not change.'
+                        : 'Extra practice under your filters. It is not in today\'s review list, so the count does not change.'
                     }
                   >
                     {servedKind === 'review' ? 'Review' : servedKind === 'new' ? 'New' : 'Practice'}
+                  </span>
+                  <span
+                    className="mode-pill mode-pill-today"
+                    title={reviewSessionNow.keepGoing
+                      ? 'Past today\'s session: keep going for as long as you like.'
+                      : `Today's session: ${reviewSessionNow.answered} of ${reviewSessionNow.size} answered. A missed card asked again adds one.`}
+                  >
+                    {reviewSessionNow.keepGoing ? 'Keep going' : 'Today'}
+                    <span className="mode-pill-count">{reviewSessionNow.answered}{reviewSessionNow.keepGoing ? '' : `/${reviewSessionNow.size}`}</span>
                   </span>
                   <span
                     className={`review-count-pill${reviewsLeftToday === 0 ? ' review-count-pill-done' : ''}`}
