@@ -162,6 +162,19 @@ export const MASTERED_RESURFACE_FLOOR_FRACTION = 0.20;
 // early interleave. Due, missed and drain cards are never resting.
 export const WELL_KNOWN_STREAK = MASTERY_EXPERT_STREAK;
 
+// Reviews left today (utils/reviewSession.ts). At session start one fixed list
+// is built: missed cards past their relearn interval plus due cards in unlocked
+// topics, every type, most urgent first, capped at REVIEWS_PER_DAY. The session
+// serves that list before new content and the pill shows its length, so every
+// answered review takes the number down by exactly one. Cards that fall due
+// mid-session wait for the next session.
+export const REVIEWS_PER_DAY = 60;
+// A missed review is asked again once, REASK_SPACING cards later, and at most
+// MAX_REASKS_PER_SESSION times per session, so a run of misses cannot make the
+// list endless. A missed re-ask is not re-asked: it returns as tomorrow's relearn.
+export const REASK_SPACING = 3;
+export const MAX_REASKS_PER_SESSION = 3;
+
 // Difficulty weights for the advanced-weighted mastered sampler. ADVANCED
 // dominates; INTERMEDIATE appears occasionally; BEGINNER rarely. Sampling
 // (not hard-filtering) means a mastered topic with no advanced cards still
@@ -520,8 +533,9 @@ export class SpacedRepetitionSystem {
 
   /**
    * Drain queue size — the single source of truth shared by the reviews-first
-   * gate (hasPendingDrain) and the UI pill (getReviewStatus.drainQueueCount),
-   * so the two can never disagree. Membership is one rule:
+   * gate (hasPendingDrain) and getReviewStatus.drainQueueCount, so the two can
+   * never disagree. (The learner-facing count is reviewSession's "reviews left
+   * today" list, which covers every type, not just drain cards.) Membership is one rule:
    *   topic mastered (sticky) AND isDrainCard AND (latest attempt wrong OR
    *   due by its spacing interval).
    * A failed drain card therefore stays in the queue — regardless of how many
@@ -675,8 +689,11 @@ export class SpacedRepetitionSystem {
   }
 
   /**
-   * Lightweight, read-only snapshot of what selectNextQuestion is currently
-   * doing — for a UI mode indicator. Mirrors the same drain-first logic:
+   * Lightweight, read-only snapshot of what selectNextQuestion's drain gate is
+   * doing, used by the tests and simulations to watch the drain. It is not the
+   * learner-facing count: that is reviewSession's "reviews left today" list,
+   * because the session also serves relearns and due cards of every type,
+   * which this count leaves out. Mirrors the same drain-first logic:
    *   - `drain`  : a mastered-topic CODING+ADVANCED backlog is due (anywhere,
    *                mid-topic included) → the hard gate is active.
    *   - `new`    : not draining and unseen content remains → learning a topic.
@@ -1031,33 +1048,6 @@ export class SpacedRepetitionSystem {
     if (ds.length === 0) return null;
     const avg = ds.reduce((s, d) => s + d, 0) / ds.length;
     return { avg, label: avg < 4 ? 'easy' : avg > 7 ? 'hard' : 'medium' };
-  }
-
-  /**
-   * How many review cards are DUE in a single topic, for the breadcrumb pill's
-   * count. Scoped to the current topic (not the global drain backlog): 0 until
-   * the topic is mastered, then it rises as that topic's cards age past their
-   * (difficulty-scaled) review interval. A topic still being learned/in-review
-   * is not mastered → 0, so the badge stays hidden while you work through new
-   * material and only appears once a finished topic actually has reviews due.
-   */
-  static getTopicDueReviewCount(
-    topicQuestions: Question[],
-    progress: UserProgress,
-    cardDifficulty: Record<string, number> = {},
-  ): number {
-    if (topicQuestions.length === 0) return 0;
-    if (!this.isTopicMastered(progress, topicQuestions)) return 0;
-    const now = Date.now();
-    let n = 0;
-    for (const q of topicQuestions) {
-      const last = progress.lastAttempt.get(q.id) ?? 0;
-      if (last > 0
-        && (now - last) / MS_PER_DAY >= this.getEffectiveInterval(q.id, progress, cardDifficulty)) {
-        n++;
-      }
-    }
-    return n;
   }
 
   /**
