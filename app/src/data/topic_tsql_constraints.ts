@@ -176,4 +176,24 @@ CREATE TABLE dbo.FactOrders (
     hints: ['Inline: PRIMARY KEY, UNIQUE, DEFAULT, NOT NULL', 'Named table-level: FOREIGN KEY … REFERENCES … ON DELETE CASCADE, and CHECK (…)'],
     tags: ['tsql', 'constraints', 'foreign-key', 'check', 'unique'],
   },
+  {
+    id: 'tsql-constraints-check-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_CONSTRAINTS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'An INSERT that breaks a constraint is rejected and adds no row; the next statement still runs. What single number does the final SELECT return?',
+    code: `CREATE TABLE #Payment (
+    PaymentId INT PRIMARY KEY,
+    Amount    INT NULL CHECK (Amount >= 0)
+);
+INSERT INTO #Payment VALUES (1, 40);
+INSERT INTO #Payment VALUES (2, NULL);
+SELECT COUNT(*) FROM #Payment;`,
+    expectedOutput: `2`,
+    explanation: 'A `CHECK` constraint rejects a row only when its condition is false. For the NULL Amount, `NULL >= 0` is unknown, not false, so the row is accepted and both rows are stored. To also forbid missing values, declare the column `NOT NULL` next to the `CHECK`.',
+    hints: ['CHECK rejects only a false condition', 'NULL >= 0 is unknown, not false'],
+    tags: ['tsql', 'constraints', 'check', 'null', 'predict'],
+  },
 ];

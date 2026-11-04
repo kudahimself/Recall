@@ -217,4 +217,23 @@ WHERE OrderDate ____ ____;`,
     hints: ['The INTO clause goes between SELECT list and FROM', 'Filter with WHERE OrderDate >= the date literal'],
     tags: ['tsql', 'ddl', 'select-into', 'staging'],
   },
+  {
+    id: 'tsql-ddl-alter-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_DDL_TABLES,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The table already holds one row when the column is added. What single value does the final SELECT return? Write just the value; write a missing value as NULL.',
+    code: `CREATE TABLE #Product (ProductKey INT, ProductName NVARCHAR(50));
+INSERT INTO #Product VALUES (1, N'Desk Lamp');
+ALTER TABLE #Product ADD Color NVARCHAR(20) NULL;
+GO
+SELECT Color FROM #Product WHERE ProductKey = 1;`,
+    expectedOutput: `NULL`,
+    acceptableOutputs: ['null', 'Null'],
+    explanation: '`ALTER TABLE ... ADD` a nullable column with no `DEFAULT` gives every existing row NULL in the new column. It does not fill in an empty string or 0, and it does not fail because rows already exist. Adding a `NOT NULL` column to a table that has rows needs a `DEFAULT` so the existing rows get a value.',
+    hints: ['A new nullable column has no value for the rows already in the table', 'No DEFAULT means the existing rows hold NULL'],
+    tags: ['tsql', 'ddl', 'alter-table', 'null', 'predict'],
+  },
 ];

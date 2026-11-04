@@ -89,4 +89,19 @@ CREATE TABLE dbo.FactSale (
     hints: ['Exact money → DECIMAL; modern timestamp → DATETIME2; flag → BIT'],
     tags: ['tsql', 'types', 'cloze'],
   },
+  {
+    id: 'tsql-types-decimal-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_TYPES,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'What single value does this return? Write just the number, with as many decimal places as the type keeps.',
+    code: `DECLARE @Price DECIMAL(6, 2) = 12.347;
+SELECT @Price;`,
+    expectedOutput: `12.35`,
+    explanation: '`DECIMAL(6, 2)` keeps exactly 2 digits after the point, so the value 12.347 is rounded to fit: 12.35. It is rounded, not cut off (that would give 12.34), and the third decimal is not kept. Pick the scale `s` in `DECIMAL(p, s)` for the precision the data really needs, such as 2 for cents.',
+    hints: ['The scale (the second number) is how many decimal places are stored', 'Extra decimals are rounded, not truncated'],
+    tags: ['tsql', 'types', 'decimal', 'rounding', 'predict'],
+  },
 ];
