@@ -222,14 +222,17 @@ export const LOAD_BALANCE_SPREAD = 0.15;
 // rebuild every learner's schedule from attemptHistory on next load.
 export const FSRS_STORE_KEY = 'recall-fsrs';
 export const FSRS_STORE_VERSION = 1;
+// Storage key of lesson progress (utils/lessons): { [lessonId]: completedAt }.
+export const LESSONS_KEY = 'recall-lessons';
 
 // A topic's ramp (topicRamp): the cards that introduce it, combine and apply
 // it. Every family's first card plus up to RAMP_CARDS_PER_STEP cards of each
 // difficulty x type step, in ramp order (beginner -> advanced, MCQ -> predict
-// -> parsons -> cloze -> coding). The next topic unlocks when every ramp card
-// has been answered and the topic's attempted cards are above
-// UNLOCK_ACCURACY_PCT at their latest answer (updateMasteredTopics); the rest
-// of the topic's cards come as drills and reviews.
+// -> parsons -> cloze -> coding). The next topic unlocks when the topic's
+// lesson is met (utils/lessons), every ramp card has been answered and the
+// topic's attempted cards are above UNLOCK_ACCURACY_PCT at their latest
+// answer (updateMasteredTopics); the rest of the topic's cards come as drills
+// and reviews.
 export const RAMP_CARDS_PER_STEP = 2;
 
 // Difficulty weights for the advanced-weighted mastered sampler. ADVANCED
@@ -546,8 +549,10 @@ export class SpacedRepetitionSystem {
    * unlock gates) — and, for any scope now holding full coverage +
    * latest-correct > UNLOCK_ACCURACY_PCT, adds ALL of that scope's member
    * topics to the set. The topic itself is also granted once its ramp is
-   * done at that bar (isRampDoneAtBar), so the next topic opens without
-   * every card of this one. Mastery is sticky: entries are only ever added.
+   * done at that bar (isRampDoneAtBar) and its lesson met (`lessonMet`,
+   * utils/lessons isTopicLessonMet; a topic without a lesson always passes),
+   * so the next topic opens without every card of this one. Mastery is
+   * sticky: entries are only ever added.
    * Returns the same Set reference when nothing changed (so React skips the
    * re-render/persist) and a new Set when a scope was newly crossed.
    */
@@ -555,6 +560,7 @@ export class SpacedRepetitionSystem {
     progress: UserProgress,
     answeredTopic: string,
     allQuestions: Question[],
+    lessonMet: (topic: string) => boolean = () => true,
   ): Set<string> {
     const current = progress.masteredTopics;
     const scopes: string[][] = [[answeredTopic]];
@@ -568,9 +574,10 @@ export class SpacedRepetitionSystem {
       if (keys.every(k => current.has(k))) continue; // scope already granted
       const qs = allQuestions.filter(q => keys.includes(q.topic));
       if (qs.length === 0) continue;
-      // The topic itself opens the next one at ramp done (isRampDoneAtBar);
-      // its unit and section still grant all their members at full coverage.
-      if (keys.length === 1 && keys[0] === answeredTopic && isRampDoneAtBar(qs, latest)) {
+      // The topic itself opens the next one once its lesson is met and its
+      // ramp is done at the bar; its unit and section still grant all their
+      // members at full coverage.
+      if (keys.length === 1 && keys[0] === answeredTopic && lessonMet(answeredTopic) && isRampDoneAtBar(qs, latest)) {
         if (!next) next = new Set(current);
         next.add(answeredTopic);
         continue;

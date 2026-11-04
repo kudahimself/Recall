@@ -7,6 +7,7 @@ Question construction workflow and question writing quality standards live in sk
 - `/add-question` - guided question authoring workflow
 - `/construct-topic` - build/audit a topic's full ramp (primitive inventory, type matrix, wiring)
 - `/write-questions` - pedagogical quality rubric per question type (predict/cloze/parsons/coding)
+- `/write-lesson` - draft a topic's lesson (rule card, worked example, exercises) and check it with `check-lessons.js`
 - `/write-hints` - author the two-tier hint scaffold (apiSignature + skeleton) for coding questions
 - `/preview-questions` - live preview + computed-style grading rules for Web Dev HTML/CSS/Tailwind questions (previewHtml/previewChecks)
 - `/audit-questions` - quality review across topic/course (mechanical: leaks, parity, reserved words)

@@ -49,5 +49,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "sql.js": "1.15.1",
+    "sucrase": "3.35.1"
   }
 }

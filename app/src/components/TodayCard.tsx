@@ -69,12 +69,14 @@ interface TodayCardProps {
   settings: SessionSettings;
   courseLabel: string;
   nextTopic: string | null;
+  /** The next lesson the session will open, when the course has one waiting. */
+  nextLesson?: { title: string; exercises: number } | null;
   onSettingsChange: (next: SessionSettings) => void;
   onStart: () => void;
   onKeepGoing: () => void;
 }
 
-export function TodayCard({ session, settings, courseLabel, nextTopic, onSettingsChange, onStart, onKeepGoing }: TodayCardProps) {
+export function TodayCard({ session, settings, courseLabel, nextTopic, nextLesson, onSettingsChange, onStart, onKeepGoing }: TodayCardProps) {
   const done = isSessionDone(session);
   const reviews = session.queue.length;
   const started = session.answered > 0;
@@ -89,7 +91,9 @@ export function TodayCard({ session, settings, courseLabel, nextTopic, onSetting
       <p className="today-lede">
         {done
           ? `${session.answered} answered, ${session.tally.correct} right. Reviews are cleared; what comes due next waits for tomorrow.`
-          : <>{session.size} questions: due reviews first (up to {cap}), then new questions{nextTopic ? <> from <strong>{nextTopic}</strong></> : null} and practice on what you have met.</>}
+          : nextLesson
+            ? <>{session.size} questions: due reviews first (up to {cap}), then your next lesson, <strong>{nextLesson.title}</strong> (its rule card and {nextLesson.exercises} exercises), new questions and practice on what you have met.</>
+            : <>{session.size} questions: due reviews first (up to {cap}), then new questions{nextTopic ? <> from <strong>{nextTopic}</strong></> : null} and practice on what you have met.</>}
       </p>
       <div className="today-stats">
         <div className="today-stat">

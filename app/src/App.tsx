@@ -23,6 +23,7 @@ import {
   TODAY_SESSION_KEY,
   TODAY_SIZE_KEY,
   UNLOCK_ACCURACY_PCT,
+  LESSONS_KEY,
 } from './utils/spacedRepetition';
 import { FsrsStore, loadOrRebuild, recordAttempt, replayHistory } from './utils/familySchedule';
 import { seedMasteredTopics } from './utils/masteryMigration';
@@ -41,6 +42,20 @@ import {
   startReviewSession,
 } from './utils/reviewSession';
 import { loadSessionSettings, SessionSummary, TodayCard } from './components/TodayCard';
+import { LessonSteps, RuleCardOverlay, RuleCardPanel, RuleCardView } from './components/RuleCard';
+import { TopicLessons } from './components/TopicLessons';
+import {
+  LessonsDone,
+  getLesson,
+  isTopicLessonMet,
+  lessonContext,
+  lessonGateFor,
+  lessonsForTopic,
+  nextLessonExercise,
+  parseLessonsDone,
+  rampAfterLessonNote,
+  topicSteps,
+} from './utils/lessons';
 import { SessionSettings } from './utils/reviewSession';
 import { applyReview, ConceptProgress, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
 import {
@@ -182,6 +197,7 @@ const STORAGE_KEYS = {
   conceptMigrationVersion: 'recall-concept-migration-version',
   fsrs: FSRS_STORE_KEY,
   todaySession: TODAY_SESSION_KEY,
+  lessons: LESSONS_KEY,
 };
 
 // Bump when concept tags are added to existing questions, so previously-
@@ -371,6 +387,22 @@ function loadTodaySessions(): Partial<Record<Course, ReviewSession>> {
   }
 }
 
+/** Completed lessons (`recall-lessons`); unreadable text gives none, and credit from history still applies. */
+function loadLessonsDone(): LessonsDone {
+  try {
+    return parseLessonsDone(localStorage.getItem(STORAGE_KEYS.lessons));
+  } catch {
+    return {};
+  }
+}
+
+/** A lesson in progress: its rule card on screen, or its exercises being served in order. */
+interface LessonFlow {
+  lessonId: string;
+  course: Course;
+  stage: 'card' | 'exercise';
+}
+
 /** Per-card FSRS difficulty (1–10, 0=uninitialized). Persisted alongside concept progress. */
 function loadCardDifficulty(): Record<string, number> {
   try {
@@ -442,6 +474,13 @@ function App() {
     () => loadFsrsStore(initialLoad.progress, !studyWritesBlocked(initialLoad)),
   );
   const [sessionSettings, setSessionSettings] = useState(loadSessionSettings);
+  // Lessons (utils/lessons): completed lessons, the lesson in progress, the
+  // rule card reopened in full (R), and whether the side panel is hidden.
+  const [initialLessonsDone] = useState<LessonsDone>(loadLessonsDone);
+  const [lessonsDone, setLessonsDone] = useState<LessonsDone>(initialLessonsDone);
+  const [lessonFlow, setLessonFlow] = useState<LessonFlow | null>(null);
+  const [ruleCardOpen, setRuleCardOpen] = useState<string | null>(null);
+  const [rulePanelHidden, setRulePanelHidden] = useState(false);
   // The card on screen already had its first failed coding submit recorded as
   // a miss (decision 7); its terminal answer is then a `retry` attempt.
   const firstMissRecordedRef = useRef<string | null>(null);
@@ -513,6 +552,7 @@ function App() {
       STORAGE_KEYS.cardDifficulty,
       STORAGE_KEYS.misconceptions,
       STORAGE_KEYS.fsrs,
+      STORAGE_KEYS.lessons,
     ]);
     const onStorage = (e: StorageEvent) => {
       // key === null means another tab cleared storage.
@@ -581,6 +621,36 @@ function App() {
     setQuestionStartTime(Date.now());
     setShowNextButton(false);
   }, []);
+
+  // The lesson gate (utils/lessons). A lesson in progress serves its rule card,
+  // then its next unanswered exercise, before anything else. Otherwise an
+  // unseen card whose topic's lesson is not met opens that lesson's rule card
+  // instead; the card itself is left for the session to serve again after the
+  // lesson. Exercises are answered through handleAnswer like any new card.
+  const serveWithLessons = useCallback((pick: SessionPick | null, course: Course, flow: LessonFlow | null) => {
+    const lesson = flow && flow.course === course ? getLesson(flow.lessonId) : undefined;
+    if (flow && lesson) {
+      if (flow.stage === 'card') {
+        setLessonFlow(flow);
+        serveQuestion(null);
+        return;
+      }
+      const exercise = nextLessonExercise(lesson, progress.questionsAttempted, QUESTIONS_BY_ID);
+      if (exercise) {
+        setLessonFlow(flow);
+        serveQuestion({ question: exercise, kind: 'new' });
+        return;
+      }
+    }
+    const gate = pick ? lessonGateFor(pick.question, lessonsDone, progress.questionsAttempted) : null;
+    if (gate) {
+      setLessonFlow({ lessonId: gate.id, course, stage: 'card' });
+      serveQuestion(null);
+      return;
+    }
+    setLessonFlow(null);
+    serveQuestion(pick);
+  }, [serveQuestion, progress.questionsAttempted, lessonsDone]);
 
   // Count only seen questions that still exist (excludes deleted variation IDs from localStorage)
   const validSeenCount = useMemo(() => {
@@ -663,6 +733,12 @@ function App() {
     persist(STORAGE_KEYS.todaySession, serializeSessions(reviewSessions), 'session');
   }, [reviewSessions, persist]);
 
+  // Save completed lessons; not for the state just read, so opening the app writes nothing.
+  useEffect(() => {
+    if (lessonsDone === initialLessonsDone) return;
+    persist(STORAGE_KEYS.lessons, JSON.stringify(lessonsDone), 'study');
+  }, [lessonsDone, initialLessonsDone, persist]);
+
   useEffect(() => {
     persist(TODAY_SIZE_KEY, String(sessionSettings.size), 'ui');
     persist(TODAY_REVIEW_SHARE_KEY, String(sessionSettings.reviewShare), 'ui');
@@ -708,6 +784,10 @@ function App() {
       [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
       [STORAGE_KEYS.fsrs]: JSON.stringify(fsrsStore),
       [STORAGE_KEYS.todaySession]: serializeSessions(reviewSessions),
+      // Unchanged since load: exactly what is stored (nothing, for a learner without lessons yet).
+      [STORAGE_KEYS.lessons]: lessonsDone === initialLessonsDone
+        ? localStorage.getItem(STORAGE_KEYS.lessons)
+        : JSON.stringify(lessonsDone),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
       ...Object.fromEntries(STORED_SETTING_KEYS.map(k => [k, localStorage.getItem(k)])),
       ...Object.fromEntries(listBackupKeys(localStorage).filter(isBackupKey).map(k => [k, localStorage.getItem(k)])),
@@ -809,9 +889,9 @@ function App() {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
     const next = selectSessionQuestion(session, filteredQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
-    serveQuestion(next);
+    serveWithLessons(next, activeCourse, lessonFlow);
     setQuestionLoadCount(c => c + 1);
-  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, cardDifficulty, serveQuestion]);
+  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons, lessonFlow]);
 
   const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters);
@@ -826,8 +906,9 @@ function App() {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
     const next = selectSessionQuestion(session, filtered, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
-    serveQuestion(next);
-  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, cardDifficulty, serveQuestion]);
+    // New filters end a lesson in progress; the gate still applies to what they serve.
+    serveWithLessons(next, activeCourse, null);
+  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     applyFiltersAndLoadQuestion(newFilters);
@@ -912,10 +993,12 @@ function App() {
     // Grant sticky mastery for any unlock scope this answer just completed.
     // Computed against the new history so this answer counts; the set only
     // ever grows, so a same-reference return means nothing changed.
+    // The topic opens the next one only once its lesson is met as well.
     const newMasteredTopics = SpacedRepetitionSystem.updateMasteredTopics(
       { ...progress, attemptHistory: newAttemptHistory },
       currentQuestion.topic,
       questions,
+      topic => isTopicLessonMet(topic, lessonsDone, newQuestionsAttempted),
     );
 
     const newProgress: UserProgress = {
@@ -932,6 +1015,14 @@ function App() {
     setProgress(newProgress);
     const answered = currentQuestion;
     setFsrsStore(prev => recordAttempt(prev, answered, attempt, newAttemptHistory));
+
+    // The lesson in progress is complete once its last exercise is answered.
+    const flowLesson = lessonFlow?.stage === 'exercise' ? getLesson(lessonFlow.lessonId) : undefined;
+    if (flowLesson && flowLesson.exercises.includes(answered.id)
+      && !nextLessonExercise(flowLesson, newQuestionsAttempted, QUESTIONS_BY_ID)) {
+      const completedAt = Date.now();
+      setLessonsDone(prev => (prev[flowLesson.id] !== undefined ? prev : { ...prev, [flowLesson.id]: completedAt }));
+    }
 
     // Today's session: an answered list card leaves the list (one fewer
     // review), a new card or drill uses a slot, and a first miss comes back
@@ -1041,12 +1132,46 @@ function App() {
       setReviewSessions(prev => ({ ...prev, [targetCourse]: session }));
     }
     const next = selectSessionQuestion(session, pool, pool, progress, fsrsStore, cardDifficulty, conceptCtx);
-    serveQuestion(next);
+    serveWithLessons(next, targetCourse, lessonFlow);
     changeView('quiz');
     setSessionStats({ answered: 0, correct: 0 });
   };
 
+  // "Start lesson" on the learning path: the lesson's rule card, then its exercises.
+  const startLesson = (lessonId: string) => {
+    const session = reviewSessionFor(activeCourse);
+    if (session !== reviewSessions[activeCourse]) {
+      setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
+    }
+    setFilters({
+      topics: Object.values(Topic),
+      difficulties: Object.values(Difficulty),
+      questionTypes: Object.values(QuestionType),
+    });
+    serveWithLessons(null, activeCourse, { lessonId, course: activeCourse, stage: 'card' });
+    changeView('quiz');
+  };
+
+  // "Try the exercises" on the rule card.
+  const startLessonExercises = useCallback(() => {
+    if (!lessonFlow || lessonFlow.stage !== 'card') return;
+    serveWithLessons(null, lessonFlow.course, { ...lessonFlow, stage: 'exercise' });
+    setQuestionLoadCount(c => c + 1);
+  }, [lessonFlow, serveWithLessons]);
+
   const renderQuestion = () => {
+    const flowLesson = lessonFlow && lessonFlow.course === activeCourse ? getLesson(lessonFlow.lessonId) : undefined;
+    if (!currentQuestion && flowLesson && lessonFlow?.stage === 'card') {
+      return (
+        <RuleCardView
+          lesson={flowLesson}
+          byId={QUESTIONS_BY_ID}
+          context={lessonContext(flowLesson, courseQuestions, lessonsDone, progress.questionsAttempted)}
+          mode="lesson"
+          onStart={startLessonExercises}
+        />
+      );
+    }
     const todaySession = reviewSessions[activeCourse];
     if (!currentQuestion && todaySession && getFilteredQuestions().length === courseQuestions.length) {
       // The bounded session is over (or nothing in it is left to serve).
@@ -1236,6 +1361,12 @@ function App() {
       setMisconceptions(prev => ({
         events: prev.events.filter(e => !courseQuestionIds.has(e.questionId)),
       }));
+      // The course's completed lessons go too, so its rule cards are taught again.
+      setLessonsDone(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => {
+        const lesson = getLesson(id);
+        return !lesson || !lesson.topicKeys.some(t => courseTopics.has(t));
+      })));
+      setLessonFlow(null);
       setSessionStats({ answered: 0, correct: 0 });
     }
   };
@@ -1285,6 +1416,42 @@ function App() {
     [reviewSessionFor, activeCourse, viewMode],
   );
   const reviewsLeftToday = reviewsLeft(reviewSessionNow);
+
+  // The rule card that belongs to the screen: the lesson in progress while its
+  // exercises are served, else the lesson of the topic of the card on screen.
+  const flowLesson = lessonFlow && lessonFlow.course === activeCourse ? getLesson(lessonFlow.lessonId) : undefined;
+  const inLessonExercise = !!flowLesson && lessonFlow?.stage === 'exercise'
+    && !!currentQuestion && flowLesson.exercises.includes(currentQuestion.id);
+  const screenLesson = inLessonExercise ? flowLesson : currentQuestion ? lessonsForTopic(currentQuestion.topic)[0] : undefined;
+  const showRulePanel = viewMode === 'quiz' && !!currentQuestion && !!screenLesson && !rulePanelHidden;
+  const latestAnswers = useMemo(() => SpacedRepetitionSystem.latestCorrectness(progress), [progress]);
+
+  // R reopens the rule card in full (not while typing an answer), Esc closes
+  // it, and Enter on a lesson's first rule card starts its exercises.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'Escape' && ruleCardOpen) {
+        setRuleCardOpen(null);
+        return;
+      }
+      const t = e.target instanceof HTMLElement ? e.target : null;
+      const typing = !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || !!t.closest('.monaco-editor'));
+      if (typing) return;
+      if (e.key === 'r' || e.key === 'R') {
+        if (ruleCardOpen) setRuleCardOpen(null);
+        else if (viewMode === 'quiz' && (screenLesson || flowLesson)) setRuleCardOpen((screenLesson ?? flowLesson)!.id);
+        return;
+      }
+      if (e.key === 'Enter' && !ruleCardOpen && viewMode === 'quiz' && lessonFlow?.stage === 'card' && !currentQuestion
+        && t?.tagName !== 'BUTTON') {
+        e.preventDefault();
+        startLessonExercises();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ruleCardOpen, viewMode, screenLesson, flowLesson, lessonFlow, currentQuestion, startLessonExercises]);
 
   // Per-topic measured difficulty (avg auto-graded FSRS difficulty of its drain
   // cards) → easy/medium/hard label for the current topic. Null until graded.
@@ -1382,6 +1549,7 @@ function App() {
         recentPct: number;
         unlocked: boolean;
         coveragePct: number;
+        steps: ReturnType<typeof topicSteps>;
       }>;
     };
 
@@ -1436,6 +1604,7 @@ function App() {
           recentPct: unitRecentPct,
           unlocked: unitUnlocked,
           coveragePct: unitCoverage,
+          steps: topicSteps(topicKeys, courseQuestions, progress, fsrsStore, lessonsDone),
         };
       });
 
@@ -1460,9 +1629,13 @@ function App() {
 
     const currentSection = rows.find(r => r.status === 'current');
     const nextLocked = rows.find(r => r.status === 'locked');
+    // The next lesson to take: the first open topic whose lesson is not met.
+    const nextLessonUnit = rows.flatMap(r => r.status === 'locked' ? [] : r.units)
+      .find(u => u.unlocked && u.steps.lesson && !u.steps.lessonMet);
+    const nextLesson = nextLessonUnit?.steps.lesson ?? null;
 
-    return { rows, currentSection, nextLocked };
-  }, [activeCourse, courseQuestions, progress]);
+    return { rows, currentSection, nextLocked, nextLesson };
+  }, [activeCourse, courseQuestions, progress, fsrsStore, lessonsDone]);
 
   const isReturningUser = profile.totalSessions > 1 || progress.questionsAttempted.size > 0;
 
@@ -1735,6 +1908,9 @@ function App() {
                           .find(([, keys]) => keys.some(k => !progress.masteredTopics.has(k)));
                         return unit ? unit[0] : null;
                       })()}
+                      nextLesson={coursePath.nextLesson
+                        ? { title: coursePath.nextLesson.title, exercises: coursePath.nextLesson.exercises.length }
+                        : null}
                       onSettingsChange={changeSessionSettings}
                       onStart={() => startQuiz(activeCourse)}
                       onKeepGoing={() => startQuiz(activeCourse, true)}
@@ -1876,7 +2052,7 @@ function App() {
                                 </span>
                               </div>
                               {row.status !== 'locked' && row.units.length > 0 && (
-                                <ul className="path-units">
+                                <ul className={`path-units${row.units.some(u => u.steps.lesson) ? ' path-units-steps' : ''}`}>
                                   {row.units.map(u => (
                                     <li
                                       key={u.displayName}
@@ -1889,6 +2065,40 @@ function App() {
                                         : <Lock size={12} />
                                       }
                                       <span className="path-unit-name">{u.displayName}</span>
+                                      {u.steps.lesson && (() => {
+                                        const st = u.steps;
+                                        const isNext = st.lesson === coursePath.nextLesson;
+                                        const due = st.families.filter(f => f.due).length;
+                                        const met = st.families.filter(f => f.state && f.state.reps > 0).length;
+                                        const missed = st.families.some(f => f.state && f.state.reps > 0 && !f.state.lastCorrect);
+                                        return (
+                                          <span className="path-steps" aria-label={`${u.displayName}: lesson, ramp and review`}>
+                                            <span
+                                              className={`path-step path-step-${st.lessonMet ? 'done' : isNext ? 'next' : 'todo'}`}
+                                              title="Lesson: the rule card and its worked example, then a few exercises"
+                                            >
+                                              Lesson
+                                            </span>
+                                            <span
+                                              className={`path-step path-step-${st.rampAnswered >= st.rampTotal ? 'done' : st.rampAnswered > 0 ? 'part' : 'todo'}`}
+                                              title="Ramp: introduce, combine, apply. The next topic opens when it is answered above the accuracy bar."
+                                            >
+                                              Ramp {st.rampAnswered}/{st.rampTotal}
+                                            </span>
+                                            <span
+                                              className={`path-step path-step-${due > 0 || missed ? 'next' : met > 0 ? 'done' : 'todo'}`}
+                                              title="Review: the topic's card families, scheduled by FSRS"
+                                            >
+                                              {due > 0 ? `Review ${due} due` : missed ? 'Review: missed' : 'Review'}
+                                            </span>
+                                            {st.lessonMet
+                                              ? <button className="path-step-btn" onClick={() => setRuleCardOpen(st.lesson!.id)}>Rule card</button>
+                                              : isNext && u.unlocked
+                                                ? <button className="path-step-btn path-step-btn-primary" onClick={() => startLesson(st.lesson!.id)}>Start lesson</button>
+                                                : null}
+                                          </span>
+                                        );
+                                      })()}
                                       {u.total > 0 && (
                                         <span className="path-unit-meta">
                                           {u.seen}/{u.total}
@@ -1915,7 +2125,7 @@ function App() {
           )}
 
           {viewMode === 'quiz' && (
-            <div className="quiz-view">
+            <div className={`quiz-view${showRulePanel || (lessonFlow?.stage === 'card' && !currentQuestion) ? ' quiz-view-with-panel' : ''}`}>
               {/* Breadcrumb bar */}
               {currentQuestion && (
                 <div className="quiz-breadcrumb">
@@ -1932,9 +2142,11 @@ function App() {
                     </span>
                   </div>
                   <span
-                    className={`mode-pill mode-pill-${servedKind}`}
+                    className={`mode-pill mode-pill-${inLessonExercise ? 'lesson' : servedKind}`}
                     title={
-                      servedKind === 'review'
+                      inLessonExercise
+                        ? 'A lesson exercise: an existing question of the topic, right after its rule card.'
+                        : servedKind === 'review'
                         ? 'A review from today\'s list.'
                         : servedKind === 'new'
                         ? 'First time seeing this question: the next step of the topic\'s ramp.'
@@ -1943,7 +2155,7 @@ function App() {
                         : 'Extra practice under your filters. It is not in today\'s review list, so the count does not change.'
                     }
                   >
-                    {servedKind === 'review' ? 'Review' : servedKind === 'new' ? 'New' : 'Practice'}
+                    {inLessonExercise ? 'Lesson' : servedKind === 'review' ? 'Review' : servedKind === 'new' ? 'New' : 'Practice'}
                   </span>
                   <span
                     className="mode-pill mode-pill-today"
@@ -1979,6 +2191,15 @@ function App() {
                       {topicDifficulty.label}
                     </span>
                   )}
+                  {screenLesson && (
+                    <button
+                      className="breadcrumb-rulecard"
+                      onClick={() => setRuleCardOpen(screenLesson.id)}
+                      title="Reopen this topic's rule card"
+                    >
+                      Rule card <kbd>R</kbd>
+                    </button>
+                  )}
                   <button
                     className="breadcrumb-filter"
                     onClick={() => setShowFilters(!showFilters)}
@@ -2004,6 +2225,15 @@ function App() {
                 </div>
               )}
 
+              {inLessonExercise && flowLesson && (
+                <LessonSteps
+                  lesson={flowLesson}
+                  byId={QUESTIONS_BY_ID}
+                  latest={latestAnswers}
+                  currentId={currentQuestion ? currentQuestion.id : null}
+                />
+              )}
+
               {showFilters && (
                 <QuestionFilter
                   filters={filters}
@@ -2013,18 +2243,47 @@ function App() {
                 />
               )}
 
-              <QuestionErrorBoundary onSkip={loadNextQuestion}>
-                {renderQuestion()}
-              </QuestionErrorBoundary>
+              {(() => {
+                const body = (
+                  <>
+                    <QuestionErrorBoundary onSkip={loadNextQuestion}>
+                      {renderQuestion()}
+                    </QuestionErrorBoundary>
 
-              {showNextButton && (
-                <div className="next-button-container">
-                  <button className="next-button" onClick={loadNextQuestion}>
-                    Next question
-                    <ArrowRight className="next-button-icon" size={16} />
-                  </button>
-                </div>
-              )}
+                    {showNextButton && (
+                      <div className="next-button-container">
+                        <button className="next-button" onClick={loadNextQuestion}>
+                          {inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, QUESTIONS_BY_ID)
+                            ? 'Finish the lesson'
+                            : inLessonExercise ? 'Next exercise' : 'Next question'}
+                          <ArrowRight className="next-button-icon" size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+                // Beside a card whose topic has a lesson: the rule card, or a tab to bring it back.
+                if (!currentQuestion || !screenLesson) return body;
+                return (
+                  <div className="quiz-stage">
+                    <div className="quiz-main">{body}</div>
+                    {showRulePanel
+                      ? (
+                        <RuleCardPanel
+                          lesson={screenLesson}
+                          rampNote={rampAfterLessonNote(screenLesson, courseQuestions, progress.questionsAttempted)}
+                          onOpen={() => setRuleCardOpen(screenLesson.id)}
+                          onHide={() => setRulePanelHidden(true)}
+                        />
+                      )
+                      : (
+                        <button className="rule-panel-tab" onClick={() => setRulePanelHidden(false)} title="Show the rule card beside the question">
+                          Rule card
+                        </button>
+                      )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -2044,7 +2303,7 @@ function App() {
                   onClick={() => setActiveProgressTab('topics')}
                 >
                   <BookOpen size={16} />
-                  By Topic
+                  Topics
                 </button>
                 <button
                   className={`progress-tab ${activeProgressTab === 'heatmap' ? 'active' : ''}`}
@@ -2072,13 +2331,15 @@ function App() {
 
                 {activeProgressTab === 'topics' && (
                   <div className="tab-panel">
-                    {/* Detailed topic breakdown */}
-                    <ProgressTracker
-                      progress={progress}
-                      questions={courseQuestions}
+                    {/* Every topic: its lesson, ramp and review, with Rule card and Drill */}
+                    <TopicLessons
                       course={activeCourse}
-                      misconceptions={misconceptions}
-                      onReviewTopic={handleReviewWeakTopic}
+                      questions={courseQuestions}
+                      progress={progress}
+                      store={fsrsStore}
+                      lessonsDone={lessonsDone}
+                      onRuleCard={setRuleCardOpen}
+                      onDrill={handleReviewWeakTopic}
                     />
                   </div>
                 )}
@@ -2107,6 +2368,19 @@ function App() {
           </div>
         </main>
       </div>
+
+      {ruleCardOpen && (() => {
+        const lesson = getLesson(ruleCardOpen);
+        if (!lesson) return null;
+        return (
+          <RuleCardOverlay
+            lesson={lesson}
+            byId={QUESTIONS_BY_ID}
+            context={lessonContext(lesson, courseQuestions, lessonsDone, progress.questionsAttempted)}
+            onClose={() => setRuleCardOpen(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
