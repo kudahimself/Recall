@@ -114,6 +114,29 @@ END;`,
     tags: ['tsql', 'procedures', 'output-parameter', 'return'],
   },
   {
+    id: 'tsql-proc-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_PROCEDURES,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'What does this batch PRINT (one value)?',
+    tables: [{ name: 'dbo.Ticket', columns: ['TicketId'], rows: [[1], [2], [3]] }],
+    code: `CREATE PROCEDURE dbo.CountTickets @MinId INT, @Total INT OUTPUT
+AS
+BEGIN
+    SELECT @Total = COUNT(*) FROM dbo.Ticket WHERE TicketId >= @MinId;
+END;
+GO
+DECLARE @n INT = -1;
+EXEC dbo.CountTickets @MinId = 2, @Total = @n;
+PRINT @n;`,
+    expectedOutput: `-1`,
+    explanation: 'The procedure does set `@Total` to 2, but the call site passes `@Total = @n` without `OUTPUT`, so `@n` goes in by value and the 2 never comes back. `@n` keeps the -1 it was declared with. Writing `@Total = @n OUTPUT` in the EXEC would print 2: the keyword is needed in the header and at the call.',
+    hints: ['Look at the EXEC line, not the procedure body', 'Without OUTPUT at the call site the value is not copied back'],
+    tags: ['tsql', 'procedures', 'output-parameter', 'exec', 'predict'],
+  },
+  {
     id: 'tsql-proc-outparam-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.INTERMEDIATE,
