@@ -817,7 +817,8 @@ function runBatches(db, code, translate) {
       let b = b0;
       let param;
       if (toks[a].k === 'var' && isSym(toks[a + 1], '=')) {
-        param = proc.params.find(p => p.key === toks[a].v.toLowerCase());
+        const key = toks[a].v.toLowerCase();
+        param = proc.params.find(p => p.key === key);
         if (!param) throw new Unsupported(`${toks[a].v} is not a parameter of ${procName}`);
         a += 2;
       } else {
