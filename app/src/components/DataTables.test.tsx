@@ -16,6 +16,14 @@ import {
 
 const byId = <T,>(id: string) => questions.find(q => q.id === id) as unknown as T;
 
+const table = (name: string) => {
+  const match = screen.getAllByRole('figure').find(f => within(f).queryByText(name));
+  if (!match) throw new Error(`no table named ${name}`);
+  return match;
+};
+const codesIn = (el: HTMLElement) => within(el).queryAllByText((_, node) => node?.tagName === 'CODE');
+const questionHeading = () => screen.getByRole('heading', { level: 3 });
+
 describe('DataTables', () => {
   it('renders nothing when a question has no tables', () => {
     const { container } = render(<DataTables />);
@@ -31,7 +39,7 @@ describe('DataTables', () => {
         ]}
       />,
     );
-    const payment = screen.getByText('dbo.Payment').closest('figure') as HTMLElement;
+    const payment = table('dbo.Payment');
     const headers = within(payment).getAllByRole('columnheader').map(h => h.textContent);
     expect(headers).toEqual(['PaymentId', 'Amount']);
     const cells = within(payment).getAllByRole('cell').map(c => c.textContent);
@@ -53,40 +61,44 @@ describe('DataTables', () => {
         ]}
       />,
     );
-    const [realNull, textNull] = within(screen.getByText('dbo.T').closest('figure') as HTMLElement).getAllByRole('cell');
+    const [realNull, textNull] = within(table('dbo.T')).getAllByRole('cell');
     expect(realNull).toHaveClass('data-table-null');
     expect(textNull).not.toHaveClass('data-table-null');
-    expect(within(screen.getByText('dbo.Empty').closest('figure') as HTMLElement).getByText('(no rows)')).toBeInTheDocument();
+    expect(within(table('dbo.Empty')).getByText('(no rows)')).toBeInTheDocument();
   });
 });
 
 describe('renderInlineCode', () => {
   it('turns backticked spans into inline code and leaves the rest as text', () => {
-    const { container } = render(<p>{renderInlineCode('Use `IS NULL`, not `= NULL`.', Topic.TSQL_FILTERING)}</p>);
-    expect(Array.from(container.querySelectorAll('code')).map(c => c.textContent)).toEqual(['IS NULL', '= NULL']);
-    expect(container.textContent).toBe('Use IS NULL, not = NULL.');
+    render(<p data-testid="text">{renderInlineCode('Use `IS NULL`, not `= NULL`.', Topic.TSQL_FILTERING)}</p>);
+    const text = screen.getByTestId('text');
+    expect(codesIn(text).map(c => c.textContent)).toEqual(['IS NULL', '= NULL']);
+    expect(text.textContent).toBe('Use IS NULL, not = NULL.');
   });
 
   it('shows an unpaired backtick as written', () => {
-    const { container } = render(<p>{renderInlineCode('a `b` c ` d', Topic.TSQL_FILTERING)}</p>);
-    expect(container.querySelectorAll('code')).toHaveLength(1);
-    expect(container.textContent).toBe('a b c ` d');
+    render(<p data-testid="text">{renderInlineCode('a `b` c ` d', Topic.TSQL_FILTERING)}</p>);
+    const text = screen.getByTestId('text');
+    expect(codesIn(text)).toHaveLength(1);
+    expect(text.textContent).toBe('a b c ` d');
   });
 
   it('leaves a non-SQL question with a JS template literal exactly as written', () => {
     const q = byId<MCQ>('js-misc-mcq-4');
-    const { container } = render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
-    const heading = container.querySelector('.question-text') as HTMLElement;
-    expect(heading.querySelector('code')).toBeNull();
+    render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
+    const heading = questionHeading();
+    expect(codesIn(heading)).toHaveLength(0);
     expect(heading.textContent).toBe(q.question);
+    // eslint-disable-next-line no-template-curly-in-string
     expect(heading.textContent).toContain('`Hi, ${this.name}`');
   });
 
   it('still renders inline code in a SQL question', () => {
     const q = questions.find(x => getCourseForTopic(x.topic) === Course.SQL && /`[^`]+`/.test(x.question) && x.type === QuestionType.MULTIPLE_CHOICE) as unknown as MCQ;
-    const { container } = render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
-    const heading = container.querySelector('.question-text') as HTMLElement;
-    expect(heading.querySelector('code.inline-code')).not.toBeNull();
+    render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
+    const heading = questionHeading();
+    expect(codesIn(heading).length).toBeGreaterThan(0);
+    codesIn(heading).forEach(c => expect(c).toHaveClass('inline-code'));
     expect(heading.textContent).not.toContain('`');
   });
 });
@@ -102,11 +114,11 @@ describe('SQL questions show their tables above the code', () => {
 
   it('an MCQ renders its tables and its question text with inline code', () => {
     const q = byId<MCQ>('tsql-joins-cross-mcq-1');
-    const { container } = render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
+    render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
     expect(screen.getByText('dbo.DimColor')).toBeInTheDocument();
     expect(screen.getByText('dbo.DimSize')).toBeInTheDocument();
-    const heading = container.querySelector('.question-text') as HTMLElement;
+    const heading = questionHeading();
     expect(heading.textContent).not.toContain('`');
-    expect(heading.querySelector('code')?.textContent).toContain('CROSS JOIN');
+    expect(codesIn(heading)[0]?.textContent).toContain('CROSS JOIN');
   });
 });
