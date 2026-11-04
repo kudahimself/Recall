@@ -331,7 +331,7 @@ Regression suite: `codeValidator.mutants.test.ts` (every reference passes; flipp
    - Strip comments/whitespace/imports
    - Normalize quotes
    - Lowercase for SQL
-3. **Equivalence rewrites:** `filter`↔`where`, `sort`↔`orderBy`, `col("x")`↔`"x"`, `df["x"]`↔`"x"`, `F.func`→`func`, `INNER JOIN`↔`JOIN`, etc.
+3. **Equivalence rewrites:** `filter`↔`where`, `sort`↔`orderBy`, `col("x")`↔`"x"`, `df["x"]`↔`"x"`, `F.func`→`func`, `INNER JOIN`↔`JOIN`, SQL `a.x = b.y` / `a.x <> b.y` (and `!=`) predicates after `ON`/`WHERE`/`AND`/`OR`/`WHEN`/`HAVING` put in a fixed side order (never `SET` assignments), etc.
 4. **Bracket check:** user code with an unclosed or mismatched `(`, `[` or `{` is a `fail` when the reference itself is balanced (catches truncated answers).
 5. **Match each alternative:** pass if ANY alternative matches, either by:
    - Containment - the whole normalized alternative appears in user code on token boundaries (full solution plus extras). A user fragment of the solution is never a pass.
@@ -362,6 +362,8 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 **Shared UI primitives:**
 - `StyledButton.tsx` - variants: primary/secondary/warning/danger. Use for all buttons.
 - `StyledBadge.tsx` - pills/badges
+- `DataTables.tsx` - read-only sample-data grids for a question's `tables`
+- `InlineCode.tsx` - `renderInlineCode` for backticked prose (SQL course only)
 
 **UI theme:**
 Dark-purple themed with radial-gradient mouse-tracked card effects.
@@ -410,6 +412,13 @@ Older `databricks-*` keys are copied to their `recall-*` names on first load and
 
 Five formats live side-by-side.
 Spaced repetition treats them all as equal-weight questions.
+
+Any question can carry `tables?: SqlTable[]` (`{ name, columns, rows }`, `null` cells render as NULL).
+SQL questions use it to show the data a query reads as small read-only grids above the code (`DataTables.tsx`), so the query says `FROM dbo.Payment` instead of building rows inline with `WITH`/`VALUES`.
+Predict questions write their own small tables, since the rows decide the answer.
+In Querying Foundations every other question gets the canonical sample tables from `src/data/tsqlSampleTables.ts` through `attachSampleTables`, trimmed to the columns the question mentions.
+`tsqlSampleTables.test.ts` fails if a section question queries a table it does not show, or builds data inline.
+In SQL-course questions, backticks in the text and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
 
 ### 1. Multiple Choice (`QuestionType.MULTIPLE_CHOICE`)
 
@@ -466,16 +475,16 @@ Encode misconceptions in distractors: `=` vs `==`, escaped braces, mutated-vs-re
 ### 4. Predict Output (`QuestionType.PREDICT_OUTPUT`)
 
 Code-tracing.
-Show short snippet; user types exact output `print()` would produce.
+Show short snippet; user types the output it would produce.
 Forces mental-model use before writing.
 
 **Schema:**
 - `code: string` - snippet to read (3-8 lines is sweet spot)
-- `expectedOutput: string` - canonical output; matched after:
-  - Trimming trailing whitespace per line
-  - Dropping leading/trailing blank lines
-  - Collapsing multi-line gaps to single blank lines
-- `acceptableOutputs?: string[]` - optional alternates for genuine ambiguity (rare in modern Python)
+- `expectedOutput: string` - canonical output, compared by `outputMatches` in `src/utils/predictOutput.ts` (owner of the matching rules and the on-screen answer instructions; tests in `predictOutput.test.ts`):
+  - Non-SQL: exact output after whitespace normalization (trailing whitespace, outer blank lines, blank-line runs, spaces inside list/dict reprs)
+  - SQL query results: one row per line, columns in SELECT order separated by a comma, no headers, `NULL` for nulls, `(no rows)` for an empty result; quotes, spacing and tab separators are tolerated, values stay exact (`20` is not `20.0`)
+  - SQL with `PRINT`: each printed line in order; when the batch also has a `SELECT`, only the `PRINT` output is the answer, so the prompt should say so
+- `acceptableOutputs?: string[]` - optional alternates for genuine ambiguity, each a correct answer in a reasonable format (rare)
 
 **Authoring rules:**
 - One misconception per question: off-by-one, slice exclusivity, mutation aliasing, immutability of strings, default-arg semantics, etc.

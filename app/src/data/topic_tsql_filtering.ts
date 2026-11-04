@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_filtering_questions: Question[] = [
+export const tsql_filtering_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-filter-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -38,10 +39,11 @@ export const tsql_filtering_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `SELECT v.n
-FROM (VALUES (5), (12), (20), (25)) AS v(n)
-WHERE v.n BETWEEN 10 AND 22
-ORDER BY v.n;`,
+    tables: [{ name: 'dbo.Score', columns: ['PlayerId', 'Points'], rows: [[1, 5], [2, 12], [3, 20], [4, 25]] }],
+    code: `SELECT Points
+FROM dbo.Score
+WHERE Points BETWEEN 10 AND 22
+ORDER BY Points;`,
     expectedOutput: `12
 20`,
     explanation: '`BETWEEN 10 AND 22` is inclusive of both bounds, so it matches 12 and 20 but not 5 (too low) or 25 (too high).',
@@ -153,8 +155,8 @@ FROM dbo.DimProduct;`,
     topic: Topic.TSQL_FILTERING,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    requires: [/WHERE/i],
-    question: "From `dbo.DimCustomer` (FullName, Email, Country), return FullName and a column `ContactEmail` that shows Email, or the text 'none' when Email is NULL — for customers in country 'NO' or 'SE' whose FullName is not NULL.",
+    requires: [/COALESCE|ISNULL|IIF|CASE/i, /IS\s+NOT\s+NULL/i],
+    question: "From `dbo.DimCustomer` (FullName, Email, Country), return FullName and a column `ContactEmail` that shows Email, or the text 'none' when Email is NULL - for customers in country 'NO' or 'SE' whose FullName is not NULL.",
     starterCode: `-- dbo.DimCustomer(FullName, Email, Country); return FullName, ContactEmail
 `,
     testCases: [
@@ -167,6 +169,21 @@ FROM dbo.DimProduct;`,
     solution: `SELECT FullName, COALESCE(Email, 'none') AS ContactEmail
 FROM dbo.DimCustomer
 WHERE Country IN ('NO', 'SE')
+  AND FullName IS NOT NULL;
+-- OR
+SELECT FullName, ISNULL(Email, 'none') AS ContactEmail
+FROM dbo.DimCustomer
+WHERE Country IN ('NO', 'SE')
+  AND FullName IS NOT NULL;
+-- OR
+SELECT FullName, COALESCE(Email, 'none') AS ContactEmail
+FROM dbo.DimCustomer
+WHERE (Country = 'NO' OR Country = 'SE')
+  AND FullName IS NOT NULL;
+-- OR
+SELECT FullName, ISNULL(Email, 'none') AS ContactEmail
+FROM dbo.DimCustomer
+WHERE (Country = 'NO' OR Country = 'SE')
   AND FullName IS NOT NULL;`,
     tieredHints: {
       apiSignature: 'COALESCE(expression, ...) -> first non-null expression',
@@ -175,8 +192,8 @@ FROM dbo.DimCustomer
 WHERE Country ____ (____, ____)
   AND FullName ____ ____ ____;`,
     },
-    explanation: '`COALESCE(Email, \'none\')` substitutes a default for missing emails; `Country IN (\'NO\', \'SE\')` filters the set; `FullName IS NOT NULL` excludes nameless rows (a plain `<>` would not catch NULLs).',
+    explanation: '`COALESCE(Email, \'none\')` (or the two-argument T-SQL `ISNULL`) substitutes a default for missing emails; `Country IN (\'NO\', \'SE\')` filters the set (the same as two `=` tests joined by `OR`, which then need brackets so the `AND` applies to both); `FullName IS NOT NULL` excludes nameless rows (a comparison like `FullName <> NULL` is never true, so it would return nothing).',
     hints: ["COALESCE(Email, 'none') for the default", "IN ('NO','SE') and IS NOT NULL"],
     tags: ['tsql', 'filtering', 'coalesce', 'in', 'is-null'],
   },
-];
+]);

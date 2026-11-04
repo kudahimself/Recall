@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MultipleChoiceQuestion as MCQuestion } from '../types';
 import { StyledButton } from './StyledButton';
+import { DataTables } from './DataTables';
+import { renderInlineCode } from './InlineCode';
 import './MultipleChoiceQuestion.css';
 
 interface Props {
@@ -93,7 +95,7 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
 
   return (
     <div className="multiple-choice-question">
-      <h3 className="question-text">{question.question}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">
@@ -104,6 +106,8 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
           {question.topic.replace(/_/g, ' ').toUpperCase()}
         </div>
       </div>
+
+      <DataTables tables={question.tables} />
 
       <div className="options">
         {shuffledOptions.map(option => (
@@ -181,7 +185,7 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
       ) : (
         <div className="explanation">
           <h4>Explanation:</h4>
-          <p>{question.explanation}</p>
+          <p>{renderInlineCode(question.explanation, question.topic)}</p>
           {onNext && (
             <StyledButton variant="primary" onClick={onNext}>
               Next Question →

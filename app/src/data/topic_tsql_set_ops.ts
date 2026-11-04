@@ -10,8 +10,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_set_ops_questions: Question[] = [
+export const tsql_set_ops_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-setops-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -37,10 +38,14 @@ export const tsql_set_ops_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `SELECT v.n FROM (VALUES (1), (2)) AS v(n)
+    tables: [
+      { name: 'dbo.StoreA', columns: ['ProductId'], rows: [[1], [2]] },
+      { name: 'dbo.StoreB', columns: ['ProductId'], rows: [[2], [3]] },
+    ],
+    code: `SELECT ProductId FROM dbo.StoreA
 UNION
-SELECT w.n FROM (VALUES (2), (3)) AS w(n)
-ORDER BY n;`,
+SELECT ProductId FROM dbo.StoreB
+ORDER BY ProductId;`,
     expectedOutput: `1
 2
 3`,
@@ -119,8 +124,8 @@ SELECT Country FROM dbo.DimSupplier;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/EXCEPT/i],
-    question: 'Both `dbo.DimCustomer` and `dbo.DimSupplier` have a `Country` column. Return the distinct Country values that appear in `dbo.DimCustomer` but NOT in `dbo.DimSupplier`.',
-    starterCode: `-- SELECT Country FROM ... EXCEPT SELECT Country FROM ...
+    question: 'Both `dbo.DimCustomer` and `dbo.DimSupplier` have a `Country` column. Using a set operator, return the distinct Country values that appear in `dbo.DimCustomer` but NOT in `dbo.DimSupplier`.',
+    starterCode: `-- dbo.DimCustomer(Country), dbo.DimSupplier(Country)
 `,
     testCases: [
       {
@@ -142,4 +147,4 @@ SELECT ____ FROM dbo.DimSupplier;`,
     hints: ['First-query rows minus second-query rows → EXCEPT'],
     tags: ['tsql', 'set-ops', 'except'],
   },
-];
+]);

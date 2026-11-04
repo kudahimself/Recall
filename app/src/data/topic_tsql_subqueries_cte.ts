@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_subqueries_cte_questions: Question[] = [
+export const tsql_subqueries_cte_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-subq-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -64,15 +65,19 @@ SELECT * FROM HighValue WHERE Total > 1000;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `WITH t(n) AS (VALUES (1), (2), (3), (4))
-SELECT n FROM t
-WHERE n IN (SELECT v.x FROM (VALUES (2), (4), (9)) AS v(x))
-ORDER BY n;`,
+    tables: [
+      { name: 'dbo.Product', columns: ['ProductId', 'ProductName'], rows: [[1, 'Pen'], [2, 'Mug'], [3, 'Cap'], [4, 'Bag']] },
+      { name: 'dbo.Featured', columns: ['ProductId'], rows: [[2], [4], [9]] },
+    ],
+    code: `SELECT ProductId
+FROM dbo.Product
+WHERE ProductId IN (SELECT ProductId FROM dbo.Featured)
+ORDER BY ProductId;`,
     expectedOutput: `2
 4`,
-    explanation: 'The subquery returns the set {2, 4, 9}; `WHERE n IN (…)` keeps rows of `t` whose `n` is in that set. Only 2 and 4 are present in `t` (9 is not), so they are returned.',
-    hints: ['Keep rows whose n is in the subquery set'],
-    tags: ['tsql', 'subqueries', 'in', 'cte', 'predict'],
+    explanation: 'The subquery returns the set {2, 4, 9} from `dbo.Featured`; `WHERE ProductId IN (…)` keeps the `dbo.Product` rows whose ProductId is in that set. Only 2 and 4 exist in `dbo.Product` (there is no product 9), so they are returned.',
+    hints: ['Keep rows whose ProductId is in the subquery set'],
+    tags: ['tsql', 'subqueries', 'in', 'predict'],
   },
   {
     id: 'tsql-subq-exists-cloze-1',
@@ -109,12 +114,12 @@ WHERE EXISTS (
     course: Course.SQL,
     question: 'How does a recursive CTE work?',
     options: [
-      { id: 'a', text: "It has an anchor query (the starting rows) UNION ALL'd with a recursive query that references the CTE's own name; SQL Server repeats the recursive part until it returns no more rows.", isCorrect: true },
-      { id: 'b', text: 'It re-runs the entire CTE body twice in a row, with no other change in behavior.', isCorrect: false },
-      { id: 'c', text: 'It calls a stored procedure once per row of the base table, recursively.', isCorrect: false },
-      { id: 'd', text: 'It is just a naming convention - "recursive" has no effect on how the query executes.', isCorrect: false },
+      { id: 'a', text: "An anchor query (the starting rows) is UNION ALL'd with a recursive query that references the CTE's own name; the recursive part repeats until it returns no rows.", isCorrect: true },
+      { id: 'b', text: 'A single query references its own CTE name, and SQL Server runs it a fixed number of times set by MAXRECURSION, whether or not new rows appear.', isCorrect: false },
+      { id: 'c', text: 'Two separate CTEs reference each other by name; SQL Server alternates between them until both return the same rows twice.', isCorrect: false },
+      { id: 'd', text: "An anchor query is UNION'd with a recursive query, and each pass re-reads every row produced so far, not only the newest, until the total stops growing.", isCorrect: false },
     ],
-    explanation: "A recursive CTE unions an anchor member (the base case) with a recursive member that joins back to the CTE's own name. SQL Server re-executes the recursive member against only the rows produced in the previous step, accumulating results until a step produces zero rows - the classic pattern for walking a hierarchy (e.g. an employee/manager chain).",
+    explanation: "A recursive CTE unions an anchor member (the base case) with a recursive member that joins back to the CTE's own name. SQL Server re-executes the recursive member against only the rows produced in the previous step, accumulating results until a step produces zero rows - the classic pattern for walking a hierarchy (e.g. an employee/manager chain). `MAXRECURSION` (default 100) is only a safety cap that raises an error if the recursion runs too deep; it does not set how many passes run. SQL Server also requires `UNION ALL` between the anchor and the recursive member - plain `UNION` is rejected.",
     hints: ['Anchor UNION ALL recursive member', 'Recursive member references the CTE by name'],
     tags: ['tsql', 'subqueries', 'cte', 'recursive-cte'],
   },
@@ -126,8 +131,8 @@ WHERE EXISTS (
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/WITH/i, /SUM/i],
-    question: 'Using a CTE named `CustomerTotals` that sums `Amount` per `CustomerKey` from `dbo.FactOrders`, return the CustomerKey and Total for customers whose total is at least 500.',
-    starterCode: `-- WITH CustomerTotals AS ( ... ) SELECT ... WHERE Total >= 500;
+    question: 'Using a CTE named `CustomerTotals` that sums `Amount` per `CustomerKey` from `dbo.FactOrders` into a column `Total`, return the CustomerKey and Total for customers whose total is at least 500.',
+    starterCode: `-- dbo.FactOrders(CustomerKey, Amount); return CustomerKey and Total
 `,
     testCases: [
       {
@@ -142,6 +147,15 @@ WHERE EXISTS (
     GROUP BY CustomerKey
 )
 SELECT CustomerKey, Total
+FROM CustomerTotals
+WHERE Total >= 500;
+-- OR
+WITH CustomerTotals AS (
+    SELECT CustomerKey, SUM(Amount) AS Total
+    FROM dbo.FactOrders
+    GROUP BY CustomerKey
+)
+SELECT *
 FROM CustomerTotals
 WHERE Total >= 500;`,
     explanation: 'The CTE computes per-customer totals once; the outer query then filters them with a simple `WHERE Total >= 500`. This is cleaner than repeating the aggregate, and you can reference `Total` directly because the CTE already named it.',
@@ -179,6 +193,7 @@ WITH EmpChain AS (
 )
 SELECT * FROM EmpChain;`,
     blanks: ['UNION', 'ALL', 'JOIN'],
+    blankAlternates: [[], [], ['INNER JOIN']],
     solution: `WITH EmpChain AS (
     SELECT EmployeeId, ManagerId, 0 AS Lvl
     FROM dbo.Employee
@@ -201,7 +216,7 @@ SELECT * FROM EmpChain;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/SELECT/i, /COUNT/i],
-    question: 'From `dbo.DimCustomer c` (FullName, CustomerKey), return each FullName and their number of orders — using a correlated scalar subquery against `dbo.FactOrders` (matched on CustomerKey) aliased `OrderCount`.',
+    question: 'From `dbo.DimCustomer c` (FullName, CustomerKey), return each FullName and their number of orders as a column `OrderCount`, using a correlated scalar subquery against `dbo.FactOrders o` (matched on CustomerKey).',
     starterCode: `-- Return FullName and OrderCount for each customer using a correlated scalar subquery
 `,
     testCases: [
@@ -228,4 +243,4 @@ FROM dbo.DimCustomer c;`,
     },
     tags: ['tsql', 'subqueries', 'correlated', 'scalar-subquery'],
   },
-];
+]);

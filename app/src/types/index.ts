@@ -400,7 +400,19 @@ export interface BaseQuestion {
    * legacy card-level scheduling. See CONCEPT_LAYER_SPEC.md.
    */
   concepts?: string[];
+  /**
+   * Sample tables a SQL question reads from, shown as small read-only grids
+   * above the code so the query can say `FROM dbo.Payment` instead of
+   * building its data inline with `WITH`/`VALUES`. `null` cells render as a
+   * distinct NULL. Same shape as a lesson's worked-example tables.
+   */
+  tables?: SqlTable[];
 }
+
+export type SqlCell = string | number | null;
+
+/** A named table with its rows, as a question or lesson shows it. */
+export type SqlTable = LessonTable;
 
 export interface MultipleChoiceQuestion extends BaseQuestion {
   type: QuestionType.MULTIPLE_CHOICE;

@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_select_questions: Question[] = [
+export const tsql_select_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-select-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -24,9 +25,9 @@ export const tsql_select_questions: Question[] = [
       { id: 'a', text: 'SELECT TOP (5) ProductName, Price FROM dbo.DimProduct ORDER BY Price DESC;', isCorrect: true },
       { id: 'b', text: 'SELECT ProductName, Price FROM dbo.DimProduct ORDER BY Price DESC LIMIT 5;', isCorrect: false },
       { id: 'c', text: 'SELECT TOP (5) ProductName, Price FROM dbo.DimProduct;', isCorrect: false },
-      { id: 'd', text: 'SELECT MAX(5) ProductName, Price FROM dbo.DimProduct ORDER BY Price DESC;', isCorrect: false },
+      { id: 'd', text: 'SELECT TOP (5) ProductName, Price FROM dbo.DimProduct ORDER BY Price;', isCorrect: false },
     ],
-    explanation: 'T-SQL limits rows with `TOP (n)`, not `LIMIT` (that is MySQL/Postgres). Crucially, `TOP` without `ORDER BY` returns an arbitrary 5 rows — the sort is what makes "most expensive" meaningful. `MAX(5)` is not valid syntax.',
+    explanation: 'T-SQL limits rows with `TOP (n)`, not `LIMIT` (that is MySQL/Postgres). Crucially, `TOP` without `ORDER BY` returns an arbitrary 5 rows - the sort is what makes "most expensive" meaningful. And `ORDER BY` sorts ascending by default, so leaving off `DESC` returns the 5 cheapest products instead.',
     hints: ['T-SQL uses TOP (n), not LIMIT', 'TOP without ORDER BY is non-deterministic'],
     tags: ['tsql', 'select', 'top', 'order-by'],
   },
@@ -38,9 +39,10 @@ export const tsql_select_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `SELECT v.City
-FROM (VALUES ('Oslo'), ('Cairo'), ('Lima')) AS v(City)
-ORDER BY v.City DESC;`,
+    tables: [{ name: 'dbo.Office', columns: ['OfficeId', 'City'], rows: [[1, 'Oslo'], [2, 'Cairo'], [3, 'Lima']] }],
+    code: `SELECT City
+FROM dbo.Office
+ORDER BY City DESC;`,
     expectedOutput: `Oslo
 Lima
 Cairo`,
@@ -192,4 +194,4 @@ ____ 20 ____ FETCH ____ 20 ROWS ____;`,
     hints: ['Skip 20, fetch next 20', 'OFFSET/FETCH needs ORDER BY'],
     tags: ['tsql', 'select', 'offset-fetch', 'pagination'],
   },
-];
+]);

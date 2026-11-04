@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_date_functions_questions: Question[] = [
+export const tsql_date_functions_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-dt-getdate-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -59,7 +60,7 @@ FROM dbo.FactOrders;`,
     template: `SELECT ___(GETDATE() ___ DATE) AS TodayOnly;`,
     blanks: ['CAST', 'AS'],
     solution: `SELECT CAST(GETDATE() AS DATE) AS TodayOnly;`,
-    explanation: '`CAST(expression AS type)` converts a value to another data type. `GETDATE()` returns a `DATETIME2` (date + time); casting it `AS DATE` keeps only the calendar date, discarding the time-of-day - the standard way to get "just today\'s date" for comparisons.',
+    explanation: '`CAST(expression AS type)` converts a value to another data type. `GETDATE()` returns a `DATETIME` (date + time); casting it `AS DATE` keeps only the calendar date, discarding the time-of-day - the standard way to get "just today\'s date" for comparisons.',
     hints: ['Type-conversion function', 'CAST(expr AS type)'],
     tags: ['tsql', 'date-functions', 'cast', 'cloze'],
   },
@@ -103,6 +104,7 @@ FROM dbo.FactOrders;`,
 SELECT OrderId, ___(___, OrderDate) AS OrderQuarter
 FROM dbo.FactOrders;`,
     blanks: ['DATEPART', 'quarter'],
+    blankAlternates: [[], ['qq', 'q']],
     solution: `SELECT OrderId, DATEPART(quarter, OrderDate) AS OrderQuarter
 FROM dbo.FactOrders;`,
     explanation: '`DATEPART(datepart, date)` is the general-purpose part-extractor - `quarter` is one of many valid parts (others include `year`, `month`, `day`, `weekday`, `hour`). `YEAR()`/`MONTH()`/`DAY()` are just shorthand for the most common cases of `DATEPART`.',
@@ -116,14 +118,14 @@ FROM dbo.FactOrders;`,
     topic: Topic.TSQL_DATE_FUNCTIONS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: "Fill in the function that computes how many years have passed since SignupDate, using today's date.",
+    question: "Fill in the function that computes the difference in years between SignupDate and today's date.",
     template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
 SELECT CustomerKey, ___(YEAR, SignupDate, GETDATE()) AS YearsSinceSignup
 FROM dbo.DimCustomer;`,
     blanks: ['DATEDIFF'],
     solution: `SELECT CustomerKey, DATEDIFF(YEAR, SignupDate, GETDATE()) AS YearsSinceSignup
 FROM dbo.DimCustomer;`,
-    explanation: '`DATEDIFF(YEAR, start, end)` combined with `GETDATE()` as the end point gives an ever-current "years since" figure that updates automatically every time the query runs, without hard-coding today\'s date.',
+    explanation: '`DATEDIFF(YEAR, start, end)` combined with `GETDATE()` as the end point gives an ever-current figure that updates every time the query runs, without hard-coding today\'s date. Note that it counts year boundaries crossed, not full years elapsed: a signup on 2025-12-31 already shows 1 on 2026-01-01.',
     hints: ['Difference-between-dates function', 'End point is the current moment'],
     tags: ['tsql', 'date-functions', 'datediff', 'getdate', 'cloze'],
   },
@@ -202,6 +204,9 @@ FROM dbo.FactOrders;`,
       },
     ],
     solution: `SELECT OrderId, YEAR(OrderDate) AS OrderYear, MONTH(OrderDate) AS OrderMonth
+FROM dbo.FactOrders;
+-- OR
+SELECT OrderId, DATEPART(year, OrderDate) AS OrderYear, DATEPART(month, OrderDate) AS OrderMonth
 FROM dbo.FactOrders;`,
     tieredHints: {
       apiSignature: 'YEAR(date_expression) -> int',
@@ -250,27 +255,27 @@ FROM dbo.DimCustomer;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/DATEDIFF/i, /CAST/i, /GETDATE/i],
-    question: 'From `dbo.FactOrders` (OrderId, OrderDate, Amount), return OrderId and Amount for orders placed more than 30 days before today, comparing only the calendar date and ignoring time-of-day.',
-    starterCode: `-- filter FactOrders to orders more than 30 days old, ignoring time-of-day
+    question: 'From `dbo.FactOrders` (OrderId, OrderDate, Amount), where OrderDate holds a date and a time, return OrderId, Amount, and a column `OrderDay` (OrderDate with its time-of-day removed) for orders placed more than 30 calendar days before today.',
+    starterCode: `-- dbo.FactOrders(OrderId, OrderDate, Amount); return OrderId, Amount, OrderDay
 `,
     testCases: [
       {
-        input: "DATEDIFF(DAY, OrderDate, CAST(GETDATE() AS DATE)) > 30",
-        expectedOutput: 'Orders older than 30 days',
+        input: "CAST(OrderDate AS DATE) AS OrderDay ... WHERE DATEDIFF(DAY, OrderDate, GETDATE()) > 30",
+        expectedOutput: 'Orders older than 30 calendar days, with their date-only OrderDay',
         description: 'DATEDIFF + CAST + GETDATE combined',
       },
     ],
-    solution: `SELECT OrderId, Amount
+    solution: `SELECT OrderId, Amount, CAST(OrderDate AS DATE) AS OrderDay
 FROM dbo.FactOrders
-WHERE DATEDIFF(DAY, OrderDate, CAST(GETDATE() AS DATE)) > 30;`,
+WHERE DATEDIFF(DAY, OrderDate, GETDATE()) > 30;`,
     tieredHints: {
       apiSignature: 'DATEDIFF(datepart, startdate, enddate) -> int',
-      skeleton: `SELECT OrderId, Amount
+      skeleton: `SELECT OrderId, Amount, ____(OrderDate AS ____) AS OrderDay
 FROM dbo.FactOrders
-WHERE ____(____, OrderDate, ____(____() AS ____)) ____ 30;`,
+WHERE ____(____, OrderDate, ____()) ____ 30;`,
     },
-    explanation: '`CAST(GETDATE() AS DATE)` strips today\'s time-of-day so the comparison is purely calendar-based; `DATEDIFF(DAY, OrderDate, ...)` then measures the gap, and the `WHERE` clause keeps only orders where that gap exceeds 30 days.',
-    hints: ['CAST(GETDATE() AS DATE) removes the time component', 'DATEDIFF(DAY, OrderDate, that) > 30'],
+    explanation: '`CAST(OrderDate AS DATE)` drops the time-of-day for the `OrderDay` column. `DATEDIFF(DAY, OrderDate, GETDATE())` counts the midnights crossed between the order and now, so it already compares calendar days - the times on either side do not change the count, and casting both sides to DATE first gives the same answer. The `WHERE` keeps orders where that gap exceeds 30 days.',
+    hints: ['CAST(... AS DATE) removes the time component', 'DATEDIFF(DAY, OrderDate, GETDATE()) > 30 counts calendar days'],
     tags: ['tsql', 'date-functions', 'datediff', 'cast', 'getdate'],
   },
-];
+]);

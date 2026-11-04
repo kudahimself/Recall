@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_joins_questions: Question[] = [
+export const tsql_joins_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-joins-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -71,6 +72,10 @@ export const tsql_joins_questions: Question[] = [
     topic: Topic.TSQL_JOINS,
     course: Course.SQL,
     question: "What does `SELECT * FROM dbo.DimColor CROSS JOIN dbo.DimSize` return, given DimColor has 4 rows and DimSize has 3 rows?",
+    tables: [
+      { name: 'dbo.DimColor', columns: ['ColorKey', 'Color'], rows: [[1, 'Red'], [2, 'Blue'], [3, 'Green'], [4, 'Black']] },
+      { name: 'dbo.DimSize', columns: ['SizeKey', 'Size'], rows: [[1, 'S'], [2, 'M'], [3, 'L']] },
+    ],
     options: [
       { id: 'a', text: '12 rows - every combination of a color and a size (the Cartesian product).', isCorrect: true },
       { id: 'b', text: '7 rows - the two tables stacked on top of each other.', isCorrect: false },
@@ -89,12 +94,14 @@ export const tsql_joins_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `WITH c(id) AS (VALUES (1), (2), (3)),
-     o(cid) AS (VALUES (1), (1), (2))
-SELECT c.id
-FROM c
-INNER JOIN o ON o.cid = c.id
-ORDER BY c.id;`,
+    tables: [
+      { name: 'dbo.Customer', columns: ['CustomerId', 'FullName'], rows: [[1, 'Ada'], [2, 'Ben'], [3, 'Cy']] },
+      { name: 'dbo.Orders', columns: ['OrderId', 'CustomerId'], rows: [[101, 1], [102, 1], [103, 2]] },
+    ],
+    code: `SELECT c.CustomerId
+FROM dbo.Customer c
+INNER JOIN dbo.Orders o ON o.CustomerId = c.CustomerId
+ORDER BY c.CustomerId;`,
     expectedOutput: `1
 1
 2`,
@@ -138,6 +145,7 @@ FROM dbo.DimCustomer c
 ___ JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey
 WHERE o.OrderId ___;`,
     blanks: ['LEFT', 'IS NULL'],
+    blankAlternates: [['LEFT OUTER'], []],
     solution: `SELECT c.FullName
 FROM dbo.DimCustomer c
 LEFT JOIN dbo.FactOrders o ON o.CustomerKey = c.CustomerKey
@@ -170,7 +178,7 @@ WHERE o.OrderId IS NULL;`,
     topic: Topic.TSQL_JOINS,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    requires: [/INNER\s+JOIN/i],
+    requires: [/\bJOIN\b/i],
     question: 'Join `dbo.DimCustomer c` (CustomerKey, FullName) to `dbo.FactOrders o` (CustomerKey, Amount) and return each customer\'s FullName and Amount, for orders with Amount over 100.',
     starterCode: `-- Join dbo.DimCustomer and dbo.FactOrders to return FullName and Amount for orders over 100
 `,
@@ -204,7 +212,7 @@ WHERE o.Amount ____ ____;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/LEFT\s+JOIN|NOT\s+EXISTS/i],
-    question: 'From `dbo.DimCustomer` (CustomerKey, FullName) and `dbo.FactOrders` (OrderId, CustomerKey, Amount), return the FullName of every customer who has NO matching rows in FactOrders (matched on CustomerKey).',
+    question: 'From `dbo.DimCustomer c` (CustomerKey, FullName) and `dbo.FactOrders o` (OrderId, CustomerKey, Amount), return the FullName of every customer who has NO matching rows in FactOrders (matched on CustomerKey).',
     starterCode: `-- dbo.DimCustomer(CustomerKey, FullName); return customers with no dbo.FactOrders(OrderId, CustomerKey) match
 `,
     testCases: [
@@ -225,7 +233,7 @@ WHERE NOT EXISTS (
     SELECT 1 FROM dbo.FactOrders o WHERE o.CustomerKey = c.CustomerKey
 );`,
     tieredHints: {
-      apiSignature: 'NOT EXISTS (SELECT 1 FROM table WHERE correlated_condition)',
+      apiSignature: 'LEFT JOIN table alias ON join_condition WHERE alias.key_col IS NULL',
       skeleton: `SELECT c.____
 FROM dbo.DimCustomer c
 ____ ____ dbo.FactOrders o ____ o.____ = c.____
@@ -272,4 +280,4 @@ ORDER BY o.Amount ____;`,
     hints: ['Two INNER JOINs, one per dimension table', 'Filter on columns from both joined tables', 'ORDER BY Amount DESC'],
     tags: ['tsql', 'joins', 'multi-table-join', 'inner-join'],
   },
-];
+]);

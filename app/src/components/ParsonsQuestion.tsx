@@ -27,6 +27,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ParsonsQuestion as ParsonsQ, CodeLanguage, Topic } from '../types';
 import { StyledButton } from './StyledButton';
+import { DataTables } from './DataTables';
+import { renderInlineCode } from './InlineCode';
 import { LivePreview } from './visual/LivePreview';
 import './ParsonsQuestion.css';
 
@@ -341,7 +343,7 @@ export const ParsonsQuestion: React.FC<Props> = ({
 
   return (
     <div className="parsons-question">
-      <h3 className="question-text">{question.question}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
@@ -354,9 +356,11 @@ export const ParsonsQuestion: React.FC<Props> = ({
       <div className="parsons-instructions">
         Drag lines into your solution and drag to reorder - or click a line to add it. Use ↑/↓ to reorder, ✕ to remove.
         {question.distractorLines && question.distractorLines.length > 0 && (
-          <span className="parsons-warning"> Some lines don't belong — leave them out.</span>
+          <span className="parsons-warning"> Some lines don't belong - leave them out.</span>
         )}
       </div>
+
+      <DataTables tables={question.tables} />
 
       <DndContext
         sensors={sensors}
@@ -485,7 +489,7 @@ export const ParsonsQuestion: React.FC<Props> = ({
       ) : (
         <div className="explanation">
           <h4>{wasCorrect ? 'Correct.' : 'Not quite.'}</h4>
-          <p>{question.explanation}</p>
+          <p>{renderInlineCode(question.explanation, question.topic)}</p>
           {!wasCorrect && (
             <div className="reference-solution">
               <div className="reference-label">Reference solution:</div>

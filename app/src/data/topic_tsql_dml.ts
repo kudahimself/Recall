@@ -13,8 +13,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_dml_questions: Question[] = [
+export const tsql_dml_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-dml-insert-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -23,12 +24,12 @@ export const tsql_dml_questions: Question[] = [
     course: Course.SQL,
     question: "What does `INSERT INTO dbo.DimProduct (ProductName, Price) VALUES ('Widget', 9.99)` do?",
     options: [
-      { id: 'a', text: "Adds one new row to dbo.DimProduct with ProductName = 'Widget' and Price = 9.99; any column left out of the list gets its default or NULL.", isCorrect: true },
-      { id: 'b', text: "Overwrites every existing row's ProductName and Price with these values.", isCorrect: false },
-      { id: 'c', text: 'Creates the dbo.DimProduct table if it does not already exist.', isCorrect: false },
-      { id: 'd', text: 'Only validates the values without changing any data.', isCorrect: false },
+      { id: 'a', text: "Adds one new row with ProductName 'Widget' and Price 9.99; columns not listed get their default or NULL.", isCorrect: true },
+      { id: 'b', text: "Overwrites the ProductName and Price of every existing row with 'Widget' and 9.99.", isCorrect: false },
+      { id: 'c', text: 'Creates dbo.DimProduct with just these two columns if it does not exist, then adds the row.', isCorrect: false },
+      { id: 'd', text: "Updates the row whose ProductName is already 'Widget', or adds it if no such row exists.", isCorrect: false },
     ],
-    explanation: '`INSERT INTO table (cols) VALUES (...)` adds exactly one new row with the given values in the listed columns. It never touches existing rows and never creates the table - the target must already exist.',
+    explanation: '`INSERT INTO table (cols) VALUES (...)` adds exactly one new row with the given values in the listed columns; every column you leave out gets its default (or NULL). It never touches existing rows, never matches on a value the way an upsert (`MERGE`) does, and never creates the table - the target must already exist.',
     hints: ['Adds a new row, does not touch existing ones', 'Table must already exist'],
     tags: ['tsql', 'dml', 'insert'],
   },
@@ -96,10 +97,10 @@ WHERE ProductKey = 101;`,
     course: Course.SQL,
     question: 'What happens if you run `DELETE FROM dbo.DimProduct;` with no WHERE clause?',
     options: [
-      { id: 'a', text: 'Every row in the table is deleted - WHERE is what limits DML to specific rows; omit it and the whole table empties. The same danger applies to a WHERE-less UPDATE.', isCorrect: true },
-      { id: 'b', text: 'Nothing happens; DELETE is rejected unless a WHERE clause is present.', isCorrect: false },
-      { id: 'c', text: 'Only the first row is deleted, since DELETE defaults to affecting one row.', isCorrect: false },
-      { id: 'd', text: 'The table itself is dropped along with its structure.', isCorrect: false },
+      { id: 'a', text: 'Every row is deleted - WHERE is what limits DML to specific rows, so without it the whole table empties.', isCorrect: true },
+      { id: 'b', text: 'Nothing happens - SQL Server rejects a DELETE that has no WHERE clause as a safety check.', isCorrect: false },
+      { id: 'c', text: 'Only the first row is deleted, since DELETE affects a single row unless told otherwise.', isCorrect: false },
+      { id: 'd', text: 'The rows are deleted and the table is dropped too, so its structure is gone as well.', isCorrect: false },
     ],
     explanation: 'WHERE is optional, not required - a WHERE-less DELETE (or UPDATE) matches every row in the table. The table and its structure survive (unlike DROP TABLE); it is simply left empty (or, for UPDATE, every row is overwritten). Always double-check the WHERE clause before running DML against a real table.',
     hints: ['WHERE is optional - no filter means every row matches', 'The table itself survives; only the rows are gone/changed'],
@@ -112,15 +113,14 @@ WHERE ProductKey = 101;`,
     topic: Topic.TSQL_DML,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'What does the final SELECT output?',
-    code: `CREATE TABLE #t (id INT, amt INT);
-INSERT INTO #t VALUES (1, 100), (2, 200);
-UPDATE #t SET amt = amt + 10 WHERE id = 1;
-SELECT amt FROM #t ORDER BY id;`,
+    question: 'What does the final SELECT return (one value per line)?',
+    tables: [{ name: 'dbo.Account', columns: ['AccountId', 'Balance'], rows: [[1, 100], [2, 200]] }],
+    code: `UPDATE dbo.Account SET Balance = Balance + 10 WHERE AccountId = 1;
+SELECT Balance FROM dbo.Account ORDER BY AccountId;`,
     expectedOutput: `110
 200`,
-    explanation: 'Only the row with `id = 1` matches the WHERE clause, so its `amt` becomes 100 + 10 = 110. The row with `id = 2` is untouched and keeps its original 200.',
-    hints: ['Only the matching row changes', 'id = 1 → 100 + 10; id = 2 unaffected'],
+    explanation: 'Only the row with `AccountId = 1` matches the WHERE clause, so its `Balance` becomes 100 + 10 = 110. Account 2 is untouched and keeps its original 200.',
+    hints: ['Only the matching row changes', 'AccountId = 1 → 100 + 10; account 2 unaffected'],
     tags: ['tsql', 'dml', 'update', 'predict'],
   },
   {
@@ -130,14 +130,13 @@ SELECT amt FROM #t ORDER BY id;`,
     topic: Topic.TSQL_DML,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'What does the final SELECT output (one value per line)?',
-    code: `CREATE TABLE #t (id INT);
-INSERT INTO #t VALUES (1), (2), (3);
-DELETE FROM #t WHERE id = 2;
-SELECT id FROM #t ORDER BY id;`,
+    question: 'What does the final SELECT return (one value per line)?',
+    tables: [{ name: 'dbo.Ticket', columns: ['TicketId'], rows: [[1], [2], [3]] }],
+    code: `DELETE FROM dbo.Ticket WHERE TicketId = 2;
+SELECT TicketId FROM dbo.Ticket ORDER BY TicketId;`,
     expectedOutput: `1
 3`,
-    explanation: 'The DELETE removes only the row where `id = 2`, leaving `1` and `3` behind.',
+    explanation: 'The DELETE removes only the row where `TicketId = 2`, leaving `1` and `3` behind.',
     hints: ['Only the matching row is removed'],
     tags: ['tsql', 'dml', 'delete', 'predict'],
   },
@@ -189,12 +188,12 @@ WHERE Category = 'Books';`,
     course: Course.SQL,
     question: 'How does `TRUNCATE TABLE dbo.StageOrders` differ from `DELETE FROM dbo.StageOrders`?',
     options: [
-      { id: 'a', text: 'TRUNCATE deallocates whole data pages at once (minimally logged, resets IDENTITY) and cannot take a WHERE clause; DELETE removes rows individually (fully logged, WHERE-capable) and does not reset IDENTITY.', isCorrect: true },
-      { id: 'b', text: 'They are identical in every respect except spelling.', isCorrect: false },
-      { id: 'c', text: 'TRUNCATE removes the table structure permanently; DELETE only empties rows.', isCorrect: false },
-      { id: 'd', text: 'DELETE always resets the IDENTITY seed; TRUNCATE never does.', isCorrect: false },
+      { id: 'a', text: 'TRUNCATE deallocates whole pages, cannot take a WHERE, and resets IDENTITY; DELETE removes rows one by one, can filter, and keeps IDENTITY.', isCorrect: true },
+      { id: 'b', text: 'TRUNCATE drops the table and its structure; DELETE empties the rows but keeps the table definition in place.', isCorrect: false },
+      { id: 'c', text: 'TRUNCATE is logged row by row so it can be rolled back; DELETE is unlogged, so once it runs it cannot be undone.', isCorrect: false },
+      { id: 'd', text: 'TRUNCATE can take a WHERE clause like DELETE; the only difference is that TRUNCATE also resets the IDENTITY seed.', isCorrect: false },
     ],
-    explanation: 'Both empty a table of rows, but differently: TRUNCATE is a fast, minimally-logged, all-or-nothing operation that also resets IDENTITY, and it cannot filter with WHERE. DELETE is ordinary row-by-row DML - slower on huge tables, but filterable and fully logged/rollback-friendly. Neither drops the table itself.',
+    explanation: 'Both empty a table of rows, but differently: TRUNCATE is a fast, minimally-logged, all-or-nothing operation that also resets IDENTITY, and it cannot filter with WHERE. DELETE is ordinary row-by-row DML - slower on huge tables, but filterable and fully logged. Neither drops the table itself, and in SQL Server both can be rolled back inside an explicit transaction.',
     hints: ['TRUNCATE = fast, all rows, resets IDENTITY, no WHERE', 'DELETE = row-by-row, WHERE-capable, fully logged'],
     tags: ['tsql', 'dml', 'truncate', 'delete'],
   },
@@ -311,7 +310,7 @@ FROM dbo.DimCustomer AS tgt
     topic: Topic.TSQL_DML,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Update `dbo.DimProduct` (ProductKey, ProductName) so `ProductName` matches the latest value from `stg.Product` (ProductKey, ProductName), for every row where the two currently differ. Use UPDATE...FROM...JOIN.',
+    question: 'Update `dbo.DimProduct` (ProductKey, ProductName), aliased `tgt`, so `ProductName` matches the latest value from `stg.Product` (ProductKey, ProductName), aliased `src`, for every row where the two currently differ. Use UPDATE...FROM...JOIN.',
     requires: [/UPDATE/i, /FROM/i, /JOIN/i],
     starterCode: `-- dbo.DimProduct(ProductKey, ProductName), stg.Product(ProductKey, ProductName)
 -- Update DimProduct.ProductName to match stg.Product.ProductName where they differ using UPDATE...FROM...JOIN
@@ -347,9 +346,9 @@ WHERE tgt.ProductName ____ src.ProductName;`,
     topic: Topic.TSQL_DML,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Delete every row from `dbo.FactOrders` (ProductKey) whose `ProductKey` belongs to a product in `dbo.DimProduct` (ProductKey, Discontinued) that has been discontinued (`Discontinued = 1`). Use DELETE...FROM...JOIN.',
+    question: 'Delete every row from `dbo.FactOrders f` (ProductKey) whose `ProductKey` belongs to a product in `dbo.DimProduct p` (ProductKey, Discontinued) that has been discontinued (`Discontinued = 1`). Use DELETE...FROM...JOIN.',
     requires: [/DELETE/i, /FROM/i, /JOIN/i],
-    starterCode: `-- DELETE f FROM dbo.FactOrders AS f JOIN dbo.DimProduct AS p ON ... WHERE p.Discontinued = 1;
+    starterCode: `-- dbo.FactOrders f (ProductKey), dbo.DimProduct p (ProductKey, Discontinued)
 `,
     testCases: [
       {
@@ -373,4 +372,4 @@ WHERE p.Discontinued ____ 1;`,
     hints: ['DELETE f FROM dbo.FactOrders AS f JOIN dbo.DimProduct AS p ON ProductKey', 'WHERE p.Discontinued = 1'],
     tags: ['tsql', 'dml', 'delete', 'join'],
   },
-];
+]);
