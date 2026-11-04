@@ -188,6 +188,7 @@ export const sqlOrderedQuestions: Question[] = [
   // GROUPING SETS / ROLLUP / CUBE
   q('tsql-gs-mcq-1'), q('tsql-gs-cloze-1'), q('tsql-gs-cube-cloze-1'), q('tsql-gs-1'),
   q('tsql-gs-groupingsets-cloze-1'), q('tsql-gs-groupingfn-cloze-1'), q('tsql-gs-2'),
+  q('tsql-gs-rollup-predict-1'),
   // PIVOT & conditional aggregation
   q('tsql-pivot-mcq-1'), q('tsql-pivot-predict-1'), q('tsql-pivot-cloze-1'),
   q('tsql-pivot-native-cloze-1'), q('tsql-pivot-unpivot-mcq-1'), q('tsql-pivot-1'),
