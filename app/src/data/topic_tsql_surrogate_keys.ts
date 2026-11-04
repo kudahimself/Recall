@@ -147,4 +147,25 @@ VALUES (NEXT VALUE FOR dbo.OrderKeySeq, 100);`,
 );`,
     },
   },
+  {
+    id: 'tsql-surr-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_SURROGATE_KEYS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The table starts empty. What single value does the final SELECT return?',
+    code: `CREATE TABLE dbo.DimStore (
+    StoreKey  INT IDENTITY(1, 1) PRIMARY KEY,
+    StoreCode VARCHAR(10) NOT NULL UNIQUE
+);
+INSERT INTO dbo.DimStore (StoreCode) VALUES ('S-10'), ('S-20');
+DELETE FROM dbo.DimStore WHERE StoreCode = 'S-20';
+INSERT INTO dbo.DimStore (StoreCode) VALUES ('S-30');
+SELECT StoreKey FROM dbo.DimStore WHERE StoreCode = 'S-30';`,
+    expectedOutput: `3`,
+    explanation: 'The two inserts take keys 1 and 2. `DELETE` removes the S-20 row but does not give key 2 back: `IDENTITY` only moves forward, so S-30 gets 3. Surrogate keys carry no meaning and may have gaps, which is why nothing should depend on them being dense. Only `TRUNCATE TABLE` or a reseed starts the count again.',
+    hints: ['IDENTITY never hands out a deleted value again', 'Keys 1 and 2 were already used'],
+    tags: ['tsql', 'surrogate-keys', 'identity', 'gaps', 'predict'],
+  },
 ];

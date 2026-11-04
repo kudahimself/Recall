@@ -152,4 +152,24 @@ CREATE TABLE dbo.FactSales (
     requires: [/CREATE\s+TABLE/i],
     tags: ['tsql', 'facts-dims', 'grain', 'degenerate-dimension'],
   },
+  {
+    id: 'tsql-facts-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_FACTS_DIMS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The fact holds one row per product on an order, and each row also carries its whole order\'s total. What single value does this query return?',
+    tables: [{
+      name: 'dbo.FactOrderLine',
+      columns: ['OrderNumber', 'ProductKey', 'LineAmount', 'OrderTotal'],
+      rows: [['A1', 1, 30, 50], ['A1', 2, 20, 50], ['A2', 1, 40, 40]],
+    }],
+    code: `SELECT SUM(OrderTotal) AS Total
+FROM dbo.FactOrderLine;`,
+    expectedOutput: `140`,
+    explanation: '`OrderTotal` belongs to the order grain, but the table\'s grain is one product on one order, so order A1\'s 50 is stored on both of its lines and summed twice: 50 + 50 + 40 = 140. The real total of the two orders is 90, which `SUM(LineAmount)` gives. Keep only measures of the declared grain in a fact; an order-level total belongs in an order-grain fact.',
+    hints: ['Count how many rows carry order A1\'s total', 'A measure of a coarser grain repeats on every finer row'],
+    tags: ['tsql', 'facts-dims', 'grain', 'double-counting', 'predict'],
+  },
 ];

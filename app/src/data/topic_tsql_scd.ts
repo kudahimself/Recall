@@ -214,4 +214,31 @@ WHERE NOT EXISTS (
     hints: ['A newly inserted current row has IsCurrent = 1', 'NOT EXISTS a current row for that ProductCode'],
     tags: ['tsql', 'scd', 'type-2', 'effective-dates', 'cloze'],
   },
+  {
+    id: 'tsql-scd-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_SCD,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Customer C-7 moved from Leeds to York, and the Type 2 load added a new version. What does this query return? Write one row per line in the ORDER BY order, as City and Total separated by a comma.',
+    tables: [
+      {
+        name: 'dbo.DimCustomer',
+        columns: ['CustomerKey', 'CustomerId', 'City', 'IsCurrent'],
+        rows: [[1, 'C-7', 'Leeds', 0], [2, 'C-7', 'York', 1]],
+      },
+      { name: 'dbo.FactSale', columns: ['CustomerKey', 'Amount'], rows: [[1, 40], [1, 10], [2, 25]] },
+    ],
+    code: `SELECT d.City, SUM(f.Amount) AS Total
+FROM dbo.FactSale AS f
+JOIN dbo.DimCustomer AS d ON d.CustomerKey = f.CustomerKey
+GROUP BY d.City
+ORDER BY d.City;`,
+    expectedOutput: `Leeds, 50
+York, 25`,
+    explanation: 'Each sale keeps the surrogate key of the version that was current when it happened. The two sales made in Leeds point at key 1 and still report Leeds; only the sale after the move points at key 2. That is what Type 2 is for: history stays where it happened. Under Type 1 the City would have been overwritten and all 75 would show as York.',
+    hints: ['Facts join on CustomerKey, not on CustomerId', 'Key 1 is the Leeds version, key 2 the York one'],
+    tags: ['tsql', 'scd', 'type-2', 'history', 'predict'],
+  },
 ];
