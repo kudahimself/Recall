@@ -237,7 +237,7 @@ After the lesson the session goes on with the rest of the topic's ramp.
 Answering the last exercise records the lesson under `recall-lessons`; new filters end a lesson in progress.
 Beside every card of a topic with a lesson, the rule card stays in a side panel, and `R` reopens it in full (Esc closes it).
 The learning path on Home shows each topic's lesson, ramp and review steps with "Start lesson" or "Rule card", and Progress -> Topics lists every topic with "Rule card" and "Drill" and the review schedule of its card families.
-`scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, Python on python3) and prints its `output`; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
+`scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, procedural T-SQL through `scripts/tsql-batch.js`, Python on python3) and prints its `output`; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
 
 **Drain queue definition:**
 `countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
