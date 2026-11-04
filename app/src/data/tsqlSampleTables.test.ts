@@ -1,5 +1,5 @@
 import { questions } from './questions';
-import { Question, Topic } from '../types';
+import { Question, QuestionType, Topic } from '../types';
 import { questionSql } from './tsqlSampleTables';
 import { definedNames, referencedTables } from '../utils/sqlTableRefs';
 
@@ -60,6 +60,77 @@ describe('Querying Foundations questions show the tables they query', () => {
         const inlineValues = /\(\s*VALUES\b/i.test(sql);
         const cte = /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(sql);
         return inlineValues || (cte && !(q.tags ?? []).some(t => t === 'cte' || t === 'recursive-cte'));
+      })
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+});
+
+const DDL_AND_CONSTRAINTS = new Set<string>([
+  Topic.TSQL_DDL_TABLES, Topic.TSQL_TYPES, Topic.TSQL_CONSTRAINTS, Topic.TSQL_VIEWS,
+]);
+
+const ddlSection: Question[] = questions.filter(q => DDL_AND_CONSTRAINTS.has(q.topic));
+
+/** Tables and views the SQL makes itself: CREATE TABLE / VIEW targets and temp tables. */
+function createdNames(sql: string): Set<string> {
+  const code = sql.replace(/--[^\n]*/g, '');
+  const names = new Set<string>();
+  for (const m of Array.from(code.matchAll(/\bCREATE\s+(?:OR\s+ALTER\s+)?(?:TABLE|VIEW)\s+(#?[\w.]+)/gi))) {
+    names.add(m[1].toLowerCase());
+  }
+  for (const m of Array.from(code.matchAll(/#{1,2}\w+/g))) names.add(m[0].toLowerCase());
+  return names;
+}
+
+describe('DDL & Constraints questions show the existing tables they read', () => {
+  it('has the whole section to check', () => {
+    expect(ddlSection.length).toBe(27);
+  });
+
+  it('every existing table a question reads or alters is one of the tables it shows', () => {
+    // MCQs here compare statements as concepts and run against no data.
+    const offenders = ddlSection
+      .filter(q => q.type !== QuestionType.MULTIPLE_CHOICE)
+      .flatMap(q => {
+        const sql = questionSql(q);
+        const created = createdNames(sql);
+        const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+        return referencedTables(sql)
+          .filter(t => !created.has(t) && !shown.has(t))
+          .map(t => `${q.id} reads ${t} without showing it`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question reads, with rows that fit its columns', () => {
+    const offenders = ddlSection.flatMap(q => {
+      const sql = questionSql(q);
+      const refs = new Set(referencedTables(sql));
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) && !createdNames(sql).has(t.name.toLowerCase())
+          ? [] : [`${q.id} shows ${t.name} but does not read an existing table by that name`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('no question builds sample data inline with a VALUES derived table or a CTE', () => {
+    const offenders = ddlSection
+      .filter(q => /\(\s*VALUES\b/i.test(questionSql(q)) || /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(questionSql(q)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no cloze template describes a table it then creates with different columns', () => {
+    // A `-- dbo.T(cols)` header claims T already exists; above `CREATE TABLE dbo.T` it contradicts the statement.
+    const offenders = ddlSection
+      .filter(q => q.type === QuestionType.CLOZE_CODE)
+      .filter(q => {
+        const tpl = (q as { template: string }).template;
+        const headers = Array.from(tpl.matchAll(/^--\s*([\w.]+)\(/gm)).map(m => m[1].toLowerCase());
+        return headers.some(h => createdNames(tpl).has(h));
       })
       .map(q => q.id);
     expect(offenders).toEqual([]);

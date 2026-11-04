@@ -143,6 +143,22 @@ function pick(table: SqlTable, mentioned: string): SqlTable {
 }
 
 /**
+ * One canonical sample table, trimmed to the given columns, for a question
+ * that sets its own `tables` (the DDL & Constraints section, where most
+ * questions create their tables and only a few read the warehouse ones).
+ */
+export function sampleTable(name: string, columns: string[]): SqlTable {
+  const table = BY_NAME.get(name.toLowerCase());
+  if (!table) throw new Error(`no sample table ${name}`);
+  const idx = columns.map(c => {
+    const i = table.columns.indexOf(c);
+    if (i < 0) throw new Error(`sample table ${name} has no column ${c}`);
+    return i;
+  });
+  return { name: table.name, columns: [...columns], rows: table.rows.map(r => idx.map(i => r[i] as SqlCell)) };
+}
+
+/**
  * Give every question that reads a known sample table (and has no `tables`
  * of its own) a preview of it, showing only the columns the question mentions.
  */
