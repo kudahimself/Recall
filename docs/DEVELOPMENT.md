@@ -363,7 +363,7 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 - `StyledButton.tsx` - variants: primary/secondary/warning/danger. Use for all buttons.
 - `StyledBadge.tsx` - pills/badges
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
-- `InlineCode.tsx` - `renderInlineCode` for backticked prose
+- `InlineCode.tsx` - `renderInlineCode` for backticked prose (SQL course only)
 
 **UI theme:**
 Dark-purple themed with radial-gradient mouse-tracked card effects.
@@ -418,7 +418,7 @@ SQL questions use it to show the data a query reads as small read-only grids abo
 Predict questions write their own small tables, since the rows decide the answer.
 In Querying Foundations every other question gets the canonical sample tables from `src/data/tsqlSampleTables.ts` through `attachSampleTables`, trimmed to the columns the question mentions.
 `tsqlSampleTables.test.ts` fails if a section question queries a table it does not show, or builds data inline.
-Backticks in a question's text and explanation render as inline code (`InlineCode.tsx`).
+In SQL-course questions, backticks in the text and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
 
 ### 1. Multiple Choice (`QuestionType.MULTIPLE_CHOICE`)
 
