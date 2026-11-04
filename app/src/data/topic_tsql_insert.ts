@@ -128,4 +128,34 @@ JOIN dbo.DimProduct AS p ON p.____ = s.____;`,
     requires: [/INSERT\s+INTO/i],
     tags: ['tsql', 'insert', 'insert-select', 'surrogate-keys'],
   },
+  {
+    id: 'tsql-insert-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_INSERT,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The load copies active staging products into a dimension that already holds one product. What does the final SELECT return? Write one row per line in the ORDER BY order, as ProductCode and Copies separated by a comma.',
+    tables: [
+      { name: 'dbo.DimProduct', columns: ['ProductCode', 'ProductName'], rows: [['P-10', 'Helmet']] },
+      {
+        name: 'stg.Product',
+        columns: ['ProductCode', 'ProductName', 'IsActive'],
+        rows: [['P-10', 'Helmet', 1], ['P-20', 'Lock', 1], ['P-30', 'Pump', 0]],
+      },
+    ],
+    code: `INSERT INTO dbo.DimProduct (ProductCode, ProductName)
+SELECT ProductCode, ProductName
+FROM stg.Product
+WHERE IsActive = 1;
+SELECT ProductCode, COUNT(*) AS Copies
+FROM dbo.DimProduct
+GROUP BY ProductCode
+ORDER BY ProductCode;`,
+    expectedOutput: `P-10, 2
+P-20, 1`,
+    explanation: 'INSERT ... SELECT appends every row the query returns: the two active products, P-10 and P-20, while the WHERE leaves out the inactive P-30. It never looks at what the target already holds, so P-10 is now stored twice. Running a plain INSERT ... SELECT again would add another copy of each; a load that must be safe to repeat filters with NOT EXISTS or uses MERGE.',
+    hints: ['Which staging rows pass the WHERE?', 'Does INSERT check whether P-10 is already in the target?'],
+    tags: ['tsql', 'insert', 'insert-select', 'duplicates', 'predict'],
+  },
 ];

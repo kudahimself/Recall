@@ -122,4 +122,38 @@ FROM dbo.FactSales;`,
     requires: [/MAX/i, /ISNULL|COALESCE/i],
     tags: ['tsql', 'incremental', 'watermark', 'null-handling'],
   },
+  {
+    id: 'tsql-incr-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_INCREMENTAL,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The last run loaded every staged row up to 10:00 and stored that watermark. Order 2 reached staging only after that run. Which rows does this run pick up? Write one row per line in the ORDER BY order, as OrderId and Amount separated by a comma.',
+    tables: [
+      { name: 'dbo.EtlControl', columns: ['TableName', 'LastLoadedAt'], rows: [['FactSales', '2026-03-01 10:00']] },
+      {
+        name: 'stg.Sales',
+        columns: ['OrderId', 'Amount', 'UpdatedAt'],
+        rows: [
+          [1, 20, '2026-03-01 09:00'],
+          [2, 35, '2026-03-01 09:30'],
+          [3, 10, '2026-03-01 10:00'],
+          [4, 15, '2026-03-01 11:30'],
+          [5, 40, '2026-03-01 12:00'],
+        ],
+      },
+    ],
+    code: `DECLARE @lastLoaded DATETIME2;
+SELECT @lastLoaded = LastLoadedAt FROM dbo.EtlControl WHERE TableName = 'FactSales';
+SELECT OrderId, Amount
+FROM stg.Sales
+WHERE UpdatedAt > @lastLoaded
+ORDER BY OrderId;`,
+    expectedOutput: `4, 15
+5, 40`,
+    explanation: 'The filter keeps rows strictly after the 10:00 watermark: orders 4 and 5. Order 3, stamped exactly 10:00, was loaded by the last run, and the strict > rightly skips it. Order 2 is stamped 09:30, so the filter skips it too, although no run ever loaded it: it arrived late. A lookback window (watermark minus a margin) feeding an idempotent MERGE picks such rows up without duplicating the ones already loaded.',
+    hints: ['Compare each UpdatedAt with 10:00, strictly greater', 'The filter reads the timestamp, not when the row arrived'],
+    tags: ['tsql', 'incremental', 'high-watermark', 'late-arriving', 'predict'],
+  },
 ];

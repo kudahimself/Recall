@@ -6,7 +6,8 @@
  * Section 3, Analytical & Window SQL: every topic.
  * Section 4, Transactions & Procedural T-SQL: every topic.
  * Section 5, Data Modeling in SQL: every topic.
- * Later sections follow one per PR (next: ELT & Transformation Patterns).
+ * Section 6, ELT & Transformation Patterns: every topic.
+ * Later sections follow one per PR (next: Performance & Optimization).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -2225,6 +2226,524 @@ ORDER BY l.LoanId;`,
       'tsql-norm-mcq-2',
       'tsql-norm-mcq-3',
       'tsql-norm-mcq-5',
+    ],
+  },
+  {
+    id: 'tsql_insert/1',
+    topicKeys: [Topic.TSQL_INSERT],
+    step: 1,
+    title: 'INSERT & OUTPUT',
+    idea: [
+      lines(
+        "`INSERT INTO t (cols) SELECT ... FROM src` loads every row a query returns into a table that already exists, in one set-based statement.",
+        "It is how staging rows move into a warehouse table; `INSERT ... VALUES` only supplies rows you type out.",
+      ),
+      lines(
+        "The target column list pairs with the select list by position, not by name, so always write it out.",
+        "The `SELECT` can filter, join and compute, and a constant in the select list fills a column for every row.",
+      ),
+      lines(
+        "`SELECT ... INTO NewTable FROM src` is different: it creates the table on the spot, without its keys, constraints or indexes, which suits a scratch table rather than a real target.",
+        "`OUTPUT inserted.col` hands back the rows the insert just wrote, such as generated surrogate keys, and `OUTPUT ... INTO @v` keeps them for the next load step.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- Load an existing table from a query
+INSERT INTO t (col1, col2)              -- target columns, paired by position
+SELECT s.colA, s.colB
+FROM src AS s
+WHERE condition;
+
+-- Create and fill a new table (no keys or constraints copied)
+SELECT col1, col2 INTO new_t FROM src;
+
+-- Capture what was inserted, e.g. generated keys
+INSERT INTO t (col1)
+OUTPUT inserted.key_col INTO @keys (key_col)
+SELECT colA FROM src;`,
+    },
+    pitfall: lines(
+      "`INSERT ... SELECT` never looks at what the target already holds, so a row that is already there is added again, and a rerun of the load doubles the table.",
+      "When the target may already have the row, guard the insert with `WHERE NOT EXISTS` on the key, or use `MERGE`.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Book',
+          columns: ['BookId', 'Title', 'Shelf'],
+          rows: [[1, 'Dune', 'A1']],
+        },
+        {
+          name: 'StageBook',
+          columns: ['Title', 'BookId', 'InPrint'],
+          rows: [
+            ['Dune', 1, 1],
+            ['Emma', 2, 1],
+            ['Ubik', 3, 0],
+          ],
+        },
+      ],
+      code: `INSERT INTO Book (BookId, Title, Shelf)
+SELECT s.BookId, s.Title, 'NEW'
+FROM StageBook AS s
+WHERE s.InPrint = 1
+  AND NOT EXISTS (SELECT 1 FROM Book AS b WHERE b.BookId = s.BookId);
+SELECT BookId, Title, Shelf FROM Book ORDER BY BookId;`,
+      steps: [
+        "Line 1: the column list names the target columns, and line 2 fills them in that order, although `StageBook` keeps `Title` before `BookId`.",
+        "Line 2: the constant 'NEW' fills `Shelf` for every row loaded, since staging has no shelf yet.",
+        "Line 4: Ubik is out of print, so the filter leaves it out.",
+        "Line 5: Dune is already in `Book`, so `NOT EXISTS` skips it, and only Emma is inserted.",
+        "Without line 5, Dune would be stored twice, and every rerun would add another copy.",
+      ],
+      output: `BookId | Title | Shelf
+1 | Dune | A1
+2 | Emma | NEW`,
+    },
+    exercises: [
+      'tsql-insert-mcq-1',
+      'tsql-insert-predict-1',
+      'tsql-insert-cloze-1',
+      'tsql-insert-mcq-2',
+      'tsql-insert-output-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_merge/1',
+    topicKeys: [Topic.TSQL_MERGE],
+    step: 1,
+    title: 'MERGE (Upsert)',
+    idea: [
+      lines(
+        "`MERGE` joins a source to a target on a key and then, row by row, runs the action of the branch that row falls into.",
+        "One statement can update, insert and delete, which is why it is the usual tool for loading a dimension from staging.",
+      ),
+      lines(
+        "`WHEN MATCHED` fires for keys in both tables, usually to `UPDATE` the target row.",
+        "`WHEN NOT MATCHED BY TARGET` fires for keys only in the source, which are new, so it inserts them; a plain `WHEN NOT MATCHED` means the same.",
+        "`WHEN NOT MATCHED BY SOURCE` fires for keys only in the target, which have gone upstream, so it deletes or expires them.",
+      ),
+      lines(
+        "A branch can carry an extra condition, as in `WHEN MATCHED AND tgt.col <> src.col`, so unchanged rows are not rewritten.",
+        "`OUTPUT $action` reports which branch each row took, and a `MERGE` must end with a semicolon.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `MERGE target AS tgt
+USING source AS src
+    ON tgt.key = src.key                      -- match on the key
+WHEN MATCHED AND tgt.col <> src.col THEN      -- in both, and changed
+    UPDATE SET tgt.col = src.col
+WHEN NOT MATCHED BY TARGET THEN               -- only in the source: new
+    INSERT (key, col) VALUES (src.key, src.col)
+WHEN NOT MATCHED BY SOURCE THEN               -- only in the target: gone
+    DELETE
+OUTPUT $action, inserted.key;                 -- optional; the ; is required`,
+    },
+    pitfall: lines(
+      "`BY TARGET` and `BY SOURCE` name the table that lacks the row, not the one that has it.",
+      "A row only in the source is not matched by the target, so it is inserted; a row only in the target is not matched by the source.",
+      "Leave out `WHEN NOT MATCHED BY SOURCE` and target-only rows stay as they are; add it with `DELETE` only when the target must mirror the source.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Book',
+          columns: ['BookId', 'Title', 'Price'],
+          rows: [
+            [1, 'Dune', 9],
+            [2, 'Emma', 7],
+            [3, 'Ubik', 8],
+          ],
+        },
+        {
+          name: 'StageBook',
+          columns: ['BookId', 'Title', 'Price'],
+          rows: [
+            [2, 'Emma', 7],
+            [3, 'Ubik', 6],
+            [4, 'Kindred', 10],
+          ],
+        },
+      ],
+      code: `SELECT COALESCE(t.BookId, s.BookId) AS BookId,
+       CASE WHEN t.BookId IS NULL THEN 'INSERT'
+            WHEN s.BookId IS NULL THEN 'DELETE'
+            WHEN t.Price <> s.Price THEN 'UPDATE'
+            ELSE 'no change' END AS Branch
+FROM Book AS t
+FULL OUTER JOIN StageBook AS s ON s.BookId = t.BookId
+ORDER BY BookId;`,
+      steps: [
+        "This query is a dry run of the three-branch `MERGE` in the form, with `Book` as the target and `StageBook` as the source: it shows which branch each key falls into.",
+        "Lines 6-7: a full outer join keeps keys from either side, just as `MERGE` sees every key of both tables.",
+        "Line 2: book 4 has no target row, so `NOT MATCHED BY TARGET` would insert it.",
+        "Line 3: book 1 has no source row, so `NOT MATCHED BY SOURCE` would delete it.",
+        "Lines 4-5: books 2 and 3 are matched, but only book 3's price changed, so `WHEN MATCHED AND tgt.Price <> src.Price` would update book 3 alone.",
+      ],
+      output: `BookId | Branch
+1 | DELETE
+2 | no change
+3 | UPDATE
+4 | INSERT`,
+    },
+    exercises: [
+      'tsql-merge-mcq-1',
+      'tsql-merge-mcq-2',
+      'tsql-merge-predict-1',
+      'tsql-merge-cloze-1',
+      'tsql-merge-bysource-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_dedup/1',
+    topicKeys: [Topic.TSQL_DEDUP],
+    step: 1,
+    title: 'Deduplication',
+    idea: [
+      lines(
+        "Staging often holds several versions of the same key, such as one row per extract a customer appeared in.",
+        "To keep one row per key, number the rows inside each key with `ROW_NUMBER() OVER (PARTITION BY key ORDER BY ...)` and keep number 1.",
+      ),
+      lines(
+        "`PARTITION BY` restarts the count for each key, and the `ORDER BY` decides which row is first, usually the newest with `DESC`.",
+        "A window value cannot be filtered in the same `SELECT`, so compute `rn` in a CTE and filter `WHERE rn = 1` outside it; T-SQL has no `QUALIFY`.",
+      ),
+      lines(
+        "To clean the table itself, delete through the CTE: `DELETE FROM cte WHERE rn > 1` removes the extra rows from the underlying table.",
+        "`DISTINCT` is no substitute, because it only removes rows that are equal in every column.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `WITH ranked AS (
+    SELECT cols,
+           ROW_NUMBER() OVER (PARTITION BY key_col      -- one count per key
+                              ORDER BY recency_col DESC, tie_col) AS rn
+    FROM t
+)
+SELECT cols FROM ranked WHERE rn = 1;                   -- keep one per key
+
+-- Or remove the extra rows from t itself
+-- WITH ranked AS (...) DELETE FROM ranked WHERE rn > 1;`,
+    },
+    pitfall: lines(
+      "The `ORDER BY` inside `OVER` decides which row survives, so getting it wrong silently keeps the wrong version.",
+      "Sort newest first with `DESC` to keep the latest, and add a unique column as a tie-breaker, or two rows with the same timestamp may swap places from one run to the next.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'StageMember',
+          columns: ['MemberId', 'Email', 'ExtractedOn', 'BatchId'],
+          rows: [
+            [7, 'ada@old.org', '2026-02-01', 1],
+            [7, 'ada@new.org', '2026-03-01', 2],
+            [8, 'ben@mail.org', '2026-03-01', 2],
+            [8, 'ben@work.org', '2026-03-01', 3],
+          ],
+        },
+      ],
+      code: `WITH latest AS (
+    SELECT MemberId, Email,
+           ROW_NUMBER() OVER (PARTITION BY MemberId
+                              ORDER BY ExtractedOn DESC, BatchId DESC) AS rn
+    FROM StageMember
+)
+SELECT MemberId, Email
+FROM latest
+WHERE rn = 1
+ORDER BY MemberId;`,
+      steps: [
+        "Line 3: the count restarts for each member, so member 7 and member 8 each get a row numbered 1.",
+        "Line 4: the newest extract comes first, so ada@new.org from March beats ada@old.org from February.",
+        "Line 4: member 8's two rows share a date, and the tie-breaker `BatchId DESC` puts the later batch, ben@work.org, first every time.",
+        "Line 9: the outer query keeps `rn = 1`, one row per member, which the CTE had to compute first.",
+      ],
+      output: `MemberId | Email
+7 | ada@new.org
+8 | ben@work.org`,
+    },
+    exercises: [
+      'tsql-dedup-mcq-1',
+      'tsql-dedup-predict-1',
+      'tsql-dedup-cloze-1',
+      'tsql-dedup-delete-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_etl_proc/1',
+    topicKeys: [Topic.TSQL_ETL_PROC],
+    step: 1,
+    title: 'Staging → Target Load Procedures',
+    idea: [
+      lines(
+        "A load from staging into a target runs as one stored procedure: a single named entry point a scheduler can call and retry.",
+        "Inside it, `SET XACT_ABORT ON` and a `BEGIN TRAN ... COMMIT` in a `TRY` block make the load all or nothing, and the `CATCH` rolls back and re-throws with `THROW`, so the scheduler sees the failure.",
+      ),
+      lines(
+        "The load must be idempotent: running it again leaves the target in the same state, not doubled.",
+        "Schedulers retry failed runs, so a blind `INSERT ... SELECT` is not enough; use `MERGE` on the key, or empty the target and reload it all.",
+      ),
+      lines(
+        "A full reload is simplest for small tables or ones with no reliable change column; a `MERGE` or an incremental load wins for large tables and is required to keep history.",
+        "Many loads also log each run, capturing `@@ROWCOUNT` right after the main statement, before the next statement resets it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE PROCEDURE dbo.LoadTarget AS
+BEGIN
+    DECLARE @rows INT;
+    SET XACT_ABORT ON;                 -- any error dooms the transaction
+    BEGIN TRY
+        BEGIN TRAN;
+        -- idempotent step: MERGE on the key, or DELETE / TRUNCATE + INSERT ... SELECT
+        SET @rows = @@ROWCOUNT;        -- capture at once: the next statement resets it
+        -- INSERT INTO dbo.RunLog (...) VALUES (..., @rows, status);
+        COMMIT;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK;   -- undo the partial load
+        THROW;                         -- re-raise to the scheduler
+    END CATCH
+END;`,
+    },
+    pitfall: lines(
+      "A `CATCH` that rolls back but does not re-throw swallows the error: the scheduler records a success and the load is quietly missing.",
+      "End the `CATCH` with `THROW;` after the `ROLLBACK`, so a failed run is reported and retried.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Shelf',
+          columns: ['ShelfId', 'Label'],
+          rows: [[9, 'Old stock']],
+        },
+        {
+          name: 'StageShelf',
+          columns: ['ShelfId', 'Label'],
+          rows: [
+            [1, 'Fiction'],
+            [2, 'History'],
+          ],
+        },
+      ],
+      code: `CREATE PROCEDURE LoadShelf AS
+BEGIN
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRAN;
+        DELETE FROM Shelf;
+        INSERT INTO Shelf (ShelfId, Label) SELECT ShelfId, Label FROM StageShelf;
+        COMMIT;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK;
+        THROW;
+    END CATCH
+END
+GO
+EXEC LoadShelf;
+EXEC LoadShelf;
+SELECT ShelfId, Label FROM Shelf ORDER BY ShelfId;`,
+      steps: [
+        "Lines 1-14: the procedure is the load's one entry point, created alone in its batch before the `GO`.",
+        "Lines 6-7: the load empties `Shelf` and reloads it from staging, a full reload, so the old shelf 9 is gone.",
+        "Lines 5 and 8: both steps commit together, so a failure in the insert would leave the old rows in place rather than an empty table.",
+        "Lines 16-17: the scheduler runs the load twice, as a retry would, and the second run lands in the same state: two shelves, not four.",
+      ],
+      output: `ShelfId | Label
+1 | Fiction
+2 | History`,
+    },
+    exercises: [
+      'tsql-etlproc-mcq-1',
+      'tsql-etlproc-predict-1',
+      'tsql-etlproc-cloze-1',
+      'tsql-etlproc-mcq-2',
+      'tsql-etlproc-runlog-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_incremental/1',
+    topicKeys: [Topic.TSQL_INCREMENTAL],
+    step: 1,
+    title: 'Incremental Loads',
+    idea: [
+      lines(
+        "An incremental load moves only the rows that are new or changed since the last run, instead of the whole source.",
+        "It keeps a high-watermark, the newest change timestamp (or id) already loaded, in a control table.",
+      ),
+      lines(
+        "Each run reads the watermark into a variable, loads the rows with `col > @watermark`, and then moves the watermark to the newest value it loaded.",
+        "The comparison is strictly greater, so the boundary row loaded last time is not loaded again.",
+        "Take the new watermark from the rows loaded, not from `GETDATE()`, and wrap `MAX` in `ISNULL` so an empty table or an empty run does not leave it NULL.",
+      ),
+      lines(
+        "A row can arrive late: stamped before the watermark but staged after the run that moved past it.",
+        "A strict filter skips it forever, so many loads reread a lookback window, `col > DATEADD(HOUR, -n, @watermark)`, and load it with an idempotent `MERGE` so the overlap is not duplicated.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `DECLARE @wm DATETIME2;
+SELECT @wm = last_col FROM ctl WHERE table_col = 'T';     -- 1. read the watermark
+
+INSERT INTO target (cols)                                 -- 2. load the delta
+SELECT cols FROM src
+WHERE change_col > @wm;            -- or > DATEADD(HOUR, -n, @wm) with a MERGE
+
+UPDATE ctl                                                -- 3. move the watermark
+SET last_col = (SELECT ISNULL(MAX(change_col), @wm) FROM target)
+WHERE table_col = 'T';`,
+    },
+    pitfall: lines(
+      "Moving the watermark to the current time, or past rows that were not loaded, silently skips data.",
+      "Set it from the newest value actually loaded, with `ISNULL` keeping the old value when a run finds nothing.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'LoadControl',
+          columns: ['TableName', 'LastLoadedOn'],
+          rows: [['Loan', '2026-03-02']],
+        },
+        {
+          name: 'StageLoan',
+          columns: ['LoanId', 'BookId', 'LoanedOn'],
+          rows: [
+            [1, 10, '2026-03-01'],
+            [2, 11, '2026-03-02'],
+            [3, 12, '2026-03-03'],
+            [4, 10, '2026-03-04'],
+          ],
+        },
+      ],
+      code: `DECLARE @last DATE;
+DECLARE @next DATE;
+SELECT @last = LastLoadedOn FROM LoadControl WHERE TableName = 'Loan';
+SELECT LoanId, LoanedOn FROM StageLoan WHERE LoanedOn > @last ORDER BY LoanId;
+SELECT @next = ISNULL(MAX(LoanedOn), @last) FROM StageLoan WHERE LoanedOn > @last;
+UPDATE LoadControl SET LastLoadedOn = @next WHERE TableName = 'Loan';
+SELECT TableName, LastLoadedOn FROM LoadControl;`,
+      steps: [
+        "Line 3: the last run loaded everything up to 2 March, so `@last` is 2026-03-02.",
+        "Line 4: the delta is loans 3 and 4; loan 2, stamped exactly 2 March, came in last time, and the strict `>` leaves it out.",
+        "In a real load, line 4 is the `SELECT` of an `INSERT` or `MERGE` into the target.",
+        "Line 5: the new watermark is the newest date in the delta, 4 March, and if the delta were empty `ISNULL` would keep 2 March.",
+        "Line 6: the control row moves forward, so the next run starts after 4 March.",
+      ],
+      output: `LoanId | LoanedOn
+3 | 2026-03-03
+4 | 2026-03-04
+
+TableName | LastLoadedOn
+Loan | 2026-03-04`,
+    },
+    exercises: [
+      'tsql-incr-mcq-1',
+      'tsql-incr-predict-1',
+      'tsql-incr-cloze-1',
+      'tsql-incr-mcq-2',
+      'tsql-incr-lookback-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_quality/1',
+    topicKeys: [Topic.TSQL_QUALITY],
+    step: 1,
+    title: 'Data Quality Checks',
+    idea: [
+      lines(
+        "A data-quality check is a query that returns the rows, or the count of rows, that break a rule.",
+        "A load gate runs the checks after staging and stops the load, or sets the bad rows aside, when any check finds something.",
+      ),
+      lines(
+        "Uniqueness: `GROUP BY key HAVING COUNT(*) > 1` returns every key stored more than once.",
+        "Referential integrity: `LEFT JOIN` the fact to the dimension and keep `WHERE dim.key IS NULL`, the orphans with no parent, or write it with `NOT EXISTS`.",
+      ),
+      lines(
+        "Validity: count the rows that fail a rule, such as `WHERE col IS NULL OR col < 0`.",
+        "Reconciliation: `src_query EXCEPT target_query` returns the distinct rows of the source that are missing or different in the target.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- Uniqueness: keys stored more than once
+SELECT key_col, COUNT(*) FROM t GROUP BY key_col HAVING COUNT(*) > 1;
+
+-- Orphans: child rows with no parent
+SELECT c.* FROM child AS c
+LEFT JOIN parent AS p ON p.key_col = c.key_col
+WHERE p.key_col IS NULL;
+
+-- Validity: rows that break a rule, NULLs named explicitly
+SELECT COUNT(*) FROM t WHERE col IS NULL OR col < 0;
+
+-- Reconciliation: source rows missing or different in the target
+SELECT cols FROM src EXCEPT SELECT cols FROM target;`,
+    },
+    pitfall: lines(
+      "A comparison with NULL is unknown, never true, so `WHERE col < 0` skips rows whose value is missing, and a check meant to catch them reports too few.",
+      "Test missing values by name with `col IS NULL`, alongside the range rule.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'StageBook',
+          columns: ['BookId', 'Title'],
+          rows: [
+            [1, 'Dune'],
+            [2, null],
+            [2, 'Emma'],
+          ],
+        },
+        {
+          name: 'StageLoan',
+          columns: ['LoanId', 'BookId'],
+          rows: [
+            [10, 1],
+            [11, 5],
+            [12, 6],
+          ],
+        },
+      ],
+      code: `SELECT 'duplicate id' AS RuleName, COUNT(*) AS Failures
+FROM (SELECT BookId FROM StageBook GROUP BY BookId HAVING COUNT(*) > 1) AS d
+UNION ALL
+SELECT 'missing title', COUNT(*) FROM StageBook WHERE Title IS NULL
+UNION ALL
+SELECT 'orphan loan', COUNT(*)
+FROM StageLoan AS l
+LEFT JOIN StageBook AS b ON b.BookId = l.BookId
+WHERE b.BookId IS NULL
+ORDER BY RuleName;`,
+      steps: [
+        "Lines 1-2: book 2 appears twice, so one key breaks uniqueness, and the outer `COUNT(*)` counts the keys the inner query returns.",
+        "Line 4: one row has no title, and `IS NULL` is the only test that finds it.",
+        "Lines 6-9: loans 11 and 12 point at books 5 and 6, which do not exist, so the left join gives them a NULL `b.BookId` and they count as orphans.",
+        "`UNION ALL` stacks the checks into one report, one row per rule, and a gate stops the load when any `Failures` is above 0.",
+      ],
+      output: `RuleName | Failures
+duplicate id | 1
+missing title | 1
+orphan loan | 2`,
+    },
+    exercises: [
+      'tsql-quality-mcq-1',
+      'tsql-quality-mcq-2',
+      'tsql-quality-predict-1',
+      'tsql-quality-cloze-1',
+      'tsql-quality-1',
     ],
   },
 ];

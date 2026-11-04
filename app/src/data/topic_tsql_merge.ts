@@ -208,4 +208,29 @@ ____ NOT MATCHED BY SOURCE THEN
     requires: [/MERGE/i],
     tags: ['tsql', 'merge', 'upsert', 'sync'],
   },
+  {
+    id: 'tsql-merge-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_MERGE,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The MERGE syncs the dimension from staging with two WHEN branches. What does the final SELECT return? Write one row per line in the ORDER BY order, as CustomerId and City separated by a comma.',
+    tables: [
+      { name: 'dbo.DimCustomer', columns: ['CustomerId', 'City'], rows: [[7, 'Leeds'], [8, 'York']] },
+      { name: 'stg.Customer', columns: ['CustomerId', 'City'], rows: [[8, 'Hull'], [9, 'Bath']] },
+    ],
+    code: `MERGE dbo.DimCustomer AS tgt
+USING stg.Customer AS src ON tgt.CustomerId = src.CustomerId
+WHEN MATCHED THEN UPDATE SET tgt.City = src.City
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (CustomerId, City) VALUES (src.CustomerId, src.City);
+SELECT CustomerId, City FROM dbo.DimCustomer ORDER BY CustomerId;`,
+    expectedOutput: `7, Leeds
+8, Hull
+9, Bath`,
+    explanation: 'Customer 8 is in both tables, so WHEN MATCHED updates its City to Hull. Customer 9 is only in staging, so WHEN NOT MATCHED BY TARGET inserts it. Customer 7 is only in the target, and with no WHEN NOT MATCHED BY SOURCE branch MERGE leaves it alone, so it keeps Leeds. Add that branch with DELETE only when the target must mirror the source exactly.',
+    hints: ['Sort each customer into: in both, only in staging, only in the target', 'Which branch would fire for customer 7, and is it written?'],
+    tags: ['tsql', 'merge', 'upsert', 'not-matched-by-source', 'predict'],
+  },
 ];
