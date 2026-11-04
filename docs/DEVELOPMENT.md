@@ -417,8 +417,9 @@ Any question can carry `tables?: SqlTable[]` (`{ name, columns, rows }`, `null` 
 SQL questions use it to show the data a query reads as small read-only grids above the code (`DataTables.tsx`), so the query says `FROM dbo.Payment` instead of building rows inline with `WITH`/`VALUES`.
 Predict questions write their own small tables, since the rows decide the answer.
 In Querying Foundations every other question gets the canonical sample tables from `src/data/tsqlSampleTables.ts` through `attachSampleTables`, trimmed to the columns the question mentions.
-`tsqlSampleTables.test.ts` fails if a section question queries a table it does not show, or builds data inline.
-In SQL-course questions, backticks in the text and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
+In DDL & Constraints most questions create their own tables, so the few that read or alter an existing one set `tables` themselves, using `sampleTable(name, columns)` for a canonical table.
+`tsqlSampleTables.test.ts` fails if a question in either section queries an existing table it does not show, or builds data inline.
+In SQL-course questions, backticks in the text, multiple-choice options and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
 
 ### 1. Multiple Choice (`QuestionType.MULTIPLE_CHOICE`)
 

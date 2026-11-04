@@ -1,5 +1,5 @@
 /**
- * Topic.TSQL_DDL_TABLES — SQL for Data Engineering (T-SQL).
+ * Topic.TSQL_DDL_TABLES - SQL for Data Engineering (T-SQL).
  * Pillar 2 (DDL & Constraints): CREATE/ALTER/DROP TABLE, SELECT INTO, schemas,
  * temp tables (#t / ##g) and table variables (@t).
  */
@@ -11,6 +11,7 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { sampleTable } from './tsqlSampleTables';
 
 export const tsql_ddl_tables_questions: Question[] = [
   {
@@ -24,10 +25,10 @@ export const tsql_ddl_tables_questions: Question[] = [
       { id: 'a', text: 'Defines a new persistent table in the `dbo` schema with the given columns and types; qualifying with `dbo.` avoids name ambiguity and is the recommended practice.', isCorrect: true },
       { id: 'b', text: 'Creates a temporary table that is dropped at the end of the session; the `dbo.` prefix is what marks the table as session-scoped.', isCorrect: false },
       { id: 'c', text: 'Inserts a batch of rows into an existing `DimCustomer` table; the `dbo.` prefix chooses which database the rows are written to.', isCorrect: false },
-      { id: 'd', text: 'Declares an in-memory table variable for the current batch; the `dbo.` prefix selects the memory pool it is allocated from.', isCorrect: false },
+      { id: 'd', text: 'Creates the table, or replaces it if one with that name already exists; the `dbo.` prefix is required syntax and the statement fails without it.', isCorrect: false },
     ],
-    explanation: 'CREATE TABLE is DDL — it defines schema, it does not move data. Names resolve as `schema.object`; `dbo` is the default schema. Always two-part-name your objects (`dbo.DimCustomer`) so resolution does not depend on the caller\'s default schema. Temp tables use a `#` prefix and table variables use `@`, not `dbo.`.',
-    hints: ['DDL defines structure; DML (INSERT/UPDATE) changes data', 'schema.object — dbo is the default schema'],
+    explanation: 'CREATE TABLE is DDL - it defines structure, it does not move data, and it fails if a table with that name already exists (it never replaces one). Names resolve as `schema.object`, and `dbo` is the default schema, so the prefix is optional syntax but good practice: a two-part name (`dbo.DimCustomer`) resolves the same way whoever runs the script, whatever their default schema. The schema is not the database, and temp tables use a `#` prefix, not `dbo.`.',
+    hints: ['DDL defines structure; DML (INSERT/UPDATE) changes data', 'schema.object - dbo is the default schema'],
     tags: ['tsql', 'ddl', 'create-table', 'schema'],
   },
   {
@@ -37,9 +38,8 @@ export const tsql_ddl_tables_questions: Question[] = [
     topic: Topic.TSQL_DDL_TABLES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the statement keyword that defines a new table, and the Unicode string type for the product name.',
-    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
-___ TABLE dbo.DimProduct (
+    question: 'Fill in the statement keyword that defines a new table, and the variable-length Unicode text type for the product name.',
+    template: `___ TABLE dbo.DimProduct (
     ProductKey  INT,
     ProductName ___(100)
 );`,
@@ -48,7 +48,7 @@ ___ TABLE dbo.DimProduct (
     ProductKey  INT,
     ProductName NVARCHAR(100)
 );`,
-    explanation: '`CREATE TABLE` defines the table. `NVARCHAR(n)` stores Unicode text (two bytes/char) — use it over `VARCHAR` whenever the data may contain non-ASCII characters, which is the safe default for names in a warehouse.',
+    explanation: '`CREATE TABLE` defines the table. `NVARCHAR(n)` stores variable-length Unicode text, up to n characters (`NCHAR(n)` is the fixed-length one that pads to n) - use it over `VARCHAR` whenever the data may contain non-ASCII characters, which is the safe default for names in a warehouse.',
     hints: ['The DDL verb that makes a new object', 'N-prefixed VARCHAR = Unicode'],
     tags: ['tsql', 'ddl', 'create-table', 'cloze'],
   },
@@ -59,7 +59,7 @@ ___ TABLE dbo.DimProduct (
     topic: Topic.TSQL_DDL_TABLES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Write a `CREATE TABLE` statement for `dbo.DimCustomer` with these columns: `CustomerKey` (INT), `FullName` (Unicode text up to 100 chars), `Email` (Unicode text up to 255 chars), and `CreatedAt` (a modern date-and-time type).',
+    question: 'Write a `CREATE TABLE` statement for `dbo.DimCustomer` with these columns: `CustomerKey` (INT), `FullName` (Unicode text up to 100 chars), `Email` (Unicode text up to 255 chars), and `CreatedAt` (the modern date-and-time type that replaces the legacy `DATETIME`).',
     requires: [/CREATE\s+TABLE/i],
     starterCode: `-- CREATE TABLE dbo.DimCustomer ( ... )
 `,
@@ -85,7 +85,7 @@ ___ TABLE dbo.DimProduct (
     CreatedAt   ____
 );`,
     },
-    explanation: 'Each column is `name type`. `NVARCHAR(n)` for Unicode text with a length cap; `DATETIME2` is the modern timestamp type (wider range and higher precision than the legacy `DATETIME`). Keys/constraints come later — this is the bare table definition.',
+    explanation: 'Each column is `name type`. `NVARCHAR(n)` for Unicode text with a length cap; `DATETIME2` is the modern timestamp type (wider range and higher precision than the legacy `DATETIME`). Keys and constraints come later - this is the bare table definition.',
     hints: ['One `column type` per line, comma-separated', 'NVARCHAR(n) for text, DATETIME2 for timestamps'],
     tags: ['tsql', 'ddl', 'create-table'],
   },
@@ -97,12 +97,12 @@ ___ TABLE dbo.DimProduct (
     course: Course.SQL,
     question: 'How does `DROP TABLE dbo.StageOrders` differ from `DELETE FROM dbo.StageOrders`?',
     options: [
-      { id: 'a', text: 'DROP TABLE removes the table definition itself, along with all its data - the table no longer exists; DELETE only removes rows and leaves the (now empty) table and its structure intact.', isCorrect: true },
-      { id: 'b', text: 'They are equivalent - both remove every row and leave an empty table behind.', isCorrect: false },
-      { id: 'c', text: 'DROP TABLE only removes rows matching a WHERE clause; DELETE removes the table structure.', isCorrect: false },
-      { id: 'd', text: 'DROP TABLE is DML and can be rolled back automatically; DELETE is DDL and cannot.', isCorrect: false },
+      { id: 'a', text: 'DROP TABLE removes the table itself, its columns and rows, so it no longer exists; DELETE removes rows and leaves the empty table in place.', isCorrect: true },
+      { id: 'b', text: 'Both remove every row and keep the table; DROP TABLE is just faster because it does not log each row as it goes.', isCorrect: false },
+      { id: 'c', text: 'DROP TABLE removes the rows but keeps the column definitions for a reload; DELETE without a WHERE removes the table itself.', isCorrect: false },
+      { id: 'd', text: 'DROP TABLE works only on an empty table, so you DELETE the rows first; once it is empty, DROP TABLE removes the definition.', isCorrect: false },
     ],
-    explanation: '`DROP TABLE` is DDL - it erases the table\'s definition and data entirely, so the object is gone and would need `CREATE TABLE` again to exist. `DELETE` is DML - it removes rows (optionally filtered by WHERE) but the empty table, its columns, and its constraints remain.',
+    explanation: '`DROP TABLE` is DDL - it erases the table\'s definition and data entirely, whether or not it holds rows, so the object is gone and would need `CREATE TABLE` again to exist. `DELETE` is DML - it removes rows (optionally filtered by WHERE) but the empty table, its columns, and its constraints remain, even with no WHERE. Emptying a table quickly while keeping it is `TRUNCATE TABLE`, not DROP.',
     hints: ['DROP removes the whole object (structure + data)', 'DELETE removes rows, keeps the table'],
     tags: ['tsql', 'ddl', 'drop-table'],
   },
@@ -119,7 +119,7 @@ ___ TABLE dbo.DimProduct (
       { id: 'c', text: 'ALTER TABLE dbo.DimCustomer MODIFY Phone NVARCHAR(20) NULL;', isCorrect: false },
       { id: 'd', text: 'UPDATE TABLE dbo.DimCustomer ADD Phone NVARCHAR(20) NULL;', isCorrect: false },
     ],
-    explanation: 'In T-SQL the syntax is `ALTER TABLE … ADD <col> <type>` — note there is NO `COLUMN` keyword when adding (unlike some other dialects). `MODIFY` is MySQL/Oracle; T-SQL changes a type with `ALTER COLUMN`. To remove a column you DO write `DROP COLUMN`. Adding a nullable column is a metadata-only, fast operation.',
+    explanation: 'In T-SQL the syntax is `ALTER TABLE … ADD <col> <type>` - note there is NO `COLUMN` keyword when adding (unlike some other dialects). `MODIFY` is MySQL/Oracle; T-SQL changes a type with `ALTER COLUMN`. To remove a column you DO write `DROP COLUMN`. Adding a nullable column is a metadata-only, fast operation.',
     hints: ['T-SQL ADD has no COLUMN keyword (but DROP COLUMN does)', 'changing a type is ALTER COLUMN, not MODIFY'],
     tags: ['tsql', 'ddl', 'alter-table'],
   },
@@ -130,8 +130,19 @@ ___ TABLE dbo.DimProduct (
     topic: Topic.TSQL_DDL_TABLES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the two ALTER TABLE sub-clauses: one widens an existing column\'s type, the other removes a column.',
-    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+    question: 'Fill in the two ALTER TABLE sub-clauses on the existing `dbo.DimCustomer` table shown: one widens the Email column\'s type, the other removes the Phone column.',
+    tables: [
+      {
+        name: 'dbo.DimCustomer',
+        columns: ['CustomerKey', 'FullName', 'Email', 'Phone'],
+        rows: [
+          [1, 'Ingrid Berg', 'ingrid@example.no', '555-123-4567'],
+          [2, 'Lars Holm', null, '555-222-0101'],
+          [3, 'Sofia Lind', 'sofia@example.se', null],
+        ],
+      },
+    ],
+    template: `-- dbo.DimCustomer(CustomerKey, FullName, Email, Phone)
 -- widen the Email column
 ALTER TABLE dbo.DimCustomer ___ COLUMN Email NVARCHAR(320);
 -- remove the Phone column
@@ -155,7 +166,7 @@ ALTER TABLE dbo.DimCustomer DROP COLUMN Phone;`,
     options: [
       { id: 'a', text: '`#tmp` is a session-scoped temp table in tempdb (visible to nested procs in that session); `@tbl` is a table variable scoped to the batch/proc; `##tmp` is a global temp table visible to all sessions until the creator disconnects.', isCorrect: true },
       { id: 'b', text: '`#tmp` is global to every session; `@tbl` is written to the user database; `##tmp` is an in-memory variable that vanishes after the current statement finishes.', isCorrect: false },
-      { id: 'c', text: 'All three are identical aliases for tempdb tables; the prefix is purely stylistic and chosen by team convention.', isCorrect: false },
+      { id: 'c', text: '`#tmp` and `##tmp` both last only for your session (the second `#` just avoids name clashes); `@tbl` is a temp table that other sessions can query by name.', isCorrect: false },
       { id: 'd', text: '`#tmp` and `##tmp` are permanent staging tables in `dbo`; `@tbl` is the only one that lives in tempdb and is cleaned up automatically.', isCorrect: false },
     ],
     explanation: 'All three live in tempdb, but scope differs. `#local` temp tables last for the session and are seen by called procedures; `@table` variables are scoped to the batch/procedure and don\'t participate in transactions or get statistics (good for small sets); `##global` temp tables are shared across sessions and dropped when the creating session ends and no one else references them. ETL staging usually uses `#temp`.',
@@ -170,7 +181,8 @@ ALTER TABLE dbo.DimCustomer DROP COLUMN Phone;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the clause that materializes the query result into a brand-new staging temp table in a single statement.',
-    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
+    tables: [sampleTable('dbo.DimCustomer', ['CustomerKey', 'FullName', 'IsActive'])],
+    template: `-- dbo.DimCustomer(CustomerKey, FullName, IsActive)
 SELECT CustomerKey, FullName
 ___ #StageCustomer
 FROM dbo.DimCustomer
@@ -180,7 +192,7 @@ WHERE IsActive = 1;`,
 INTO #StageCustomer
 FROM dbo.DimCustomer
 WHERE IsActive = 1;`,
-    explanation: '`SELECT … INTO <new_table>` creates the target table on the fly from the result set\'s column names and types, then inserts the rows — no prior `CREATE TABLE` needed. It is a staging workhorse, but note the new table inherits no indexes or constraints from the source.',
+    explanation: '`SELECT … INTO <new_table>` creates the target table on the fly from the result set\'s column names and types, then inserts the rows - no prior `CREATE TABLE` needed. It is a staging workhorse, but note the new table inherits no indexes or constraints from the source.',
     hints: ['SELECT … <keyword> #NewTable FROM …', 'creates + populates in one shot'],
     tags: ['tsql', 'ddl', 'select-into', 'staging', 'cloze'],
   },
@@ -191,13 +203,14 @@ WHERE IsActive = 1;`,
     topic: Topic.TSQL_DDL_TABLES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Using a single `SELECT … INTO` statement, build a staging temp table `#StageOrders` holding `OrderId`, `CustomerKey`, and `Amount` for every row in `dbo.FactOrders` with `OrderDate` on or after 2026-01-01.',
+    question: 'Using a single `SELECT … INTO` statement, build a staging temp table `#StageOrders` holding `OrderId`, `CustomerKey`, and `Amount` for every row in `dbo.FactOrders` with `OrderDate` on or after 2026-10-01.',
+    tables: [sampleTable('dbo.FactOrders', ['OrderId', 'CustomerKey', 'OrderDate', 'Amount'])],
     requires: [/SELECT/i, /INTO/i],
     starterCode: `-- SELECT ... INTO #StageOrders FROM dbo.FactOrders ...
 `,
     testCases: [
       {
-        input: "SELECT ... INTO #StageOrders FROM dbo.FactOrders WHERE OrderDate >= '2026-01-01'",
+        input: "SELECT ... INTO #StageOrders FROM dbo.FactOrders WHERE OrderDate >= '2026-10-01'",
         expectedOutput: 'A temp table #StageOrders with OrderId, CustomerKey, Amount for recent orders',
         description: 'Creates and fills a staging temp table in one statement',
       },
@@ -205,7 +218,17 @@ WHERE IsActive = 1;`,
     solution: `SELECT OrderId, CustomerKey, Amount
 INTO #StageOrders
 FROM dbo.FactOrders
-WHERE OrderDate >= '2026-01-01';`,
+WHERE OrderDate >= '2026-10-01';
+-- OR
+SELECT OrderId, CustomerKey, Amount
+INTO #StageOrders
+FROM dbo.FactOrders
+WHERE OrderDate >= '20261001';
+-- OR
+SELECT o.OrderId, o.CustomerKey, o.Amount
+INTO #StageOrders
+FROM dbo.FactOrders AS o
+WHERE o.OrderDate >= '2026-10-01';`,
     tieredHints: {
       apiSignature: 'SELECT column_list INTO new_table FROM source_table WHERE condition;',
       skeleton: `SELECT ____, ____, ____
@@ -213,7 +236,7 @@ ____ #StageOrders
 FROM ____
 WHERE OrderDate ____ ____;`,
     },
-    explanation: '`SELECT … INTO #StageOrders` creates the temp table from the projected columns and loads the filtered rows in one pass — the common first step of an ELT load before transforming and merging into the target.',
+    explanation: '`SELECT … INTO #StageOrders` creates the temp table from the projected columns and loads the filtered rows in one pass - the common first step of an ELT load before transforming and merging into the target. Against the rows shown, orders 5003 to 5006 land in the staging table. `>=` keeps orders from 2026-10-01 itself, and `\'20261001\'` is the same date in the unambiguous basic ISO form.',
     hints: ['The INTO clause goes between SELECT list and FROM', 'Filter with WHERE OrderDate >= the date literal'],
     tags: ['tsql', 'ddl', 'select-into', 'staging'],
   },

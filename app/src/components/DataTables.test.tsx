@@ -8,6 +8,7 @@ import { questions } from '../data/questions';
 import { getCourseForTopic } from '../utils/courseConfig';
 import {
   Course,
+  Difficulty,
   QuestionType,
   Topic,
   MultipleChoiceQuestion as MCQ,
@@ -100,6 +101,34 @@ describe('renderInlineCode', () => {
     expect(codesIn(heading).length).toBeGreaterThan(0);
     codesIn(heading).forEach(c => expect(c).toHaveClass('inline-code'));
     expect(heading.textContent).not.toContain('`');
+  });
+
+  const optionQuestion = (topic: Topic): MCQ => ({
+    id: 'inline-code-option-test',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic,
+    question: 'Pick one.',
+    explanation: 'Because.',
+    options: [
+      { id: 'a', text: 'Use `NVARCHAR` here', isCorrect: true },
+      { id: 'b', text: 'Plain option', isCorrect: false },
+    ],
+  });
+  const optionLabel = (text: string) =>
+    screen.getAllByText((_, node) => node?.classList.contains('flipdisc-text-content') === true && node.textContent === text)[0];
+
+  it('renders inline code in a SQL multiple-choice option', () => {
+    render(<MultipleChoiceQuestion question={optionQuestion(Topic.TSQL_FILTERING)} onAnswer={() => {}} showHints={false} />);
+    const option = optionLabel('Use NVARCHAR here');
+    expect(codesIn(option).map(c => c.textContent)).toEqual(['NVARCHAR']);
+    expect(codesIn(option)[0]).toHaveClass('inline-code');
+  });
+
+  it('leaves backticks in a non-SQL multiple-choice option unchanged', () => {
+    render(<MultipleChoiceQuestion question={optionQuestion(Topic.JS_FUNCTIONS)} onAnswer={() => {}} showHints={false} />);
+    const option = optionLabel('Use `NVARCHAR` here');
+    expect(codesIn(option)).toHaveLength(0);
   });
 });
 
