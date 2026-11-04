@@ -326,3 +326,74 @@ describe('Data Modeling in SQL questions show the tables they use', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+const ELT_AND_TRANSFORMATION = new Set<string>([
+  Topic.TSQL_INSERT, Topic.TSQL_MERGE, Topic.TSQL_DEDUP, Topic.TSQL_ETL_PROC, Topic.TSQL_INCREMENTAL, Topic.TSQL_QUALITY,
+]);
+
+const eltSection: Question[] = questions.filter(q => ELT_AND_TRANSFORMATION.has(q.topic));
+
+// A MERGE or USING target is a table the statement reads or writes, so it counts as one the question uses.
+const eltSql = (q: Question) => questionSql(q).replace(/\bMERGE\s+INTO\b/gi, 'MERGE').replace(/\b(MERGE|USING)\b/gi, 'FROM');
+
+describe('ELT & Transformation questions show the tables they read and write', () => {
+  it('has the whole section to check', () => {
+    expect(eltSection.length).toBe(41);
+  });
+
+  it('every table a question reads or writes is one of the tables it shows', () => {
+    // Concept MCQs ("stg.Orders should have one row per key") run against no data.
+    const offenders = eltSection
+      .filter(q => q.type !== QuestionType.MULTIPLE_CHOICE)
+      .flatMap(q => {
+        const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+        return referencedTables(eltSql(q))
+          .filter(t => !shown.has(t))
+          .map(t => `${q.id} reads ${t} without showing it`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question uses, with rows that fit its columns', () => {
+    const offenders = eltSection.flatMap(q => {
+      const refs = new Set(referencedTables(eltSql(q)));
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) ? [] : [`${q.id} shows ${t.name} but never uses it`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('no question builds its data inline or in a temp table; a CTE only reads a shown table', () => {
+    const offenders = eltSection
+      .filter(q => /\(\s*VALUES\b/i.test(questionSql(q)) || /#\w+/.test(questionSql(q)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('every variable a cloze template or predict assigns, selects into or outputs to is declared', () => {
+    // `OUTPUT ... INTO @NewKeys` or `SELECT @x = ...` with no DECLARE does not compile as a batch.
+    const offenders = eltSection
+      .filter(q => q.type === QuestionType.CLOZE_CODE || q.type === QuestionType.PREDICT_OUTPUT)
+      .filter(q => {
+        const sql = questionSql(q);
+        const declared = new Set(Array.from(sql.matchAll(/\bDECLARE\s+(@\w+)/gi)).map(m => m[1].toLowerCase()));
+        // the @lastLoaded the lesson's watermark questions read is declared in the template or by a SELECT ... INTO
+        const used = Array.from(sql.matchAll(/(?:\bINTO\s+|\bSELECT\s+|\bSET\s+)(@\w+)\s*(?:=|\(|\s|$)/gi))
+          .map(m => m[1].toLowerCase())
+          .filter(v => !v.startsWith('@@'));
+        return used.some(v => !declared.has(v));
+      })
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('a watermark variable a cloze compares against is declared', () => {
+    const offenders = eltSection
+      .filter(q => q.type === QuestionType.CLOZE_CODE)
+      .filter(q => /@lastLoaded/.test(questionSql(q)) && !/DECLARE\s+@lastLoaded/i.test(questionSql(q)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+});
