@@ -270,18 +270,23 @@ export const sqlOrderedQuestions: Question[] = [
   q('tsql-idx-mcq-1'), q('tsql-idx-mcq-2'), q('tsql-idx-mcq-3'),
   q('tsql-idx-mcq-4'), q('tsql-idx-cloze-1'), q('tsql-idx-1'),
   q('tsql-idx-mcq-5'),
+  q('tsql-idx-predict-1'),
   // Execution plans (seek/scan, key lookup, statistics IO/TIME, cardinality)
   q('tsql-plan-cloze-1'), q('tsql-plan-mcq-1'), q('tsql-plan-mcq-3'),
   q('tsql-plan-mcq-2'), q('tsql-plan-mcq-4'),
+  q('tsql-plan-predict-1'),
   // Partitioning (elimination, switching)
   q('tsql-part-mcq-1'), q('tsql-part-cloze-1'), q('tsql-part-scheme-cloze-1'),
   q('tsql-part-mcq-2'), q('tsql-part-mcq-3'), q('tsql-part-switch-cloze-1'), q('tsql-part-1'),
+  q('tsql-part-predict-1'),
   // Columnstore (batch mode, rowgroup elimination)
   q('tsql-col-mcq-1'), q('tsql-col-mcq-3'), q('tsql-col-cloze-1'),
   q('tsql-col-1'), q('tsql-col-mcq-2'), q('tsql-col-mcq-4'),
+  q('tsql-col-predict-1'),
   // Query anti-patterns (SARGability, RBAR, SELECT *, implicit conversion)
   q('tsql-anti-mcq-1'), q('tsql-anti-mcq-2'), q('tsql-anti-mcq-3'),
   q('tsql-anti-1'), q('tsql-anti-mcq-4'),
+  q('tsql-anti-predict-1'),
 
   // ===== PILLAR 8: CLOUD WAREHOUSE SQL =====
   // MPP mental model, storage/compute separation, cost models

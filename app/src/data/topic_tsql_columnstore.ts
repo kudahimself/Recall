@@ -128,4 +128,34 @@ ____ dbo.FactOrders;`,
     hints: ['Rows processed in batches (~900), not one at a time', 'Cuts per-row CPU overhead for scans/aggregates/joins'],
     tags: ['tsql', 'columnstore', 'batch-mode'],
   },
+  {
+    id: 'tsql-col-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_COLUMNSTORE,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'A columnstore keeps the minimum and maximum OrderDate of each rowgroup. A query asking for orders from 20 February to 10 March must read every rowgroup whose min-max range overlaps that window, and may skip the rest. Which rowgroups does it read? Write one GroupNo per line in the ORDER BY order.',
+    tables: [
+      {
+        name: 'dbo.RowGroupStats',
+        columns: ['GroupNo', 'MinDate', 'MaxDate'],
+        rows: [
+          [1, '2026-01-01', '2026-01-31'],
+          [2, '2026-02-01', '2026-02-28'],
+          [3, '2026-02-15', '2026-03-15'],
+          [4, '2026-03-16', '2026-04-30'],
+        ],
+      },
+    ],
+    code: `SELECT GroupNo
+FROM dbo.RowGroupStats
+WHERE MaxDate >= '2026-02-20' AND MinDate <= '2026-03-10'
+ORDER BY GroupNo;`,
+    expectedOutput: `2
+3`,
+    explanation: 'A rowgroup can hold a match only when its range overlaps the window: its max is at or after 20 February and its min is at or before 10 March. Groups 2 and 3 overlap, group 1 ends in January and group 4 starts after 10 March, so those two are eliminated without being read. Groups 2 and 3 overlap each other too, which is what happens when rows were not loaded in date order and why loading sorted by the filter column keeps elimination sharp.',
+    hints: ['A rowgroup overlaps when MaxDate >= window start and MinDate <= window end', 'Rowgroups outside the window are skipped'],
+    tags: ['tsql', 'columnstore', 'rowgroup-elimination', 'predict'],
+  },
 ];
