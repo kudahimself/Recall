@@ -193,6 +193,22 @@ describe('the review list', () => {
     expect(pick?.question.id).toBe(left.id);
   });
 
+  it('under filters to another type, never reviews a family still in the list a second time', () => {
+    const state = { p: emptyProgress(), store: replayHistory([], byId) };
+    const byFamily = new Map<string, Question[]>();
+    for (const q of pool) byFamily.set(familyOf(q), [...(byFamily.get(familyOf(q)) ?? []), q]);
+    const members = Array.from(byFamily.values()).find(m => new Set(m.map(q => q.type)).size > 1)!;
+    const pair = [members[0], members.find(q => q.type !== members[0].type)!];
+    pair.forEach((q, i) => answer(state, q.id, NOW - 20 * DAY + i * 1000, true));
+    const session = startReviewSession(pool, state.p, state.store, {}, clock, { size: 20, reviewShare: 0.6 });
+    const listed = session.queue.find(e => e.family === familyOf(pair[0]))!;
+    expect(listed).toBeDefined();
+    const other = pair.find(q => q.id !== listed.id)!;
+    const filtered = pool.filter(q => q.type === other.type && familyOf(q) === listed.family && state.p.questionsAttempted.has(q.id));
+    expect(filtered.map(q => q.id)).toEqual([other.id]);
+    expect(selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+  });
+
   it('never lists a resting well-known card', () => {
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     const card = pool[0];

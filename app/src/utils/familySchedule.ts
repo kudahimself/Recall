@@ -338,6 +338,8 @@ export interface CardPickContext {
   resting: Set<string>;
   /** Cards already answered this session (re-asks aside, a card is served once a day). */
   served: Set<string>;
+  /** Families still in today's review list: practice and drills leave them to it. */
+  queuedFamilies?: Set<string>;
   /** Topics the learner may practise (null: no gating). */
   unlocked: Set<string> | null;
   /** Topic questions by topic, for the in-topic difficulty gate on unseen cards. */

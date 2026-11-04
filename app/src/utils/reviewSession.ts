@@ -359,7 +359,8 @@ export function nextConsolidationCard(pools: Pools, ctx: CardPickContext, topic:
     ? RAMP_DIFFICULTY_ORDER.indexOf(q.difficulty) < RAMP_DIFFICULTY_ORDER.indexOf(held.difficulty)
     : isRampDifficultyOpen(tq, ctx.latest, q.difficulty);
   const usable = tq
-    .filter(q => allowed(q) && servable.has(q.id) && !ctx.served.has(q.id) && !ctx.resting.has(q.id))
+    .filter(q => allowed(q) && servable.has(q.id) && !ctx.served.has(q.id) && !ctx.resting.has(q.id)
+      && !ctx.queuedFamilies?.has(familyOf(q)))
     .sort((a, b) => rampRank(a) - rampRank(b));
   return usable.find(q => ctx.latest.get(q.id) === false)
     ?? usable.find(q => !ctx.latest.has(q.id))
@@ -375,7 +376,7 @@ export function nextConsolidationCard(pools: Pools, ctx: CardPickContext, topic:
 export function nextDrillCard(pools: Pools, store: FsrsStore, ctx: CardPickContext, now: number): Question | null {
   const index = familyIndex(pools.serve);
   const met = Object.entries(store.families)
-    .filter(([f, s]) => s.state !== State.New && !isFamilyDue(s, now) && index.has(f))
+    .filter(([f, s]) => s.state !== State.New && !isFamilyDue(s, now) && index.has(f) && !ctx.queuedFamilies?.has(f))
     .map(([f, s]) => ({ f, r: familyRetrievability(s, now) }))
     .sort((a, b) => a.r - b.r || (a.f < b.f ? -1 : 1));
   for (const { f } of met) {
@@ -441,10 +442,11 @@ export function selectSessionQuestion(
 
   const pools: Pools = { course: coursePool, serve: servePool };
   const ctx = pickContext(coursePool, progress, cardDifficulty, session.served);
-  const queued = new Set(session.queue.map(e => e.id));
-  queued.forEach(id => ctx.served.add(id));
+  session.queue.forEach(e => ctx.served.add(e.id));
+  ctx.queuedFamilies = new Set(session.queue.map(e => e.family));
   const dueCard = (): Question | null => {
-    const first = buildReviewList(coursePool, progress, store, cardDifficulty, now, Infinity, ctx.served, conceptCtx, servePool).entries[0];
+    const first = buildReviewList(coursePool, progress, store, cardDifficulty, now, Infinity, ctx.served, conceptCtx, servePool)
+      .entries.find(e => !ctx.queuedFamilies?.has(e.family));
     return first ? servePool.find(q => q.id === first.id) ?? null : null;
   };
 
