@@ -45,6 +45,27 @@ test('the T-SQL layer covers TOP, OFFSET/FETCH and the date functions, and refus
   expect(r.batches.output).toBe('n\n2\n3');
 });
 
+test('ROLLUP, CUBE and GROUPING SETS run as the UNION ALL of their grouping sets, and other shapes are refused', () => {
+  const r = probe(`
+    const t = [{ name: 't', columns: ['a', 'b', 'n'], rows: [['x', 'p', 1], ['x', 'q', 2], ['y', 'p', 4]] }];
+    const v = [{ name: 'v', columns: ['cat', 'amt'], rows: [['A', 10], ['B', 5], ['A', 20]] }];
+    const rollup = await C.runSql("SELECT a, b, SUM(n) AS s, GROUPING(b) AS g FROM t GROUP BY ROLLUP(a, b) ORDER BY a, g, b;", t);
+    const cube = await C.runSql("SELECT a, b, SUM(n) AS s FROM t GROUP BY CUBE(a, b) ORDER BY a, b;", t);
+    const sets = await C.runSql("SELECT a, SUM(n) AS s FROM t WHERE n > 1 GROUP BY GROUPING SETS ((a), ()) ORDER BY a;", t);
+    // tsql-gs-rollup-predict-1 on a table instead of VALUES, ordered by GROUPING's alias.
+    const predict = await C.runSql("SELECT cat, SUM(amt) AS total, GROUPING(cat) AS g FROM v GROUP BY ROLLUP(cat) ORDER BY g, cat;", v);
+    const inExpr = await C.runSql("SELECT a, COUNT(a) AS c FROM t GROUP BY ROLLUP(a) ORDER BY a;", t);
+    const having = await C.runSql("SELECT a, SUM(n) AS s FROM t GROUP BY ROLLUP(a) HAVING SUM(n) > 1 ORDER BY a;", t);
+    return { rollup, cube, sets, predict, inExpr, having };
+  `);
+  expect(r.rollup.output).toBe('a | b | s | g\nNULL | NULL | 7 | 1\nx | p | 1 | 0\nx | q | 2 | 0\nx | NULL | 3 | 1\ny | p | 4 | 0\ny | NULL | 4 | 1');
+  expect(r.cube.output).toBe('a | b | s\nNULL | NULL | 7\nNULL | p | 5\nNULL | q | 2\nx | NULL | 3\nx | p | 1\nx | q | 2\ny | NULL | 4\ny | p | 4');
+  expect(r.sets.output).toBe('a | s\nNULL | 6\nx | 2\ny | 4');
+  expect(r.predict.output).toBe('cat | total | g\nA | 30 | 0\nB | 5 | 0\nNULL | 35 | 1');
+  expect(r.inExpr.error).toMatch(/grouping column inside an expression/);
+  expect(r.having.error).toMatch(/anything but ORDER BY/);
+});
+
 test('a lesson fails on a wrong output, exercises out of ramp order, a repeated solution and broken prose', () => {
   const r = probe(`
     const { LESSONS } = require('./src/data/lessons/index.ts');

@@ -68,8 +68,9 @@ House rules (check-lessons.js enforces the first two):
 - 6-15 lines of code that use the topic's main primitives together, with 3-5 `steps`, each naming the line it explains ("Line 3: ...").
 - A different domain from the exercises (the bank uses DimProduct, DimCustomer, FactOrders; lessons use small library and bookshop tables), so it never repeats an exercise's solution.
 - SQL: give the input in `tables` (shown above the code), unqualified table names, and an `ORDER BY` on every statement that returns more than one row.
-  It runs on sql.js through a T-SQL layer: TOP, OFFSET/FETCH, ISNULL, LEN, CHARINDEX, LEFT, RIGHT, YEAR, MONTH, DAY, DATEPART, DATEADD, DATEDIFF, EOMONTH, DATEFROMPARTS, and a line holding only `GO` separates batches (CREATE VIEW needs one before and after it).
-  GETDATE, CAST to date types, FORMAT, CONVERT, `+` on strings, #temp tables, MERGE and UPDATE ... FROM are refused; name them in the idea or the form instead.
+  It runs on sql.js through a T-SQL layer: TOP, OFFSET/FETCH, ISNULL, LEN, CHARINDEX, LEFT, RIGHT, YEAR, MONTH, DAY, DATEPART, DATEADD, DATEDIFF, EOMONTH, DATEFROMPARTS, GROUP BY ROLLUP / CUBE / GROUPING SETS (run as the UNION ALL of the grouping sets: bare grouping columns and aliased `GROUPING(col)` in the select list, only `ORDER BY` after, and order by the alias rather than `GROUPING()`), and a line holding only `GO` separates batches (CREATE VIEW needs one before and after it).
+  Window functions run natively; avoid `AVG` over integers, which SQLite returns as a decimal where SQL Server truncates.
+  GETDATE, CAST to date types, FORMAT, CONVERT, `+` on strings, #temp tables, MERGE, PIVOT and UPDATE ... FROM are refused; name them in the idea or the form instead.
   Keep numbers integers (SQLite prints `12.5` where SQL Server prints `12.50`).
 - Python: plain `print` output; it runs on `python3 -I`.
 - Set `output` to exactly what the code prints (SQL: `col | col` header and rows, a blank line between result sets).
