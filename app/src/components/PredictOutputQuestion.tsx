@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { PredictOutputQuestion as PredictQ } from '../types';
 import { outputInstruction, outputMatches } from '../utils/predictOutput';
 import { StyledButton } from './StyledButton';
+import { DataTables } from './DataTables';
+import { renderInlineCode } from './InlineCode';
 import './PredictOutputQuestion.css';
 
 interface Props {
@@ -46,7 +48,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({
 
   return (
     <div className="predict-output-question">
-      <h3 className="question-text">{question.question}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
@@ -59,6 +61,8 @@ export const PredictOutputQuestion: React.FC<Props> = ({
       <div className="predict-instructions">
         {outputInstruction(question.code, question.language)}
       </div>
+
+      <DataTables tables={question.tables} />
 
       <div className="code-block-wrapper">
         <div className="code-block-header">{question.language.toUpperCase()}</div>
@@ -105,7 +109,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({
               <pre className="actual-code">{question.expectedOutput}</pre>
             </div>
           )}
-          <p>{question.explanation}</p>
+          <p>{renderInlineCode(question.explanation)}</p>
           {onNext && (
             <StyledButton variant="primary" onClick={onNext}>
               Next Question →

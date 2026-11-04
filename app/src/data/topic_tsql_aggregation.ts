@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_aggregation_questions: Question[] = [
+export const tsql_aggregation_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-agg-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -38,10 +39,11 @@ export const tsql_aggregation_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What single value does this query return?',
-    code: `SELECT SUM(v.amt) AS Total
-FROM (VALUES (10), (20), (30)) AS v(amt);`,
+    tables: [{ name: 'dbo.Payment', columns: ['PaymentId', 'Amount'], rows: [[1, 10], [2, 20], [3, 30]] }],
+    code: `SELECT SUM(Amount) AS Total
+FROM dbo.Payment;`,
     expectedOutput: `60`,
-    explanation: 'With no GROUP BY, the aggregate applies to the whole result as one group: `SUM(amt)` = 10 + 20 + 30 = 60.',
+    explanation: 'With no GROUP BY, the aggregate applies to the whole result as one group: `SUM(Amount)` = 10 + 20 + 30 = 60.',
     hints: ['No GROUP BY → one group over all rows'],
     tags: ['tsql', 'aggregation', 'sum', 'predict'],
   },
@@ -53,11 +55,12 @@ FROM (VALUES (10), (20), (30)) AS v(amt);`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query return? It is one row of three columns - write them in SELECT order, separated by commas.',
-    code: `SELECT MIN(v.amt) AS Lo, MAX(v.amt) AS Hi, AVG(v.amt) AS Mean
-FROM (VALUES (10), (20), (30)) AS v(amt);`,
+    tables: [{ name: 'dbo.Payment', columns: ['PaymentId', 'Amount'], rows: [[1, 10], [2, 20], [3, 30]] }],
+    code: `SELECT MIN(Amount) AS Lo, MAX(Amount) AS Hi, AVG(Amount) AS Mean
+FROM dbo.Payment;`,
     expectedOutput: `10, 30, 20`,
     acceptableOutputs: ['Lo=10, Hi=30, Mean=20'],
-    explanation: '`MIN` and `MAX` return the smallest and largest value in the group; `AVG` returns the arithmetic mean (10+20+30)/3 = 20. Like `SUM` and `COUNT`, all three collapse a set of rows into a single value per group. (Because `amt` is an INT, T-SQL\'s `AVG` returns an INT too - here the mean is exactly 20, but an average of 10 and 15 would come back as 12, not 12.5.)',
+    explanation: '`MIN` and `MAX` return the smallest and largest value in the group; `AVG` returns the arithmetic mean (10+20+30)/3 = 20. Like `SUM` and `COUNT`, all three collapse a set of rows into a single value per group. (Because `Amount` holds whole numbers (an INT column), T-SQL\'s `AVG` returns an INT too - here the mean is exactly 20, but an average of 10 and 15 would come back as 12, not 12.5.)',
     hints: ['MIN/MAX = smallest/largest value', 'AVG = arithmetic mean'],
     tags: ['tsql', 'aggregation', 'min', 'max', 'avg', 'predict'],
   },
@@ -113,10 +116,11 @@ HAVING SUM(Amount) > 1000;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What single value does this query return?',
-    code: `SELECT COUNT(DISTINCT v.c) AS n
-FROM (VALUES ('x'), ('y'), ('x'), ('z'), ('y')) AS v(c);`,
+    tables: [{ name: 'dbo.Visit', columns: ['VisitId', 'Region'], rows: [[1, 'North'], [2, 'South'], [3, 'North'], [4, 'East'], [5, 'South']] }],
+    code: `SELECT COUNT(DISTINCT Region) AS n
+FROM dbo.Visit;`,
     expectedOutput: `3`,
-    explanation: '`COUNT(DISTINCT c)` counts unique values only: the distinct set is {x, y, z}, so the answer is 3. A plain `COUNT(c)` would return 5.',
+    explanation: '`COUNT(DISTINCT Region)` counts unique values only: the distinct set is {North, South, East}, so the answer is 3. A plain `COUNT(Region)` would return 5.',
     hints: ['Count unique values, not rows'],
     tags: ['tsql', 'aggregation', 'count-distinct', 'predict'],
   },
@@ -156,4 +160,4 @@ ____ BY ____ ____;`,
     hints: ['SUM per CustomerKey', 'HAVING for the aggregate filter, then ORDER BY Total DESC'],
     tags: ['tsql', 'aggregation', 'group-by', 'having', 'sum'],
   },
-];
+]);

@@ -106,6 +106,19 @@ describe('SQL predict questions', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('the min/max/average predict accepts the plain row the on-screen instruction describes', () => {
+    // Owner report: this question used to demand `Lo=10, Hi=30, Avg=20`, a
+    // format nothing on screen asked for. The rows convention says "columns in
+    // SELECT order separated by a comma", so the plain row must be the answer.
+    const q = sqlPredicts.find(p => p.id === 'tsql-agg-minmaxavg-predict-1') as PredictOutputQuestion;
+    const accepted = [q.expectedOutput, ...(q.acceptableOutputs ?? [])];
+    expect(outputInstruction(q.code, q.language)).toBe(SQL_OUTPUT_CONVENTION);
+    expect(q.expectedOutput).toBe('10, 30, 20');
+    expect(outputMatches('10, 30, 20', accepted, CodeLanguage.SQL)).toBe(true);
+    expect(outputMatches('10,30,20', accepted, CodeLanguage.SQL)).toBe(true);
+    expect(outputMatches('10, 20, 30', accepted, CodeLanguage.SQL)).toBe(false);
+  });
+
   it('a batch that both SELECTs and PRINTs names PRINT in its prompt', () => {
     const offenders = sqlPredicts
       .filter(q => outputInstruction(q.code, q.language) === SQL_MIXED_PRINT_CONVENTION)

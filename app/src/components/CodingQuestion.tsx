@@ -6,6 +6,8 @@ import { CREDIT_CORRECT_THRESHOLD } from '../utils/spacedRepetition';
 import { validateByComputedStyle } from '../utils/computedStyleValidator';
 import { LivePreview } from './visual/LivePreview';
 import { StyledButton } from './StyledButton';
+import { DataTables } from './DataTables';
+import { renderInlineCode } from './InlineCode';
 import { StyledBadge } from './StyledBadge';
 import './CodingQuestion.css';
 
@@ -332,7 +334,7 @@ export const CodingQuestion: React.FC<Props> = ({
 
   return (
     <div className="coding-question">
-      <h3 className="question-text">{question.question}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
 
       <div className="badges">
         <StyledBadge variant="difficulty">
@@ -345,6 +347,8 @@ export const CodingQuestion: React.FC<Props> = ({
           {question.language}
         </StyledBadge>
       </div>
+
+      <DataTables tables={question.tables} />
 
       <div className={previewActive ? 'editor-preview-row' : 'editor-preview-row editor-only'}>
       <div className="answer-editor-wrapper">
@@ -538,7 +542,7 @@ export const CodingQuestion: React.FC<Props> = ({
               <h4>Need your eyes on this one</h4>
               <p>
                 Your code might be a valid alternative the validator can't recognise.
-                Compare with the reference below — does your code do the same thing?
+                Compare with the reference below - does your code do the same thing?
               </p>
               <div className="self-grade-reference">
                 <div className="self-grade-reference-label">Reference solution</div>
@@ -570,7 +574,7 @@ export const CodingQuestion: React.FC<Props> = ({
         {phase === 'done' && (
         <div className="explanation">
           <h4>Explanation:</h4>
-          <p>{question.explanation}</p>
+          <p>{renderInlineCode(question.explanation)}</p>
         </div>
         )}
 

@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_filtering_questions: Question[] = [
+export const tsql_filtering_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-filter-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -38,10 +39,11 @@ export const tsql_filtering_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `SELECT v.n
-FROM (VALUES (5), (12), (20), (25)) AS v(n)
-WHERE v.n BETWEEN 10 AND 22
-ORDER BY v.n;`,
+    tables: [{ name: 'dbo.Score', columns: ['PlayerId', 'Points'], rows: [[1, 5], [2, 12], [3, 20], [4, 25]] }],
+    code: `SELECT Points
+FROM dbo.Score
+WHERE Points BETWEEN 10 AND 22
+ORDER BY Points;`,
     expectedOutput: `12
 20`,
     explanation: '`BETWEEN 10 AND 22` is inclusive of both bounds, so it matches 12 and 20 but not 5 (too low) or 25 (too high).',
@@ -194,4 +196,4 @@ WHERE Country ____ (____, ____)
     hints: ["COALESCE(Email, 'none') for the default", "IN ('NO','SE') and IS NOT NULL"],
     tags: ['tsql', 'filtering', 'coalesce', 'in', 'is-null'],
   },
-];
+]);

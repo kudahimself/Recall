@@ -1,0 +1,79 @@
+.data-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 24px;
+}
+
+.data-table {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.data-table-name {
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+/* About six rows tall; longer tables scroll inside the grid. */
+.data-table-scroll {
+  max-height: 11.5rem;
+  overflow: auto;
+}
+
+.data-table table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.data-table th,
+.data-table td {
+  padding: 4px 10px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table .data-table-num {
+  text-align: right;
+}
+
+.data-table .data-table-null,
+.data-table .data-table-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Backticked spans in question text and explanations (see InlineCode.tsx). */
+.inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+}

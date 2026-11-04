@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_date_functions_questions: Question[] = [
+export const tsql_date_functions_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-dt-getdate-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -277,4 +278,4 @@ WHERE ____(____, OrderDate, ____()) ____ 30;`,
     hints: ['CAST(... AS DATE) removes the time component', 'DATEDIFF(DAY, OrderDate, GETDATE()) > 30 counts calendar days'],
     tags: ['tsql', 'date-functions', 'datediff', 'cast', 'getdate'],
   },
-];
+]);

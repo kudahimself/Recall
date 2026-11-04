@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic } from '../types';
 import { StyledButton } from './StyledButton';
+import { DataTables } from './DataTables';
+import { renderInlineCode } from './InlineCode';
 import { LivePreview } from './visual/LivePreview';
 import './ClozeCodeQuestion.css';
 
@@ -167,7 +169,7 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
 
   return (
     <div className="cloze-code-question">
-      <h3 className="question-text">{question.question}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
@@ -179,8 +181,10 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
 
       <div className="cloze-instructions">
         Complete the worked example by filling in the blanks. The surrounding code is
-        already correct — focus on what's missing.
+        already correct - focus on what's missing.
       </div>
+
+      <DataTables tables={question.tables} />
 
       <div className="cloze-block-wrapper">
         <div className="cloze-block-header">{question.language.toUpperCase()}</div>
@@ -250,7 +254,7 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
               <pre className="reference-code">{question.solution}</pre>
             </div>
           )}
-          <p>{question.explanation}</p>
+          <p>{renderInlineCode(question.explanation)}</p>
           {onNext && (
             <StyledButton variant="primary" onClick={onNext}>
               Next Question →

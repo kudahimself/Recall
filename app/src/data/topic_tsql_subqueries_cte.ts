@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_subqueries_cte_questions: Question[] = [
+export const tsql_subqueries_cte_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-subq-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -64,15 +65,19 @@ SELECT * FROM HighValue WHERE Total > 1000;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `WITH t AS (SELECT v.n FROM (VALUES (1), (2), (3), (4)) AS v(n))
-SELECT n FROM t
-WHERE n IN (SELECT w.x FROM (VALUES (2), (4), (9)) AS w(x))
-ORDER BY n;`,
+    tables: [
+      { name: 'dbo.Product', columns: ['ProductId', 'ProductName'], rows: [[1, 'Pen'], [2, 'Mug'], [3, 'Cap'], [4, 'Bag']] },
+      { name: 'dbo.Featured', columns: ['ProductId'], rows: [[2], [4], [9]] },
+    ],
+    code: `SELECT ProductId
+FROM dbo.Product
+WHERE ProductId IN (SELECT ProductId FROM dbo.Featured)
+ORDER BY ProductId;`,
     expectedOutput: `2
 4`,
-    explanation: 'The subquery returns the set {2, 4, 9}; `WHERE n IN (…)` keeps rows of `t` whose `n` is in that set. Only 2 and 4 are present in `t` (9 is not), so they are returned.',
-    hints: ['Keep rows whose n is in the subquery set'],
-    tags: ['tsql', 'subqueries', 'in', 'cte', 'predict'],
+    explanation: 'The subquery returns the set {2, 4, 9} from `dbo.Featured`; `WHERE ProductId IN (…)` keeps the `dbo.Product` rows whose ProductId is in that set. Only 2 and 4 exist in `dbo.Product` (there is no product 9), so they are returned.',
+    hints: ['Keep rows whose ProductId is in the subquery set'],
+    tags: ['tsql', 'subqueries', 'in', 'predict'],
   },
   {
     id: 'tsql-subq-exists-cloze-1',
@@ -238,4 +243,4 @@ FROM dbo.DimCustomer c;`,
     },
     tags: ['tsql', 'subqueries', 'correlated', 'scalar-subquery'],
   },
-];
+]);

@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_joins_questions: Question[] = [
+export const tsql_joins_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-joins-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -71,6 +72,10 @@ export const tsql_joins_questions: Question[] = [
     topic: Topic.TSQL_JOINS,
     course: Course.SQL,
     question: "What does `SELECT * FROM dbo.DimColor CROSS JOIN dbo.DimSize` return, given DimColor has 4 rows and DimSize has 3 rows?",
+    tables: [
+      { name: 'dbo.DimColor', columns: ['ColorKey', 'Color'], rows: [[1, 'Red'], [2, 'Blue'], [3, 'Green'], [4, 'Black']] },
+      { name: 'dbo.DimSize', columns: ['SizeKey', 'Size'], rows: [[1, 'S'], [2, 'M'], [3, 'L']] },
+    ],
     options: [
       { id: 'a', text: '12 rows - every combination of a color and a size (the Cartesian product).', isCorrect: true },
       { id: 'b', text: '7 rows - the two tables stacked on top of each other.', isCorrect: false },
@@ -89,10 +94,14 @@ export const tsql_joins_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `SELECT c.id
-FROM (VALUES (1), (2), (3)) AS c(id)
-INNER JOIN (VALUES (1), (1), (2)) AS o(cid) ON o.cid = c.id
-ORDER BY c.id;`,
+    tables: [
+      { name: 'dbo.Customer', columns: ['CustomerId', 'FullName'], rows: [[1, 'Ada'], [2, 'Ben'], [3, 'Cy']] },
+      { name: 'dbo.Orders', columns: ['OrderId', 'CustomerId'], rows: [[101, 1], [102, 1], [103, 2]] },
+    ],
+    code: `SELECT c.CustomerId
+FROM dbo.Customer c
+INNER JOIN dbo.Orders o ON o.CustomerId = c.CustomerId
+ORDER BY c.CustomerId;`,
     expectedOutput: `1
 1
 2`,
@@ -271,4 +280,4 @@ ORDER BY o.Amount ____;`,
     hints: ['Two INNER JOINs, one per dimension table', 'Filter on columns from both joined tables', 'ORDER BY Amount DESC'],
     tags: ['tsql', 'joins', 'multi-table-join', 'inner-join'],
   },
-];
+]);

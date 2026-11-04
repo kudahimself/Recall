@@ -13,8 +13,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_dml_questions: Question[] = [
+export const tsql_dml_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-dml-insert-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -113,14 +114,13 @@ WHERE ProductKey = 101;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does the final SELECT return (one value per line)?',
-    code: `CREATE TABLE #t (id INT, amt INT);
-INSERT INTO #t VALUES (1, 100), (2, 200);
-UPDATE #t SET amt = amt + 10 WHERE id = 1;
-SELECT amt FROM #t ORDER BY id;`,
+    tables: [{ name: 'dbo.Account', columns: ['AccountId', 'Balance'], rows: [[1, 100], [2, 200]] }],
+    code: `UPDATE dbo.Account SET Balance = Balance + 10 WHERE AccountId = 1;
+SELECT Balance FROM dbo.Account ORDER BY AccountId;`,
     expectedOutput: `110
 200`,
-    explanation: 'Only the row with `id = 1` matches the WHERE clause, so its `amt` becomes 100 + 10 = 110. The row with `id = 2` is untouched and keeps its original 200.',
-    hints: ['Only the matching row changes', 'id = 1 → 100 + 10; id = 2 unaffected'],
+    explanation: 'Only the row with `AccountId = 1` matches the WHERE clause, so its `Balance` becomes 100 + 10 = 110. Account 2 is untouched and keeps its original 200.',
+    hints: ['Only the matching row changes', 'AccountId = 1 → 100 + 10; account 2 unaffected'],
     tags: ['tsql', 'dml', 'update', 'predict'],
   },
   {
@@ -131,13 +131,12 @@ SELECT amt FROM #t ORDER BY id;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does the final SELECT return (one value per line)?',
-    code: `CREATE TABLE #t (id INT);
-INSERT INTO #t VALUES (1), (2), (3);
-DELETE FROM #t WHERE id = 2;
-SELECT id FROM #t ORDER BY id;`,
+    tables: [{ name: 'dbo.Ticket', columns: ['TicketId'], rows: [[1], [2], [3]] }],
+    code: `DELETE FROM dbo.Ticket WHERE TicketId = 2;
+SELECT TicketId FROM dbo.Ticket ORDER BY TicketId;`,
     expectedOutput: `1
 3`,
-    explanation: 'The DELETE removes only the row where `id = 2`, leaving `1` and `3` behind.',
+    explanation: 'The DELETE removes only the row where `TicketId = 2`, leaving `1` and `3` behind.',
     hints: ['Only the matching row is removed'],
     tags: ['tsql', 'dml', 'delete', 'predict'],
   },
@@ -373,4 +372,4 @@ WHERE p.Discontinued ____ 1;`,
     hints: ['DELETE f FROM dbo.FactOrders AS f JOIN dbo.DimProduct AS p ON ProductKey', 'WHERE p.Discontinued = 1'],
     tags: ['tsql', 'dml', 'delete', 'join'],
   },
-];
+]);

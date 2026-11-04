@@ -362,6 +362,8 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 **Shared UI primitives:**
 - `StyledButton.tsx` - variants: primary/secondary/warning/danger. Use for all buttons.
 - `StyledBadge.tsx` - pills/badges
+- `DataTables.tsx` - read-only sample-data grids for a question's `tables`
+- `InlineCode.tsx` - `renderInlineCode` for backticked prose
 
 **UI theme:**
 Dark-purple themed with radial-gradient mouse-tracked card effects.
@@ -410,6 +412,13 @@ Older `databricks-*` keys are copied to their `recall-*` names on first load and
 
 Five formats live side-by-side.
 Spaced repetition treats them all as equal-weight questions.
+
+Any question can carry `tables?: SqlTable[]` (`{ name, columns, rows }`, `null` cells render as NULL).
+SQL questions use it to show the data a query reads as small read-only grids above the code (`DataTables.tsx`), so the query says `FROM dbo.Payment` instead of building rows inline with `WITH`/`VALUES`.
+Predict questions write their own small tables, since the rows decide the answer.
+In Querying Foundations every other question gets the canonical sample tables from `src/data/tsqlSampleTables.ts` through `attachSampleTables`, trimmed to the columns the question mentions.
+`tsqlSampleTables.test.ts` fails if a section question queries a table it does not show, or builds data inline.
+Backticks in a question's text and explanation render as inline code (`InlineCode.tsx`).
 
 ### 1. Multiple Choice (`QuestionType.MULTIPLE_CHOICE`)
 

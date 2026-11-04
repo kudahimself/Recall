@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_select_questions: Question[] = [
+export const tsql_select_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-select-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -38,9 +39,10 @@ export const tsql_select_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'What does this query output (one value per line)?',
-    code: `SELECT v.City
-FROM (VALUES ('Oslo'), ('Cairo'), ('Lima')) AS v(City)
-ORDER BY v.City DESC;`,
+    tables: [{ name: 'dbo.Office', columns: ['OfficeId', 'City'], rows: [[1, 'Oslo'], [2, 'Cairo'], [3, 'Lima']] }],
+    code: `SELECT City
+FROM dbo.Office
+ORDER BY City DESC;`,
     expectedOutput: `Oslo
 Lima
 Cairo`,
@@ -192,4 +194,4 @@ ____ 20 ____ FETCH ____ 20 ROWS ____;`,
     hints: ['Skip 20, fetch next 20', 'OFFSET/FETCH needs ORDER BY'],
     tags: ['tsql', 'select', 'offset-fetch', 'pagination'],
   },
-];
+]);

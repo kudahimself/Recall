@@ -11,8 +11,9 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { attachSampleTables } from './tsqlSampleTables';
 
-export const tsql_string_functions_questions: Question[] = [
+export const tsql_string_functions_questions: Question[] = attachSampleTables([
   {
     id: 'tsql-str-concat-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -287,4 +288,4 @@ FROM stg.Customer;`,
 FROM stg.Customer;`,
     },
   },
-];
+]);
