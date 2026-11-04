@@ -48,6 +48,19 @@ const SAMPLE: SqlTable[] = [
     ],
   },
   {
+    // SaleId 4 has a real NULL SubCategory, which a ROLLUP subtotal row also shows as NULL.
+    name: 'dbo.FactSale',
+    columns: ['SaleId', 'Category', 'SubCategory', 'Amount', 'SaleDate'],
+    rows: [
+      [1, 'Books', 'Fiction', 20, '2026-10-01'],
+      [2, 'Books', 'Fiction', 15, '2026-10-02'],
+      [3, 'Books', 'Travel', 30, '2026-10-02'],
+      [4, 'Books', null, 10, '2026-10-03'],
+      [5, 'Toys', 'Puzzles', 12, '2026-10-03'],
+      [6, 'Toys', 'Outdoor', 25, '2026-10-04'],
+    ],
+  },
+  {
     name: 'dbo.DimSupplier',
     columns: ['SupplierKey', 'SupplierId', 'SupplierName', 'Country'],
     rows: [
@@ -145,7 +158,8 @@ function pick(table: SqlTable, mentioned: string): SqlTable {
 /**
  * One canonical sample table, trimmed to the given columns, for a question
  * that sets its own `tables` (the DDL & Constraints section, where most
- * questions create their tables and only a few read the warehouse ones).
+ * questions create their tables and only a few read the warehouse ones, and
+ * the Analytical & Window SQL section).
  */
 export function sampleTable(name: string, columns: string[]): SqlTable {
   const table = BY_NAME.get(name.toLowerCase());

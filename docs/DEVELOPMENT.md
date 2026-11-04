@@ -418,7 +418,8 @@ SQL questions use it to show the data a query reads as small read-only grids abo
 Predict questions write their own small tables, since the rows decide the answer.
 In Querying Foundations every other question gets the canonical sample tables from `src/data/tsqlSampleTables.ts` through `attachSampleTables`, trimmed to the columns the question mentions.
 In DDL & Constraints most questions create their own tables, so the few that read or alter an existing one set `tables` themselves, using `sampleTable(name, columns)` for a canonical table.
-`tsqlSampleTables.test.ts` fails if a question in either section queries an existing table it does not show, or builds data inline.
+Analytical & Window SQL questions set `tables` the same way.
+`tsqlSampleTables.test.ts` fails if a question in any of these sections queries an existing table it does not show, or builds data inline.
 In SQL-course questions, backticks in the text, multiple-choice options and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
 
 ### 1. Multiple Choice (`QuestionType.MULTIPLE_CHOICE`)
