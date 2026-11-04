@@ -4,7 +4,8 @@
  * Section 1, Querying Foundations: every topic.
  * Section 2, DDL & Constraints: every topic.
  * Section 3, Analytical & Window SQL: every topic.
- * Later sections follow one per PR (next: Transactions & Procedural T-SQL).
+ * Section 4, Transactions & Procedural T-SQL: every topic.
+ * Later sections follow one per PR (next: Data Modeling in SQL).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -1372,6 +1373,409 @@ York | 3 | 0 | 4`,
       'tsql-pivot-cloze-1',
       'tsql-pivot-native-cloze-1',
       'tsql-pivot-1',
+    ],
+  },
+  {
+    id: 'tsql_transactions/1',
+    topicKeys: [Topic.TSQL_TRANSACTIONS],
+    step: 1,
+    title: 'Transactions (BEGIN TRAN, COMMIT, ROLLBACK)',
+    idea: [
+      lines(
+        "A transaction makes a group of statements one unit of work: either all of their changes are kept or none are.",
+        "`BEGIN TRAN` opens it, `COMMIT` makes every change since then permanent together, and `ROLLBACK` undoes all of them.",
+        "Without `BEGIN TRAN`, each statement is its own transaction and commits as soon as it finishes.",
+      ),
+      lines(
+        "`@@TRANCOUNT` counts how many transactions opened with `BEGIN TRAN` are still open on the connection.",
+        "A nested `BEGIN TRAN` only adds 1: the inner `COMMIT` takes 1 away and commits nothing, and only the outermost `COMMIT` makes the work permanent.",
+        "A bare `ROLLBACK` undoes everything back to the outermost `BEGIN TRAN` and sets the count to 0.",
+      ),
+      lines(
+        "`SAVE TRAN name` marks a savepoint, and `ROLLBACK TRAN name` undoes only the work after it, leaving the transaction open.",
+        "`SET XACT_ABORT ON` makes most run-time errors end the whole transaction instead of failing just one statement.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SET XACT_ABORT ON;                 -- an error ends the whole transaction
+BEGIN TRAN;                        -- @@TRANCOUNT 0 -> 1
+    UPDATE t SET col = col - n WHERE id = 1;
+    SAVE TRAN sp;                  -- a savepoint
+    UPDATE t SET col = col + n WHERE id = 2;
+    ROLLBACK TRAN sp;              -- undo back to sp, still open
+COMMIT;                            -- keep it all (ROLLBACK: undo it all)`,
+    },
+    pitfall: lines(
+      "Without `SET XACT_ABORT ON`, an error such as a constraint violation fails only its own statement: the next statement still runs and the transaction stays open.",
+      "A script that then reaches `COMMIT` keeps half the work, so turn `XACT_ABORT` on, or handle the error with `TRY ... CATCH`.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Shelf',
+          columns: ['Branch', 'Copies'],
+          rows: [
+            ['North', 5],
+            ['South', 2],
+          ],
+        },
+      ],
+      code: `BEGIN TRAN;
+UPDATE Shelf SET Copies = Copies - 3 WHERE Branch = 'North';
+UPDATE Shelf SET Copies = Copies + 3 WHERE Branch = 'South';
+COMMIT;
+BEGIN TRAN;
+UPDATE Shelf SET Copies = Copies - 10 WHERE Branch = 'North';
+SELECT Branch, Copies FROM Shelf ORDER BY Branch;
+ROLLBACK;
+SELECT Branch, Copies FROM Shelf ORDER BY Branch;`,
+      steps: [
+        "Lines 1-4: moving 3 copies is two updates in one transaction, so North drops to 2 and South rises to 5 together at the `COMMIT`.",
+        "Line 6: a second transaction takes 10 copies from North by mistake, leaving -8.",
+        "Line 7: inside its own open transaction the session sees that change, so the first result shows North at -8.",
+        "Lines 8-9: `ROLLBACK` undoes everything since line 5, and the second result is back to the committed 2 and 5.",
+      ],
+      output: `Branch | Copies
+North | -8
+South | 5
+
+Branch | Copies
+North | 2
+South | 5`,
+    },
+    exercises: [
+      'tsql-tran-mcq-1',
+      'tsql-tran-cloze-1',
+      'tsql-tran-xact-mcq-1',
+      'tsql-tran-predict-1',
+      'tsql-tran-1',
+    ],
+  },
+  {
+    id: 'tsql_isolation/1',
+    topicKeys: [Topic.TSQL_ISOLATION],
+    step: 1,
+    title: 'Isolation Levels & Locking',
+    idea: [
+      lines(
+        "Isolation decides how much of another transaction's unfinished work yours can see.",
+        "SQL Server enforces it with locks: readers take shared locks, and writers take exclusive locks that they hold until they commit.",
+        "`SET TRANSACTION ISOLATION LEVEL ...` sets the level for the session's transactions from then on.",
+      ),
+      lines(
+        "`READ UNCOMMITTED` reads without locks, so it can see a change that is later rolled back: a dirty read.",
+        "`READ COMMITTED`, the default, sees only committed data, but a row read twice can change in between: a non-repeatable read.",
+        "`REPEATABLE READ` keeps the rows it read locked until the end, and `SERIALIZABLE` also locks the range, so no new matching row, a phantom, can appear.",
+      ),
+      lines(
+        "`SNAPSHOT` reads the data as it was committed when the transaction started, from row versions, so readers and writers do not block each other.",
+        "A table hint sets the locking of one table in one statement: `WITH (UPDLOCK)` reads a row with an update lock, so a second session that wants to change it has to wait.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SET TRANSACTION ISOLATION LEVEL READ COMMITTED;   -- the default
+--   READ UNCOMMITTED   dirty reads possible, like WITH (NOLOCK)
+--   READ COMMITTED     no dirty reads
+--   REPEATABLE READ    and rows read cannot change
+--   SERIALIZABLE       and no phantom rows
+--   SNAPSHOT           versioned reads, no blocking
+BEGIN TRAN;
+SELECT col FROM t WITH (UPDLOCK) WHERE id = 1;    -- reserve the row
+UPDATE t SET col = col - 1 WHERE id = 1;
+COMMIT;`,
+    },
+    pitfall: lines(
+      "`WITH (NOLOCK)` is not a free speed-up: it is READ UNCOMMITTED for that table, so a report can count changes that are rolled back, and skip or double-count rows that move while it reads.",
+      "Keep it for numbers that may be rough, and use SNAPSHOT when readers must not block writers.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Stock',
+          columns: ['BookId', 'Copies'],
+          rows: [
+            [1, 1],
+            [2, 4],
+          ],
+        },
+      ],
+      code: `SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+DECLARE @left INT;
+BEGIN TRAN;
+SELECT @left = Copies FROM Stock WITH (UPDLOCK, HOLDLOCK) WHERE BookId = 1;
+IF @left > 0
+    UPDATE Stock SET Copies = @left - 1 WHERE BookId = 1;
+COMMIT;
+SELECT BookId, Copies FROM Stock ORDER BY BookId;`,
+      steps: [
+        "Line 1: READ COMMITTED is the default, so this line only makes it explicit.",
+        "Line 4: the session reads the last copy of book 1 into `@left` and holds an update lock on the row until `COMMIT`.",
+        "Lines 5-6: with a copy left, it takes one, and the result shows book 1 at 0.",
+        "Without the hint, a second session running the same code could read 1 before the first one updates, and both would sell the same copy.",
+        "With it, the second session's line 4 waits until the first commits, then reads 0 and skips the update.",
+      ],
+      output: `BookId | Copies
+1 | 0
+2 | 4`,
+    },
+    exercises: [
+      'tsql-iso-mcq-1',
+      'tsql-iso-predict-1',
+      'tsql-iso-mcq-3',
+      'tsql-iso-mcq-4',
+      'tsql-iso-cloze-2',
+    ],
+  },
+  {
+    id: 'tsql_procedures/1',
+    topicKeys: [Topic.TSQL_PROCEDURES],
+    step: 1,
+    title: 'Stored Procedures',
+    idea: [
+      lines(
+        "A stored procedure saves statements under a name, with parameters, so a scheduled job or a caller runs them with one `EXEC`.",
+        "Parameters follow the name as `@name TYPE`, separated by commas and with no parentheses needed, and `= value` gives one a default.",
+        "The body goes between `AS BEGIN` and `END`, and `CREATE PROCEDURE` must be alone in its batch.",
+      ),
+      lines(
+        "A procedure hands results back in three ways.",
+        "A `SELECT` in the body returns a result set to the caller.",
+        "An `OUTPUT` parameter carries a value of any type back into the caller's variable.",
+        "`RETURN n` ends the procedure at once with an integer status code, 0 for success by convention, which the caller reads with `EXEC @rc = name ...`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE PROCEDURE dbo.name
+    @in  INT,                   -- input
+    @opt INT = 10,              -- input with a default
+    @out INT OUTPUT             -- sent back to the caller
+AS
+BEGIN
+    IF @in < 0 RETURN 1;        -- leave now with status 1
+    SELECT @out = COUNT(*) FROM dbo.t WHERE col >= @in;
+    RETURN 0;                   -- success
+END;
+GO
+DECLARE @result INT, @rc INT;
+EXEC @rc = dbo.name @in = 5, @out = @result OUTPUT;  -- OUTPUT here too`,
+    },
+    pitfall: lines(
+      "`OUTPUT` has to be written twice: on the parameter in the header and after the argument in the `EXEC`.",
+      "Leave it off the call and the procedure still runs, but the caller's variable keeps the value it had before.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Loan',
+          columns: ['LoanId', 'Member', 'Returned'],
+          rows: [
+            [1, 'Ada', 1],
+            [2, 'Ada', 0],
+            [3, 'Ben', 0],
+            [4, 'Ada', 0],
+          ],
+        },
+      ],
+      code: `CREATE PROCEDURE OpenLoans @Member NVARCHAR(40), @Open INT OUTPUT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Loan WHERE Member = @Member)
+        RETURN 1;
+    SELECT @Open = COUNT(*) FROM Loan WHERE Member = @Member AND Returned = 0;
+    RETURN 0;
+END;
+GO
+DECLARE @n INT, @rc INT;
+EXEC @rc = OpenLoans @Member = N'Ada', @Open = @n OUTPUT;
+SELECT @rc AS Status, @n AS OpenLoans;
+EXEC @rc = OpenLoans N'Cy', @n OUTPUT;
+SELECT @rc AS Status, @n AS OpenLoans;`,
+      steps: [
+        "Line 1: the procedure takes a member's name and sends a count back through `@Open`.",
+        "Lines 4-5: for a member with no loans at all it leaves at once with status 1.",
+        "Line 11: for Ada, `@Open = @n OUTPUT` copies her 2 open loans into `@n`, and `@rc` gets the 0 from line 7.",
+        "Line 13: the arguments go by position this time, and Cy has no loans, so `@rc` is 1.",
+        "The procedure never set `@Open` for Cy, and an OUTPUT parameter starts with the value passed in, so `@n` comes back as 2.",
+      ],
+      output: `Status | OpenLoans
+0 | 2
+
+Status | OpenLoans
+1 | 2`,
+    },
+    exercises: [
+      'tsql-proc-mcq-1',
+      'tsql-proc-cloze-1',
+      'tsql-proc-output-mcq-1',
+      'tsql-proc-predict-1',
+      'tsql-proc-1',
+    ],
+  },
+  {
+    id: 'tsql_control_flow/1',
+    topicKeys: [Topic.TSQL_CONTROL_FLOW],
+    step: 1,
+    title: 'Control Flow & Functions',
+    idea: [
+      lines(
+        "`IF condition` runs the one statement after it when the condition is true, and `ELSE` runs the one after it otherwise.",
+        "A condition that is NULL counts as false, so the `ELSE` branch runs.",
+        "`WHILE condition` checks before every pass and repeats its statement until the condition is false.",
+        "`BREAK` leaves the loop, and `CONTINUE` goes straight to the next check.",
+      ),
+      lines(
+        "Variables hold values inside one batch: `DECLARE @v INT = 1;` creates one, and `SET @v = ...` changes it.",
+        "`GO` ends the batch, and its variables end with it.",
+      ),
+      lines(
+        "A scalar function, `CREATE FUNCTION ... RETURNS type`, works out one value from its parameters and hands it back with `RETURN`.",
+        "Unlike a procedure it is used inside an expression, as in `SELECT dbo.f(col) FROM t`, and it cannot change data.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `DECLARE @i INT = 1;              -- lives until the next GO
+IF @i > 0
+    PRINT 'positive';            -- one statement: no block needed
+ELSE
+BEGIN                            -- several statements: BEGIN ... END
+    PRINT 'not positive';
+    SET @i = 1;
+END
+WHILE @i < 100                   -- checked before every pass
+BEGIN
+    SET @i = @i * 10;            -- BREAK leaves, CONTINUE checks again
+END
+GO
+CREATE FUNCTION dbo.f (@x INT) RETURNS INT
+AS BEGIN RETURN @x + 1; END;     -- used as SELECT dbo.f(col) FROM t`,
+    },
+    pitfall: lines(
+      "`IF` and `WHILE` govern exactly one statement.",
+      "To run several, wrap them in `BEGIN ... END`; otherwise only the first one is conditional, and a loop whose counter update falls outside the block never ends.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      code: `CREATE FUNCTION dbo.LateFee (@DaysLate INT) RETURNS INT
+AS
+BEGIN
+    IF @DaysLate <= 0 RETURN 0;
+    RETURN @DaysLate * 5;
+END;
+GO
+DECLARE @day INT = 0;
+WHILE @day < 5
+BEGIN
+    SET @day = @day + 2;
+    PRINT CONCAT('day ', @day, ': fee ', dbo.LateFee(@day - 3));
+END`,
+      steps: [
+        "Lines 1-6: the function returns 0 for a book that is not late yet, and 5 per late day otherwise.",
+        "Lines 8-9: `@day` starts at 0, and the loop runs while it is below 5.",
+        "Lines 10-13: the two statements in `BEGIN ... END` both repeat, so each pass adds 2 days and prints the fee for that day, with the first 3 days free.",
+        "The check comes before each pass, so `@day` = 4 still passes it, and that pass prints day 6 before the loop stops.",
+      ],
+      output: `day 2: fee 0
+day 4: fee 5
+day 6: fee 15`,
+    },
+    exercises: [
+      'tsql-flow-mcq-1',
+      'tsql-flow-func-mcq-1',
+      'tsql-flow-predict-1',
+      'tsql-flow-while-predict-1',
+      'tsql-flow-1',
+    ],
+  },
+  {
+    id: 'tsql_error_handling/1',
+    topicKeys: [Topic.TSQL_ERROR_HANDLING],
+    step: 1,
+    title: 'Error Handling (TRY…CATCH)',
+    idea: [
+      lines(
+        "`BEGIN TRY ... END TRY` wraps the work, and `BEGIN CATCH ... END CATCH` right after it handles a failure.",
+        "When a statement in TRY raises an error, the rest of TRY is skipped and CATCH runs; when nothing fails, CATCH is skipped.",
+      ),
+      lines(
+        "Inside CATCH, `ERROR_NUMBER()` and `ERROR_MESSAGE()` describe the error that led there.",
+        "`THROW 50001, 'message', 1;` raises your own error, with a number from 50000 up.",
+        "A bare `THROW;` in CATCH raises the caught error again unchanged, which `RAISERROR`, the older statement, cannot do.",
+      ),
+      lines(
+        "In a transaction, `COMMIT` is the last statement of TRY.",
+        "`XACT_STATE()` tells CATCH what is left: 1 for an open transaction, -1 for one that can only be rolled back, and 0 for none.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRAN;
+    UPDATE t SET col = col - n WHERE id = 1;
+    IF @bad = 1 THROW 50001, 'message', 1;   -- your own error
+    COMMIT;                                  -- last statement of TRY
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;           -- undo first
+    -- ERROR_NUMBER(), ERROR_MESSAGE() describe the error
+    THROW;                                   -- pass it on unchanged
+END CATCH`,
+    },
+    pitfall: lines(
+      "An error in TRY skips everything after it, including the `COMMIT`, so the transaction is still open when CATCH starts.",
+      "Roll it back first, then end with `THROW;`: a CATCH that only prints the error leaves the caller and the job believing the work succeeded.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Shelf',
+          columns: ['Title', 'Copies'],
+          rows: [
+            ['Dune', 2],
+            ['Emma', 1],
+          ],
+        },
+      ],
+      code: `SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRAN;
+    UPDATE Shelf SET Copies = Copies - 1 WHERE Title = 'Dune';
+    IF NOT EXISTS (SELECT 1 FROM Shelf WHERE Title = 'Ubik')
+        THROW 50001, 'Ubik is not on the shelf', 1;
+    COMMIT;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    PRINT CONCAT(ERROR_NUMBER(), ': ', ERROR_MESSAGE());
+END CATCH
+SELECT Title, Copies FROM Shelf ORDER BY Title;`,
+      steps: [
+        "Line 4: the loan of Dune takes its copies from 2 to 1 inside the open transaction.",
+        "Lines 5-6: Ubik is not in the table, so `THROW` raises error 50001, and line 7's `COMMIT` never runs.",
+        "Line 10: CATCH finds the transaction still there and rolls it back, which puts Dune back at 2.",
+        "Line 11: the error's number and message are printed, and the final `SELECT` shows both titles unchanged.",
+        "A load procedure would end its CATCH with `THROW;` as well, so the job that called it fails too.",
+      ],
+      output: `50001: Ubik is not on the shelf
+
+Title | Copies
+Dune | 2
+Emma | 1`,
+    },
+    exercises: [
+      'tsql-err-mcq-1',
+      'tsql-err-throw-mcq-1',
+      'tsql-err-predict-1',
+      'tsql-err-cloze-1',
+      'tsql-err-parsons-1',
     ],
   },
 ];
