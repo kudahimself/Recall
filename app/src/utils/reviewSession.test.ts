@@ -193,6 +193,25 @@ describe('the review list', () => {
     expect(pick?.question.id).toBe(left.id);
   });
 
+  it('after the session is done, a filtered view still serves a due family beyond the cap; unfiltered it ends', () => {
+    const state = { p: emptyProgress(), store: replayHistory([], byId) };
+    const firsts: Question[] = [];
+    for (const q of pool) {
+      if (firsts.some(f => familyOf(f) === familyOf(q))) continue;
+      firsts.push(q);
+      answer(state, q.id, NOW - 20 * DAY + firsts.length * 1000, true);
+      if (firsts.length === 40) break;
+    }
+    const started = startReviewSession(pool, state.p, state.store, {}, clock, { size: 20, reviewShare: 0.6 });
+    const left = firsts.find(q => !started.queue.some(e => e.family === familyOf(q)))!;
+    const session: ReviewSession = { ...started, queue: [], freshLeft: 0 };
+    expect(isSessionDone(session)).toBe(true);
+    expect(selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+    const filtered = pool.filter(q => familyOf(q) === familyOf(left) && state.p.questionsAttempted.has(q.id));
+    const pick = selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock);
+    expect(pick).toEqual({ question: left, kind: 'practice' });
+  });
+
   it('under filters to another type, never reviews a family still in the list a second time', () => {
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     const byFamily = new Map<string, Question[]>();

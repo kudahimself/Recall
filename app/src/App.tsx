@@ -24,7 +24,7 @@ import {
   TODAY_SIZE_KEY,
   UNLOCK_ACCURACY_PCT,
 } from './utils/spacedRepetition';
-import { FsrsStore, loadOrRebuild, recordAttempt } from './utils/familySchedule';
+import { FsrsStore, loadOrRebuild, recordAttempt, replayHistory } from './utils/familySchedule';
 import { seedMasteredTopics } from './utils/masteryMigration';
 import {
   ReviewSession,
@@ -1227,6 +1227,11 @@ function App() {
           return next;
         });
       }
+
+      setFsrsStore(replayHistory(
+        progress.attemptHistory.filter(a => !courseQuestionIds.has(a.questionId)),
+        QUESTIONS_BY_ID,
+      ));
 
       setMisconceptions(prev => ({
         events: prev.events.filter(e => !courseQuestionIds.has(e.questionId)),

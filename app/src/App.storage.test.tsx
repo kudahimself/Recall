@@ -169,6 +169,27 @@ test('history for an id missing from the build is kept in storage (bug 4)', asyn
   expect(stored.correctAnswers).toContain(GONE_ID);
 });
 
+test('resetting a course drops its families from the stored FSRS schedule', async () => {
+  const DBX_ID = 'ps-selectexpr-1';
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+    ...seeded,
+    questionsAttempted: [KNOWN_ID, DBX_ID],
+    correctAnswers: [KNOWN_ID, DBX_ID],
+    attemptHistory: [
+      ...seeded.attemptHistory,
+      { questionId: DBX_ID, timestamp: 1_700_000_200_000, isCorrect: true, attempts: 1, timeSpent: 9000 },
+    ],
+  }));
+  render(<App />);
+  const storedCards = () => Object.keys(JSON.parse(localStorage.getItem('recall-fsrs') as string).cards).sort();
+  expect(storedCards()).toEqual([DBX_ID, KNOWN_ID].sort());
+
+  await resetActiveCourse();
+  await waitFor(() => expect(storedCards()).toEqual([KNOWN_ID]));
+  const families = Object.keys(JSON.parse(localStorage.getItem('recall-fsrs') as string).families);
+  expect(families).toHaveLength(1);
+});
+
 test('a failed progress write keeps the app on screen and warns (bug 5)', async () => {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
   const realSet = Storage.prototype.setItem;

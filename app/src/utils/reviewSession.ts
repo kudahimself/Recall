@@ -438,7 +438,8 @@ export function selectSessionQuestion(
 ): SessionPick | null {
   const listed = nextReviewCard(session, servePool);
   if (listed) return { question: listed, kind: 'review' };
-  if (isSessionDone(session)) return null;
+  const filtered = servePool.length !== coursePool.length;
+  if (isSessionDone(session) && !filtered) return null;
 
   const pools: Pools = { course: coursePool, serve: servePool };
   const ctx = pickContext(coursePool, progress, cardDifficulty, session.served);
@@ -474,7 +475,7 @@ export function selectSessionQuestion(
   // Nothing of today's plan is servable. Under filters, or past the bound,
   // practice goes on from the same list and families (due families beyond
   // the cap first); otherwise the day is done.
-  if (servePool.length === coursePool.length && !session.keepGoing) return null;
+  if (!filtered && !session.keepGoing) return null;
   const practice = dueCard() ?? nextDrillCard(pools, store, ctx, now) ?? nextUnseenCard(pools, ctx);
   return practice ? { question: practice, kind: 'practice' } : null;
 }
