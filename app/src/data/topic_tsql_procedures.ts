@@ -11,6 +11,7 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { sampleTable } from './tsqlSampleTables';
 
 export const tsql_procedures_questions: Question[] = [
   {
@@ -21,12 +22,12 @@ export const tsql_procedures_questions: Question[] = [
     course: Course.SQL,
     question: 'Why package warehouse load logic in a stored procedure instead of repeating ad-hoc SQL?',
     options: [
-      { id: 'a', text: 'It is compiled and stored server-side, can be parameterised and reused, and gives the load one named, versioned, schedulable entry point.', isCorrect: true },
-      { id: 'b', text: 'A stored procedure runs without ever touching the transaction log, so it is always faster than plain SQL.', isCorrect: false },
-      { id: 'c', text: 'A stored procedure can only contain a single SELECT statement, which makes it simpler to audit.', isCorrect: false },
-      { id: 'd', text: 'Stored procedures bypass all permissions, so any user can run any logic inside them.', isCorrect: false },
+      { id: 'a', text: 'The logic is stored once on the server under one name, takes parameters, and a scheduler runs it with a single EXEC.', isCorrect: true },
+      { id: 'b', text: 'Its statements run as one transaction by themselves, so a load step that fails halfway never leaves partial changes.', isCorrect: false },
+      { id: 'c', text: 'Its writes skip the transaction log, so the same INSERTs and UPDATEs run faster than when sent as a plain batch.', isCorrect: false },
+      { id: 'd', text: 'Its result rows are cached, so a second call with the same parameters returns them without reading the tables again.', isCorrect: false },
     ],
-    explanation: 'A procedure stores reusable, parameterised logic server-side under one name — the natural unit a scheduler (SQL Agent / ADF) calls for an ELT step. It centralises the logic, supports input/output params, and can be granted EXECUTE permission without exposing the underlying tables.',
+    explanation: 'A procedure stores reusable, parameterised logic server-side under one name - the natural unit a scheduler (SQL Agent / ADF) calls for an ELT step. It centralises the logic, supports input/output params, and can be granted EXECUTE permission without exposing the underlying tables. It is not automatically a transaction: each statement inside still autocommits unless the body opens one with `BEGIN TRAN`. It is logged like any other write, and what SQL Server caches is the query plan, not the result rows.',
     hints: ['Reusable, parameterised, named server-side unit', 'The thing a scheduler calls for a load step'],
     tags: ['tsql', 'procedures', 'stored-proc'],
   },
@@ -37,7 +38,8 @@ export const tsql_procedures_questions: Question[] = [
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the keywords that create a procedure with one input parameter.',
+    question: 'Fill in the keyword that creates a procedure, and the character every parameter name starts with.',
+    tables: [sampleTable('dbo.FactOrders', ['OrderId', 'CustomerKey', 'Amount'])],
     template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
 CREATE ___ dbo.GetCustomerOrders
     ___ CustomerKey INT
@@ -68,7 +70,8 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Assemble a procedure `dbo.AddSale` that takes `@CustomerKey INT` and `@Amount DECIMAL(10,2)` and inserts one row into `dbo.FactSales (CustomerKey, Amount)`. Order: header line, parameter list, AS, BEGIN, the INSERT, END.',
+    question: 'Assemble a procedure `dbo.AddSale` that takes `@CustomerKey INT` and then `@Amount DECIMAL(10,2)`, and inserts one row into `dbo.FactSales (CustomerKey, Amount)`.',
+    tables: [sampleTable('dbo.FactSales', ['CustomerKey', 'Amount'])],
     correctOrder: [
       'CREATE PROCEDURE dbo.AddSale',
       '    @CustomerKey INT,',
@@ -92,8 +95,8 @@ BEGIN
     INSERT INTO dbo.FactSales (CustomerKey, Amount)
     VALUES (@CustomerKey, @Amount);
 END;`,
-    explanation: 'A procedure header is `CREATE PROCEDURE <name>` followed by comma-separated `@param TYPE` declarations (no parentheses around the list in T-SQL), then `AS BEGIN … END`. Parameters feed straight into the INSERT\'s VALUES list.',
-    hints: ['No parentheses around a T-SQL parameter list', 'Header → params → AS → BEGIN → body → END'],
+    explanation: 'A procedure header is `CREATE PROCEDURE <name>` followed by comma-separated `@param TYPE` declarations, then `AS BEGIN ... END`. Parentheses around the list are optional, but an empty `()` followed by parameters is a syntax error, and every parameter name needs its `@`. Parameters feed straight into the INSERT\'s VALUES list, which always needs its parentheses.',
+    hints: ['The parameter list needs no parentheses, and each name starts with @', 'Header → params → AS → BEGIN → body → END'],
     tags: ['tsql', 'procedures', 'create-procedure', 'parsons'],
   },
   {
@@ -104,12 +107,12 @@ END;`,
     course: Course.SQL,
     question: 'In T-SQL, how does an OUTPUT parameter differ from the value given by `RETURN`?',
     options: [
-      { id: 'a', text: 'An OUTPUT parameter can pass back any type and multiple values; RETURN sends back a single integer, conventionally a status code.', isCorrect: true },
-      { id: 'b', text: 'They are identical; OUTPUT is just an alias for RETURN with a longer keyword.', isCorrect: false },
-      { id: 'c', text: 'RETURN can pass back any type and multiple values; OUTPUT only sends a single integer status code.', isCorrect: false },
-      { id: 'd', text: 'OUTPUT parameters work only in functions; RETURN works only in procedures.', isCorrect: false },
+      { id: 'a', text: 'An OUTPUT parameter can carry any type, and there can be several; RETURN sends back one integer, by convention a status code.', isCorrect: true },
+      { id: 'b', text: 'RETURN can carry any type, such as a total or a name; an OUTPUT parameter only carries an integer status code.', isCorrect: false },
+      { id: 'c', text: 'An OUTPUT parameter can carry any type and needs nothing extra at the call; RETURN is read with EXEC @rc = ...', isCorrect: false },
+      { id: 'd', text: 'RETURN sends a whole result set back to the caller; an OUTPUT parameter sends back one value of any type.', isCorrect: false },
     ],
-    explanation: 'Use an `OUTPUT` parameter to hand back a result of any type (and you can have several). `RETURN` yields a single integer — by convention a status/exit code (0 = success), not data. Mixing them up (returning a row count via RETURN, say) silently breaks once the count exceeds the int range or you need a non-integer.',
+    explanation: 'Use an `OUTPUT` parameter to hand back a result of any type (and you can have several), and write `OUTPUT` at the call too, or the caller\'s variable keeps its old value. `RETURN` yields a single integer, by convention a status code (0 = success), not data, so it cannot hand back an amount like 19.99 or a name. Rows come back from a `SELECT` in the body, not from RETURN.',
     hints: ['OUTPUT = any type, many values', 'RETURN = one integer status code'],
     tags: ['tsql', 'procedures', 'output-parameter', 'return'],
   },
@@ -120,7 +123,7 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'What does this batch PRINT (one value)?',
+    question: 'What does this script PRINT (one value)?',
     tables: [{ name: 'dbo.Ticket', columns: ['TicketId'], rows: [[1], [2], [3]] }],
     code: `CREATE PROCEDURE dbo.CountTickets @MinId INT, @Total INT OUTPUT
 AS
@@ -144,6 +147,7 @@ PRINT @n;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the keyword that marks a parameter as returning a value to the caller.',
+    tables: [sampleTable('dbo.FactOrders', ['OrderId', 'CustomerKey', 'Amount'])],
     template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
 CREATE PROCEDURE dbo.GetOrderTotal
     @CustomerKey INT,
@@ -155,6 +159,7 @@ BEGIN
     WHERE CustomerKey = @CustomerKey;
 END;`,
     blanks: ['OUTPUT'],
+    blankAlternates: [['OUT']],
     solution: `CREATE PROCEDURE dbo.GetOrderTotal
     @CustomerKey INT,
     @Total DECIMAL(10, 2) OUTPUT
@@ -164,7 +169,7 @@ BEGIN
     FROM dbo.FactOrders
     WHERE CustomerKey = @CustomerKey;
 END;`,
-    explanation: 'Appending `OUTPUT` after a parameter\'s type in the procedure header marks it as an output parameter - the body can write a value into it that the caller reads back after EXEC (the call site must also repeat `OUTPUT`, as seen when invoking one).',
+    explanation: 'Appending `OUTPUT` (or its short form `OUT`) after a parameter\'s type in the procedure header marks it as an output parameter - the body can write a value into it that the caller reads back after EXEC. For customer 1 the body sets `@Total` to 153.99. The call site must also repeat `OUTPUT`.',
     hints: ['Goes right after the parameter\'s type', 'Same keyword as at the EXEC call site'],
     tags: ['tsql', 'procedures', 'output-parameter', 'cloze'],
   },
@@ -175,7 +180,7 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the keyword that runs the procedure and the keyword that marks the captured argument as an output.',
+    question: 'The procedure `dbo.CountOrders @CustomerKey INT, @OrderCount INT OUTPUT` already exists. Fill in the keyword that runs it and the keyword that copies its count back into `@cnt`.',
     template: `DECLARE @cnt INT;
 ___ dbo.CountOrders @CustomerKey = 42, @OrderCount = @cnt ___;
 SELECT @cnt AS Orders;`,
@@ -183,8 +188,8 @@ SELECT @cnt AS Orders;`,
     solution: `DECLARE @cnt INT;
 EXEC dbo.CountOrders @CustomerKey = 42, @OrderCount = @cnt OUTPUT;
 SELECT @cnt AS Orders;`,
-    blankAlternates: [['EXECUTE'], []],
-    explanation: '`EXEC` (or `EXECUTE`) runs a stored procedure. To receive an OUTPUT parameter you must repeat the `OUTPUT` keyword at the call site — omit it and the variable stays NULL because the value is passed by value, not by reference.',
+    blankAlternates: [['EXECUTE'], ['OUT']],
+    explanation: '`EXEC` (or `EXECUTE`) runs a stored procedure. To receive an OUTPUT parameter you must repeat the `OUTPUT` keyword at the call site - omit it and `@cnt` stays NULL, the value it was declared with, because the argument is passed in by value and nothing is copied back.',
     hints: ['Run a proc with EXEC / EXECUTE', 'Repeat OUTPUT at the call site to capture it'],
     tags: ['tsql', 'procedures', 'exec', 'output-parameter', 'cloze'],
   },
@@ -196,6 +201,7 @@ SELECT @cnt AS Orders;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the statement that exits the procedure early with status 1 when the order is missing, and the one that exits with status 0 on success.',
+    tables: [sampleTable('dbo.FactOrders', ['OrderId', 'Amount'])],
     template: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
 CREATE PROCEDURE dbo.GetOrderAmount
     @OrderId INT,
@@ -233,9 +239,10 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    requires: [/CREATE\s+PROCEDURE/i],
+    requires: [/CREATE\s+(OR\s+ALTER\s+)?PROC(EDURE)?\b/i],
     question: 'Create a stored procedure `dbo.GetOrdersSince` with one input parameter `@FromDate DATE` that returns `OrderId`, `OrderDate`, and `Amount` from `dbo.FactOrders` where `OrderDate >= @FromDate`, ordered by `OrderDate`.',
-    starterCode: `-- CREATE PROCEDURE dbo.GetOrdersSince @FromDate DATE AS ...
+    tables: [sampleTable('dbo.FactOrders', ['OrderId', 'OrderDate', 'Amount'])],
+    starterCode: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
 `,
     testCases: [
       {
@@ -252,6 +259,13 @@ BEGIN
     FROM dbo.FactOrders
     WHERE OrderDate >= @FromDate
     ORDER BY OrderDate;
+END;
+-- OR
+CREATE PROC dbo.GetOrdersSince @FromDate DATE
+AS
+BEGIN
+    SELECT OrderId, OrderDate, Amount FROM dbo.FactOrders
+    WHERE OrderDate >= @FromDate ORDER BY OrderDate;
 END;`,
     tieredHints: {
       apiSignature: 'CREATE PROCEDURE proc_name @param_name data_type AS BEGIN ... END;',
@@ -265,7 +279,7 @@ BEGIN
     ORDER BY ____;
 END;`,
     },
-    explanation: 'The `@FromDate DATE` parameter is declared after the proc name and used in the `WHERE` to filter on or after that date. Wrapping the query in `CREATE PROCEDURE … AS BEGIN … END` turns a one-off query into a reusable, schedulable load/report step.',
+    explanation: 'The `@FromDate DATE` parameter is declared after the proc name and used in the `WHERE` to filter on or after that date: `EXEC dbo.GetOrdersSince \'2026-10-28\'` returns orders 5004, 5005 and 5006. Wrapping the query in `CREATE PROCEDURE ... AS BEGIN ... END` turns a one-off query into a reusable, schedulable load/report step; `CREATE PROC` is fine too.',
     hints: ['Declare @FromDate DATE after the name', 'WHERE OrderDate >= @FromDate, ORDER BY OrderDate'],
     tags: ['tsql', 'procedures', 'create-procedure'],
   },
@@ -276,9 +290,10 @@ END;`,
     topic: Topic.TSQL_PROCEDURES,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    requires: [/OUTPUT/i],
+    requires: [/\bOUT(PUT)?\b/i],
     question: 'Create a stored procedure `dbo.CountOrdersForCustomer` with an input parameter `@CustomerKey INT` and an output parameter `@OrderCount INT` that sets the output parameter to the number of rows in `dbo.FactOrders` for that customer.',
-    starterCode: `-- CREATE PROCEDURE dbo.CountOrdersForCustomer ( ... ) AS ...
+    tables: [sampleTable('dbo.FactOrders', ['OrderId', 'CustomerKey'])],
+    starterCode: `-- dbo.FactOrders(OrderId, CustomerKey, ProductKey, OrderDate, Amount)
 `,
     testCases: [
       {
@@ -295,6 +310,30 @@ BEGIN
     SELECT @OrderCount = COUNT(*)
     FROM dbo.FactOrders
     WHERE CustomerKey = @CustomerKey;
+END;
+-- OR
+CREATE PROCEDURE dbo.CountOrdersForCustomer @CustomerKey INT, @OrderCount INT OUT
+AS
+BEGIN
+    SELECT @OrderCount = COUNT(*) FROM dbo.FactOrders WHERE CustomerKey = @CustomerKey;
+END;
+-- OR
+CREATE PROC dbo.CountOrdersForCustomer @CustomerKey INT, @OrderCount INT OUTPUT
+AS
+BEGIN
+    SELECT @OrderCount = COUNT(*) FROM dbo.FactOrders WHERE CustomerKey = @CustomerKey;
+END;
+-- OR
+CREATE PROC dbo.CountOrdersForCustomer @CustomerKey INT, @OrderCount INT OUT
+AS
+BEGIN
+    SELECT @OrderCount = COUNT(*) FROM dbo.FactOrders WHERE CustomerKey = @CustomerKey;
+END;
+-- OR
+CREATE PROCEDURE dbo.CountOrdersForCustomer @CustomerKey INT, @OrderCount INT OUTPUT
+AS
+BEGIN
+    SET @OrderCount = (SELECT COUNT(*) FROM dbo.FactOrders WHERE CustomerKey = @CustomerKey);
 END;`,
     tieredHints: {
       apiSignature: '@param_name data_type OUTPUT',
@@ -308,7 +347,7 @@ BEGIN
     WHERE ____ = @____;
 END;`,
     },
-    explanation: 'The header declares one plain input parameter and one parameter suffixed `OUTPUT`. The body assigns into the output parameter with `SELECT @OrderCount = COUNT(*) ...` rather than returning a result set - the caller reads the count back through the parameter after EXEC, not from a SELECT.',
+    explanation: 'The header declares one plain input parameter and one parameter suffixed `OUTPUT` (or `OUT`). The body assigns into the output parameter with `SELECT @OrderCount = COUNT(*) ...` (or `SET @OrderCount = (SELECT COUNT(*) ...)`) rather than returning a result set - the caller reads the count back through the parameter after EXEC, not from a SELECT. For customer 4 it is 2.',
     hints: ['Second parameter needs the OUTPUT suffix', 'Assign the count into it with SELECT @OrderCount = COUNT(*) ... WHERE CustomerKey = @CustomerKey'],
     tags: ['tsql', 'procedures', 'output-parameter', 'create-procedure'],
   },
