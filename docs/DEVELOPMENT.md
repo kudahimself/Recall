@@ -209,7 +209,7 @@ When the ramp is held by its difficulty gate, or finished but below the unlock b
 The session serves the list first, and the "Reviews left N" pill and the Today card show its length, so the number drops by exactly one per answered review.
 A first miss anywhere in the session comes back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
 Families due beyond the cap stay due and lead the next days' lists; "Keep going" lifts the bound and serves them, then fresh slots, for as long as the learner wants.
-Under topic, difficulty or type filters the plan serves what it can inside them; past the plan, "Practice" comes from the same families (a drill of a family already met, then an unseen card) without using a slot.
+Under topic, difficulty or type filters the plan serves what it can inside them; past the plan, and also after "Done for today", "Practice" comes from the same list and families (due families beyond the cap, then a drill of a family already met, then an unseen card) without using a slot.
 The older selector below is not used by the session.
 The session is stored under `recall-today-session`, so a reload the same day resumes it (count, slots left, cards served, and "Done for today"); a new day starts a new one.
 
@@ -369,7 +369,7 @@ Layouts target desktop viewport without scrolling.
 - `recall-filters` - topic/difficulty/type filter state
 - `recall-active-course` - currently selected `Course`
 - `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
-- `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, built from a different history (its `basis`), or built against a different card-to-family mapping, as after a concept re-tag (its `bank`); `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
+- `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, built from a different history (its `basis`), or built against a different card-to-family mapping, as after a concept re-tag (its `bank`), and replayed from the remaining history when a course is reset; `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
 - `recall-today-size`, `recall-today-review-share` - Today's session settings, read straight from storage
 - `recall-today-session` - today's session per course, dropped at the day boundary
 - `recall-concept-srs-enabled` (feature flag, `featureFlags.ts`) - a setting read straight from storage
