@@ -8,7 +8,7 @@
  * Section 5, Data Modeling in SQL: every topic.
  * Section 6, ELT & Transformation Patterns: every topic.
  * Section 7, Performance & Optimization: every topic.
- * Later sections follow one per PR (next: Cloud Warehouse SQL).
+ * Section 8, Cloud Warehouse SQL: every topic (the last SQL section).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -3171,6 +3171,258 @@ WHERE code_col = N'12345'`,
       'tsql-anti-predict-1',
       'tsql-anti-1',
       'tsql-anti-mcq-4',
+    ],
+  },
+  {
+    id: 'tsql_mpp_model/1',
+    topicKeys: [Topic.TSQL_MPP_MODEL],
+    step: 1,
+    title: 'MPP & Cost Models',
+    idea: [
+      lines(
+        "A massively parallel (MPP) warehouse spreads a table over many nodes, each holding a slice with its own CPU and memory.",
+        "A query runs the same step on every slice at once and then merges the partial results, so more nodes means more speed on the same data.",
+      ),
+      lines(
+        "A node can only work on rows it holds.",
+        "When a join or grouping needs rows that sit on another node, the engine moves them across the network first, which is called a shuffle, and at scale that movement often costs more than the computing.",
+        "Good design keeps rows that are joined together on the same node.",
+      ),
+      lines(
+        "Cloud warehouses also separate storage from compute: the data sits once in cheap storage, and compute is switched on, scaled and paused on its own.",
+        "That makes the bill depend on the engine: BigQuery on demand charges for bytes scanned, Snowflake for running warehouse time, Synapse Dedicated for the provisioned size over time.",
+        "Columnar storage likes big batches, so load in bulk rather than one row per `INSERT`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- every node runs this on its own slice
+SELECT key, SUM(col) AS partial FROM t GROUP BY key;
+
+-- the partials are merged into the answer
+SELECT SUM(partial) FROM (...) AS p;
+
+-- cost follows the billing model:
+--   bytes scanned  -> name columns, filter on partitions
+--   compute time   -> suspend idle compute
+--   provisioned    -> pause or scale the pool`,
+    },
+    pitfall: lines(
+      "Adding nodes does not fix a slow join when the join keys are on different nodes, because the rows are still shuffled across the network.",
+      "Place the rows that are joined together on the same node, and load in bulk batches instead of single-row inserts.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'BookSale',
+          columns: ['SaleId', 'NodeNo', 'Copies'],
+          rows: [
+            [1, 1, 4],
+            [2, 1, 6],
+            [3, 2, 5],
+            [4, 2, 3],
+            [5, 3, 7],
+            [6, 3, 2],
+            [7, 3, 1],
+          ],
+        },
+      ],
+      code: `SELECT NodeNo, SUM(Copies) AS Partial
+FROM BookSale
+GROUP BY NodeNo
+ORDER BY NodeNo;
+
+SELECT SUM(Partial) AS Total
+FROM (
+  SELECT NodeNo, SUM(Copies) AS Partial
+  FROM BookSale
+  GROUP BY NodeNo
+) AS p;`,
+      steps: [
+        "Lines 1-4: each `NodeNo` stands for a node, and the first statement is the step every node runs alone on its own slice, with no data from the others.",
+        "The three partial sums are 10, 8 and 10, and each node produced its figure without waiting for another.",
+        "Lines 6-11: the second statement merges the three partials into the answer, the small final step that crosses the network.",
+        "Only three numbers travel, not seven sale rows, which is why a sum or a count scales well on MPP.",
+        "The total is 28, the same as `SUM(Copies)` over the whole table, but reached by parallel work plus a tiny merge.",
+      ],
+      output: `NodeNo | Partial
+1 | 10
+2 | 8
+3 | 10
+
+Total
+28`,
+    },
+    exercises: [
+      'tsql-mpp-mcq-1',
+      'tsql-mpp-mcq-3',
+      'tsql-mpp-predict-1',
+      'tsql-mpp-mcq-2',
+      'tsql-mpp-mcq-5',
+    ],
+  },
+  {
+    id: 'tsql_synapse_fabric/1',
+    topicKeys: [Topic.TSQL_SYNAPSE_FABRIC],
+    step: 1,
+    title: 'Synapse / Fabric (Distribution, CTAS)',
+    idea: [
+      lines(
+        "A Synapse dedicated pool stores each table across 60 distributions, and the `DISTRIBUTION` option decides where a row goes.",
+        "`HASH(col)` sends rows with the same value of col to the same distribution, `ROUND_ROBIN` deals rows out evenly with no key, and `REPLICATE` keeps a full copy on every node.",
+      ),
+      lines(
+        "Hash a large fact on a column it is often joined or grouped by, replicate a small dimension, and use round robin for a staging table that loads fast.",
+        "A hash column with few distinct values or one dominant value piles rows on a few distributions, which is skew.",
+      ),
+      lines(
+        "`CREATE TABLE ... WITH (DISTRIBUTION = ..., CLUSTERED COLUMNSTORE INDEX) AS SELECT ...` is CTAS.",
+        "It creates the table and loads it in parallel in one statement, and it is the way to transform a big table or move it to a better hash column.",
+        "The optimizer plans data movement from row counts, so keep statistics up to date.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE t_new
+WITH (
+  DISTRIBUTION = HASH(key_col),        -- or ROUND_ROBIN, or REPLICATE
+  CLUSTERED COLUMNSTORE INDEX
+)
+AS SELECT key_col, agg(col) AS total FROM t GROUP BY key_col;
+
+CREATE STATISTICS st_key ON t_new (key_col);`,
+    },
+    pitfall: lines(
+      "Hashing a fact on a column with few distinct values, or one value that dominates, puts most rows in a few distributions, so one of them does most of the work.",
+      "Choose a hash column with many distinct, evenly used values.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Loan',
+          columns: ['LoanId', 'BranchId', 'MemberId'],
+          rows: [
+            [1, 3, 11],
+            [2, 3, 12],
+            [3, 3, 13],
+            [4, 3, 14],
+            [5, 6, 15],
+            [6, 3, 16],
+            [7, 4, 17],
+            [8, 5, 18],
+          ],
+        },
+      ],
+      code: `SELECT BranchId % 3 AS DistNo, COUNT(*) AS LoanCount
+FROM Loan
+GROUP BY BranchId % 3
+ORDER BY DistNo;
+
+SELECT MemberId % 3 AS DistNo, COUNT(*) AS LoanCount
+FROM Loan
+GROUP BY MemberId % 3
+ORDER BY DistNo;`,
+      steps: [
+        "Both queries stand in for `DISTRIBUTION = HASH(col)` with a toy hash, `col % 3`, giving three distributions; a real pool has 60.",
+        "Lines 1-4: hashing on `BranchId` puts branches 3 and 6 in distribution 0, so six of the eight loans land there and the other two have one each.",
+        "That is skew, because one distribution does most of the work while the others wait.",
+        "Lines 6-9: hashing on `MemberId`, which is different on every loan, gives 3, 2 and 3 rows.",
+        "The same table spreads evenly or badly depending on the hash column, which is the choice `CREATE TABLE ... WITH (DISTRIBUTION = HASH(...))` makes.",
+      ],
+      output: `DistNo | LoanCount
+0 | 6
+1 | 1
+2 | 1
+
+DistNo | LoanCount
+0 | 3
+1 | 2
+2 | 3`,
+    },
+    exercises: [
+      'tsql-syn-mcq-1',
+      'tsql-syn-mcq-3',
+      'tsql-syn-predict-1',
+      'tsql-syn-mcq-2',
+      'tsql-syn-1',
+    ],
+  },
+  {
+    id: 'tsql_other_warehouses/1',
+    topicKeys: [Topic.TSQL_OTHER_WAREHOUSES],
+    step: 1,
+    title: 'Snowflake & BigQuery',
+    idea: [
+      lines(
+        "Snowflake and BigQuery manage physical layout for you: Snowflake keeps data in automatic micro-partitions that carry min and max values, so a filter skips the ones it cannot match.",
+        "There is no distribution key to design, only an optional clustering key on very large tables.",
+      ),
+      lines(
+        "`QUALIFY` filters on a window function in the same query, the way `HAVING` filters on an aggregate.",
+        "`QUALIFY ROW_NUMBER() OVER (PARTITION BY k ORDER BY d DESC) = 1` keeps the latest row per key, where T-SQL needs a CTE and `WHERE rn = 1`.",
+      ),
+      lines(
+        "Time travel reads or restores a table as it was at an earlier moment within a retention window, a safety net after a bad load.",
+        "Nested data is a first-class type: Snowflake `VARIANT` holds JSON and `FLATTEN` turns an array into rows, BigQuery has `ARRAY` and `STRUCT` with `UNNEST`.",
+        "BigQuery on demand bills bytes scanned, so name the columns you need and filter on the partition column.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- Snowflake / BigQuery: latest row per key, no CTE
+SELECT * FROM t
+QUALIFY ROW_NUMBER() OVER (PARTITION BY k ORDER BY d DESC) = 1;
+
+-- Snowflake: the table as it was an hour ago
+SELECT * FROM t AT (OFFSET => -3600);
+
+-- BigQuery: bytes scanned = only the columns named
+SELECT col1, col2 FROM t WHERE part_date = '2026-01-01';`,
+    },
+    pitfall: lines(
+      "On BigQuery `SELECT *` bills every column of every partition it reads, and the column store makes a narrow query cheap only when you name the columns.",
+      "List the columns you need and filter on the partition column.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'BookColumn',
+          columns: ['ColName', 'Mb'],
+          rows: [
+            ['Isbn', 40],
+            ['Title', 120],
+            ['Price', 20],
+            ['Blurb', 800],
+          ],
+        },
+      ],
+      code: `SELECT 'select star' AS Query, SUM(Mb) AS MbScanned
+FROM BookColumn
+UNION ALL
+SELECT 'two columns', SUM(Mb)
+FROM BookColumn
+WHERE ColName IN ('Isbn', 'Price')
+ORDER BY MbScanned DESC;`,
+      steps: [
+        "Each row of `BookColumn` is one column of a book table and how many megabytes it takes on disk; a column store keeps and reads each column separately.",
+        "Lines 1-3: `SELECT *` reads all four columns, so the query scans 40 + 120 + 20 + 800 = 980 MB and is billed for all of it.",
+        "Lines 4-6: naming only `Isbn` and `Price` reads those two columns, 40 + 20 = 60 MB, about six percent of the cost.",
+        "The big `Blurb` column is never read when it is not named, which is why the narrow query is so much cheaper.",
+        "Partition pruning cuts the bill the same way, by skipping whole slices of the table that the filter rules out.",
+      ],
+      output: `Query | MbScanned
+select star | 980
+two columns | 60`,
+    },
+    exercises: [
+      'tsql-other-mcq-1',
+      'tsql-other-mcq-3',
+      'tsql-other-predict-1',
+      'tsql-other-mcq-2',
+      'tsql-other-mcq-4',
     ],
   },
 ];

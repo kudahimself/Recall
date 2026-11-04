@@ -10,6 +10,7 @@ import {
   Difficulty,
   Topic,
   Course,
+  CodeLanguage,
 } from '../types';
 
 export const tsql_other_warehouses_questions: Question[] = [
@@ -97,5 +98,43 @@ export const tsql_other_warehouses_questions: Question[] = [
     explanation: 'Because BigQuery charges for bytes read, the column-store means `SELECT col1, col2` is cheaper than `SELECT *` (you pay only for scanned columns), and partitioning (e.g. by date) plus clustering lets a filtered query prune to a small slice — directly reducing bytes scanned and therefore the bill. The cost model dictates the optimisation.',
     hints: ['Bytes scanned → name columns, avoid SELECT *', 'Partition + cluster to prune scanned data'],
     tags: ['tsql', 'other-warehouses', 'bigquery', 'cost-model'],
+  },
+  {
+    id: 'tsql-other-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_OTHER_WAREHOUSES,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Snowflake writes "the latest order per customer" as QUALIFY ROW_NUMBER() OVER (PARTITION BY CustomerKey ORDER BY OrderDate DESC) = 1. T-SQL has no QUALIFY, so the same filter is written as a CTE and a WHERE on the row number, as below. Which orders does it return? Write one row per line in the ORDER BY order, as CustomerKey and OrderId separated by a comma.',
+    tables: [
+      {
+        name: 'dbo.FactOrders',
+        columns: ['OrderId', 'CustomerKey', 'OrderDate'],
+        rows: [
+          [101, 1, '2026-01-05'],
+          [102, 1, '2026-03-12'],
+          [103, 2, '2026-02-20'],
+          [104, 1, '2026-02-01'],
+          [105, 3, '2026-01-30'],
+          [106, 3, '2026-04-02'],
+        ],
+      },
+    ],
+    code: `WITH Ranked AS (
+  SELECT CustomerKey, OrderId,
+         ROW_NUMBER() OVER (PARTITION BY CustomerKey ORDER BY OrderDate DESC) AS rn
+  FROM dbo.FactOrders
+)
+SELECT CustomerKey, OrderId
+FROM Ranked
+WHERE rn = 1
+ORDER BY CustomerKey;`,
+    expectedOutput: `1, 102
+2, 103
+3, 106`,
+    explanation: 'The window numbers each customer\'s orders from the newest, so rn = 1 is the latest one. Customer 1 has orders on 5 January, 12 March and 1 February, and 12 March (order 102) is the newest. Customer 2 has only order 103, and customer 3\'s newest is 2 April (order 106). QUALIFY does this filtering in the same SELECT, where T-SQL needs the CTE because a window function cannot appear in WHERE.',
+    hints: ['rn = 1 is the newest order of each customer', 'A customer with a single order always keeps it'],
+    tags: ['tsql', 'snowflake', 'qualify', 'row-number', 'predict'],
   },
 ];

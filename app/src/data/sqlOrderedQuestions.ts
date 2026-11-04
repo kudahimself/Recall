@@ -292,10 +292,13 @@ export const sqlOrderedQuestions: Question[] = [
   // MPP mental model, storage/compute separation, cost models
   q('tsql-mpp-mcq-1'), q('tsql-mpp-mcq-3'), q('tsql-mpp-mcq-4'),
   q('tsql-mpp-mcq-2'), q('tsql-mpp-mcq-5'),
+  q('tsql-mpp-predict-1'),
   // Synapse / Fabric (DISTRIBUTION, CTAS, columnstore, statistics)
   q('tsql-syn-mcq-1'), q('tsql-syn-mcq-3'), q('tsql-syn-cloze-1'),
   q('tsql-syn-mcq-2'), q('tsql-syn-mcq-4'), q('tsql-syn-1'),
+  q('tsql-syn-predict-1'),
   // Snowflake & BigQuery contrast (QUALIFY, micro-partitions, time travel, VARIANT/ARRAY, bytes-scanned)
   q('tsql-other-mcq-1'), q('tsql-other-mcq-3'), q('tsql-other-mcq-5'),
   q('tsql-other-mcq-2'), q('tsql-other-mcq-4'),
+  q('tsql-other-predict-1'),
 ];

@@ -9,6 +9,7 @@ import {
   Difficulty,
   Topic,
   Course,
+  CodeLanguage,
 } from '../types';
 
 export const tsql_mpp_model_questions: Question[] = [
@@ -96,5 +97,45 @@ export const tsql_mpp_model_questions: Question[] = [
     explanation: 'Columnar MPP storage shines when data lands in big batches that fill well-compressed segments/rowgroups. A stream of singleton inserts produces many tiny, inefficient segments and pays fixed per-statement overhead each time — so the pattern is micro-batch or bulk-load (COPY/CTAS/PolyBase), not row-at-a-time DML.',
     hints: ['Built for bulk/batch loads into columnar segments', 'Singletons → tiny segments + high overhead'],
     tags: ['tsql', 'mpp', 'bulk-load'],
+  },
+  {
+    id: 'tsql-mpp-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_MPP_MODEL,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'In an MPP warehouse each row lives on one node, and a join can only pair rows that sit on the same node, so every row whose partner is on another node has to be moved first. dbo.FactOrders is spread over nodes by OrderId and dbo.DimCustomer by CustomerKey. How many order rows have their customer on a different node? Write the single number.',
+    tables: [
+      {
+        name: 'dbo.FactOrders',
+        columns: ['OrderId', 'CustomerKey', 'NodeNo'],
+        rows: [
+          [1, 10, 1],
+          [2, 20, 2],
+          [3, 10, 3],
+          [4, 30, 1],
+          [5, 20, 2],
+          [6, 30, 3],
+        ],
+      },
+      {
+        name: 'dbo.DimCustomer',
+        columns: ['CustomerKey', 'NodeNo'],
+        rows: [
+          [10, 1],
+          [20, 3],
+          [30, 1],
+        ],
+      },
+    ],
+    code: `SELECT COUNT(*) AS RowsToMove
+FROM dbo.FactOrders AS f
+JOIN dbo.DimCustomer AS c ON c.CustomerKey = f.CustomerKey
+WHERE f.NodeNo <> c.NodeNo;`,
+    expectedOutput: `4`,
+    explanation: 'Each order is compared with the node of its customer. Orders 1 and 4 already sit with their customer on node 1, so they join locally. Order 3 (customer 10, node 1) is on node 3, orders 2 and 5 (customer 20, node 3) are on node 2, and order 6 (customer 30, node 1) is on node 3, so four rows have to cross the network. That movement is the shuffle an MPP engine tries to avoid, and distributing both tables on the join key would leave it with nothing to move.',
+    hints: ['Compare the node of each order with the node of its customer', 'Only rows on a different node count'],
+    tags: ['tsql', 'mpp', 'data-movement', 'predict'],
   },
 ];

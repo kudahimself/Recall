@@ -154,4 +154,39 @@ GROUP BY ____;`,
     requires: [/DISTRIBUTION/i],
     tags: ['tsql', 'synapse', 'ctas', 'distribution', 'columnstore'],
   },
+  {
+    id: 'tsql-syn-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_SYNAPSE_FABRIC,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'A HASH-distributed table sends every row with the same key to the same distribution. Suppose the hash is simply CustomerKey % 3, giving three distributions numbered 0 to 2 (a real pool has 60). How many rows of dbo.FactSales land in each distribution? Write one row per line in the ORDER BY order, as DistNo and RowsInDist separated by a comma.',
+    tables: [
+      {
+        name: 'dbo.FactSales',
+        columns: ['SaleId', 'CustomerKey'],
+        rows: [
+          [1, 3],
+          [2, 6],
+          [3, 3],
+          [4, 9],
+          [5, 4],
+          [6, 6],
+          [7, 5],
+          [8, 3],
+        ],
+      },
+    ],
+    code: `SELECT CustomerKey % 3 AS DistNo, COUNT(*) AS RowsInDist
+FROM dbo.FactSales
+GROUP BY CustomerKey % 3
+ORDER BY DistNo;`,
+    expectedOutput: `0, 6
+1, 1
+2, 1`,
+    explanation: 'Customers 3, 6 and 9 all hash to distribution 0, and they own sales 1, 2, 3, 4, 6 and 8, so that distribution holds six of the eight rows. Customer 4 hashes to 1 and customer 5 to 2, one row each. This is data skew: one distribution does most of the work while the others sit idle, which is why a HASH key should have many distinct, evenly used values.',
+    hints: ['Compute CustomerKey % 3 for each row, then count per result', 'Keys 3, 6 and 9 all give 0'],
+    tags: ['tsql', 'synapse', 'distribution', 'skew', 'predict'],
+  },
 ];
