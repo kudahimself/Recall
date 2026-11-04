@@ -201,10 +201,12 @@ export const sqlOrderedQuestions: Question[] = [
   // Isolation levels & locking
   q('tsql-iso-mcq-1'), q('tsql-iso-mcq-2'), q('tsql-iso-cloze-1'),
   q('tsql-iso-cloze-2'), q('tsql-iso-mcq-3'), q('tsql-iso-mcq-4'),
+  q('tsql-iso-predict-1'),
   // Stored procedures
   q('tsql-proc-mcq-1'), q('tsql-proc-cloze-1'), q('tsql-proc-parsons-1'),
   q('tsql-proc-output-mcq-1'), q('tsql-proc-outparam-cloze-1'), q('tsql-proc-exec-cloze-1'),
   q('tsql-proc-return-cloze-1'), q('tsql-proc-1'), q('tsql-proc-2'),
+  q('tsql-proc-predict-1'),
   // Control flow & functions
   q('tsql-flow-mcq-1'), q('tsql-flow-go-mcq-1'), q('tsql-flow-predict-1'), q('tsql-flow-while-predict-1'),
   q('tsql-flow-cloze-1'), q('tsql-flow-func-mcq-1'), q('tsql-flow-func-cloze-1'), q('tsql-flow-1'),

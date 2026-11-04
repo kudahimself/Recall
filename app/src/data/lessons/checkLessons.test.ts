@@ -66,6 +66,52 @@ test('ROLLUP, CUBE and GROUPING SETS run as the UNION ALL of their grouping sets
   expect(r.having.error).toMatch(/anything but ORDER BY/);
 });
 
+test('procedural T-SQL runs with SQL Server semantics: variables, control flow, transactions, TRY ... CATCH, procedures and functions', () => {
+  const r = probe(`
+    const T = [{ name: 't', columns: ['id', 'n'], rows: [[1, 5], [2, 0]] }];
+    const run = code => C.runSql(code, T);
+    return {
+      flow: await run("DECLARE @i INT = 1, @s INT = 0;\\nWHILE @i <= 4\\nBEGIN\\n  SET @s += @i;\\n  SET @i = @i + 1;\\nEND\\nIF @s % 2 = 0 PRINT 'even'; ELSE PRINT 'odd';\\nPRINT @s;"),
+      nested: await run("BEGIN TRAN; BEGIN TRAN; PRINT @@TRANCOUNT; COMMIT; PRINT @@TRANCOUNT; ROLLBACK; PRINT @@TRANCOUNT;"),
+      save: await run("BEGIN TRAN;\\nUPDATE t SET n = n - 1 WHERE id = 1;\\nSAVE TRAN sp;\\nUPDATE t SET n = 99 WHERE id = 1;\\nROLLBACK TRAN sp;\\nCOMMIT;\\nSELECT n FROM t WHERE id = 1;"),
+      doomed: await run("CREATE TABLE c (q INT CHECK (q >= 0)); INSERT INTO c VALUES (1);\\nSET XACT_ABORT ON;\\nBEGIN TRY BEGIN TRAN; UPDATE c SET q = q - 5; COMMIT; END TRY\\nBEGIN CATCH PRINT ERROR_NUMBER(); PRINT XACT_STATE(); IF XACT_STATE() <> 0 ROLLBACK; END CATCH\\nSELECT q FROM c;"),
+      rethrow: await run("BEGIN TRY BEGIN TRY THROW 50002, 'inner', 1; PRINT 'skipped'; END TRY BEGIN CATCH PRINT 'cleanup'; THROW; END CATCH END TRY BEGIN CATCH PRINT CONCAT(ERROR_NUMBER(), ' ', ERROR_MESSAGE()); END CATCH"),
+      proc: await run("CREATE PROCEDURE dbo.Total @min INT, @sum INT OUTPUT, @extra INT = 0 AS BEGIN IF @min < 0 RETURN 1; SELECT @sum = SUM(n) + @extra FROM t WHERE id >= @min; RETURN 0; END\\nGO\\nDECLARE @a INT = -1, @rc INT;\\nEXEC @rc = dbo.Total @min = 1, @sum = @a;\\nPRINT @a;\\nEXEC @rc = dbo.Total 1, @a OUTPUT, 10;\\nPRINT CONCAT(@rc, ' ', @a);\\nEXEC @rc = dbo.Total -1, @a OUTPUT;\\nPRINT CONCAT(@rc, ' ', @a);"),
+      fn: await run("CREATE FUNCTION dbo.Fee (@d INT) RETURNS INT AS BEGIN IF @d <= 0 RETURN 0; RETURN @d * 5; END;\\nGO\\nSELECT id, dbo.Fee(n) AS fee FROM t ORDER BY id;\\nPRINT CONCAT('fee ', dbo.Fee(3));"),
+      hint: await run("SELECT n FROM t WITH (UPDLOCK, HOLDLOCK) WHERE id = 1;"),
+      uncaught: await run("THROW 50001, 'boom', 1;"),
+      engineText: await run("CREATE TABLE c (q INT CHECK (q >= 0)); BEGIN TRY INSERT INTO c VALUES (-1); END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH"),
+      leftOpen: await run("BEGIN TRAN; UPDATE t SET n = 1;"),
+      batchScope: await run("DECLARE @a INT = 1;\\nGO\\nPRINT @a;"),
+      stringPlus: await run("DECLARE @s VARCHAR(10) = 'a'; PRINT @s + 'b';"),
+      decimalVar: await run("DECLARE @d DECIMAL(10, 2) = 1.5;"),
+      mismatch: await run("CREATE PROC dbo.Leaky AS BEGIN BEGIN TRAN; END\\nGO\\nBEGIN TRY EXEC dbo.Leaky; END TRY BEGIN CATCH PRINT ERROR_NUMBER(); IF @@TRANCOUNT > 0 ROLLBACK; END CATCH"),
+      noSemis: await run("BEGIN TRAN\\nUPDATE t SET n = n - 1 WHERE id = 1;\\nSAVE TRAN sp\\nUPDATE t SET n = 99 WHERE id = 1;\\nROLLBACK TRAN sp\\nCOMMIT\\nSELECT n FROM t WHERE id = 1;\\nDECLARE @i INT = 0;\\nWHILE 1 = 1 BEGIN SET @i += 1; IF @i >= 3 BREAK END\\nPRINT @i"),
+      namedTran: await run("BEGIN TRANSACTION upd\\nUPDATE t SET n = 7 WHERE id = 2;\\nROLLBACK TRANSACTION upd\\nSELECT n FROM t WHERE id = 2"),
+      brackets: await run("SELECT n AS [Left], id AS [Row Id] FROM [t] WHERE [id] = 1;"),
+    };
+  `);
+  expect(r.flow.output).toBe('even\n10');
+  expect(r.nested.output).toBe('2\n1\n0');
+  expect(r.save.output).toBe('n\n4');
+  expect(r.doomed.output).toBe('547\n-1\n\nq\n1');
+  expect(r.rethrow.output).toBe('cleanup\n50002 inner');
+  // No OUTPUT at the call: @a keeps -1. An early RETURN leaves the OUTPUT value as passed in.
+  expect(r.proc.output).toBe('-1\n0 15\n1 15');
+  expect(r.fn.output).toBe('id | fee\n1 | 25\n2 | 0\n\nfee 15');
+  expect(r.hint.output).toBe('n\n5');
+  expect(r.uncaught.error).toMatch(/uncaught error 50001/);
+  expect(r.engineText.error).toMatch(/ERROR_MESSAGE\(\) of engine error 547/);
+  expect(r.leftOpen.error).toMatch(/transaction still open/);
+  expect(r.batchScope.error).toMatch(/@a is not declared/);
+  expect(r.stringPlus.error).toMatch(/CONCAT/);
+  expect(r.decimalVar.error).toMatch(/DECIMAL variable/);
+  expect(r.mismatch.output).toBe('266');
+  expect(r.noSemis.output).toBe('n\n4\n\n3');
+  expect(r.namedTran.output).toBe('n\n0');
+  expect(r.brackets.output).toBe('Left | Row Id\n5 | 1');
+});
+
 test('a lesson fails on a wrong output, exercises out of ramp order, a repeated solution and broken prose', () => {
   const r = probe(`
     const { LESSONS } = require('./src/data/lessons/index.ts');

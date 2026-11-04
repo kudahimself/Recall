@@ -48,6 +48,28 @@ export const tsql_isolation_questions: Question[] = [
     tags: ['tsql', 'isolation', 'nolock', 'lock-hints'],
   },
   {
+    id: 'tsql-iso-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_ISOLATION,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'Two sessions run these statements on separate connections, in the order shown. What does Session B\'s SELECT return (one value)?',
+    tables: [{ name: 'dbo.Account', columns: ['AccountId', 'Balance'], rows: [[1, 500]] }],
+    code: `-- Session A
+BEGIN TRAN;
+UPDATE dbo.Account SET Balance = 0 WHERE AccountId = 1;
+-- Session B, while A is still open
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SELECT Balance FROM dbo.Account WHERE AccountId = 1;
+-- Session A
+ROLLBACK;`,
+    expectedOutput: `0`,
+    explanation: 'READ UNCOMMITTED takes no shared locks, so Session B reads the 0 that Session A wrote but has not committed - a dirty read. Session A then rolls back, so the balance was never really 0. Under READ COMMITTED, the default, B never sees the 0: its SELECT waits for A to finish and then reads 500.',
+    hints: ['READ UNCOMMITTED sees changes that are not committed yet', 'The ROLLBACK happens after B has already read'],
+    tags: ['tsql', 'isolation', 'dirty-read', 'read-uncommitted', 'predict'],
+  },
+  {
     id: 'tsql-iso-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.INTERMEDIATE,

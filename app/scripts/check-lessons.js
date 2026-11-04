@@ -33,7 +33,13 @@
  * layer does not cover (GETDATE, CAST AS DATE, FORMAT, CONVERT, `+` on
  * strings, #temp tables, MERGE, UPDATE ... FROM) is refused with a message
  * rather than run with SQLite's different meaning, so an example that passes
- * prints what SQL Server prints. Input tables come from `worked.tables`
+ * prints what SQL Server prints. Table hints such as WITH (UPDLOCK) are
+ * dropped, since they change locking, not what one session reads.
+ * Procedural T-SQL (variables, PRINT, IF / WHILE, transactions and
+ * savepoints, TRY ... CATCH and THROW, stored procedures and scalar functions)
+ * runs through scripts/tsql-batch.js, which lists what it covers and refuses;
+ * PRINT lines are printed in order with the result sets, consecutive lines
+ * forming one block. Input tables come from `worked.tables`
  * (columns typed INTEGER, REAL or TEXT from their values).
  */
 const path = require('path');
@@ -42,6 +48,7 @@ const { spawnSync } = require('child_process');
 const APP = path.join(__dirname, '..');
 require(require.resolve('sucrase/register/ts', { paths: [APP] }));
 const { essentialTokens, splitAlternatives, stripNoise } = require('./check-leaks');
+const { runBatches } = require('./tsql-batch');
 
 const { questions } = require(path.join(APP, 'src/data/questions.ts'));
 const { LESSONS } = require(path.join(APP, 'src/data/lessons/index.ts'));
@@ -176,36 +183,8 @@ const UNSUPPORTED = [
   [/\bDELETE\s+\w+\s+FROM\b/i, 'DELETE alias FROM ... JOIN'],
 ];
 
-/**
- * Split on `;` outside quotes and comments. A line holding only `GO` (the
- * SSMS batch separator, which CREATE VIEW needs before and after it) also
- * ends a statement.
- */
-function splitStatements(code) {
-  code = code.replace(/^[ \t]*GO[ \t]*$/gim, ';');
-  const out = [];
-  let cur = '';
-  let quote = null;
-  for (let i = 0; i < code.length; i++) {
-    const c = code[i];
-    if (quote) {
-      cur += c;
-      if (c === quote) quote = null;
-      continue;
-    }
-    if (c === "'" || c === '"') { quote = c; cur += c; continue; }
-    if (c === '-' && code[i + 1] === '-') {
-      const end = code.indexOf('\n', i);
-      cur += end === -1 ? code.slice(i) : code.slice(i, end);
-      i = end === -1 ? code.length : end - 1;
-      continue;
-    }
-    if (c === ';') { out.push(cur); cur = ''; continue; }
-    cur += c;
-  }
-  out.push(cur);
-  return out.filter(s => s.replace(/--.*$/gm, '').trim().length > 0);
-}
+const HINT = '(?:NOLOCK|UPDLOCK|HOLDLOCK|ROWLOCK|PAGLOCK|TABLOCKX?|XLOCK|READPAST|NOWAIT|SERIALIZABLE|REPEATABLEREAD|READCOMMITTED|READUNCOMMITTED)';
+const TABLE_HINTS = new RegExp(`\\bWITH\\s*\\(\\s*${HINT}(?:\\s*,\\s*${HINT})*\\s*\\)`, 'gi');
 
 /** `s` with everything inside quotes or parentheses blanked, so a regex on it only sees the top level. */
 function topLevelMask(s) {
@@ -327,6 +306,8 @@ function translateTsql(stmt) {
     if (re.test(stmt)) return { error: `not supported by the SQLite check: ${what}` };
   }
   let s = stmt.replace(/(^|[^\w'])N'/g, "$1'");
+  // Table hints change what other sessions see and wait for, never what this one reads.
+  s = s.replace(TABLE_HINTS, '');
   const tops = s.match(/\bTOP\b/gi) || [];
   if (tops.length > 1) return { error: 'not supported by the SQLite check: more than one TOP in a statement' };
   let limit = null;
@@ -355,11 +336,6 @@ function columnType(values) {
   return 'TEXT';
 }
 
-function formatValue(v) {
-  if (v === null || v === undefined) return 'NULL';
-  return String(v);
-}
-
 let sqlEngine = null;
 async function getSqlEngine() {
   if (!sqlEngine) sqlEngine = await require('sql.js')();
@@ -370,7 +346,7 @@ async function runSql(code, tables = []) {
   const SQL = await getSqlEngine();
   const db = new SQL.Database();
   try {
-    db.exec("ATTACH DATABASE ':memory:' AS dbo; ATTACH DATABASE ':memory:' AS stg;");
+    db.exec("PRAGMA foreign_keys = ON; ATTACH DATABASE ':memory:' AS dbo; ATTACH DATABASE ':memory:' AS stg;");
     for (const [name, fn] of Object.entries(TSQL_FUNCTIONS)) {
       // sql.js registers a function for fn.length arguments; -1 takes any
       // number, for the optional ones (CHARINDEX start, EOMONTH offset).
@@ -385,24 +361,8 @@ async function runSql(code, tables = []) {
       for (const r of t.rows) insert.run(r);
       insert.free();
     }
-    const blocks = [];
-    for (const stmt of splitStatements(code)) {
-      const t = translateTsql(stmt);
-      if (t.error) return { error: `${t.error}\n    in: ${stmt.trim().split('\n')[0]}` };
-      let results;
-      try {
-        results = db.exec(t.sql);
-      } catch (e) {
-        return { error: `SQLite error: ${e.message}\n    in: ${stmt.trim().split('\n')[0]}` };
-      }
-      for (const r of results) {
-        if (r.values.length > 1 && !/\bORDER\s+BY\b/i.test(stmt)) {
-          return { error: `a result of ${r.values.length} rows comes from a statement without ORDER BY, so its order is not fixed\n    in: ${stmt.trim().split('\n')[0]}` };
-        }
-        blocks.push([r.columns.join(' | '), ...r.values.map(row => row.map(formatValue).join(' | '))].join('\n'));
-      }
-    }
-    return { output: normalizeOutput(blocks.join('\n\n')) };
+    const r = runBatches(db, code, translateTsql);
+    return r.error ? r : { output: normalizeOutput(r.output) };
   } catch (e) {
     return { error: String(e.message || e) };
   } finally {
@@ -575,7 +535,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-module.exports = { checkLesson, runSql, runPython, translateTsql, expandGroupingSets, splitStatements, multiSentenceLines, TSQL_FUNCTIONS };
+module.exports = { checkLesson, runSql, runPython, translateTsql, expandGroupingSets, multiSentenceLines, TSQL_FUNCTIONS };
 
 if (require.main === module) {
   main().catch(e => {

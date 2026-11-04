@@ -69,6 +69,10 @@ House rules (check-lessons.js enforces the first two):
 - A different domain from the exercises (the bank uses DimProduct, DimCustomer, FactOrders; lessons use small library and bookshop tables), so it never repeats an exercise's solution.
 - SQL: give the input in `tables` (shown above the code), unqualified table names, and an `ORDER BY` on every statement that returns more than one row.
   It runs on sql.js through a T-SQL layer: TOP, OFFSET/FETCH, ISNULL, LEN, CHARINDEX, LEFT, RIGHT, YEAR, MONTH, DAY, DATEPART, DATEADD, DATEDIFF, EOMONTH, DATEFROMPARTS, GROUP BY ROLLUP / CUBE / GROUPING SETS (run as the UNION ALL of the grouping sets: bare grouping columns and aliased `GROUPING(col)` in the select list, only `ORDER BY` after, and order by the alias rather than `GROUPING()`), and a line holding only `GO` separates batches (CREATE VIEW needs one before and after it).
+  Procedural T-SQL runs too (`scripts/tsql-batch.js`): DECLARE / SET / PRINT, IF / ELSE, WHILE, BEGIN TRAN / COMMIT / ROLLBACK / SAVE TRAN, @@TRANCOUNT, SET XACT_ABORT, XACT_STATE(), TRY ... CATCH with THROW and ERROR_NUMBER() / ERROR_MESSAGE(), CREATE PROCEDURE with OUTPUT parameters and RETURN codes, EXEC, and scalar CREATE FUNCTION (a procedure or function alone in its batch, between `GO` lines).
+  PRINT lines appear in `output` in order with the result sets, consecutive PRINT lines as one block.
+  Variables are INT, BIT, VARCHAR or DATE; catch every error you raise, since an uncaught one is refused, and print `ERROR_NUMBER()` rather than `ERROR_MESSAGE()` for an engine error such as a CHECK violation.
+  Isolation levels and table hints are accepted but change nothing in one session, so describe the second session in the steps.
   Window functions run natively; avoid `AVG` over integers, which SQLite returns as a decimal where SQL Server truncates.
   GETDATE, CAST to date types, FORMAT, CONVERT, `+` on strings, #temp tables, MERGE, PIVOT and UPDATE ... FROM are refused; name them in the idea or the form instead.
   Keep numbers integers (SQLite prints `12.5` where SQL Server prints `12.50`).

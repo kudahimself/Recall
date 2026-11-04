@@ -70,7 +70,8 @@ describe('credit and the gate', () => {
     expect(lessonGateFor(card, {}, new Set(['tsql-select-2']))).toBeNull();
     expect(lessonGateFor(card, {}, new Set(['tsql-select-mcq-1']))).toBeNull();
     // A topic without a lesson yet is never gated.
-    expect(lessonGateFor(questions.find(x => x.topic === 'tsql_transactions')!, {}, new Set())).toBeNull();
+    const unlessoned = questions.find(x => lessonsForTopic(x.topic).length === 0)!;
+    expect(lessonGateFor(unlessoned, {}, new Set())).toBeNull();
   });
 
   it('serves the exercises in order, skipping answered ones', () => {
