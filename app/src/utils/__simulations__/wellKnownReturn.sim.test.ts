@@ -162,7 +162,7 @@ it('the Today session never serves a streak >= WELL_KNOWN_STREAK card before its
       clock = START + day * MS_PER_DAY;
       let session = startReviewSession(pool, progress, store, {}, clock, { size: PER_DAY, reviewShare: 0.6 });
       for (let i = 0; i < PER_DAY * 2; i++) {
-        const pick = selectSessionQuestion(session, pool, pool, progress, store, {}, undefined, undefined, clock);
+        const pick = selectSessionQuestion(session, pool, pool, progress, store, {}, undefined, clock);
         if (!pick) break;
         const q = pick.question;
         const prevTs = progress.lastAttempt.get(q.id) ?? 0;

@@ -15,6 +15,7 @@ import { questions } from '../data/questions';
 import { getTopicOrder } from './courseConfig';
 import {
   familyOf,
+  topicRamp,
   MAX_REASKS_PER_SESSION,
   NEW_PER_DRILL,
   REASK_SPACING,
@@ -29,9 +30,11 @@ import {
   continueSession,
   isSessionCurrent,
   isSessionDone,
+  parseStoredSessions,
   recordReviewAnswer,
   reviewsLeft,
   selectSessionQuestion,
+  serializeSessions,
   startReviewSession,
 } from './reviewSession';
 
@@ -118,6 +121,18 @@ describe('the review list', () => {
     expect(soleMisses.map(id => session.queue.find(e => e.family === familyOf(byId.get(id)!))!.id)).toEqual(soleMisses);
   });
 
+  it('serves relearn families first, then drain cards of mastered topics, then the rest', () => {
+    const { p, store } = reproState();
+    const session = startReviewSession(pool, p, store, {}, clock);
+    const relearn = new Set(MISSED_YESTERDAY.map(id => familyOf(byId.get(id)!)));
+    const rank = (id: string, family: string) => relearn.has(family) ? 0 : SRS.isDrainCard(byId.get(id)!) ? 1 : 2;
+    const ranks = session.queue.map(e => rank(e.id, e.family));
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    expect(ranks).toContain(0);
+    expect(ranks).toContain(1);
+    expect(ranks).toContain(2);
+  });
+
   it('every answer moves the number by exactly -1, or by 0 shown as "+1 again", and the list ends at 0', () => {
     const state = reproState();
     let session: ReviewSession = startReviewSession(pool, state.p, state.store, {}, clock);
@@ -125,7 +140,7 @@ describe('the review list', () => {
     let missedOnce = false;
     for (let i = 0; i < 30 && reviewsLeft(session) > 0; i++) {
       const before = reviewsLeft(session);
-      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, undefined, clock)!;
+      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock)!;
       expect(pick.kind).toBe('review');
       const ok = missedOnce || i !== 4;
       if (!ok) missedOnce = true;
@@ -188,7 +203,7 @@ describe('the bounded session', () => {
     expect(session.total).toBe(0);
     const kinds: string[] = [];
     for (let i = 0; i < 40; i++) {
-      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, undefined, clock);
+      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock);
       if (!pick) break;
       kinds.push(pick.kind);
       clock += 60_000;
@@ -200,7 +215,7 @@ describe('the bounded session', () => {
     expect(kinds[0]).toBe('new');
     expect(kinds[NEW_PER_DRILL]).toBe('drill');
     expect(new Set(session.served).size).toBe(12);
-    const more = selectSessionQuestion(continueSession(session), pool, pool, state.p, state.store, {}, undefined, undefined, clock);
+    const more = selectSessionQuestion(continueSession(session), pool, pool, state.p, state.store, {}, undefined, clock);
     expect(more).not.toBeNull();
     expect(session.served).not.toContain(more!.question.id);
   });
@@ -210,7 +225,7 @@ describe('the bounded session', () => {
     let session = startReviewSession(pool, state.p, state.store, {}, clock, { size: 10, reviewShare: 0.6 });
     const order: { id: string; again: boolean }[] = [];
     for (let i = 0; i < 30; i++) {
-      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, undefined, clock);
+      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock);
       if (!pick) break;
       const again = session.queue.some(e => e.id === pick.question.id && e.again);
       order.push({ id: pick.question.id, again });
@@ -234,18 +249,87 @@ describe('the bounded session', () => {
     expect(isSessionCurrent(session, NOW + DAY)).toBe(false);
   });
 
-  it('under filters the plan serves inside them, and only falls back to the older selector as practice', () => {
+  it('under filters the plan serves inside them, and practice past it comes from the same families, never the older selector', () => {
+    const legacy = jest.spyOn(SRS, 'selectNextQuestion');
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     let session = startReviewSession(pool, state.p, state.store, {}, clock);
-    const topic = pool[pool.length - 1].topic;
+    const topics = Array.from(new Set(pool.map(q => q.topic))).reverse();
+    let topic = '';
+    let extra: Question | undefined;
+    for (const t of topics) {
+      const tq = pool.filter(q => q.topic === t);
+      const ramp = topicRamp(tq);
+      const inRamp = new Set(ramp.map(q => q.id));
+      extra = tq.find(q => !inRamp.has(q.id) && q.difficulty === ramp[0]?.difficulty && familyOf(q) !== familyOf(ramp[0]));
+      if (extra) { topic = t; break; }
+    }
+    expect(extra).toBeDefined();
     const filtered: Question[] = pool.filter(q => q.topic === topic);
-    const pick = selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, undefined, clock)!;
+    const pick = selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock)!;
     expect(pick.kind).toBe('new');
     expect(pick.question.topic).toBe(topic);
     clock += 60_000;
     answer(state, pick.question.id, clock, true);
     session = recordReviewAnswer(session, pick.question.id, true, pick.kind).session;
-    const only = [pick.question];
-    expect(selectSessionQuestion(session, only, pool, state.p, state.store, {}, undefined, undefined, clock)?.kind).toBe('practice');
+    const only = [pick.question, extra!];
+    expect(selectSessionQuestion(session, only, pool, state.p, state.store, {}, undefined, clock))
+      .toEqual({ question: extra, kind: 'practice' });
+    expect(selectSessionQuestion(session, [pick.question], pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+    expect(legacy).not.toHaveBeenCalled();
+    legacy.mockRestore();
+  });
+});
+
+describe('a reload the same day', () => {
+  let nowSpy: jest.SpyInstance;
+  let clock = NOW;
+  beforeEach(() => {
+    clock = NOW;
+    nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => clock);
+  });
+  afterEach(() => nowSpy.mockRestore());
+
+  const reload = (session: ReviewSession, at: number): ReviewSession | undefined =>
+    parseStoredSessions(serializeSessions({ [Course.BACKEND]: session }), at)[Course.BACKEND];
+
+  it('resumes the session mid-way, with its count, slots and served cards, and a new day drops it', () => {
+    const state = reproState();
+    let session = startReviewSession(pool, state.p, state.store, {}, clock, { size: 12, reviewShare: 0.6 });
+    for (let i = 0; i < 4; i++) {
+      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock)!;
+      clock += 60_000;
+      answer(state, pick.question.id, clock, i !== 1);
+      session = recordReviewAnswer(session, pick.question.id, i !== 1, pick.kind, familyOf(pick.question)).session;
+    }
+    const resumed = reload(session, clock + 60_000);
+    expect(resumed).toEqual(session);
+    expect(reviewsLeft(resumed)).toBe(reviewsLeft(session));
+    expect(selectSessionQuestion(resumed!, pool, pool, state.p, state.store, {}, undefined, clock))
+      .toEqual(selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock));
+    expect(reload(session, NOW + DAY)).toBeUndefined();
+  });
+
+  it('after "Done for today" stays done, and "Keep going" still serves more', () => {
+    const state = { p: emptyProgress(), store: replayHistory([], byId) };
+    let session = startReviewSession(pool, state.p, state.store, {}, clock, { size: 6, reviewShare: 0.6 });
+    for (let i = 0; i < 20; i++) {
+      const pick = selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock);
+      if (!pick) break;
+      clock += 60_000;
+      answer(state, pick.question.id, clock, true);
+      session = recordReviewAnswer(session, pick.question.id, true, pick.kind).session;
+    }
+    expect(isSessionDone(session)).toBe(true);
+    const resumed = reload(session, clock + 60_000)!;
+    expect(isSessionDone(resumed)).toBe(true);
+    expect(selectSessionQuestion(resumed, pool, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+    expect(selectSessionQuestion(continueSession(resumed), pool, pool, state.p, state.store, {}, undefined, clock)).not.toBeNull();
+  });
+
+  it('drops unreadable or malformed stored sessions', () => {
+    const session = startReviewSession(pool, emptyProgress(), replayHistory([], byId), {}, NOW);
+    expect(parseStoredSessions('{not json', NOW)).toEqual({});
+    expect(parseStoredSessions(JSON.stringify({ [Course.BACKEND]: { ...session, queue: 'x' } }), NOW)).toEqual({});
+    expect(parseStoredSessions(JSON.stringify({ nope: session }), NOW)).toEqual({});
   });
 });

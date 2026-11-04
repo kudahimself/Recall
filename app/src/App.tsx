@@ -20,6 +20,7 @@ import {
   ConceptSelectionContext,
   FSRS_STORE_KEY,
   TODAY_REVIEW_SHARE_KEY,
+  TODAY_SESSION_KEY,
   TODAY_SIZE_KEY,
   UNLOCK_ACCURACY_PCT,
 } from './utils/spacedRepetition';
@@ -32,9 +33,11 @@ import {
   continueSession,
   familyOf,
   isSessionCurrent,
+  parseStoredSessions,
   recordReviewAnswer,
   reviewsLeft,
   selectSessionQuestion,
+  serializeSessions,
   startReviewSession,
 } from './utils/reviewSession';
 import { loadSessionSettings, SessionSummary, TodayCard } from './components/TodayCard';
@@ -83,7 +86,6 @@ import {
   DATA_ENG_SECTIONS,
   SQL_SECTIONS,
   getSectionUnits,
-  getSelectionPolicy,
 } from './utils/courseConfig';
 import { MultipleChoiceQuestion } from './components/MultipleChoiceQuestion';
 import { CodingQuestion } from './components/CodingQuestion';
@@ -179,6 +181,7 @@ const STORAGE_KEYS = {
   cardDifficulty: 'recall-card-difficulty',
   conceptMigrationVersion: 'recall-concept-migration-version',
   fsrs: FSRS_STORE_KEY,
+  todaySession: TODAY_SESSION_KEY,
 };
 
 // Bump when concept tags are added to existing questions, so previously-
@@ -359,6 +362,15 @@ function loadFsrsStore(progress: UserProgress, canWrite: boolean): FsrsStore {
   return store;
 }
 
+/** Today's sessions that belong to today, so a reload resumes them. */
+function loadTodaySessions(): Partial<Record<Course, ReviewSession>> {
+  try {
+    return parseStoredSessions(localStorage.getItem(STORAGE_KEYS.todaySession));
+  } catch {
+    return {};
+  }
+}
+
 /** Per-card FSRS difficulty (1–10, 0=uninitialized). Persisted alongside concept progress. */
 function loadCardDifficulty(): Record<string, number> {
   try {
@@ -438,9 +450,9 @@ function App() {
   const [sessionStartTime] = useState(Date.now());
   const [showNextButton, setShowNextButton] = useState(false);
   const [sessionStats, setSessionStats] = useState({ answered: 0, correct: 0 });
-  // Today's fixed review list per course (utils/reviewSession). In memory only:
-  // a reload or a new day builds it again from progress.
-  const [reviewSessions, setReviewSessions] = useState<Partial<Record<Course, ReviewSession>>>({});
+  // Today's session per course (utils/reviewSession), stored so a reload the
+  // same day resumes it; a new day builds a new one from progress.
+  const [reviewSessions, setReviewSessions] = useState<Partial<Record<Course, ReviewSession>>>(loadTodaySessions);
   // How the card on screen was served: from today's review list, unseen, or a
   // seen card outside the list (extra practice that does not move the count).
   const [servedKind, setServedKind] = useState<ServedKind>('new');
@@ -544,9 +556,12 @@ function App() {
     return questions.filter(q => getCourseForTopic(q.topic) === activeCourse);
   }, [activeCourse]);
 
-  // Per-course selection policy. Centralises topic order + concept-SRS flag
-  // so the selector doesn't have to special-case courses internally.
-  const selectionPolicy = useMemo(() => getSelectionPolicy(activeCourse), [activeCourse]);
+  // Concept-aware context for the review list's concept-bucket ordering.
+  // Undefined when the feature flag is off: the buckets then play no part.
+  const conceptCtx = useMemo<ConceptSelectionContext | undefined>(() => {
+    if (!isFeatureEnabled('conceptSrsEnabled')) return undefined;
+    return { progress: conceptProgress, betas: CONCEPT_BETAS };
+  }, [conceptProgress]);
 
   // Today's review session for a course: the current one, or a new list built
   // now from that course's whole pool (filters only narrow what is served).
@@ -554,8 +569,8 @@ function App() {
     const existing = reviewSessions[course];
     if (isSessionCurrent(existing)) return existing;
     const pool = questions.filter(q => getCourseForTopic(q.topic) === course);
-    return startReviewSession(pool, progress, fsrsStore, cardDifficulty, Date.now(), sessionSettings);
-  }, [reviewSessions, progress, fsrsStore, cardDifficulty, sessionSettings]);
+    return startReviewSession(pool, progress, fsrsStore, cardDifficulty, Date.now(), sessionSettings, conceptCtx);
+  }, [reviewSessions, progress, fsrsStore, cardDifficulty, sessionSettings, conceptCtx]);
 
   // Put a picked card on screen and remember how it was served, for the pill.
   const serveQuestion = useCallback((pick: SessionPick | null) => {
@@ -645,6 +660,10 @@ function App() {
   }, [fsrsStore, persist]);
 
   useEffect(() => {
+    persist(STORAGE_KEYS.todaySession, serializeSessions(reviewSessions), 'session');
+  }, [reviewSessions, persist]);
+
+  useEffect(() => {
     persist(TODAY_SIZE_KEY, String(sessionSettings.size), 'ui');
     persist(TODAY_REVIEW_SHARE_KEY, String(sessionSettings.reviewShare), 'ui');
   }, [sessionSettings, persist]);
@@ -660,14 +679,6 @@ function App() {
       return rest;
     });
   }, [activeCourse]);
-
-  // Concept-aware selection context. Memoized so SpacedRepetitionSystem only
-  // sees a new ctx when conceptProgress actually changes. Returns undefined
-  // when the feature flag is off → existing legacy selection runs unchanged.
-  const conceptCtx = useMemo<ConceptSelectionContext | undefined>(() => {
-    if (!isFeatureEnabled('conceptSrsEnabled')) return undefined;
-    return { progress: conceptProgress, betas: CONCEPT_BETAS };
-  }, [conceptProgress]);
 
   const handleMisconception = useCallback((tag: string, questionId: string) => {
     setMisconceptions(prev => ({
@@ -696,6 +707,7 @@ function App() {
       [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
       [STORAGE_KEYS.cardDifficulty]: JSON.stringify(cardDifficulty),
       [STORAGE_KEYS.fsrs]: JSON.stringify(fsrsStore),
+      [STORAGE_KEYS.todaySession]: serializeSessions(reviewSessions),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
       ...Object.fromEntries(STORED_SETTING_KEYS.map(k => [k, localStorage.getItem(k)])),
       ...Object.fromEntries(listBackupKeys(localStorage).filter(isBackupKey).map(k => [k, localStorage.getItem(k)])),
@@ -796,10 +808,10 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filteredQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx, selectionPolicy);
+    const next = selectSessionQuestion(session, filteredQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
     serveQuestion(next);
     setQuestionLoadCount(c => c + 1);
-  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
+  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, cardDifficulty, serveQuestion]);
 
   const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters);
@@ -813,9 +825,9 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filtered, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx, selectionPolicy);
+    const next = selectSessionQuestion(session, filtered, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
     serveQuestion(next);
-  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
+  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, cardDifficulty, serveQuestion]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     applyFiltersAndLoadQuestion(newFilters);
@@ -1022,16 +1034,13 @@ function App() {
       questionTypes: Object.values(QuestionType),
     });
     // Compute questions for the target course directly (state hasn't flushed yet).
-    // Build a fresh policy from targetCourse — selectionPolicy useMemo hasn't
-    // updated yet for this render either.
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
-    const targetPolicy = getSelectionPolicy(targetCourse);
     const built = reviewSessionFor(targetCourse);
     const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
     if (session !== reviewSessions[targetCourse]) {
       setReviewSessions(prev => ({ ...prev, [targetCourse]: session }));
     }
-    const next = selectSessionQuestion(session, pool, pool, progress, fsrsStore, cardDifficulty, conceptCtx, targetPolicy);
+    const next = selectSessionQuestion(session, pool, pool, progress, fsrsStore, cardDifficulty, conceptCtx);
     serveQuestion(next);
     changeView('quiz');
     setSessionStats({ answered: 0, correct: 0 });
@@ -1050,7 +1059,7 @@ function App() {
       );
     }
     if (!currentQuestion) {
-      // selectNextQuestion returned null — the unlocked pool is empty under
+      // selectSessionQuestion returned null — the unlocked pool is empty under
       // current filters. Tell the user clearly and offer a way out.
       return (
         <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>

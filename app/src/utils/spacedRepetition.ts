@@ -179,6 +179,14 @@ export const TODAY_REVIEW_SHARE_CHOICES = [0.4, 0.5, 0.6, 0.7, 0.8] as const;
 export const NEW_PER_DRILL = 3;
 export const TODAY_SIZE_KEY = 'recall-today-size';
 export const TODAY_REVIEW_SHARE_KEY = 'recall-today-review-share';
+// Today's session progress per course (answers, fresh slots left, cards
+// served, the list still owed), so a reload the same day resumes the session
+// and its end instead of starting a new one. Dropped at the day boundary.
+export const TODAY_SESSION_KEY = 'recall-today-session';
+// Serving order inside the review list (reviewSession.reviewListRank): after
+// the relearn step and the drain, due families go by their card's concept
+// bucket in this order.
+export const REVIEW_LIST_BUCKET_ORDER: readonly CardBucket[] = ['DUE', 'SPOT_CHECK', 'FRINGE', 'IDLE'];
 // A missed card is asked again once, REASK_SPACING cards later, and at most
 // MAX_REASKS_PER_SESSION times per session, so a run of misses cannot make the
 // session endless. A missed re-ask is not re-asked: FSRS brings its family back.

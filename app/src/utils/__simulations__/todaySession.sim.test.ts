@@ -17,6 +17,10 @@
  *   - no card on a correct streak of WELL_KNOWN_STREAK or more is served
  *     before its interval (getEffectiveInterval at the moment it is served)
  *   - new cards keep coming: every studied week serves some
+ *   - the families still owed after the session stay bounded and clear: from
+ *     day STEADY_FROM on, at most one day's review cap (the first
+ *     OWED_RUN_DAYS days back from a gap aside), and never owed more than
+ *     OWED_RUN_DAYS studied days in a row
  *
  * The default run (Backend, 28 days) runs in every test run. The study's
  * scenarios:
@@ -46,6 +50,7 @@ const SHARE = Number(env.SHARE || 0.6);
 const P_OK = Number(env.P_OK || 0.85);
 const GAP = (env.GAP || '').split('-').filter(Boolean).map(Number);
 const STEADY_FROM = 14;
+const OWED_RUN_DAYS = 7;
 
 interface DayRow {
   day: number;
@@ -89,7 +94,7 @@ it('Today session: list reaches 0 daily, reviews within the share, no early well
   }
   const order = new Set(getTopicOrder(course));
   const pool: Question[] = questions.filter(q => order.has(q.topic));
-  let store: FsrsStore = progress.attemptHistory.length > 0 ? replayHistory(progress.attemptHistory, byId) : emptyStore();
+  let store: FsrsStore = progress.attemptHistory.length > 0 ? replayHistory(progress.attemptHistory, byId) : emptyStore(byId);
 
   const realRandom = Math.random;
   Math.random = rng;
@@ -125,7 +130,7 @@ it('Today session: list reaches 0 daily, reviews within the share, no early well
         row.listStart = session.total;
         row.overflow = session.overflow;
         for (let guard = 0; guard < PER_DAY * 3; guard++) {
-          const pick = selectSessionQuestion(session, pool, pool, progress, store, cardDifficulty, undefined, undefined, clock);
+          const pick = selectSessionQuestion(session, pool, pool, progress, store, cardDifficulty, undefined, clock);
           if (!pick) break;
           const q = pick.question;
           const prevTs = progress.lastAttempt.get(q.id) ?? 0;
@@ -221,4 +226,13 @@ it('Today session: list reaches 0 daily, reviews within the share, no early well
     if (wk.length >= 4 && wk.reduce((s, r) => s + r.fresh, 0) === 0) weeksWithoutNew.push(w + 1);
   }
   expect(weeksWithoutNew).toEqual([]);
+  const backFromGap = (day: number) => GAP.length === 2 && day > GAP[1] && day <= GAP[1] + OWED_RUN_DAYS;
+  expect(steady.filter(r => !backFromGap(r.day) && r.dueAfter > cap).map(r => r.day)).toEqual([]);
+  const longOwed: number[] = [];
+  let owedRun = 0;
+  for (const r of steady) {
+    owedRun = r.dueAfter > 0 ? owedRun + 1 : 0;
+    if (owedRun > OWED_RUN_DAYS) longOwed.push(r.day);
+  }
+  expect(longOwed).toEqual([]);
 });

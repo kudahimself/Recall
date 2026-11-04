@@ -76,7 +76,7 @@ function sampleHistory(): QuestionAttempt[] {
 describe('migration: replaying attemptHistory', () => {
   it('gives exactly the schedule live answers built, and is deterministic', () => {
     const history = sampleHistory();
-    let live: FsrsStore = emptyStore();
+    let live: FsrsStore = emptyStore(byId);
     history.forEach((a, i) => { live = recordAttempt(live, byId.get(a.questionId)!, a, history.slice(0, i + 1)); });
     const replayed = replayHistory(history, byId);
     expect(replayed).toEqual(live);
@@ -121,6 +121,19 @@ describe('migration: replaying attemptHistory', () => {
     expect(parseStore(JSON.stringify({ version: 1, basis: '0:0', families: {} }))).toBeNull();
   });
 
+  it('rebuilds when a card is re-tagged into another family, so its state follows it', () => {
+    const history = sampleHistory();
+    const p = progressFrom(history);
+    const stored = replayHistory(history, byId);
+    const moved = byId.get(history[0].questionId)!;
+    const retagged: Question = { ...moved, concepts: ['retagged-concept'] };
+    const retaggedBank = new Map(byId).set(moved.id, retagged);
+    const r = loadOrRebuild(JSON.stringify(stored), p, retaggedBank);
+    expect(r.rebuilt).toBe(true);
+    expect(r.store.families[familyOf(retagged)]).toBeDefined();
+    expect(r.store).toEqual(replayHistory(history, retaggedBank));
+  });
+
   it('is exported and imported with the rest of the progress, as are the session settings', () => {
     expect(FSRS_STORE_KEY).toBe('recall-fsrs');
     expect(EXPORT_KEYS).toEqual(expect.arrayContaining([
@@ -132,7 +145,7 @@ describe('migration: replaying attemptHistory', () => {
 describe('scheduling', () => {
   it('load balancing moves a long interval within its spread to the least-loaded day', () => {
     const families: FsrsStore['families'] = {};
-    const base = emptyStore();
+    const base = emptyStore(byId);
     const q = topicQs('py_basics')[0];
     const s0 = recordAttempt(base, q, { questionId: q.id, timestamp: T0, isCorrect: true, attempts: 1, timeSpent: 10_000 }, []).families[familyOf(q)];
     // Pile 5 families onto day 20 and leave day 19 empty.

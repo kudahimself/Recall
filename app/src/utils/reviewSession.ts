@@ -4,7 +4,10 @@
  * When the session starts it fixes the review list: due card families
  * (familySchedule.dueFamilies, most overdue first), each mapped to the one card
  * it will serve (pickFamilyCard), capped at the session's review share
- * (todayReviewCap: 12 of 20 by default). The rest of the session is fresh
+ * (todayReviewCap: 12 of 20 by default). Inside the list, the old pickers'
+ * rules are ordering rules (reviewListRank): relearn families first, then
+ * drain cards (coding/advanced in a mastered topic), then the concept buckets
+ * (REVIEW_LIST_BUCKET_ORDER), each most overdue first. The rest of the session is fresh
  * slots: new cards from the current topic's ramp, with a drill of a family
  * already met after every NEW_PER_DRILL new cards. Families due beyond the cap
  * stay due; they lead tomorrow's list and are served by "Keep going".
@@ -17,14 +20,20 @@
  * (isSessionDone) when the list is empty and every fresh slot is used; the App
  * then shows the summary. "Keep going" (continueSession) lifts the bound: due
  * families left over, then fresh slots, for as long as the learner wants.
+ * Under filters, or past the bound, anything left is practice from the same
+ * families: drills of families already met, then unseen cards (nextUnseenCard).
  *
- * The session lives in memory: a reload or a new day builds it again from
- * progress and the family schedule. Nothing here writes stored data.
+ * The App stores today's sessions under TODAY_SESSION_KEY
+ * (serializeSessions / parseStoredSessions), so a reload the same day resumes
+ * the session, its count and its end; a new day starts a new one. Nothing
+ * here writes stored data.
  */
-import { Question, UserProgress } from '../types';
+import { Course, Question, UserProgress } from '../types';
+import { bucketCard } from './conceptSRS';
 import {
   SpacedRepetitionSystem as SRS,
   ConceptSelectionContext,
+  REVIEW_LIST_BUCKET_ORDER,
   familyOf,
   isRampDifficultyOpen,
   topicRamp,
@@ -37,12 +46,13 @@ import {
   TODAY_REVIEW_SHARE,
   TODAY_SESSION_SIZE,
 } from './spacedRepetition';
-import { getCourseForTopic, getTopicOrder, SelectionPolicy } from './courseConfig';
+import { getCourseForTopic, getTopicOrder } from './courseConfig';
 import {
   CardPickContext,
   dueFamilies,
   familyIndex,
   familyRetrievability,
+  FamilyState,
   FsrsStore,
   isFamilyDue,
   pickFamilyCard,
@@ -134,9 +144,35 @@ function pickContext(pool: Question[], progress: UserProgress, cardDifficulty: R
   };
 }
 
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Where a due family's card goes in the review list, lowest first: the
+ * relearn step (the family was missed last time), then the drain (a coding or
+ * advanced card of a mastered topic), then the card's concept bucket in
+ * REVIEW_LIST_BUCKET_ORDER (IDLE without concept-aware selection).
+ */
+export function reviewListRank(
+  q: Question,
+  s: FamilyState | undefined,
+  progress: UserProgress,
+  now: number,
+  conceptCtx?: ConceptSelectionContext,
+): number {
+  if (s && !s.lastCorrect) return 0;
+  if (SRS.isDrainCard(q) && progress.masteredTopics.has(q.topic)) return 1;
+  let bucket: (typeof REVIEW_LIST_BUCKET_ORDER)[number] = 'IDLE';
+  if (conceptCtx && q.concepts && q.concepts.length > 0) {
+    const last = progress.lastAttempt.get(q.id) ?? 0;
+    bucket = bucketCard(q.concepts, conceptCtx.progress, last > 0 ? (now - last) / DAY : 0, conceptCtx.betas, now);
+  }
+  return 2 + REVIEW_LIST_BUCKET_ORDER.indexOf(bucket);
+}
+
 /**
  * Today's review list: due families in unlocked topics, most overdue first,
- * each with the card it serves, capped at `limit`. `due` is how many due
+ * each with the card it serves, capped at `limit`, then put in serving order
+ * by reviewListRank (ties keep the most overdue first). `due` is how many due
  * families have a card to serve at all (the list plus the overflow).
  */
 export function buildReviewList(
@@ -147,10 +183,11 @@ export function buildReviewList(
   now: number = Date.now(),
   limit: number = todayReviewCap(),
   served: Iterable<string> = [],
+  conceptCtx?: ConceptSelectionContext,
 ): { entries: ReviewEntry[]; due: number } {
   const ctx = pickContext(pool, progress, cardDifficulty, served);
   const index = familyIndex(pool);
-  const entries: ReviewEntry[] = [];
+  const picked: { entry: ReviewEntry; rank: number }[] = [];
   let due = 0;
   for (const f of dueFamilies(store, now)) {
     const members = index.get(f);
@@ -158,11 +195,17 @@ export function buildReviewList(
     const card = pickFamilyCard(members, store.families[f], ctx);
     if (!card) continue;
     due++;
-    if (entries.length < limit) {
-      entries.push({ id: card.id, family: f, again: false, notBefore: 0 });
+    if (picked.length < limit) {
+      picked.push({
+        entry: { id: card.id, family: f, again: false, notBefore: 0 },
+        rank: reviewListRank(card, store.families[f], progress, now, conceptCtx),
+      });
       ctx.served.add(card.id);
     }
   }
+  const entries = picked.map((p, i) => ({ ...p, i }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .map(p => p.entry);
   return { entries, due };
 }
 
@@ -173,9 +216,10 @@ export function startReviewSession(
   cardDifficulty: Record<string, number> = {},
   now: number = Date.now(),
   settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
+  conceptCtx?: ConceptSelectionContext,
 ): ReviewSession {
   const cap = todayReviewCap(settings.size, settings.reviewShare);
-  const { entries, due } = buildReviewList(pool, progress, store, cardDifficulty, now, cap);
+  const { entries, due } = buildReviewList(pool, progress, store, cardDifficulty, now, cap, [], conceptCtx);
   return {
     day: localDayKey(now),
     size: settings.size,
@@ -189,6 +233,51 @@ export function startReviewSession(
     keepGoing: false,
     tally: { review: 0, new: 0, drill: 0, practice: 0, again: 0, correct: 0 },
   };
+}
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+function isStoredSession(v: unknown): v is ReviewSession {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const s = v as Record<string, unknown>;
+  const tally = s.tally as Record<string, unknown> | null | undefined;
+  return typeof s.day === 'string'
+    && [s.size, s.total, s.overflow, s.freshLeft, s.answered, s.reasks].every(isNum)
+    && typeof s.keepGoing === 'boolean'
+    && Array.isArray(s.served) && s.served.every(id => typeof id === 'string')
+    && Array.isArray(s.queue) && s.queue.every(e => !!e && typeof e === 'object'
+      && typeof e.id === 'string' && typeof e.family === 'string'
+      && typeof e.again === 'boolean' && isNum(e.notBefore))
+    && !!tally && typeof tally === 'object'
+    && ['review', 'new', 'drill', 'practice', 'again', 'correct'].every(k => isNum(tally[k]));
+}
+
+/** Today's sessions by course, as stored under TODAY_SESSION_KEY. */
+export function serializeSessions(sessions: Partial<Record<Course, ReviewSession>>): string {
+  return JSON.stringify(sessions);
+}
+
+/**
+ * The stored sessions that belong to today; a session from another day, of an
+ * unknown course or of the wrong shape is dropped, and unreadable text gives none.
+ */
+export function parseStoredSessions(raw: string | null, now: number = Date.now()): Partial<Record<Course, ReviewSession>> {
+  if (!raw) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  const courses = new Set<string>(Object.values(Course));
+  const out: Partial<Record<Course, ReviewSession>> = {};
+  for (const [course, session] of Object.entries(parsed as Record<string, unknown>)) {
+    if (courses.has(course) && isStoredSession(session) && isSessionCurrent(session, now)) {
+      out[course as Course] = session;
+    }
+  }
+  return out;
 }
 
 /** True while the session belongs to today; otherwise a new one is started. */
@@ -299,6 +388,26 @@ export function nextDrillCard(pools: Pools, store: FsrsStore, ctx: CardPickConte
   return null;
 }
 
+/**
+ * Practice past the plan: an unseen card the serve pool holds, in an unlocked
+ * topic at a difficulty its ramp has opened, in course then ramp order.
+ */
+export function nextUnseenCard(pools: Pools, ctx: CardPickContext): Question | null {
+  if (pools.serve.length === 0) return null;
+  const order = getTopicOrder(getCourseForTopic(pools.serve[0].topic));
+  const topicRank = (q: Question) => {
+    const i = order.indexOf(q.topic);
+    return i < 0 ? order.length : i;
+  };
+  return pools.serve
+    .filter(q => !ctx.latest.has(q.id) && !ctx.served.has(q.id)
+      && (!ctx.unlocked || ctx.unlocked.has(q.topic))
+      && isRampDifficultyOpen(ctx.byTopic.get(q.topic) ?? [q], ctx.latest, q.difficulty))
+    .map((q, i) => ({ q, i }))
+    .sort((a, b) => topicRank(a.q) - topicRank(b.q) || rampRank(a.q) - rampRank(b.q) || a.i - b.i)
+    .map(x => x.q)[0] ?? null;
+}
+
 export interface SessionPick {
   question: Question;
   kind: ServedKind;
@@ -307,11 +416,12 @@ export interface SessionPick {
 /**
  * What the session serves next, or null when the bounded session is done (or
  * nothing at all can be served). Order: a review list card; past the bound, a
- * family still due today; a fresh slot (new card, a drill after every
- * NEW_PER_DRILL new ones); a re-ask that is still spacing out; and, only when
- * filters (or "Keep going") leave none of those servable, a card from the
- * older selector as practice (it does not use up a slot). Without filters,
- * a session with nothing left to serve ends early (null).
+ * family still due today, in review list order; a fresh slot (new card, a
+ * drill after every NEW_PER_DRILL new ones); a re-ask that is still spacing
+ * out; and, only when filters (or "Keep going") leave none of those
+ * servable, practice from the same families (a drill, then an unseen card;
+ * it does not use up a slot). Without filters, a session with nothing left
+ * to serve ends early (null).
  */
 export function selectSessionQuestion(
   session: ReviewSession,
@@ -321,7 +431,6 @@ export function selectSessionQuestion(
   store: FsrsStore,
   cardDifficulty: Record<string, number> = {},
   conceptCtx?: ConceptSelectionContext,
-  policy?: SelectionPolicy,
   now: number = Date.now(),
 ): SessionPick | null {
   const listed = nextReviewCard(session, servePool);
@@ -335,12 +444,10 @@ export function selectSessionQuestion(
   queued.forEach(id => ctx.served.add(id));
 
   if (session.keepGoing) {
-    const index = familyIndex(coursePool);
-    for (const f of dueFamilies(store, now)) {
-      const members = (index.get(f) ?? []).filter(q => servable.has(q.id));
-      const card = pickFamilyCard(members, store.families[f], ctx);
-      if (card) return { question: card, kind: 'review' };
-    }
+    const { entries } = buildReviewList(coursePool, progress, store, cardDifficulty, now, Infinity, ctx.served, conceptCtx);
+    const due = entries.find(e => servable.has(e.id));
+    const card = due && servePool.find(q => q.id === due.id);
+    if (card) return { question: card, kind: 'review' };
   }
 
   if (session.keepGoing || session.freshLeft > 0) {
@@ -360,10 +467,10 @@ export function selectSessionQuestion(
   if (spacing) return { question: spacing, kind: 'review' };
 
   // Nothing of today's plan is servable. Under filters, or past the bound,
-  // the older selector keeps practice going; otherwise the day is done.
+  // practice goes on from the same families; otherwise the day is done.
   if (servePool.length === coursePool.length && !session.keepGoing) return null;
-  const legacy = SRS.selectNextQuestion(servePool, progress, conceptCtx, policy, cardDifficulty);
-  return legacy ? { question: legacy, kind: 'practice' } : null;
+  const practice = nextDrillCard(pools, store, ctx, now) ?? nextUnseenCard(pools, ctx);
+  return practice ? { question: practice, kind: 'practice' } : null;
 }
 
 /**

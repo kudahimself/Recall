@@ -11,9 +11,10 @@
  * The state is stored under FSRS_STORE_KEY (`recall-fsrs`). It is derived
  * data: replayHistory rebuilds it from attemptHistory in time order, the same
  * way live answers update it (recordAttempt), so it can be thrown away and
- * rebuilt at any time. `basis` records which history it was built from; a
- * store whose basis does not match the loaded history (missing, unreadable,
- * an older schema, or progress imported or changed in another tab) is rebuilt.
+ * rebuilt at any time. `basis` records which history it was built from and
+ * `bank` which card-to-family mapping (bankFingerprint); a store whose basis
+ * or bank does not match (missing, unreadable, an older schema, progress
+ * imported or changed in another tab, or cards re-tagged) is rebuilt.
  *
  * Pure functions only: no React, no localStorage.
  */
@@ -60,6 +61,8 @@ export interface FsrsStore {
   version: number;
   /** historyBasis of the attemptHistory this store reflects. */
   basis: string;
+  /** bankFingerprint of the question bank this store was built against. */
+  bank: string;
   families: Record<string, FamilyState>;
   /**
    * Each answered card's FSRS difficulty, computed from this history the way
@@ -81,8 +84,33 @@ function getScheduler(): FSRS {
   return scheduler;
 }
 
-export function emptyStore(): FsrsStore {
-  return { version: FSRS_STORE_VERSION, basis: historyBasis([]), families: {}, cards: {} };
+export function emptyStore(byId: Map<string, Question>): FsrsStore {
+  return { version: FSRS_STORE_VERSION, basis: historyBasis([]), bank: bankFingerprint(byId), families: {}, cards: {} };
+}
+
+const bankCache = new WeakMap<Map<string, Question>, string>();
+
+/**
+ * Fingerprint of what replay reads from the bank: every card's family and
+ * type. Re-tagging a card's concepts moves it to another family, so a store
+ * built against an older bank no longer matches.
+ */
+export function bankFingerprint(byId: Map<string, Question>): string {
+  const cached = bankCache.get(byId);
+  if (cached) return cached;
+  let h = 2166136261;
+  const ids = Array.from(byId.keys()).sort();
+  for (const id of ids) {
+    const q = byId.get(id)!;
+    const s = `${id}=${familyOf(q)}:${q.type};`;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+  }
+  const fp = `${ids.length}:${h.toString(36)}`;
+  bankCache.set(byId, fp);
+  return fp;
 }
 
 /** Fingerprint of a history: its length and last timestamp. */
@@ -225,7 +253,7 @@ export function recordAttempt(store: FsrsStore, q: Question, a: QuestionAttempt,
   const families = { ...store.families };
   const cards = { ...store.cards };
   applyAttempt(families, cards, q, a);
-  return { version: FSRS_STORE_VERSION, basis: historyBasis(history), families, cards };
+  return { version: FSRS_STORE_VERSION, basis: historyBasis(history), bank: store.bank, families, cards };
 }
 
 /**
@@ -241,7 +269,7 @@ export function replayHistory(history: QuestionAttempt[], byId: Map<string, Ques
     const q = byId.get(a.questionId);
     if (q) applyAttempt(families, cards, q, a);
   }
-  return { version: FSRS_STORE_VERSION, basis: historyBasis(history), families, cards };
+  return { version: FSRS_STORE_VERSION, basis: historyBasis(history), bank: bankFingerprint(byId), families, cards };
 }
 
 /** Parse a stored store; null when absent, unreadable or another schema version. */
@@ -250,6 +278,7 @@ export function parseStore(raw: string | null): FsrsStore | null {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.version !== FSRS_STORE_VERSION || typeof parsed.basis !== 'string'
+      || typeof parsed.bank !== 'string'
       || !parsed.families || typeof parsed.families !== 'object'
       || !parsed.cards || typeof parsed.cards !== 'object') return null;
     return parsed as FsrsStore;
@@ -258,10 +287,10 @@ export function parseStore(raw: string | null): FsrsStore | null {
   }
 }
 
-/** The stored store when it matches `progress`, otherwise one rebuilt from its history. */
+/** The stored store when it matches `progress` and the bank, otherwise one rebuilt from its history. */
 export function loadOrRebuild(raw: string | null, progress: UserProgress, byId: Map<string, Question>): { store: FsrsStore; rebuilt: boolean } {
   const stored = parseStore(raw);
-  if (stored && stored.basis === historyBasis(progress.attemptHistory)) return { store: stored, rebuilt: false };
+  if (stored && stored.basis === historyBasis(progress.attemptHistory) && stored.bank === bankFingerprint(byId)) return { store: stored, rebuilt: false };
   return { store: replayHistory(progress.attemptHistory, byId), rebuilt: true };
 }
 

@@ -203,13 +203,15 @@ Recall on already-learned topics outranks new material (Anki-style reviews-first
 Each course has one bounded session a day, `TODAY_SESSION_SIZE` (20) questions by default, with an end and a summary.
 Size and review share are settings on the Today card on Home (`recall-today-size`, `recall-today-review-share`).
 When the session starts one fixed review list is built: due card families in unlocked topics, most overdue (lowest FSRS retrievability) first, each mapped to the one card it serves, capped at `TODAY_REVIEW_SHARE` of the session (12 of 20).
+Inside the list the old pickers' rules are ordering rules (`reviewListRank`): relearn families (missed last time) first, then drain cards (coding or advanced in a mastered topic), then the card's concept bucket in `REVIEW_LIST_BUCKET_ORDER`, each most overdue first.
 The rest of the session is fresh slots: the next unanswered card of the current topic's ramp, with a drill of a family already met after every `NEW_PER_DRILL` new cards.
 When the ramp is held by its difficulty gate, or finished but below the unlock bar, drills go to that topic (missed cards first) so the bar can be reached.
 The session serves the list first, and the "Reviews left N" pill and the Today card show its length, so the number drops by exactly one per answered review.
 A first miss anywhere in the session comes back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
 Families due beyond the cap stay due and lead the next days' lists; "Keep going" lifts the bound and serves them, then fresh slots, for as long as the learner wants.
-Under topic, difficulty or type filters the plan serves what it can inside them, and the older selector below fills in as "Practice" without using a slot.
-The session lives in memory only; a new day or a reload builds it again.
+Under topic, difficulty or type filters the plan serves what it can inside them; past the plan, "Practice" comes from the same families (a drill of a family already met, then an unseen card) without using a slot.
+The older selector below is not used by the session.
+The session is stored under `recall-today-session`, so a reload the same day resumes it (count, slots left, cards served, and "Done for today"); a new day starts a new one.
 
 **Card families (`utils/familySchedule.ts`):**
 A family is one primitive of one topic: the topic plus the card's first concept tag (`familyOf`), about 625 across the courses.
@@ -367,8 +369,9 @@ Layouts target desktop viewport without scrolling.
 - `recall-filters` - topic/difficulty/type filter state
 - `recall-active-course` - currently selected `Course`
 - `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
-- `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, or built from a different history (its `basis`); `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
+- `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, built from a different history (its `basis`), or built against a different card-to-family mapping, as after a concept re-tag (its `bank`); `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
 - `recall-today-size`, `recall-today-review-share` - Today's session settings, read straight from storage
+- `recall-today-session` - today's session per course, dropped at the day boundary
 - `recall-concept-srs-enabled` (feature flag, `featureFlags.ts`) - a setting read straight from storage
 - `recall-dev-unlock-all` - developer unlock switch, not exported
 
