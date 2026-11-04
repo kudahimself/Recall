@@ -52,11 +52,12 @@ FROM (VALUES (10), (20), (30)) AS v(amt);`,
     topic: Topic.TSQL_AGGREGATION,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'What does this query output (one row, three columns)?',
-    code: `SELECT MIN(v.amt) AS Lo, MAX(v.amt) AS Hi, AVG(v.amt) AS Avg
+    question: 'What does this query return? It is one row of three columns - write them in SELECT order, separated by commas.',
+    code: `SELECT MIN(v.amt) AS Lo, MAX(v.amt) AS Hi, AVG(v.amt) AS Mean
 FROM (VALUES (10), (20), (30)) AS v(amt);`,
-    expectedOutput: `Lo=10, Hi=30, Avg=20`,
-    explanation: '`MIN` and `MAX` return the smallest and largest value in the group; `AVG` returns the arithmetic mean (10+20+30)/3 = 20. Like `SUM` and `COUNT`, all three collapse a set of rows into a single value per group.',
+    expectedOutput: `10, 30, 20`,
+    acceptableOutputs: ['Lo=10, Hi=30, Mean=20', 'Lo, Hi, Mean\n10, 30, 20'],
+    explanation: '`MIN` and `MAX` return the smallest and largest value in the group; `AVG` returns the arithmetic mean (10+20+30)/3 = 20. Like `SUM` and `COUNT`, all three collapse a set of rows into a single value per group. (Because `amt` is an INT, T-SQL\'s `AVG` returns an INT too - here the mean is exactly 20, but an average of 10 and 15 would come back as 12, not 12.5.)',
     hints: ['MIN/MAX = smallest/largest value', 'AVG = arithmetic mean'],
     tags: ['tsql', 'aggregation', 'min', 'max', 'avg', 'predict'],
   },
@@ -73,6 +74,7 @@ SELECT Category, ___(*) AS NumProducts
 FROM dbo.DimProduct
 ___ ___ Category;`,
     blanks: ['COUNT', 'GROUP', 'BY'],
+    blankAlternates: [['COUNT_BIG'], [], []],
     solution: `-- dbo.DimProduct(ProductKey, ProductName, Category, Price)
 SELECT Category, COUNT(*) AS NumProducts
 FROM dbo.DimProduct

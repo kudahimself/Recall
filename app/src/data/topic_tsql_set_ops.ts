@@ -119,8 +119,8 @@ SELECT Country FROM dbo.DimSupplier;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/EXCEPT/i],
-    question: 'Both `dbo.DimCustomer` and `dbo.DimSupplier` have a `Country` column. Return the distinct Country values that appear in `dbo.DimCustomer` but NOT in `dbo.DimSupplier`.',
-    starterCode: `-- SELECT Country FROM ... EXCEPT SELECT Country FROM ...
+    question: 'Both `dbo.DimCustomer` and `dbo.DimSupplier` have a `Country` column. Using a set operator, return the distinct Country values that appear in `dbo.DimCustomer` but NOT in `dbo.DimSupplier`.',
+    starterCode: `-- dbo.DimCustomer(Country), dbo.DimSupplier(Country)
 `,
     testCases: [
       {

@@ -173,7 +173,7 @@ FROM dbo.DimProduct;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     requires: [/UPPER/i, /CONCAT/i],
-    question: "From `dbo.DimProduct` (ProductName, Category), return one column `Label` that combines Category and ProductName separated by ' - ', with the whole result in uppercase (e.g. 'BOOKS - THE GREAT NOVEL').",
+    question: "From `dbo.DimProduct` (ProductName, Category), return one column `Label` that combines Category and ProductName separated by ' - ', with the whole result in uppercase (e.g. 'BOOKS - THE GREAT NOVEL'). A product with a NULL Category must still get a label rather than a NULL.",
     starterCode: `-- dbo.DimProduct(ProductName, Category); return one Label column
 `,
     testCases: [
@@ -187,8 +187,11 @@ FROM dbo.DimProduct;`,
 FROM dbo.DimProduct;
 -- OR
 SELECT CONCAT(UPPER(Category), ' - ', UPPER(ProductName)) AS Label
+FROM dbo.DimProduct;
+-- OR
+SELECT UPPER(CONCAT_WS(' - ', Category, ProductName)) AS Label
 FROM dbo.DimProduct;`,
-    explanation: '`CONCAT` joins the three pieces (Category, the literal separator, ProductName); wrapping the whole thing in `UPPER` (or upper-casing each piece before concatenating) produces the all-caps label either way.',
+    explanation: '`CONCAT` joins the three pieces (Category, the literal separator, ProductName) and treats a NULL piece as an empty string, so a missing Category still yields a label. The `+` operator would turn the whole label NULL instead. Wrapping the result in `UPPER` (or upper-casing each piece before concatenating) produces the all-caps label either way.',
     hints: ["CONCAT(Category, ' - ', ProductName)", 'Wrap the result in UPPER (or upper-case each piece first)'],
     tags: ['tsql', 'string-functions', 'concat', 'upper'],
     tieredHints: {
@@ -216,8 +219,14 @@ FROM dbo.DimProduct;`,
       },
     ],
     solution: `SELECT Email, LEN(TRIM(Email)) AS EmailLength
+FROM stg.Customer;
+-- OR
+SELECT Email, LEN(LTRIM(RTRIM(Email))) AS EmailLength
+FROM stg.Customer;
+-- OR
+SELECT Email, LEN(LTRIM(Email)) AS EmailLength
 FROM stg.Customer;`,
-    explanation: 'Trimming first (`TRIM(Email)`) removes stray leading/trailing spaces from the staged value before `LEN` measures it - without the trim, whitespace in the raw data would inflate the count.',
+    explanation: 'Trimming first (`TRIM(Email)`, or `LTRIM(RTRIM(Email))` on versions before SQL Server 2017) removes stray spaces from the staged value before `LEN` measures it. `LEN` already ignores trailing spaces, so it is the leading spaces that would otherwise inflate the count - which is why `LEN(LTRIM(Email))` gives the same answer.',
     hints: ['Trim before measuring', 'LEN(TRIM(Email))'],
     tags: ['tsql', 'string-functions', 'trim', 'len'],
     tieredHints: {
@@ -265,8 +274,11 @@ FROM dbo.DimCustomer;`,
       },
     ],
     solution: `SELECT CustomerId, TRIM(REPLACE(Phone, '-', '')) AS Phone
+FROM stg.Customer;
+-- OR
+SELECT CustomerId, REPLACE(TRIM(Phone), '-', '') AS Phone
 FROM stg.Customer;`,
-    explanation: '`REPLACE(Phone, \'-\', \'\')` strips every hyphen; wrapping that in `TRIM` then removes the surrounding whitespace. Order matters here only in that both must run - REPLACE does not touch whitespace, and TRIM does not touch hyphens, so neither alone is enough.',
+    explanation: '`REPLACE(Phone, \'-\', \'\')` strips every hyphen; wrapping that in `TRIM` then removes the surrounding whitespace. The nesting order does not matter - trimming first and replacing second gives the same result. What matters is that both run: REPLACE does not touch whitespace, and TRIM does not touch hyphens, so neither alone is enough.',
     hints: ['REPLACE removes the hyphens', 'TRIM removes the surrounding whitespace'],
     tags: ['tsql', 'string-functions', 'replace', 'trim'],
     tieredHints: {

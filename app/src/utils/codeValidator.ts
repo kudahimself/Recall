@@ -168,6 +168,23 @@ function normalizeCode(code: string, language: CodeLanguage): string {
   // about which way the comparison points.
   n = n.replace(/\s*([,:+\-*/=<>!])\s*/g, '$1');
 
+  // SQL comparisons between two qualified columns are symmetric: a join
+  // written `ON c.key = o.key` and one written `ON o.key = c.key` are the same
+  // predicate, and `!=` is T-SQL/Spark SQL's spelling of `<>`. Put both sides
+  // in a fixed order so the token match does not depend on which side the
+  // learner wrote first. Only `col.col OP col.col` is touched, never `>=`,
+  // `<=` or a comparison against a literal.
+  if (language === CodeLanguage.SQL) {
+    n = n.replace(
+      /(^|[^\w.<>!=])([a-z_]\w*\.[a-z_]\w*)(=|<>|!=)([a-z_]\w*\.[a-z_]\w*)(?![\w.(])/g,
+      (_m, pre: string, left: string, op: string, right: string) => {
+        const sym = op === '!=' ? '<>' : op;
+        const [a, b] = left <= right ? [left, right] : [right, left];
+        return `${pre}${a}${sym}${b}`;
+      },
+    );
+  }
+
   return n;
 }
 
