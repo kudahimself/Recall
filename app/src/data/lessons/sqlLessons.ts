@@ -3,7 +3,8 @@
  *
  * Section 1, Querying Foundations: every topic.
  * Section 2, DDL & Constraints: every topic.
- * Later sections follow one per PR (next: Analytical & Window SQL).
+ * Section 3, Analytical & Window SQL: every topic.
+ * Later sections follow one per PR (next: Transactions & Procedural T-SQL).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -977,6 +978,400 @@ Ubik | 15`,
       'tsql-views-cloze-1',
       'tsql-views-computed-cloze-1',
       'tsql-views-1',
+    ],
+  },
+  {
+    id: 'tsql_windows/1',
+    topicKeys: [Topic.TSQL_WINDOWS],
+    step: 1,
+    title: 'Window Functions (ROW_NUMBER, RANK)',
+    idea: [
+      lines(
+        "A window function computes a value across a set of rows and returns it on every row, so the detail rows stay.",
+        "`GROUP BY` collapses each group to one row, while `OVER (...)` keeps them all and adds a column beside them.",
+      ),
+      lines(
+        "`OVER (PARTITION BY col ORDER BY col2)` defines the window: `PARTITION BY` splits the rows into groups and restarts the numbering in each, and `ORDER BY` sets the order the numbers follow.",
+        "Without `PARTITION BY` the whole result is one window.",
+      ),
+      lines(
+        "On ties, `ROW_NUMBER()` still numbers every row uniquely (1, 2, 3), `RANK()` repeats the rank and then skips (1, 1, 3), and `DENSE_RANK()` repeats without skipping (1, 1, 2).",
+        "`NTILE(n)` splits the ordered rows into n buckets of nearly equal size and labels them 1 to n.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT grp, val,                                                  -- on a tie:
+  ROW_NUMBER() OVER (PARTITION BY grp ORDER BY val DESC) AS rn,   -- 1, 2, 3
+  RANK()       OVER (PARTITION BY grp ORDER BY val DESC) AS rnk,  -- 1, 1, 3
+  DENSE_RANK() OVER (PARTITION BY grp ORDER BY val DESC) AS drnk, -- 1, 1, 2
+  NTILE(4)     OVER (ORDER BY val DESC) AS bucket                 -- 1 to 4
+FROM t;`,
+    },
+    pitfall: lines(
+      "A window function is worked out after `WHERE`, so `WHERE rn = 1` cannot see `rn` and fails.",
+      "To keep the first row of each group, compute `rn` in a CTE or subquery and filter on it in the outer query.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Book',
+          columns: ['Title', 'Genre', 'Loans'],
+          rows: [
+            ['Dune', 'SciFi', 9],
+            ['Emma', 'Classic', 7],
+            ['Ubik', 'SciFi', 9],
+            ['Hyperion', 'SciFi', 5],
+            ['Beloved', 'Classic', 3],
+            ['Solaris', 'SciFi', 4],
+          ],
+        },
+      ],
+      code: `SELECT Genre, Title, Loans,
+       ROW_NUMBER() OVER (PARTITION BY Genre ORDER BY Loans DESC, Title) AS RowNo,
+       RANK()       OVER (PARTITION BY Genre ORDER BY Loans DESC) AS RankNo,
+       DENSE_RANK() OVER (PARTITION BY Genre ORDER BY Loans DESC) AS DenseNo
+FROM Book
+ORDER BY Genre, RowNo;`,
+      steps: [
+        "Line 2: `PARTITION BY Genre` restarts the numbering for each genre, and `ORDER BY Loans DESC, Title` numbers the most borrowed book 1, with Title breaking the Dune and Ubik tie so the numbers are fixed.",
+        "Line 3: `RANK()` gives Dune and Ubik, both on 9 loans, rank 1, and then skips to 3 for Hyperion.",
+        "Line 4: `DENSE_RANK()` gives the tie the same rank 1 but does not skip, so Hyperion is 2 and Solaris 3.",
+        "Lines 5-6: every book row is still there with its three numbers beside it, and Classic sorts before SciFi.",
+      ],
+      output: `Genre | Title | Loans | RowNo | RankNo | DenseNo
+Classic | Emma | 7 | 1 | 1 | 1
+Classic | Beloved | 3 | 2 | 2 | 2
+SciFi | Dune | 9 | 1 | 1 | 1
+SciFi | Ubik | 9 | 2 | 1 | 1
+SciFi | Hyperion | 5 | 3 | 3 | 2
+SciFi | Solaris | 4 | 4 | 4 | 3`,
+    },
+    exercises: [
+      'tsql-windows-mcq-1',
+      'tsql-windows-mcq-2',
+      'tsql-windows-predict-1',
+      'tsql-windows-cloze-1',
+      'tsql-windows-1',
+    ],
+  },
+  {
+    id: 'tsql_window_frames/1',
+    topicKeys: [Topic.TSQL_WINDOW_FRAMES],
+    step: 1,
+    title: 'Window Frames & Running Totals',
+    idea: [
+      lines(
+        "An aggregate with `OVER`, such as `SUM(col) OVER (...)`, totals a window of rows and returns the result on each row.",
+        "With only `PARTITION BY`, the window is the whole partition, so every row of a group gets the group's total.",
+      ),
+      lines(
+        "Adding `ORDER BY` inside `OVER` turns the window into a frame that ends at the current row.",
+        "The default frame is `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`, which makes `SUM` a running total.",
+      ),
+      lines(
+        "An explicit frame sets the window's size: `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW` covers this row and the two before it, a 3-row moving window.",
+        "`ROWS` counts physical rows, while `RANGE` also takes in every row that ties with the current one on the `ORDER BY` value.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT grp, d, amt,
+  -- the whole partition
+  SUM(amt) OVER (PARTITION BY grp) AS grp_total,
+  -- first row to this row: a running total
+  SUM(amt) OVER (PARTITION BY grp ORDER BY d) AS running,
+  -- this row and the 2 before: a moving average
+  AVG(amt) OVER (PARTITION BY grp ORDER BY d
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving3
+FROM t;`,
+    },
+    pitfall: lines(
+      "The default frame is `RANGE`, so rows that tie on the `ORDER BY` value are peers and all show the same running total, which jumps by both amounts at once.",
+      "Write `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` and order by something unique when each row should add only its own amount.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Sale',
+          columns: ['SaleId', 'Shop', 'SaleDay', 'Copies'],
+          rows: [
+            [1, 'Leeds', 1, 4],
+            [2, 'Leeds', 2, 3],
+            [3, 'Leeds', 2, 5],
+            [4, 'Leeds', 3, 2],
+            [5, 'York', 1, 6],
+            [6, 'York', 2, 1],
+          ],
+        },
+      ],
+      code: `SELECT Shop, SaleDay, Copies,
+       SUM(Copies) OVER (PARTITION BY Shop) AS ShopTotal,
+       SUM(Copies) OVER (PARTITION BY Shop ORDER BY SaleDay) AS RangeRun,
+       SUM(Copies) OVER (PARTITION BY Shop ORDER BY SaleDay, SaleId
+                         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS RowsRun,
+       SUM(Copies) OVER (PARTITION BY Shop ORDER BY SaleDay, SaleId
+                         ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS LastTwo
+FROM Sale
+ORDER BY Shop, SaleDay, SaleId;`,
+      steps: [
+        "Line 2: with no `ORDER BY` the window is the whole shop, so every Leeds row shows 14 and every York row 7.",
+        "Line 3: `ORDER BY SaleDay` makes a running total with the default `RANGE` frame, and both Leeds sales on day 2 are peers, so both show 4 + 3 + 5 = 12.",
+        "Lines 4-5: a `ROWS` frame ordered by SaleDay and then SaleId adds one row at a time, giving 4, 7, 12 and 14.",
+        "Lines 6-7: `1 PRECEDING AND CURRENT ROW` slides a two-row window, so the third Leeds row is 3 + 5 = 8 and the fourth 5 + 2 = 7.",
+        "Lines 2-7: `PARTITION BY Shop` restarts every window for York, whose running totals are 6 and 7.",
+      ],
+      output: `Shop | SaleDay | Copies | ShopTotal | RangeRun | RowsRun | LastTwo
+Leeds | 1 | 4 | 14 | 4 | 4 | 4
+Leeds | 2 | 3 | 14 | 12 | 7 | 7
+Leeds | 2 | 5 | 14 | 12 | 12 | 8
+Leeds | 3 | 2 | 14 | 14 | 14 | 7
+York | 1 | 6 | 7 | 6 | 6 | 6
+York | 2 | 1 | 7 | 7 | 7 | 7`,
+    },
+    exercises: [
+      'tsql-frames-mcq-1',
+      'tsql-frames-predict-1',
+      'tsql-frames-cloze-1',
+      'tsql-frames-1',
+      'tsql-frames-movingavg-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_lag_lead/1',
+    topicKeys: [Topic.TSQL_LAG_LEAD],
+    step: 1,
+    title: 'LAG / LEAD & Period-over-Period',
+    idea: [
+      lines(
+        "`LAG(col)` reads `col` from the row before the current one in the window's order, and `LEAD(col)` reads it from the row after.",
+        "Both need an `ORDER BY` in `OVER`, and `PARTITION BY` keeps each group's sequence apart.",
+      ),
+      lines(
+        "`LAG(col, n, default)` looks n rows back and returns `default` where there is no such row; without a default, the first row gets NULL.",
+        "`col - LAG(col) OVER (...)` is the change since the previous period, the heart of a period-over-period report.",
+      ),
+      lines(
+        "`FIRST_VALUE(col)` returns the value of the first row of the ordered frame on every row, a fixed anchor such as each customer's first order.",
+        "`LAST_VALUE(col)` reads the last row of the frame, and by default the frame ends at the current row.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT grp, d, amt,
+  -- the row before, NULL on the first row
+  LAG(amt) OVER (PARTITION BY grp ORDER BY d) AS prev_amt,
+  -- the row after, 0 on the last row
+  LEAD(amt, 1, 0) OVER (PARTITION BY grp ORDER BY d) AS next_amt,
+  amt - LAG(amt) OVER (PARTITION BY grp ORDER BY d) AS change,
+  FIRST_VALUE(amt) OVER (PARTITION BY grp ORDER BY d) AS first_amt,
+  -- the whole partition's last row, not this row
+  LAST_VALUE(amt) OVER (PARTITION BY grp ORDER BY d
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS last_amt
+FROM t;`,
+    },
+    pitfall: lines(
+      "`LAST_VALUE(col) OVER (ORDER BY d)` returns the current row's own value, because the default frame stops at the current row.",
+      "Widen the frame with `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING` to read the partition's real last value.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'MonthlyLoan',
+          columns: ['Branch', 'MonthNo', 'Loans'],
+          rows: [
+            ['Leeds', 1, 40],
+            ['Leeds', 2, 55],
+            ['Leeds', 3, 50],
+            ['York', 1, 20],
+            ['York', 2, 30],
+          ],
+        },
+      ],
+      code: `SELECT Branch, MonthNo, Loans,
+       LAG(Loans) OVER (PARTITION BY Branch ORDER BY MonthNo) AS PrevLoans,
+       Loans - LAG(Loans) OVER (PARTITION BY Branch ORDER BY MonthNo) AS Change,
+       LEAD(Loans, 1, 0) OVER (PARTITION BY Branch ORDER BY MonthNo) AS NextLoans,
+       LAST_VALUE(Loans) OVER (PARTITION BY Branch ORDER BY MonthNo
+           ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS LastLoans
+FROM MonthlyLoan
+ORDER BY Branch, MonthNo;`,
+      steps: [
+        "Line 2: `LAG` reads the month before within the same branch, so each branch's first month has no previous row and gets NULL.",
+        "Line 3: the change is this month minus the last, 15 and then -5 for Leeds, and NULL in month 1 because anything minus NULL is NULL.",
+        "Line 4: `LEAD` reads the month after, and the default 0 fills each branch's last month.",
+        "Lines 5-6: the full frame lets `LAST_VALUE` see the whole branch, so every Leeds row shows 50 and every York row 30.",
+      ],
+      output: `Branch | MonthNo | Loans | PrevLoans | Change | NextLoans | LastLoans
+Leeds | 1 | 40 | NULL | NULL | 55 | 50
+Leeds | 2 | 55 | 40 | 15 | 50 | 50
+Leeds | 3 | 50 | 55 | -5 | 0 | 50
+York | 1 | 20 | NULL | NULL | 30 | 30
+York | 2 | 30 | 20 | 10 | 0 | 30`,
+    },
+    exercises: [
+      'tsql-laglead-mcq-1',
+      'tsql-laglead-predict-1',
+      'tsql-laglead-cloze-1',
+      'tsql-laglead-mcq-2',
+      'tsql-laglead-1',
+    ],
+  },
+  {
+    id: 'tsql_grouping_sets/1',
+    topicKeys: [Topic.TSQL_GROUPING_SETS],
+    step: 1,
+    title: 'GROUPING SETS, ROLLUP, CUBE',
+    idea: [
+      lines(
+        "`GROUP BY ROLLUP(a, b)` returns the usual (a, b) groups, plus a subtotal for each a and one grand total, in a single query.",
+        "On a subtotal row the rolled-up columns show NULL: the subtotal for an a has b = NULL, and the grand total has both NULL.",
+      ),
+      lines(
+        "`CUBE(a, b)` gives every combination instead of a hierarchy: (a, b), (a), (b) and the grand total.",
+        "`GROUPING SETS ((a, b), (a), ())` lists exactly the groupings you want, with `()` for the grand total, and ROLLUP and CUBE are shorthand for such lists.",
+      ),
+      lines(
+        "`GROUPING(col)` returns 1 on a row where col was rolled up and 0 where col holds a real value.",
+        "Use it to label subtotal rows or to sort them after the detail.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT a, b, SUM(x) AS total,
+       GROUPING(b) AS b_rolled_up         -- 1 on a subtotal row for b
+FROM t
+GROUP BY ROLLUP(a, b);                    -- (a, b), (a), ()
+-- GROUP BY CUBE(a, b);                   -- (a, b), (a), (b), ()
+-- GROUP BY GROUPING SETS ((a, b), (a), ());  -- exactly these`,
+    },
+    pitfall: lines(
+      "A NULL in a ROLLUP result is not always a subtotal: when b itself holds NULLs, the group of real NULLs looks just like the subtotal row.",
+      "Test `GROUPING(b) = 1` to find the subtotals, not `b IS NULL`.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Sale',
+          columns: ['Genre', 'Shop', 'Copies'],
+          rows: [
+            ['SciFi', 'Leeds', 4],
+            ['SciFi', 'York', 3],
+            ['SciFi', 'Leeds', 2],
+            ['Classic', 'Leeds', 5],
+            ['Classic', null, 1],
+          ],
+        },
+      ],
+      code: `SELECT Genre, Shop, SUM(Copies) AS Total,
+       GROUPING(Genre) AS AllGenres,
+       GROUPING(Shop) AS AllShops
+FROM Sale
+GROUP BY ROLLUP(Genre, Shop)
+ORDER BY AllGenres, Genre, AllShops, Shop;`,
+      steps: [
+        "Line 5: `ROLLUP(Genre, Shop)` computes three groupings in one pass: each genre and shop, each genre alone, and all rows.",
+        "Lines 2-3: `GROUPING(Shop)` is 1 on the rows where Shop was rolled up, and `GROUPING(Genre)` is 1 only on the grand total.",
+        "Line 3: two Classic rows show a NULL Shop, but the first is the sale with no shop recorded (AllShops 0) and the third is the Classic subtotal of 6 (AllShops 1).",
+        "Line 6: sorting on the two flags puts each genre's subtotal after its shops and the grand total of 15 last.",
+      ],
+      output: `Genre | Shop | Total | AllGenres | AllShops
+Classic | NULL | 1 | 0 | 0
+Classic | Leeds | 5 | 0 | 0
+Classic | NULL | 6 | 0 | 1
+SciFi | Leeds | 6 | 0 | 0
+SciFi | York | 3 | 0 | 0
+SciFi | NULL | 9 | 0 | 1
+NULL | NULL | 15 | 1 | 1`,
+    },
+    exercises: [
+      'tsql-gs-mcq-1',
+      'tsql-gs-rollup-predict-1',
+      'tsql-gs-cloze-1',
+      'tsql-gs-cube-cloze-1',
+      'tsql-gs-groupingfn-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_pivot/1',
+    topicKeys: [Topic.TSQL_PIVOT],
+    step: 1,
+    title: 'PIVOT & Conditional Aggregation',
+    idea: [
+      lines(
+        "A pivot turns the values of one column into columns of their own, with an aggregate under each.",
+        "Instead of a row per shop and genre, you get one row per shop with a column per genre.",
+      ),
+      lines(
+        "The portable way is conditional aggregation: one `SUM(CASE WHEN col = 'x' THEN val ELSE 0 END)` per new column, and `GROUP BY` for the rows you keep.",
+        "Each CASE passes a row's value only to its own column, and without `GROUP BY` the whole table collapses to one row.",
+      ),
+      lines(
+        "T-SQL's `PIVOT (SUM(val) FOR col IN ([x], [y])) AS p` does the same inside `FROM`, grouping by every input column it does not pivot, so feed it a subquery of just the columns it needs.",
+        "`UNPIVOT` is the reverse and turns columns back into rows of a name and a value.",
+        "Either way the new columns are listed by hand, because neither form discovers them.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- portable: one SUM(CASE ...) per new column
+SELECT grp,
+       SUM(CASE WHEN col = 'x' THEN val ELSE 0 END) AS x,
+       SUM(CASE WHEN col = 'y' THEN val ELSE 0 END) AS y
+FROM t
+GROUP BY grp;
+
+-- T-SQL PIVOT: the new columns are fixed in IN (...)
+SELECT grp, [x], [y]
+FROM (SELECT grp, col, val FROM t) AS src
+PIVOT (SUM(val) FOR col IN ([x], [y])) AS p;`,
+    },
+    pitfall: lines(
+      "Without `ELSE 0`, a CASE gives NULL on the rows it does not match, so a group with no matching rows at all shows NULL in that column, not 0.",
+      "Write `ELSE 0` when a missing combination should read as zero.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Sale',
+          columns: ['Shop', 'Genre', 'Copies'],
+          rows: [
+            ['Leeds', 'SciFi', 4],
+            ['Leeds', 'Classic', 5],
+            ['Leeds', 'SciFi', 2],
+            ['York', 'SciFi', 3],
+            ['York', 'Poetry', 1],
+          ],
+        },
+      ],
+      code: `SELECT Shop,
+       SUM(CASE WHEN Genre = 'SciFi' THEN Copies ELSE 0 END) AS SciFi,
+       SUM(CASE WHEN Genre = 'Classic' THEN Copies ELSE 0 END) AS Classic,
+       SUM(Copies) AS AllCopies
+FROM Sale
+GROUP BY Shop
+ORDER BY Shop;`,
+      steps: [
+        "Line 2: a row adds its Copies to SciFi only when its genre is SciFi, so Leeds gets 4 + 2 = 6 and York 3.",
+        "Line 3: York sold no Classic books, and `ELSE 0` makes its Classic 0, where without it the column would be NULL.",
+        "Line 4: the plain `SUM` still counts every genre, including York's Poetry sale, which has no column of its own.",
+        "Line 6: `GROUP BY Shop` keeps one row per shop, and the genres have become its columns.",
+      ],
+      output: `Shop | SciFi | Classic | AllCopies
+Leeds | 6 | 5 | 11
+York | 3 | 0 | 4`,
+    },
+    exercises: [
+      'tsql-pivot-mcq-1',
+      'tsql-pivot-predict-1',
+      'tsql-pivot-cloze-1',
+      'tsql-pivot-native-cloze-1',
+      'tsql-pivot-1',
     ],
   },
 ];

@@ -28,7 +28,8 @@
  * explicit compatibility layer: TOP (n) and OFFSET ... FETCH become LIMIT,
  * ISNULL becomes IFNULL, and LEN, CHARINDEX, LEFT, RIGHT, YEAR, MONTH, DAY,
  * DATEPART, DATEADD, DATEDIFF, EOMONTH and DATEFROMPARTS are registered with
- * T-SQL semantics, and a line holding only GO separates batches. Anything the
+ * T-SQL semantics, GROUP BY ROLLUP / CUBE / GROUPING SETS becomes the UNION ALL
+ * of its grouping sets, and a line holding only GO separates batches. Anything the
  * layer does not cover (GETDATE, CAST AS DATE, FORMAT, CONVERT, `+` on
  * strings, #temp tables, MERGE, UPDATE ... FROM) is refused with a message
  * rather than run with SQLite's different meaning, so an example that passes
@@ -206,6 +207,120 @@ function splitStatements(code) {
   return out.filter(s => s.replace(/--.*$/gm, '').trim().length > 0);
 }
 
+/** `s` with everything inside quotes or parentheses blanked, so a regex on it only sees the top level. */
+function topLevelMask(s) {
+  let out = '';
+  let depth = 0;
+  let quote = null;
+  for (const c of s) {
+    if (quote) {
+      out += ' ';
+      if (c === quote) quote = null;
+    } else if (c === "'" || c === '"') {
+      quote = c;
+      out += ' ';
+    } else if (c === '(') {
+      out += depth === 0 ? c : ' ';
+      depth++;
+    } else if (c === ')') {
+      depth--;
+      out += depth === 0 ? c : ' ';
+    } else {
+      out += depth === 0 ? c : ' ';
+    }
+  }
+  return out;
+}
+
+/** Split on commas at the top level (outside quotes and parentheses). */
+function splitTopLevel(s) {
+  const m = topLevelMask(s);
+  const parts = [];
+  let from = 0;
+  for (let i = 0; i < m.length; i++) {
+    if (m[i] === ',') { parts.push(s.slice(from, i).trim()); from = i + 1; }
+  }
+  parts.push(s.slice(from).trim());
+  return parts.filter(p => p.length > 0);
+}
+
+const lastPart = col => col.split('.').pop().replace(/^\[|\]$/g, '');
+const normCol = col => col.replace(/\s+/g, '').toLowerCase();
+const COLUMN_REF = /^[\w.[\]]+$/;
+
+/**
+ * GROUP BY ROLLUP / CUBE / GROUPING SETS (which SQLite lacks) as the UNION ALL
+ * of one GROUP BY per grouping set, which is how SQL Server defines them: a
+ * grouping column left out of a set is NULL on that set's rows, and
+ * GROUPING(col) is 1 there and 0 elsewhere. Only the plain shape is covered
+ * (column lists, bare grouping columns and aliased GROUPING(col) in the
+ * select list, an ORDER BY on output columns); anything else is refused.
+ */
+function expandGroupingSets(s) {
+  if (!/\b(ROLLUP|CUBE|GROUPING\s+SETS)\b/i.test(s)) return { sql: s };
+  s = s.replace(/--[^\n]*/g, '');
+  const gb = /\bGROUP\s+BY\s+(ROLLUP|CUBE|GROUPING\s+SETS)\s*\(/i.exec(topLevelMask(s));
+  if (!gb) return { error: 'not supported by the SQLite check: ROLLUP / CUBE / GROUPING SETS outside a top-level GROUP BY' };
+  const refuse = what => ({ error: `not supported by the SQLite check: ${what} with ROLLUP / CUBE / GROUPING SETS` });
+  if (/\bGROUPING_ID\b/i.test(s)) return refuse('GROUPING_ID');
+  const open = gb.index + gb[0].length - 1;
+  const close = topLevelMask(s.slice(open)).indexOf(')') + open;
+  const inner = s.slice(open + 1, close);
+  const orderBy = s.slice(close + 1).trim();
+  if (orderBy && !/^ORDER\s+BY\b/i.test(orderBy)) return refuse('anything but ORDER BY after the GROUP BY');
+  if (/\bGROUPING\s*\(/i.test(orderBy)) return refuse('GROUPING() in ORDER BY (order by its alias)');
+
+  const head = s.slice(0, gb.index);
+  const sel = /^\s*SELECT\s+/i.exec(head);
+  const from = /\bFROM\b/i.exec(topLevelMask(head));
+  if (!sel || !from) return refuse('a statement that is not SELECT ... FROM');
+  const selectList = head.slice(sel[0].length, from.index);
+  const rest = head.slice(from.index).trim();
+  if (/^DISTINCT\b/i.test(selectList.trim())) return refuse('SELECT DISTINCT');
+
+  const columnsOf = e => {
+    const t = e.trim();
+    const cols = t.startsWith('(') && t.endsWith(')') ? splitTopLevel(t.slice(1, -1)) : [t];
+    return cols.every(c => COLUMN_REF.test(c)) ? cols : null;
+  };
+  const kind = gb[1].toUpperCase().replace(/\s+/, ' ');
+  const items = splitTopLevel(inner);
+  let sets;
+  if (kind === 'GROUPING SETS') {
+    sets = items.map(columnsOf);
+  } else {
+    if (!items.every(c => COLUMN_REF.test(c))) return refuse(`${kind} of anything but columns`);
+    sets = kind === 'ROLLUP'
+      ? items.map((_c, i) => items.slice(0, items.length - i)).concat([[]])
+      : Array.from({ length: 2 ** items.length }, (_v, m) => items.filter((_c, i) => !((m >> (items.length - 1 - i)) & 1)));
+  }
+  if (sets.some(set => set === null)) return refuse('a grouping set of anything but columns');
+  const all = new Set(sets.flat().map(normCol));
+  const allNames = new Set([...all].map(lastPart));
+
+  const select = [];
+  for (const item of splitTopLevel(selectList)) {
+    const a = /^([\s\S]*?)\s+AS\s+(\[[^\]]+\]|\w+)$/i.exec(item);
+    const expr = (a ? a[1] : item).trim();
+    const alias = a ? a[2] : null;
+    const g = /^GROUPING\s*\(\s*([\w.[\]]+)\s*\)$/i.exec(expr);
+    if (g) {
+      if (!all.has(normCol(g[1]))) return refuse(`GROUPING(${g[1]}) of a column that is not grouped`);
+      if (!alias) return refuse('GROUPING() without an alias');
+      select.push(set => `${set.some(c => normCol(c) === normCol(g[1])) ? 0 : 1} AS ${alias}`);
+    } else if (all.has(normCol(expr))) {
+      select.push(set => (set.some(c => normCol(c) === normCol(expr)) ? item : `NULL AS ${alias || lastPart(expr)}`));
+    } else if ((expr.match(/[A-Za-z_]\w*/g) || []).some(t => allNames.has(t.toLowerCase()))) {
+      return refuse(`a grouping column inside an expression (${item})`);
+    } else {
+      select.push(() => item);
+    }
+  }
+  const branches = sets.map(set =>
+    `SELECT ${select.map(f => f(set)).join(', ')} ${rest}${set.length > 0 ? ` GROUP BY ${set.join(', ')}` : ''}`);
+  return { sql: `SELECT * FROM (${branches.join(' UNION ALL ')})${orderBy ? ` ${orderBy}` : ''}` };
+}
+
 /** One T-SQL statement as SQLite runs it, or an error naming what the check does not cover. */
 function translateTsql(stmt) {
   for (const [re, what] of UNSUPPORTED) {
@@ -221,6 +336,9 @@ function translateTsql(stmt) {
   });
   if (tops.length === 1 && limit === null) return { error: 'not supported by the SQLite check: TOP outside SELECT [DISTINCT] TOP (n)' };
   if (limit !== null && /\bOFFSET\b/i.test(s)) return { error: 'not supported by the SQLite check: TOP with OFFSET' };
+  const grouped = expandGroupingSets(s);
+  if (grouped.error) return grouped;
+  s = grouped.sql;
   s = s.replace(/\bOFFSET\s+(\d+)\s+ROWS?\s+FETCH\s+(?:NEXT|FIRST)\s+(\d+)\s+ROWS?\s+ONLY\b/gi, 'LIMIT $2 OFFSET $1');
   s = s.replace(/\bOFFSET\s+(\d+)\s+ROWS?\b/gi, 'LIMIT -1 OFFSET $1');
   s = s.replace(/\bISNULL\s*\(/gi, 'IFNULL(');
@@ -457,7 +575,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-module.exports = { checkLesson, runSql, runPython, translateTsql, splitStatements, multiSentenceLines, TSQL_FUNCTIONS };
+module.exports = { checkLesson, runSql, runPython, translateTsql, expandGroupingSets, splitStatements, multiSentenceLines, TSQL_FUNCTIONS };
 
 if (require.main === module) {
   main().catch(e => {

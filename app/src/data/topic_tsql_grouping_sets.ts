@@ -173,4 +173,24 @@ ____ ____ ____ ____ ((Category, ____), (____), ());`,
     requires: [/GROUPING\s+SETS/i],
     tags: ['tsql', 'grouping-sets'],
   },
+  {
+    id: 'tsql-gs-rollup-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_GROUPING_SETS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'What rows does this query return? Write one row per line as cat | total (for example X | 1), in the order the query returns them, and write a NULL as NULL.',
+    code: `SELECT v.cat, SUM(v.amt) AS total
+FROM (VALUES ('A', 10), ('B', 5), ('A', 20)) AS v(cat, amt)
+GROUP BY ROLLUP(v.cat)
+ORDER BY GROUPING(v.cat), v.cat;`,
+    expectedOutput: `A | 30
+B | 5
+NULL | 35`,
+    acceptableOutputs: ['A|30\nB|5\nNULL|35'],
+    explanation: '`ROLLUP(v.cat)` groups by cat as usual, giving A = 10 + 20 = 30 and B = 5, and then adds one grouping with no columns at all: the grand total, 35. That extra row has no cat of its own, so ROLLUP fills the column with NULL. `GROUPING(v.cat)` is 1 only on that subtotal row, so `ORDER BY GROUPING(v.cat)` puts it last.',
+    hints: ['ROLLUP adds one extra row besides the detail rows: the grand total. ORDER BY GROUPING(...) puts it last', 'The grand-total row has no cat, so the column shows NULL'],
+    tags: ['tsql', 'grouping-sets', 'rollup', 'predict'],
+  },
 ];
