@@ -158,7 +158,7 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
                 </div>
               </div>
             </div>
-            <span className="flipdisc-text-content">{option.text}</span>
+            <span className="flipdisc-text-content">{renderInlineCode(option.text, question.topic)}</span>
           </label>
         ))}
       </div>
