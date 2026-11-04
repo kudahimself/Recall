@@ -1,12 +1,16 @@
 import React from 'react';
+import { Course, Topic } from '../types';
+import { getCourseForTopic } from '../utils/courseConfig';
 import './DataTables.css';
 
 /**
- * Render prose that marks code with backticks (`like this`), as question
- * explanations do, with each backticked span as inline <code>. An unpaired
- * backtick is shown as written.
+ * Render a SQL-course question's prose, which marks code with backticks
+ * (`like this`), with each backticked span as inline <code>. An unpaired
+ * backtick is shown as written. Other courses show their text unchanged, since
+ * their backticks can be real code such as JS template literals.
  */
-export function renderInlineCode(text: string): React.ReactNode[] {
+export function renderInlineCode(text: string, topic: Topic): React.ReactNode[] {
+  if (getCourseForTopic(topic) !== Course.SQL) return [text];
   const parts = text.split('`');
   // An even number of parts means an odd number of backticks: the last one has
   // no partner, so glue it back onto the trailing text.

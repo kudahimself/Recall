@@ -10,7 +10,7 @@
  */
 import { questions } from '../data/questions';
 import { validateAnswer } from './codeValidator';
-import { CodingQuestion } from '../types';
+import { CodeLanguage, CodingQuestion } from '../types';
 
 const ACCEPTED: Record<string, string[]> = {
   'tsql-filter-1': [
@@ -120,5 +120,18 @@ describe('Querying Foundations coding questions still reject near-miss wrong ans
         expect(grade(id, code).verdict).not.toBe('pass');
       });
     });
+  });
+});
+
+describe('SQL column comparisons are only reordered when both sides are bare columns', () => {
+  const solution = `SELECT a.x FROM dbo.A a JOIN dbo.B b ON a.x = b.y + 1;`;
+  const run = (code: string) => validateAnswer(code, solution, CodeLanguage.SQL, 'qf');
+
+  it('does not treat ON b.y = a.x + 1 as the same predicate as ON a.x = b.y + 1', () => {
+    expect(run(`SELECT a.x FROM dbo.A a JOIN dbo.B b ON b.y = a.x + 1;`).verdict).not.toBe('pass');
+  });
+
+  it('still accepts the reference predicate as written', () => {
+    expect(run(`SELECT a.x FROM dbo.A a JOIN dbo.B b ON a.x = b.y + 1;`).verdict).toBe('pass');
   });
 });

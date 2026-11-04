@@ -177,7 +177,7 @@ function normalizeCode(code: string, language: CodeLanguage): string {
   // literal, or an assignment in an UPDATE/MERGE SET list.
   if (language === CodeLanguage.SQL) {
     n = n.replace(
-      /(\b(?:on|where|and|or|not|when|having) |\()([a-z_]\w*\.[a-z_]\w*)(=|<>|!=)([a-z_]\w*\.[a-z_]\w*)(?![\w.(])/g,
+      /(\b(?:on|where|and|or|not|when|having) |\()([a-z_]\w*\.[a-z_]\w*)(=|<>|!=)([a-z_]\w*\.[a-z_]\w*)(?![\w.(+\-*/%|&^])/g,
       (_m, pre: string, left: string, op: string, right: string) => {
         const sym = op === '!=' ? '<>' : op;
         const [a, b] = left <= right ? [left, right] : [right, left];

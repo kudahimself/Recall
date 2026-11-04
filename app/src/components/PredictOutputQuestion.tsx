@@ -48,7 +48,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({
 
   return (
     <div className="predict-output-question">
-      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
@@ -109,7 +109,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({
               <pre className="actual-code">{question.expectedOutput}</pre>
             </div>
           )}
-          <p>{renderInlineCode(question.explanation)}</p>
+          <p>{renderInlineCode(question.explanation, question.topic)}</p>
           {onNext && (
             <StyledButton variant="primary" onClick={onNext}>
               Next Question →

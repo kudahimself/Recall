@@ -343,7 +343,7 @@ export const ParsonsQuestion: React.FC<Props> = ({
 
   return (
     <div className="parsons-question">
-      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
@@ -489,7 +489,7 @@ export const ParsonsQuestion: React.FC<Props> = ({
       ) : (
         <div className="explanation">
           <h4>{wasCorrect ? 'Correct.' : 'Not quite.'}</h4>
-          <p>{renderInlineCode(question.explanation)}</p>
+          <p>{renderInlineCode(question.explanation, question.topic)}</p>
           {!wasCorrect && (
             <div className="reference-solution">
               <div className="reference-label">Reference solution:</div>

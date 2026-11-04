@@ -5,7 +5,11 @@ import { renderInlineCode } from './InlineCode';
 import { PredictOutputQuestion } from './PredictOutputQuestion';
 import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
 import { questions } from '../data/questions';
+import { getCourseForTopic } from '../utils/courseConfig';
 import {
+  Course,
+  QuestionType,
+  Topic,
   MultipleChoiceQuestion as MCQ,
   PredictOutputQuestion as PredictQ,
 } from '../types';
@@ -58,15 +62,32 @@ describe('DataTables', () => {
 
 describe('renderInlineCode', () => {
   it('turns backticked spans into inline code and leaves the rest as text', () => {
-    const { container } = render(<p>{renderInlineCode('Use `IS NULL`, not `= NULL`.')}</p>);
+    const { container } = render(<p>{renderInlineCode('Use `IS NULL`, not `= NULL`.', Topic.TSQL_FILTERING)}</p>);
     expect(Array.from(container.querySelectorAll('code')).map(c => c.textContent)).toEqual(['IS NULL', '= NULL']);
     expect(container.textContent).toBe('Use IS NULL, not = NULL.');
   });
 
   it('shows an unpaired backtick as written', () => {
-    const { container } = render(<p>{renderInlineCode('a `b` c ` d')}</p>);
+    const { container } = render(<p>{renderInlineCode('a `b` c ` d', Topic.TSQL_FILTERING)}</p>);
     expect(container.querySelectorAll('code')).toHaveLength(1);
     expect(container.textContent).toBe('a b c ` d');
+  });
+
+  it('leaves a non-SQL question with a JS template literal exactly as written', () => {
+    const q = byId<MCQ>('js-misc-mcq-4');
+    const { container } = render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
+    const heading = container.querySelector('.question-text') as HTMLElement;
+    expect(heading.querySelector('code')).toBeNull();
+    expect(heading.textContent).toBe(q.question);
+    expect(heading.textContent).toContain('`Hi, ${this.name}`');
+  });
+
+  it('still renders inline code in a SQL question', () => {
+    const q = questions.find(x => getCourseForTopic(x.topic) === Course.SQL && /`[^`]+`/.test(x.question) && x.type === QuestionType.MULTIPLE_CHOICE) as unknown as MCQ;
+    const { container } = render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
+    const heading = container.querySelector('.question-text') as HTMLElement;
+    expect(heading.querySelector('code.inline-code')).not.toBeNull();
+    expect(heading.textContent).not.toContain('`');
   });
 });
 

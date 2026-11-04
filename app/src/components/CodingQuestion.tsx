@@ -334,7 +334,7 @@ export const CodingQuestion: React.FC<Props> = ({
 
   return (
     <div className="coding-question">
-      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
 
       <div className="badges">
         <StyledBadge variant="difficulty">
@@ -574,7 +574,7 @@ export const CodingQuestion: React.FC<Props> = ({
         {phase === 'done' && (
         <div className="explanation">
           <h4>Explanation:</h4>
-          <p>{renderInlineCode(question.explanation)}</p>
+          <p>{renderInlineCode(question.explanation, question.topic)}</p>
         </div>
         )}
 

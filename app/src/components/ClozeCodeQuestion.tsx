@@ -169,7 +169,7 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
 
   return (
     <div className="cloze-code-question">
-      <h3 className="question-text">{renderInlineCode(question.question)}</h3>
+      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
 
       <div className="badges-row">
         <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
@@ -254,7 +254,7 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
               <pre className="reference-code">{question.solution}</pre>
             </div>
           )}
-          <p>{renderInlineCode(question.explanation)}</p>
+          <p>{renderInlineCode(question.explanation, question.topic)}</p>
           {onNext && (
             <StyledButton variant="primary" onClick={onNext}>
               Next Question →
