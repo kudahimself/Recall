@@ -172,11 +172,12 @@ function normalizeCode(code: string, language: CodeLanguage): string {
   // written `ON c.key = o.key` and one written `ON o.key = c.key` are the same
   // predicate, and `!=` is T-SQL/Spark SQL's spelling of `<>`. Put both sides
   // in a fixed order so the token match does not depend on which side the
-  // learner wrote first. Only `col.col OP col.col` is touched, never `>=`,
-  // `<=` or a comparison against a literal.
+  // learner wrote first. Only `col.col OP col.col` directly after a predicate
+  // keyword or `(` is touched, never `>=`, `<=`, a comparison against a
+  // literal, or an assignment in an UPDATE/MERGE SET list.
   if (language === CodeLanguage.SQL) {
     n = n.replace(
-      /(^|[^\w.<>!=])([a-z_]\w*\.[a-z_]\w*)(=|<>|!=)([a-z_]\w*\.[a-z_]\w*)(?![\w.(])/g,
+      /(\b(?:on|where|and|or|not|when|having) |\()([a-z_]\w*\.[a-z_]\w*)(=|<>|!=)([a-z_]\w*\.[a-z_]\w*)(?![\w.(])/g,
       (_m, pre: string, left: string, op: string, right: string) => {
         const sym = op === '!=' ? '<>' : op;
         const [a, b] = left <= right ? [left, right] : [right, left];

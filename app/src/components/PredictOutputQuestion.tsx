@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { CodeLanguage, PredictOutputQuestion as PredictQ } from '../types';
-import { outputMatches, SQL_OUTPUT_CONVENTION } from '../utils/predictOutput';
+import { PredictOutputQuestion as PredictQ } from '../types';
+import { outputInstruction, outputMatches } from '../utils/predictOutput';
 import { StyledButton } from './StyledButton';
 import './PredictOutputQuestion.css';
 
@@ -30,8 +30,6 @@ export const PredictOutputQuestion: React.FC<Props> = ({
     setShowHint(false);
   }, [question.id]);
 
-  const isSql = question.language === CodeLanguage.SQL;
-
   const evaluate = (): boolean =>
     outputMatches(
       userOutput,
@@ -59,9 +57,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({
       </div>
 
       <div className="predict-instructions">
-        {isSql
-          ? SQL_OUTPUT_CONVENTION
-          : 'Read the code below and predict what it prints. Type the exact output - match whitespace and line breaks.'}
+        {outputInstruction(question.code, question.language)}
       </div>
 
       <div className="code-block-wrapper">

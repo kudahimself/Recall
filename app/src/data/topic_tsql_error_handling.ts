@@ -37,7 +37,7 @@ export const tsql_error_handling_questions: Question[] = [
     topic: Topic.TSQL_ERROR_HANDLING,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'What does this batch print?',
+    question: 'What does this batch PRINT? Give only the PRINT output, not the result of the SELECT.',
     code: `BEGIN TRY
     SELECT 1 / 0;
     PRINT 'after divide';

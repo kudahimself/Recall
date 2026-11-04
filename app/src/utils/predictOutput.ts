@@ -14,15 +14,14 @@ import { CodeLanguage } from '../types';
  *     and tabs outside string literals so [('b',3),('a',2)],
  *     [('b', 3), ('a', 2)], and [ ('b', 3) , ('a', 2) ] all compare equal.
  *
- * SQL does not "print" anything: a query returns a result set, and there is no
- * one obvious way to type rows and columns into a text box. So for SQL the
- * answer is read as a grid of cells under the convention shown in the UI
- * (SQL_OUTPUT_CONVENTION), and these spellings of the same grid are equal:
- *   - columns separated by a comma, a tab, or a pipe (`10, 30` = `10 | 30`)
- *   - a table border around the row (`| 10 | 30 |`) and separator rows (`---+---`)
+ * A SQL query returns a result set, and there is no one obvious way to type
+ * rows and columns into a text box. So for SQL the answer is read as a grid of
+ * cells under the convention shown in the UI (SQL_OUTPUT_CONVENTION), and these
+ * spellings of the same grid are equal:
+ *   - columns separated by a comma or a tab, with any spacing
  *   - text values with or without quotes (`Oslo` = `'Oslo'`)
  *   - NULL in any letter case
- *   - an empty result written as `(no rows)`, `no rows`, `(0 rows)` or `(empty)`
+ *   - an empty result written as `(no rows)`, `no rows`, `0 rows` or `empty`
  * Values themselves stay exact: `20` and `20.0` are different answers, since
  * the type of an aggregate's result is often the point of the question.
  */
@@ -33,7 +32,24 @@ export const SQL_OUTPUT_CONVENTION =
   'Write NULL for a null value and (no rows) for an empty result. Quotes around text are optional.';
 
 const EMPTY_RESULT = '(no rows)';
-const EMPTY_SPELLINGS = new Set(['(no rows)', 'no rows', '(0 rows)', '0 rows', '(empty)', 'empty', '(none)']);
+const EMPTY_SPELLINGS = new Set(['(no rows)', 'no rows', '0 rows', 'empty']);
+
+export const SQL_PRINT_CONVENTION =
+  'Type each printed line in order, one per line.';
+
+export const SQL_MIXED_PRINT_CONVENTION =
+  'Type only what PRINT outputs, each printed line in order, one per line. ' +
+  'Rows returned by a SELECT are not part of the answer.';
+
+export const DEFAULT_OUTPUT_CONVENTION =
+  'Read the code below and predict what it prints. Type the exact output - match whitespace and line breaks.';
+
+/** The answer instruction that matches what the code actually outputs. */
+export function outputInstruction(code: string, language: CodeLanguage): string {
+  if (language !== CodeLanguage.SQL) return DEFAULT_OUTPUT_CONVENTION;
+  if (!/\bPRINT\b/i.test(code)) return SQL_OUTPUT_CONVENTION;
+  return /\bSELECT\b/i.test(code) ? SQL_MIXED_PRINT_CONVENTION : SQL_PRINT_CONVENTION;
+}
 
 function collapseBracketSpaces(s: string): string {
   let depth = 0;
@@ -85,15 +101,11 @@ function normalizeSql(s: string): string {
     .replace(/\r\n/g, '\n')
     .split('\n')
     .map(l => l.trim())
-    // blank lines and table-border rows like `---+---` or `+----+` carry no cells
-    .filter(l => l.length > 0 && !/^[-+=|\s]+$/.test(l));
+    .filter(l => l.length > 0);
   if (lines.length === 0) return '';
   if (lines.length === 1 && EMPTY_SPELLINGS.has(lines[0].toLowerCase())) return EMPTY_RESULT;
   return lines
-    .map(line => {
-      const bare = line.replace(/^\|/, '').replace(/\|$/, '');
-      return bare.split(/\s*[,|\t]\s*/).map(normalizeSqlCell).join(', ');
-    })
+    .map(line => line.split(/\s*[,\t]\s*/).map(normalizeSqlCell).join(', '))
     .join('\n');
 }
 

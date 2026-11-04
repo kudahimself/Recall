@@ -38,6 +38,8 @@ const ACCEPTED: Record<string, string[]> = {
   ],
   'tsql-joins-1': [
     `SELECT c.FullName, o.Amount FROM dbo.DimCustomer c
+     JOIN dbo.FactOrders o ON (o.CustomerKey = c.CustomerKey) WHERE o.Amount > 100;`,
+    `SELECT c.FullName, o.Amount FROM dbo.DimCustomer c
      JOIN dbo.FactOrders o ON c.CustomerKey = o.CustomerKey WHERE o.Amount > 100;`,
   ],
   'tsql-joins-2': [
@@ -83,6 +85,9 @@ const REJECTED: Record<string, string[]> = {
     // updates rows that already match
     `UPDATE tgt SET tgt.ProductName = src.ProductName FROM dbo.DimProduct tgt
      JOIN stg.Product src ON tgt.ProductKey = src.ProductKey WHERE tgt.ProductName = src.ProductName;`,
+    // assigns the target's value to the source instead of updating the target
+    `UPDATE tgt SET src.ProductName = tgt.ProductName FROM dbo.DimProduct tgt
+     JOIN stg.Product src ON tgt.ProductKey = src.ProductKey WHERE tgt.ProductName <> src.ProductName;`,
   ],
 };
 

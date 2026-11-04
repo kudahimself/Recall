@@ -1,14 +1,21 @@
 import { CodeLanguage } from '../types';
 import { questions } from '../data/questions';
 import { QuestionType, PredictOutputQuestion } from '../types';
-import { outputMatches } from './predictOutput';
+import {
+  outputInstruction,
+  outputMatches,
+  DEFAULT_OUTPUT_CONVENTION,
+  SQL_MIXED_PRINT_CONVENTION,
+  SQL_OUTPUT_CONVENTION,
+  SQL_PRINT_CONVENTION,
+} from './predictOutput';
 
 const sql = (user: string, ...expected: string[]) => outputMatches(user, expected, CodeLanguage.SQL);
 const py = (user: string, ...expected: string[]) => outputMatches(user, expected, CodeLanguage.PYTHON);
 
 describe('predict-output matching: SQL result sets', () => {
-  it('accepts comma, pipe and tab column separators with any spacing', () => {
-    for (const answer of ['10, 30, 20', '10,30,20', '10 | 30 | 20', '10\t30\t20', '| 10 | 30 | 20 |']) {
+  it('accepts comma and tab column separators with any spacing', () => {
+    for (const answer of ['10, 30, 20', '10,30,20', '10\t30\t20', '10 ,  30,20']) {
       expect(sql(answer, '10, 30, 20')).toBe(true);
     }
   });
@@ -19,15 +26,23 @@ describe('predict-output matching: SQL result sets', () => {
     expect(sql('13\nnull\n10', '13\nNULL\n10')).toBe(true);
   });
 
-  it('ignores table borders and blank lines between rows', () => {
-    expect(sql('+----+\n| 1 |\n+----+\n| 2 |\n+----+', '1\n2')).toBe(true);
+  it('ignores blank lines between rows', () => {
     expect(sql('\n1\n\n2\n', '1\n2')).toBe(true);
   });
 
-  it('accepts the usual spellings of an empty result', () => {
-    for (const answer of ['(no rows)', 'no rows', '(0 rows)', '(empty)', 'EMPTY']) {
+  it('accepts the obvious spellings of an empty result', () => {
+    for (const answer of ['(no rows)', 'no rows', '0 rows', 'EMPTY']) {
       expect(sql(answer, '(no rows)')).toBe(true);
     }
+  });
+
+  it('does not read pipes or border lines as table structure, so cell values keep their meaning', () => {
+    expect(sql('10 | 30 | 20', '10, 30, 20')).toBe(false);
+    expect(sql('| 10 | 30 | 20 |', '10, 30, 20')).toBe(false);
+    expect(sql('a|b', 'a|b')).toBe(true);
+    expect(sql('a|b', 'a, b')).toBe(false);
+    expect(sql('---\n1', '1')).toBe(false);
+    expect(sql('---', '---')).toBe(true);
   });
 
   it('still rejects wrong values, wrong row order, and changed precision', () => {
@@ -46,6 +61,25 @@ describe('predict-output matching: other languages keep exact whitespace rules',
     expect(py('1 | 2', '1, 2')).toBe(false);
     expect(py("[('b', 3)]", "[('b',3)]")).toBe(true);
     expect(py('  indented', 'indented')).toBe(false);
+  });
+});
+
+describe('predict-output instruction matches what the code outputs', () => {
+  it('shows the rows convention for a SQL query with no PRINT', () => {
+    expect(outputInstruction('SELECT 1, 2;', CodeLanguage.SQL)).toBe(SQL_OUTPUT_CONVENTION);
+  });
+
+  it('asks for each printed line for a SQL batch that only PRINTs', () => {
+    expect(outputInstruction("DECLARE @n INT = 7;\nPRINT 'odd';", CodeLanguage.SQL)).toBe(SQL_PRINT_CONVENTION);
+  });
+
+  it('says to type only the PRINT output for a batch that both SELECTs and PRINTs', () => {
+    expect(outputInstruction("BEGIN TRY\n  SELECT 1 / 0;\n  PRINT 'x';\nEND TRY", CodeLanguage.SQL))
+      .toBe(SQL_MIXED_PRINT_CONVENTION);
+  });
+
+  it('keeps the exact-output instruction for other languages', () => {
+    expect(outputInstruction("print('hi')", CodeLanguage.PYTHON)).toBe(DEFAULT_OUTPUT_CONVENTION);
   });
 });
 
@@ -68,6 +102,14 @@ describe('SQL predict questions', () => {
         // the code a learner reads must be a single query result: no PRINT output to mix in
         || /\bPRINT\b/i.test(q.code),
       )
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('a batch that both SELECTs and PRINTs names PRINT in its prompt', () => {
+    const offenders = sqlPredicts
+      .filter(q => outputInstruction(q.code, q.language) === SQL_MIXED_PRINT_CONVENTION)
+      .filter(q => !/\bPRINT\b/.test(q.question))
       .map(q => q.id);
     expect(offenders).toEqual([]);
   });
