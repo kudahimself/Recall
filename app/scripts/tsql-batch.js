@@ -278,7 +278,21 @@ function parseBatch(toks) {
     }
     if (w === 'CREATE' && ['PROC', 'PROCEDURE', 'FUNCTION'].includes(peekW(1))) return routine();
     if (w === 'END' || w === 'ELSE') throw refuse(`${w} without a matching ${w === 'END' ? 'BEGIN' : 'IF'}`);
+    if (w === 'BEGIN' || ['COMMIT', 'ROLLBACK', 'SAVE', 'BREAK', 'CONTINUE'].includes(w)) return control();
     return simple();
+  }
+
+  /** BEGIN TRAN / COMMIT / ROLLBACK / SAVE TRAN [name], BREAK, CONTINUE: they end after their own words, `;` or not. */
+  function control() {
+    const s = p;
+    const w = peekW();
+    p++;
+    if (w === 'BREAK' || w === 'CONTINUE') return { type: 'simple', s, e: p };
+    if (w === 'BEGIN' && peekW() === 'DISTRIBUTED') p++;
+    if (['TRAN', 'TRANSACTION', 'WORK'].includes(peekW())) p++;
+    const t = toks[p];
+    if (t && (t.k === 'var' || (t.k === 'word' && !STATEMENT_START.has(W(t)) && !['END', 'ELSE'].includes(W(t))))) p++;
+    return { type: 'simple', s, e: p };
   }
 
   /** `IF c PRINT 'a'; ELSE ...`: the `;` before ELSE ends the THEN statement. */
@@ -448,7 +462,7 @@ function runBatches(db, code, translate) {
         at = toks[i].e;
         continue;
       }
-      out += t.v;
+      out += src.slice(t.s, t.e);
       if (closeCast.has(i)) out += ' AS INTEGER)';
     }
     for (const i of stringVars) {

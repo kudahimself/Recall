@@ -186,37 +186,6 @@ const UNSUPPORTED = [
 const HINT = '(?:NOLOCK|UPDLOCK|HOLDLOCK|ROWLOCK|PAGLOCK|TABLOCKX?|XLOCK|READPAST|NOWAIT|SERIALIZABLE|REPEATABLEREAD|READCOMMITTED|READUNCOMMITTED)';
 const TABLE_HINTS = new RegExp(`\\bWITH\\s*\\(\\s*${HINT}(?:\\s*,\\s*${HINT})*\\s*\\)`, 'gi');
 
-/**
- * Split on `;` outside quotes and comments. A line holding only `GO` (the
- * SSMS batch separator, which CREATE VIEW needs before and after it) also
- * ends a statement.
- */
-function splitStatements(code) {
-  code = code.replace(/^[ \t]*GO[ \t]*$/gim, ';');
-  const out = [];
-  let cur = '';
-  let quote = null;
-  for (let i = 0; i < code.length; i++) {
-    const c = code[i];
-    if (quote) {
-      cur += c;
-      if (c === quote) quote = null;
-      continue;
-    }
-    if (c === "'" || c === '"') { quote = c; cur += c; continue; }
-    if (c === '-' && code[i + 1] === '-') {
-      const end = code.indexOf('\n', i);
-      cur += end === -1 ? code.slice(i) : code.slice(i, end);
-      i = end === -1 ? code.length : end - 1;
-      continue;
-    }
-    if (c === ';') { out.push(cur); cur = ''; continue; }
-    cur += c;
-  }
-  out.push(cur);
-  return out.filter(s => s.replace(/--.*$/gm, '').trim().length > 0);
-}
-
 /** `s` with everything inside quotes or parentheses blanked, so a regex on it only sees the top level. */
 function topLevelMask(s) {
   let out = '';
@@ -365,11 +334,6 @@ function columnType(values) {
   if (present.length > 0 && present.every(v => typeof v === 'number' && Number.isInteger(v))) return 'INTEGER';
   if (present.length > 0 && present.every(v => typeof v === 'number')) return 'REAL';
   return 'TEXT';
-}
-
-function formatValue(v) {
-  if (v === null || v === undefined) return 'NULL';
-  return String(v);
 }
 
 let sqlEngine = null;
@@ -571,7 +535,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-module.exports = { checkLesson, runSql, runPython, translateTsql, expandGroupingSets, splitStatements, multiSentenceLines, TSQL_FUNCTIONS };
+module.exports = { checkLesson, runSql, runPython, translateTsql, expandGroupingSets, multiSentenceLines, TSQL_FUNCTIONS };
 
 if (require.main === module) {
   main().catch(e => {

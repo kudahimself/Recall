@@ -86,6 +86,9 @@ test('procedural T-SQL runs with SQL Server semantics: variables, control flow, 
       stringPlus: await run("DECLARE @s VARCHAR(10) = 'a'; PRINT @s + 'b';"),
       decimalVar: await run("DECLARE @d DECIMAL(10, 2) = 1.5;"),
       mismatch: await run("CREATE PROC dbo.Leaky AS BEGIN BEGIN TRAN; END\\nGO\\nBEGIN TRY EXEC dbo.Leaky; END TRY BEGIN CATCH PRINT ERROR_NUMBER(); IF @@TRANCOUNT > 0 ROLLBACK; END CATCH"),
+      noSemis: await run("BEGIN TRAN\\nUPDATE t SET n = n - 1 WHERE id = 1;\\nSAVE TRAN sp\\nUPDATE t SET n = 99 WHERE id = 1;\\nROLLBACK TRAN sp\\nCOMMIT\\nSELECT n FROM t WHERE id = 1;\\nDECLARE @i INT = 0;\\nWHILE 1 = 1 BEGIN SET @i += 1; IF @i >= 3 BREAK END\\nPRINT @i"),
+      namedTran: await run("BEGIN TRANSACTION upd\\nUPDATE t SET n = 7 WHERE id = 2;\\nROLLBACK TRANSACTION upd\\nSELECT n FROM t WHERE id = 2"),
+      brackets: await run("SELECT n AS [Left], id AS [Row Id] FROM [t] WHERE [id] = 1;"),
     };
   `);
   expect(r.flow.output).toBe('even\n10');
@@ -104,6 +107,9 @@ test('procedural T-SQL runs with SQL Server semantics: variables, control flow, 
   expect(r.stringPlus.error).toMatch(/CONCAT/);
   expect(r.decimalVar.error).toMatch(/DECIMAL variable/);
   expect(r.mismatch.output).toBe('266');
+  expect(r.noSemis.output).toBe('n\n4\n\n3');
+  expect(r.namedTran.output).toBe('n\n0');
+  expect(r.brackets.output).toBe('Left | Row Id\n5 | 1');
 });
 
 test('a lesson fails on a wrong output, exercises out of ramp order, a repeated solution and broken prose', () => {
