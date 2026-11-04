@@ -5,7 +5,8 @@
  * Section 2, DDL & Constraints: every topic.
  * Section 3, Analytical & Window SQL: every topic.
  * Section 4, Transactions & Procedural T-SQL: every topic.
- * Later sections follow one per PR (next: Data Modeling in SQL).
+ * Section 5, Data Modeling in SQL: every topic.
+ * Later sections follow one per PR (next: ELT & Transformation Patterns).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -1776,6 +1777,454 @@ Emma | 1`,
       'tsql-err-predict-1',
       'tsql-err-cloze-1',
       'tsql-err-parsons-1',
+    ],
+  },
+  {
+    id: 'tsql_facts_dims/1',
+    topicKeys: [Topic.TSQL_FACTS_DIMS],
+    step: 1,
+    title: 'Facts & Dimensions',
+    idea: [
+      lines(
+        "A dimensional model splits data into two kinds of table.",
+        "A fact table records events, such as a sale or a loan: one row per event, holding foreign keys to the dimensions and numeric measures such as `Quantity` or `Amount`.",
+        "A dimension table holds the descriptive context you filter and group by, such as a customer's name or a product's category.",
+        "Facts are tall and narrow; dimensions are short and wide.",
+      ),
+      lines(
+        "The grain says what one fact row means, for example one product on one order.",
+        "Declare it first: every measure must belong to that grain, and every dimension must apply to every row.",
+      ),
+      lines(
+        "Most measures are additive and sum across every dimension.",
+        "A balance in a daily snapshot is semi-additive: it sums across accounts on one day, but not across days.",
+        "An order or invoice number with no attributes of its own stays in the fact as a degenerate dimension, with no table of its own.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE FactT (                                   -- grain: one <thing> per <event>
+    FactKey   BIGINT IDENTITY PRIMARY KEY,
+    AKey      INT NOT NULL REFERENCES DimA (AKey),     -- foreign keys to dimensions
+    BKey      INT NOT NULL REFERENCES DimB (BKey),
+    DocNumber VARCHAR(20) NOT NULL,                    -- degenerate dimension
+    measure1  INT NOT NULL,                            -- measures of this grain
+    measure2  DECIMAL(12, 2) NOT NULL
+);`,
+    },
+    pitfall: lines(
+      "Storing a measure of a coarser grain on a finer fact row, such as each order's total on every one of its lines, makes `SUM` count it once per line.",
+      "Keep only measures of the declared grain, and get the order total by summing the lines.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'DimBook',
+          columns: ['BookKey', 'Title', 'Genre'],
+          rows: [
+            [1, 'Dune', 'SciFi'],
+            [2, 'Emma', 'Classic'],
+            [3, 'Ubik', 'SciFi'],
+          ],
+        },
+        {
+          name: 'FactLoanLine',
+          columns: ['LoanNumber', 'BookKey', 'Copies', 'Fee'],
+          rows: [
+            ['L1', 1, 1, 2],
+            ['L1', 2, 2, 0],
+            ['L2', 1, 1, 3],
+            ['L3', 3, 1, 0],
+          ],
+        },
+      ],
+      code: `-- Grain: one book on one loan
+SELECT b.Genre,
+       COUNT(DISTINCT f.LoanNumber) AS Loans,
+       SUM(f.Copies) AS Copies,
+       SUM(f.Fee) AS Fees
+FROM FactLoanLine AS f
+JOIN DimBook AS b ON b.BookKey = f.BookKey
+GROUP BY b.Genre
+ORDER BY b.Genre;`,
+      steps: [
+        "Line 1: the grain is one book on one loan, so loan L1, which took two books, is two rows.",
+        "Line 3: `LoanNumber` is a degenerate dimension; counting its distinct values counts loans, where `COUNT(*)` would count lines.",
+        "Lines 4-5: `Copies` and `Fee` belong to the line grain and are additive, so summing them per genre is safe.",
+        "Lines 6-8: the fact joins `DimBook` on its key and groups by the dimension attribute `Genre`.",
+        "SciFi has three loans (L1, L2, L3), three copies and fees of 2 + 3 = 5; Classic has loan L1's two copies of Emma.",
+      ],
+      output: `Genre | Loans | Copies | Fees
+Classic | 1 | 2 | 0
+SciFi | 3 | 3 | 5`,
+    },
+    exercises: [
+      'tsql-facts-mcq-1',
+      'tsql-facts-mcq-2',
+      'tsql-facts-predict-1',
+      'tsql-facts-cloze-1',
+      'tsql-facts-1',
+    ],
+  },
+  {
+    id: 'tsql_surrogate_keys/1',
+    topicKeys: [Topic.TSQL_SURROGATE_KEYS],
+    step: 1,
+    title: 'Surrogate Keys',
+    idea: [
+      lines(
+        "A surrogate key is a compact integer the warehouse assigns to each dimension row, such as `CustomerKey`, and facts store and join on it.",
+        "The source system's own identifier, the natural or business key such as `CustomerId`, stays in the dimension as an ordinary attribute so loads can look the surrogate up.",
+      ),
+      lines(
+        "Because the warehouse owns the surrogate, it survives the source renumbering its ids or two sources using the same id.",
+        "It also lets one business key have several dimension rows over time, which Slowly Changing Dimensions need.",
+      ),
+      lines(
+        "`IDENTITY(1, 1)` on the key column numbers rows as they are inserted, starting at 1 and adding 1.",
+        "A `SEQUENCE` is a separate object: `NEXT VALUE FOR seq` hands out a number before the insert, and several tables can share it.",
+        "Both leave gaps, since a deleted or rolled-back number is never handed out again.",
+        "The date dimension is the usual exception, keyed by a readable `yyyymmdd` integer such as `20260628`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE DimT (
+    TKey  INT IDENTITY(1, 1) PRIMARY KEY,   -- surrogate: the warehouse assigns it
+    TCode VARCHAR(20) NOT NULL,             -- natural key from the source
+    attr  VARCHAR(100) NULL
+);
+CREATE SEQUENCE seq AS INT START WITH 1 INCREMENT BY 1;   -- standalone generator
+-- Fact load: look the surrogate up by the natural key
+INSERT INTO FactT (TKey, measure)
+SELECT d.TKey, s.measure
+FROM stg AS s
+JOIN DimT AS d ON d.TCode = s.TCode;`,
+    },
+    pitfall: lines(
+      "Copying the source id into the fact, and joining on it, ties the warehouse to the source system and breaks once a dimension keeps several versions of one entity.",
+      "Facts hold the surrogate key; the load looks it up by natural key.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'DimMember',
+          columns: ['MemberKey', 'MemberId', 'FullName'],
+          rows: [
+            [1, 'M-204', 'Ada Ross'],
+            [2, 'M-311', 'Ben Okafor'],
+            [3, 'M-090', 'Cy Lund'],
+          ],
+        },
+        {
+          name: 'StgLoan',
+          columns: ['LoanNumber', 'MemberId', 'Copies'],
+          rows: [
+            ['L-1', 'M-311', 2],
+            ['L-2', 'M-204', 1],
+            ['L-3', 'M-311', 1],
+          ],
+        },
+      ],
+      code: `CREATE TABLE FactLoan (
+    LoanNumber VARCHAR(10) NOT NULL,
+    MemberKey  INT NOT NULL,
+    Copies     INT NOT NULL
+);
+INSERT INTO FactLoan (LoanNumber, MemberKey, Copies)
+SELECT s.LoanNumber, d.MemberKey, s.Copies
+FROM StgLoan AS s
+JOIN DimMember AS d ON d.MemberId = s.MemberId;
+SELECT LoanNumber, MemberKey, Copies FROM FactLoan ORDER BY LoanNumber;`,
+      steps: [
+        "`DimMember` is shown after its load: `IDENTITY` gave the members keys 1, 2 and 3 in the order they arrived, and each keeps its source `MemberId`.",
+        "Line 3: the fact stores `MemberKey`, the surrogate, and no source id.",
+        "Lines 6-9: the load joins each staged loan to the dimension on the natural key and takes the surrogate it finds there.",
+        "Line 10: loans L-1 and L-3 belong to M-311, so both get key 2; L-2 belongs to M-204 and gets key 1.",
+      ],
+      output: `LoanNumber | MemberKey | Copies
+L-1 | 2 | 2
+L-2 | 1 | 1
+L-3 | 2 | 1`,
+    },
+    exercises: [
+      'tsql-surr-cloze-1',
+      'tsql-surr-mcq-1',
+      'tsql-surr-mcq-2',
+      'tsql-surr-predict-1',
+      'tsql-surr-1',
+    ],
+  },
+  {
+    id: 'tsql_star_schema/1',
+    topicKeys: [Topic.TSQL_STAR_SCHEMA],
+    step: 1,
+    title: 'Star Schema',
+    idea: [
+      lines(
+        "A star schema puts one fact table in the middle, with each dimension one join away on its surrogate key.",
+        "A star query joins the fact to the dimensions it needs, groups by dimension attributes, and aggregates the fact's measures.",
+      ),
+      lines(
+        "Star dimensions are denormalized: `Category` and `Department` sit on `DimProduct` itself, not in tables of their own.",
+        "A snowflake schema normalizes them into chains such as `DimProduct` to `DimCategory` to `DimDepartment`, which stores less repeated text but adds a join per level.",
+      ),
+      lines(
+        "A conformed dimension, such as one shared `DimDate` or `DimProduct`, has the same keys and meaning in several facts.",
+        "That is what lets sales and returns be compared side by side on one row.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT a.attr, b.attr, SUM(f.measure) AS total
+FROM FactT AS f
+JOIN DimA AS a ON a.AKey = f.AKey     -- one join per dimension
+JOIN DimB AS b ON b.BKey = f.BKey     -- on the surrogate key
+GROUP BY a.attr, b.attr;              -- group by dimension attributes
+-- A source key with no dimension row loads as the Unknown member (key -1)`,
+    },
+    pitfall: lines(
+      "An inner join silently drops fact rows whose key has no dimension row, so the totals come out smaller than the fact.",
+      "Give every dimension an Unknown member row, often key -1, and point unmatched keys at it during the load, so every fact row joins.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'DimBook',
+          columns: ['BookKey', 'Title', 'Genre'],
+          rows: [
+            [-1, 'Unknown', 'Unknown'],
+            [1, 'Dune', 'SciFi'],
+            [2, 'Emma', 'Classic'],
+          ],
+        },
+        {
+          name: 'DimShop',
+          columns: ['ShopKey', 'City'],
+          rows: [
+            [1, 'Leeds'],
+            [2, 'York'],
+          ],
+        },
+        {
+          name: 'FactSale',
+          columns: ['BookKey', 'ShopKey', 'Price'],
+          rows: [
+            [1, 1, 12],
+            [2, 1, 8],
+            [1, 2, 9],
+            [-1, 2, 6],
+            [2, 2, 4],
+          ],
+        },
+      ],
+      code: `SELECT s.City, b.Genre, SUM(f.Price) AS Sales
+FROM FactSale AS f
+JOIN DimBook AS b ON b.BookKey = f.BookKey
+JOIN DimShop AS s ON s.ShopKey = f.ShopKey
+GROUP BY s.City, b.Genre
+ORDER BY s.City, b.Genre;`,
+      steps: [
+        "Lines 3-4: one join per dimension, each on its surrogate key, so no dimension is more than one hop from the fact.",
+        "Line 5: grouping by `City` and `Genre` gives one row per shop city and genre that has sales.",
+        "The York sale of 6 came in with a book the dimension did not know yet; the load gave it key -1, the Unknown member, so it still joins and shows as its own row.",
+        "The five totals add up to 39, the whole of `FactSale`; without the -1 row the inner joins would report 33.",
+      ],
+      output: `City | Genre | Sales
+Leeds | Classic | 8
+Leeds | SciFi | 12
+York | Classic | 4
+York | SciFi | 9
+York | Unknown | 6`,
+    },
+    exercises: [
+      'tsql-star-mcq-1',
+      'tsql-star-mcq-3',
+      'tsql-star-predict-1',
+      'tsql-star-cloze-1',
+      'tsql-star-1',
+    ],
+  },
+  {
+    id: 'tsql_scd/1',
+    topicKeys: [Topic.TSQL_SCD],
+    step: 1,
+    title: 'Slowly Changing Dimensions',
+    idea: [
+      lines(
+        "A Slowly Changing Dimension type says what a load does when a dimension attribute changes in the source, such as a customer's city.",
+        "Type 1 overwrites the row: the dimension shows only the latest value, and old facts report it too.",
+      ),
+      lines(
+        "Type 2 keeps history: the load closes the current row and inserts a new version with its own surrogate key.",
+        "Each version carries `EffectiveDate`, `EndDate` (NULL while open) and an `IsCurrent` flag, so a business key has one current row and any number of expired ones.",
+        "Facts keep the key of the version that was current when they happened.",
+      ),
+      lines(
+        "A Type 1 load is one `MERGE` on the natural key: `WHEN MATCHED` updates, `WHEN NOT MATCHED BY TARGET` inserts.",
+        "A Type 2 load runs two steps: expire the current rows whose tracked attribute changed, then insert a current row for every business key left without one.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- Type 1: overwrite
+MERGE dim AS t USING stg AS s ON t.code = s.code
+WHEN MATCHED THEN UPDATE SET t.attr = s.attr
+WHEN NOT MATCHED BY TARGET THEN INSERT (code, attr) VALUES (s.code, s.attr);
+-- Type 2, step 1: expire the current rows that changed
+UPDATE t SET t.EndDate = @today, t.IsCurrent = 0
+FROM dim AS t JOIN stg AS s ON s.code = t.code
+WHERE t.IsCurrent = 1 AND t.attr <> s.attr;
+-- Type 2, step 2: a new current row where none is left
+INSERT INTO dim (code, attr, EffectiveDate, EndDate, IsCurrent)
+SELECT s.code, s.attr, @today, NULL, 1 FROM stg AS s
+WHERE NOT EXISTS (SELECT 1 FROM dim AS d
+                  WHERE d.code = s.code AND d.IsCurrent = 1);`,
+    },
+    pitfall: lines(
+      "An expire step that leaves out `IsCurrent = 1` or the changed-value test closes rows that did not change, and the insert step then adds a new version of them on every run.",
+      "Expire only current rows whose tracked attribute differs, and never delete a version: the history is what Type 2 is for.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'DimMember',
+          columns: ['MemberKey', 'MemberId', 'City', 'EffectiveDate', 'EndDate', 'IsCurrent'],
+          rows: [
+            [1, 'M-1', 'Leeds', '2025-01-10', '2026-03-01', 0],
+            [2, 'M-2', 'Bath', '2025-06-02', null, 1],
+            [3, 'M-1', 'York', '2026-03-01', null, 1],
+          ],
+        },
+        {
+          name: 'StgLoan',
+          columns: ['LoanNumber', 'MemberId', 'LoanDate'],
+          rows: [
+            ['L-1', 'M-1', '2026-02-14'],
+            ['L-2', 'M-1', '2026-03-05'],
+            ['L-3', 'M-2', '2026-03-05'],
+          ],
+        },
+      ],
+      code: `-- Fact load: the version that was valid on the loan date
+SELECT l.LoanNumber, d.MemberKey, d.City
+FROM StgLoan AS l
+JOIN DimMember AS d
+  ON d.MemberId = l.MemberId
+ AND l.LoanDate >= d.EffectiveDate
+ AND (d.EndDate IS NULL OR l.LoanDate < d.EndDate)
+ORDER BY l.LoanNumber;
+-- Today's view: current rows only
+SELECT MemberId, City FROM DimMember WHERE IsCurrent = 1 ORDER BY MemberId;`,
+      steps: [
+        "The table shows member M-1's move from Leeds to York on 2026-03-01: the load set `EndDate` and `IsCurrent = 0` on key 1 and inserted key 3 as the current version.",
+        "Lines 5-7: a fact load matches the natural key and the date window, so each loan finds exactly one version; `EndDate` is exclusive, and NULL means the version is still open.",
+        "L-1 on 2026-02-14 falls before the move and gets key 1 and Leeds; L-2 after it gets key 3 and York, and both keep those keys from now on.",
+        "Line 10: `IsCurrent = 1` is the cheap filter for today's values, one row per member.",
+      ],
+      output: `LoanNumber | MemberKey | City
+L-1 | 1 | Leeds
+L-2 | 3 | York
+L-3 | 2 | Bath
+
+MemberId | City
+M-1 | York
+M-2 | Bath`,
+    },
+    exercises: [
+      'tsql-scd-mcq-1',
+      'tsql-scd-mcq-2',
+      'tsql-scd-predict-1',
+      'tsql-scd-cloze-1',
+      'tsql-scd-parsons-1',
+    ],
+  },
+  {
+    id: 'tsql_normalization/1',
+    topicKeys: [Topic.TSQL_NORMALIZATION],
+    step: 1,
+    title: 'Normalization Tradeoffs',
+    idea: [
+      lines(
+        "Normalizing splits tables so each fact is stored in exactly one place: a customer's name lives in one Customer row, and orders refer to it by `CustomerId`.",
+        "A column that depends on something other than the whole key, such as `CustomerName` on an order row, breaks the normal forms (2NF and 3NF) and belongs in its own table.",
+      ),
+      lines(
+        "Transactional (OLTP) databases normalize because they are write-heavy.",
+        "With one copy there is nothing to fall out of step, so there are no update, insert or delete anomalies.",
+      ),
+      lines(
+        "Warehouses are read-heavy and loaded by a controlled ETL process, so they denormalize dimensions on purpose: `Category` and `Department` sit on `DimProduct` to save joins.",
+        "Denormalize within a dimension, never into the fact, which has by far the most rows.",
+        "Snowflaking a sub-dimension back out pays off when it is large, changes often or is shared by several dimensions.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- OLTP, normalized: each fact stored once
+CREATE TABLE p (p_id INT PRIMARY KEY, p_attr VARCHAR(100));           -- stored once
+CREATE TABLE c (c_id INT PRIMARY KEY, p_id INT REFERENCES p (p_id));  -- refers to it
+
+-- Warehouse dimension, denormalized on purpose
+CREATE TABLE DimT (
+    TKey   INT PRIMARY KEY,
+    attr   VARCHAR(100),
+    level1 VARCHAR(50),   -- hierarchy flattened onto the row:
+    level2 VARCHAR(50)    -- no join to reach it
+);
+-- Never: descriptive columns copied into every fact row`,
+    },
+    pitfall: lines(
+      "A descriptive column stored on rows keyed by something else, such as a customer's name on every order, lets one `UPDATE` change some copies and not others.",
+      "In OLTP, move it to the table keyed by what it describes; a warehouse dimension can keep such copies only because its ETL load rewrites them together.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Member',
+          columns: ['MemberId', 'FullName'],
+          rows: [
+            [7, 'Ada Ross'],
+            [8, 'Ben Okafor'],
+          ],
+        },
+        {
+          name: 'Loan',
+          columns: ['LoanId', 'MemberId', 'Title'],
+          rows: [
+            [1, 7, 'Dune'],
+            [2, 8, 'Emma'],
+            [3, 7, 'Ubik'],
+          ],
+        },
+      ],
+      code: `UPDATE Member SET FullName = 'Ada Stone' WHERE MemberId = 7;
+SELECT l.LoanId, m.FullName, l.Title
+FROM Loan AS l
+JOIN Member AS m ON m.MemberId = l.MemberId
+ORDER BY l.LoanId;`,
+      steps: [
+        "The name lives once, in `Member`; each loan holds only `MemberId`.",
+        "Line 1: one `UPDATE` of one row renames member 7.",
+        "Lines 2-5: the join reads the name through the key, so loans 1 and 3 both show Ada Stone, and no copy is left saying Ada Ross.",
+        "The price is a join on every read, which a warehouse avoids by flattening a dimension's hierarchy, such as genre and shelf on one `DimBook` row.",
+      ],
+      output: `LoanId | FullName | Title
+1 | Ada Stone | Dune
+2 | Ben Okafor | Emma
+3 | Ada Stone | Ubik`,
+    },
+    exercises: [
+      'tsql-norm-mcq-1',
+      'tsql-norm-predict-1',
+      'tsql-norm-mcq-2',
+      'tsql-norm-mcq-3',
+      'tsql-norm-mcq-5',
     ],
   },
 ];
