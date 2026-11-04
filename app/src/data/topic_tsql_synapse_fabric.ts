@@ -161,7 +161,7 @@ GROUP BY ____;`,
     topic: Topic.TSQL_SYNAPSE_FABRIC,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'A HASH-distributed table sends every row with the same key to the same distribution. Suppose the hash is simply CustomerKey % 3, giving three distributions numbered 0 to 2 (a real pool has 60). How many rows of dbo.FactSales land in each distribution? Write one row per line in the ORDER BY order, as DistNo and RowCount separated by a comma.',
+    question: 'A HASH-distributed table sends every row with the same key to the same distribution. Suppose the hash is simply CustomerKey % 3, giving three distributions numbered 0 to 2 (a real pool has 60). How many rows of dbo.FactSales land in each distribution? Write one row per line in the ORDER BY order, as DistNo and RowsInDist separated by a comma.',
     tables: [
       {
         name: 'dbo.FactSales',
@@ -178,7 +178,7 @@ GROUP BY ____;`,
         ],
       },
     ],
-    code: `SELECT CustomerKey % 3 AS DistNo, COUNT(*) AS RowCount
+    code: `SELECT CustomerKey % 3 AS DistNo, COUNT(*) AS RowsInDist
 FROM dbo.FactSales
 GROUP BY CustomerKey % 3
 ORDER BY DistNo;`,
