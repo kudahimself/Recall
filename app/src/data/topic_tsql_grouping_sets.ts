@@ -190,7 +190,7 @@ B | 5
 NULL | 35`,
     acceptableOutputs: ['A|30\nB|5\nNULL|35'],
     explanation: '`ROLLUP(v.cat)` groups by cat as usual, giving A = 10 + 20 = 30 and B = 5, and then adds one grouping with no columns at all: the grand total, 35. That extra row has no cat of its own, so ROLLUP fills the column with NULL. `GROUPING(v.cat)` is 1 only on that subtotal row, so `ORDER BY GROUPING(v.cat)` puts it last.',
-    hints: ['ROLLUP adds a row above the detail rows: here the grand total', 'The grand-total row has no cat, so the column shows NULL'],
+    hints: ['ROLLUP adds one extra row besides the detail rows: the grand total. ORDER BY GROUPING(...) puts it last', 'The grand-total row has no cat, so the column shows NULL'],
     tags: ['tsql', 'grouping-sets', 'rollup', 'predict'],
   },
 ];
