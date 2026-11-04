@@ -13,6 +13,15 @@ import {
 import { questions } from './data/questions';
 import { SpacedRepetitionSystem, RECENT_WINDOW, pct, recentAttempts, ConceptSelectionContext } from './utils/spacedRepetition';
 import { seedMasteredTopics } from './utils/masteryMigration';
+import {
+  ReviewSession,
+  isInReviewList,
+  isSessionCurrent,
+  recordReviewAnswer,
+  reviewsLeft,
+  selectSessionQuestion,
+  startReviewSession,
+} from './utils/reviewSession';
 import { applyReview, ConceptProgress, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
 import {
   migrateProgressToConcepts,
@@ -384,6 +393,14 @@ function App() {
   const [sessionStartTime] = useState(Date.now());
   const [showNextButton, setShowNextButton] = useState(false);
   const [sessionStats, setSessionStats] = useState({ answered: 0, correct: 0 });
+  // Today's fixed review list per course (utils/reviewSession). In memory only:
+  // a reload or a new day builds it again from progress.
+  const [reviewSessions, setReviewSessions] = useState<Partial<Record<Course, ReviewSession>>>({});
+  // How the card on screen was served: from today's review list, unseen, or a
+  // seen card outside the list (extra practice that does not move the count).
+  const [servedKind, setServedKind] = useState<'review' | 'new' | 'practice'>('new');
+  // True after a miss put the card back in today's list, until the next card.
+  const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -484,6 +501,27 @@ function App() {
   // Per-course selection policy. Centralises topic order + concept-SRS flag
   // so the selector doesn't have to special-case courses internally.
   const selectionPolicy = useMemo(() => getSelectionPolicy(activeCourse), [activeCourse]);
+
+  // Today's review session for a course: the current one, or a new list built
+  // now from that course's whole pool (filters only narrow what is served).
+  const reviewSessionFor = useCallback((course: Course): ReviewSession => {
+    const existing = reviewSessions[course];
+    if (isSessionCurrent(existing)) return existing;
+    const pool = questions.filter(q => getCourseForTopic(q.topic) === course);
+    return startReviewSession(pool, progress, cardDifficulty);
+  }, [reviewSessions, progress, cardDifficulty]);
+
+  // Put a picked card on screen and remember how it was served, for the pill.
+  const serveQuestion = useCallback((next: Question | null, session: ReviewSession, seen: Set<string>) => {
+    setCurrentQuestion(next);
+    setServedKind(!next ? 'new'
+      : isInReviewList(session, next.id) ? 'review'
+      : seen.has(next.id) ? 'practice'
+      : 'new');
+    setReaskShown(false);
+    setQuestionStartTime(Date.now());
+    setShowNextButton(false);
+  }, []);
 
   // Count only seen questions that still exist (excludes deleted variation IDs from localStorage)
   const validSeenCount = useMemo(() => {
@@ -688,12 +726,14 @@ function App() {
 
   const loadNextQuestion = useCallback(() => {
     const filteredQuestions = getFilteredQuestions();
-    const next = SpacedRepetitionSystem.selectNextQuestion(filteredQuestions, progress, conceptCtx, selectionPolicy, cardDifficulty);
-    setCurrentQuestion(next);
-    setQuestionStartTime(Date.now());
-    setShowNextButton(false);
+    const session = reviewSessionFor(activeCourse);
+    if (session !== reviewSessions[activeCourse]) {
+      setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
+    }
+    const next = selectSessionQuestion(session, filteredQuestions, progress, conceptCtx, selectionPolicy, cardDifficulty);
+    serveQuestion(next, session, progress.questionsAttempted);
     setQuestionLoadCount(c => c + 1);
-  }, [getFilteredQuestions, progress, conceptCtx, selectionPolicy, cardDifficulty]);
+  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
 
   const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters);
@@ -703,11 +743,13 @@ function App() {
       const typeMatch = newFilters.questionTypes.length === 0 || newFilters.questionTypes.includes(q.type);
       return topicMatch && difficultyMatch && typeMatch;
     });
-    const next = SpacedRepetitionSystem.selectNextQuestion(filtered, progress, conceptCtx, selectionPolicy, cardDifficulty);
-    setCurrentQuestion(next);
-    setQuestionStartTime(Date.now());
-    setShowNextButton(false);
-  }, [courseQuestions, progress, conceptCtx, selectionPolicy, cardDifficulty]);
+    const session = reviewSessionFor(activeCourse);
+    if (session !== reviewSessions[activeCourse]) {
+      setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
+    }
+    const next = selectSessionQuestion(session, filtered, progress, conceptCtx, selectionPolicy, cardDifficulty);
+    serveQuestion(next, session, progress.questionsAttempted);
+  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, conceptCtx, selectionPolicy, cardDifficulty, serveQuestion]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     applyFiltersAndLoadQuestion(newFilters);
@@ -806,6 +848,16 @@ function App() {
 
     setProgress(newProgress);
 
+    // Today's review list: an answered list card leaves it (one fewer review),
+    // and a first miss puts it back once, a few cards later ("+1 again").
+    const answeredCourse = getCourseForTopic(currentQuestion.topic);
+    const session = reviewSessions[answeredCourse];
+    if (session) {
+      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect);
+      setReviewSessions(prev => ({ ...prev, [answeredCourse]: result.session }));
+      setReaskShown(result.requeued);
+    }
+
     // Reveal Next BEFORE the FSRS bookkeeping. If applyReview throws (corrupt
     // state, unknown concept id, etc.) the user can still advance — losing one
     // concept update is acceptable; stranding the user on the just-answered
@@ -874,10 +926,12 @@ function App() {
     // updated yet for this render either.
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
     const targetPolicy = getSelectionPolicy(targetCourse);
-    const next = SpacedRepetitionSystem.selectNextQuestion(pool, progress, conceptCtx, targetPolicy, cardDifficulty);
-    setCurrentQuestion(next);
-    setQuestionStartTime(Date.now());
-    setShowNextButton(false);
+    const session = reviewSessionFor(targetCourse);
+    if (session !== reviewSessions[targetCourse]) {
+      setReviewSessions(prev => ({ ...prev, [targetCourse]: session }));
+    }
+    const next = selectSessionQuestion(session, pool, progress, conceptCtx, targetPolicy, cardDifficulty);
+    serveQuestion(next, session, progress.questionsAttempted);
     changeView('quiz');
     setSessionStats({ answered: 0, correct: 0 });
   };
@@ -974,6 +1028,12 @@ function App() {
         `Are you sure you want to reset all progress for ${courseLabel}? This cannot be undone.`
       )
     ) {
+      // Today's review list was built from the progress being wiped.
+      setReviewSessions(prev => {
+        const rest = { ...prev };
+        delete rest[activeCourse];
+        return rest;
+      });
       const courseTopics = new Set<string>(
         questions.filter(q => getCourseForTopic(q.topic) === activeCourse).map(q => q.topic)
       );
@@ -1088,11 +1148,16 @@ function App() {
     return { pct: accuracyPct, correct, total, topicName, coverage, coveragePct };
   }, [progress.attemptHistory, currentQuestion, questionTopicMap]);
 
-  // Review/new-topic mode + due drain-queue size, for the breadcrumb mode pill.
-  const reviewStatus = useMemo(
-    () => SpacedRepetitionSystem.getReviewStatus(getFilteredQuestions(), progress, selectionPolicy, cardDifficulty),
-    [getFilteredQuestions, progress, selectionPolicy, cardDifficulty],
+  // Reviews left today in the active course: the live session's list, or on
+  // Home before a session starts, the list Start would build right now (the
+  // same builder, so Home and the first card's pill show the same number).
+  // viewMode is a dependency so coming back to Home rebuilds a preview.
+  const reviewSessionNow = useMemo(
+    () => reviewSessionFor(activeCourse),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reviewSessionFor, activeCourse, viewMode],
   );
+  const reviewsLeftToday = reviewsLeft(reviewSessionNow);
 
   // Per-topic measured difficulty (avg auto-graded FSRS difficulty of its drain
   // cards) → easy/medium/hard label for the current topic. Null until graded.
@@ -1102,40 +1167,6 @@ function App() {
     const tq = questions.filter(q => q.topic === topic);
     return SpacedRepetitionSystem.getTopicDifficulty(tq, cardDifficulty);
   }, [currentQuestion, cardDifficulty]);
-
-  // Review cards due in the CURRENT topic (the pill's count). Scoped to where
-  // the learner is — 0 while a topic is still new/in-review, rising once it's
-  // mastered and its cards age past their review intervals.
-  const topicReviewCount = useMemo(() => {
-    const topic = currentQuestion?.topic;
-    if (!topic) return 0;
-    const tq = questions.filter(q => q.topic === topic);
-    return SpacedRepetitionSystem.getTopicDueReviewCount(tq, progress, cardDifficulty);
-  }, [currentQuestion, progress, cardDifficulty]);
-
-  // Whether the card on screen was unseen when it was served. Deliberately
-  // memoized on the question alone: answering it adds it to questionsAttempted,
-  // and recomputing then would flip the pill to "Review" mid-card.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const isUnseenCard = useMemo(
-    () => !!currentQuestion && !progress.questionsAttempted.has(currentQuestion.id),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentQuestion]
-  );
-
-  // Pill mode reflects the CURRENT card, not the global bank state. The old
-  // check (any unseen question anywhere in the course) made "New topic" the
-  // permanent default mid-course, even while answering review cards.
-  const pillMode: 'drain' | 'new' | 'review' =
-    reviewStatus.mode === 'drain' ? 'drain' : isUnseenCard ? 'new' : 'review';
-
-  // Number on the mode pill. While DRAINING it's the global drain-queue
-  // countdown (falls by one per correct answer, holds on a miss) - the
-  // per-topic due count would jump around as the drain serves cards from
-  // different topics. Outside a drain it's the current topic's due count.
-  const modePillCount = pillMode === 'drain'
-    ? reviewStatus.drainQueueCount
-    : topicReviewCount;
 
   const overallRecentAccuracy = useMemo(() => {
     const recent = recentAttempts(progress.attemptHistory, RECENT_WINDOW);
@@ -1598,6 +1629,10 @@ function App() {
                           <span className="hero-stat-value">{profile.currentStreak}</span>
                           <span className="hero-stat-label">Day streak</span>
                         </div>
+                        <div className="hero-stat" title="Reviews owed today: missed cards and cards past their review interval. A session serves these first.">
+                          <span className="hero-stat-value hero-reviews-left">{reviewsLeftToday}</span>
+                          <span className="hero-stat-label">Reviews left today</span>
+                        </div>
                         <div className="hero-stat hero-stat-wide">
                           <span className="hero-stat-value hero-stat-section">
                             {current ? current.name : 'All caught up'}
@@ -1755,24 +1790,32 @@ function App() {
                     </span>
                   </div>
                   <span
-                    className={`mode-pill mode-pill-${pillMode}`}
+                    className={`mode-pill mode-pill-${servedKind}`}
                     title={
-                      pillMode === 'drain'
-                        ? `${modePillCount} coding/advanced card${modePillCount === 1 ? '' : 's'} left in the review drain before the next topic.`
-                        : pillMode === 'new'
+                      servedKind === 'review'
+                        ? 'A review from today\'s list.'
+                        : servedKind === 'new'
                         ? 'First time seeing this question.'
-                        : modePillCount > 0
-                        ? `${modePillCount} review card${modePillCount === 1 ? '' : 's'} due in this topic.`
-                        : 'Revisiting a question you have seen before.'
+                        : 'Extra practice on a card you have seen. It is not in today\'s review list, so the count does not change.'
                     }
                   >
-                    {pillMode === 'drain'
-                      ? 'Review drain'
-                      : pillMode === 'new'
-                      ? 'New'
-                      : 'Review'}
-                    {modePillCount > 0 && (
-                      <span className="mode-pill-count">{modePillCount}</span>
+                    {servedKind === 'review' ? 'Review' : servedKind === 'new' ? 'New' : 'Practice'}
+                  </span>
+                  <span
+                    className={`review-count-pill${reviewsLeftToday === 0 ? ' review-count-pill-done' : ''}`}
+                    title={
+                      reviewsLeftToday === 0
+                        ? 'Today\'s reviews are done. Cards that come due later wait for tomorrow.'
+                        : `${reviewsLeftToday} review${reviewsLeftToday === 1 ? '' : 's'} left today. Each answered review takes one off; a missed one comes back once, a few cards later.`
+                    }
+                  >
+                    Reviews left
+                    <span className="mode-pill-count">{reviewsLeftToday}</span>
+                    {reaskShown && <span className="review-count-again">+1 again</span>}
+                    {reviewsLeftToday === 0 && (
+                      <span className="review-count-done-label">
+                        <CheckCircle2 size={12} /> done for today
+                      </span>
                     )}
                   </span>
                   {topicDifficulty && (

@@ -828,7 +828,7 @@ body::after {
 
 .course-hero-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   margin-bottom: 24px;
 }
@@ -1331,13 +1331,44 @@ body::after {
   border-color: var(--primary);
 }
 
-.mode-pill-drain {
+.mode-pill-review {
   color: var(--warning);
   border-color: var(--warning);
 }
 
-.mode-pill-review {
+.mode-pill-practice {
   color: var(--text-muted);
+}
+
+/* Reviews left today (breadcrumb): one number, the session's fixed review list */
+.review-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: 0 0 auto;
+  padding: 2px var(--space-sm);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.review-count-pill-done {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.review-count-again {
+  color: var(--warning);
+}
+
+.review-count-done-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .mode-pill-count {

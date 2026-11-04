@@ -197,8 +197,18 @@ Recall on already-learned topics outranks new material (Anki-style reviews-first
    - Due beginner/intermediate MCQs keep the reduced onboarding-rate resurface (rate 1 when caught up) but never block new content
    - Keeps the forced-review burst short after a few days away
 
+**Reviews left today (`utils/reviewSession.ts`):**
+At session start one fixed list is built: missed cards past their relearn interval plus due cards in unlocked topics, every type, missed first, then most overdue, capped at `REVIEWS_PER_DAY`.
+The session serves that list before the selector (`selectSessionQuestion`), and the "Reviews left N" pill and Home show its length.
+An answered list card leaves the list, so the number drops by exactly one per answered review.
+A first miss puts the card back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
+Cards that fall due mid-session wait for the next session; a new day or a reload builds a new list.
+The list lives in memory only and changes no interval or stored data.
+Once it is empty the normal selector below picks; seen cards it serves show as "Practice" and do not move the count.
+
 **Drain queue definition:**
-`countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and the `getReviewStatus.drainQueueCount` pill, so gate and pill can't disagree.
+`countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
+It is not the number the learner sees: the breadcrumb and Home show "reviews left today" (below).
 
 A covered-topic drain card is in queue iff:
 - **(Its topic `isTopicMastered` AND it is due)** - the servable backlog
@@ -263,7 +273,7 @@ Used by every due-check:
   - Wrong = again
 - Struggled topic re-enters drain sooner
 - Threads as trailing optional param (default `{}`) into `selectNextQuestion`/`getReviewStatus`
-- **Pass it to BOTH gate and count or pill desyncs from gate**
+- **Pass it to BOTH gate and count or they desync**
 
 **Topic difficulty:**
 `getTopicDifficulty(topicQuestions, cardDifficulty)` rolls topic's drain-card difficulties up to `easy`/`medium`/`hard` label shown as breadcrumb pill (`.topic-diff-pill`)
