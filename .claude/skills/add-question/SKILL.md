@@ -39,7 +39,7 @@ Before authoring:
 **Predict Output questions:**
 1. Keep `code` snippet short (3-8 lines)
 2. One misconception per question
-3. `expectedOutput` is exact match after whitespace normalization
+3. `expectedOutput` follows the matching rules in `docs/DEVELOPMENT.md` (Predict Output); SQL answers use the rows convention, or PRINT lines for PRINT batches
 
 **Cloze questions:**
 1. 1-3 blanks per question
