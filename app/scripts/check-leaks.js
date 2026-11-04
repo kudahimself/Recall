@@ -163,79 +163,86 @@ function laneASeverity(recall) {
   return null;
 }
 
-const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.ts'));
-const leaks = [];
+// Shared with check-lessons.js (a worked example must not repeat an exercise's solution).
+module.exports = { stripNoise, stripComments, splitAlternatives, essentialTokens, laneASeverity };
 
-for (const file of files) {
-  const src = fs.readFileSync(path.join(DATA_DIR, file), 'utf8');
-  const questions = extractQuestions(src);
-  for (const q of questions) {
-    const solutionStripped = stripNoise(q.solution);
-    if (solutionStripped.length === 0 || solutionStripped.length < MIN_SOLUTION_CHARS) continue;
+function main() {
+  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.ts'));
+  const leaks = [];
 
-    const starterCodeOnly = stripNoise(q.starter);
+  for (const file of files) {
+    const src = fs.readFileSync(path.join(DATA_DIR, file), 'utf8');
+    const questions = extractQuestions(src);
+    for (const q of questions) {
+      const solutionStripped = stripNoise(q.solution);
+      if (solutionStripped.length === 0 || solutionStripped.length < MIN_SOLUTION_CHARS) continue;
 
-    if (starterCodeOnly.length === 0) {
-      // ── Lane A: comment-only starter → the "just uncomment it" anti-pattern ──
-      const revealed = uncomment(q.starter);
-      if (revealed.length < MIN_UNCOMMENT_CHARS) continue;
-      const normStarter = revealed.replace(/\s+/g, '').toLowerCase();
+      const starterCodeOnly = stripNoise(q.starter);
 
-      // Primary signal: the uncommented starter contains a solution (or one of
-      // its `-- OR` / `# OR` alternatives) nearly verbatim. This is precise —
-      // it fires on dt-1 (starter IS the query) but not on a "rewrite this
-      // anti-pattern" starter, whose commented code differs from the solution.
-      let verbatim = false;
-      for (const alt of splitAlternatives(q.solution)) {
-        const normAlt = stripNoise(alt).toLowerCase();
-        if (normAlt.length >= 40 && normStarter.includes(normAlt)) { verbatim = true; break; }
-      }
+      if (starterCodeOnly.length === 0) {
+        // ── Lane A: comment-only starter → the "just uncomment it" anti-pattern ──
+        const revealed = uncomment(q.starter);
+        if (revealed.length < MIN_UNCOMMENT_CHARS) continue;
+        const normStarter = revealed.replace(/\s+/g, '').toLowerCase();
 
-      if (verbatim) {
-        leaks.push({ file, id: q.id, lane: 'A', severity: 'HIGH', metric: 'verbatim-solution' });
-        continue;
-      }
+        // Primary signal: the uncommented starter contains a solution (or one of
+        // its `-- OR` / `# OR` alternatives) nearly verbatim. This is precise —
+        // it fires on dt-1 (starter IS the query) but not on a "rewrite this
+        // anti-pattern" starter, whose commented code differs from the solution.
+        let verbatim = false;
+        for (const alt of splitAlternatives(q.solution)) {
+          const normAlt = stripNoise(alt).toLowerCase();
+          if (normAlt.length >= 40 && normStarter.includes(normAlt)) { verbatim = true; break; }
+        }
 
-      // Secondary: reworded partial reveal. Score only the solution tokens the
-      // PROMPT didn't already hand over — tables/columns/target names are given
-      // context, so restating them isn't a leak.
-      const promptTokens = essentialTokens(q.prompt);
-      const solTokens = [...essentialTokens(q.solution)].filter(t => !promptTokens.has(t));
-      if (solTokens.length < 3) continue;
-      const starterTokens = essentialTokens(revealed);
-      let hit = 0;
-      for (const t of solTokens) if (starterTokens.has(t)) hit++;
-      const recall = hit / solTokens.length;
-      const sev = laneASeverity(recall);
-      if (sev) {
-        leaks.push({ file, id: q.id, lane: 'A', severity: sev, metric: `recall=${recall.toFixed(2)}` });
-      }
-    } else {
-      // ── Lane B: real-code scaffolding → stripped char ratio ──
-      const ratio = starterCodeOnly.length / solutionStripped.length;
-      const sev = laneBSeverity(ratio, solutionStripped.length);
-      if (sev) {
-        leaks.push({
-          file, id: q.id, lane: 'B', severity: sev,
-          metric: `ratio=${ratio.toFixed(2)} (${starterCodeOnly.length}/${solutionStripped.length})`,
-        });
+        if (verbatim) {
+          leaks.push({ file, id: q.id, lane: 'A', severity: 'HIGH', metric: 'verbatim-solution' });
+          continue;
+        }
+
+        // Secondary: reworded partial reveal. Score only the solution tokens the
+        // PROMPT didn't already hand over — tables/columns/target names are given
+        // context, so restating them isn't a leak.
+        const promptTokens = essentialTokens(q.prompt);
+        const solTokens = [...essentialTokens(q.solution)].filter(t => !promptTokens.has(t));
+        if (solTokens.length < 3) continue;
+        const starterTokens = essentialTokens(revealed);
+        let hit = 0;
+        for (const t of solTokens) if (starterTokens.has(t)) hit++;
+        const recall = hit / solTokens.length;
+        const sev = laneASeverity(recall);
+        if (sev) {
+          leaks.push({ file, id: q.id, lane: 'A', severity: sev, metric: `recall=${recall.toFixed(2)}` });
+        }
+      } else {
+        // ── Lane B: real-code scaffolding → stripped char ratio ──
+        const ratio = starterCodeOnly.length / solutionStripped.length;
+        const sev = laneBSeverity(ratio, solutionStripped.length);
+        if (sev) {
+          leaks.push({
+            file, id: q.id, lane: 'B', severity: sev,
+            metric: `ratio=${ratio.toFixed(2)} (${starterCodeOnly.length}/${solutionStripped.length})`,
+          });
+        }
       }
     }
   }
+
+  const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  leaks.sort((a, b) => order[a.severity] - order[b.severity] || a.file.localeCompare(b.file));
+
+  if (leaks.length === 0) {
+    console.log('No leaks detected.');
+    process.exit(0);
+  }
+
+  console.log(`Found ${leaks.length} potentially leaky questions:\n`);
+  for (const l of leaks) {
+    console.log(`[${l.severity.padEnd(6)}] lane ${l.lane}  ${l.id.padEnd(30)} ${l.metric.padEnd(28)} ${l.file}`);
+  }
+
+  const counts = leaks.reduce((acc, l) => ({ ...acc, [l.severity]: (acc[l.severity] || 0) + 1 }), {});
+  console.log(`\nSummary: HIGH=${counts.HIGH || 0}  MEDIUM=${counts.MEDIUM || 0}  LOW=${counts.LOW || 0}`);
 }
 
-const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-leaks.sort((a, b) => order[a.severity] - order[b.severity] || a.file.localeCompare(b.file));
-
-if (leaks.length === 0) {
-  console.log('No leaks detected.');
-  process.exit(0);
-}
-
-console.log(`Found ${leaks.length} potentially leaky questions:\n`);
-for (const l of leaks) {
-  console.log(`[${l.severity.padEnd(6)}] lane ${l.lane}  ${l.id.padEnd(30)} ${l.metric.padEnd(28)} ${l.file}`);
-}
-
-const counts = leaks.reduce((acc, l) => ({ ...acc, [l.severity]: (acc[l.severity] || 0) + 1 }), {});
-console.log(`\nSummary: HIGH=${counts.HIGH || 0}  MEDIUM=${counts.MEDIUM || 0}  LOW=${counts.LOW || 0}`);
+if (require.main === module) main();

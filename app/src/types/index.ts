@@ -553,3 +553,48 @@ export interface MisconceptionEvent {
 export interface MisconceptionStore {
   events: MisconceptionEvent[];
 }
+
+// ── Lessons (Stage 2: teach topic by topic) ──
+// A lesson is new data beside the bank: a rule card (idea, form, pitfall, a
+// worked example) followed by 3-5 existing questions of the topic, in ramp
+// order. Lessons live in src/data/lessons/ and are checked by
+// scripts/check-lessons.js (run by `npm test`).
+
+/** A small input table shown beside a SQL worked example; check-lessons.js creates it before running the code. */
+export interface LessonTable {
+  /** Table name as the code uses it, e.g. 'dbo.Book'. */
+  name: string;
+  columns: string[];
+  rows: (string | number | null)[][];
+}
+
+export interface TopicLesson {
+  /** `${topicKeys[0]}/${step}`, e.g. 'tsql_select/1'. */
+  id: string;
+  /** The courseConfig unit's topic keys. */
+  topicKeys: Topic[];
+  /** 1 for most topics; 2..n when a large topic is split into steps. */
+  step: number;
+  title: string;
+  /** 2-4 short paragraphs; one sentence per line inside each. `code` spans render as code. */
+  idea: string[];
+  /** The shape of the construct (the poker trainer's "formula"). */
+  form: { code: string; language: CodeLanguage };
+  /** The one mistake the topic's misses show most; one sentence per line. */
+  pitfall: string;
+  /** A fully worked example whose code check-lessons.js runs, comparing what it prints with `output`. */
+  worked: {
+    code: string;
+    language: CodeLanguage;
+    /** Input tables for a SQL example, shown above the code. */
+    tables?: LessonTable[];
+    /** One note per step, in reading order; one sentence per line inside each. */
+    steps: string[];
+    /** What the code prints: SQL result sets as `col | col` rows, Python stdout. */
+    output?: string;
+  };
+  /** 3-5 existing question ids of the topic, in ramp order. */
+  exercises: string[];
+  /** The card family this lesson opens for review, when it is not the exercises' own. */
+  family?: string;
+}

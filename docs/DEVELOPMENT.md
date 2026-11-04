@@ -224,8 +224,20 @@ The first failed submit of a tiered coding card is recorded as a miss (`CodingQu
 
 **Topic unlock:**
 A topic's ramp (`topicRamp`) is the first card of each of its families plus up to `RAMP_CARDS_PER_STEP` cards of each difficulty x type step, in ramp order.
-The next topic opens when every ramp card is answered and the topic's answered cards are above `UNLOCK_ACCURACY_PCT` at their latest answer (`isRampDoneAtBar`, granted by `updateMasteredTopics`), instead of at 100% coverage.
+The next topic opens when the topic's lesson is met (below), every ramp card is answered and the topic's answered cards are above `UNLOCK_ACCURACY_PCT` at their latest answer (`isRampDoneAtBar`, granted by `updateMasteredTopics` with the App's `isTopicLessonMet`), instead of at 100% coverage.
+A topic without a lesson yet needs only its ramp.
 Inside the ramp, intermediate opens when the beginner ramp cards are answered at `IN_TOPIC_DIFFICULTY_GATE_PCT` (`isRampDifficultyOpen`), and advanced likewise.
+
+**Lessons (`utils/lessons.ts`, `data/lessons/`):**
+A lesson teaches one topic before its ramp: a rule card (the idea, the form, the one pitfall, and a worked example whose output is shown) and 3-5 of the topic's existing questions as exercises, in ramp order.
+Lessons are `TopicLesson` data beside the bank, one per topic for now, written one section per PR from each course's first topic, in course order (SQL for Data Engineering, then Backend, then Databricks); `/write-lesson` drafts one.
+A lesson is met when it was completed, or when any of its exercises was already attempted, so existing progress is credited and never forced through a lesson.
+The gate lives in the App, not the selector: when the session serves an unseen card whose topic's lesson is not met (`lessonGateFor`), the App shows the rule card instead; "Try the exercises" (or Enter) then serves the exercises in order as new cards through the normal `handleAnswer`, so they count for coverage, the session's slots and the schedule exactly as other cards do, and a miss is asked again like any other.
+After the lesson the session goes on with the rest of the topic's ramp.
+Answering the last exercise records the lesson under `recall-lessons`; new filters end a lesson in progress.
+Beside every card of a topic with a lesson, the rule card stays in a side panel, and `R` reopens it in full (Esc closes it).
+The learning path on Home shows each topic's lesson, ramp and review steps with "Start lesson" or "Rule card", and Progress -> Topics lists every topic with "Rule card" and "Drill" and the review schedule of its card families.
+`scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, Python on python3) and prints its `output`; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
 
 **Drain queue definition:**
 `countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
@@ -372,6 +384,7 @@ Layouts target desktop viewport without scrolling.
 - `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, built from a different history (its `basis`), or built against a different card-to-family mapping, as after a concept re-tag (its `bank`), and replayed from the remaining history when a course is reset; `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
 - `recall-today-size`, `recall-today-review-share` - Today's session settings, read straight from storage
 - `recall-today-session` - today's session per course, dropped at the day boundary
+- `recall-lessons` - completed lessons, `{ [lessonId]: completedAt }` (`utils/lessons.ts`); written only when a lesson is completed, cleared for a course when its progress is reset
 - `recall-concept-srs-enabled` (feature flag, `featureFlags.ts`) - a setting read straight from storage
 - `recall-dev-unlock-all` - developer unlock switch, not exported
 
