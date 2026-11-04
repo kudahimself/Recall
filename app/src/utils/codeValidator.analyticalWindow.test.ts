@@ -149,6 +149,12 @@ describe('Analytical & Window SQL predict questions use the rows convention the 
     expect(outputMatches('NULL, 35\nBooks, 30\nToys, 5', accepted, CodeLanguage.SQL)).toBe(false);
   });
 
+  it('the ROLLUP predict no longer accepts the old pipe spelling', () => {
+    const q = predicts.find(p => p.id === 'tsql-gs-rollup-predict-1') as PredictOutputQuestion;
+    const accepted = [q.expectedOutput, ...(q.acceptableOutputs ?? [])];
+    expect(outputMatches('Books | 30\nToys | 5\nNULL | 35', accepted, CodeLanguage.SQL)).toBe(false);
+  });
+
   it('the conditional-aggregation predict accepts its one row of two columns', () => {
     const q = predicts.find(p => p.id === 'tsql-pivot-predict-1') as PredictOutputQuestion;
     expect(outputMatches('30, 5', [q.expectedOutput], CodeLanguage.SQL)).toBe(true);

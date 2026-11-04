@@ -203,7 +203,6 @@ ORDER BY GROUPING(Category), Category;`,
     expectedOutput: `Books, 30
 Toys, 5
 NULL, 35`,
-    acceptableOutputs: ['Books | 30\nToys | 5\nNULL | 35'],
     explanation: '`ROLLUP(Category)` groups by Category as usual, giving Books = 10 + 20 = 30 and Toys = 5, and then adds one grouping with no columns at all: the grand total, 35. That extra row has no Category of its own, so ROLLUP fills the column with NULL. `GROUPING(Category)` is 1 only on that subtotal row, so `ORDER BY GROUPING(Category)` puts it last.',
     hints: ['ROLLUP adds one extra row besides the detail rows: the grand total. ORDER BY GROUPING(...) puts it last', 'The grand-total row has no Category, so the column shows NULL'],
     tags: ['tsql', 'grouping-sets', 'rollup', 'predict'],
