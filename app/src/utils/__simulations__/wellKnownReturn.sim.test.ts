@@ -28,6 +28,8 @@ import { getSelectionPolicy, getTopicOrder } from '../courseConfig';
 import { questions } from '../../data/questions';
 import { Course, QuestionAttempt, UserProgress } from '../../types';
 import { seededRandom } from './simHarness';
+import { recordAttempt, replayHistory } from '../familySchedule';
+import { recordReviewAnswer, selectSessionQuestion, startReviewSession } from '../reviewSession';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DAYS = 14;
@@ -122,6 +124,68 @@ it('streak >= WELL_KNOWN_STREAK cards are never served before their interval', (
   }
 
   // Not vacuous: plenty of well-known cards fell due and were reviewed.
+  expect(wellKnownReviews).toBeGreaterThan(50);
+  expect(early.slice(0, 5)).toEqual([]);
+});
+
+it('the Today session never serves a streak >= WELL_KNOWN_STREAK card before its interval', () => {
+  const course = Course.DATABRICKS;
+  const order = new Set(getTopicOrder(course));
+  const pool = questions.filter(q => order.has(q.topic));
+  const byId = new Map(questions.map(q => [q.id, q]));
+  const START = Date.UTC(2026, 8, 1, 18);
+  const rng = seededRandom(11);
+  const history: QuestionAttempt[] = [];
+  for (const q of pool) {
+    const streak = 1 + Math.floor(rng() * 7);
+    let t = START - rng() * 1.5 * SRS.getTargetInterval(streak) * MS_PER_DAY;
+    for (let k = streak; k >= 1; k--) {
+      history.push({ questionId: q.id, timestamp: t, isCorrect: true, attempts: 1, timeSpent: 20_000 });
+      t -= SRS.getTargetInterval(k - 1) * MS_PER_DAY;
+    }
+  }
+  history.sort((a, b) => a.timestamp - b.timestamp);
+  const lastAttempt = new Map<string, number>();
+  for (const a of history) lastAttempt.set(a.questionId, a.timestamp);
+  let progress: UserProgress = {
+    questionsAttempted: new Set(pool.map(q => q.id)), correctAnswers: new Set(pool.map(q => q.id)),
+    attemptHistory: history, topicScores: new Map(), difficultyScores: new Map(), lastAttempt,
+    repetitionQueue: new Map(), masteredTopics: seedMasteredTopics(pool, history),
+  };
+  let store = replayHistory(history, byId);
+  let clock = START;
+  const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => clock);
+  const early: { id: string; ratio: number }[] = [];
+  let wellKnownReviews = 0;
+  try {
+    for (let day = 0; day < DAYS; day++) {
+      clock = START + day * MS_PER_DAY;
+      let session = startReviewSession(pool, progress, store, {}, clock, { size: PER_DAY, reviewShare: 0.6 });
+      for (let i = 0; i < PER_DAY * 2; i++) {
+        const pick = selectSessionQuestion(session, pool, pool, progress, store, {}, undefined, clock);
+        if (!pick) break;
+        const q = pick.question;
+        const prevTs = progress.lastAttempt.get(q.id) ?? 0;
+        if (prevTs > 0 && SRS.getCorrectStreak(q.id, progress) >= WELL_KNOWN_STREAK) {
+          wellKnownReviews++;
+          const ratio = (clock - prevTs) / MS_PER_DAY / SRS.getEffectiveInterval(q.id, progress, {});
+          if (ratio < 1) early.push({ id: q.id, ratio });
+        }
+        const ok = rng() < P_OK;
+        const timeSpent = 20_000 + Math.floor(rng() * 40_000);
+        clock += timeSpent;
+        const attempt: QuestionAttempt = { questionId: q.id, timestamp: clock, isCorrect: ok, attempts: 1, timeSpent, credit: ok ? 1 : 0, hintTierUsed: 0 };
+        const attemptHistory = [...progress.attemptHistory, attempt];
+        const nextLast = new Map(progress.lastAttempt);
+        nextLast.set(q.id, clock);
+        progress = { ...progress, attemptHistory, lastAttempt: nextLast, masteredTopics: SRS.updateMasteredTopics({ ...progress, attemptHistory }, q.topic, questions) };
+        store = recordAttempt(store, q, attempt, attemptHistory);
+        session = recordReviewAnswer(session, q.id, ok, pick.kind).session;
+      }
+    }
+  } finally {
+    nowSpy.mockRestore();
+  }
   expect(wellKnownReviews).toBeGreaterThan(50);
   expect(early.slice(0, 5)).toEqual([]);
 });
