@@ -1,5 +1,5 @@
 /**
- * Topic.TSQL_STAR_SCHEMA — SQL for Data Engineering (T-SQL).
+ * Topic.TSQL_STAR_SCHEMA - SQL for Data Engineering (T-SQL).
  * Pillar 5 (Data Modeling): star vs snowflake, conformed dimensions,
  * fact-to-dimension join patterns.
  */
@@ -11,6 +11,7 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { sampleTable } from './tsqlSampleTables';
 
 export const tsql_star_schema_questions: Question[] = [
   {
@@ -21,12 +22,12 @@ export const tsql_star_schema_questions: Question[] = [
     course: Course.SQL,
     question: 'What is the defining shape of a star schema?',
     options: [
-      { id: 'a', text: 'One central fact table joined directly to a ring of denormalized dimension tables — each dimension is one hop from the fact.', isCorrect: true },
-      { id: 'b', text: 'A chain of fact tables each joined to the next, with no dimensions involved.', isCorrect: false },
-      { id: 'c', text: 'A single wide table containing every fact and dimension column, with no joins at all.', isCorrect: false },
-      { id: 'd', text: 'Many fact tables sharing one giant normalized dimension hierarchy several joins deep.', isCorrect: false },
+      { id: 'a', text: 'One central fact table joined directly to denormalized dimension tables, so each dimension is a single join from the fact.', isCorrect: true },
+      { id: 'b', text: 'Several fact tables chained to each other with no dimensions, so every report walks the chain of joins.', isCorrect: false },
+      { id: 'c', text: 'One wide table holding every fact and dimension column, so that a query needs no join at all.', isCorrect: false },
+      { id: 'd', text: 'One fact table whose dimensions are split into sub-tables, so that reaching an attribute can take several joins.', isCorrect: false },
     ],
-    explanation: 'A star = a central fact surrounded by denormalized dimensions, each a single join from the fact. The denormalization (e.g. Category stored on DimProduct, not in a separate DimCategory) keeps queries to one hop per dimension — simple and fast for BI tools.',
+    explanation: 'A star = a central fact surrounded by denormalized dimensions, each a single join from the fact. The denormalization (e.g. Category stored on DimProduct, not in a separate DimCategory) keeps queries to one hop per dimension, which is simple and fast for BI tools. A dimension split into sub-tables is a snowflake, not a star.',
     hints: ['Central fact, ring of dimensions', 'Each dimension one join away'],
     tags: ['tsql', 'star-schema', 'dimensional-modeling'],
   },
@@ -38,12 +39,12 @@ export const tsql_star_schema_questions: Question[] = [
     course: Course.SQL,
     question: 'How does a snowflake schema differ from a star, and what is the main trade-off?',
     options: [
-      { id: 'a', text: 'A snowflake normalizes dimensions into sub-tables (e.g. DimProduct → DimCategory), reducing redundancy but adding extra joins that complicate and slow typical queries.', isCorrect: true },
-      { id: 'b', text: 'A snowflake removes all dimensions, so queries hit only the fact table and run faster.', isCorrect: false },
-      { id: 'c', text: 'A snowflake merges every dimension into the fact, eliminating joins entirely.', isCorrect: false },
-      { id: 'd', text: 'A snowflake and a star are identical; the term just describes a star with more than four dimensions.', isCorrect: false },
+      { id: 'a', text: 'A snowflake normalizes dimensions into sub-tables (DimProduct to DimCategory): less redundancy, but extra joins make typical queries longer and often slower.', isCorrect: true },
+      { id: 'b', text: 'A snowflake drops the dimensions and keeps every attribute in the fact, so queries touch one table and run faster.', isCorrect: false },
+      { id: 'c', text: 'A snowflake denormalizes dimensions further than a star: it needs fewer joins but repeats more data in each row.', isCorrect: false },
+      { id: 'd', text: 'A snowflake is just a star that has more than four dimensions; the name describes how many there are.', isCorrect: false },
     ],
-    explanation: 'Snowflaking normalizes a dimension into a hierarchy of sub-tables (DimProduct → DimCategory → DimDepartment). It cuts storage redundancy and centralizes attribute edits, but every extra level is another join, hurting query simplicity and (often) speed. Most warehouses prefer denormalized star dimensions and accept the redundancy.',
+    explanation: 'Snowflaking normalizes a dimension into a hierarchy of sub-tables (DimProduct to DimCategory to DimDepartment). It cuts storage redundancy and centralizes attribute edits, but every extra level is another join, hurting query simplicity and (often) speed. Most warehouses prefer denormalized star dimensions and accept the redundancy.',
     hints: ['Snowflake = normalized dimension hierarchy', 'Less redundancy, more joins'],
     tags: ['tsql', 'star-schema', 'snowflake'],
   },
@@ -55,12 +56,12 @@ export const tsql_star_schema_questions: Question[] = [
     course: Course.SQL,
     question: 'What makes a dimension "conformed", and why does it matter?',
     options: [
-      { id: 'a', text: 'It is a single shared dimension (e.g. one DimDate or DimCustomer) used identically by multiple fact tables, so metrics from different facts can be compared and combined consistently.', isCorrect: true },
-      { id: 'b', text: 'It is a dimension that has been fully normalized to third normal form before loading.', isCorrect: false },
-      { id: 'c', text: 'It is a dimension that contains only conformant data types matching the fact table exactly.', isCorrect: false },
-      { id: 'd', text: 'It is a dimension automatically generated by the BI tool and never stored in the database.', isCorrect: false },
+      { id: 'a', text: 'One shared dimension (such as DimDate or DimCustomer), with the same keys and meaning, used by several fact tables so their metrics line up.', isCorrect: true },
+      { id: 'b', text: 'A dimension normalized to third normal form before loading, so every attribute is stored in exactly one place.', isCorrect: false },
+      { id: 'c', text: 'A dimension whose column data types match the fact table\'s key types exactly, so that joins need no conversion.', isCorrect: false },
+      { id: 'd', text: 'A separate copy of the dimension inside each fact\'s schema, so one fact can change it without affecting another.', isCorrect: false },
     ],
-    explanation: 'A conformed dimension is shared, with the same keys and meaning, across multiple facts (sales and returns both joining the same DimDate/DimProduct). This is what lets you put metrics from different processes side by side on one row — the backbone of an enterprise bus-matrix design.',
+    explanation: 'A conformed dimension is shared, with the same keys and meaning, across multiple facts (sales and returns both joining the same DimDate/DimProduct). This is what lets you put metrics from different processes side by side on one row, the backbone of an enterprise bus-matrix design.',
     hints: ['Same dimension shared across multiple facts', 'Enables cross-fact comparison'],
     tags: ['tsql', 'star-schema', 'conformed-dimension'],
   },
@@ -72,9 +73,11 @@ export const tsql_star_schema_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the join keywords for a star query: total sales amount per product category.',
-    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
--- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
-SELECT p.Category, SUM(f.Amount) AS TotalSales
+    tables: [
+      sampleTable('dbo.FactSales', ['ProductKey', 'Amount']),
+      sampleTable('dbo.DimProduct', ['ProductKey', 'Category']),
+    ],
+    template: `SELECT p.Category, SUM(f.Amount) AS TotalSales
 FROM dbo.FactSales AS f
 ___ dbo.DimProduct AS p ___ p.ProductKey = f.ProductKey
 GROUP BY p.Category;`,
@@ -84,7 +87,7 @@ FROM dbo.FactSales AS f
 JOIN dbo.DimProduct AS p ON p.ProductKey = f.ProductKey
 GROUP BY p.Category;`,
     blankAlternates: [['INNER JOIN'], []],
-    explanation: 'The canonical star query joins the fact to each needed dimension on its surrogate key (`f.ProductKey = p.ProductKey`), then groups by a dimension attribute (`Category`) and aggregates a measure (`SUM(f.Amount)`). One join per dimension — the star\'s whole appeal.',
+    explanation: 'The canonical star query joins the fact to each needed dimension on its surrogate key (`f.ProductKey = p.ProductKey`), then groups by a dimension attribute (`Category`) and aggregates a measure (`SUM(f.Amount)`). On the shown rows it returns Books 129, Toys 79 and Home 640. One join per dimension is the star\'s whole appeal.',
     hints: ['Fact JOIN dimension', 'Match surrogate keys with ON'],
     tags: ['tsql', 'star-schema', 'join', 'cloze'],
   },
@@ -95,8 +98,13 @@ GROUP BY p.Category;`,
     topic: Topic.TSQL_STAR_SCHEMA,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Write a star-schema query: join `dbo.FactSales` (ProductKey, CustomerKey, Amount) to `dbo.DimCustomer` (CustomerKey, Country) and `dbo.DimProduct` (ProductKey, Category), and return Country, Category, and total `Amount` as `TotalSales`, grouped by Country and Category.',
-    starterCode: `-- SELECT c.Country, p.Category, SUM(...) FROM dbo.FactSales f JOIN ... JOIN ...
+    question: 'Write a star-schema query: join the fact `dbo.FactSales` (alias `f`) to the dimensions `dbo.DimCustomer` (alias `c`) and `dbo.DimProduct` (alias `p`), and return Country, Category and the total `Amount` as `TotalSales`, one row per Country and Category.',
+    tables: [
+      sampleTable('dbo.FactSales', ['CustomerKey', 'ProductKey', 'Amount']),
+      sampleTable('dbo.DimCustomer', ['CustomerKey', 'Country']),
+      sampleTable('dbo.DimProduct', ['ProductKey', 'Category']),
+    ],
+    starterCode: `-- Write the query below.
 `,
     testCases: [
       {
@@ -109,6 +117,12 @@ GROUP BY p.Category;`,
 FROM dbo.FactSales AS f
 JOIN dbo.DimCustomer AS c ON c.CustomerKey = f.CustomerKey
 JOIN dbo.DimProduct AS p ON p.ProductKey = f.ProductKey
+GROUP BY c.Country, p.Category;
+-- OR
+SELECT c.Country, p.Category, SUM(f.Amount) AS TotalSales
+FROM dbo.FactSales AS f
+JOIN dbo.DimCustomer AS c ON c.CustomerKey = f.CustomerKey
+JOIN dbo.DimProduct AS p ON p.ProductKey = f.ProductKey
 GROUP BY c.Country, p.Category
 ORDER BY c.Country, p.Category;`,
     tieredHints: {
@@ -117,10 +131,9 @@ ORDER BY c.Country, p.Category;`,
 FROM dbo.FactSales AS f
 ____ dbo.DimCustomer AS c ON c.____ = f.____
 ____ dbo.____ AS p ON p.____ = f.____
-GROUP BY c.____, p.____
-ORDER BY c.____, p.____;`,
+GROUP BY c.____, p.____;`,
     },
-    explanation: 'FactSales joins directly to DimCustomer and DimProduct via their foreign keys (CustomerKey and ProductKey) - both star joins. `SUM(Amount)` is aggregated at the `(Country, Category)` level.',
+    explanation: 'FactSales joins directly to DimCustomer and DimProduct via their foreign keys (CustomerKey and ProductKey) - both star joins. `SUM(f.Amount)` is aggregated at the `(Country, Category)` level: NG Home 640, NO Books 129 and NO Toys 79 on the shown rows. An ORDER BY is fine but not required.',
     hints: ['Fact JOIN DimCustomer ON CustomerKey, JOIN DimProduct ON ProductKey', 'GROUP BY c.Country, p.Category; SUM(f.Amount)'],
     requires: [/JOIN/i, /GROUP\s+BY/i],
     tags: ['tsql', 'star-schema', 'join'],
