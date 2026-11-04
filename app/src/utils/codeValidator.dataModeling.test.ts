@@ -10,6 +10,7 @@
  */
 import { questions } from '../data/questions';
 import { validateAnswer } from './codeValidator';
+import { blankMatches } from '../components/ClozeCodeQuestion';
 import { CodeLanguage, ClozeCodeQuestion, CodingQuestion, PredictOutputQuestion, QuestionType, Topic } from '../types';
 import { outputInstruction, outputMatches, SQL_OUTPUT_CONVENTION } from './predictOutput';
 
@@ -218,11 +219,7 @@ const MODELING_TOPICS = new Set<string>([
 
 describe('Data Modeling cloze blanks accept the equivalent spellings', () => {
   const cloze = (id: string) => questions.find(q => q.id === id) as ClozeCodeQuestion;
-  const accepts = (id: string, idx: number, got: string) => {
-    const q = cloze(id);
-    const norm = (v: string) => v.trim().replace(/\s+/g, ' ').toLowerCase();
-    return [q.blanks[idx], ...(q.blankAlternates?.[idx] ?? [])].some(a => norm(a) === norm(got));
-  };
+  const accepts = (id: string, idx: number, got: string) => blankMatches(cloze(id), idx, got);
 
   it('the FK keyword may carry FOREIGN KEY and the money type may be NUMERIC', () => {
     expect(accepts('tsql-facts-cloze-1', 0, 'FOREIGN KEY REFERENCES')).toBe(true);

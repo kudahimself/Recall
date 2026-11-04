@@ -57,6 +57,20 @@ function normalizeBlank(s: string, caseInsensitive = false): string {
     .trim();
 }
 
+export function blankMatches(
+  question: Pick<ClozeQ, 'blanks' | 'blankAlternates' | 'language'>,
+  idx: number,
+  value: string | undefined,
+): boolean {
+  const expected = question.blanks[idx];
+  if (expected === undefined) return false;
+  const ci = question.language === CodeLanguage.SQL;
+  const got = normalizeBlank(value ?? '', ci);
+  if (got === normalizeBlank(expected, ci)) return true;
+  const alts = question.blankAlternates?.[idx];
+  return !!alts && alts.some(a => normalizeBlank(a, ci) === got);
+}
+
 // Split the template into segments alternating between code text and blank slots.
 // Returns: [textSegment, textSegment, ...] where blank slots are represented as
 // `null` in a parallel array. We split on the literal `___` token.
@@ -122,16 +136,8 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
     });
   };
 
-  const checkBlank = (idx: number, value: string | undefined): boolean => {
-    const expected = question.blanks[idx];
-    if (expected === undefined) return false;
-    const ci = question.language === CodeLanguage.SQL;
-    const got = normalizeBlank(value ?? '', ci);
-    if (got === normalizeBlank(expected, ci)) return true;
-    const alts = question.blankAlternates?.[idx];
-    if (alts && alts.some(a => normalizeBlank(a, ci) === got)) return true;
-    return false;
-  };
+  const checkBlank = (idx: number, value: string | undefined): boolean =>
+    blankMatches(question, idx, value);
 
   const evaluate = (): boolean => {
     return values.every((v, i) => checkBlank(i, v));
