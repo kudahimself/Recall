@@ -136,3 +136,58 @@ describe('DDL & Constraints questions show the existing tables they read', () =>
     expect(offenders).toEqual([]);
   });
 });
+
+const ANALYTICAL_AND_WINDOW = new Set<string>([
+  Topic.TSQL_WINDOWS, Topic.TSQL_WINDOW_FRAMES, Topic.TSQL_LAG_LEAD, Topic.TSQL_GROUPING_SETS, Topic.TSQL_PIVOT,
+]);
+
+const windowSection: Question[] = questions.filter(q => ANALYTICAL_AND_WINDOW.has(q.topic));
+
+describe('Analytical & Window SQL questions show the tables they query', () => {
+  it('has the whole section to check', () => {
+    expect(windowSection.length).toBe(34);
+  });
+
+  it('every table a question queries is one of the tables it shows', () => {
+    const offenders = windowSection.flatMap(q => {
+      const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+      return referencedTables(questionSql(q))
+        .filter(t => !shown.has(t))
+        .map(t => `${q.id} reads ${t} without showing it`);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question queries, with rows that fit its columns', () => {
+    const offenders = windowSection.flatMap(q => {
+      const refs = new Set(referencedTables(questionSql(q)));
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) ? [] : [`${q.id} shows ${t.name} but never queries it`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every predict question reads from a shown table, not inline VALUES or a CTE', () => {
+    const offenders = windowSection
+      .filter(q => {
+        const sql = questionSql(q);
+        return /\(\s*VALUES\b/i.test(sql) || /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(sql)
+          || (q.type === QuestionType.PREDICT_OUTPUT && (q.tables ?? []).length === 0);
+      })
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('a native PIVOT reads from a subquery of only the columns it uses', () => {
+    // PIVOT groups by every input column it does not pivot, so straight off
+    // dbo.FactSale it would return one row per sale instead of one total row.
+    const offenders = windowSection
+      .filter(q => /\bPIVOT\s*\(/i.test(questionSql(q)))
+      .filter(q => questionSql(q).split(/^-- OR$/m).some(branch =>
+        /\bPIVOT\s*\(/i.test(branch) && /\bFROM\s+dbo\.FactSale\s+PIVOT\b/i.test(branch)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+});
