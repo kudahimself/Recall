@@ -173,7 +173,8 @@ export function reviewListRank(
  * Today's review list: due families in unlocked topics, most overdue first,
  * each with the card it serves, capped at `limit`, then put in serving order
  * by reviewListRank (ties keep the most overdue first). `due` is how many due
- * families have a card to serve at all (the list plus the overflow).
+ * families have a card to serve at all (the list plus the overflow). Cards
+ * come from `servePool` (narrower under filters); unlocks from `pool`.
  */
 export function buildReviewList(
   pool: Question[],
@@ -184,9 +185,10 @@ export function buildReviewList(
   limit: number = todayReviewCap(),
   served: Iterable<string> = [],
   conceptCtx?: ConceptSelectionContext,
+  servePool: Question[] = pool,
 ): { entries: ReviewEntry[]; due: number } {
   const ctx = pickContext(pool, progress, cardDifficulty, served);
-  const index = familyIndex(pool);
+  const index = familyIndex(servePool);
   const picked: { entry: ReviewEntry; rank: number }[] = [];
   let due = 0;
   for (const f of dueFamilies(store, now)) {
@@ -419,8 +421,8 @@ export interface SessionPick {
  * family still due today, in review list order; a fresh slot (new card, a
  * drill after every NEW_PER_DRILL new ones); a re-ask that is still spacing
  * out; and, only when filters (or "Keep going") leave none of those
- * servable, practice from the same families (a drill, then an unseen card;
- * it does not use up a slot). Without filters, a session with nothing left
+ * servable, practice from the same list and families (a due family beyond
+ * the cap, a drill, then an unseen card; it does not use up a slot). Without filters, a session with nothing left
  * to serve ends early (null).
  */
 export function selectSessionQuestion(
@@ -439,14 +441,15 @@ export function selectSessionQuestion(
 
   const pools: Pools = { course: coursePool, serve: servePool };
   const ctx = pickContext(coursePool, progress, cardDifficulty, session.served);
-  const servable = new Set(servePool.map(q => q.id));
   const queued = new Set(session.queue.map(e => e.id));
   queued.forEach(id => ctx.served.add(id));
+  const dueCard = (): Question | null => {
+    const first = buildReviewList(coursePool, progress, store, cardDifficulty, now, Infinity, ctx.served, conceptCtx, servePool).entries[0];
+    return first ? servePool.find(q => q.id === first.id) ?? null : null;
+  };
 
   if (session.keepGoing) {
-    const { entries } = buildReviewList(coursePool, progress, store, cardDifficulty, now, Infinity, ctx.served, conceptCtx);
-    const due = entries.find(e => servable.has(e.id));
-    const card = due && servePool.find(q => q.id === due.id);
+    const card = dueCard();
     if (card) return { question: card, kind: 'review' };
   }
 
@@ -467,9 +470,10 @@ export function selectSessionQuestion(
   if (spacing) return { question: spacing, kind: 'review' };
 
   // Nothing of today's plan is servable. Under filters, or past the bound,
-  // practice goes on from the same families; otherwise the day is done.
+  // practice goes on from the same list and families (due families beyond
+  // the cap first); otherwise the day is done.
   if (servePool.length === coursePool.length && !session.keepGoing) return null;
-  const practice = nextDrillCard(pools, store, ctx, now) ?? nextUnseenCard(pools, ctx);
+  const practice = dueCard() ?? nextDrillCard(pools, store, ctx, now) ?? nextUnseenCard(pools, ctx);
   return practice ? { question: practice, kind: 'practice' } : null;
 }
 

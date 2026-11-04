@@ -176,6 +176,23 @@ describe('the review list', () => {
     expect(startReviewSession(pool, state.p, state.store, {}, clock, { size: 30, reviewShare: 0.8 }).total).toBe(24);
   });
 
+  it('under filters serves a due family left out by the cap before showing nothing', () => {
+    const state = { p: emptyProgress(), store: replayHistory([], byId) };
+    const firsts: Question[] = [];
+    for (const q of pool) {
+      if (firsts.some(f => familyOf(f) === familyOf(q))) continue;
+      firsts.push(q);
+      answer(state, q.id, NOW - 20 * DAY + firsts.length * 1000, true);
+      if (firsts.length === 40) break;
+    }
+    const session = startReviewSession(pool, state.p, state.store, {}, clock, { size: 20, reviewShare: 0.6 });
+    const left = firsts.find(q => !session.queue.some(e => e.family === familyOf(q)))!;
+    expect(left).toBeDefined();
+    const filtered = pool.filter(q => familyOf(q) === familyOf(left) && state.p.questionsAttempted.has(q.id));
+    const pick = selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock);
+    expect(pick?.question.id).toBe(left.id);
+  });
+
   it('never lists a resting well-known card', () => {
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     const card = pool[0];
