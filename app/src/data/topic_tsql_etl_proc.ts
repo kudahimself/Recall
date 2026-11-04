@@ -389,4 +389,32 @@ END;`,
     requires: [/CREATE\s+PROCEDURE/i, /BEGIN\s+TRY/i],
     tags: ['tsql', 'etl-proc', 'scd', 'type-2', 'transactions', 'try-catch'],
   },
+  {
+    id: 'tsql-etlproc-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_ETL_PROC,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The dimension load inserts two customers, then the next step of the same load fails. What single value does the final SELECT return?',
+    tables: [
+      { name: 'dbo.DimCustomer', columns: ['CustomerId', 'FullName'], rows: [[5, 'Cy Diaz']] },
+      { name: 'stg.Customer', columns: ['CustomerId', 'FullName'], rows: [[7, 'Ann Lee'], [8, 'Bo Chan']] },
+    ],
+    code: `BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO dbo.DimCustomer (CustomerId, FullName)
+    SELECT CustomerId, FullName FROM stg.Customer;
+    THROW 50001, 'Fact load failed', 1;  -- the next step fails
+    COMMIT;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK;
+END CATCH;
+SELECT COUNT(*) AS DimRows FROM dbo.DimCustomer;`,
+    expectedOutput: `1`,
+    explanation: 'The INSERT adds customers 7 and 8 inside the open transaction, then the THROW jumps to CATCH before COMMIT runs. The ROLLBACK undoes the insert, so only the original row, customer 5, is left. That is why a load runs in one transaction: a failure leaves the target as it was, not half loaded. A real load procedure also re-throws with THROW in its CATCH, so the scheduler sees the failure; it is left out here so the final SELECT runs.',
+    hints: ['Does COMMIT ever run?', 'What does ROLLBACK undo?'],
+    tags: ['tsql', 'etl-proc', 'transaction', 'try-catch', 'atomicity', 'predict'],
+  },
 ];

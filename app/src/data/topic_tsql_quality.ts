@@ -132,4 +132,25 @@ HAVING COUNT(*) ____ 1;`,
     requires: [/GROUP\s+BY/i, /HAVING/i],
     tags: ['tsql', 'quality', 'uniqueness', 'having'],
   },
+  {
+    id: 'tsql-quality-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_QUALITY,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'This check is meant to count the sales whose Quantity is missing or negative. What single value does it return?',
+    tables: [{
+      name: 'dbo.FactSales',
+      columns: ['OrderId', 'Quantity'],
+      rows: [[1, 3], [2, -1], [3, null], [4, 0], [5, null]],
+    }],
+    code: `SELECT COUNT(*) AS FailedRows
+FROM dbo.FactSales
+WHERE Quantity < 0;`,
+    expectedOutput: `1`,
+    explanation: 'Only order 2 has a Quantity below 0. For orders 3 and 5, NULL < 0 is unknown rather than true, so WHERE drops them, and the check reports 1 instead of the 3 bad rows it was meant to find. A rule about missing values must test them by name: WHERE Quantity IS NULL OR Quantity < 0.',
+    hints: ['Is NULL < 0 true?', 'WHERE keeps only rows whose condition is true'],
+    tags: ['tsql', 'data-quality', 'null', 'validation', 'predict'],
+  },
 ];

@@ -241,10 +241,12 @@ export const sqlOrderedQuestions: Question[] = [
   // INSERT / INSERT…SELECT / SELECT…INTO / OUTPUT
   q('tsql-insert-mcq-1'), q('tsql-insert-cloze-1'), q('tsql-insert-mcq-2'),
   q('tsql-insert-output-cloze-1'), q('tsql-insert-1'),
+  q('tsql-insert-predict-1'),
   // MERGE (upsert)
   q('tsql-merge-mcq-1'), q('tsql-merge-mcq-2'), q('tsql-merge-cloze-1'),
   q('tsql-merge-cloze-2'), q('tsql-merge-bysource-cloze-1'),
   q('tsql-merge-output-cloze-1'), q('tsql-merge-1'),
+  q('tsql-merge-predict-1'),
   // Deduplication (ROW_NUMBER + WHERE rn = 1)
   q('tsql-dedup-mcq-1'), q('tsql-dedup-predict-1'), q('tsql-dedup-cloze-1'),
   q('tsql-dedup-delete-cloze-1'), q('tsql-dedup-1'),
@@ -253,12 +255,15 @@ export const sqlOrderedQuestions: Question[] = [
   q('tsql-etlproc-parsons-1'), q('tsql-etlproc-mcq-3'),
   q('tsql-etlproc-runlog-cloze-1'),
   q('tsql-etlproc-1'), q('tsql-etlproc-2'), q('tsql-etlproc-3'),
+  q('tsql-etlproc-predict-1'),
   // Incremental loads (high-watermark, late-arriving data)
   q('tsql-incr-mcq-1'), q('tsql-incr-cloze-1'), q('tsql-incr-1'),
   q('tsql-incr-mcq-2'), q('tsql-incr-lookback-cloze-1'),
+  q('tsql-incr-predict-1'),
   // Data quality checks
   q('tsql-quality-mcq-1'), q('tsql-quality-mcq-2'), q('tsql-quality-cloze-1'),
   q('tsql-quality-1'), q('tsql-quality-2'),
+  q('tsql-quality-predict-1'),
 
   // ===== PILLAR 7: PERFORMANCE & OPTIMIZATION =====
   // Indexes (clustered, nonclustered, composite, covering/INCLUDE)
