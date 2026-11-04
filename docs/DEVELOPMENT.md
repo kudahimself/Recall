@@ -208,7 +208,7 @@ Once it is empty the normal selector below picks; seen cards it serves show as "
 
 **Drain queue definition:**
 `countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
-It is not the number the learner sees: the breadcrumb and Home show "reviews left today" (below).
+It is not the number the learner sees: the breadcrumb and Home show "reviews left today" (above).
 
 A covered-topic drain card is in queue iff:
 - **(Its topic `isTopicMastered` AND it is due)** - the servable backlog
