@@ -6,7 +6,7 @@
 import { questions } from '../data/questions';
 import { LESSONS } from '../data/lessons';
 import { Course, QuestionAttempt, QuestionType, UserProgress } from '../types';
-import { SQL_SECTIONS, getTopicOrder } from './courseConfig';
+import { SQL_PATH_ORDER, SQL_SECTIONS, getTopicOrder } from './courseConfig';
 import { EXPORT_KEYS } from './progressStorage';
 import { SpacedRepetitionSystem as SRS, LESSONS_KEY, topicRamp } from './spacedRepetition';
 import {
@@ -107,12 +107,18 @@ describe('the ramp unlock needs the lesson', () => {
 });
 
 describe('content', () => {
-  it('starts with the SQL course, one lesson per topic of its first section, in course order', () => {
-    const first = Object.values(Object.values(SQL_SECTIONS)[0].topics).flat();
+  it('starts with the SQL course, one lesson per topic of whole sections, in course order', () => {
     const order = getTopicOrder(Course.SQL);
     const sqlLessonTopics = LESSONS.filter(l => order.includes(l.topicKeys[0])).map(l => l.topicKeys[0]);
-    expect(sqlLessonTopics).toEqual(first);
-    for (const t of first) expect(lessonsForTopic(t)).toHaveLength(1);
+    // Sections are written one per PR from the first, so the lessons cover
+    // every topic of the first n sections and nothing past them.
+    const written: string[] = [];
+    for (const section of SQL_PATH_ORDER) {
+      if (written.length >= sqlLessonTopics.length) break;
+      written.push(...Object.values(SQL_SECTIONS[section].topics).flat());
+    }
+    expect(sqlLessonTopics).toEqual(written);
+    for (const t of written) expect(lessonsForTopic(t)).toHaveLength(1);
   });
 
   it('every lesson opens with a recognition exercise and has an MCQ and a predict', () => {

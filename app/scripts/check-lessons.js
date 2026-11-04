@@ -28,11 +28,12 @@
  * explicit compatibility layer: TOP (n) and OFFSET ... FETCH become LIMIT,
  * ISNULL becomes IFNULL, and LEN, CHARINDEX, LEFT, RIGHT, YEAR, MONTH, DAY,
  * DATEPART, DATEADD, DATEDIFF, EOMONTH and DATEFROMPARTS are registered with
- * T-SQL semantics. Anything the layer does not cover (GETDATE, CAST AS DATE,
- * FORMAT, CONVERT, `+` on strings, #temp tables, MERGE, UPDATE ... FROM) is
- * refused with a message rather than run with SQLite's different meaning, so
- * an example that passes prints what SQL Server prints. Input tables come from
- * `worked.tables` (columns typed INTEGER, REAL or TEXT from their values).
+ * T-SQL semantics, and a line holding only GO separates batches. Anything the
+ * layer does not cover (GETDATE, CAST AS DATE, FORMAT, CONVERT, `+` on
+ * strings, #temp tables, MERGE, UPDATE ... FROM) is refused with a message
+ * rather than run with SQLite's different meaning, so an example that passes
+ * prints what SQL Server prints. Input tables come from `worked.tables`
+ * (columns typed INTEGER, REAL or TEXT from their values).
  */
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -174,8 +175,13 @@ const UNSUPPORTED = [
   [/\bDELETE\s+\w+\s+FROM\b/i, 'DELETE alias FROM ... JOIN'],
 ];
 
-/** Split on `;` outside quotes and comments. */
+/**
+ * Split on `;` outside quotes and comments. A line holding only `GO` (the
+ * SSMS batch separator, which CREATE VIEW needs before and after it) also
+ * ends a statement.
+ */
 function splitStatements(code) {
+  code = code.replace(/^[ \t]*GO[ \t]*$/gim, ';');
   const out = [];
   let cur = '';
   let quote = null;

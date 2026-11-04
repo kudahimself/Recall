@@ -114,4 +114,23 @@ CREATE TABLE dbo.FactSale (
     hints: ['The keyword that stores a computed column on disk'],
     tags: ['tsql', 'views', 'computed-column', 'cloze'],
   },
+  {
+    id: 'tsql-views-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_VIEWS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'When the view is created, dbo.DimCustomer holds 2 rows with IsActive = 1. What single number does the final SELECT return?',
+    code: `CREATE VIEW dbo.vActiveCustomer AS
+SELECT CustomerKey FROM dbo.DimCustomer WHERE IsActive = 1;
+GO
+INSERT INTO dbo.DimCustomer (CustomerKey, FullName, IsActive)
+VALUES (3, N'Lena Ortiz', 1);
+SELECT COUNT(*) FROM dbo.vActiveCustomer;`,
+    expectedOutput: `3`,
+    explanation: 'A plain view stores only its `SELECT`, not a copy of the rows. Each query against it runs that `SELECT` on the base table as it is now, so the customer inserted after `CREATE VIEW` is counted: 2 + 1 = 3. A snapshot that does not change needs a table, for example from `SELECT ... INTO`.',
+    hints: ['A view holds a query, not rows', 'The view reads the base table each time it is queried'],
+    tags: ['tsql', 'views', 'predict'],
+  },
 ];

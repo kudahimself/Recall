@@ -33,7 +33,8 @@ test('the T-SQL layer covers TOP, OFFSET/FETCH and the date functions, and refus
     const now = await C.runSql("SELECT GETDATE();");
     const plus = await C.runSql("SELECT 'a' + 'b';");
     const unordered = await C.runSql("SELECT n FROM t;", [{ name: 't', columns: ['n'], rows: [[1], [2]] }]);
-    return { top, page, dates, now, plus, unordered };
+    const batches = await C.runSql("CREATE VIEW v AS SELECT n FROM t WHERE n > 1\\nGO\\nSELECT n FROM v ORDER BY n;", [{ name: 't', columns: ['n'], rows: [[1], [3], [2]] }]);
+    return { top, page, dates, now, plus, unordered, batches };
   `);
   expect(r.top.output).toBe('n\n3\n2');
   expect(r.page.output).toBe('n\n2');
@@ -41,6 +42,7 @@ test('the T-SQL layer covers TOP, OFFSET/FETCH and the date functions, and refus
   expect(r.now.error).toMatch(/not supported/);
   expect(r.plus.error).toMatch(/CONCAT/);
   expect(r.unordered.error).toMatch(/without ORDER BY/);
+  expect(r.batches.output).toBe('n\n2\n3');
 });
 
 test('a lesson fails on a wrong output, exercises out of ramp order, a repeated solution and broken prose', () => {

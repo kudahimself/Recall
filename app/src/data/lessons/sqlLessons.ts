@@ -2,7 +2,8 @@
  * SQL for Data Engineering lessons, one per topic, in course order.
  *
  * Section 1, Querying Foundations: every topic.
- * Later sections follow one per PR (next: DDL & Constraints).
+ * Section 2, DDL & Constraints: every topic.
+ * Later sections follow one per PR (next: Analytical & Window SQL).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -689,6 +690,293 @@ SELECT CopyId, Title, Loans FROM BookCopy ORDER BY CopyId;`,
       'tsql-dml-update-predict-1',
       'tsql-dml-delete-predict-1',
       'tsql-dml-update-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_ddl_tables/1',
+    topicKeys: [Topic.TSQL_DDL_TABLES],
+    step: 1,
+    title: 'Creating & Altering Tables',
+    idea: [
+      lines(
+        "`CREATE TABLE dbo.t (col type, ...)` defines a new, empty table: its name, its columns and the type of each.",
+        "It is DDL, so it changes structure, not data, and an `INSERT` fills it afterwards.",
+        "Name objects with their schema, as in `dbo.t`, so the name does not depend on who runs the script.",
+      ),
+      lines(
+        "`ALTER TABLE` changes a table that already exists.",
+        "`ADD col type` adds a column, and the rows already there hold NULL in it unless it has a `DEFAULT`.",
+        "`ALTER COLUMN col newtype` changes a column's type, and `DROP COLUMN col` removes the column.",
+      ),
+      lines(
+        "`DROP TABLE` removes the whole table, its columns and its rows, while `DELETE` removes only rows.",
+        "`SELECT cols INTO #t FROM src` creates a table from a query and fills it in one statement, a common way to build a staging table.",
+        "A `#t` table is a temp table that lasts for the session.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE dbo.t (
+    id  INT,                                   -- name type, comma-separated
+    col NVARCHAR(100)
+);
+ALTER TABLE dbo.t ADD col2 INT NULL;           -- ADD: no COLUMN keyword
+ALTER TABLE dbo.t ALTER COLUMN col NVARCHAR(200);
+ALTER TABLE dbo.t DROP COLUMN col2;
+DROP TABLE dbo.t;                              -- structure and rows gone
+
+SELECT id, col INTO #t FROM dbo.src;           -- create + fill in one go`,
+    },
+    pitfall: lines(
+      "In T-SQL `ADD` takes no `COLUMN` keyword, but `ALTER COLUMN` and `DROP COLUMN` do, and `MODIFY` is not T-SQL at all.",
+      "Write `ADD col type` to add a column, `ALTER COLUMN` to change its type and `DROP COLUMN` to remove it.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE Shelf (
+    ShelfId INT,
+    Room    NVARCHAR(30)
+);
+INSERT INTO Shelf VALUES (1, N'Reading room'), (2, N'Archive');
+ALTER TABLE Shelf ADD Capacity INT NULL;
+GO
+UPDATE Shelf SET Capacity = 40 WHERE ShelfId = 1;
+SELECT ShelfId, Room, Capacity FROM Shelf ORDER BY ShelfId;`,
+      steps: [
+        "Lines 1-4: `CREATE TABLE` defines Shelf with two columns and no rows.",
+        "Line 5: the `INSERT` adds two shelves.",
+        "Line 6: `ADD Capacity INT NULL` adds a third column, with no `COLUMN` keyword, and both shelves hold NULL in it.",
+        "Line 7: `GO` ends the batch, so the statements below it are compiled after the new column exists.",
+        "Lines 8-9: the `UPDATE` gives shelf 1 a capacity, and the Archive keeps its NULL.",
+      ],
+      output: `ShelfId | Room | Capacity
+1 | Reading room | 40
+2 | Archive | NULL`,
+    },
+    exercises: [
+      'tsql-ddl-create-mcq-1',
+      'tsql-ddl-create-cloze-1',
+      'tsql-ddl-alter-mcq-1',
+      'tsql-ddl-alter-predict-1',
+      'tsql-ddl-alter-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_types/1',
+    topicKeys: [Topic.TSQL_TYPES],
+    step: 1,
+    title: 'Data Types',
+    idea: [
+      lines(
+        "A column's type fixes what it can hold and how much space each value takes.",
+        "Text is `NVARCHAR(n)`, which stores any Unicode character, up to n of them.",
+        "`VARCHAR` is for text you know is plain ASCII.",
+      ),
+      lines(
+        "Whole numbers are `INT`, which tops out at about 2.1 billion, or `BIGINT` for the keys of a table that may grow past that.",
+        "Money and other exact amounts are `DECIMAL(p, s)`: p digits in total, s of them after the point, so `DECIMAL(10, 2)` holds up to 99,999,999.99.",
+        "A value with more than s decimals is rounded to fit.",
+      ),
+      lines(
+        "A day is `DATE`, and a day with a time is `DATETIME2`, which has more range and precision than the older `DATETIME`.",
+        "`BIT` is the yes or no flag and holds 0, 1 or NULL.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE dbo.t (
+    id     BIGINT,            -- whole numbers; INT stops near 2.1 billion
+    label  NVARCHAR(100),     -- Unicode text, up to 100 characters
+    amount DECIMAL(p, s),     -- exact: p digits, s after the point
+    day_of DATE,              -- a day
+    at     DATETIME2,         -- a day and a time
+    flag   BIT                -- 0, 1 or NULL
+);`,
+    },
+    pitfall: lines(
+      "`FLOAT` and `REAL` store binary approximations, so money kept in them drifts by fractions of a cent.",
+      "Keep money and other exact amounts in `DECIMAL(p, s)`.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE Loan (
+    LoanId   BIGINT,
+    Borrower NVARCHAR(50),
+    LateFee  DECIMAL(6, 2),
+    DueOn    DATE,
+    OnLoan   BIT
+);
+INSERT INTO Loan VALUES
+    (1, N'Łukasz', 1.25, '2026-03-02', 0),
+    (2, N'Ravi', 0.75, '2026-03-09', 1),
+    (3, N'Ana', 2.45, '2026-03-16', 1);
+SELECT Borrower, LateFee, DueOn
+FROM Loan
+WHERE OnLoan = 1
+ORDER BY DueOn;`,
+      steps: [
+        "Line 2: `BIGINT` leaves room for more than 2.1 billion loans.",
+        "Line 3: `NVARCHAR` stores any Unicode letter, such as the Ł in Łukasz.",
+        "Line 4: `DECIMAL(6, 2)` keeps each fee exact to the cent, with up to 4 digits before the point.",
+        "Lines 5-6: `DATE` holds just the day, and the `BIT` says whether the book is still out.",
+        "Lines 12-15: the `WHERE` keeps the two loans with `OnLoan = 1`, earliest due day first.",
+      ],
+      output: `Borrower | LateFee | DueOn
+Ravi | 0.75 | 2026-03-09
+Ana | 2.45 | 2026-03-16`,
+    },
+    exercises: [
+      'tsql-types-mcq-1',
+      'tsql-types-mcq-2',
+      'tsql-types-bigint-mcq-1',
+      'tsql-types-decimal-predict-1',
+      'tsql-types-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_constraints/1',
+    topicKeys: [Topic.TSQL_CONSTRAINTS],
+    step: 1,
+    title: 'Constraints (PK, FK, CHECK)',
+    idea: [
+      lines(
+        "Constraints are rules the table checks on every `INSERT` and `UPDATE`, so a bad row is rejected instead of stored.",
+        "`NOT NULL` makes a column required, and `DEFAULT value` fills a column that an `INSERT` leaves out.",
+      ),
+      lines(
+        "`PRIMARY KEY` is the row's identity: unique, never NULL, and one per table.",
+        "`UNIQUE` forbids duplicates in another column, and a table can have several.",
+        "`FOREIGN KEY (col) REFERENCES parent (col)` accepts only values that exist in the parent table, and `ON DELETE CASCADE` deletes the child rows along with their parent.",
+      ),
+      lines(
+        "`CHECK (condition)` rejects a row when the condition is false.",
+        "Name table-level constraints with `CONSTRAINT name ...`, so error messages and later changes can point at them.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE dbo.child (
+    id        INT PRIMARY KEY,                -- unique + not NULL
+    parent_id INT NOT NULL,                   -- required
+    code      NVARCHAR(20) UNIQUE,            -- no duplicates
+    qty       INT DEFAULT 0,                  -- when INSERT leaves it out
+    CONSTRAINT FK_child_parent FOREIGN KEY (parent_id)
+        REFERENCES dbo.parent (id) ON DELETE CASCADE,
+    CONSTRAINT CK_child_qty CHECK (qty >= 0)  -- false = rejected
+);`,
+    },
+    pitfall: lines(
+      "`CHECK` rejects a row only when its condition is false, and a comparison with NULL is unknown, so a NULL passes `CHECK (qty >= 0)`.",
+      "Add `NOT NULL` to the column when a missing value is not allowed either.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE Branch (
+    BranchId INT PRIMARY KEY,
+    City     NVARCHAR(40) NOT NULL UNIQUE
+);
+CREATE TABLE Copy (
+    CopyId    INT PRIMARY KEY,
+    BranchId  INT NOT NULL REFERENCES Branch (BranchId),
+    Condition NVARCHAR(10) NOT NULL DEFAULT N'good',
+    Price     INT NULL,
+    CONSTRAINT CK_Copy_Price CHECK (Price > 0)
+);
+INSERT INTO Branch VALUES (1, N'Leeds'), (2, N'York');
+INSERT INTO Copy (CopyId, BranchId, Price) VALUES (10, 1, 12), (11, 2, NULL);
+INSERT INTO Copy VALUES (12, 2, N'worn', 8);
+SELECT CopyId, BranchId, Condition, Price FROM Copy ORDER BY CopyId;`,
+      steps: [
+        "Lines 1-4: each branch has a `PRIMARY KEY` and a City that must be given and differ from every other branch's.",
+        "Line 7: `REFERENCES Branch (BranchId)` accepts a copy only when its branch exists, so a copy for branch 3 would be rejected.",
+        "Line 8: the `INSERT` on line 13 leaves Condition out, so the `DEFAULT` gives copies 10 and 11 'good'.",
+        "Line 10: the named `CHECK` passes 12 and 8, and also copy 11's NULL Price, because `NULL > 0` is unknown, not false.",
+        "Line 15: all three copies were stored, and a Price of 0 or a second branch in York would have been rejected.",
+      ],
+      output: `CopyId | BranchId | Condition | Price
+10 | 1 | good | 12
+11 | 2 | good | NULL
+12 | 2 | worn | 8`,
+    },
+    exercises: [
+      'tsql-constraints-mcq-1',
+      'tsql-constraints-cloze-1',
+      'tsql-constraints-check-predict-1',
+      'tsql-constraints-fk-cloze-1',
+      'tsql-constraints-check-cloze-1',
+    ],
+  },
+  {
+    id: 'tsql_views/1',
+    topicKeys: [Topic.TSQL_VIEWS],
+    step: 1,
+    title: 'Views & Computed Columns',
+    idea: [
+      lines(
+        "`CREATE VIEW v AS SELECT ...` saves a query under a name.",
+        "The view stores no rows: each query against it runs its `SELECT` on the base tables as they are now.",
+        "That makes it a stable name for a join or a filter that many queries reuse.",
+      ),
+      lines(
+        "`CREATE VIEW` must be the only statement in its batch, so a script puts `GO` before and after it.",
+        "An indexed view is the exception that stores its result: it is created `WITH SCHEMABINDING` and given a unique clustered index, and SQL Server keeps it current on every write.",
+      ),
+      lines(
+        "A computed column, `col AS (expression)`, derives its value from other columns of the same row.",
+        "By default it is worked out on every read, and `PERSISTED` stores it instead, so it can be indexed.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE VIEW dbo.v AS                 -- alone in its batch
+SELECT a.col, b.col2
+FROM dbo.a AS a
+JOIN dbo.b AS b ON b.id = a.id;
+GO
+SELECT col, col2 FROM dbo.v;         -- runs the view's SELECT now
+
+CREATE TABLE dbo.t (
+    qty   INT,
+    price INT,
+    total AS (qty * price)           -- computed on every read
+    -- total AS (qty * price) PERSISTED  -- stored, can be indexed
+);`,
+    },
+    pitfall: lines(
+      "A plain view is not a snapshot: rows added to its tables after `CREATE VIEW` show up the next time you query it.",
+      "When you need a fixed copy, load a table, for example with `SELECT ... INTO`.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE OrderLine (
+    Title     NVARCHAR(60) NOT NULL,
+    Qty       INT NOT NULL,
+    Price     INT NOT NULL,
+    LineTotal AS (Qty * Price)
+);
+INSERT INTO OrderLine (Title, Qty, Price) VALUES (N'Dune', 2, 9), (N'Emma', 1, 7);
+GO
+CREATE VIEW BigLine AS
+SELECT Title, LineTotal FROM OrderLine WHERE LineTotal >= 15;
+GO
+INSERT INTO OrderLine (Title, Qty, Price) VALUES (N'Ubik', 3, 5);
+SELECT Title, LineTotal FROM BigLine ORDER BY LineTotal DESC;`,
+      steps: [
+        "Line 5: `LineTotal` is computed from Qty and Price, so the `INSERT` on line 7 gives it no value, and Dune works out to 18 and Emma to 7.",
+        "Lines 9-10: the view saves a query for the lines worth 15 or more, between two `GO` lines because `CREATE VIEW` must stand alone in its batch.",
+        "Line 12: Ubik, 3 times 5, is added after the view was created.",
+        "Line 13: querying the view runs its `SELECT` now, so it finds Dune and Ubik, and Emma's 7 is filtered out.",
+      ],
+      output: `Title | LineTotal
+Dune | 18
+Ubik | 15`,
+    },
+    exercises: [
+      'tsql-views-mcq-1',
+      'tsql-views-predict-1',
+      'tsql-views-cloze-1',
+      'tsql-views-computed-cloze-1',
+      'tsql-views-1',
     ],
   },
 ];

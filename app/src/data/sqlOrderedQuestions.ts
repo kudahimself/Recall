@@ -159,15 +159,19 @@ export const sqlOrderedQuestions: Question[] = [
   q('tsql-ddl-alter-mcq-1'), q('tsql-ddl-alter-cloze-1'),
   q('tsql-ddl-temp-mcq-1'),
   q('tsql-ddl-selectinto-cloze-1'), q('tsql-ddl-selectinto-1'),
+  q('tsql-ddl-alter-predict-1'),
   // Data Types
   q('tsql-types-mcq-1'), q('tsql-types-mcq-2'), q('tsql-types-bigint-mcq-1'), q('tsql-types-cloze-1'),
+  q('tsql-types-decimal-predict-1'),
   // Constraints (PK, FK, CHECK)
   q('tsql-constraints-mcq-1'), q('tsql-constraints-cloze-1'),
   q('tsql-constraints-fk-cloze-1'), q('tsql-constraints-check-cloze-1'),
   q('tsql-constraints-unique-cloze-1'), q('tsql-constraints-1'),
+  q('tsql-constraints-check-predict-1'),
   // Views & Computed Columns
   q('tsql-views-mcq-1'), q('tsql-views-cloze-1'), q('tsql-views-1'),
   q('tsql-views-computed-cloze-1'),
+  q('tsql-views-predict-1'),
 
   // ===== PILLAR 3: ANALYTICAL & WINDOW SQL =====
   // Window functions (ROW_NUMBER / RANK / DENSE_RANK / NTILE)
