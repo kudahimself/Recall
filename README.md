@@ -43,6 +43,7 @@ node scripts/check-leaks.js                  # flag starter code that reveals th
 node scripts/check-prompt-leaks.js           # flag prompts that leak the solution
 node scripts/check-starter-leaks-webdev.js   # web-dev-specific starter checks
 node scripts/check-hint-leaks.js             # flag tieredHints skeletons that leak the solution
+node scripts/check-lessons.js                # check lessons in src/data/lessons/ (also run by npm test)
 ```
 
 ## Project layout
