@@ -61,6 +61,26 @@ const SAMPLE: SqlTable[] = [
     ],
   },
   {
+    name: 'dbo.FactSales',
+    columns: ['CustomerKey', 'ProductKey', 'Amount', 'OrderDate'],
+    rows: [
+      [1, 102, 129.0, '2026-09-03'],
+      [2, 103, 79.0, '2026-10-02'],
+      [4, 105, 640.0, '2026-10-28'],
+    ],
+  },
+  {
+    // Accounts 1 and 2, and 10 and 20, are the pairs the transfer questions move money between.
+    name: 'dbo.Account',
+    columns: ['AccountId', 'Balance'],
+    rows: [
+      [1, 500],
+      [2, 300],
+      [10, 1200],
+      [20, 80],
+    ],
+  },
+  {
     name: 'dbo.DimSupplier',
     columns: ['SupplierKey', 'SupplierId', 'SupplierName', 'Country'],
     rows: [

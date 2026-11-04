@@ -191,3 +191,69 @@ describe('Analytical & Window SQL questions show the tables they query', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+const TRANSACTIONS_AND_PROCEDURAL = new Set<string>([
+  Topic.TSQL_TRANSACTIONS, Topic.TSQL_ISOLATION, Topic.TSQL_PROCEDURES, Topic.TSQL_CONTROL_FLOW, Topic.TSQL_ERROR_HANDLING,
+]);
+
+const proceduralSection: Question[] = questions.filter(q => TRANSACTIONS_AND_PROCEDURAL.has(q.topic));
+
+describe('Transactions & Procedural questions show the tables they read and write', () => {
+  it('has the whole section to check', () => {
+    expect(proceduralSection.length).toBe(39);
+  });
+
+  it('every existing table a question reads or writes is one of the tables it shows', () => {
+    // MCQs here name a table in passing (`WITH (NOLOCK)` on a report) and run against no data.
+    const offenders = proceduralSection
+      .filter(q => q.type !== QuestionType.MULTIPLE_CHOICE)
+      .flatMap(q => {
+        const sql = questionSql(q);
+        const created = createdNames(sql);
+        const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+        return referencedTables(sql)
+          .filter(t => !created.has(t) && !shown.has(t))
+          .map(t => `${q.id} reads ${t} without showing it`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question reads or writes, with rows that fit its columns', () => {
+    const offenders = proceduralSection.flatMap(q => {
+      const refs = new Set(referencedTables(questionSql(q)));
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) ? [] : [`${q.id} shows ${t.name} but never uses it`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('no question builds its data in a temp table, a VALUES derived table or a CTE', () => {
+    const offenders = proceduralSection
+      .filter(q => {
+        const sql = questionSql(q);
+        return /\(\s*VALUES\b/i.test(sql) || /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(sql) || /#\w+/.test(sql);
+      })
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('every variable a cloze template assigns is declared in it', () => {
+    // `SELECT @qty = Stock` with no DECLARE does not compile as a batch.
+    const offenders = proceduralSection
+      .filter(q => q.type === QuestionType.CLOZE_CODE)
+      .filter(q => {
+        const tpl = (q as { template: string }).template;
+        const params = new Set(Array.from(tpl.matchAll(/^\s*(@\w+)\s+[A-Z]/gim)).map(m => m[1].toLowerCase()));
+        const fnParams = Array.from(tpl.matchAll(/\(\s*(@\w+)\s+[A-Z]/gi)).map(m => m[1].toLowerCase());
+        fnParams.forEach(p => params.add(p));
+        const declared = new Set(Array.from(tpl.matchAll(/\bDECLARE\s+(@\w+)/gi)).map(m => m[1].toLowerCase()));
+        Array.from(tpl.matchAll(/\bDECLARE\s+@\w+[^;]*?,\s*(@\w+)/gi)).forEach(m => declared.add(m[1].toLowerCase()));
+        const assigned = Array.from(tpl.matchAll(/\b(?:SELECT|SET)\s+(@\w+)\s*=/gi)).map(m => m[1].toLowerCase());
+        return assigned.some(v => !declared.has(v) && !params.has(v));
+      })
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+});
