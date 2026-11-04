@@ -113,4 +113,35 @@ WHERE OrderDate ____ '2026-01-01' ____ OrderDate ____ '2027-01-01';`,
     requires: [/WHERE/i, />=/],
     tags: ['tsql', 'antipatterns', 'sargable'],
   },
+  {
+    id: 'tsql-anti-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_ANTIPATTERNS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'A report wants every order placed in 2026 and filters with BETWEEN on the first and last day of the year. OrderDate holds a date and a time. Which orders does it return? Write one OrderId per line in the ORDER BY order.',
+    tables: [
+      {
+        name: 'dbo.FactOrders',
+        columns: ['OrderId', 'OrderDate'],
+        rows: [
+          [1, '2025-12-31 23:59'],
+          [2, '2026-01-01 00:00'],
+          [3, '2026-07-04 12:30'],
+          [4, '2026-12-31 23:59'],
+          [5, '2027-01-01 00:00'],
+        ],
+      },
+    ],
+    code: `SELECT OrderId
+FROM dbo.FactOrders
+WHERE OrderDate BETWEEN '2026-01-01' AND '2026-12-31'
+ORDER BY OrderId;`,
+    expectedOutput: `2
+3`,
+    explanation: 'The end value \'2026-12-31\' means midnight at the start of that day, so an order at 23:59 on 31 December is later than the end and falls out: order 4 is lost, a quiet wrong result rather than an error. The column is kept bare, which is good for seeking, but the range must be half-open: OrderDate >= \'2026-01-01\' AND OrderDate < \'2027-01-01\' returns orders 2, 3 and 4.',
+    hints: ['BETWEEN includes both ends, but the end value is midnight', 'Compare 23:59 on 31 December with 2026-12-31 00:00'],
+    tags: ['tsql', 'antipatterns', 'sargable', 'between-trap', 'predict'],
+  },
 ];

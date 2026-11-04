@@ -145,4 +145,39 @@ ____ ____ dbo.FactSales ____ 3;`,
     requires: [/SWITCH/i, /PARTITION/i],
     tags: ['tsql', 'partitioning', 'partition-switching'],
   },
+  {
+    id: 'tsql-part-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_PARTITIONING,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'A RANGE RIGHT partition function has the boundary values in dbo.Boundary, so a boundary value belongs to the partition on its right. The query numbers the partition each sale lands in, starting at 1. Which partition does each sale get? Write one row per line in the ORDER BY order, as SaleId and PartitionNo separated by a comma.',
+    tables: [
+      { name: 'dbo.Boundary', columns: ['BoundaryDate'], rows: [['2026-02-01'], ['2026-03-01'], ['2026-04-01']] },
+      {
+        name: 'dbo.FactSales',
+        columns: ['SaleId', 'SaleDate'],
+        rows: [
+          [1, '2026-01-31'],
+          [2, '2026-02-01'],
+          [3, '2026-02-28'],
+          [4, '2026-03-01'],
+          [5, '2026-05-15'],
+        ],
+      },
+    ],
+    code: `SELECT f.SaleId,
+       (SELECT COUNT(*) FROM dbo.Boundary AS b WHERE b.BoundaryDate <= f.SaleDate) + 1 AS PartitionNo
+FROM dbo.FactSales AS f
+ORDER BY f.SaleId;`,
+    expectedOutput: `1, 1
+2, 2
+3, 2
+4, 3
+5, 4`,
+    explanation: 'The partition number is one more than the count of boundaries at or below the date. Sale 2 is dated exactly on the first boundary and counts it, so it lands in partition 2, not 1: with RANGE RIGHT a boundary value starts the partition on its right. With RANGE LEFT the comparison would be strictly below, and sale 2 would stay in partition 1.',
+    hints: ['Count the boundaries that are <= the sale date', 'Partition numbers start at 1, so add 1'],
+    tags: ['tsql', 'partitioning', 'range-right', 'boundary', 'predict'],
+  },
 ];

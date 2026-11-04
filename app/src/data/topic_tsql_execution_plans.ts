@@ -105,4 +105,36 @@ GROUP BY CustomerKey;`,
     hints: ['Page reads → STATISTICS IO', 'CPU/elapsed time → STATISTICS TIME'],
     tags: ['tsql', 'execution-plans', 'statistics-io', 'cloze'],
   },
+  {
+    id: 'tsql-plan-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_EXECUTION_PLANS,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'A plan seeks a nonclustered index on CustomerKey, which does not hold Amount, so the plan adds a Key Lookup into the base table for every row the seek finds. Which rows does the seek find, so that one Key Lookup runs for each? Write one row per line in the ORDER BY order, as OrderId and Amount separated by a comma.',
+    tables: [
+      {
+        name: 'dbo.FactOrders',
+        columns: ['OrderId', 'CustomerKey', 'Amount'],
+        rows: [
+          [1, 7, 40],
+          [2, 3, 15],
+          [3, 7, 25],
+          [4, 9, 60],
+          [5, 7, 10],
+        ],
+      },
+    ],
+    code: `SELECT OrderId, Amount
+FROM dbo.FactOrders
+WHERE CustomerKey = 7
+ORDER BY OrderId;`,
+    expectedOutput: `1, 40
+3, 25
+5, 10`,
+    explanation: 'Three orders belong to customer 7, so the seek finds three index entries and the plan runs three Key Lookups, one per row, to fetch Amount from the base table. At this size that is nothing; for a customer with thousands of orders the lookups dominate the cost, which is when a covering index (INCLUDE (Amount)) removes them.',
+    hints: ['Keep the rows where CustomerKey is 7', 'One Key Lookup runs for each row the seek returns'],
+    tags: ['tsql', 'execution-plans', 'key-lookup', 'predict'],
+  },
 ];

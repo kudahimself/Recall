@@ -7,7 +7,8 @@
  * Section 4, Transactions & Procedural T-SQL: every topic.
  * Section 5, Data Modeling in SQL: every topic.
  * Section 6, ELT & Transformation Patterns: every topic.
- * Later sections follow one per PR (next: Performance & Optimization).
+ * Section 7, Performance & Optimization: every topic.
+ * Later sections follow one per PR (next: Cloud Warehouse SQL).
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on sql.js and compares what it prints with `output`.
@@ -2744,6 +2745,432 @@ orphan loan | 2`,
       'tsql-quality-predict-1',
       'tsql-quality-cloze-1',
       'tsql-quality-1',
+    ],
+  },
+  {
+    id: 'tsql_indexes/1',
+    topicKeys: [Topic.TSQL_INDEXES],
+    step: 1,
+    title: 'Indexes (Clustered, Covering)',
+    idea: [
+      lines(
+        "An index is a sorted copy of some columns that the engine can search without reading the whole table.",
+        "A clustered index is the table itself, stored in key order, so there is only one per table.",
+        "A nonclustered index is a separate sorted structure whose entries point back to the rows.",
+      ),
+      lines(
+        "A composite index sorts by its first column, then by the second inside each first value.",
+        "A search can seek only when it filters on the leading column, the leftmost-prefix rule, so the column order is a design choice.",
+      ),
+      lines(
+        "`INCLUDE (col)` stores extra columns at the leaf without sorting by them.",
+        "When an index holds every column a query touches it covers the query, and the engine skips the lookup back into the table.",
+        "A filtered index adds `WHERE` and indexes only the rows that match.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE CLUSTERED INDEX CIX_t ON t (key_col);   -- the table, in key order
+
+CREATE NONCLUSTERED INDEX IX_t_lookup
+ON t (lead_col, second_col)    -- lead_col, then second_col
+INCLUDE (output_col)           -- at the leaf, not sorted
+WHERE flag_col = 1;            -- optional: only these rows`,
+    },
+    pitfall: lines(
+      "Every index is kept up to date on every write, so an index on every column slows loads and bloats storage.",
+      "Add an index for a query that matters, with the filtered column first, and leave the rest unindexed.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Loan',
+          columns: ['LoanId', 'MemberId', 'BookId'],
+          rows: [
+            [1, 5, 10],
+            [2, 5, 11],
+            [3, 6, 10],
+          ],
+        },
+      ],
+      code: `CREATE UNIQUE INDEX UX_Loan_Member_Book ON Loan (MemberId, BookId);
+BEGIN TRY
+  INSERT INTO Loan VALUES (4, 5, 10);
+  PRINT 'member 5 book 10: accepted';
+END TRY
+BEGIN CATCH
+  PRINT 'member 5 book 10: rejected';
+END CATCH
+BEGIN TRY
+  INSERT INTO Loan VALUES (5, 6, 11);
+  PRINT 'member 6 book 11: accepted';
+END TRY
+BEGIN CATCH
+  PRINT 'member 6 book 11: rejected';
+END CATCH
+SELECT MemberId, BookId FROM Loan ORDER BY MemberId, BookId;`,
+      steps: [
+        "Line 1: a unique composite index on `(MemberId, BookId)` sorts the loans by member, then by book, and refuses a second entry for the same pair.",
+        "Lines 2-8: member 5 already has book 10, so the pair is a duplicate and the insert is rejected.",
+        "Lines 9-15: member 6 has book 10 but not book 11, so the pair is new and the insert is accepted, because the key is the pair, not either column alone.",
+        "Line 16: the rows read back in index order, member 5 with books 10 and 11, then member 6 with books 10 and 11.",
+        "Every one of these inserts had to update the index as well as the table, which is the write cost of an index.",
+      ],
+      output: `member 5 book 10: rejected
+member 6 book 11: accepted
+
+MemberId | BookId
+5 | 10
+5 | 11
+6 | 10
+6 | 11`,
+    },
+    exercises: [
+      'tsql-idx-mcq-1',
+      'tsql-idx-mcq-2',
+      'tsql-idx-predict-1',
+      'tsql-idx-cloze-1',
+      'tsql-idx-1',
+    ],
+  },
+  {
+    id: 'tsql_execution_plans/1',
+    topicKeys: [Topic.TSQL_EXECUTION_PLANS],
+    step: 1,
+    title: 'Execution Plans',
+    idea: [
+      lines(
+        "An execution plan is the list of steps the engine chose to answer a query, with the number of rows it expected at each step and the number that really flowed through.",
+        "You read it to find where the work goes.",
+      ),
+      lines(
+        "An Index Seek jumps to the matching rows, so its cost follows the rows returned.",
+        "A scan reads every row and filters afterward, so its cost follows the table size.",
+        "A Key Lookup fetches a column the index lacks from the base table, once per row the seek found.",
+      ),
+      lines(
+        "`SET STATISTICS IO ON` reports the pages read per table, a steady measure of work.",
+        "`SET STATISTICS TIME ON` reports CPU and elapsed time, which vary from run to run.",
+        "An estimate far from the actual row count points to stale statistics, because the engine picked its steps for the wrong size.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SET STATISTICS IO ON;      -- pages read per table
+SET STATISTICS TIME ON;    -- CPU and elapsed time
+
+SELECT cols FROM t WHERE col = value;
+
+-- in the plan, per operator:
+--   Index Seek / Scan       how the rows are found
+--   Key Lookup              a missing column fetched row by row
+--   estimated vs actual     a big gap means stale statistics`,
+    },
+    pitfall: lines(
+      "A scan is not always the problem, and a seek is not always the cure: a scan can beat many seeks when most of the table is wanted.",
+      "Compare the pages read before and after a change, and look for the operator whose actual rows are far above its estimate.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'PlanOperator',
+          columns: ['OperatorName', 'EstimatedRows', 'ActualRows'],
+          rows: [
+            ['Index Seek on Loan', 12, 14],
+            ['Key Lookup on Loan', 12, 14],
+            ['Hash Match on Book', 40, 52000],
+            ['Sort', 40, 52000],
+          ],
+        },
+      ],
+      code: `SELECT OperatorName,
+       EstimatedRows,
+       ActualRows,
+       CASE WHEN ActualRows >= EstimatedRows * 10
+            THEN 'check statistics'
+            ELSE 'ok'
+       END AS Verdict
+FROM PlanOperator
+ORDER BY ActualRows DESC, OperatorName;`,
+      steps: [
+        "The table is a plan written out: each row is an operator with the rows the engine expected and the rows that actually passed through.",
+        "Line 5: an operator whose actual rows are ten times its estimate or more is flagged, the sign of stale statistics.",
+        "The seek found 14 rows against an estimate of 12, close enough, and the Key Lookup under it ran 14 times, once per row.",
+        "The hash match and the sort expected 40 rows and handled 52,000, so the engine sized its memory and its join for the wrong data and both are flagged.",
+        "Line 9: the biggest gap sorts first, which is where to look, and updating statistics usually realigns the estimate.",
+      ],
+      output: `OperatorName | EstimatedRows | ActualRows | Verdict
+Hash Match on Book | 40 | 52000 | check statistics
+Sort | 40 | 52000 | check statistics
+Index Seek on Loan | 12 | 14 | ok
+Key Lookup on Loan | 12 | 14 | ok`,
+    },
+    exercises: [
+      'tsql-plan-cloze-1',
+      'tsql-plan-mcq-1',
+      'tsql-plan-mcq-3',
+      'tsql-plan-predict-1',
+      'tsql-plan-mcq-2',
+    ],
+  },
+  {
+    id: 'tsql_partitioning/1',
+    topicKeys: [Topic.TSQL_PARTITIONING],
+    step: 1,
+    title: 'Partitioning',
+    idea: [
+      lines(
+        "Partitioning splits one big table into slices by the values of a column, usually a date.",
+        "A partition function lists the boundary values and decides which slice a value belongs to.",
+        "A partition scheme maps the slices onto filegroups, and the table is built `ON` the scheme.",
+      ),
+      lines(
+        "With `RANGE RIGHT` a boundary value starts the slice on its right, so `2026-02-01` is the first day of the February slice.",
+        "With `RANGE LEFT` it ends the slice on its left.",
+      ),
+      lines(
+        "Partition elimination lets a query that filters on the partitioning column read only the matching slices.",
+        "`ALTER TABLE staging SWITCH TO fact PARTITION n` moves a whole slice in or out by changing metadata, so loading or purging a month is instant.",
+        "The staging table must match the target and carry a `CHECK` that proves its rows fit the slice.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE PARTITION FUNCTION pf_name (DATE)
+AS RANGE RIGHT FOR VALUES ('b1', 'b2', 'b3');      -- boundaries
+
+CREATE PARTITION SCHEME ps_name
+AS PARTITION pf_name ALL TO ([PRIMARY]);           -- slices to filegroups
+
+CREATE TABLE t (..., date_col DATE) ON ps_name (date_col);
+
+ALTER TABLE stage SWITCH TO t PARTITION n;         -- metadata only`,
+    },
+    pitfall: lines(
+      "Elimination works only when the filter uses the partitioning column bare, so wrapping it in a function reads every slice.",
+      "Filter with a plain range on the column, and pick `RANGE RIGHT` for dates so a boundary day belongs to the slice it starts.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Cut',
+          columns: ['CutDate'],
+          rows: [['2026-02-01'], ['2026-03-01']],
+        },
+        {
+          name: 'Loan',
+          columns: ['LoanId', 'LoanedOn'],
+          rows: [
+            [1, '2026-01-20'],
+            [2, '2026-02-01'],
+            [3, '2026-02-10'],
+            [4, '2026-02-28'],
+            [5, '2026-03-05'],
+          ],
+        },
+      ],
+      code: `SELECT p.PartNo, COUNT(*) AS LoanCount
+FROM (SELECT LoanId,
+             (SELECT COUNT(*) FROM Cut WHERE CutDate <= LoanedOn) + 1 AS PartNo
+      FROM Loan) AS p
+GROUP BY p.PartNo
+ORDER BY p.PartNo;
+
+SELECT DISTINCT (SELECT COUNT(*) FROM Cut WHERE CutDate <= LoanedOn) + 1 AS PartNo
+FROM Loan
+WHERE LoanedOn >= '2026-02-01' AND LoanedOn < '2026-03-01'
+ORDER BY PartNo;`,
+      steps: [
+        "The table `Cut` holds the boundaries of a `RANGE RIGHT` function: two cuts make three slices.",
+        "Line 3: a loan's slice number is one more than the number of cuts at or below its date, so 20 January is slice 1.",
+        "Loan 2 is dated exactly on the first cut and starts slice 2, so slice 2 holds loans 2, 3 and 4, and slice 3 holds loan 5.",
+        "Lines 8-10: a query for February filters on the date with a plain range, and only slice 2 can hold its rows.",
+        "That is partition elimination: slices 1 and 3 are never read.",
+      ],
+      output: `PartNo | LoanCount
+1 | 1
+2 | 3
+3 | 1
+
+PartNo
+2`,
+    },
+    exercises: [
+      'tsql-part-mcq-1',
+      'tsql-part-predict-1',
+      'tsql-part-cloze-1',
+      'tsql-part-scheme-cloze-1',
+      'tsql-part-mcq-2',
+    ],
+  },
+  {
+    id: 'tsql_columnstore/1',
+    topicKeys: [Topic.TSQL_COLUMNSTORE],
+    step: 1,
+    title: 'Columnstore',
+    idea: [
+      lines(
+        "A rowstore keeps each row together, and a columnstore keeps each column together, in compressed segments grouped into rowgroups of about a million rows.",
+        "A report that reads three columns of a billion-row fact reads only those columns, and each compresses well.",
+      ),
+      lines(
+        "A clustered columnstore index makes the whole table column storage, and it lists no key columns.",
+        "It runs queries in batch mode, about 900 rows per operator call instead of one.",
+      ),
+      lines(
+        "Each rowgroup records the minimum and maximum of every column.",
+        "A filter skips every rowgroup whose range cannot hold a match, which is rowgroup elimination.",
+        "Loading the rows ordered by the common filter column keeps each range tight.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE CLUSTERED COLUMNSTORE INDEX CCI_t ON t;   -- no key columns
+
+-- per rowgroup the engine keeps min and max of each column
+-- a filter on col skips rowgroups whose [min, max] misses it
+
+INSERT INTO t SELECT cols FROM src ORDER BY col;   -- load in filter order`,
+    },
+    pitfall: lines(
+      "Columnstore is built for big scans and aggregates, so a workload of single-row seeks and small updates runs badly on it.",
+      "Keep rowstore for small dimensions that are looked up one row at a time, and use columnstore for the large fact.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'LoadArrival',
+          columns: ['Pos', 'LoanedOn'],
+          rows: [
+            [1, '2026-03-10'],
+            [2, '2026-01-05'],
+            [3, '2026-02-20'],
+            [4, '2026-01-25'],
+            [5, '2026-03-30'],
+            [6, '2026-02-02'],
+          ],
+        },
+        {
+          name: 'LoadSorted',
+          columns: ['Pos', 'LoanedOn'],
+          rows: [
+            [1, '2026-01-05'],
+            [2, '2026-01-25'],
+            [3, '2026-02-02'],
+            [4, '2026-02-20'],
+            [5, '2026-03-10'],
+            [6, '2026-03-30'],
+          ],
+        },
+      ],
+      code: `SELECT (Pos - 1) / 3 AS GroupNo, MIN(LoanedOn) AS MinDate, MAX(LoanedOn) AS MaxDate
+FROM LoadArrival
+GROUP BY (Pos - 1) / 3
+ORDER BY GroupNo;
+
+SELECT (Pos - 1) / 3 AS GroupNo, MIN(LoanedOn) AS MinDate, MAX(LoanedOn) AS MaxDate
+FROM LoadSorted
+GROUP BY (Pos - 1) / 3
+ORDER BY GroupNo;`,
+      steps: [
+        "Both loads hold the same six loans, packed three to a rowgroup in the order they are loaded; real rowgroups hold about a million rows.",
+        "Line 1: each rowgroup keeps the minimum and maximum date of its rows, found here with `MIN` and `MAX` per group.",
+        "In arrival order group 0 spans 5 January to 10 March and group 1 spans 25 January to 30 March, so the two ranges overlap almost entirely.",
+        "A query for February must read both groups, because neither range rules a match out.",
+        "Loaded in date order, group 0 ends on 2 February and group 1 starts on 20 February, so a filter on late February reads group 1 only and eliminates the other.",
+      ],
+      output: `GroupNo | MinDate | MaxDate
+0 | 2026-01-05 | 2026-03-10
+1 | 2026-01-25 | 2026-03-30
+
+GroupNo | MinDate | MaxDate
+0 | 2026-01-05 | 2026-02-02
+1 | 2026-02-20 | 2026-03-30`,
+    },
+    exercises: [
+      'tsql-col-mcq-1',
+      'tsql-col-mcq-3',
+      'tsql-col-predict-1',
+      'tsql-col-cloze-1',
+      'tsql-col-1',
+    ],
+  },
+  {
+    id: 'tsql_antipatterns/1',
+    topicKeys: [Topic.TSQL_ANTIPATTERNS],
+    step: 1,
+    title: 'Query Anti-patterns',
+    idea: [
+      lines(
+        "A predicate is SARGable when the engine can use an index to search it, which needs the indexed column bare on one side of the comparison.",
+        "Wrapping the column in a function, such as `YEAR(col)`, makes the engine compute it for every row and scan the index.",
+        "Rewrite the test as a range on the bare column.",
+      ),
+      lines(
+        "A date range should be half-open: `col >= start AND col < next_start`.",
+        "`BETWEEN` includes its end value, which for a date means midnight, so rows later that day fall outside.",
+      ),
+      lines(
+        "Row-by-row work, a cursor or a `WHILE` loop over rows, pays planning and round trips per row, and one set-based statement does the same job much faster.",
+        "`SELECT *` reads columns nobody needs and changes shape when a column is added.",
+        "Comparing a string column to a number forces a per-row conversion that also defeats the index.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- not SARGable: the column is wrapped
+WHERE YEAR(date_col) = 2026
+
+-- SARGable: bare column, half-open range
+WHERE date_col >= '2026-01-01' AND date_col < '2027-01-01'
+
+-- match the types: string column, string literal
+WHERE code_col = N'12345'`,
+    },
+    pitfall: lines(
+      "A `BETWEEN` that ends on the last day of a period silently drops the rows timed later that day, and no error shows it.",
+      "End the range with `<` the first moment of the next period instead.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Loan',
+          columns: ['LoanId', 'LoanedAt'],
+          rows: [
+            [1, '2025-12-31 23:00'],
+            [2, '2026-01-01 08:00'],
+            [3, '2026-06-15 10:30'],
+            [4, '2026-12-31 18:45'],
+            [5, '2027-01-01 00:00'],
+          ],
+        },
+      ],
+      code: `SELECT
+  (SELECT COUNT(*) FROM Loan WHERE YEAR(LoanedAt) = 2026) AS ByYear,
+  (SELECT COUNT(*) FROM Loan
+   WHERE LoanedAt >= '2026-01-01' AND LoanedAt < '2027-01-01') AS ByRange,
+  (SELECT COUNT(*) FROM Loan
+   WHERE LoanedAt BETWEEN '2026-01-01' AND '2026-12-31') AS ByBetween;`,
+      steps: [
+        "Column `ByYear`: wrapping `LoanedAt` in `YEAR()` is correct, three loans fall in 2026, but the engine cannot seek an index on `LoanedAt` and reads every row.",
+        "Column `ByRange`: the half-open range returns the same three loans and keeps `LoanedAt` bare, so an index on it can seek.",
+        "Column `ByBetween`: the end value `2026-12-31` is midnight at the start of that day, so loan 4 at 18:45 falls outside and the count is 2.",
+        "The rewrite is safe and fast, and the `BETWEEN` version is fast but wrong, with nothing to warn you.",
+      ],
+      output: `ByYear | ByRange | ByBetween
+3 | 3 | 2`,
+    },
+    exercises: [
+      'tsql-anti-mcq-1',
+      'tsql-anti-mcq-2',
+      'tsql-anti-predict-1',
+      'tsql-anti-1',
+      'tsql-anti-mcq-4',
     ],
   },
 ];

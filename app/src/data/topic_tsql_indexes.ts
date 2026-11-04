@@ -149,4 +149,37 @@ ____ (Amount);`,
     hints: ['Indexes only the rows matching a WHERE predicate', 'Cheap + selective when most rows do not match the predicate'],
     tags: ['tsql', 'indexes', 'filtered-index'],
   },
+  {
+    id: 'tsql-idx-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_INDEXES,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'A nonclustered index on (CustomerKey, OrderDate) keeps its entries sorted by CustomerKey first and, within one customer, by OrderDate. The table rows below sit in arrival order. Which entries does a full scan of that index read, in order? Write one entry per line, as CustomerKey and OrderDate separated by a comma.',
+    tables: [
+      {
+        name: 'dbo.FactOrders',
+        columns: ['OrderId', 'CustomerKey', 'OrderDate'],
+        rows: [
+          [1, 9, '2026-03-02'],
+          [2, 4, '2026-03-09'],
+          [3, 9, '2026-01-15'],
+          [4, 4, '2026-02-20'],
+          [5, 7, '2026-03-01'],
+        ],
+      },
+    ],
+    code: `SELECT CustomerKey, OrderDate
+FROM dbo.FactOrders
+ORDER BY CustomerKey, OrderDate;`,
+    expectedOutput: `4, 2026-02-20
+4, 2026-03-09
+7, 2026-03-01
+9, 2026-01-15
+9, 2026-03-02`,
+    explanation: 'The entries are sorted by CustomerKey, and only inside one customer by OrderDate: customer 4 has both its dates in order, then 7, then 9. That is why a seek on CustomerKey alone, or on CustomerKey plus a date range, reads one contiguous slice of the index, while a filter on OrderDate alone finds its dates scattered under every customer and cannot seek.',
+    hints: ['Sort by CustomerKey first', 'Break ties inside one customer by OrderDate'],
+    tags: ['tsql', 'indexes', 'composite', 'key-order', 'predict'],
+  },
 ];
