@@ -125,4 +125,24 @@ ORDER BY c.____, p.____;`,
     requires: [/JOIN/i, /GROUP\s+BY/i],
     tags: ['tsql', 'star-schema', 'join'],
   },
+  {
+    id: 'tsql-star-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TSQL_STAR_SCHEMA,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'One sale was loaded with a ProductKey that the dimension does not have yet. What single value does this query return?',
+    tables: [
+      { name: 'dbo.FactSales', columns: ['ProductKey', 'Amount'], rows: [[1, 10], [2, 15], [1, 5], [9, 20]] },
+      { name: 'dbo.DimProduct', columns: ['ProductKey', 'Category'], rows: [[1, 'Books'], [2, 'Games']] },
+    ],
+    code: `SELECT SUM(f.Amount) AS Total
+FROM dbo.FactSales AS f
+JOIN dbo.DimProduct AS p ON p.ProductKey = f.ProductKey;`,
+    expectedOutput: `30`,
+    explanation: 'An inner join keeps only fact rows that find their dimension row. The sale with ProductKey 9 has none, so its 20 drops out: 10 + 15 + 5 = 30, not the 50 in the fact. Star loads avoid this by pointing unmatched keys at an "Unknown" member row (often key -1), so every fact row joins and the totals stay whole.',
+    hints: ['Which fact row has no matching DimProduct row?', 'JOIN means INNER JOIN'],
+    tags: ['tsql', 'star-schema', 'join', 'unknown-member', 'predict'],
+  },
 ];

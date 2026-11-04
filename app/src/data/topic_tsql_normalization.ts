@@ -9,6 +9,7 @@ import {
   Difficulty,
   Topic,
   Course,
+  CodeLanguage,
 } from '../types';
 
 export const tsql_normalization_questions: Question[] = [
@@ -96,5 +97,27 @@ export const tsql_normalization_questions: Question[] = [
     explanation: 'The star/denormalized default has real exceptions: if a sub-dimension is large, rapidly changing, or reused by several dimensions, snowflaking it avoids massive duplication and gives one place to maintain those attributes. It is an engineering trade-off — fewer joins (star) vs less redundancy and easier maintenance (snowflake) — not a universal rule.',
     hints: ['Large/volatile/shared sub-hierarchy', 'Trade fewer joins for less duplication'],
     tags: ['tsql', 'normalization', 'snowflake', 'tradeoffs'],
+  },
+  {
+    id: 'tsql-norm-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TSQL_NORMALIZATION,
+    course: Course.SQL,
+    language: CodeLanguage.SQL,
+    question: 'The customer\'s name is stored on every order row. What single value does the final SELECT return?',
+    tables: [{
+      name: 'dbo.OrderFlat',
+      columns: ['OrderId', 'CustomerId', 'CustomerName'],
+      rows: [[1, 7, 'Ann Lee'], [2, 7, 'Ann Lee'], [3, 8, 'Bo Chan']],
+    }],
+    code: `UPDATE dbo.OrderFlat SET CustomerName = 'Ann Park' WHERE OrderId = 1;
+SELECT COUNT(DISTINCT CustomerName) AS NameCount
+FROM dbo.OrderFlat
+WHERE CustomerId = 7;`,
+    expectedOutput: `2`,
+    explanation: 'The UPDATE changes one of customer 7\'s two copies of the name, so that customer now has two names: Ann Park on order 1 and Ann Lee on order 2. This is an update anomaly, the risk redundancy brings. Normalizing moves CustomerName into a Customer table keyed by CustomerId, so the name lives in one row and one UPDATE changes it everywhere.',
+    hints: ['How many rows does the WHERE in the UPDATE touch?', 'Customer 7\'s name was stored twice'],
+    tags: ['tsql', 'normalization', 'update-anomaly', 'redundancy', 'predict'],
   },
 ];

@@ -75,6 +75,8 @@ House rules (check-lessons.js enforces the first two):
   Isolation levels and table hints are accepted but change nothing in one session, so describe the second session in the steps.
   Window functions run natively; avoid `AVG` over integers, which SQLite returns as a decimal where SQL Server truncates.
   GETDATE, CAST to date types, FORMAT, CONVERT, `+` on strings, #temp tables, MERGE, PIVOT and UPDATE ... FROM are refused; name them in the idea or the form instead.
+  An `UPDATE` with any `FROM` in it, a subquery's included, counts as UPDATE ... FROM.
+  `IDENTITY` is not emulated and leaves the column NULL, so give keys already assigned in `tables` and leave generated keys out of the printed columns.
   Keep numbers integers (SQLite prints `12.5` where SQL Server prints `12.50`).
 - Python: plain `print` output; it runs on `python3 -I`.
 - Set `output` to exactly what the code prints (SQL: `col | col` header and rows, a blank line between result sets).

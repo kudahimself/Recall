@@ -219,18 +219,23 @@ export const sqlOrderedQuestions: Question[] = [
   // Facts & dimensions, grain, measures, degenerate dims
   q('tsql-facts-mcq-1'), q('tsql-facts-mcq-2'), q('tsql-facts-mcq-3'),
   q('tsql-facts-cloze-1'), q('tsql-facts-mcq-4'), q('tsql-facts-1'),
+  q('tsql-facts-predict-1'),
   // Surrogate keys (IDENTITY / SEQUENCE / natural vs surrogate / date dim)
   q('tsql-surr-cloze-1'), q('tsql-surr-mcq-1'), q('tsql-surr-mcq-2'),
   q('tsql-surr-sequence-cloze-1'), q('tsql-surr-mcq-3'), q('tsql-surr-1'),
+  q('tsql-surr-predict-1'),
   // Star schema, snowflake, conformed dims
   q('tsql-star-mcq-1'), q('tsql-star-mcq-2'), q('tsql-star-mcq-3'),
   q('tsql-star-cloze-1'), q('tsql-star-1'),
+  q('tsql-star-predict-1'),
   // Slowly Changing Dimensions (Type 1 / Type 2 via MERGE)
   q('tsql-scd-mcq-1'), q('tsql-scd-mcq-2'), q('tsql-scd-cloze-1'),
   q('tsql-scd-parsons-1'), q('tsql-scd-1'), q('tsql-scd-2'), q('tsql-scd-insert-cloze-1'),
+  q('tsql-scd-predict-1'),
   // Normalization vs denormalization tradeoffs
   q('tsql-norm-mcq-1'), q('tsql-norm-mcq-2'), q('tsql-norm-mcq-3'),
   q('tsql-norm-mcq-4'), q('tsql-norm-mcq-5'),
+  q('tsql-norm-predict-1'),
 
   // ===== PILLAR 6: ELT & TRANSFORMATION PATTERNS =====
   // INSERT / INSERT…SELECT / SELECT…INTO / OUTPUT
