@@ -276,4 +276,114 @@ None`,
       tags: ['django', 'drf', 'pagination', 'generics', 'predict'],
       concepts: ['dj-pagination-strategy'],
     },
+  {
+      id: 'dj-drf-pagination-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_PAGINATION_GENERICS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the two REST_FRAMEWORK settings keys that configure global pagination.',
+      template: `# settings.py
+REST_FRAMEWORK = {
+    "___": "rest_framework.pagination.PageNumberPagination",
+    "___": 20,
+}`,
+      blanks: ['DEFAULT_PAGINATION_CLASS', 'PAGE_SIZE'],
+      solution: '# settings.py\nREST_FRAMEWORK = {\n    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",\n    "PAGE_SIZE": 20,\n}',
+      explanation: '`DEFAULT_PAGINATION_CLASS` sets the pagination style project-wide; `PageNumberPagination` is the simplest (`?page=N`). `PAGE_SIZE` sets how many items per page. List responses are then wrapped with `count`/`next`/`previous`/`results`.',
+      hints: ['Key naming the pagination class', 'Key naming items per page'],
+      tags: ['drf', 'pagination', 'cloze'],
+      concepts: ['dj-pagination-strategy'],
+    },
+  {
+      id: 'py-drf-pagination',
+      type: QuestionType.CODING,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_PAGINATION_GENERICS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'In `settings.py`, configure global DRF pagination so list endpoints return 20 items per page using the simple `?page=N` style (responses wrapped with `count`/`next`/`previous`/`results`). Set the `REST_FRAMEWORK` dict.',
+      starterCode: `# settings.py
+REST_FRAMEWORK = {
+}
+`,
+      testCases: [
+        {
+          input: 'default pagination',
+          expectedOutput: 'List responses wrapped with count/next/previous/results',
+          description: 'PageNumberPagination is the simplest default',
+        },
+      ],
+      solution: `# settings.py
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+}`,
+      explanation: 'Options: `PageNumberPagination` (?page=N — simplest), `LimitOffsetPagination` (?limit=N&offset=N — SQL-style), `CursorPagination` (opaque cursor — stable under inserts, required for real-time feeds). Per-view override via `pagination_class = MyPagination`. Disable for a view by setting `pagination_class = None`. Always paginate list endpoints on collections that could grow unbounded — otherwise you ship a DoS vector.',
+      hints: [
+        'Page / Limit-Offset / Cursor — pick by the API shape',
+        'Per-view override: pagination_class on the view',
+        'Always paginate unbounded lists',
+      ],
+      tieredHints: {
+        apiSignature: 'REST_FRAMEWORK = {\'DEFAULT_PAGINATION_CLASS\': ..., \'PAGE_SIZE\': ...}',
+        skeleton: '# settings.py\nREST_FRAMEWORK = {\n    "____": "____.PageNumberPagination",\n    "____": 20,\n}',
+      },
+      tags: ['drf', 'pagination'],
+      concepts: ['dj-pagination-strategy'],
+    },
+  {
+      id: 'dj-drf-parsons-2',
+      type: QuestionType.PARSONS,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_PAGINATION_GENERICS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Build a DRF ListCreateAPIView for Article using ArticleSerializer that returns published articles only. Set the serializer attribute first, then override the method that returns the rows.',
+      correctOrder: [
+        'from rest_framework.generics import ListCreateAPIView',
+        'from .models import Article',
+        'from .serializers import ArticleSerializer',
+        '',
+        'class ArticleListCreate(ListCreateAPIView):',
+        '    serializer_class = ArticleSerializer',
+        '',
+        '    def get_queryset(self):',
+        '        return Article.objects.filter(status="published")',
+      ],
+      distractorLines: [
+        '        return Article.objects.get(status="published")',
+        '    serializer = ArticleSerializer',
+        'class ArticleListCreate(GenericAPIView):',
+        '    def queryset(self):',
+      ],
+      solution: 'from rest_framework.generics import ListCreateAPIView\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\nclass ArticleListCreate(ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(status="published")',
+      explanation: 'Generic API views need `serializer_class` (not `serializer`) and either a class-level `queryset` or an overridden `get_queryset()`, which must return a queryset: `.filter(...)` gives the many published rows, while `.get(...)` returns one object (or raises when there are several). Overriding `get_queryset` is also what you do when the rows depend on the request, such as the current user. `ListCreateAPIView` handles both `GET` (list) and `POST` (create) automatically.',
+      hints: ['serializer_class, not serializer', 'Override get_queryset for dynamic filtering', 'ListCreate handles GET and POST'],
+      tags: ['django', 'drf', 'ListCreateAPIView', 'get_queryset', 'parsons'],
+      concepts: ['dj-view-patterns'],
+    },
+  {
+      id: 'dj-drf-cloze-3',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_PAGINATION_GENERICS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in the generic view base class that both lists (GET) and creates (POST) articles, the attribute that names its serializer, and the method that returns only the published articles.',
+      template: `from rest_framework import generics
+
+class ArticleListCreate(generics.___):
+    ___ = ArticleSerializer
+
+    def ___(self):
+        return Article.objects.filter(status="published")`,
+      blanks: ['ListCreateAPIView', 'serializer_class', 'get_queryset'],
+      solution: 'from rest_framework import generics\n\nclass ArticleListCreate(generics.ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(status="published")',
+      explanation: 'Generic API views use `serializer_class` (singular, not `serializer`) and either a class-level `queryset` or an overridden `get_queryset()`. Override the method when the queryset depends on the request (e.g. filter by `self.request.user`).',
+      hints: ['serializer_class is the attr name', 'get_queryset for request-aware filtering'],
+      tags: ['django', 'drf', 'ListCreateAPIView', 'get_queryset', 'cloze'],
+      concepts: ['dj-view-patterns'],
+    },
 ];

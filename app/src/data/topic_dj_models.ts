@@ -46,7 +46,7 @@ export const dj_models_questions: Question[] = [
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a Django model "Comment" with a ForeignKey to "Article" (on_delete=CASCADE), author (CharField max 100), body (TextField), and created_at (DateTimeField auto_now_add).',
+      question: 'Create a Django model "Comment" with an `article` ForeignKey to "Article" (on_delete=CASCADE), author (CharField max 100), body (TextField), and created_at (DateTimeField auto_now_add).',
       starterCode: `from django.db import models\n\nclass Comment(models.Model):\n`,
       testCases: [
         {
@@ -74,7 +74,7 @@ export const dj_models_questions: Question[] = [
       language: CodeLanguage.PYTHON,
       question: 'Define a Django model `Book` with a 200-char `title` field and a 100-char `author` field (use Django\'s short-string field type for both). Add the dunder method that controls human-readable rendering (used by the admin list page, shell, and logs) so that `str(Book(title="Dune", author="Herbert"))` returns `"Dune by Herbert"`.',
       starterCode: `from django.db import models
-  `,
+`,
       testCases: [
         {
           input: 'str(Book(title="Dune", author="Herbert"))',
@@ -90,11 +90,11 @@ class Book(models.Model):
 
     def __str__(self):
         return f"{self.title} by {self.author}"`,
-      explanation: 'Without `__str__`, Django falls back to `"Book object (None)"` — useless in the admin list view, the shell REPL, and tracebacks. Always define `__str__` on models. Keep it cheap: don\'t hit related objects, don\'t concatenate long text. The admin sidebar, change list, and inline forms all call it.',
+      explanation: 'Without `__str__`, Django falls back to `"Book object (None)"` - useless in the admin list view, the shell REPL, and tracebacks. Always define `__str__` on models. Keep it cheap: don\'t hit related objects, don\'t concatenate long text. The admin sidebar, change list, and inline forms all call it.',
       hints: [
         '__str__ returns the human-readable label',
         'Used by admin list page, shell, logs, tracebacks',
-        'Keep it cheap — no DB hits, no long strings',
+        'Keep it cheap - no DB hits, no long strings',
       ],
       tieredHints: {
         apiSignature: 'def __str__(self) -> str',
@@ -112,7 +112,7 @@ class Book(models.Model):
       language: CodeLanguage.PYTHON,
       question: 'Define a Django model `Article` with a 200-char `title` field and a `created_at` timestamp field that auto-populates when rows are first inserted. Give the model class-level metadata (via Django\'s inner config class) that sets the default ordering to newest-first by `created_at`, and sets the admin sidebar plural label to `"Articles"`. After this, querying all `Article` rows should return newest-first without any explicit sort call.',
       starterCode: `from django.db import models
-  `,
+`,
       testCases: [
         {
           input: 'Article with Meta ordering and verbose_name_plural',
@@ -129,10 +129,10 @@ class Article(models.Model):
     class Meta:
         ordering = ["-created_at"]
         verbose_name_plural = "Articles"`,
-      explanation: '`class Meta` declares non-field class-level model options. Common entries: `ordering` (default sort — accepts `"-field"` for descending), `verbose_name` and `verbose_name_plural` (admin labels), `db_table` (override the auto-generated table name), `indexes` and `constraints` (DB-level indexes/CHECK constraints), `unique_together` (multi-column uniqueness), `abstract = True` (make it an abstract base class — won\'t create a table). Meta ordering is used by the admin list page and by any queryset that doesn\'t call `.order_by()`.',
+      explanation: '`class Meta` declares non-field class-level model options. Common entries: `ordering` (default sort - accepts `"-field"` for descending), `verbose_name` and `verbose_name_plural` (admin labels), `db_table` (override the auto-generated table name), `indexes` and `constraints` (DB-level indexes/CHECK constraints), `unique_together` (multi-column uniqueness), `abstract = True` (make it an abstract base class - won\'t create a table). Meta ordering is used by the admin list page and by any queryset that doesn\'t call `.order_by()`.',
       hints: [
         'class Meta: is an inner class inside the model',
-        'ordering = ["-field"] — leading minus means DESC',
+        'ordering = ["-field"] - leading minus means DESC',
         'Other Meta options: verbose_name, db_table, indexes, constraints',
       ],
       tieredHints: {
@@ -151,9 +151,9 @@ class Article(models.Model):
       language: CodeLanguage.PYTHON,
       question: 'Fill in the field types: title is bounded text up to 200 chars; body is unbounded text; created_at stamps the row when created.',
       template: `class Article(models.Model):
-      title = models.___(max_length=200)
-      body = models.___()
-      created_at = models.DateTimeField(auto_now_add=___)`,
+    title = models.___(max_length=200)
+    body = models.___()
+    created_at = models.DateTimeField(auto_now_add=___)`,
       blanks: ['CharField', 'TextField', 'True'],
       solution: 'class Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    created_at = models.DateTimeField(auto_now_add=True)',
       explanation: '`CharField` for short bounded strings (requires `max_length`); `TextField` for unbounded text. `auto_now_add=True` sets the timestamp once at creation; `auto_now=True` updates it on every save (use for `updated_at`).',
@@ -168,13 +168,13 @@ class Article(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Comments belong to an Article and should be deleted when the parent Article is removed.',
+      question: 'Comments belong to an Article and should be deleted when the parent Article is removed. Fill in the relation field type and the on_delete option.',
       template: `class Comment(models.Model):
-      article = models.___(Article, on_delete=models.___)
-      body = models.TextField()`,
+    article = models.___(Article, on_delete=models.___)
+    body = models.TextField()`,
       blanks: ['ForeignKey', 'CASCADE'],
       solution: 'class Comment(models.Model):\n    article = models.ForeignKey(Article, on_delete=models.CASCADE)\n    body = models.TextField()',
-      explanation: '`ForeignKey` is the many-to-one relation. `on_delete` has been mandatory since Django 2.0 — `CASCADE` is the most common choice for tightly-coupled child rows. Other options: `PROTECT` (raises on delete), `SET_NULL` (requires `null=True`), `SET_DEFAULT`, `DO_NOTHING`.',
+      explanation: '`ForeignKey` is the many-to-one relation. `on_delete` has been mandatory since Django 2.0 - `CASCADE` is the most common choice for tightly-coupled child rows. Other options: `PROTECT` (raises on delete), `SET_NULL` (requires `null=True`), `SET_DEFAULT`, `DO_NOTHING`.',
       hints: ['Many-to-one is ForeignKey', 'CASCADE deletes children'],
       tags: ['django', 'models', 'ForeignKey', 'on_delete', 'cloze'],
       concepts: ['dj-model-construction'],
@@ -188,14 +188,14 @@ class Article(models.Model):
       language: CodeLanguage.PYTHON,
       question: 'Make Article admin display use the title and order articles by newest-first by default.',
       template: `class Article(models.Model):
-      title = models.CharField(max_length=200)
-      created_at = models.DateTimeField(auto_now_add=True)
-  
-      class ___:
-          ordering = ["___"]
-  
-      def ___(self):
-          return self.title`,
+    title = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class ___:
+        ordering = ["___"]
+
+    def ___(self):
+        return self.title`,
       blanks: ['Meta', '-created_at', '__str__'],
       solution: 'class Article(models.Model):\n    title = models.CharField(max_length=200)\n    created_at = models.DateTimeField(auto_now_add=True)\n\n    class Meta:\n        ordering = ["-created_at"]\n\n    def __str__(self):\n        return self.title',
       explanation: '`class Meta:` (capital M) is Django\'s convention for model options. `ordering` is a list; the `-` prefix makes it descending. `__str__` controls how the instance appears in the admin and `print()`.',
@@ -253,12 +253,12 @@ class Article(models.Model):
       course: Course.BACKEND,
       question: 'What is `related_name` on a ForeignKey, and why would you use it?',
       options: [
-        { id: 'a', text: 'It renames the ForeignKey field itself', isCorrect: false },
-        { id: 'b', text: 'It makes the relationship bidirectional', isCorrect: false },
-        { id: 'c', text: 'It customises the reverse accessor name on the related model (instead of the default `modelname_set`)', isCorrect: true },
-        { id: 'd', text: 'It is required when the related model is in a different app', isCorrect: false },
+        { id: 'a', text: 'It renames the ForeignKey field itself, so `book.writer` replaces `book.author`', isCorrect: false },
+        { id: 'b', text: 'It makes the relationship two-way; without it an author cannot reach its books', isCorrect: false },
+        { id: 'c', text: 'It names the reverse accessor on the related model (instead of the default `modelname_set`)', isCorrect: true },
+        { id: 'd', text: 'It is required whenever the related model is defined in a different app', isCorrect: false },
       ],
-      explanation: 'By default, Django creates a reverse accessor named `modelname_set` (e.g. `author.book_set.all()`). `related_name="books"` gives you a cleaner API: `author.books.all()`. You **must** set `related_name` when a model has two ForeignKeys to the same model, otherwise Django raises a `SystemCheckError` about clashing reverse accessors.',
+      explanation: 'By default, Django creates a reverse accessor named `modelname_set` (e.g. `author.book_set.all()`). `related_name="books"` gives you a cleaner API: `author.books.all()`. You **must** set `related_name` when a model has two ForeignKeys to the same model, otherwise Django raises a `SystemCheckError` about clashing reverse accessors. It never renames the forward field (`book.author` stays), the reverse side exists even without it (as `book_set`), and models in different apps link with a plain `ForeignKey("otherapp.Model")`.',
       hints: [
         'Without `related_name`: `author.book_set.all()`; with it: `author.books.all()`',
         'Required when two FKs on the same model point to the same target',
@@ -273,18 +273,10 @@ class Article(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define `Author` and `Book` models with a one-to-many relationship. Book should have a `title`, `published_year`, and a ForeignKey to Author with `related_name="books"`. Then write a query to get all books by a specific author.',
-      starterCode: `# Import models from django.db
+      question: 'Define `Author` and `Book` models with a one-to-many relationship. Author has a `name` (up to 200 chars) and prints as its name. Book has a `title` (up to 300 chars), an integer `published_year` and an `author` ForeignKey to Author with `related_name="books"`; deleting an author deletes their books, and a book prints as its title. Then, in a comment, write a query that gets all books by a specific author.',
+      starterCode: `from django.db import models
 
-
-# Define Author with name (CharField max_length=200) and __str__ returning self.name
-
-
-# Define Book with:
-#   title (CharField, max_length=300)
-#   published_year (IntegerField)
-#   author = ForeignKey(Author, on_delete=models.CASCADE, related_name="books")
-#   __str__ returning self.title
+# Author, then Book (the "many" side), each with a __str__
 `,
       testCases: [
         { input: 'Book._meta.get_field("author").related_query_name()', expectedOutput: 'books', description: 'related_name should be "books"' },
@@ -322,40 +314,19 @@ class Book(models.Model):
       concepts: ['dj-model-construction', 'dj-orm-query-construction'],
     },
   {
-      id: 'dj4e-fk-5',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_MODELS,
-      course: Course.BACKEND,
-      question: 'What is `select_related()` in Django and when should you use it?',
-      options: [
-        { id: 'a', text: 'It selects only specific fields from the database', isCorrect: false },
-        { id: 'b', text: 'It caches query results for 5 minutes', isCorrect: false },
-        { id: 'c', text: 'It selects related objects asynchronously in the background', isCorrect: false },
-        { id: 'd', text: 'It performs a SQL JOIN to fetch related ForeignKey objects in a single query, avoiding N+1 queries', isCorrect: true },
-      ],
-      explanation: 'The N+1 problem: if you query 100 books and access `book.author.name` in a loop, Django makes 100 extra queries (one per book). `Book.objects.select_related("author")` does a single JOIN and fetches all authors at once. Use `select_related` for ForeignKey/OneToOne fields (forward relations). Use `prefetch_related` for ManyToMany or reverse FK relations.',
-      hints: [
-        '`select_related` = one SQL JOIN; no extra queries per object',
-        'Use for ForeignKey (forward). Use `prefetch_related` for M2M or reverse FK',
-      ],
-      tags: ['django', 'ORM', 'select_related', 'N+1', 'performance', 'JOIN'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
-    },
-  {
       id: 'dj4e-m2m-1',
       type: QuestionType.MULTIPLE_CHOICE,
       difficulty: Difficulty.BEGINNER,
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
-      question: 'When do you use a ManyToManyField in Django? Give a real example.',
+      question: 'When do you use a ManyToManyField in Django?',
       options: [
         { id: 'a', text: 'When one object must belong to exactly two other objects at once', isCorrect: false },
         { id: 'b', text: 'When you need a nullable relationship that ForeignKey can\'t express', isCorrect: false },
         { id: 'c', text: 'When both sides can have many counterparts, like students and courses', isCorrect: true },
         { id: 'd', text: 'Only when a model relates to itself in a self-referential way', isCorrect: false },
       ],
-      explanation: 'ManyToMany: both sides can have multiple related objects. Examples: students ↔ courses, posts ↔ tags, movies ↔ actors. Django creates a hidden junction table automatically to store the pairs. Unlike ForeignKey (which goes on the "many" side), `ManyToManyField` can go on either model — choose whichever makes more semantic sense.',
+      explanation: 'ManyToMany: both sides can have multiple related objects. Examples: students ↔ courses, posts ↔ tags, movies ↔ actors. Django creates a hidden junction table automatically to store the pairs. Unlike ForeignKey (which goes on the "many" side), `ManyToManyField` can go on either model - choose whichever makes more semantic sense.',
       hints: [
         'Many-to-many: "a student takes many courses AND a course has many students"',
         'Django creates the junction table automatically',
@@ -443,11 +414,11 @@ class Article(models.Model):
       question: 'When should you use a `through` model for a ManyToMany relationship instead of the automatic junction table?',
       options: [
         { id: 'a', text: 'When you need to store extra data on the relationship itself (e.g. the date a student enrolled in a course)', isCorrect: true },
-        { id: 'b', text: 'Always — the `through` model is always required for ManyToMany', isCorrect: false },
-        { id: 'c', text: 'When the two related models are in different apps', isCorrect: false },
-        { id: 'd', text: 'Only for self-referential many-to-many relationships', isCorrect: false },
+        { id: 'b', text: 'Always - Django cannot create the table that stores the pairs on its own', isCorrect: false },
+        { id: 'c', text: 'When the two related models live in different apps, so no automatic table can join them', isCorrect: false },
+        { id: 'd', text: 'Only for self-referential many-to-many, where the automatic table cannot tell the sides apart', isCorrect: false },
       ],
-      explanation: 'The automatic junction table only stores the two FK IDs. If you need extra fields on the relationship (e.g. `enrollment_date`, `role`, `grade`), create an explicit `through` model: `class Enrollment(models.Model): student = FK(Student); course = FK(Course); enrolled_date = DateField()`. Then `ManyToManyField(Course, through="Enrollment")`.',
+      explanation: 'The automatic junction table only stores the two FK IDs. If you need extra fields on the relationship (e.g. `enrollment_date`, `role`, `grade`), create an explicit `through` model: `class Enrollment(models.Model): student = FK(Student); course = FK(Course); enrolled_date = DateField()`. Then `ManyToManyField(Course, through="Enrollment")`. Without extra data you do not need one: Django creates the junction table automatically, also across apps and for `ManyToManyField("self")`.',
       hints: [
         '`through` model = extra fields on the relationship',
         'The through model has ForeignKeys to both sides plus your extra fields',
@@ -462,7 +433,7 @@ class Article(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A Band has many Musicians and a Musician can join many Bands — but you also need to store the `joined_date` on that relationship. Fill in the parameter that routes the M2M through an explicit model, and the field type on Membership.',
+      question: 'A Band has many Musicians and a Musician can join many Bands, but you also need to store the `joined_date` on that relationship. Fill in the explicit model that `through=` routes the M2M through, and the field type on Membership.',
       template: `class Musician(models.Model):
     name = models.CharField(max_length=100)
 
@@ -476,7 +447,7 @@ class Membership(models.Model):
     joined_date = models.DateField()`,
       blanks: ['Membership', 'ForeignKey'],
       solution: 'class Musician(models.Model):\n    name = models.CharField(max_length=100)\n\nclass Band(models.Model):\n    name = models.CharField(max_length=100)\n    musicians = models.ManyToManyField(Musician, through="Membership")\n\nclass Membership(models.Model):\n    musician = models.ForeignKey(Musician, on_delete=models.CASCADE)\n    band = models.ForeignKey(Band, on_delete=models.CASCADE)\n    joined_date = models.DateField()',
-      explanation: 'A `through` model is required when the relationship itself carries data (here, `joined_date`). `ManyToManyField(..., through="Membership")` tells Django to route adds/removes through that model instead of the automatic hidden join table. The through model needs a ForeignKey to BOTH sides plus the extra field(s); you can no longer use `.add()` — create `Membership` rows directly.',
+      explanation: 'A `through` model is required when the relationship itself carries data (here, `joined_date`). `ManyToManyField(..., through="Membership")` tells Django to route adds/removes through that model instead of the automatic hidden join table. The through model needs a ForeignKey to BOTH sides plus the extra field(s). Because `joined_date` has no default, `band.musicians.add(m)` must supply it with `through_defaults={"joined_date": ...}`, or you create `Membership` rows directly.',
       hints: ['through= takes the model name as a string', 'The through model needs ForeignKeys to both sides'],
       tags: ['django', 'models', 'ManyToManyField', 'through', 'cloze'],
       concepts: ['dj-model-construction'],
@@ -488,7 +459,7 @@ class Membership(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create Student, Course, and Enrollment models. Enrollment is the `through` model storing `enrolled_date`. Show how to enrol a student and query a student\'s courses.',
+      question: 'Create Student, Course, and Enrollment models. A Student has a `name` (up to 100 chars). A Course has a `title` (up to 200 chars) and a `students` many-to-many to Student that goes through Enrollment, with the reverse side reading `student.courses`. Enrollment links one `student` and one `course` (deleted with either) and stores an `enrolled_date` that defaults to the current time. In comments, show how to enrol a student and query a student\'s courses.',
       starterCode: `from django.db import models
 from django.utils import timezone
 
@@ -520,7 +491,7 @@ class Enrollment(models.Model):
 # Enrol: Enrollment.objects.create(student=student, course=course)
 # Query: student.courses.all()
 # With date: Enrollment.objects.filter(student=student).select_related("course")`,
-      explanation: 'The `through` model has two ForeignKeys (to Student and Course) plus the extra field `enrolled_date`. You can no longer use `.add()` — instead create `Enrollment` objects directly. You can still use `student.courses.all()` for simple M2M queries, or query `Enrollment` directly when you need the extra fields.',
+      explanation: 'The `through` model has two ForeignKeys (to Student and Course) plus the extra field `enrolled_date`. You can enrol by creating an `Enrollment` row directly, or with `course.students.add(student)`, which works here because `enrolled_date` has a default (otherwise pass `through_defaults={...}`). `student.courses.all()` lists a student\'s courses; query `Enrollment` directly when you need the extra fields.',
       hints: [
         'Enrollment needs FK to Student, FK to Course, and the date field',
         'Create enrollments with `Enrollment.objects.create(student=..., course=...)`',
@@ -531,27 +502,6 @@ class Enrollment(models.Model):
       },
       tags: ['django', 'models', 'ManyToManyField', 'through', 'Enrollment', 'intermediate'],
       concepts: ['dj-model-construction'],
-    },
-  {
-      id: 'dj4e-m2m-5',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_MODELS,
-      course: Course.BACKEND,
-      question: 'What is `prefetch_related()` and how does it differ from `select_related()`?',
-      options: [
-        { id: 'a', text: 'They are identical — use either one for any relationship type', isCorrect: false },
-        { id: 'b', text: '`select_related` uses SQL JOINs (for FK/O2O); `prefetch_related` makes separate queries and joins in Python (for M2M or reverse FK)', isCorrect: true },
-        { id: 'c', text: '`prefetch_related` is only for GenericForeignKey; `select_related` is for everything else', isCorrect: false },
-        { id: 'd', text: '`prefetch_related` caches the result; `select_related` always queries fresh', isCorrect: false },
-      ],
-      explanation: '`select_related` does a SQL JOIN — efficient for FK/O2O (forward relations). `prefetch_related` does two separate queries and joins the results in Python — necessary for M2M and reverse FK relations (where a JOIN would cause row duplication). For `Article.objects.prefetch_related("tags")`, Django does: 1) get all articles, 2) get all tags for those articles, 3) Python-side join.',
-      hints: [
-        'FK forward → `select_related` (JOIN); M2M or reverse FK → `prefetch_related` (2 queries)',
-        'Both solve N+1 but with different SQL strategies',
-      ],
-      tags: ['django', 'ORM', 'prefetch_related', 'select_related', 'performance', 'M2M'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
     },
   {
       id: 'dj-models-parsons-1',
@@ -587,7 +537,7 @@ class Enrollment(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Assemble a `Comment` model that links to `Article` via a ForeignKey, deletes when its parent Article is deleted, and orders newest comments first. Use a Meta inner class for ordering.',
+      question: 'Assemble a `Comment` model with its fields in this order: `article` (a ForeignKey to `Article`, deleted when its parent Article is deleted), a text `body`, and a `created_at` timestamp set on creation. Then add a Meta inner class that orders newest comments first.',
       correctOrder: [
         'class Comment(models.Model):',
         '    article = models.ForeignKey(Article, on_delete=models.CASCADE)',
@@ -616,7 +566,7 @@ class Enrollment(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Add a `__str__` method to `Article` that returns the title, plus a `STATUS_CHOICES` constant and a `status` field that uses it with default "draft".',
+      question: 'Build an `Article` model in this order: a `STATUS_CHOICES` constant whose stored values are "draft" and "published" (labels "Draft" and "Published"), a 200-char `title`, a `status` field (up to 20 chars) that uses those choices with default "draft", then a `__str__` method that returns the title.',
       correctOrder: [
         'class Article(models.Model):',
         '    STATUS_CHOICES = [("draft", "Draft"), ("published", "Published")]',
@@ -627,14 +577,14 @@ class Enrollment(models.Model):
         '        return self.title',
       ],
       distractorLines: [
-        '    STATUS_CHOICES = {"draft": "Draft", "published": "Published"}',
+        '    STATUS_CHOICES = [("Draft", "draft"), ("Published", "published")]',
         '    status = models.CharField(choices=STATUS_CHOICES)',
         '    def __str__():',
         '        return title',
       ],
       solution: 'class Article(models.Model):\n    STATUS_CHOICES = [("draft", "Draft"), ("published", "Published")]\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")\n\n    def __str__(self):\n        return self.title',
-      explanation: '`choices` expects a list of `(stored_value, display_label)` tuples — not a dict. `__str__` takes `self` and returns a string; the admin and `print(article)` both use it. `default="draft"` means new instances get that value automatically.',
-      hints: ['choices is a list of tuples', '__str__(self) returns self.title', 'default sets initial value'],
+      explanation: 'Each `choices` pair is `(stored_value, display_label)`, stored value first; with the pair swapped the column would store "Draft" and the default "draft" would not be a valid choice. (Since Django 5.0 a dict `{"draft": "Draft", ...}` is accepted too.) A `CharField` still needs `max_length`. `__str__` takes `self` and returns a string; the admin and `print(article)` both use it. `default="draft"` means new instances get that value automatically.',
+      hints: ['Each choice is (stored value, label)', '__str__(self) returns self.title', 'default sets initial value'],
       tags: ['django', 'models', 'choices', '__str__', 'parsons'],
       concepts: ['dj-model-construction'],
     },
@@ -781,33 +731,18 @@ class Product(models.Model):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(check=Q(price__gte=0), name="product_price_non_negative"),
-            models.UniqueConstraint(fields=["sku"], condition=Q(is_active=True), name="unique_active_sku"),
-        ]
-# OR
-from django.db import models
-from django.db.models import Q
-
-class Product(models.Model):
-    name = models.CharField(max_length=200)
-    sku = models.CharField(max_length=50)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        constraints = [
             models.CheckConstraint(condition=Q(price__gte=0), name="product_price_non_negative"),
             models.UniqueConstraint(fields=["sku"], condition=Q(is_active=True), name="unique_active_sku"),
         ]`,
-      explanation: '`CheckConstraint` emits a SQL `CHECK` (here `price >= 0`) the DB enforces on every write. `UniqueConstraint` with a `condition` is a partial unique index — `sku` unique only over `is_active=True` rows. Both live in `Meta.constraints`, can\'t be bypassed by `bulk_create`/`update()`, and each needs a unique `name`. (Django ≥5.1 renames `CheckConstraint`\'s `check=` kwarg to `condition=`; both shown.)',
+      explanation: '`CheckConstraint` emits a SQL `CHECK` (here `price >= 0`) the DB enforces on every write. `UniqueConstraint` with a `condition` is a partial unique index - `sku` unique only over `is_active=True` rows. Both live in `Meta.constraints`, can\'t be bypassed by `bulk_create`/`update()`, and each needs a unique `name`. (Older tutorials write `CheckConstraint(check=...)`; that keyword was renamed `condition=` in Django 5.1 and removed in 6.0, where it raises a TypeError.)',
       hints: [
         'Both rules go in `class Meta: constraints = [...]`',
-        '`CheckConstraint(check=Q(price__gte=0), name=...)` for the price rule',
+        '`CheckConstraint(condition=Q(price__gte=0), name=...)` for the price rule',
         '`UniqueConstraint(fields=["sku"], condition=Q(is_active=True), name=...)` for the scoped uniqueness',
       ],
       tieredHints: {
-        apiSignature: 'models.CheckConstraint(check=None, name="")',
-        skeleton: 'from django.db import models\nfrom django.db.models import Q\n\nclass Product(models.Model):\n    name = models.CharField(max_length=200)\n    sku = models.CharField(max_length=50)\n    price = models.DecimalField(max_digits=10, decimal_places=2)\n    is_active = models.BooleanField(default=True)\n\n    class Meta:\n        constraints = [\n            models.____(check=Q(price__gte=0), name="product_price_non_negative"),\n            models.____(fields=["sku"], condition=Q(is_active=____), name="unique_active_sku"),\n        ]',
+        apiSignature: 'models.CheckConstraint(*, condition, name)',
+        skeleton: 'from django.db import models\nfrom django.db.models import Q\n\nclass Product(models.Model):\n    name = models.____(____)\n    sku = models.____(____)\n    price = models.____(____, ____)\n    is_active = models.____(____)\n\n    class Meta:\n        ____ = [\n            models.____(____=Q(____), name=____),\n            models.____(fields=[____], ____=Q(____), name=____),\n        ]',
       },
       tags: ['django', 'models', 'constraints', 'CheckConstraint', 'UniqueConstraint'],
       concepts: ['dj-model-construction'],
@@ -821,15 +756,15 @@ class Product(models.Model):
       course: Course.BACKEND,
       question: 'Queries filter `Order` by `customer` (equality) and then sort the matches by `created_at` descending. For ONE composite index to serve both the filter and the sort, how should its columns be ordered?',
       options: [
-        { id: 'a', text: '`fields=["customer", "-created_at"]` — equality-filtered column first, then the sort column in its sort direction', isCorrect: true },
-        { id: 'b', text: '`fields=["-created_at", "customer"]` — put the sorted column first so ordering resolves before the filter', isCorrect: false },
-        { id: 'c', text: '`fields=["customer", "created_at"]` — index direction never matters; the planner sorts either way for free', isCorrect: false },
+        { id: 'a', text: '`fields=["customer", "-created_at"]` - equality-filtered column first, then the sort column in its sort direction', isCorrect: true },
+        { id: 'b', text: '`fields=["-created_at", "customer"]` - put the sorted column first so ordering resolves before the filter', isCorrect: false },
+        { id: 'c', text: '`fields=["customer"]` alone - the rows found for one customer already come back in `created_at` order', isCorrect: false },
         { id: 'd', text: 'Two separate single-column indexes always beat one composite index for this access pattern', isCorrect: false },
       ],
-      explanation: 'A composite index is ordered left-to-right. Put the equality-filtered column (`customer`) first so the index narrows to those rows, then the sort column (`-created_at`) so the already-filtered rows come out pre-sorted — no extra sort step. Leading with the sort column means the DB can\'t use the index to find `customer` efficiently.',
+      explanation: 'A composite index is ordered left-to-right. Put the equality-filtered column (`customer`) first so the index narrows to those rows, then the sort column (`-created_at`) so the already-filtered rows come out pre-sorted - no extra sort step. Leading with the sort column means the DB can\'t use the index to find `customer` efficiently. An index on `customer` alone finds the rows but says nothing about their order, so the database still has to sort them. (An ascending `["customer", "created_at"]` index would also work here, because the database can read it backwards; the `-` just matches the query\'s direction.)',
       hints: [
         'Equality columns first, then the ORDER BY column',
-        'Index direction (`-`) matters when the query sorts descending',
+        'A column that is not in the index cannot give the rows their order',
       ],
       tags: ['django', 'models', 'indexes', 'Index', 'performance'],
       concepts: ['dj-model-construction'],
@@ -1044,8 +979,9 @@ class Profile(models.Model):
         related_name="___",
     )`,
       blanks: ['self', 'children'],
+      blankAlternates: [['Category'], []],
       solution: 'class Category(models.Model):\n    title = models.CharField(max_length=100)\n    parent = models.ForeignKey(\n        "self",\n        on_delete=models.CASCADE,\n        null=True,\n        blank=True,\n        related_name="children",\n    )',
-      explanation: '`ForeignKey("self")` points a model at its own table. `null=True, blank=True` lets root categories have no parent. `related_name="children"` makes the reverse accessor `category.children.all()` return a category\'s direct subcategories.',
+      explanation: '`ForeignKey("self")` points a model at its own table (naming the class itself, `"Category"`, works too). `null=True, blank=True` lets root categories have no parent. `related_name="children"` makes the reverse accessor `category.children.all()` return a category\'s direct subcategories.',
       hints: ['The target string for a self-reference is "self"', 'Reverse accessor name → `children`'],
       tags: ['django', 'models', 'ForeignKey', 'self-referential', 'cloze'],
       concepts: ['dj-model-construction'],
@@ -1064,7 +1000,7 @@ class Profile(models.Model):
         { id: 'c', text: 'A single table for the base with every child\'s fields merged into it (single-table inheritance)', isCorrect: false },
         { id: 'd', text: 'One table for the abstract base only; the children are pure Python views with no storage', isCorrect: false },
       ],
-      explanation: 'Abstract inheritance is a code-reuse tool, not a DB relationship: the base creates NO table, and each concrete child gets the inherited fields copied into its own table. Option (b) describes multi-table inheritance (a real base table + per-child tables joined by an auto OneToOne) — the alternative you\'d get WITHOUT `abstract = True`.',
+      explanation: 'Abstract inheritance is a code-reuse tool, not a DB relationship: the base creates NO table, and each concrete child gets the inherited fields copied into its own table. A shared base table plus per-child tables joined by an automatic one-to-one link is multi-table inheritance - what you\'d get WITHOUT `abstract = True`. Django has no single-table inheritance, and the children are real tables, not views.',
       hints: [
         'Abstract = fields copied down; no base table',
         'A real base table + joins is multi-table inheritance (non-abstract)',
@@ -1079,7 +1015,7 @@ class Profile(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Assemble an abstract `TimeStampedModel` base (no table of its own) with a created_at field listed before an updated_at field, then a concrete `Article` that inherits it. The base\'s Meta must mark it abstract.',
+      question: 'Assemble an abstract `TimeStampedModel` base (no table of its own) with a `created_at` field set once on insert, then an `updated_at` field refreshed on every save, then its Meta class marking it abstract. After it, add a concrete `Article` with a 200-char `title` that inherits the base.',
       correctOrder: [
         'class TimeStampedModel(models.Model):',
         '    created_at = models.DateTimeField(auto_now_add=True)',
@@ -1093,13 +1029,13 @@ class Profile(models.Model):
       ],
       distractorLines: [
         'class TimeStampedModel:',
-        '        abstract = "True"',
+        '        managed = False',
         'class Article(models.Model):',
-        '    class Meta:',
+        '    created_at = models.DateTimeField(auto_now=True)',
       ],
       solution: 'class TimeStampedModel(models.Model):\n    created_at = models.DateTimeField(auto_now_add=True)\n    updated_at = models.DateTimeField(auto_now=True)\n\n    class Meta:\n        abstract = True\n\nclass Article(TimeStampedModel):\n    title = models.CharField(max_length=200)',
-      explanation: 'The base must still inherit `models.Model`. `class Meta: abstract = True` (a boolean, not the string `"True"`) stops Django building a table for it. The child inherits FROM the base (`Article(TimeStampedModel)`), so the timestamp columns land in the `Article` table.',
-      hints: ['Base inherits models.Model; child inherits the base', 'abstract = True is a boolean', 'created_at before updated_at'],
+      explanation: 'The base must still inherit `models.Model`. `class Meta: abstract = True` stops Django building a table for it; `managed = False` only stops migrations from creating the table, so the base would still be a concrete model and `Article` would get a one-to-one link to a table that does not exist. The child inherits FROM the base (`Article(TimeStampedModel)`), so the timestamp columns land in the `Article` table. `created_at` uses `auto_now_add` (set once on insert); `auto_now` refreshes on every save, which is `updated_at`\'s job.',
+      hints: ['Base inherits models.Model; child inherits the base', 'abstract = True in the base\'s Meta', 'auto_now_add for created_at, auto_now for updated_at'],
       tags: ['django', 'models', 'abstract', 'inheritance', 'parsons'],
       concepts: ['dj-model-construction'],
     },
@@ -1110,7 +1046,7 @@ class Profile(models.Model):
       topic: Topic.DJ_MODELS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a reusable abstract base model that adds a `created_at` timestamp (set once on insert) and an `updated_at` timestamp (refreshed on every save), and produces no database table of its own. Then define two concrete models — `Article` (with a `title` ≤200 chars) and `Comment` (with a `body` text field) — that both inherit those timestamps.',
+      question: 'Create a reusable abstract base model named `TimeStampedModel` that adds a `created_at` timestamp (set once on insert) and an `updated_at` timestamp (refreshed on every save), and produces no database table of its own. Then define two concrete models, `Article` (with a `title` of up to 200 chars) and `Comment` (with a `body` text field), that both inherit those timestamps.',
       starterCode: `from django.db import models
 
 # Abstract base + two concrete models that inherit it.
@@ -1132,7 +1068,7 @@ class Article(TimeStampedModel):
 
 class Comment(TimeStampedModel):
     body = models.TextField()`,
-      explanation: '`auto_now_add=True` stamps once at insert; `auto_now=True` updates on every `save()`. `class Meta: abstract = True` makes the base table-less — its fields are copied into each concrete child (`Article`, `Comment`), so both tables carry their own timestamp columns. This is the canonical DRY pattern for shared model fields.',
+      explanation: '`auto_now_add=True` stamps once at insert; `auto_now=True` updates on every `save()`. `class Meta: abstract = True` makes the base table-less - its fields are copied into each concrete child (`Article`, `Comment`), so both tables carry their own timestamp columns. This is the canonical DRY pattern for shared model fields.',
       hints: [
         'Base inherits `models.Model` and sets `class Meta: abstract = True`',
         '`auto_now_add` for created, `auto_now` for updated',
@@ -1270,12 +1206,12 @@ class Article(models.Model):
       course: Course.BACKEND,
       question: 'A field declared `rating = models.IntegerField(validators=[MinValueValidator(0)])` runs that validator during which operation?',
       options: [
-        { id: 'a', text: 'During `full_clean()` — which `ModelForm`/serializer validation calls — but NOT during a plain `Model.save()`', isCorrect: true },
+        { id: 'a', text: 'During `full_clean()`, which `ModelForm` validation calls for you, but NOT during a plain `Model.save()`', isCorrect: true },
         { id: 'b', text: 'During every `Model.save()` call automatically, no matter how the instance was constructed', isCorrect: false },
         { id: 'c', text: 'Only at the database level, as a CHECK constraint emitted in the field\'s migration', isCorrect: false },
         { id: 'd', text: 'During queryset filtering, rejecting any `.filter()` that would match an invalid value', isCorrect: false },
       ],
-      explanation: 'Field `validators` run inside `full_clean()`. Forms and DRF serializers call `full_clean`/`run_validators` for you, so invalid input is caught there. But `Model.save()` does NOT call `full_clean()` — `Model(rating=-5).save()` happily writes a negative value. For a guarantee at the DB level you need a `CheckConstraint`.',
+      explanation: 'Field `validators` run inside `full_clean()`. A `ModelForm` calls it for you (and a DRF `ModelSerializer` copies the field\'s validators onto its own fields), so invalid input is caught there. But `Model.save()` does NOT call `full_clean()` - `Model(rating=-5).save()` happily writes a negative value. For a guarantee at the DB level you need a `CheckConstraint`.',
       hints: [
         'validators fire in `full_clean()`, not `save()`',
         'DB-level enforcement needs a `CheckConstraint`',

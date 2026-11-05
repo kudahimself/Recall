@@ -20,7 +20,7 @@ export const dj_orm_questions: Question[] = [
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Given an `Employee` model with a `department` (CharField) and a `salary` (DecimalField), write a Django ORM query that groups employees by department, annotates each group with `total_budget` = the sum of salaries, keeps only departments whose `total_budget` exceeds 100000, and orders the results by `total_budget` descending.',
+      question: 'Given an `Employee` model with a `department` (CharField) and a `salary` (DecimalField), write a Django ORM query that groups employees by department, annotates each group with `total_budget` = the sum of salaries, keeps only departments whose `total_budget` exceeds 100000, and orders the results by `total_budget` descending. Assign the queryset to `results`.',
       starterCode: `from django.db.models import Sum\n\n`,
       testCases: [{ input: 'aggregate query', expectedOutput: 'annotate(Sum), filter, order_by', description: 'Should annotate and filter' }],
       solution: `from django.db.models import Sum\n\nresults = Employee.objects.values("department").annotate(\n    total_budget=Sum("salary")\n).filter(\n    total_budget__gt=100000\n).order_by("-total_budget")`,
@@ -57,7 +57,7 @@ export const dj_orm_questions: Question[] = [
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Using the Django ORM with an Article model (fields: title, author, is_published, published_date), write three separate queries. Assign each to a variable: `published` = all published articles; `alice_articles` = articles by author "Alice"; `recent` = all articles ordered by published_date descending (newest first).',
+      question: 'Using the Django ORM with an Article model (fields: `title` and `author`, both text; `is_published`, a boolean; `published_date`, a date), write three separate queries. Assign each to a variable: `published` = all published articles; `alice_articles` = articles by author "Alice"; `recent` = all articles ordered by published_date descending (newest first).',
       starterCode: `# Django ORM queries\n`,
       testCases: [
         {
@@ -83,7 +83,7 @@ export const dj_orm_questions: Question[] = [
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Using the Django ORM, get articles with titles containing "python" (case-insensitive), exclude articles by author "admin", and get only the first 5.',
+      question: 'An `Article` model has text fields `title` and `author`. Using the Django ORM, get articles with titles containing "python" (case-insensitive), exclude articles by author "admin", and keep only the first 5. Assign the queryset to `results`.',
       starterCode: `# Advanced ORM queries\n`,
       testCases: [
         {
@@ -209,175 +209,6 @@ def above_average_articles():
       concepts: ['dj-orm-query-construction'],
     },
   {
-      id: 'dj-orm-queryset-manager-cloze-1',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Give `Product` a chainable custom filter: `Product.objects.in_stock().cheap()` should both work. Fill in the base class the custom QuerySet extends, and the classmethod call that turns it into the model\'s manager.',
-      template: `class ProductQuerySet(models.___):
-    def in_stock(self):
-        return self.filter(in_stock=True)
-
-    def cheap(self):
-        return self.filter(price__lt=10)
-
-class Product(models.Model):
-    name = models.CharField(max_length=200)
-    price = models.DecimalField(max_digits=6, decimal_places=2)
-    in_stock = models.BooleanField(default=True)
-
-    objects = ProductQuerySet.___()`,
-      blanks: ['QuerySet', 'as_manager'],
-      solution: 'class ProductQuerySet(models.QuerySet):\n    def in_stock(self):\n        return self.filter(in_stock=True)\n\n    def cheap(self):\n        return self.filter(price__lt=10)\n\nclass Product(models.Model):\n    name = models.CharField(max_length=200)\n    price = models.DecimalField(max_digits=6, decimal_places=2)\n    in_stock = models.BooleanField(default=True)\n\n    objects = ProductQuerySet.as_manager()',
-      explanation: 'Subclassing `models.QuerySet` and exposing it via `SubclassedQuerySet.as_manager()` is what makes custom filter methods chainable: `Product.objects.in_stock().cheap()`. Defining the same methods on a `Manager` subclass instead would break chaining — a `Manager` method doesn\'t return another `Manager`, so `.in_stock()` would return a plain QuerySet with no `.cheap()` on it. `as_manager()` builds a manager class from the QuerySet automatically, keeping every method chainable all the way down.',
-      hints: ['Custom QuerySets subclass models.QuerySet', 'as_manager() turns the QuerySet class into a chainable manager'],
-      tags: ['django', 'orm', 'QuerySet', 'as_manager', 'cloze'],
-      concepts: ['dj-orm-query-construction'],
-    },
-  {
-      id: 'dj-orm-adv-3',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.ADVANCED,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: `Build an \`Article\` model that combines three production patterns:
-
-  1. A custom QuerySet exposing two chainable filters: \`published()\` narrows to status="published", and \`recent(days=7)\` (the \`days\` keyword defaulting to 7) narrows to articles created within the last N days. Hook it up so the model's default manager exposes both as chainable on \`Article.objects\` (e.g. \`Article.objects.published().recent(days=7)\`).
-  2. The primary key is a UUID (not the default auto-incrementing integer).
-  3. A read-only \`is_recent\` attribute on each instance returns True iff the article was created within the last 24 hours, evaluated against the current time.
-
-  The model also has \`title\` (CharField, max 200), \`status\` (CharField, max 20), and \`created_at\` (auto_now_add).`,
-      starterCode: `import uuid
-from datetime import timedelta
-from django.db import models
-from django.utils import timezone
-`,
-      testCases: [
-        {
-          input: 'Article.objects.published().recent(days=7)',
-          expectedOutput: 'chainable QuerySet via as_manager() + UUID pk + computed property',
-          description: '3 production patterns combined',
-        },
-      ],
-      solution: `import uuid
-from datetime import timedelta
-from django.db import models
-from django.utils import timezone
-
-
-class ArticleQuerySet(models.QuerySet):
-    def published(self):
-        return self.filter(status="published")
-
-    def recent(self, days=7):
-        cutoff = timezone.now() - timedelta(days=days)
-        return self.filter(created_at__gte=cutoff)
-
-
-class Article(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=200)
-    status = models.CharField(max_length=20)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = ArticleQuerySet.as_manager()
-
-    @property
-    def is_recent(self):
-        return timezone.now() - self.created_at < timedelta(hours=24)`,
-      explanation: 'Custom `QuerySet.as_manager()` is the modern way to make filter methods chainable — defining them on a `Manager` instead would break chaining (you can\'t call `Article.objects.published().recent()`). UUID primary keys hide row counts from clients and avoid integer-enumeration attacks; pass `default=uuid.uuid4` (the function itself, not a call). `@property` exposes computed values without storing them — useful for "derived from `created_at`" facts the DB doesn\'t need to know.',
-      hints: [
-        'Custom QuerySet + as_manager() = chainable filters',
-        'UUID default takes the callable, not uuid.uuid4()',
-        '@property for computed-from-other-fields values',
-        'timezone.now(), not datetime.now()',
-      ],
-      tieredHints: {
-        apiSignature: 'QuerySet.as_manager() -> Manager',
-        skeleton: 'import uuid\nfrom datetime import ____\nfrom django.db import ____\nfrom django.utils import ____\n\n\nclass ArticleQuerySet(models.____):\n    def ____(self):\n        return self.____(____="____")\n\n    def ____(self, days=7):\n        cutoff = timezone.____() - ____(days=days)\n        return self.____(____=cutoff)\n\n\nclass Article(models.____):\n    id = models.____(primary_key=True, default=uuid.____, editable=False)\n    title = models.____(____=200)\n    status = models.____(____=20)\n    created_at = models.____(____=True)\n\n    objects = ArticleQuerySet.____()\n\n    @____\n    def ____(self):\n        return timezone.____() - self.____ < ____(hours=24)',
-      },
-      tags: ['django', 'orm', 'QuerySet', 'as_manager', 'UUIDField', 'property', 'advanced'],
-      concepts: ['dj-model-construction', 'dj-orm-query-construction'],
-    },
-  {
-      id: 'py-dj-orm-select-related',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Use `select_related` to eliminate N+1 queries on a ForeignKey. Given a `Post` model with `author = ForeignKey(User, ...)`, write a `run()` function that iterates every post and prints `f"{post.title} by {post.author.username}"`, loading each post\'s author in a SINGLE JOIN query (not one query per post). Without eager-loading, every iteration fires a separate query for `post.author`; calling `select_related` on the `author` FK makes Django do ONE JOIN query and pre-populate `post.author`.',
-      starterCode: `# Write run(): print one "<title> by <author username>" line per post,
-# loading each post's author in a single JOIN instead of a query per post.
-`,
-      testCases: [
-        {
-          input: 'ForeignKey preloading',
-          expectedOutput: 'Single SQL query including author columns via JOIN',
-          description: 'select_related for FK and OneToOne',
-        },
-      ],
-      solution: `from .models import Post
-
-def run():
-    qs = Post.objects.select_related("author").all()
-    for post in qs:
-        print(f"{post.title} by {post.author.username}")`,
-      explanation: '`select_related(*fields)` adds SQL JOINs — one query for the whole list. Works for `ForeignKey` and `OneToOneField`. For 100 posts without it: 1 + 100 = 101 queries. With it: 1. Chain multiple: `.select_related("author", "category")`. Traverse relations: `.select_related("author__profile")`. Doesn\'t work for `ManyToMany` or reverse FK — use `prefetch_related` for those.',
-      hints: [
-        'select_related for FK / OneToOne — uses SQL JOIN',
-        'Single query instead of N+1',
-        'Traverse relations with __: "author__profile"',
-      ],
-      tieredHints: {
-        apiSignature: 'QuerySet.select_related(*fields)',
-        skeleton: 'from .models import Post\n\ndef run():\n    qs = Post.____.____("____").____()\n    for ____ in qs:\n        print(f"{____.____} by {____.____.____}")',
-      },
-      tags: ['django', 'orm', 'select_related', 'n-plus-1'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
-    },
-  {
-      id: 'py-dj-orm-prefetch',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Use `prefetch_related` with `"tags"` for a many-to-many reverse lookup. Given a `Post` model whose `tags` attribute is a `ManyToManyField` to `Tag`, fetch all posts with the tags prefetched — one additional query TOTAL, not per post. Iterate the queryset inside a `run` function and for each post print a line of the form `"<title>: <comma-separated tag names>"` — build the tag name list by joining the `name` of each tag in `post.tags.all()` with `", "`.',
-      starterCode: `# Write run(): iterate all posts and print "<title>: <tag names>"
-# (tag names comma-separated), prefetching the M2M tags so the
-# whole tag set loads in one extra query, not one per post.
-`,
-      testCases: [
-        {
-          input: 'M2M preloading',
-          expectedOutput: 'Two queries total: one for posts, one for ALL related tags',
-          description: 'prefetch_related does a second query, merges in Python',
-        },
-      ],
-      solution: `from .models import Post
-
-def run():
-    for p in Post.objects.prefetch_related("tags"):
-        names = ", ".join(t.name for t in p.tags.all())
-        print(f"{p.title}: {names}")`,
-      explanation: '`prefetch_related` does two queries (one for the main model, one for the related table) and matches them in Python — works for M2M, reverse FK, reverse OneToOne. Without it, `post.tags.all()` fires per iteration. Can be composed with `select_related` in the same queryset: `.select_related("author").prefetch_related("tags", "comments__user")`. For complex filtering of prefetches, use `Prefetch(...)` objects.',
-      hints: [
-        'prefetch_related for M2M and reverse FK',
-        'Two queries total — not per parent',
-        'Composable with select_related in the same queryset',
-      ],
-      tieredHints: {
-        apiSignature: 'QuerySet.prefetch_related(*lookups)',
-        skeleton: 'from .models import Post\n\ndef run():\n    for p in Post.____.____("____"):\n        names = ", ".join(t.____ for t in p.____.____())\n        print(f"{p.____}: {names}")',
-      },
-      tags: ['django', 'orm', 'prefetch_related', 'm2m'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
-    },
-  {
       id: 'py-dj-orm-f',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,
@@ -420,7 +251,7 @@ def bump(pk):
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use `Q()` for OR queries. Import `Q` from `django.db.models`. Write a queryset that finds `Post` rows where `title` contains "django" OR `body` contains "django" (case-insensitive). `Q` objects compose with `|` (OR), `&` (AND), and `~` (NOT) — plain `filter()` kwargs can only AND.',
+      question: 'Use `Q()` for OR queries. Import `Q` from `django.db.models`. Write a queryset that finds `Post` rows where `title` contains "django" OR `body` contains "django" (case-insensitive), and assign it to `qs`. `Q` objects compose with `|` (OR), `&` (AND), and `~` (NOT) - plain `filter()` kwargs can only AND.',
       starterCode: `# Build a queryset of Posts where title OR body contains "django"
 # (case-insensitive), using Q objects to express the OR.
 `,
@@ -437,10 +268,10 @@ from .models import Post
 qs = Post.objects.filter(
     Q(title__icontains="django") | Q(body__icontains="django")
 )`,
-      explanation: 'Normal `filter()` kwargs are AND-combined — there\'s no way to express OR that way. `Q()` objects are composable query atoms: `Q(a=1) | Q(b=2)` means `WHERE a=1 OR b=2`. Combine with `&`, negate with `~Q(...)`. Used heavily in search (multiple fields), permission checks (OR-ing rules), complex filters. Can be nested arbitrarily.',
+      explanation: 'Normal `filter()` kwargs are AND-combined - there\'s no way to express OR that way. `Q()` objects are composable query atoms: `Q(a=1) | Q(b=2)` means `WHERE a=1 OR b=2`. Combine with `&`, negate with `~Q(...)`. Used heavily in search (multiple fields), permission checks (OR-ing rules), complex filters. Can be nested arbitrarily.',
       hints: [
         'Q objects are composable: | (OR), & (AND), ~ (NOT)',
-        'Default kwargs filtering is AND-only — Q enables OR',
+        'Default kwargs filtering is AND-only - Q enables OR',
         'Parenthesise when mixing operators',
       ],
       tieredHints: {
@@ -489,28 +320,6 @@ print(f"{top.username} ({top.post_count})")`,
       concepts: ['dj-orm-query-construction'],
     },
   {
-      id: 'py-dj-orm-select-vs-prefetch',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      question: 'When do you use `select_related` vs `prefetch_related`?',
-      options: [
-        { id: 'a', text: 'They\'re interchangeable — both trigger a SQL JOIN, and Django simply uses whichever appears first in the queryset chain', isCorrect: false },
-        { id: 'b', text: '`select_related` for "one" sides (FK, OneToOne): a SQL JOIN, one query. `prefetch_related` for "many" sides (M2M, reverse FK): a second query merged in Python', isCorrect: true },
-        { id: 'c', text: '`select_related` is Postgres-only because it relies on JOIN optimisations; on SQLite and MySQL you must use `prefetch_related`', isCorrect: false },
-        { id: 'd', text: '`prefetch_related` is deprecated — recent Django versions fold its behaviour into `select_related` automatically', isCorrect: false },
-      ],
-      explanation: 'Cardinality matters because JOINing a many-to-many would multiply rows. `select_related("author")` is a JOIN; `prefetch_related("tags")` is a second query. You can combine them: `Post.objects.select_related("author").prefetch_related("tags", "comments__user")`. The `__` traverses relations; `comments__user` prefetches comments AND their users, minimising queries. Watch the total query count with Django Debug Toolbar.',
-      hints: [
-        'select_related: FK / OneToOne → JOIN, one query',
-        'prefetch_related: M2M / reverse FK → second query, merge in Python',
-        'Combine them; use Debug Toolbar to verify',
-      ],
-      tags: ['django', 'orm', 'select_related', 'prefetch_related'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
-    },
-  {
       id: 'dj-orm-cloze-1',
       type: QuestionType.CLOZE_CODE,
       difficulty: Difficulty.BEGINNER,
@@ -530,27 +339,6 @@ print(f"{top.username} ({top.post_count})")`,
       hints: ['filter for WHERE, order_by for ORDER BY', 'Slice [:N] for LIMIT'],
       tags: ['django', 'orm', 'filter', 'order_by', 'slice', 'cloze'],
       concepts: ['dj-orm-query-construction'],
-    },
-  {
-      id: 'dj-orm-cloze-2',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Eager-load article authors (FK) AND their tags (M2M) in one access pattern.',
-      template: `articles = (
-    Article.objects
-    .___("author")
-    .___("tags")
-    .all()
-)`,
-      blanks: ['select_related', 'prefetch_related'],
-      solution: 'articles = (\n    Article.objects\n    .select_related("author")\n    .prefetch_related("tags")\n    .all()\n)',
-      explanation: '`select_related` does a SQL JOIN — works for ForeignKey and OneToOne. `prefetch_related` issues a separate query and joins in Python — required for ManyToMany and reverse FK. Mixing them in one chain is the canonical fix for N+1.',
-      hints: ['select_related for FK/OneToOne', 'prefetch_related for M2M / reverse FK'],
-      tags: ['django', 'orm', 'select_related', 'prefetch_related', 'cloze'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
     },
   {
       id: 'dj-orm-cloze-3',
@@ -576,7 +364,7 @@ Article.objects.filter(pk=pk).update(view_count=___("view_count") + 1)`,
       difficulty: Difficulty.BEGINNER,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
-      question: 'What is the Django ORM?\n\nORM stands for Object-Relational Mapping. It is the layer between your Python code and the database.',
+      question: 'What is the Django ORM?',
       options: [
         {
           id: 'a',
@@ -595,11 +383,11 @@ Article.objects.filter(pk=pk).update(view_count=___("view_count") + 1)`,
         },
         {
           id: 'd',
-          text: 'Object-Relational Mapping — Python code talks to the database instead of raw SQL',
+          text: 'A layer that maps model classes to tables and objects to rows, so you query in Python and Django writes the SQL',
           isCorrect: true,
         },
       ],
-      explanation: 'The Django ORM translates Python code into SQL behind the scenes. When you define a model class (e.g., class Article), Django creates a database table. Each instance of Article represents a row, and each attribute (title, content) maps to a column. You write Python like Article.objects.filter(title="Hello") and Django converts it to SELECT * FROM article WHERE title = \'Hello\'. This means you can switch databases (SQLite to PostgreSQL) without changing your code.',
+      explanation: 'The Django ORM translates Python code into SQL behind the scenes. When you define a model class (e.g., class Article), Django creates a database table. Each instance of Article represents a row, and each attribute (title, content) maps to a column. You write Python like Article.objects.filter(title="Hello") and Django converts it to SELECT ... FROM app_article WHERE title = \'Hello\'. ORM stands for Object-Relational Mapping. It is not a database engine (it talks to SQLite, PostgreSQL or MySQL), not a raw-SQL tool and not the template engine.',
       hints: [
         'ORM = Object-Relational Mapping: objects in Python map to relations (tables) in the database',
         'You write Python; Django writes the SQL for you',
@@ -614,7 +402,7 @@ Article.objects.filter(pk=pk).update(view_count=___("view_count") + 1)`,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Given an existing model `Article` with fields title (CharField), content (TextField), and published_date (DateField), write ORM queries to:\n1. Get all articles\n2. Get the article with id=5\n3. Create a new article with title="My Post", content="Hello world", published_date="2025-01-15"\n4. Delete the article with id=5\n\nAssume the Article model is already imported.',
+      question: 'Given an existing model `Article` with fields title (CharField), content (TextField), and published_date (DateField), write ORM queries to:\n1. Get all articles into `all_articles`\n2. Get the article with id=5 into `article`\n3. Create a new article with title="My Post", content="Hello world", published_date="2025-01-15" into `new_article`\n4. Delete the article with id=5\n\nAssume the Article model is already imported.',
       starterCode: `# The Article model is already imported
 # Write 4 separate ORM queries below:
 
@@ -652,12 +440,22 @@ new_article = Article.objects.create(
 
 # 4. Delete the article with id=5
 article = Article.objects.get(id=5)
-article.delete()`,
+article.delete()
+# OR
+all_articles = Article.objects.all()
+article = Article.objects.get(id=5)
+new_article = Article.objects.create(title="My Post", content="Hello world", published_date="2025-01-15")
+article.delete()
+# OR
+all_articles = Article.objects.all()
+article = Article.objects.get(id=5)
+new_article = Article.objects.create(title="My Post", content="Hello world", published_date="2025-01-15")
+Article.objects.filter(id=5).delete()`,
       explanation: 'These are the four fundamental ORM operations. objects.all() returns a QuerySet of every row. objects.get(id=5) returns exactly one object (raises DoesNotExist if missing, MultipleObjectsReturned if duplicates). objects.create() inserts a new row and returns the object. To delete, you first retrieve the object with get(), then call .delete() on the instance. You can also do Article.objects.filter(id=5).delete() to delete without fetching first.',
       hints: [
         'The manager "objects" is the entry point: Article.objects',
         'get() returns one object; all() and filter() return QuerySets',
-        'To delete, you need the object instance first, then call .delete() on it',
+        'Call .delete() on the object you fetched, or on a filtered queryset',
       ],
       tieredHints: {
         apiSignature: 'Model.objects.create(**kwargs)',
@@ -673,7 +471,7 @@ article.delete()`,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Given `Article` model, fetch published articles ordered by newest first, limited to 10. Build a single chained queryset.',
+      question: 'Given an `Article` model with `status` and `created_at` fields, build one chained queryset `articles`: filter to published articles first, then order newest first, then keep only the first 10.',
       correctOrder: [
         'articles = (',
         '    Article.objects',
@@ -689,38 +487,10 @@ article.delete()`,
         '    .first(10)',
       ],
       solution: 'articles = (\n    Article.objects\n    .filter(status="published")\n    .order_by("-created_at")\n    [:10]\n)',
-      explanation: 'Querysets chain through the default manager `objects`. `.filter()` adds WHERE clauses; `.order_by("-x")` sorts descending; Python slice `[:10]` translates to SQL `LIMIT 10`. The ORM has no `.limit()` method — you slice. Querysets are lazy: no SQL runs until you iterate, slice in a way that evaluates, or call `list()`.',
+      explanation: 'Querysets chain through the default manager `objects`. `.filter()` adds WHERE clauses; `.order_by("-x")` sorts descending; Python slice `[:10]` translates to SQL `LIMIT 10`. The ORM has no `.limit()` method - you slice, and `first()` takes no count. Querysets are lazy: no SQL runs until you iterate, slice in a way that evaluates, or call `list()`.',
       hints: ['Start with Model.objects', 'Slice [:N], not .limit(N)', 'order_by with - is descending'],
       tags: ['django', 'orm', 'filter', 'order_by', 'parsons'],
       concepts: ['dj-orm-query-construction'],
-    },
-  {
-      id: 'dj-orm-parsons-2',
-      type: QuestionType.PARSONS,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Avoid the N+1 problem: fetch all comments and access `comment.article.title` for each without one query per comment. Use the queryset method that JOINs ForeignKey targets.',
-      correctOrder: [
-        'comments = (',
-        '    Comment.objects',
-        '    .select_related("article")',
-        '    .all()',
-        ')',
-        'for c in comments:',
-        '    print(c.article.title)',
-      ],
-      distractorLines: [
-        '    .prefetch_related("article")',
-        '    .join("article")',
-        '    .include("article")',
-      ],
-      solution: 'comments = (\n    Comment.objects\n    .select_related("article")\n    .all()\n)\nfor c in comments:\n    print(c.article.title)',
-      explanation: '`select_related` does an SQL JOIN and pulls related rows in the same query — for ForeignKey and OneToOne. `prefetch_related` issues a separate query and joins in Python — for ManyToMany and reverse FK. Without either, accessing `c.article.title` triggers one extra SELECT per comment (the N+1 problem).',
-      hints: ['select_related for FK/OneToOne', 'prefetch_related for M2M / reverse FK', 'No JOIN method called .join'],
-      tags: ['django', 'orm', 'select_related', 'n-plus-one', 'parsons'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
     },
   {
       id: 'dj-orm-parsons-3',
@@ -758,15 +528,16 @@ article.delete()`,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this print? (Assume 5 published articles in the DB.)',
-      code: `qs = Article.objects.filter(status="published")
-qs = qs.order_by("-created_at")
-print("Built queryset")
-articles = list(qs)
-print("Materialized")`,
-      expectedOutput: `Built queryset
-Materialized`,
-      explanation: 'Querysets are LAZY. `.filter()` and `.order_by()` build up the query object but issue zero SQL. The query runs only when iterated, sliced for length, or coerced (`list()`, `bool()`, `len()`). So this prints both lines with exactly one SELECT executed at `list(qs)`.',
+      question: 'The `Article` table holds exactly the two rows shown in the comment. What does this print? Type the list exactly as Python prints it.',
+      code: `# Article table:
+# title | status
+# Dune  | published
+# Emma  | draft
+qs = Article.objects.filter(status="published").order_by("title")
+Article.objects.create(title="Arrival", status="published")
+print([a.title for a in qs])`,
+      expectedOutput: `['Arrival', 'Dune']`,
+      explanation: 'Querysets are lazy. `.filter()` and `.order_by()` only build the query; no SQL runs on that line. The SELECT runs when the list comprehension loops over `qs`, which is after `create()` inserted Arrival, so Arrival is included and sorts before Dune. Emma is a draft and is filtered out.',
       hints: ['Lazy evaluation: SQL fires on materialization', 'list() / for / bool() / len() trigger execution'],
       tags: ['django', 'orm', 'lazy', 'queryset', 'predict'],
       concepts: ['dj-orm-query-construction'],
@@ -793,12 +564,11 @@ from django.db.models import Q
 qs = Article.objects.filter(Q(status="published") | Q(status="draft"))
 print(qs.count())
 
-# Chaining .filter() ANDs the conditions: status == "published" AND status == "draft"
 qs2 = Article.objects.filter(status="published").filter(status="draft")
 print(qs2.count())`,
       expectedOutput: `6
 0`,
-      explanation: '`Q` objects with `|` build OR clauses, so `qs` matches all 6 published+draft rows. Chaining `.filter().filter()` ANDs the conditions — `status="published"` AND `status="draft"` is impossible for one row, so `qs2` returns 0. (Passing `status=` twice as kwargs in a single `.filter()` is a `SyntaxError`, not a query.) Use `Q()` for OR, `~Q()` for NOT, and `&` to combine explicitly.',
+      explanation: '`Q` objects with `|` build OR clauses, so `qs` matches all 6 published+draft rows. Chaining `.filter().filter()` ANDs the conditions - `status="published"` AND `status="draft"` is impossible for one row, so `qs2` returns 0. (Passing `status=` twice as kwargs in a single `.filter()` is a `SyntaxError`, not a query.) Use `Q()` for OR, `~Q()` for NOT, and `&` to combine explicitly.',
       hints: ['Q objects with | for OR', 'Multiple kwargs in filter() = AND', 'A row cannot match both statuses'],
       tags: ['django', 'orm', 'Q', 'OR-vs-AND', 'predict'],
       concepts: ['dj-orm-query-construction'],
@@ -810,15 +580,20 @@ print(qs2.count())`,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this print? Article has a reverse FK `comments` (from Comment, related_name="comments"). The Comment rows for the queried article are shown in the comment table.',
-      code: `# Comment table (all have article_id = 1):
-#   id | approved
-#   ---+---------
-#    1 | True
-#    2 | True
-#    3 | False
-#    4 | False
-#    5 | False
+      question: 'What does this print? Comment has a ForeignKey `article` to Article with related_name="comments". Every row of both tables is shown in the comment tables.',
+      code: `# Article table:
+#   id | title
+#   ---+------
+#    1 | Intro
+#
+# Comment table:
+#   id | article_id | approved
+#   ---+------------+---------
+#    1 |          1 | True
+#    2 |          1 | True
+#    3 |          1 | False
+#    4 |          1 | False
+#    5 |          1 | False
 article = Article.objects.get(pk=1)
 print(type(article.comments.all()).__name__)
 print(article.comments.count())
@@ -970,7 +745,7 @@ print(article.comments.filter(approved=True).count())`,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Annotate each Order with a `tier` of "big" when total >= 100, else "small", using a single SQL conditional expression. Import the helpers, then build the annotation.',
+      question: 'Annotate each Order with a `tier` of "big" when total >= 100, else "small", using a single SQL conditional expression. Import the helpers, then build the annotation; pass `default` before `output_field`.',
       correctOrder: [
         'from django.db.models import Case, When, Value, CharField',
         '',
@@ -1000,7 +775,7 @@ print(article.comments.filter(approved=True).count())`,
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'In a SINGLE aggregate query (one database round trip, no Python-side counting), compute both how many Articles have status "published" and how many have status "draft". Return the result as a dict with keys `published` and `draft`. `Article` has a `status` CharField.',
+      question: 'In a SINGLE aggregate query (one database round trip, no Python-side counting), compute both how many Articles have status "published" and how many have status "draft". Assign the result, a dict with keys `published` and `draft`, to `stats`. `Article` has a `status` CharField.',
       starterCode: `# One aggregate() call that returns {"published": <n>, "draft": <n>}.
 `,
       testCases: [
@@ -1017,13 +792,20 @@ stats = Article.objects.aggregate(
     draft=Count("id", filter=Q(status="draft")),
 )
 # OR
+from django.db.models import Count, Q
+
+stats = Article.objects.aggregate(
+    published=Count("pk", filter=Q(status="published")),
+    draft=Count("pk", filter=Q(status="draft")),
+)
+# OR
 from django.db.models import Sum, Case, When, IntegerField
 
 stats = Article.objects.aggregate(
     published=Sum(Case(When(status="published", then=1), default=0, output_field=IntegerField())),
     draft=Sum(Case(When(status="draft", then=1), default=0, output_field=IntegerField())),
 )`,
-      explanation: 'Conditional aggregation collapses what looks like two queries into one. The modern form is `Count("id", filter=Q(...))` — a FILTER (WHERE) clause attached to the aggregate. The older, equally valid form sums a `Case/When` that yields 1 or 0 per row. Both run as one `SELECT` with two computed columns — far cheaper than two separate `COUNT` queries or any Python loop.',
+      explanation: 'Conditional aggregation collapses what looks like two queries into one. The modern form is `Count("id", filter=Q(...))` - a FILTER (WHERE) clause attached to the aggregate. The older, equally valid form sums a `Case/When` that yields 1 or 0 per row. Both run as one `SELECT` with two computed columns - far cheaper than two separate `COUNT` queries or any Python loop.',
       hints: [
         'aggregate() can take more than one keyed aggregate at once',
         'Count(..., filter=Q(...)) attaches a per-aggregate WHERE',
@@ -1036,7 +818,7 @@ stats = Article.objects.aggregate(
       tags: ['django', 'orm', 'aggregate', 'Case', 'conditional', 'advanced'],
       concepts: ['dj-orm-query-construction'],
     },
-  // Subquery / OuterRef — correlated subqueries
+  // Subquery / OuterRef - correlated subqueries
   {
       id: 'dj-orm-subquery-mcq-1',
       type: QuestionType.MULTIPLE_CHOICE,
@@ -1086,7 +868,7 @@ articles = Article.objects.annotate(
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Annotate every User with the title of their most recent Article, under a field named `latest_title`, using a correlated subquery — no Python loops and no extra query per user. `Article` has `author` (ForeignKey to User) and `created_at`.',
+      question: 'Annotate every User with the title of their most recent Article, under a field named `latest_title`, using a correlated subquery - no Python loops and no extra query per user. `Article` has `author` (ForeignKey to User) and `created_at`. Assign the annotated User queryset to `users`.',
       starterCode: `# Annotate each User with latest_title = title of their newest Article.
 `,
       testCases: [
@@ -1117,7 +899,7 @@ users = User.objects.annotate(
       tags: ['django', 'orm', 'Subquery', 'OuterRef', 'advanced'],
       concepts: ['dj-orm-query-construction', 'dj-n-plus-one'],
     },
-  // exists() — efficient existence checks
+  // exists() - efficient existence checks
   {
       id: 'dj-orm-exists-cloze-1',
       type: QuestionType.CLOZE_CODE,
@@ -1142,15 +924,20 @@ users = User.objects.annotate(
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this print? Assume there is at least one Article with status "published" and none with status "archived".',
-      code: `pub = Article.objects.filter(status="published")
+      question: 'What does this print? The Article rows are shown in the comment table.',
+      code: `# Article table:
+#   id | status
+#   ---+-----------
+#    1 | published
+#    2 | draft
+pub = Article.objects.filter(status="published")
 print(pub.exists())
 
 arch = Article.objects.filter(status="archived")
 print(arch.exists())`,
       expectedOutput: `True
 False`,
-      explanation: '`.exists()` returns a plain Python bool — True when at least one row matches, False otherwise. It compiles to `SELECT (1) ... LIMIT 1`, so it short-circuits at the first match instead of materializing the queryset. Cheapest way to ask "is there any?".',
+      explanation: '`.exists()` returns a plain Python bool - True when at least one row matches (row 1 is published), False otherwise (no row is archived). It compiles to `SELECT (1) ... LIMIT 1`, so it short-circuits at the first match instead of materializing the queryset. Cheapest way to ask "is there any?".',
       hints: ['exists() returns a bool, not a queryset', 'LIMIT 1 under the hood'],
       tags: ['django', 'orm', 'exists', 'predict'],
       concepts: ['dj-orm-query-construction'],
@@ -1201,12 +988,12 @@ def ensure_tag(label):
       course: Course.BACKEND,
       question: 'How do `.only("title")`, `.defer("body")`, and `.values("title")` differ?',
       options: [
-        { id: 'a', text: '`only` loads just those columns (the rest lazy-load on access), `defer` loads everything except those, and `values` returns dicts instead of model instances — and touching a deferred field fires an extra query', isCorrect: true },
+        { id: 'a', text: '`only` loads just those columns (the rest lazy-load on access), `defer` loads everything except those, and `values` returns dicts instead of model instances', isCorrect: true },
         { id: 'b', text: 'All three return fully-populated model instances with every column loaded; they differ only in the order Django lists the columns in the generated SELECT statement', isCorrect: false },
         { id: 'c', text: '`only` and `defer` read from the cache while `values` hits the database; accessing a deferred field returns the cached copy and never triggers another query', isCorrect: false },
         { id: 'd', text: '`values` loads just those columns, `only` returns dicts, and `defer` is a backward-compatibility alias for `values_list` that flattens the result', isCorrect: false },
       ],
-      explanation: '`only`/`defer` still return *model instances* — they just control which columns load up front. `only("title")` loads the pk + title; `defer("body")` loads everything but body. Either way, touching a column that wasn\'t loaded triggers a fresh per-instance SELECT (the classic deferred-field N+1). `values("title")` is different in kind: it returns dicts, not instances. Use `only`/`defer` to trim wide rows; use `values` when you want raw data, not objects.',
+      explanation: '`only`/`defer` still return *model instances* - they just control which columns load up front. `only("title")` loads the pk + title; `defer("body")` loads everything but body. Either way, touching a column that wasn\'t loaded triggers a fresh per-instance SELECT (the classic deferred-field N+1). `values("title")` is different in kind: it returns dicts, not instances. Use `only`/`defer` to trim wide rows; use `values` when you want raw data, not objects.',
       hints: [
         'only/defer still give model instances; values gives dicts',
         'only = whitelist columns, defer = blacklist columns',
@@ -1245,7 +1032,7 @@ def ensure_tag(label):
         { id: 'c', text: 'It calls `save()` once per object internally but batches the signals, so `post_save` fires exactly one consolidated time at the end of the run', isCorrect: false },
         { id: 'd', text: 'It runs `full_clean()` validation on every instance before inserting, which makes it slower than a plain loop of `create()` calls for large batches', isCorrect: false },
       ],
-      explanation: '`bulk_create` issues one (or a few batched) INSERT statements and deliberately bypasses the per-object machinery: no `save()` override runs, no `pre_save`/`post_save` signals fire, and `auto_now`/custom `save()` logic is skipped. On older MySQL it also can\'t return PKs. That\'s the speed/semantics trade — use it for raw inserts where you don\'t need hooks; loop `save()` when you do.',
+      explanation: '`bulk_create` issues one (or a few batched) INSERT statements and deliberately bypasses the per-object machinery: no `save()` override runs and no `pre_save`/`post_save` signals fire, so any logic you put in `save()` or a signal handler is skipped (field defaults and `auto_now`/`auto_now_add` are still filled in). PostgreSQL, SQLite and MariaDB set the new primary keys on the returned objects, but MySQL cannot, so there they stay `None`. Each batch is one INSERT, not a savepoint per row, so one bad row fails the batch, and `full_clean()` is not run. That is the speed/semantics trade: use it for raw inserts where you do not need hooks; loop `save()` when you do.',
       hints: [
         'No save() override, no pre_save/post_save signals',
         'PKs may be missing on some backends',
@@ -1360,8 +1147,13 @@ def import_titles(titles):
       topic: Topic.DJ_ORM,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this print? Assume exactly two Articles exist: (id=1, title="Hi") and (id=2, title="Yo").',
-      code: `rows = Article.objects.values("title").order_by("id")
+      question: 'What does this print? The Article rows are shown in the comment table.',
+      code: `# Article table:
+#   id | title
+#   ---+------
+#    1 | Hi
+#    2 | Yo
+rows = Article.objects.values("title").order_by("id")
 print(list(rows))
 
 ids = Article.objects.values_list("id", flat=True).order_by("id")
@@ -1390,100 +1182,4 @@ print(list(ids))`,
       concepts: ['dj-orm-query-construction'],
     },
   // Prefetch object — filtered prefetch
-  {
-      id: 'dj-orm-prefetch-obj-mcq-1',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      question: 'Why pass a `Prefetch(...)` object to `prefetch_related` instead of just the relation name as a string?',
-      options: [
-        { id: 'a', text: 'The bare string prefetches ALL related rows; a `Prefetch` object lets you supply a filtered or ordered `queryset` and stash the result under a custom `to_attr`', isCorrect: true },
-        { id: 'b', text: 'The string form has been deprecated; current Django only accepts `Prefetch` objects and emits a warning whenever a plain relation name is passed', isCorrect: false },
-        { id: 'c', text: 'A `Prefetch` object converts the second query into a SQL JOIN, whereas the string form always issues a separate query that is merged back in Python', isCorrect: false },
-        { id: 'd', text: 'It has no runtime effect at all — `Prefetch` is purely a typing helper that documents the relation\'s cardinality for IDEs and static type checkers', isCorrect: false },
-      ],
-      explanation: 'A bare `prefetch_related("comments")` pulls every related comment. `Prefetch("comments", queryset=Comment.objects.filter(approved=True), to_attr="approved_comments")` lets you control the inner queryset (filter, order, even `select_related` on it) and store it on a separate attribute so it doesn\'t clobber the default related manager. Both still run as a second query merged in Python — the object form just makes that query yours to shape.',
-      hints: [
-        'String form = all related rows; object form = your queryset',
-        'to_attr stores the result on a custom attribute',
-        'Still a second query, just shaped by you',
-      ],
-      tags: ['django', 'orm', 'Prefetch', 'prefetch_related'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
-    },
-  {
-      id: 'dj-orm-prefetch-obj-cloze-1',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.ADVANCED,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Fill in (1) the object wrapper that customises a prefetch, and (2) the keyword that stores the filtered result on a separate attribute.',
-      template: `approved = Comment.objects.filter(approved=True)
-
-articles = Article.objects.prefetch_related(
-    ___("comments", queryset=approved, ___="approved_comments")
-)`,
-      blanks: ['Prefetch', 'to_attr'],
-      solution: 'approved = Comment.objects.filter(approved=True)\n\narticles = Article.objects.prefetch_related(\n    Prefetch("comments", queryset=approved, to_attr="approved_comments")\n)',
-      explanation: '`Prefetch(lookup, queryset=..., to_attr=...)` replaces the default "fetch all" prefetch with your own filtered/ordered queryset, and `to_attr` parks the result on `article.approved_comments` instead of overwriting the `article.comments` manager. Each article then exposes a plain Python list of just its approved comments — with no extra query per article.',
-      hints: ['The prefetch-customising object, then the attribute-naming keyword'],
-      tags: ['django', 'orm', 'Prefetch', 'to_attr', 'cloze'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
-    },
-  {
-      id: 'dj-orm-prefetch-obj-adv-1',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.ADVANCED,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Fetch all Articles and attach to each one ONLY its approved comments, under the attribute `approved_comments`, using a single extra query for the comments (not one per article). `Comment` has a ForeignKey `article` (related_name "comments") and a boolean `approved`.',
-      starterCode: `# Prefetch only approved comments onto each article as .approved_comments
-`,
-      testCases: [
-        {
-          input: 'filtered prefetch onto a custom attribute',
-          expectedOutput: 'Prefetch(queryset=..., to_attr=...) — one extra query',
-          description: 'Per-article filtered related list without N+1',
-        },
-      ],
-      solution: `from django.db.models import Prefetch
-from .models import Article, Comment
-
-approved = Comment.objects.filter(approved=True)
-articles = Article.objects.prefetch_related(
-    Prefetch("comments", queryset=approved, to_attr="approved_comments")
-)`,
-      explanation: 'A bare `prefetch_related("comments")` would load every comment; here we hand `Prefetch` a *filtered* queryset so only approved comments are fetched — in one batched query for all articles. `to_attr="approved_comments"` stores them as a plain list on each article (leaving the default `comments` manager untouched). Reading `article.approved_comments` then costs zero extra queries.',
-      hints: [
-        'Build the filtered Comment queryset first',
-        'Wrap it in Prefetch("comments", queryset=..., to_attr=...)',
-        'to_attr exposes a per-article list with no N+1',
-      ],
-      tieredHints: {
-        apiSignature: 'Prefetch(lookup, queryset=None, to_attr=None)',
-        skeleton: 'from django.db.models import ____\nfrom .models import Article, Comment\n\napproved = Comment.____.____(approved=True)\narticles = Article.____.____(\n    ____("____", queryset=approved, ____="approved_comments")\n)',
-      },
-      tags: ['django', 'orm', 'Prefetch', 'to_attr', 'n-plus-one', 'advanced'],
-      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
-    },
-  {
-      id: 'be-sql-4',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.DJ_ORM,
-      course: Course.BACKEND,
-      question: 'What is the N+1 query problem in Django?',
-      options: [
-        { id: 'a', text: 'One query loads N rows, then reading a related object inside the loop runs one more query per row', isCorrect: true },
-        { id: 'b', text: 'A queryset is re-run from scratch every time you loop over it, so N loops cost N+1 queries', isCorrect: false },
-        { id: 'c', text: 'A query with N filters is split into N+1 separate queries, one per filter plus a final join', isCorrect: false },
-        { id: 'd', text: 'Slicing a queryset with [:N] fetches one extra row to check if more exist, so N+1 rows come back', isCorrect: false },
-      ],
-      explanation: 'Article.objects.all() runs one query for the list; then reading article.author inside the loop runs one extra query per article, N more in total. select_related("author") fetches the authors in the same query with a JOIN (for ForeignKey); prefetch_related("tags") runs one second query with an IN clause (for ManyToMany). Either removes the per-row queries. A queryset caches its rows after the first evaluation, filters combine into one WHERE clause, and slicing adds a LIMIT, so none of those cause it.',
-      tags: ['n+1', 'select_related', 'prefetch_related', 'django', 'performance'],
-      concepts: ['dj-n-plus-one', 'dj-select-related-vs-prefetch'],
-    },
 ];

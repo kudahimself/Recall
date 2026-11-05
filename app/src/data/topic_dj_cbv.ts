@@ -15,7 +15,7 @@ export const dj_cbv_questions: Question[] = [
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a class-based view "ArticleListView" using Django\'s ListView that displays all articles ordered by published_date descending, with a template "articles/list.html" and 10 items per page.',
+      question: 'Create a class-based view "ArticleListView" using Django\'s ListView that displays all articles ordered by published_date descending, with a template "articles/list.html", the context name "articles", and 10 items per page.',
       starterCode: `# Define ArticleListView(ListView): set the model, template
 # "articles/list.html", a context name of "articles", newest-published
 # ordering, and 10 per page (use the standard ListView attributes).
@@ -95,7 +95,7 @@ class ArticleListView(___):
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Convert this function-based view into a `ListView` CBV. The FBV lists all `Article` objects. Set `model`, `template_name`, and `context_object_name`.',
+      question: 'A function-based view lists all `Article` objects with the template "articles/list.html", under the context key "articles". Convert it into a `ListView` CBV named `ArticleListView`: set `model`, `template_name` and `context_object_name` to match.',
       starterCode: `# Convert the FBV into ArticleListView(ListView): set model, template_name
 # "articles/list.html", and context_object_name "articles". Wire it in
 # urls.py with ArticleListView.as_view().
@@ -121,7 +121,7 @@ class ArticleListView(____):
     template_name = 'articles/list.html'
     ____ = 'articles'`,
       },
-      explanation: '`ListView` automatically calls `Article.objects.all()` and passes it to the template. `context_object_name = "articles"` names the variable in the template (default would be `article_list`). Note `as_view()` in urls.py — CBVs must be converted to a callable. You can override `get_queryset()` to customise filtering.',
+      explanation: '`ListView` automatically calls `Article.objects.all()` and passes it to the template. `context_object_name = "articles"` names the variable in the template (default would be `article_list`). Note `as_view()` in urls.py: CBVs must be converted to a callable. You can override `get_queryset()` to customise filtering.',
       hints: [
         'Set `model`, `template_name`, and `context_object_name` as class attributes',
         'Use `as_view()` in urls.py: `ArticleListView.as_view()`',
@@ -160,7 +160,7 @@ class ArticleCreateView(___, CreateView):
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a `CreateView` for an `Article` model with fields `title` and `body`. Set `success_url` to redirect to `/articles/` after creation. Add `login_required` using `LoginRequiredMixin`.',
+      question: 'Create a `CreateView` named `ArticleCreateView` for an `Article` model with fields `title` and `body` and the template "articles/create.html". After creation, redirect to the list page, whose URL is named "article-list" (resolve it lazily, since `success_url` is a class attribute). Require login using `LoginRequiredMixin`.',
       starterCode: `# Define ArticleCreateView(LoginRequiredMixin, CreateView): model Article,
 # form fields title and body, template "articles/create.html", and a
 # success_url that reverse_lazy-resolves the "article-list" URL.
@@ -204,7 +204,7 @@ class ArticleCreateView(____, ____):
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create `UpdateView` and `DeleteView` for `Article`. The update view should only update `title` and `body`. The delete view should redirect to `/articles/` on success.',
+      question: 'Create `ArticleUpdateView` (an `UpdateView`) and `ArticleDeleteView` (a `DeleteView`) for `Article`. The update view edits only `title` and `body` and uses the template "articles/update.html"; the delete view uses "articles/confirm_delete.html". Both redirect on success to the list page, whose URL is named "article-list" (resolve it lazily, since `success_url` is a class attribute).',
       starterCode: `# Define ArticleUpdateView(UpdateView) (fields title, body) and
 # ArticleDeleteView(DeleteView), each with its own template and a
 # success_url of reverse_lazy("article-list").
@@ -241,7 +241,7 @@ class ArticleDeleteView(____):
     template_name = 'articles/confirm_delete.html'
     ____ = ____('article-list')`,
       },
-      explanation: '`UpdateView` is like `CreateView` but pre-populates the form with existing data and calls `.save()` on the existing instance. `DeleteView` shows a confirmation page (GET) and deletes on POST — always use a confirmation template to prevent accidental deletion. In urls.py: `path("articles/<int:pk>/edit/", ArticleUpdateView.as_view())`.',
+      explanation: '`UpdateView` is like `CreateView` but pre-populates the form with existing data and calls `.save()` on the existing instance. `DeleteView` shows a confirmation page (GET) and deletes on POST; always use a confirmation template to prevent accidental deletion. In urls.py: `path("articles/<int:pk>/edit/", ArticleUpdateView.as_view())`.',
       hints: [
         'Both views need `model`, `template_name`, and `success_url`',
         '`UpdateView` also needs `fields`; `DeleteView` does not',
@@ -328,11 +328,11 @@ class ArticleUpdateView(____, ____):
       question: 'What is `DetailView` used for, and what context variable does it provide to the template by default?',
       options: [
         { id: 'a', text: 'It shows a list of objects; the template variable is `object_list`', isCorrect: false },
-        { id: 'b', text: 'It shows a single object looked up by `pk` or `slug`; the template variable is `object` (or the lowercased model name)', isCorrect: true },
-        { id: 'c', text: 'It shows details about the database schema', isCorrect: false },
-        { id: 'd', text: 'It is only for the Django admin interface', isCorrect: false },
+        { id: 'b', text: 'It shows one object found by `pk` or `slug`, as `object` and as the lowercased model name', isCorrect: true },
+        { id: 'c', text: 'It shows one object found by `pk` or `slug`, but as `object_list` holding that one row', isCorrect: false },
+        { id: 'd', text: 'It shows one object found by `pk` only, as a template variable named `detail`', isCorrect: false },
       ],
-      explanation: '`DetailView` fetches a single object using `pk` or `slug` from the URL. It provides two template context variables: `object` (always available) and the lowercased model name (e.g. `article` for an `Article` model). In urls.py: `path("articles/<int:pk>/", ArticleDetailView.as_view())`. Use `context_object_name` to customise the variable name.',
+      explanation: '`DetailView` fetches a single object using `pk` or `slug` from the URL. It provides two template context variables: `object` (always available) and the lowercased model name (e.g. `article` for an `Article` model). In urls.py: `path("articles/<int:pk>/", ArticleDetailView.as_view())`. Use `context_object_name` to customise the variable name. `object_list` belongs to `ListView`, there is no `detail` variable, and a `slug` capture works as well as `pk`.',
       hints: [
         '`DetailView` needs `<int:pk>` or `<slug:slug>` in the URL pattern',
         'Template variable: `object` or `article` (lowercased model name)',
@@ -347,7 +347,7 @@ class ArticleUpdateView(____, ____):
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a complete set of CRUD CBVs for an `Article` model: `ArticleListView`, `ArticleDetailView`, `ArticleCreateView`. Show the corresponding `urlpatterns` for each.',
+      question: 'Write three class-based views for an `Article` model, plus their `urlpatterns`. `ArticleListView` is a `ListView` with the template "articles/list.html" and the context name "articles". `ArticleDetailView` is a `DetailView` with the template "articles/detail.html". `ArticleCreateView` requires login with `LoginRequiredMixin`, is a `CreateView` with fields `title` and `body`, and on success redirects to the URL named "article-list" (resolved lazily, since `success_url` is a class attribute). Wire them as `articles/` (named "article-list"), `articles/<int:pk>/` ("article-detail") and `articles/new/` ("article-create").',
       starterCode: `# Define ArticleListView (ListView), ArticleDetailView (DetailView), and
 # ArticleCreateView (LoginRequiredMixin, CreateView) for Article with the
 # usual attributes, then the three urlpatterns wiring each via as_view().
@@ -408,7 +408,7 @@ urlpatterns = [
       },
       explanation: 'All CBVs use `.as_view()` in urlpatterns. `DetailView` and `UpdateView`/`DeleteView` need `<int:pk>` to identify the object. `reverse_lazy` is used instead of `reverse` for class-level `success_url` attributes. `LoginRequiredMixin` on `CreateView` ensures only logged-in users can create articles.',
       hints: [
-        'Remember `.as_view()` in urlpatterns — CBVs are classes, not callables',
+        'Remember `.as_view()` in urlpatterns: it turns each CBV class into a view function',
         '`<int:pk>` in the URL pattern for single-object views',
       ],
       tags: ['django', 'CBV', 'CRUD', 'urls', 'ListView', 'DetailView', 'CreateView'],
@@ -421,7 +421,7 @@ urlpatterns = [
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a class-based ListView for `Article` that uses template `articles/list.html`, paginates by 20, and exposes the queryset as `articles` in the template.',
+      question: 'Build a class-based ListView for `Article` that uses template `articles/list.html`, paginates by 20, and exposes the queryset as `articles` in the template. Set the class attributes in this order: the model, the template, the context name, then the page size.',
       correctOrder: [
         'from django.views.generic import ListView',
         'from .models import Article',
@@ -453,13 +453,13 @@ urlpatterns = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: `Build a class-based ListView \`PublishedArticlesView\` for the \`Article\` model that combines four primitives:
-  
-  1. Requires login (use the modern mixin, not the decorator).
-  2. Filters \`Article.objects\` to only \`status="published"\`, ordered by \`-created_at\`.
-  3. Eager-loads each article's \`author\` (ForeignKey) to avoid N+1.
-  4. Paginates by 20 with \`context_object_name="articles"\` and template \`articles/list.html\`.
-  
-  Override \`get_queryset\` (do not just set \`queryset\`) so the filter is request-aware.`,
+
+1. Requires login (use the modern mixin, not the decorator).
+2. Filters \`Article.objects\` to only \`status="published"\`, ordered by \`-created_at\`.
+3. Eager-loads each article's \`author\` (ForeignKey) to avoid N+1.
+4. Paginates by 20 with \`context_object_name="articles"\` and template \`articles/list.html\`.
+
+Override \`get_queryset\` (do not just set \`queryset\`) so the filter is request-aware.`,
       starterCode: `from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView
 from .models import Article
@@ -510,7 +510,7 @@ class PublishedArticlesView(____, ____):
             .____("-created_at")
         )`,
       },
-      explanation: 'Mixin order matters: LoginRequiredMixin must come BEFORE ListView (left-to-right MRO) so its `dispatch()` override runs first and bounces unauthenticated users. `get_queryset()` is overridden (not the class-level `queryset`) so the queryset is reconstructed per-request — important if you later filter by `self.request.user`. `select_related("author")` does the JOIN at the SQL level, eliminating one query per article in templates that read `article.author.username`.',
+      explanation: 'Mixin order matters: LoginRequiredMixin must come BEFORE ListView (left-to-right MRO) so its `dispatch()` override runs first and bounces unauthenticated users. `get_queryset()` is overridden (not the class-level `queryset`) so the queryset is reconstructed per-request, which matters if you later filter by `self.request.user`. `select_related("author")` does the JOIN at the SQL level, eliminating one query per article in templates that read `article.author.username`.',
       hints: [
         'LoginRequiredMixin must come BEFORE ListView (MRO order)',
         'Override get_queryset, not class-level queryset, for request-awareness',
@@ -528,13 +528,13 @@ class PublishedArticlesView(____, ____):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: `Build a CreateView \`ArticleCreateView\` that combines four primitives:
-  
-  1. Requires login.
-  2. Uses \`ArticleForm\` (a ModelForm exposing \`title\` and \`body\`).
-  3. Sets the new Article's \`author\` to \`request.user\` automatically — the user does NOT submit the author field. Override \`form_valid\`, attach \`request.user\`, then defer to super().
-  4. On success, redirect to the article's detail page using the URL name \`"article_detail"\` and the new article's \`pk\`. Implement via \`get_success_url\`.
-  
-  The \`Article.author\` field is a ForeignKey to the user model.`,
+
+1. Requires login.
+2. Uses \`ArticleForm\` (a ModelForm exposing \`title\` and \`body\`) and the template \`"articles/form.html"\`.
+3. Sets the new Article's \`author\` to \`request.user\` automatically; the user does NOT submit the author field. Override \`form_valid\`, attach \`request.user\`, then defer to super().
+4. On success, redirect to the article's detail page using the URL name \`"article_detail"\` and the new article's \`pk\`. Implement via \`get_success_url\`.
+
+The \`Article.author\` field is a ForeignKey to the user model.`,
       starterCode: `from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
 from django.views.generic.edit import CreateView
@@ -587,7 +587,7 @@ class ArticleCreateView(____, ____):
     def ____(self):
         return ____("article_detail", kwargs={"pk": self.____.pk})`,
       },
-      explanation: 'The pattern of setting an attribute on `form.instance` before calling `super().form_valid()` is canonical for "the request user owns this row" scenarios — the form never sees the field, so it can\'t be tampered with. `super().form_valid(form)` saves the instance and returns an HttpResponseRedirect to `get_success_url()`. `self.object` is set by `super().form_valid()` so it\'s available in `get_success_url`.',
+      explanation: 'The pattern of setting an attribute on `form.instance` before calling `super().form_valid()` is canonical for "the request user owns this row" scenarios: the form never sees the field, so it can\'t be tampered with. `super().form_valid(form)` saves the instance and returns an HttpResponseRedirect to `get_success_url()`. `self.object` is set by `super().form_valid()` so it\'s available in `get_success_url`.',
       hints: [
         'Set form.instance.<field> BEFORE super().form_valid()',
         'super().form_valid() saves and returns the redirect',
@@ -625,7 +625,7 @@ class ArticleCreateView(____, ____):
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Assemble an UpdateView for Article that requires login, only lets the author edit their own article (404 otherwise), and redirects to the article detail on success.',
+      question: 'Assemble an UpdateView for Article that requires login, only lets the author edit their own article (403 for anyone else who is logged in), and redirects to the article detail on success. Inside the class, put the attributes in the order model, form class, template, the 403 switch, then `test_func`, then `get_success_url`.',
       correctOrder: [
         'from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin',
         'from django.urls import reverse',
@@ -653,7 +653,7 @@ class ArticleCreateView(____, ____):
         '    success_url = "/articles/"',
       ],
       solution: 'from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin\nfrom django.urls import reverse\nfrom django.views.generic.edit import UpdateView\nfrom .forms import ArticleForm\nfrom .models import Article\n\nclass ArticleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):\n    model = Article\n    form_class = ArticleForm\n    template_name = "articles/form.html"\n    raise_exception = True\n\n    def test_func(self):\n        return self.get_object().author == self.request.user\n\n    def get_success_url(self):\n        return reverse("article_detail", kwargs={"pk": self.object.pk})',
-      explanation: 'Mixin order is left-to-right: `LoginRequiredMixin` first (auth check), then `UserPassesTestMixin` (ownership check), THEN the generic view. `test_func` takes only `self` — read the user via `self.request.user` and the object via `self.get_object()`. `raise_exception = True` makes a failing test raise `PermissionDenied` (403) instead of redirecting to login (the default — confusing here since the user IS logged in). Don\'t use `permission_required` — that checks Django permissions, not row ownership.',
+      explanation: 'Mixin order is left-to-right: `LoginRequiredMixin` first (auth check), then `UserPassesTestMixin` (ownership check), THEN the generic view. `test_func` takes only `self`: read the user via `self.request.user` and the object via `self.get_object()` (`self.object` is not set yet when the test runs, before `get()`/`post()`). `raise_exception = True` makes a failing test raise `PermissionDenied` (403) instead of redirecting to login (the default, confusing here since the user IS logged in). Don\'t use `permission_required`: that checks Django permissions, not row ownership, and only `PermissionRequiredMixin` reads it.',
       hints: [
         'Mixin order: auth → permission → generic view',
         'test_func() takes only self',
@@ -670,7 +670,7 @@ class ArticleCreateView(____, ____):
       topic: Topic.DJ_CBV,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A class-based view dispatches through three mixins. What\'s logged when an authenticated user lacking the permission requests it?',
+      question: 'A class-based view dispatches through three mixins. An authenticated user without the permission sends a GET request. What does the code print? Give each printed line in order.',
       code: `class LogMixin:
     def dispatch(self, request, *args, **kwargs):
         print("LogMixin")
@@ -702,7 +702,7 @@ print(response.status_code)`,
 AuthMixin
 PermMixin
 403`,
-      explanation: 'MRO is left-to-right for the class declaration, so `dispatch` chains: LogMixin → AuthMixin → PermMixin → View. Each prints, calls `super().dispatch()`, and only then either short-circuits (returning a Response) or descends further. The user IS authenticated so AuthMixin passes through; PermMixin sees the missing permission and returns the 403 — `View.dispatch` (which would route to `get`) never runs, so "Body" is not printed.',
+      explanation: 'MRO is left-to-right for the class declaration, so `dispatch` chains: LogMixin → AuthMixin → PermMixin → View. Each one prints first, then either short-circuits by returning a response or calls `super().dispatch()` to hand on to the next class. The user IS authenticated so AuthMixin passes through; PermMixin sees the missing permission and returns the 403, so `View.dispatch` (which would route to `get`) never runs and "Body" is not printed.',
       hints: [
         'Mixin dispatch chains via super() left-to-right',
         'A mixin returning early skips everything below',
@@ -806,11 +806,11 @@ PermMixin
       question: 'A `DetailView` for `Article` should also pass the article\'s related comments to the template. What is the correct way to add extra context to a generic CBV?',
       options: [
         { id: 'a', text: 'Override `get_context_data()`, call `super().get_context_data(**kwargs)` for the base dict, add your keys, and return it', isCorrect: true },
-        { id: 'b', text: 'Override `get_context_data()` and return a fresh dict of only your extra keys — Django merges it with the defaults', isCorrect: false },
+        { id: 'b', text: 'Override `get_context_data()` and return a fresh dict of only your extra keys; Django merges it with the defaults', isCorrect: false },
         { id: 'c', text: 'Set a `context = {...}` class attribute on the view; the generic view merges it into the template context', isCorrect: false },
         { id: 'd', text: 'Override `get()` and pass a second dict of your extra keys positionally to `render()` alongside the object', isCorrect: false },
       ],
-      explanation: 'The hook is `get_context_data()`. You MUST call `super().get_context_data(**kwargs)` first — that base dict contains `object`/`object_list`, `view`, pagination data, etc. — then add your keys and return the merged dict. Returning only your own keys (b) drops the object the template needs. There is no auto-merged `context` class attribute (c), and you should not bypass the machinery by re-implementing `get()` (d).',
+      explanation: 'The hook is `get_context_data()`. You MUST call `super().get_context_data(**kwargs)` first (that base dict contains `object`/`object_list`, `view`, pagination data, etc.), then add your keys and return the merged dict. Returning a fresh dict of only your own keys is not merged with anything, so the template loses the object. A class attribute named `context` does nothing (Django\'s `extra_context` attribute exists, but it holds fixed values and cannot reach `self.object`), and re-implementing `get()` to call `render()` bypasses the generic view instead of extending it; `render()` takes one context dict, not a second positional one.',
       hints: [
         'Override get_context_data(self, **kwargs)',
         'Start from super().get_context_data(**kwargs)',
@@ -1072,8 +1072,8 @@ class ContactView(____):
     ___ = "slug"        # which model field to match
     ___ = "slug"        # which URL kwarg holds the value`,
       blanks: ['slug_field', 'slug_url_kwarg'],
-      solution: 'class ArticleDetailView(DetailView):\n    model = Article\n    slug_field = "slug"\n    slug_url_kwarg = "slug"',
-      explanation: '`slug_field` names the model column; `slug_url_kwarg` names the captured URL parameter. Both happen to be `"slug"` here, which is why they are also the defaults — set them explicitly when either differs (e.g. URL `<slug:title_slug>` → `slug_url_kwarg = "title_slug"`).',
+      solution: 'class ArticleDetailView(DetailView):\n    model = Article\n    slug_field = "slug"        # which model field to match\n    slug_url_kwarg = "slug"        # which URL kwarg holds the value',
+      explanation: '`slug_field` names the model column; `slug_url_kwarg` names the captured URL parameter. Both happen to be `"slug"` here, which is why they are also the defaults; set them explicitly when either differs (e.g. URL `<slug:title_slug>` → `slug_url_kwarg = "title_slug"`).',
       hints: ['One names the model field, one names the URL kwarg', 'Both default to "slug"'],
       tags: ['django', 'CBV', 'DetailView', 'slug_field', 'slug_url_kwarg', 'cloze'],
       concepts: ['dj-view-patterns'],
