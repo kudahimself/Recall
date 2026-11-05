@@ -245,4 +245,35 @@ class ArticleListView(generics.ListAPIView):
     tags: ['drf', 'generic-views', 'queryset', 'cloze'],
     concepts: ['dj-view-patterns'],
   },
+  {
+      id: 'dj-pagination-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_PAGINATION_GENERICS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: '`shop.Book` holds 5 rows and `BookSerializer` is a `ModelSerializer` for it. This list view is called from `python manage.py shell`, asking for page 2. What do the two `print` calls output? The answer is two lines: two numbers separated by a space, then the value of `next` as Python prints it.',
+      code: `from rest_framework import generics
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.test import APIRequestFactory
+
+class ThreePerPage(PageNumberPagination):
+    page_size = 3
+
+class BookList(generics.ListAPIView):
+    queryset = Book.objects.order_by("title")
+    serializer_class = BookSerializer
+    pagination_class = ThreePerPage
+
+view = BookList.as_view()
+data = view(APIRequestFactory().get("/books/", {"page": 2})).data
+print(data["count"], len(data["results"]))
+print(data["next"])`,
+      expectedOutput: `5 2
+None`,
+      explanation: '`ListAPIView` runs the queryset through `pagination_class`, so the response holds one page wrapped in metadata. `count` is the total number of rows the queryset matches, 5, not the size of the page. With 3 per page, page 1 holds 3 books and page 2 holds the last 2, so `results` has 2 items. Page 2 is the last page, so there is no next link and `next` is `None`, while `previous` would point back to page 1.',
+      hints: ['count is the total across all pages, not the rows on this page.', 'Work out how many of the 5 rows are left for page 2 after page 1 takes 3.'],
+      tags: ['django', 'drf', 'pagination', 'generics', 'predict'],
+      concepts: ['dj-pagination-strategy'],
+    },
 ];

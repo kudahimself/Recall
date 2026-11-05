@@ -685,11 +685,11 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.DJ_PAGINATION_GENERICS =====
   q('dj-pagination-gap-1'), q('dj-pagination-gap-2'), q('celery-drf-17'), q('dj-pagination-generics-cloze-1'),
-  q('celery-drf-13'), q('celery-drf-14'), q('dj-pagination-custom-cloze-1'), q('celery-drf-16'),
+  q('celery-drf-13'), q('celery-drf-14'), q('dj-pagination-custom-cloze-1'), q('celery-drf-16'), q('dj-pagination-predict-1'),
 
   // ===== Topic.DJ_CUSTOM_MANAGERS =====
   q('dj-custom-managers-gap-1'), q('dj-custom-managers-cloze-1'), q('celery-drf-22'), q('celery-drf-24'),
-  q('celery-drf-25'), q('dj-custom-managers-queryset-cloze-1'), q('celery-drf-23'),
+  q('celery-drf-25'), q('dj-custom-managers-queryset-cloze-1'), q('celery-drf-23'), q('dj-custom-managers-predict-1'),
 
   // ===== Topic.DJ_SIGNALS_MW =====
   q('dj-signals-mw-gap-1'), q('dj-signals-mw-gap-2'), q('py-dj-mw-what'), q('dj-sigmw-3'),
@@ -717,7 +717,7 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.DJ_SERVICE_LAYER =====
   q('dj-service-layer-gap-1'), q('be-infra-service-2'), q('dj-service-layer-cloze-1'), q('be-infra-service-1'),
-  q('be-infra-service-3'),
+  q('be-infra-service-3'), q('dj-service-layer-predict-1'),
 
   // ===== Topic.DJ_ORM_MASTERY =====
   q('dj-orm-mastery-window-mcq-1'), q('dj-orm-mastery-lock-mcq-1'), q('dj-orm-mastery-nplus1-mcq-1'), q('dj-orm-mastery-perf-mcq-1'),
@@ -794,7 +794,7 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.DJ_API_DOCS =====
   q('celery-drf-19'), q('celery-drf-21'), q('dj-api-docs-cloze-1'), q('dj-api-docs-urls-cloze-1'), q('celery-drf-18'),
-  q('dj-api-docs-extendschema-cloze-1'), q('celery-drf-20'),
+  q('dj-api-docs-extendschema-cloze-1'), q('celery-drf-20'), q('dj-api-docs-predict-1'),
 
   // ===== Topic.DJ_CELERY =====
   q('celery-drf-4'), q('celery-drf-7'), q('dj-celery-gap-1'), q('dj-celery-gap-2'),
