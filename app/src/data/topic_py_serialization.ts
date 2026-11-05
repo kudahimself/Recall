@@ -160,7 +160,7 @@ print(json.dumps({"d": date(2024, 1, 1)}, ___=to_iso))`,
         'import json\nfrom datetime import date\n\ndef to_iso(o):\n    if isinstance(o, date):\n        return o.isoformat()\n    raise TypeError\n\nprint(json.dumps({"d": date(2024, 1, 1)}, default=to_iso))',
       explanation:
         'default= is a callable that runs for objects json.dumps doesn\'t know how to serialize. Return a serializable replacement, or raise TypeError to signal "still don\'t know".',
-      hints: ['Same word as the kwarg name for "fallback".'],
+      hints: ['The word for a fallback value, used when nothing else applies.'],
       tags: ['serialization', 'json', 'default'],
       concepts: ['py-json-serialization'],
     },
@@ -362,7 +362,7 @@ print(json.dumps(data, indent=2))`,
       language: CodeLanguage.PYTHON,
       question: 'Given `data = {"name": "Alice", "count": 3}`, round-trip it through a JSON file at `/tmp/dump.json` using the `json` stdlib functions that operate on file handles (NOT their string-based siblings). First open the path in write mode and serialise `data` to the handle; then reopen it in read mode and parse the handle back into a new dict called `loaded`. Print whether `loaded == data` (expect `True`).',
       starterCode: `import json
-  `,
+`,
       testCases: [
         {
           input: 'json.dump / json.load file round-trip',
@@ -431,7 +431,7 @@ print(obj)`,
       language: CodeLanguage.PYTHON,
       question: 'Given the JSON string `s = \'{"x": 1, "y": 2}\'`, parse it with `json.loads`, passing the decoder callback that runs on every parsed dict so you can transform it — use it to uppercase each dict\'s keys. Assign the result and print it (expect `{\'X\': 1, \'Y\': 2}`).',
       starterCode: `import json
-  `,
+`,
       testCases: [
         {
           input: 'json.loads with object_hook',
@@ -476,7 +476,7 @@ print(result)`,
       language: CodeLanguage.PYTHON,
       question: 'Given `obj = {"numbers": [1, 2, 3], "meta": (7, "x")}`, round-trip it through `pickle`: serialise to bytes with the string-form API, then deserialise the bytes back to a Python object called `restored`. Print whether `restored == obj` (expect `True`), then print the type name of `restored["meta"]` (expect `tuple` — unlike JSON, pickle preserves Python types including tuples).',
       starterCode: `import pickle
-  `,
+`,
       testCases: [
         {
           input: 'pickle round-trip preserves Python types',
@@ -520,12 +520,12 @@ print(____(restored["meta"]).____)`,
       course: Course.BACKEND,
       question: 'When should you choose `pickle` over `json`, and what\'s the dealbreaker?',
       options: [
-        { id: 'a', text: 'Always pickle — it is faster', isCorrect: false },
-        { id: 'b', text: 'Pickle for Python-only internal persistence (multiprocessing, disk caches, worker queues) where you need full type fidelity. JSON for interop with other languages, humans, or any data that crosses a trust boundary. DEALBREAKER: pickle.loads on untrusted data is a remote code execution vulnerability — the format is Turing-complete.', isCorrect: true },
-        { id: 'c', text: 'Pickle is deprecated', isCorrect: false },
-        { id: 'd', text: 'They are functionally identical', isCorrect: false },
+        { id: 'a', text: 'Use pickle whenever speed matters, public APIs included; its only real drawback is that people cannot read the bytes it writes', isCorrect: false },
+        { id: 'b', text: 'Use pickle only within your own Python programs, when you need exact Python types; never unpickle data from a source you do not trust', isCorrect: true },
+        { id: 'c', text: 'Use pickle to share data with other languages, since its format is a standard; just avoid it for large objects, which it cannot store', isCorrect: false },
+        { id: 'd', text: 'Use pickle for untrusted input, because it checks the data as it loads; JSON is the risky one, since `json.loads` can run code', isCorrect: false },
       ],
-      explanation: 'Pickle is fast and preserves every Python type — sets, tuples, datetimes, custom classes, even functions. But it\'s a deserialization vector: crafted pickle bytes can run arbitrary Python on `loads`. Rule: pickle stays inside a trust boundary (your own processes, your own disk). JSON (or MessagePack / Protocol Buffers) crosses boundaries (network, user upload, API). Libraries like Celery default to JSON for this reason.',
+      explanation: 'Pickle preserves almost any Python type: sets, tuples, datetimes, instances of your own classes. But it\'s a deserialization vector: crafted pickle bytes can run arbitrary Python on `loads`. Rule: pickle stays inside a trust boundary (your own processes, your own disk). JSON (or MessagePack / Protocol Buffers) crosses boundaries (network, user upload, API). Libraries like Celery default to JSON for this reason. Readability and speed are not the deciding points: the danger is that loading pickle bytes can run code. Pickle is Python-specific, so other languages cannot read it, and it handles large objects fine. `json.loads` only builds dicts, lists, strings, numbers, booleans and None, so it cannot run code.',
       hints: [
         'pickle = Python types, internal only, never untrusted input',
         'JSON = text, universal, safe to deserialize',
@@ -592,12 +592,12 @@ print(json.____([____(x) for x in items]))`,
       course: Course.BACKEND,
       question: 'Which Python types does `json.dumps` handle natively?',
       options: [
-        { id: 'a', text: 'Only str and int', isCorrect: false },
-        { id: 'b', text: 'dict, list, tuple (as array), str, int, float, bool, None. Sets, bytes, datetimes, Decimals, and custom classes are NOT serialisable without a custom encoder or conversion.', isCorrect: true },
-        { id: 'c', text: 'Every Python object', isCorrect: false },
-        { id: 'd', text: 'Only types that inherit from `json.Serializable`', isCorrect: false },
+        { id: 'a', text: 'dict, list, tuple, set, str, int, float, bool and None; only bytes, a datetime or your own class raises TypeError', isCorrect: false },
+        { id: 'b', text: 'dict, list, tuple, str, int, float, bool and None; a set, bytes, a datetime or your own class raises TypeError', isCorrect: true },
+        { id: 'c', text: 'dict, list, str, int, float, bool and None; a tuple, a set, a datetime or your own class raises TypeError', isCorrect: false },
+        { id: 'd', text: 'dict, list, tuple, str, int, float, bool, None and datetime (as an ISO string); a set or your own class raises TypeError', isCorrect: false },
       ],
-      explanation: 'JSON maps to a fixed set of primitives: object (dict with string keys), array (list/tuple), string, number, boolean, null. Python sets, datetimes, Decimals, UUIDs, and bytes all fail with `TypeError: Object of type X is not JSON serializable`. Fix with `default=` callback or a custom `JSONEncoder`. Dict keys MUST be strings in JSON — non-string keys get coerced via `str()`.',
+      explanation: 'JSON maps to a fixed set of primitives: object (dict with string keys), array (list/tuple), string, number, boolean, null. Python sets, datetimes, Decimals, UUIDs, and bytes all fail with `TypeError: Object of type X is not JSON serializable`. Fix with `default=` callback or a custom `JSONEncoder`. A tuple is written as an array (and comes back as a list), a set has no JSON form even though it looks like a list, and a datetime is never converted for you: pass `default=str` or convert it first. JSON object keys are always strings: int, float, bool and None keys are converted (1 becomes "1", True becomes "true"), and other key types raise TypeError.',
       hints: [
         'Supported: dict, list, tuple, str, int, float, bool, None',
         'Not supported: set, bytes, datetime, Decimal, custom classes',
@@ -615,7 +615,7 @@ print(json.____([____(x) for x in items]))`,
       language: CodeLanguage.PYTHON,
       question: 'Round-trip a Python dict through JSON. Start with `data = {"name": "Alice", "age": 30, "tags": ["admin", "beta"]}`. Serialise with `json.dumps(data)` and assign to `s`. Deserialise with `json.loads(s)` and assign to `back`. Print `s` and print `back == data` (expect `True`).',
       starterCode: `import json
-  `,
+`,
       testCases: [
         {
           input: 'dumps then loads',
@@ -704,18 +704,18 @@ print(____)`,
         'Fill in the class a custom encoder subclasses, the method it overrides, and the kwarg that applies it to dumps.',
       template: `import json
 
-class UpperEncoder(json.___):
+class SetEncoder(json.___):
     def ___(self, obj):
         if isinstance(obj, set):
             return list(obj)
         return super().default(obj)
 
-print(json.dumps({"tags": {"a"}}, ___=UpperEncoder))`,
+print(json.dumps({"tags": {"a"}}, ___=SetEncoder))`,
       blanks: ['JSONEncoder', 'default', 'cls'],
       solution:
-        'import json\n\nclass UpperEncoder(json.JSONEncoder):\n    def default(self, obj):\n        if isinstance(obj, set):\n            return list(obj)\n        return super().default(obj)\n\nprint(json.dumps({"tags": {"a"}}, cls=UpperEncoder))',
+        'import json\n\nclass SetEncoder(json.JSONEncoder):\n    def default(self, obj):\n        if isinstance(obj, set):\n            return list(obj)\n        return super().default(obj)\n\nprint(json.dumps({"tags": {"a"}}, cls=SetEncoder))',
       explanation:
-        'A custom encoder subclasses json.JSONEncoder and overrides default(self, obj) — called for any value the base encoder cannot handle. Apply it with json.dumps(data, cls=YourEncoder). Always fall back to super().default(obj) for the TypeError on genuinely unhandled types.',
+        'A custom encoder subclasses json.JSONEncoder and overrides default(self, obj) - called for any value the base encoder cannot handle. Apply it with json.dumps(data, cls=YourEncoder). Always fall back to super().default(obj) for the TypeError on genuinely unhandled types.',
       hints: ['Subclass JSONEncoder; override default(); pass cls= to dumps.'],
       tags: ['json', 'JSONEncoder', 'custom-encoder', 'subclass'],
       concepts: ['py-json-serialization'],
@@ -928,7 +928,7 @@ print(____.____(data, ____=SafeEncoder))`,
       topic: Topic.PY_SERIALIZATION,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use `pickle` to serialise a Python dictionary to bytes, then deserialise it back and verify it\'s identical to the original. Use `pickle.dumps()` and `pickle.loads()` (no file needed).',
+      question: 'Build `data = {"name": "Alice", "scores": [95, 87, 92], "active": True}`. Use `pickle.dumps()` to serialise it to bytes, then `pickle.loads()` to turn the bytes back into a dict called `restored` (no file needed). Print `restored`, then print whether `restored == data` (expect `True`).',
       starterCode: `import pickle
 
 # Create dictionary: {"name": "Alice", "scores": [95, 87, 92], "active": True}

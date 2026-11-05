@@ -22,10 +22,10 @@ export const py_magic_methods_questions: Question[] = [
       language: CodeLanguage.PYTHON,
       question: 'Fill in the dunder that hooks the built-in len().',
       template: `class Bag:
-      def __init__(self, items):
-          self.items = items
-      def ___(self):
-          return len(self.items)`,
+    def __init__(self, items):
+        self.items = items
+    def ___(self):
+        return len(self.items)`,
       blanks: ['__len__'],
       solution:
         'class Bag:\n    def __init__(self, items):\n        self.items = items\n    def __len__(self):\n        return len(self.items)',
@@ -45,10 +45,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunders that produce the developer string (repr) and the user string (str).',
       template: `class P:
-      def ___(self):
-          return f"P()"
-      def ___(self):
-          return "a P instance"`,
+    def ___(self):
+        return f"P()"
+    def ___(self):
+        return "a P instance"`,
       blanks: ['__repr__', '__str__'],
       solution:
         'class P:\n    def __repr__(self):\n        return f"P()"\n    def __str__(self):\n        return "a P instance"',
@@ -68,12 +68,12 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder pair that lets two equal objects also share a hash.',
       template: `class Point:
-      def __init__(self, x, y):
-          self.x, self.y = x, y
-      def ___(self, other):
-          return (self.x, self.y) == (other.x, other.y)
-      def ___(self):
-          return hash((self.x, self.y))`,
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+    def ___(self, other):
+        return (self.x, self.y) == (other.x, other.y)
+    def ___(self):
+        return hash((self.x, self.y))`,
       blanks: ['__eq__', '__hash__'],
       solution:
         'class Point:\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n    def __eq__(self, other):\n        return (self.x, self.y) == (other.x, other.y)\n    def __hash__(self):\n        return hash((self.x, self.y))',
@@ -93,10 +93,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder that hooks the `in` operator.',
       template: `class Bag:
-      def __init__(self, items):
-          self.items = items
-      def ___(self, item):
-          return item in self.items`,
+    def __init__(self, items):
+        self.items = items
+    def ___(self, item):
+        return item in self.items`,
       blanks: ['__contains__'],
       solution:
         'class Bag:\n    def __init__(self, items):\n        self.items = items\n    def __contains__(self, item):\n        return item in self.items',
@@ -116,10 +116,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder that supports indexed access obj[i].',
       template: `class List:
-      def __init__(self, data):
-          self.data = data
-      def ___(self, index):
-          return self.data[index]`,
+    def __init__(self, data):
+        self.data = data
+    def ___(self, index):
+        return self.data[index]`,
       blanks: ['__getitem__'],
       solution:
         'class List:\n    def __init__(self, data):\n        self.data = data\n    def __getitem__(self, index):\n        return self.data[index]',
@@ -139,10 +139,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder that implements + so two Vectors add component-wise.',
       template: `class Vector:
-      def __init__(self, x, y):
-          self.x, self.y = x, y
-      def ___(self, other):
-          return Vector(self.x + other.x, self.y + other.y)`,
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+    def ___(self, other):
+        return Vector(self.x + other.x, self.y + other.y)`,
       blanks: ['__add__'],
       solution:
         'class Vector:\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n    def __add__(self, other):\n        return Vector(self.x + other.x, self.y + other.y)',
@@ -162,10 +162,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the comparison dunder that sorted() needs to order objects.',
       template: `class Item:
-      def __init__(self, p):
-          self.p = p
-      def ___(self, other):
-          return self.p < other.p`,
+    def __init__(self, p):
+        self.p = p
+    def ___(self, other):
+        return self.p < other.p`,
       blanks: ['__lt__'],
       solution:
         'class Item:\n    def __init__(self, p):\n        self.p = p\n    def __lt__(self, other):\n        return self.p < other.p',
@@ -185,11 +185,11 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder that makes an instance callable like a function.',
       template: `class Counter:
-      def __init__(self):
-          self.n = 0
-      def ___(self):
-          self.n += 1
-          return self.n`,
+    def __init__(self):
+        self.n = 0
+    def ___(self):
+        self.n += 1
+        return self.n`,
       blanks: ['__call__'],
       solution:
         'class Counter:\n    def __init__(self):\n        self.n = 0\n    def __call__(self):\n        self.n += 1\n        return self.n',
@@ -209,10 +209,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder pair that makes Resource a context manager.',
       template: `class Resource:
-      def ___(self):
-          return self
-      def ___(self, exc_type, exc, tb):
-          pass`,
+    def ___(self):
+        return self
+    def ___(self, exc_type, exc, tb):
+        pass`,
       blanks: ['__enter__', '__exit__'],
       solution:
         'class Resource:\n    def __enter__(self):\n        return self\n    def __exit__(self, exc_type, exc, tb):\n        pass',
@@ -232,10 +232,10 @@ export const py_magic_methods_questions: Question[] = [
       question:
         'Fill in the dunder that controls truthiness in Python 3 (the modern name).',
       template: `class Inventory:
-      def __init__(self, items):
-          self.items = items
-      def ___(self):
-          return bool(self.items)`,
+    def __init__(self, items):
+        self.items = items
+    def ___(self):
+        return bool(self.items)`,
       blanks: ['__bool__'],
       solution:
         'class Inventory:\n    def __init__(self, items):\n        self.items = items\n    def __bool__(self):\n        return bool(self.items)',
@@ -253,7 +253,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Implement __repr__ on Point to return Point(x, y) for debugging.',
+        'Implement __repr__ on Point to return Point(x, y) for debugging. Define __init__ first, then __repr__.',
       correctOrder: [
         'class Point:',
         '    def __init__(self, x, y):',
@@ -282,7 +282,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Make Point hashable by defining __eq__ and __hash__ so two Points with the same coords compare equal and hash the same.',
+        'Make Point hashable by defining __eq__ and __hash__ so two Points with the same coords compare equal and hash the same. Define __init__ first, then __eq__, then __hash__.',
       correctOrder: [
         'class Point:',
         '    def __init__(self, x, y):',
@@ -315,7 +315,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a Bag class that supports len() and `in` membership tests using __len__ and __contains__.',
+        'Build a Bag class that supports len() and `in` membership tests using __len__ and __contains__. Define __init__ first, then __len__, then __contains__.',
       correctOrder: [
         'class Bag:',
         '    def __init__(self, items):',
@@ -345,7 +345,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define __add__ on Vector so v1 + v2 returns a new Vector with summed components.',
+        'Define __add__ on Vector so v1 + v2 returns a new Vector with summed components. Define __init__ first, then __add__.',
       correctOrder: [
         'class Vector:',
         '    def __init__(self, x, y):',
@@ -375,7 +375,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Make Counter iterable: __iter__ yields each count value via a generator.',
+        'Make Counter iterable: __iter__ yields each count value via a generator. Define __init__ first, then __iter__.',
       correctOrder: [
         'class Counter:',
         '    def __init__(self):',
@@ -404,7 +404,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define __getitem__ so List supports indexed access lst[i].',
+        'Define __getitem__ so List supports indexed access lst[i]. Define __init__ first, then __getitem__.',
       correctOrder: [
         'class List:',
         '    def __init__(self, data):',
@@ -432,7 +432,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Implement __lt__ on Item so a list of Items can be sorted by .priority.',
+        'Implement __lt__ on Item so a list of Items can be sorted by .priority. Define __init__ first, then __lt__.',
       correctOrder: [
         'class Item:',
         '    def __init__(self, priority):',
@@ -460,7 +460,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Make Money instances callable: instance() returns the formatted amount string.',
+        'Make Money instances callable: instance() returns the formatted amount string. Define __init__ first, then __call__.',
       correctOrder: [
         'class Money:',
         '    def __init__(self, amount, currency):',
@@ -489,7 +489,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Make Resource a context manager: __enter__ returns self, __exit__ prints "closed".',
+        'Make Resource a context manager: __enter__ returns self, __exit__ prints "closed". Define __enter__ first, then __exit__.',
       correctOrder: [
         'class Resource:',
         '    def __enter__(self):',
@@ -517,7 +517,7 @@ export const py_magic_methods_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Implement __bool__ on Inventory so empty inventories are falsy and non-empty are truthy.',
+        'Implement __bool__ on Inventory so empty inventories are falsy and non-empty are truthy. Define __init__ first, then __bool__.',
       correctOrder: [
         'class Inventory:',
         '    def __init__(self, items):',
@@ -1090,7 +1090,7 @@ print(len({a, b}))`,
       topic: Topic.PY_MAGIC_METHODS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Extend the `Money` value-object class (constructor takes a float `amount` and a string `currency`, normalised to UPPERCASE; already has `__eq__`/`__hash__`/`__repr__` as before) with addition. Adding two `Money` instances in the SAME currency returns a new `Money` with the summed amount and that currency. Adding across DIFFERENT currencies must raise `ValueError` with the message `"Cannot add "` + left currency + `" and "` + right currency. Adding a non-`Money` must defer to the other operand (return the singleton that signals "not implemented for this type") rather than raising.\n\nBuild `Money(5, "USD") + Money(3, "USD")` and print its repr (expect `Money(8, \'USD\')`). Then attempt `Money(5, "USD") + Money(3, "EUR")` inside a try/except catching `ValueError`, and print the exception\'s message (expect `Cannot add USD and EUR`).',
+      question: 'Write the `Money` value-object class again (constructor takes a float `amount` and a string `currency`, normalised to UPPERCASE; `__eq__` and `__hash__` on amount and currency; `__repr__` returning `Money(<amount>, \'<CURRENCY>\')`) and add addition. Adding two `Money` instances in the SAME currency returns a new `Money` with the summed amount and that currency. Adding across DIFFERENT currencies must raise `ValueError` with the message `"Cannot add "` + left currency + `" and "` + right currency. Adding a non-`Money` must defer to the other operand (return the singleton that signals "not implemented for this type") rather than raising.\n\nBuild `Money(5, "USD") + Money(3, "USD")` and print its repr (expect `Money(8, \'USD\')`). Then attempt `Money(5, "USD") + Money(3, "EUR")` inside a try/except catching `ValueError`, and print the exception\'s message (expect `Cannot add USD and EUR`).',
       starterCode: ``,
       testCases: [
         {
@@ -1467,7 +1467,7 @@ print("K" in d)`,
       topic: Topic.PY_MAGIC_METHODS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define a `Bag` class that takes a list of `items` on construction (stored as `_items`). Implement two operator dunders so that `a + b` returns a NEW `Bag` containing the concatenation of both `_items` (leaving both operands unchanged), while `a += b` MUTATES the left-hand `Bag` in place by extending `_items` with the right operand\'s `_items` (and returns self). Build two bags: `a` containing one string `"x"` and `b` containing one string `"y"`. First, combine them with `+` into a new bag `c` and print its items (expect `[\'x\', \'y\']`), then print `a`\'s items to confirm it\'s unchanged (expect `[\'x\']`). Then apply the compound-assignment operator `+=` from `a` to `b` and print `a`\'s items again (expect `[\'x\', \'y\']` — now mutated).',
+      question: 'Define a `Bag` class that takes a list of `items` on construction (stored as `_items`). Implement two operator dunders so that `a + b` returns a NEW `Bag` containing the concatenation of both `_items` (leaving both operands unchanged), while `a += b` MUTATES the left-hand `Bag` in place by extending `_items` with the right operand\'s `_items` (and returns self). Build two bags: `a` containing one string `"x"` and `b` containing one string `"y"`. First, combine them with `+` into a new bag `c` and print its items (expect `[\'x\', \'y\']`), then print `a`\'s items to confirm it\'s unchanged (expect `[\'x\']`). Then run `a += b` and print `a`\'s items again (expect `[\'x\', \'y\']` - now mutated).',
       starterCode: ``,
       testCases: [
         {
@@ -1584,12 +1584,12 @@ print(double(____))`,
       course: Course.BACKEND,
       question: 'When should you NOT implement `__hash__` on a class?',
       options: [
-        { id: 'a', text: 'Always implement it — never skip', isCorrect: false },
-        { id: 'b', text: 'When instances are MUTABLE in ways that would affect equality. If `a == b` today and someone mutates `a`, they may no longer be equal — but if `a` is in a set/dict using its original hash, lookups break silently. Either make the class frozen, or omit `__hash__` to mark it unhashable.', isCorrect: true },
-        { id: 'c', text: 'Only when the class has more than 10 fields', isCorrect: false },
-        { id: 'd', text: 'Only for classes named after animals', isCorrect: false },
+        { id: 'a', text: 'Whenever the class defines `__eq__`, because Python then builds a matching hash from `__eq__` for you', isCorrect: false },
+        { id: 'b', text: 'When instances can change in ways that affect `==`, because a changed object stays filed under its old hash', isCorrect: true },
+        { id: 'c', text: 'When all fields are immutable, because the default hash already hashes the field values for you', isCorrect: false },
+        { id: 'd', text: 'When objects are only used as dict keys, because a dict compares keys with `==` and never hashes them', isCorrect: false },
       ],
-      explanation: 'This is why `list`, `dict`, `set` are unhashable — they\'re mutable. If Python allowed hashing them, modifying a list after it was used as a dict key would corrupt the dict silently. Rule: immutable types (tuple, str, frozenset, frozen dataclass) are hashable. Mutable containers aren\'t. If you define `__eq__` on a mutable class and NEED to put it in a set, carefully decide whether identity-based hash is acceptable (inherit default) or make the class frozen.',
+      explanation: 'This is why `list`, `dict`, `set` are unhashable: they are mutable. If `a == b` today and someone mutates `a`, the set or dict that holds `a` still files it under its original hash, so lookups break silently. Rule: immutable types (tuple, str, frozenset, frozen dataclass) are hashable. Mutable containers aren\'t. Defining `__eq__` does not give you a matching hash: Python sets `__hash__` to `None`, making the class unhashable until you write one. The default hash (when you define neither) is based on identity, not on the field values, and dicts and sets always hash their keys first and only then compare with `==`. If you define `__eq__` on a mutable class and NEED to put it in a set, decide whether identity-based hashing is acceptable or make the class frozen.',
       hints: [
         'Mutable + hash = silent corruption when mutated after insertion',
         'list/dict/set are unhashable on purpose',
@@ -1606,12 +1606,12 @@ print(double(____))`,
       course: Course.BACKEND,
       question: 'What is the relationship between `__enter__`/`__exit__` and `__aenter__`/`__aexit__`?',
       options: [
-        { id: 'a', text: 'They are identical', isCorrect: false },
-        { id: 'b', text: '`__enter__`/`__exit__` are for sync `with` blocks; `__aenter__`/`__aexit__` are COROUTINE versions for `async with` blocks. They exist so setup/teardown can themselves await (DB connect, lock acquire, network handshake) without freezing the event loop. A class can define both to work in sync and async code.', isCorrect: true },
-        { id: 'c', text: '__aenter__ is deprecated', isCorrect: false },
-        { id: 'd', text: 'Only libraries can define them; user code cannot', isCorrect: false },
+        { id: 'a', text: '`__aenter__`/`__aexit__` are older names for the same hooks; a plain `with` calls whichever pair exists', isCorrect: false },
+        { id: 'b', text: '`__aenter__`/`__aexit__` are coroutine versions used by `async with`, so setup and cleanup can `await`', isCorrect: true },
+        { id: 'c', text: '`__aenter__` runs before `__enter__` in every `with` block, to prepare anything the block will await', isCorrect: false },
+        { id: 'd', text: 'A plain `with` inside an `async def` function calls `__aenter__`/`__aexit__` instead, automatically', isCorrect: false },
       ],
-      explanation: 'In async code, regular `__enter__` would block the event loop — you can\'t `await` inside it. `__aenter__` and `__aexit__` are coroutines, so they can await (`await self.connect()`). Used by `aiohttp.ClientSession`, `asyncpg.Connection`, `aiofiles`. Consume with `async with X() as y:`. A class can implement both pairs so it works in sync AND async contexts; pick based on how callers need to use it.',
+      explanation: 'In async code, regular `__enter__` would block the event loop, because you can\'t `await` inside it. `__aenter__` and `__aexit__` are coroutines, so they can await (`await self.connect()`). Used by `aiohttp.ClientSession`, `asyncpg.Connection`, `aiofiles`. They are only used by `async with X() as y:`; a plain `with` always calls `__enter__`/`__exit__`, even inside an `async def`, and the two pairs never run together for one block. A class can implement both pairs so it works in sync AND async code; pick based on how callers need to use it.',
       hints: [
         'async with needs __aenter__ / __aexit__ (coroutines)',
         'sync with needs __enter__ / __exit__',
@@ -1656,7 +1656,7 @@ print(double(____))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define a `Countdown` class that implements the two-method iterator protocol. Its constructor takes an integer `start` and stores it as `self.n`. Make the instance its OWN iterator — when iterated, each step must decrement `self.n` by 1 and yield the new value; once `self.n` would reach 0 or below, iteration must stop by raising the standard sentinel exception. In usage, `for v in Countdown(3): print(v)` should produce `2`, `1`, `0` on three separate lines.',
+        'Define a `Countdown` class that implements the two-method iterator protocol. Its constructor takes an integer `start` and stores it as `self.n`. Make the instance its OWN iterator - when iterated, each step must decrement `self.n` by 1 and return the new value; when a step starts with `self.n` already at 0 or below, iteration must stop by raising the standard sentinel exception. In usage, `for v in Countdown(3): print(v)` should produce `2`, `1`, `0` on three separate lines.',
       starterCode: ``,
       testCases: [
         {
@@ -1716,12 +1716,12 @@ for v in Countdown(____):
       course: Course.BACKEND,
       question: 'What are magic (dunder) methods in Python?',
       options: [
-        { id: 'a', text: 'Methods that are automatically optimized by the Python interpreter for faster execution', isCorrect: false },
-        { id: 'b', text: 'Private methods that can only be called from within the class itself', isCorrect: false },
-        { id: 'c', text: 'Deprecated methods from Python 2 that should not be used in modern Python', isCorrect: false },
-        { id: 'd', text: 'Special methods with double underscores (like `__init__`, `__str__`, `__len__`) that Python calls automatically in certain situations — e.g., `print(obj)` calls `__str__`, `len(obj)` calls `__len__`', isCorrect: true },
+        { id: 'a', text: 'Methods the interpreter compiles to C for speed, which is why their names carry double underscores', isCorrect: false },
+        { id: 'b', text: 'Private methods that only code inside the class may call; the double underscores block outside access', isCorrect: false },
+        { id: 'c', text: 'Methods you must call by name, as in `obj.__len__()`, because `len(obj)` only works on built-in types', isCorrect: false },
+        { id: 'd', text: 'Methods named with double underscores, like `__len__`, that Python calls for you: `len(obj)` calls `__len__`', isCorrect: true },
       ],
-      explanation: 'Magic methods (also called "dunder" methods for "double underscore") let you define how your objects interact with Python\'s built-in operations. `__init__` runs when creating an object, `__str__` defines what `print()` shows, `__repr__` defines the developer-friendly representation, `__eq__` handles `==` comparison, `__len__` handles `len()`, `__add__` handles `+`, and many more. They make your custom classes work naturally with Python syntax.',
+      explanation: 'Magic methods (also called "dunder" methods for "double underscore") let you define how your objects interact with Python\'s built-in operations. `__init__` runs when creating an object, `__str__` defines what `print()` shows, `__repr__` defines the developer-friendly representation, `__eq__` handles `==` comparison, `__len__` handles `len()`, `__add__` handles `+`, and many more. They make your custom classes work naturally with Python syntax: you write `len(obj)`, not `obj.__len__()`, and it works for your own classes as well as built-in ones. The underscores are a naming convention, not a speed trick, and they do not make the method private (only a name with leading underscores and no trailing ones, like `__secret`, is name-mangled).',
       hints: [
         '"Dunder" = double underscore: `__method__`',
         'Python calls them for you — you rarely call them directly',

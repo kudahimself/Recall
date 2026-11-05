@@ -123,6 +123,21 @@ for num in countdown(5):
         n -= 1
 
 for num in countdown(5):
+    print(num)
+# OR
+def countdown(n):
+    for i in range(n, 0, -1):
+        yield i
+
+for num in countdown(5):
+    print(num)
+# OR
+def countdown(n):
+    while n >= 1:
+        yield n
+        n = n - 1
+
+for num in countdown(5):
     print(num)`,
     explanation: 'Using `yield` makes this a generator function. When the `for` loop calls `next()` on the generator, it runs until `yield n`, returns that value, and pauses. On the next call, it continues from after `yield`, decrements `n`, and loops again. When `n` reaches 0, the function ends and the loop stops.',
     hints: [

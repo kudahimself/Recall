@@ -16,7 +16,7 @@ export const py_oop_advanced_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define __slots__ on Point to prevent instance __dict__ and save memory.',
+        'Define __slots__ on Point (as a tuple, before __init__) to prevent instance __dict__ and save memory.',
       correctOrder: [
         'class Point:',
         '    __slots__ = ("x", "y")',
@@ -25,14 +25,13 @@ export const py_oop_advanced_questions: Question[] = [
         '        self.y = y',
       ],
       distractorLines: [
-        '    __slots__ = "x", "y"',
-        '    __slots__ = ["x", "y"]',
+        '        self.__slots__ = ("x", "y")',
         '    slots = ("x", "y")',
       ],
       solution:
         'class Point:\n    __slots__ = ("x", "y")\n    def __init__(self, x, y):\n        self.x = x\n        self.y = y',
       explanation:
-        '__slots__ as a tuple/list/set of names tells Python to use a fixed-shape struct instead of __dict__. Saves memory and forbids adding new attributes. The bare-tuple form `"x", "y"` works too but the parenthesized form is more conventional. List form also works.',
+        '__slots__ as a tuple/list/set of names tells Python to use a fixed-shape struct instead of __dict__. Saves memory and forbids adding new attributes. It must be a class attribute in the class body: setting `self.__slots__` inside `__init__` is too late (the class is already built with a __dict__), and a plain `slots` name means nothing to Python. The bare-tuple form `"x", "y"` and a list also work, but the parenthesized tuple is the most common.',
       hints: ['Tuple of attribute names; magic name with double underscores.'],
       tags: ['oop', '__slots__', 'memory'],
       concepts: ['py-class-instance-distinction'],
@@ -149,12 +148,12 @@ export const py_oop_advanced_questions: Question[] = [
       course: Course.BACKEND,
       question: 'What is the "composition over inheritance" principle?',
       options: [
-        { id: 'a', text: 'Never use inheritance — always use composition', isCorrect: false },
-        { id: 'b', text: 'Prefer building complex objects from simpler objects (has-a relationships) rather than deep inheritance chains (is-a relationships)', isCorrect: true },
-        { id: 'c', text: 'Always inherit from multiple classes to get maximum reuse', isCorrect: false },
-        { id: 'd', text: 'Composition is faster than inheritance at runtime', isCorrect: false },
+        { id: 'a', text: 'Never use inheritance at all; every class should hold other objects instead of subclassing', isCorrect: false },
+        { id: 'b', text: 'Prefer building objects from simpler parts they hold (has-a) over deep is-a inheritance chains', isCorrect: true },
+        { id: 'c', text: 'Build behaviour by inheriting from several small parent classes instead of one large parent', isCorrect: false },
+        { id: 'd', text: 'Prefer holding objects, because a call on a held object runs faster than a call to a parent method', isCorrect: false },
       ],
-      explanation: 'Inheritance models "is-a" relationships (Dog IS-A Animal). Composition models "has-a" relationships (Car HAS-A Engine). Deep inheritance hierarchies become rigid and hard to change. Composition is more flexible — you can swap out components at runtime. The principle doesn\'t say never inherit, but prefer composition when both could work.',
+      explanation: 'Inheritance models "is-a" relationships (Dog IS-A Animal). Composition models "has-a" relationships (Car HAS-A Engine). Deep inheritance hierarchies become rigid and hard to change. Composition is more flexible - you can swap out components at runtime. The principle doesn\'t say never inherit, but prefer composition when both could work. Inheriting from several small parents is still inheritance (a mixin hierarchy), not composition, and the choice is about flexibility, not speed.',
       hints: [
         '"is-a" → inheritance; "has-a" → composition',
         'Deep inheritance = rigid; composition = flexible',
@@ -169,13 +168,8 @@ export const py_oop_advanced_questions: Question[] = [
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Model a `Car` using composition. Create an `Engine` class with `start()` and `stop()` methods. The `Car` class should HAS-A Engine (not inherit from it) and delegate `start()` and `stop()` to the engine.',
-      starterCode: `# Define an Engine(horsepower) class with:
-#   - a 'running' flag
-#   - start() → sets running=True, returns f"Engine ({horsepower}hp) started"
-#   - stop()  → sets running=False, returns "Engine stopped"
-#
-# Define a Car(make, engine) that HAS-A Engine and delegates start()/stop() to it
+      question: 'Model a `Car` using composition. Create an `Engine(horsepower)` class that stores `horsepower` and a `running` flag that starts as `False`. Its `start()` sets `running` to `True` and returns `f"Engine ({horsepower}hp) started"`; its `stop()` sets `running` to `False` and returns `"Engine stopped"`. The `Car(make, engine)` class stores both arguments under the same names, HAS-A Engine (does not inherit from it), and its own `start()` and `stop()` return what the engine\'s methods return.',
+      starterCode: `# Define Engine(horsepower) and Car(make, engine)
 `,
       testCases: [
         { input: 'Car("Toyota", Engine(150)).start()', expectedOutput: 'Engine (150hp) started', description: 'Car delegates start to Engine' },
@@ -265,7 +259,7 @@ class Car:
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a `CountedList` class that inherits from `list`. It should track how many times `append()` has been called. Add a `append_count` property. Override `append()` to increment the counter.',
+      question: 'Create a `CountedList` class that inherits from `list` and tracks how many times `append()` has been called. Override `append()` so it still adds the item like a normal list and also increments the counter, and expose the count through an `append_count` property. Then create `cl = CountedList()`, append 1, 2 and 3, print the list and then print `cl.append_count` (expect `[1, 2, 3]` and `3`).',
       starterCode: `# Define CountedList(list) that tracks how many times append() has been called
 #   - Override append() to increment a counter, then call super().append()
 #   - Expose the counter through an append_count property
@@ -333,12 +327,12 @@ print(____)`,
       course: Course.BACKEND,
       question: 'What is an abstract class in Python, and how do you create one?',
       options: [
-        { id: 'a', text: 'A class with no methods — used purely for storing data', isCorrect: false },
-        { id: 'b', text: 'A class that cannot be instantiated directly and defines abstract methods that subclasses must implement, using `ABC` from `abc`', isCorrect: true },
-        { id: 'c', text: 'A class that is defined but not yet assigned to a variable', isCorrect: false },
-        { id: 'd', text: 'A class where all methods are private', isCorrect: false },
+        { id: 'a', text: 'Any class whose methods just `raise NotImplementedError`; Python then refuses to create instances of it', isCorrect: false },
+        { id: 'b', text: 'A class you cannot instantiate, made by subclassing `ABC` and marking methods with `@abstractmethod`', isCorrect: true },
+        { id: 'c', text: 'A class whose methods are all private, made by starting every method name with a double underscore', isCorrect: false },
+        { id: 'd', text: 'A class decorated with `@abstractmethod` on the class line itself, without inheriting from anything', isCorrect: false },
       ],
-      explanation: 'Abstract classes define interfaces — methods that subclasses MUST implement. Use `from abc import ABC, abstractmethod`. Inherit from `ABC` and decorate methods with `@abstractmethod`. Trying to instantiate an abstract class raises `TypeError`. They enforce contracts in class hierarchies without implementing the behaviour themselves.',
+      explanation: 'Abstract classes define interfaces - methods that subclasses MUST implement. Use `from abc import ABC, abstractmethod`. Inherit from `ABC` and decorate methods with `@abstractmethod`. Trying to instantiate an abstract class raises `TypeError`. They enforce contracts in class hierarchies without implementing the behaviour themselves. A method that raises `NotImplementedError` only fails when it is called; the class can still be instantiated. `@abstractmethod` goes on methods, not on the class, and does nothing unless the class inherits from `ABC`. Double-underscore names only trigger name mangling; they have nothing to do with abstract classes.',
       hints: [
         '`from abc import ABC, abstractmethod`',
         'Attempting to instantiate an abstract class raises `TypeError`',
@@ -353,7 +347,7 @@ print(____)`,
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create an abstract `Shape` class with abstract methods `area()` and `perimeter()`. Then implement `Circle` and `Rectangle` subclasses. Use `math.pi` for the circle.',
+      question: 'Create an abstract `Shape` class (using `ABC`) with abstract methods `area()` and `perimeter()`. Then implement `Circle(radius)` and `Rectangle(width, height)` subclasses that store their arguments under the same names and implement both methods. Use `math.pi` for the circle.',
       starterCode: `# Define an abstract Shape (using ABC) with abstractmethods area() and perimeter()
 # Define Circle(radius) and Rectangle(width, height) implementing both
 # Use math.pi for the circle
@@ -446,12 +440,12 @@ class Rectangle(Shape):
       course: Course.BACKEND,
       question: 'What is the difference between a shallow copy and a deep copy?',
       options: [
-        { id: 'a', text: 'Shallow copy is faster; deep copy is more accurate', isCorrect: false },
-        { id: 'b', text: 'Shallow copy copies the outer container but keeps references to nested objects; deep copy recursively copies everything', isCorrect: true },
-        { id: 'c', text: 'Shallow copy works on lists only; deep copy works on all types', isCorrect: false },
-        { id: 'd', text: 'They are identical for simple objects; different only for classes', isCorrect: false },
+        { id: 'a', text: 'A shallow copy is a new name for the same object; a deep copy is a new container holding the same items', isCorrect: false },
+        { id: 'b', text: 'A shallow copy makes a new outer container that shares the nested objects; a deep copy copies every level', isCorrect: true },
+        { id: 'c', text: 'A shallow copy duplicates the nested lists but shares the numbers; a deep copy duplicates the numbers too', isCorrect: false },
+        { id: 'd', text: 'A shallow copy only works on lists and dicts; a deep copy also works on objects of your own classes', isCorrect: false },
       ],
-      explanation: 'A shallow copy (`copy.copy()` or `list[:]`) creates a new container but the nested objects are still shared references. Changing a nested object in the copy also changes it in the original. A deep copy (`copy.deepcopy()`) recursively copies everything — the copy is completely independent. Use deep copy when you need true isolation.',
+      explanation: 'A shallow copy (`copy.copy()` or `list[:]`) creates a new container but the nested objects are still shared references. Changing a nested object in the copy also changes it in the original. A deep copy (`copy.deepcopy()`) recursively copies everything, so the copy is completely independent. Use deep copy when you need true isolation. A new name for the same object is plain assignment (`b = a`), not a copy at all; a shallow copy shares the nested objects (it does not duplicate nested lists); and both `copy.copy()` and `copy.deepcopy()` work on your own classes too.',
       hints: [
         'Shallow = new container, same nested objects; Deep = everything new',
         '`import copy; copy.deepcopy(obj)` for a full independent clone',
@@ -547,12 +541,12 @@ print("Deep copy:", ____)`,
       course: Course.BACKEND,
       question: 'How do you create a read-write property with validation in Python?',
       options: [
-        { id: 'a', text: 'Use `@property` for getter and `@attr.setter` for the setter decorator', isCorrect: false },
-        { id: 'b', text: 'Use `@property` for the getter, then `@attr_name.setter` for the setter', isCorrect: true },
-        { id: 'c', text: 'Define both `get_attr()` and `set_attr()` methods', isCorrect: false },
-        { id: 'd', text: 'Use `property(fget=..., fset=...)` called at class level', isCorrect: false },
+        { id: 'a', text: 'Decorate the getter with `@property` and the setter method with `@property.setter`', isCorrect: false },
+        { id: 'b', text: 'Decorate the getter with `@property`, then a method of the same name with `@<name>.setter`', isCorrect: true },
+        { id: 'c', text: 'Decorate both methods with `@property`; Python tells them apart by their number of parameters', isCorrect: false },
+        { id: 'd', text: 'Name the methods `get_<name>` and `set_<name>`; `@property` links `obj.<name>` to them for you', isCorrect: false },
       ],
-      explanation: 'The property pattern: (1) define the getter with `@property`, (2) define the setter with `@property_name.setter`. The setter receives the new value and can validate it. Callers use simple attribute syntax (`obj.attr = val`) but your setter runs automatically. Use `@property_name.deleter` for deletion.',
+      explanation: 'The property pattern: (1) define the getter with `@property`, (2) define a second method with the same name and decorate it with `@<name>.setter`, where `<name>` is the property you just made (for example `@age.setter`). The setter receives the new value and can validate it. Callers use simple attribute syntax (`obj.age = val`) and your setter runs automatically. `@property.setter` does not work, because `property` is the built-in class, not your property. Decorating both methods with `@property` just replaces the getter with the second method. Methods named `get_age`/`set_age` are not linked to anything automatically; the older call `age = property(get_age, set_age)` links them explicitly. Use `@<name>.deleter` for deletion.',
       hints: [
         '`@property` → getter; `@name.setter` → setter',
         'The setter method must have the same name as the property',
@@ -662,12 +656,12 @@ print("Deep copy:", ____)`,
       question:
         'Fill in the decorator suffix that registers a setter for an existing @property.',
       template: `class Account:
-      @property
-      def balance(self):
-          return self._balance
-      @balance.___
-      def balance(self, value):
-          self._balance = value`,
+    @property
+    def balance(self):
+        return self._balance
+    @balance.___
+    def balance(self, value):
+        self._balance = value`,
       blanks: ['setter'],
       solution:
         'class Account:\n    @property\n    def balance(self):\n        return self._balance\n    @balance.setter\n    def balance(self, value):\n        self._balance = value',
@@ -711,10 +705,10 @@ class Shape(ABC):
       question:
         'Fill in the magic class attribute that locks instance attributes to a fixed set.',
       template: `class Point:
-      ___ = ("x", "y")
-      def __init__(self, x, y):
-          self.x = x
-          self.y = y`,
+    ___ = ("x", "y")
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y`,
       blanks: ['__slots__'],
       solution:
         'class Point:\n    __slots__ = ("x", "y")\n    def __init__(self, x, y):\n        self.x = x\n        self.y = y',
@@ -770,7 +764,7 @@ D().hello()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Add a setter to a @property that validates the value is non-negative.',
+        'Give Account an __init__ that stores balance in self._balance, then (after __init__) a balance property whose setter raises ValueError for a negative value before storing it.',
       correctOrder: [
         'class Account:',
         '    def __init__(self, balance):',
@@ -804,7 +798,7 @@ D().hello()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build an abstract base class with @abstractmethod that subclasses must implement.',
+        'Build an abstract base class Shape whose area() is an @abstractmethod, then a Square(side) subclass that implements area() as side squared. In Square, define __init__ first, then area.',
       correctOrder: [
         'from abc import ABC, abstractmethod',
         '',
@@ -822,12 +816,12 @@ D().hello()`,
       distractorLines: [
         'class Shape:',
         '    def area(self):',
-        '        raise NotImplementedError',
+        '        return side ** 2',
       ],
       solution:
         'from abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self):\n        ...\n\nclass Square(Shape):\n    def __init__(self, side):\n        self.side = side\n    def area(self):\n        return self.side ** 2',
       explanation:
-        'ABC + @abstractmethod prevents instantiation of subclasses that don\'t implement the abstract methods. The NotImplementedError pattern only catches the call — Shape() can still be instantiated. ABC enforces it at construction time.',
+        'ABC + @abstractmethod prevents instantiation of subclasses that don\'t implement the abstract methods. A plain `class Shape:` without ABC (for example with an area that just raises NotImplementedError) only fails when area() is called, and Shape() can still be instantiated; ABC enforces the contract at construction time. Inside Square.area, the side must be read as self.side: a bare `side` is not defined there.',
       hints: ['Inherit from ABC and decorate methods with @abstractmethod.'],
       tags: ['oop', 'abc', 'abstractmethod'],
       concepts: ['py-class-instance-distinction', 'py-abstract-method'],
@@ -1013,7 +1007,7 @@ except AttributeError:
       topic: Topic.PY_OOP_ADVANCED,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use @property to create a class "Circle" with a private _radius attribute. Add a radius property with getter and setter (setter validates radius > 0). Add a read-only area property.',
+      question: 'Use @property to create a class `Circle` whose constructor takes `radius` and assigns it through the property setter. Add a `radius` property whose getter returns the private `_radius` attribute and whose setter raises `ValueError("Radius must be positive")` unless the value is greater than 0, then stores it in `_radius`. Add a read-only `area` property that returns `math.pi * radius ** 2`.',
       starterCode: `import math\n\nclass Circle:\n`,
       testCases: [{ input: 'Circle class', expectedOutput: '@property getter, @radius.setter, area property', description: 'Should use property decorator' }],
       solution: `import math\n\nclass Circle:\n    def __init__(self, radius):\n        self.radius = radius\n\n    @property\n    def radius(self):\n        return self._radius\n\n    @radius.setter\n    def radius(self, value):\n        if value <= 0:\n            raise ValueError("Radius must be positive")\n        self._radius = value\n\n    @property\n    def area(self):\n        return math.pi * self._radius ** 2`,

@@ -61,12 +61,16 @@ logging.___(level=logging.___)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the kwarg for lazy %-style formatting (DO NOT pre-format the message).',
-      template: `logger.info("user %s logged in", ___)`,
+        'Fill in the argument that supplies the value for %s, passed separately so the logger formats the message lazily (do not pre-format it).',
+      template: `import logging
+
+logger = logging.getLogger(__name__)
+username = "alice"
+logger.info("user %s logged in", ___)`,
       blanks: ['username'],
-      solution: 'logger.info("user %s logged in", username)',
+      solution: 'import logging\n\nlogger = logging.getLogger(__name__)\nusername = "alice"\nlogger.info("user %s logged in", username)',
       explanation:
-        'Pass the value as a separate arg — the logger only formats the string if the message will actually be emitted (level enabled, handler attached). Pre-formatting with f-strings or % wastes CPU on filtered-out messages.',
+        'Pass the value as a separate argument: the logger only formats the string if the message will actually be emitted (level enabled, handler attached). Pre-formatting with f-strings or % wastes CPU on filtered-out messages.',
       hints: ['The variable being interpolated, passed as the second positional arg.'],
       tags: ['logging', 'lazy-formatting'],
       concepts: ['py-logging-config'],
@@ -179,7 +183,7 @@ ___({
       solution:
         'from logging.config import dictConfig\n\ndictConfig({\n    "version": 1,\n    "loggers": {"": {"level": "INFO"}},\n})',
       explanation:
-        'dictConfig is the canonical way to configure logging from JSON/YAML/TOML in production — single source of truth for handlers, formatters, and per-logger levels. fileConfig (older, ConfigParser-based) is mostly deprecated.',
+        'dictConfig is the canonical way to configure logging from JSON/YAML/TOML in production - single source of truth for handlers, formatters, and per-logger levels. fileConfig (the older, ConfigParser-based form) still works but supports fewer features, so new code usually uses dictConfig.',
       hints: ['Snake-then-camel: "dict" + "Config".'],
       tags: ['logging', 'dictConfig'],
       concepts: ['py-logging-config'],
@@ -195,9 +199,10 @@ ___({
         'Fill in the level constant that means "things still working but worth noting".',
       template: `logger.log(logging.___, "deprecated API used")`,
       blanks: ['WARNING'],
+      blankAlternates: [['WARN']],
       solution: 'logger.log(logging.WARNING, "deprecated API used")',
       explanation:
-        'WARNING is the default root level — if you have not configured logging, only WARNING and above appear. INFO is for normal-flow notes; ERROR is for actual failures.',
+        'WARNING is the default root level - if you have not configured logging, only WARNING and above appear. INFO is for normal-flow notes; ERROR is for actual failures. logging.WARN is an older alias for the same level.',
       hints: ['UPPERCASE; between INFO and ERROR.'],
       tags: ['logging', 'levels', 'WARNING'],
       concepts: ['py-logging-config'],
@@ -210,13 +215,15 @@ ___({
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the kwarg that prevents a logger from passing records up to its parent loggers.',
-      template: `logger = logging.getLogger("audit")
+        'Fill in the logger attribute that stops it from passing records up to its parent loggers.',
+      template: `import logging
+
+logger = logging.getLogger("audit")
 logger.___ = False`,
       blanks: ['propagate'],
-      solution: 'logger = logging.getLogger("audit")\nlogger.propagate = False',
+      solution: 'import logging\n\nlogger = logging.getLogger("audit")\nlogger.propagate = False',
       explanation:
-        'By default, log records propagate up the dotted-name hierarchy ("a.b" → "a" → root). Setting propagate=False stops propagation — useful for audit logs that should ONLY hit a dedicated handler, not the global one.',
+        'By default, log records propagate up the dotted-name hierarchy ("a.b" → "a" → root). Setting propagate=False stops propagation - useful for audit logs that should ONLY hit a dedicated handler, not the global one.',
       hints: ['Nine-letter lowercase.'],
       tags: ['logging', 'propagate', 'hierarchy'],
       concepts: ['py-logging-config'],
@@ -229,12 +236,12 @@ logger.___ = False`,
       course: Course.BACKEND,
       question: 'Why prefer the `logging` module over `print()` for production code?',
       options: [
-        { id: 'a', text: '`print()` is faster and safer in production', isCorrect: false },
-        { id: 'b', text: '`logging` has configurable levels (DEBUG/INFO/WARNING/ERROR/CRITICAL), per-module loggers, structured output via handlers/formatters, and can be redirected to files/network/stderr without touching call sites', isCorrect: true },
-        { id: 'c', text: '`logging` auto-encrypts all messages', isCorrect: false },
-        { id: 'd', text: 'They are equivalent — use whichever you prefer', isCorrect: false },
+        { id: 'a', text: '`logging` is faster than `print()`: it buffers messages and writes them in a background thread, so a log call never slows a request', isCorrect: false },
+        { id: 'b', text: 'Each message carries a level and a logger name, so one config can filter it and choose where it goes, without editing the calls', isCorrect: true },
+        { id: 'c', text: '`logging` keeps messages out of the program output: by default they go to a log file that Python creates next to the script', isCorrect: false },
+        { id: 'd', text: 'Running Python with `-O` in production strips out every `print()` call, while `logging` calls stay in the program', isCorrect: false },
       ],
-      explanation: '`print` always goes to stdout and has no levels or metadata. `logging` separates WHAT you log (at the call site) from WHERE/HOW it goes (configured once at app boundary). Levels let ops silence DEBUG in prod; handlers let the same call go to file, console, syslog, Sentry; formatters add timestamps, module, line numbers. Using `logger = logging.getLogger(__name__)` gives you a hierarchy you can filter.',
+      explanation: '`print` always goes to stdout and has no levels or metadata. `logging` separates WHAT you log (at the call site) from WHERE/HOW it goes (configured once at app boundary). Levels let ops silence DEBUG in prod; handlers let the same call go to file, console, syslog, Sentry; formatters add timestamps, module, line numbers. Using `logger = logging.getLogger(__name__)` gives you a hierarchy you can filter. `logging` is not faster or asynchronous by default: each handler writes when the call is made. Out of the box it writes to standard error, not to a file; you add a FileHandler (or `filename=` in basicConfig) for that. And `python -O` removes `assert` statements, not `print` calls.',
       hints: [
         'Levels: DEBUG < INFO < WARNING < ERROR < CRITICAL',
         '`getLogger(__name__)` creates a module-scoped logger',
@@ -252,7 +259,7 @@ logger.___ = False`,
       language: CodeLanguage.PYTHON,
       question: 'Configure the root logger at INFO level via `basicConfig`, then obtain a module-scoped logger named by the current module (using `__name__`). Emit three messages — a debug with text `"debug skipped"`, an info with text `"hello"`, and a warning with text `"heads up"`. Because the threshold is INFO, only the info and warning lines should actually appear — the debug must be filtered out.',
       starterCode: `import logging
-  `,
+`,
       testCases: [
         {
           input: 'INFO level filter',
@@ -297,7 +304,7 @@ logger.____("heads up")`,
       language: CodeLanguage.PYTHON,
       question: 'Obtain a logger named `"payments"` and set its threshold to DEBUG. Attach a stream handler to it, and give that handler a formatter whose format string is `"%(asctime)s [%(levelname)s] %(name)s: %(message)s"`. Emit an info message with the text `"processed 42"`. The output line should include a timestamp, the level name, the logger name `payments`, and the message.',
       starterCode: `import logging
-  `,
+`,
       testCases: [
         {
           input: 'structured formatter',
@@ -346,7 +353,7 @@ logger.info("processed 42")`,
       language: CodeLanguage.PYTHON,
       question: 'Configure logging at ERROR level and obtain a module-scoped logger (named via `__name__`). Inside a `try/except Exception` block, raise `ValueError("bad id")` in the try-body; in the except branch, log `"query failed"` using the logger method that automatically attaches the current exception\'s traceback to the record (equivalent to calling the error method with `exc_info=True`).',
       starterCode: `import logging
-  `,
+`,
       testCases: [
         {
           input: 'exception in try block',
@@ -393,7 +400,7 @@ except Exception:
       language: CodeLanguage.PYTHON,
       question: 'Configure logging at INFO level and obtain a module-scoped logger. Declare `user_id = 42` and `ip = "10.0.0.1"`. Emit an INFO message that produces the text `"user 42 logged in from 10.0.0.1"` — but use LAZY formatting (pass the format string and the values as SEPARATE args, not an f-string) so interpolation only happens if the record is actually emitted. Linters (ruff/pylint) flag f-strings in log calls for this reason.',
       starterCode: `import logging
-  `,
+`,
       testCases: [
         {
           input: 'lazy interpolation',
@@ -437,12 +444,12 @@ logger.____("user %s logged in from %s", ____, ____)`,
       course: Course.BACKEND,
       question: 'You call `logging.getLogger("app.db")` in one module and `logging.getLogger("app")` in another. How are the two loggers related?',
       options: [
-        { id: 'a', text: 'They are unrelated — names are just strings', isCorrect: false },
-        { id: 'b', text: 'Dotted names create a hierarchy: "app.db" is a child of "app", which is a child of the root logger. Child loggers inherit effective level and propagate records up to ancestor handlers unless you set `propagate=False`.', isCorrect: true },
-        { id: 'c', text: 'The second call overwrites the first', isCorrect: false },
-        { id: 'd', text: 'The hierarchy only exists when you explicitly call `addChild`', isCorrect: false },
+        { id: 'a', text: 'They are separate loggers: the dot is just part of the name, so a level or handler set on "app" never affects "app.db"', isCorrect: false },
+        { id: 'b', text: '"app.db" is a child of "app": it uses the level of "app" unless it sets its own, and its records also reach the handlers on "app"', isCorrect: true },
+        { id: 'c', text: '"app" is a child of "app.db": records logged on "app" are passed down to the handlers on "app.db" and filtered by its level', isCorrect: false },
+        { id: 'd', text: 'They are the same logger: getLogger keeps only the part of the name before the first dot, so both calls return "app"', isCorrect: false },
       ],
-      explanation: 'Logger names with dots build a tree: root → "app" → "app.db". If you set the level on "app", "app.db" inherits it (unless it sets its own). A handler on "app" also sees records from "app.db" because they propagate upward. This is how you configure once and control all child modules. Set `logger.propagate = False` on a noisy subtree to stop it reaching ancestor handlers.',
+      explanation: 'Logger names with dots build a tree: root → "app" → "app.db". If you set the level on "app", "app.db" inherits it (unless it sets its own). A handler on "app" also sees records from "app.db" because they propagate upward. This is how you configure once and control all child modules. Set `logger.propagate = False` on a noisy subtree to stop it reaching ancestor handlers. The tree runs from the shorter name down to the longer one, never the other way, and the two calls return two different Logger objects (getLogger returns the same object only for the same full name).',
       hints: [
         'Dotted names = parent/child relationship',
         'Level and propagation both cascade upward unless overridden',
@@ -542,7 +549,7 @@ logger.____("user %s logged in from %s", ____, ____)`,
       topic: Topic.PY_LOGGING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code show in the console? basicConfig sends log lines to standard error, so type the log lines exactly as they appear, in order.',
       code: `import logging
 
 logging.basicConfig(level=logging.WARNING)
@@ -564,7 +571,7 @@ ERROR:root:write failed`,
       topic: Topic.PY_LOGGING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code show in the console? basicConfig sends log lines to standard error, so type the log lines exactly as they appear, in order.',
       code: `import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -583,7 +590,7 @@ logging.info("user %s has %d items", "alice", 3)`,
       topic: Topic.PY_LOGGING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code show in the console? basicConfig sends log lines to standard error, so type the log lines exactly as they appear, in order.',
       code: `import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -593,7 +600,7 @@ logger.warning("careful")
 logger.error("boom")`,
       expectedOutput: `ERROR:app:boom`,
       explanation:
-        'The "app" logger sets its own level to ERROR, so it filters records BEFORE they propagate — WARNING < ERROR, so "careful" never reaches root\'s handler. "boom" passes and propagates up to the root handler installed by basicConfig. The emitted line shows the originating logger\'s name ("app"), not "root", even though the handler lives on root.',
+        'The "app" logger sets its own level to ERROR, so it filters records BEFORE they propagate - WARNING < ERROR, so "careful" never reaches root\'s handler. "boom" passes and propagates up to the root handler installed by basicConfig. The emitted line shows the originating logger\'s name ("app"), not "root", even though the handler lives on root.',
       hints: ['setLevel on the logger filters first; the record still shows the logger that created it.'],
       tags: ['logging', 'setLevel', 'levels', 'hierarchy'],
       concepts: ['py-logging-config'],

@@ -229,7 +229,7 @@ print(list(chain.___([[1, 2], [3, 4]])))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use itertools.chain to flatten three lists into one iterator and materialize as a list.',
+        'Define `a = [1, 2]`, `b = [3, 4]` and `c = [5, 6]` in that order, join them with itertools.chain into one list `flat`, and print it.',
       correctOrder: [
         'from itertools import chain',
         '',
@@ -241,12 +241,12 @@ print(list(chain.___([[1, 2], [3, 4]])))`,
       ],
       distractorLines: [
         'flat = list(chain([a, b, c]))',
-        'flat = a + b + c',
+        'flat = chain(a, b, c)',
       ],
       solution:
         'from itertools import chain\n\na = [1, 2]\nb = [3, 4]\nc = [5, 6]\nflat = list(chain(a, b, c))\nprint(flat)',
       explanation:
-        'chain(a, b, c) iterates each iterable in sequence — pass them as separate args. chain([a, b, c]) would iterate the OUTER list, giving back [a, b, c] not flattened. chain.from_iterable([a, b, c]) is the form for an iterable-of-iterables.',
+        'chain(a, b, c) iterates each iterable in sequence - pass them as separate args. chain([a, b, c]) would iterate the OUTER list, giving back [a, b, c] not flattened. chain(a, b, c) without list() is a lazy iterator, so printing it shows `<itertools.chain object at ...>`, not the values. chain.from_iterable([a, b, c]) is the form for an iterable-of-iterables.',
       hints: ['Pass iterables as separate args; chain.from_iterable for iterable-of-iterables.'],
       tags: ['itertools', 'chain'],
       concepts: ['py-itertools-combinators', 'ce-chord-vs-chain'],
@@ -486,12 +486,12 @@ print(list(chain.___([[1, 2], [3, 4]])))`,
       ],
       distractorLines: [
         'flat = list(chain(nested))',
-        'flat = sum(nested, [])',
+        'flat = list(chain.from_iterable(*nested))',
       ],
       solution:
         'from itertools import chain\n\nnested = [[1, 2], [3, 4], [5]]\nflat = list(chain.from_iterable(nested))\nprint(flat)',
       explanation:
-        'chain.from_iterable takes ONE argument (an iterable of iterables) and flattens. chain(nested) would treat the outer list as a single iterable to chain — yielding [[1,2], [3,4], [5]] unchanged. sum(nested, []) works but is O(n²).',
+        'chain.from_iterable takes ONE argument (an iterable of iterables) and flattens. chain(nested) would treat the outer list as a single iterable to chain - yielding [[1,2], [3,4], [5]] unchanged. chain.from_iterable(*nested) unpacks the inner lists into three arguments, so it raises TypeError: from_iterable takes exactly one. (sum(nested, []) also flattens, but is O(n²).)',
       hints: ['chain takes args; chain.from_iterable takes one iterable-of-iterables.'],
       tags: ['itertools', 'chain', 'flatten'],
       concepts: ['py-itertools-combinators', 'ce-chord-vs-chain'],
@@ -679,7 +679,7 @@ print(len(list(product([1, 2, 3], repeat=3))))`,
       topic: Topic.PY_ITERTOOLS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write two helpers that process iterators efficiently without reading everything into memory upfront.\n\n(1) `merge_sorted_streams` — takes any number of already-SORTED integer lists (via `*streams`) and returns a single sorted list containing all elements merged. The merge must be efficient even when each stream is large — do NOT concatenate-then-sort; use the `heapq` stdlib helper that merges pre-sorted iterables lazily. Example input `[1, 4, 7], [2, 5, 8], [3, 6, 9]` → `[1, 2, 3, 4, 5, 6, 7, 8, 9]`.\n\n(2) `batch_process` — a generator taking an arbitrary iterable and an integer `batch_size`, yielding successive LISTS of up to `batch_size` consecutive items. The final batch may be shorter when input length isn\'t a multiple of `batch_size`; do NOT yield an empty trailing batch. Implementation must not materialise the full input — work on any iterator, one batch at a time (hint: `itertools.islice` on an iterator advances it). Example input `(range(10), 3)` → `[[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]`.',
+      question: 'Write two helpers that process iterators efficiently without reading everything into memory upfront.\n\n(1) `merge_sorted_streams` - takes any number of already-SORTED integer lists (via `*streams`) and returns a single sorted list containing all elements merged. The merge must be efficient even when each stream is large - do NOT concatenate-then-sort; use `heapq.merge`, the standard-library helper that merges already-sorted iterables lazily. Example input `[1, 4, 7], [2, 5, 8], [3, 6, 9]` → `[1, 2, 3, 4, 5, 6, 7, 8, 9]`.\n\n(2) `batch_process` - a generator taking an arbitrary iterable and an integer `batch_size`, yielding successive LISTS of up to `batch_size` consecutive items. The final batch may be shorter when input length isn\'t a multiple of `batch_size`; do NOT yield an empty trailing batch. Implementation must not materialise the full input - work on any iterator, one batch at a time (hint: `itertools.islice` on an iterator advances it). Example input `(range(10), 3)` → `[[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]`.',
       starterCode: `import itertools
 import heapq
 `,
@@ -706,7 +706,7 @@ def batch_process(iterable, batch_size: int):
             break
         yield batch
 `,
-      explanation: 'heapq.merge efficiently merges multiple sorted iterables using a heap, producing sorted output in O(n log k) time where k is the number of streams — without loading everything into memory. itertools.islice(iterator, n) lazily takes the next n elements from an iterator, making it perfect for batching. The key insight is that islice advances the iterator, so the next call picks up where the last left off. This batching pattern is essential for processing large datasets in chunks.',
+      explanation: 'heapq.merge efficiently merges multiple sorted iterables using a heap, producing sorted output in O(n log k) time where k is the number of streams - without loading everything into memory. itertools.islice(iterator, n) lazily takes the next n elements from an iterator, making it perfect for batching. The key insight is that islice advances the iterator, so the next call picks up where the last left off. This batching pattern is essential for processing large datasets in chunks.',
       hints: [
         'heapq.merge(*iterables) for sorted merge',
         'itertools.islice(iter, n) takes next n items lazily',
@@ -795,12 +795,12 @@ def unique_pairs(names: ____) -> ____:
       course: Course.BACKEND,
       question: 'What is the difference between `itertools.combinations("ABCD", 2)` and `itertools.permutations("ABCD", 2)`?',
       options: [
-        { id: 'a', text: 'They produce identical output — both generate all 2-element subsets', isCorrect: false },
-        { id: 'b', text: 'combinations allows repeated elements (AA, BB); permutations does not', isCorrect: false },
-        { id: 'c', text: 'combinations produces 6 unordered pairs (AB, AC, AD, BC, BD, CD); permutations produces 12 ordered pairs (AB, BA, AC, CA, ...)', isCorrect: true },
-        { id: 'd', text: 'permutations is lazy but combinations loads all results into memory', isCorrect: false },
+        { id: 'a', text: 'Both give the same 6 pairs (AB, AC, ...); permutations just lists them in another order', isCorrect: false },
+        { id: 'b', text: 'combinations gives 10 pairs including AA and BB; permutations gives 6 pairs with no repeats', isCorrect: false },
+        { id: 'c', text: 'combinations gives 6 unordered pairs (AB, AC, ...); permutations gives 12 ordered ones (AB, BA, ...)', isCorrect: true },
+        { id: 'd', text: 'Both give the same 6 pairs, but permutations is lazy while combinations builds a list in memory', isCorrect: false },
       ],
-      explanation: 'combinations treats items as a set — order doesn\'t matter, so (A,B) and (B,A) are the same pair, yielding C(n,r) = n!/(r!(n-r)!) results. permutations treats order as significant — (A,B) and (B,A) are different, yielding P(n,r) = n!/(n-r)! results. For "ABCD" with r=2: combinations gives 6 pairs, permutations gives 12. Use combinations_with_replacement if you also want (A,A), (B,B), etc. All three are lazy iterators that generate results on demand.',
+      explanation: 'combinations treats items as a set - order doesn\'t matter, so (A,B) and (B,A) are the same pair, yielding C(n,r) = n!/(r!(n-r)!) results. permutations treats order as significant - (A,B) and (B,A) are different, yielding P(n,r) = n!/(n-r)! results. For "ABCD" with r=2: combinations gives 6 pairs, permutations gives 12. Pairs like (A,A) and (B,B) come only from combinations_with_replacement, which gives 10 pairs here. All three are lazy iterators that generate results on demand.',
       hints: [
         'combinations: order does NOT matter',
         'permutations: order DOES matter',
@@ -817,15 +817,15 @@ def unique_pairs(names: ____) -> ____:
       course: Course.BACKEND,
       question: 'What is the `itertools` module?',
       options: [
-        { id: 'a', text: 'A deprecated module replaced by comprehensions', isCorrect: false },
-        { id: 'b', text: 'A stdlib module of fast, memory-efficient iterator building blocks — `chain`, `cycle`, `count`, `islice`, `groupby`, `product`, `permutations`, `combinations`, `accumulate`, `takewhile`, `dropwhile`, `tee`, `starmap`, `pairwise`. They compose and are lazy (generators) so you can compose pipelines over huge inputs.', isCorrect: true },
-        { id: 'c', text: 'Tools for testing iterators', isCorrect: false },
-        { id: 'd', text: 'A third-party data-science package', isCorrect: false },
+        { id: 'a', text: 'A standard-library module of helpers like `chain` and `groupby` that build full lists you can index', isCorrect: false },
+        { id: 'b', text: 'A standard-library module of building blocks like `chain` and `islice` that return lazy iterators', isCorrect: true },
+        { id: 'c', text: 'A third-party package, installed with pip, that adds `chain`, `groupby` and other list helpers', isCorrect: false },
+        { id: 'd', text: 'The module that defines the iterator protocol, so a class must import it to work in a `for` loop', isCorrect: false },
       ],
-      explanation: 'itertools is the "lego bricks" for iteration. Every function returns an iterator (lazy), so chains stay O(1) memory. Typical uses: `chain(a, b, c)` to concatenate, `islice(infinite, 10)` to take 10 from an infinite stream, `groupby(sorted_items, key=f)` for runs of same-key items, `combinations(items, 2)` for pair-ups. Read the docs examples — they are a masterclass.',
+      explanation: 'itertools is the standard library\'s "lego bricks" for iteration: `chain`, `cycle`, `count`, `islice`, `groupby`, `product`, `permutations`, `combinations`, `accumulate`, `takewhile`, `dropwhile`, `starmap`, `pairwise` and more. Every function returns an iterator (lazy), not a list, so you wrap the result in `list()` to see or index the values, and chains stay O(1) memory. Nothing needs installing, and a class works in a `for` loop through `__iter__`/`__next__` without importing anything. Typical uses: `chain(a, b, c)` to concatenate, `islice(infinite, 10)` to take 10 from an infinite stream, `groupby(sorted_items, key=f)` for runs of same-key items, `combinations(items, 2)` for pair-ups. Read the docs examples - they are a masterclass.',
       hints: [
         'All functions return lazy iterators',
-        'Read the `itertools` docs recipes — they are canonical patterns',
+        'Read the `itertools` docs recipes - they are canonical patterns',
         'Pairs perfectly with generators and comprehensions',
       ],
       tags: ['itertools', 'stdlib', 'overview'],

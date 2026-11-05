@@ -179,7 +179,7 @@ def test_divide_by_zero():
       'import pytest\n\ndef test_divide_by_zero():\n    with pytest.raises(ZeroDivisionError):\n        1 / 0',
     explanation:
       'pytest.raises(ExcType) is a context manager — the test passes only if the body raises that exception (or a subclass). Add match="..." to also assert on the message. The test FAILS if no exception is raised.',
-    hints: ['Five letters; the context manager that expects an exception.'],
+    hints: ['Six letters; the context manager that expects an exception.'],
     tags: ['testing', 'pytest.raises', 'exceptions'],
     concepts: ['py-test-isolation'],
   },
@@ -191,22 +191,22 @@ def test_divide_by_zero():
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
     question:
-      'Use pytest.approx for float equality with tolerance.',
+      '`compute()` returns `0.1 + 0.2`. Write `test_compute` that stores its result and checks it equals 0.3 with a tolerance, using pytest.approx.',
     correctOrder: [
       'import pytest',
       '',
       'def test_compute():',
       '    result = compute()',
-      '    assert result == pytest.approx(0.1 + 0.2)',
+      '    assert result == pytest.approx(0.3)',
     ],
     distractorLines: [
-      '    assert result == 0.1 + 0.2',
-      '    assert pytest.approx(result, 0.1 + 0.2)',
+      '    assert result == 0.3',
+      '    assert pytest.approx(result, 0.3)',
     ],
     solution:
-      'import pytest\n\ndef test_compute():\n    result = compute()\n    assert result == pytest.approx(0.1 + 0.2)',
+      'import pytest\n\ndef test_compute():\n    result = compute()\n    assert result == pytest.approx(0.3)',
     explanation:
-      'Floating-point comparison should use approx — direct == fails because 0.1 + 0.2 != 0.3 exactly in IEEE 754. Use approx on the EXPECTED side (right of ==). Custom tolerance: pytest.approx(value, abs=0.001) or rel=...',
+      'Floating-point comparison should use approx: a direct `result == 0.3` fails because 0.1 + 0.2 is 0.30000000000000004 in binary floating point. Put approx on the EXPECTED side of `==`. `assert pytest.approx(result, 0.3)` is wrong: it builds an approx object (with 0.3 as the relative tolerance) and asserts it on its own, which pytest refuses with an error. Custom tolerance: pytest.approx(value, abs=0.001) or rel=...',
     hints: ['approx wraps the expected value; tolerances are kwargs (abs/rel).'],
     tags: ['testing', 'approx', 'float'],
     concepts: ['py-test-isolation'],
@@ -263,7 +263,7 @@ def test_square(value, expected):
     topic: Topic.PY_TESTING_BASICS,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Write a pytest test for a function calculate_tax(amount, rate=0.2) that returns amount * rate. Test: normal case, zero amount, custom rate.',
+    question: 'Define `calculate_tax(amount, rate=0.2)` that returns the amount times the rate. Then write three pytest tests: `test_normal_tax` checks that 100 at the default rate gives 20.0, `test_zero_amount` checks that an amount of 0 gives 0.0, and `test_custom_rate` checks that 100 at a rate of 0.1 gives 10.0.',
     starterCode: `# Import pytest; define calculate_tax(amount, rate=0.2) returning amount * rate
 # Add three test_* functions: normal case (100 → 20.0), zero amount, custom rate (100, 0.1 → 10.0)
 `,
@@ -303,7 +303,7 @@ def ____():
     topic: Topic.PY_TESTING_BASICS,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Write a test that verifies a function raises an exception. Given:\n```python\ndef divide(a, b):\n    if b == 0:\n        raise ValueError("Cannot divide by zero")\n    return a / b\n```\nWrite `test_divide_by_zero` that asserts calling `divide(10, 0)` raises `ValueError`, using pytest\'s exception-asserting context manager. Then write a second test that ALSO checks the error message contains the word "zero" — the same context manager takes a keyword argument that matches the message against a regex. Finally add a test for the normal case: `divide(10, 2) == 5.0`.',
+    question: 'Write a test that verifies a function raises an exception. Given:\n```python\ndef divide(a, b):\n    if b == 0:\n        raise ValueError("Cannot divide by zero")\n    return a / b\n```\nWrite `test_divide_by_zero` that asserts calling `divide(10, 0)` raises `ValueError`, using pytest\'s exception-asserting context manager. Then write a second test, `test_divide_by_zero_message`, that ALSO checks the error message contains the word "zero" (the same context manager takes a keyword argument that matches the message against a regex). Finally add `test_divide_normal` for the normal case: `divide(10, 2) == 5.0`.',
     starterCode: `import pytest
 # divide(a, b): raise ValueError("Cannot divide by zero") when b == 0, else a / b
 # test_divide_by_zero(): assert the zero case raises ValueError

@@ -126,16 +126,17 @@ salt = secrets.___(16)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the hmac call to sign a message — note the digestmod argument.',
+        'Fill in the third argument of `hmac.new`, the hash algorithm (digestmod), so the message is signed with HMAC-SHA256.',
       template: `import hmac
 import hashlib
 
 sig = hmac.new(key, message, ___).hexdigest()`,
       blanks: ['hashlib.sha256'],
+      blankAlternates: [['"sha256"', "'sha256'", 'digestmod=hashlib.sha256']],
       solution:
         'import hmac\nimport hashlib\n\nsig = hmac.new(key, message, hashlib.sha256).hexdigest()',
       explanation:
-        'hmac.new requires a digestmod (the underlying hash). Passing the hashlib factory is canonical. Omitting it triggers a deprecation warning and uses an insecure default.',
+        'hmac.new requires a digestmod (the underlying hash). Passing the hashlib constructor `hashlib.sha256` is the usual form; the name string "sha256" works too. Since Python 3.8, leaving it out raises TypeError: Missing required argument \'digestmod\'.',
       hints: ['hashlib.<algorithm>'],
       tags: ['security', 'hmac', 'digestmod'],
       concepts: ['py-security-primitives'],
@@ -248,7 +249,7 @@ n = secrets.___(1_000_000)`,
       solution:
         'import secrets\n\ntoken = secrets.token_urlsafe(32)\nprint(token)',
       explanation:
-        'secrets is the stdlib module for security-grade randomness — backed by os.urandom. random is seeded from system time and predictable; never use it for tokens, passwords, or session IDs.',
+        'secrets is the stdlib module for security-grade randomness, backed by os.urandom. random is a predictable generator (its internal state can be rebuilt from its outputs); never use it for tokens, passwords, or session IDs.',
       hints: ['Use the secrets module, not random.'],
       tags: ['security', 'secrets', 'tokens'],
       concepts: ['py-security-primitives'],
@@ -320,7 +321,7 @@ n = secrets.___(1_000_000)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Hash a password with PBKDF2-HMAC-SHA256, using a fresh random 16-byte salt and 200000 iterations.',
+        'Hash a password with PBKDF2-HMAC-SHA256, using a fresh random 16-byte salt and 200000 iterations. Declare the password, then the salt, then derive the digest and print it as hex.',
       correctOrder: [
         'import hashlib',
         'import secrets',
@@ -338,7 +339,7 @@ n = secrets.___(1_000_000)`,
       solution:
         'import hashlib\nimport secrets\n\npassword = "p@ssw0rd"\nsalt = secrets.token_bytes(16)\ndigest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200000)\nprint(digest.hex())',
       explanation:
-        'Password hashing needs three properties: per-user salt (defeats rainbow tables), key-stretching with high iteration count (defeats brute force), and a slow KDF. Plain SHA-256 is too fast. token_urlsafe returns str — pbkdf2_hmac needs bytes for salt.',
+        'Password hashing needs three properties: per-user salt (defeats rainbow tables), key-stretching with high iteration count (defeats brute force), and a slow KDF. Plain SHA-256 is too fast. token_urlsafe returns str - pbkdf2_hmac needs bytes for salt.',
       hints: ['pbkdf2_hmac with bytes salt + high iteration count.'],
       tags: ['security', 'pbkdf2', 'password-hashing', 'salt'],
       concepts: ['py-security-primitives'],
@@ -351,7 +352,7 @@ n = secrets.___(1_000_000)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Generate an HMAC-SHA256 signature of a message using a shared secret key.',
+        'Generate an HMAC-SHA256 signature of a message using a shared secret key. Declare the key first, then the message, then compute the hex signature and print it.',
       correctOrder: [
         'import hmac',
         'import hashlib',
@@ -369,7 +370,7 @@ n = secrets.___(1_000_000)`,
       solution:
         'import hmac\nimport hashlib\n\nkey = b"secret-key"\nmessage = b"order-42"\nsig = hmac.new(key, message, hashlib.sha256).hexdigest()\nprint(sig)',
       explanation:
-        'HMAC binds a message to a secret key. hmac.new requires the digestmod (hashlib.sha256) — omit it and you get a deprecation warning + insecure default. Plain sha256 of the message has no secret and provides no authentication.',
+        'HMAC binds a message to a secret key. hmac.new requires the digestmod (hashlib.sha256): since Python 3.8, leaving it out raises TypeError. Plain sha256 of the message has no secret and provides no authentication, and the hmac module has no sha256 function.',
       hints: ['hmac.new(key, msg, hashlib.sha256).'],
       tags: ['security', 'hmac', 'sha256'],
       concepts: ['py-security-primitives'],
@@ -398,7 +399,7 @@ n = secrets.___(1_000_000)`,
       solution:
         'import secrets\n\ncolors = ["red", "green", "blue"]\npick = secrets.choice(colors)\nprint(pick)',
       explanation:
-        'secrets.choice is the security-grade analogue of random.choice. Use it for security-relevant picks (challenge tokens, password chars, A/B-test salts that must not be guessable).',
+        'secrets.choice is the security-grade analogue of random.choice. Use it for security-relevant picks such as challenge words or password characters. Indexing with a random byte modulo the list length is biased: 256 values do not split evenly over 3 items, so "red" comes up slightly more often. secrets.choice picks each item with equal chance.',
       hints: ['secrets.choice mirrors random.choice but is secure.'],
       tags: ['security', 'secrets', 'choice'],
       concepts: ['py-security-primitives'],
@@ -469,7 +470,7 @@ n = secrets.___(1_000_000)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a parameterized SQL query — never f-string user input into SQL.',
+        'Build a parameterized SQL query (never f-string user input into SQL). Open the connection first, then set `user_input`, then run the query and print the rows (creating the `users` table is left out).',
       correctOrder: [
         'import sqlite3',
         '',
@@ -486,7 +487,7 @@ n = secrets.___(1_000_000)`,
       solution:
         'import sqlite3\n\nconn = sqlite3.connect(":memory:")\nuser_input = "alice"\ncur = conn.execute("SELECT * FROM users WHERE name = ?", (user_input,))\nprint(cur.fetchall())',
       explanation:
-        'Parameter binding (?) sends the value separately from the SQL — the database never parses it as SQL. f-string / + / % concatenation produces classic SQL injection. The trailing comma makes (user_input,) a 1-tuple.',
+        'Parameter binding (?) sends the value separately from the SQL - the database never parses it as SQL. f-string / + / % concatenation produces classic SQL injection. The trailing comma makes (user_input,) a 1-tuple.',
       hints: ['Pass values via the params tuple, not into the SQL string.'],
       tags: ['security', 'sql-injection', 'parameterized-query'],
       concepts: ['py-security-primitives'],
@@ -499,7 +500,7 @@ n = secrets.___(1_000_000)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Read a secret from an environment variable, raising clearly if it is missing.',
+        'Read the `API_KEY` environment variable with a lookup that gives None when it is missing, then raise a `RuntimeError` with a clear message if it is not set.',
       correctOrder: [
         'import os',
         '',
@@ -515,7 +516,7 @@ n = secrets.___(1_000_000)`,
       solution:
         'import os\n\napi_key = os.environ.get("API_KEY")\nif not api_key:\n    raise RuntimeError("API_KEY is not set")',
       explanation:
-        'Hard-coded secrets leak via git/logs. os.environ.get returns None on missing — explicit None-check produces a clearer error than a KeyError. Reading raw .env files bypasses python-dotenv\'s expansion and quoting rules.',
+        'Hard-coded secrets leak via git/logs. os.environ.get returns None on missing - explicit None-check produces a clearer error than a KeyError. Reading raw .env files bypasses python-dotenv\'s expansion and quoting rules.',
       hints: ['os.environ.get + explicit check beats hard-coded.'],
       tags: ['security', 'secrets', 'env'],
       concepts: ['py-security-primitives'],
@@ -714,12 +715,12 @@ print(a == b)`,
       course: Course.BACKEND,
       question: 'Why should you use `secrets.token_hex(32)` instead of `random.randint` when generating a session token or password-reset code?',
       options: [
-        { id: 'a', text: 'No reason — they are equivalent', isCorrect: false },
-        { id: 'b', text: '`random` is a pseudo-random generator seeded from system time and is predictable — fine for games, fatal for security. `secrets` draws from the OS cryptographic RNG (`/dev/urandom` / `CryptGenRandom`), which is the standard source for unguessable tokens.', isCorrect: true },
-        { id: 'c', text: '`secrets` is faster', isCorrect: false },
-        { id: 'd', text: '`random` is deprecated', isCorrect: false },
+        { id: 'a', text: 'They are equally unpredictable, but `secrets` returns hex text, the only format a cookie or URL can safely carry.', isCorrect: false },
+        { id: 'b', text: '`random` is predictable: its future outputs can be worked out from past ones, while `secrets` uses the OS cryptographic random source.', isCorrect: true },
+        { id: 'c', text: '`random` is safe once seeded with the current time, so the real gain from `secrets` is skipping that seeding step.', isCorrect: false },
+        { id: 'd', text: '`random` can repeat a value, while `secrets` remembers every token it has issued and never hands out the same one.', isCorrect: false },
       ],
-      explanation: 'Use `secrets` for ANYTHING an attacker could benefit from guessing: session IDs, CSRF tokens, password reset links, API keys, nonces. The `random` module is a Mersenne Twister — its internal state can be reconstructed from ~624 consecutive outputs. `secrets.token_hex(n)` returns 2n hex chars (n random bytes); `secrets.token_urlsafe(n)` returns URL-safe base64. Both are cryptographically strong.',
+      explanation: 'The `random` module uses the Mersenne Twister algorithm: fast and fine for games and simulations, but after seeing about 624 outputs an attacker can rebuild its internal state and predict every later value. Seeding it with the time makes it easier to guess, not safer. `secrets` draws from the operating system\'s cryptographic random source, which cannot be predicted this way. The format is not the point: a `random` number can be written as hex too. And `secrets` does not track what it issued; its tokens are unique only because 32 random bytes are practically never repeated. Use `secrets` for anything an attacker could benefit from guessing: session IDs, CSRF tokens, reset links, API keys, nonces.',
       hints: [
         '`secrets` uses the OS CSPRNG; `random` uses Mersenne Twister',
         'Rule: any token an attacker gains from guessing → `secrets`',
@@ -773,9 +774,9 @@ print(digest)`,
       topic: Topic.PY_SECURITY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Generate cryptographically-secure random values using the `secrets` stdlib module (never use `random` for security). First produce a URL-safe session token with 32 random bytes and print it — you\'ll get a ~43-character URL-safe base64 string. Then produce a 6-digit numeric verification code by picking a secure integer below `1_000_000` and print it formatted as a zero-padded 6-digit string.',
+      question: 'Generate cryptographically-secure random values using the `secrets` stdlib module (never use `random` for security). First produce a URL-safe session token with 32 random bytes and print it - you\'ll get a ~43-character URL-safe base64 string. Then produce a 6-digit numeric verification code by picking a secure integer below `1_000_000` and print it formatted as a zero-padded 6-digit string.',
       starterCode: `import secrets
-  `,
+`,
       testCases: [
         {
           input: 'token + 6-digit code',
@@ -790,7 +791,7 @@ print(token)
 
 code = secrets.randbelow(1_000_000)
 print(f"{code:06d}")`,
-      explanation: 'Use-case recipes: `token_urlsafe(n)` → session tokens, password-reset URLs (URL-safe base64). `token_hex(n)` → opaque tokens for headers (hex). `token_bytes(n)` → raw bytes. `randbelow(n)` → integer in `[0, n)` — perfect for short codes (6-digit SMS OTPs). Never build these with `random` or a millisecond timestamp.',
+      explanation: 'Use-case recipes: `token_urlsafe(n)` → session tokens, password-reset URLs (URL-safe base64). `token_hex(n)` → opaque tokens for headers (hex). `token_bytes(n)` → raw bytes. `randbelow(n)` → integer in `[0, n)` - perfect for short codes (6-digit SMS OTPs). Never build these with `random` or a millisecond timestamp.',
       hints: [
         'token_urlsafe(n) → base64 URL-safe',
         'token_hex(n) → hex',
@@ -869,9 +870,9 @@ print(____.____(expected, ____))`,
       topic: Topic.PY_SECURITY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Generate two kinds of UUID with the `uuid` stdlib module. First produce a RANDOM UUID (v4) and print it as a string. Then produce a DETERMINISTIC UUID (v5 — SHA-1 over a namespace + name, so the same inputs always yield the same output) using the built-in DNS namespace constant and the name `"example.com"`, and print it as a string. The second value should always be `cfbff0d1-9375-5685-968a-48ce8b50e3e4` regardless of when or where you run it.',
+      question: 'Generate two kinds of UUID with the `uuid` stdlib module. First produce a RANDOM UUID (v4) and print it as a string. Then produce a DETERMINISTIC UUID (v5 - SHA-1 over a namespace + name, so the same inputs always yield the same output) using the built-in DNS namespace constant and the name `"example.com"`, and print it as a string. The second value should always be `cfbff0d1-9375-5685-968a-48ce8b50e3e4` regardless of when or where you run it.',
       starterCode: `import uuid
-  `,
+`,
       testCases: [
         {
           input: 'uuid4 random + uuid5 deterministic',
@@ -885,7 +886,7 @@ print(str(uuid.uuid4()))
 
 ns = uuid.NAMESPACE_DNS
 print(str(uuid.uuid5(ns, "example.com")))`,
-      explanation: 'UUID4 = random, unique with overwhelming probability — standard for database primary keys, request IDs, correlation IDs. UUID5 (SHA-1-based) + NAMESPACE = deterministic: the same inputs always produce the same UUID, useful for idempotent keys derived from external IDs. Prefer UUID over incrementing integers for external-facing IDs (doesn\'t leak row count, globally unique). Note: UUIDs are not ordered — for time-sortable IDs look at ULID or UUIDv7 (PEP draft).',
+      explanation: 'UUID4 = random, unique with overwhelming probability - standard for database primary keys, request IDs, correlation IDs. UUID5 (SHA-1-based) + NAMESPACE = deterministic: the same inputs always produce the same UUID, useful for idempotent keys derived from external IDs. Prefer UUID over incrementing integers for external-facing IDs (doesn\'t leak row count, globally unique). Note: UUID4 and UUID5 values are not ordered; for time-sortable IDs use `uuid.uuid7()` (added in Python 3.14).',
       hints: [
         'uuid.uuid4() → random',
         'uuid.uuid5(ns, name) → deterministic from (ns, name)',
@@ -910,9 +911,9 @@ print(str(uuid.____(ns, "example.com")))`,
       topic: Topic.PY_SECURITY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Round-trip a binary blob through base64 so it is safe to put in JSON. Declare `data = b"\\x00\\x01\\x02hello"`. Using the `base64` stdlib module, encode the bytes to their base64 form, then decode the result from bytes to an ASCII string and print it (expect `AAECaGVsbG8=`). Decode the base64 string back to raw bytes and print whether it equals the original (expect `True`). Note: base64 is an ENCODING, not encryption — anyone can reverse it.',
+      question: 'Round-trip a binary blob through base64 so it is safe to put in JSON. Declare `data = b"\\x00\\x01\\x02hello"`. Using the `base64` stdlib module, encode the bytes to their base64 form, then decode the result from bytes to an ASCII string and print it (expect `AAECaGVsbG8=`). Decode the base64 string back to raw bytes and print whether it equals the original (expect `True`). Note: base64 is an ENCODING, not encryption - anyone can reverse it.',
       starterCode: `import base64
-  `,
+`,
       testCases: [
         {
           input: 'b64encode + b64decode round-trip',
@@ -928,11 +929,11 @@ print(encoded)
 
 decoded = base64.b64decode(encoded)
 print(decoded == data)`,
-      explanation: 'base64 turns bytes into ASCII text so you can put binary in JSON, environment variables, URLs, or email. Output is ~4/3 the input size. `b64encode` returns bytes — `.decode("ascii")` gets a str. `urlsafe_b64encode` / `urlsafe_b64decode` use `-` and `_` instead of `+` and `/` (safe in URLs and filenames). Common pitfall: base64 is NOT encryption — anyone can decode it instantly. It only encodes.',
+      explanation: 'base64 turns bytes into ASCII text so you can put binary in JSON, environment variables, URLs, or email. Output is ~4/3 the input size. `b64encode` returns bytes - `.decode("ascii")` gets a str. `urlsafe_b64encode` / `urlsafe_b64decode` use `-` and `_` instead of `+` and `/` (safe in URLs and filenames). Common pitfall: base64 is NOT encryption - anyone can decode it instantly. It only encodes.',
       hints: [
         'b64encode → bytes; .decode("ascii") to get a str',
         'urlsafe_b64encode avoids `+` and `/`',
-        'Base64 is encoding, not encryption — anyone can decode it',
+        'Base64 is encoding, not encryption - anyone can decode it',
       ],
       tieredHints: {
         apiSignature: 'base64.b64encode(s, altchars=None) -> bytes',

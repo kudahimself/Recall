@@ -416,12 +416,11 @@ export const backendOrderedQuestions: Question[] = [
   q('py-concurrency-cloze-9'), q('py-concurrency-cloze-10'),
 
   // ===== Topic.PY_FUTURES =====
-  q('py-fut-beg-executor'), q('py-fut-beg-future'), q('py-fut-beg-which'), q('py-fut-beg-executor'),
-  q('py-fut-beg-future'), q('py-fut-beg-which'), q('py-concurrency-parsons-3'), q('py-concurrency-cloze-3'),
-  q('py-fut-int-submit-map'), q('py-concurrency-6'), q('py-concurrency-6'), q('py-fut-int-submit-map'),
-  q('py-concurrency-predict-1'), q('py-concurrency-predict-7'), q('py-concurrency-2'), q('py-concurrency-2'),
-  q('py-concurrency-predict-2'), q('py-concurrency-parsons-6'), q('py-concurrency-parsons-7'), q('py-concurrency-parsons-10'),
-  q('py-concurrency-cloze-4'), q('py-concurrency-cloze-8'), q('py-concurrency-3'), q('py-concurrency-3'),
+  q('py-fut-beg-executor'), q('py-fut-beg-future'), q('py-fut-beg-which'), q('py-concurrency-parsons-3'),
+  q('py-concurrency-cloze-3'), q('py-fut-int-submit-map'), q('py-concurrency-6'), q('py-concurrency-predict-1'),
+  q('py-concurrency-predict-7'), q('py-concurrency-2'), q('py-concurrency-predict-2'), q('py-concurrency-parsons-6'),
+  q('py-concurrency-parsons-7'), q('py-concurrency-parsons-10'), q('py-concurrency-cloze-4'), q('py-concurrency-cloze-8'),
+  q('py-concurrency-3'),
 
   // ===== Topic.PY_REGEX =====
   q('py-regex-match-vs-search'), q('py-regex-lookaround'), q('py-regex-api-match'), q('py-regex-api-search'),

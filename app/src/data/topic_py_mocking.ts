@@ -26,12 +26,12 @@ export const py_mocking_questions: Question[] = [
     course: Course.BACKEND,
     question: 'When would you use a mock (via `unittest.mock`) in a test?',
     options: [
-      { id: 'a', text: 'Whenever you can — mocks replace all real code with fakes for speed', isCorrect: false },
-      { id: 'b', text: 'To replace dependencies that are slow, unreliable, or have side effects (HTTP calls, DB writes, time, randomness, email sending) — so the unit under test can be exercised in isolation without hitting the real collaborator', isCorrect: true },
-      { id: 'c', text: 'Only when testing classes — functions never need mocks', isCorrect: false },
-      { id: 'd', text: 'Only for performance benchmarks', isCorrect: false },
+      { id: 'a', text: 'Everywhere you can: mock every function the code calls, because a test with no real code in it is the fastest and most isolated', isCorrect: false },
+      { id: 'b', text: 'To stand in for a slow, unreliable or side-effecting collaborator (an HTTP call, the database, the clock) so the code under test runs in isolation', isCorrect: true },
+      { id: 'c', text: 'To replace the function under test itself, so the test controls what it returns and can check the result without running its logic', isCorrect: false },
+      { id: 'd', text: 'Only when the code under test is a class, because a mock copies a class\'s methods and plain functions cannot be swapped out', isCorrect: false },
     ],
-    explanation: 'Mocks let you test code that depends on something you cannot or should not hit in tests — a paid API, a database, the clock, a random generator. You assert your code CALLED the collaborator the right way, without actually running it. Avoid over-mocking: if every dependency is a mock, you are only testing the test, not the behaviour. Prefer real instances for cheap/fast deps.',
+    explanation: 'Mocks let you test code that depends on something you cannot or should not hit in tests - a paid API, a database, the clock, a random generator, an email service. You assert your code CALLED the collaborator the right way, without actually running it. Mock the collaborator, never the code under test: a mocked function under test returns whatever you told it to, so the test checks nothing. Avoid over-mocking too: if every dependency is a mock, you are only testing the test, not the behaviour, so prefer real instances for cheap, fast dependencies. Mocks work for plain functions as well as classes: `patch` can swap any name, such as `time.sleep`.',
     hints: [
       'Mock external collaborators: HTTP, DB, time, random, email',
       'Replace the dependency, not the code under test',
@@ -303,7 +303,7 @@ def retry_once(action):
 def test_retry_does_not_really_sleep(mock_sleep):
     retry_once(lambda: 1)
     mock_sleep.assert_not_called()`,
-    explanation: '`@patch("time.sleep")` replaces `time.sleep` with a `MagicMock` for the duration of the test, then restores it. The mock is passed as the first arg (after `self` in class tests). Without this, a test exercising the retry path would actually sleep 5 seconds. Patch where the object is LOOKED UP, not where it was DEFINED — see the patch-where-used question.',
+    explanation: '`@patch("time.sleep")` replaces `time.sleep` with a `MagicMock` for the duration of the test, then restores it. The mock is passed as the first arg (after `self` in class tests). Without this, a test exercising the retry path would actually sleep 5 seconds. Patch where the object is LOOKED UP, not where it was DEFINED: if the module had done `from time import sleep`, you would patch `"mymodule.sleep"` instead.',
     hints: [
       '@patch("target") as decorator — mock becomes the first argument',
       'Mock is restored to the real object after the test',
@@ -378,7 +378,7 @@ ____ patch("time.time") ____ mock_time:
     topic: Topic.PY_MOCKING,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Assume a function `get_api_key()` returns the value of the environment variable `MY_API_KEY`. Write `test_api_key` that takes pytest\'s built-in environment-patching fixture as a parameter, uses its env-var setter to set `MY_API_KEY` to `"test-key-42"` for the duration of the test, then asserts `get_api_key() == "test-key-42"`. The value must be automatically restored after the test — no manual cleanup.',
+    question: 'Define `get_api_key()` that returns the value of the environment variable `MY_API_KEY` from `os.environ`. Then write `test_api_key` that takes pytest\'s built-in environment-patching fixture as a parameter, uses its env-var setter to set `MY_API_KEY` to `"test-key-42"` for the duration of the test, then asserts `get_api_key() == "test-key-42"`. The value must be automatically restored after the test - no manual cleanup.',
     starterCode: `import os
   `,
     testCases: [
@@ -709,12 +709,12 @@ assert client.____ == [
     course: Course.BACKEND,
     question: 'When and why should you use `unittest.mock.patch` in tests?',
     options: [
-      { id: 'a', text: 'To speed up tests by replacing all functions with no-ops', isCorrect: false },
-      { id: 'b', text: 'To skip tests that are too hard to write — patch makes them always pass', isCorrect: false },
-      { id: 'c', text: 'To replace external dependencies (API calls, database queries, file I/O) with controlled fakes, so tests are fast, deterministic, and don\'t require real infrastructure', isCorrect: true },
-      { id: 'd', text: 'To test private methods by making them public temporarily', isCorrect: false },
+      { id: 'a', text: 'To replace every function in the module with a no-op mock, so the test runs fast and only has to check that nothing raised', isCorrect: false },
+      { id: 'b', text: 'To change a dependency for the rest of the test session, since patch keeps the fake in place after the test finishes', isCorrect: false },
+      { id: 'c', text: 'To swap an external dependency (an API call, a database query) for a controlled fake during the test, so it is fast and repeatable', isCorrect: true },
+      { id: 'd', text: 'To patch `requests.get` where it is defined, which also replaces it in modules that did `from requests import get`', isCorrect: false },
     ],
-    explanation: 'Mocking replaces real objects with controlled substitutes during testing. Use mock.patch when your code calls external services (APIs, databases, file systems, email) that are slow, unreliable, or have side effects. The mock returns predefined responses, letting you test YOUR code\'s logic in isolation. Key principle: mock at the boundary, not deep inside. Patch the import location, not the definition location (e.g., patch("mymodule.requests.get"), not "requests.get"). Overuse of mocking is a code smell — if you mock everything, you\'re testing nothing.',
+    explanation: 'Mocking replaces real objects with controlled substitutes during testing. Use mock.patch when your code calls external services (APIs, databases, file systems, email) that are slow, unreliable, or have side effects. The mock returns predefined responses, letting you test YOUR code\'s logic in isolation. Key principle: mock at the boundary, not deep inside; replacing everything with no-ops leaves nothing real to test. patch is temporary: it puts the original back when the `with` block or decorated test ends. Patch the name where it is looked up: a module that did `from requests import get` holds its own reference, so you patch `"mymodule.get"`, and patching `"requests.get"` does not reach it. Overuse of mocking is a code smell - if you mock everything, you are testing nothing.',
     hints: [
       'Mock external dependencies, not your own code',
       'Patch where it\'s imported, not where it\'s defined',

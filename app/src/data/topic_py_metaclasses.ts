@@ -54,7 +54,7 @@ print(p.x)`,
       topic: Topic.PY_METACLASSES,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use `type()` with three arguments to dynamically create a class `Point` with a class variable `dimensions = 2` and a method `describe()` that returns `"2D Point"`. Then create an instance and call `describe()`.',
+      question: 'Use `type()` with three arguments to dynamically create a class `Point` with a class variable `dimensions = 2` and a method `describe()` that returns `"2D Point"`. Then create an instance `p`, print `p.describe()` (expect `2D Point`), and print `Point.dimensions` (expect `2`).',
       starterCode: ``,
       testCases: [
         { input: '', expectedOutput: '2D Point\n2', description: 'Dynamic class should work like a regular class' },
@@ -71,7 +71,7 @@ Point = type(
 p = Point()
 print(p.describe())
 print(Point.dimensions)`,
-      explanation: '`type("Point", (object,), {"dimensions": 2, "describe": describe})` is equivalent to writing a class with `class Point(object):`. The third argument dict maps attribute names to values — class variables and methods alike. This is how Python creates classes internally; `class` syntax is syntactic sugar for calling `type()`.',
+      explanation: '`type("Point", (object,), {"dimensions": 2, "describe": describe})` is equivalent to writing a class with `class Point(object):`. The third argument dict maps attribute names to values - class variables and methods alike. This is how Python creates classes internally; `class` syntax is syntactic sugar for calling `type()`.',
       hints: [
         'Args: `"Point"` (name), `(object,)` (bases tuple), `{...}` (class body dict)',
         'Put both `dimensions` and `describe` in the dict',

@@ -40,7 +40,7 @@ print(evens)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the dict-comprehension brace and separator.',
+        'Fill in the braces that make this a dict comprehension.',
       template: `words = ["a", "bb", "ccc"]
 lengths = ___w: len(w) for w in words___
 print(lengths)`,
@@ -161,7 +161,7 @@ print(long)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the brace and the implied operator-keyword to deduplicate words into a set.',
+        'Fill in the braces that make this a set comprehension, so duplicate words are dropped.',
       template: `words = ["hi", "yo", "hi", "hey"]
 unique = ___w for w in words___
 print(len(unique))`,
@@ -201,11 +201,12 @@ print(zeros)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the comprehension form that creates a 3x3 matrix of independent zero rows (not aliased).',
+        'Fill in the expression for one row of three zeros, so the comprehension creates a 3x3 matrix of independent rows (not aliased).',
       template: `matrix = [___ for _ in range(3)]
 matrix[0][0] = 99
 print(matrix)`,
       blanks: ['[0] * 3'],
+      blankAlternates: [['3 * [0]', '[0, 0, 0]', '[0 for _ in range(3)]', '[0 for i in range(3)]']],
       solution:
         'matrix = [[0] * 3 for _ in range(3)]\nmatrix[0][0] = 99\nprint(matrix)',
       explanation:
@@ -286,7 +287,7 @@ print(matrix)`,
       solution:
         'words = ["a", "bb", "ccc"]\nlengths = {w: len(w) for w in words}\nprint(lengths)',
       explanation:
-        'Dict comprehensions use {key: value for ...} — note both braces and the colon. Square brackets give a list of (k, v) syntax errors; braces with a single expression give a set, not a dict.',
+        'Dict comprehensions use {key: value for ...}: note both the braces and the colon. Square brackets around `w: len(w)` are a SyntaxError, and braces with a single expression give a set, not a dict.',
       hints: ['Dict comprehension uses braces AND a colon between key and value.'],
       tags: ['comprehension', 'dict'],
       concepts: ['py-comprehension', 'py-dict-key-hashability'],
@@ -405,7 +406,7 @@ print(matrix)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a list of (i, j) coordinate pairs for a 3x3 grid where i != j.',
+        'Build a list of (i, j) coordinate pairs for a 3x3 grid where i != j, in row order (i is the outer loop, so all pairs with i = 0 come first).',
       correctOrder: [
         'pairs = [(i, j) for i in range(3) for j in range(3) if i != j]',
         'print(pairs)',
@@ -674,9 +675,8 @@ print(labels)`,
         },
       ],
       solution: `def flatten_and_transform(nested: list[list[int]]) -> list[int]:
-      """Flatten, square, and filter in one comprehension."""
-      return [x * x for sublist in nested for x in sublist if x * x > 10]
-  `,
+    """Flatten, square, and filter in one comprehension."""
+    return [x * x for sublist in nested for x in sublist if x * x > 10]`,
       tieredHints: {
         apiSignature: '[expr for outer in seq for inner in outer if cond]',
         skeleton: `def ____(nested: list[list[int]]) -> list[int]:
@@ -743,12 +743,12 @@ print(labels)`,
       course: Course.BACKEND,
       question: 'What is the key difference between `[x*2 for x in range(1000000)]` and `(x*2 for x in range(1000000))`?',
       options: [
-        { id: 'a', text: 'The bracket version creates a full list in memory (~8MB); the parentheses version creates a lazy generator that produces values one at a time, using almost no memory', isCorrect: true },
-        { id: 'b', text: 'They are identical — parentheses and brackets are interchangeable for comprehensions', isCorrect: false },
-        { id: 'c', text: 'The parentheses version creates a tuple of 1 million elements', isCorrect: false },
-        { id: 'd', text: 'The bracket version is lazy and the parentheses version is eager', isCorrect: false },
+        { id: 'a', text: 'The brackets build the whole million-item list at once; the parentheses make a generator that produces one value at a time', isCorrect: true },
+        { id: 'b', text: 'Nothing at runtime: the parentheses only group the expression, so both build the same million-item list', isCorrect: false },
+        { id: 'c', text: 'The parentheses build a tuple of a million values, which is immutable but takes as much memory as the list', isCorrect: false },
+        { id: 'd', text: 'The brackets build a lazy list that computes items on access; the parentheses compute every value immediately', isCorrect: false },
       ],
-      explanation: 'Square brackets [...] create a list comprehension — it evaluates immediately and stores all values in memory. Parentheses (...) create a generator expression — it evaluates lazily, computing each value only when requested. For 1M integers, the list uses ~8MB of memory while the generator uses nearly zero. Generators are ideal when you only need to iterate once (e.g., passing to sum(), any(), or a for loop). Use lists when you need indexing, len(), or multiple iterations.',
+      explanation: 'Square brackets make a list comprehension: it runs immediately and stores every value (about 8 MB of pointers for a million items). Parentheses make a generator expression, not a tuple (there is no tuple comprehension; use `tuple(...)` for that): it computes each value only when requested and uses almost no memory. Generators suit a single pass (`sum()`, `any()`, a `for` loop); use a list when you need indexing, `len()` or several passes.',
       hints: [
         'Generator expressions are lazy — they compute on demand',
         'You can pass generators directly to sum(), any(), all()',
@@ -764,12 +764,12 @@ print(labels)`,
       course: Course.BACKEND,
       question: 'What does `[x * 2 for x in range(5)]` evaluate to?',
       options: [
-        { id: 'a', text: '`[0, 1, 2, 3, 4]`', isCorrect: false },
-        { id: 'b', text: '`[0, 2, 4, 6, 8]` — a list comprehension that applies `x * 2` to each x from 0..4', isCorrect: true },
-        { id: 'c', text: 'An error', isCorrect: false },
-        { id: 'd', text: '`range(10)`', isCorrect: false },
+        { id: 'a', text: '`[0, 2, 4, 6, 8, 10]`, since `range(5)` includes 5', isCorrect: false },
+        { id: 'b', text: '`[0, 2, 4, 6, 8]`, each x from 0 to 4 doubled', isCorrect: true },
+        { id: 'c', text: '`[2, 4, 6, 8, 10]`, since `range(5)` counts from 1 to 5', isCorrect: false },
+        { id: 'd', text: 'A generator that needs `list()` before it holds any values', isCorrect: false },
       ],
-      explanation: 'A list comprehension `[expr for item in iterable]` is shorthand for building a list via a loop. Often replaces `result = []; for x in range(5): result.append(x * 2)` with a one-liner. Dict and set comprehensions follow the same pattern with `{}` and a `k: v` expression or a bare one. Generator expressions use `()` and don\'t materialise the whole list — memory-friendly.',
+      explanation: 'A list comprehension `[expr for item in iterable]` builds the list straight away. `range(5)` gives 0, 1, 2, 3, 4 (it starts at 0 and stops before 5), and each value is doubled. It replaces `result = []; for x in range(5): result.append(x * 2)`. Only round brackets, `(x * 2 for x in range(5))`, make a lazy generator. Dict and set comprehensions follow the same pattern with `{}`.',
       hints: [
         '[expr for item in iterable]',
         'Equivalent to a loop that appends expr',
@@ -1018,12 +1018,12 @@ ____(signs)`,
       course: Course.BACKEND,
       question: 'When is a generator expression preferable to a list comprehension?',
       options: [
-        { id: 'a', text: 'Never — list comprehensions are always faster', isCorrect: false },
-        { id: 'b', text: 'When you only need to iterate the result ONCE and don\'t need random access. Generators produce values lazily (O(1) memory), so they\'re ideal as arguments to `sum`, `max`, `any`, `all`, or in streaming pipelines over large inputs. They cannot be re-iterated or indexed.', isCorrect: true },
-        { id: 'c', text: 'When the output needs to be sortable', isCorrect: false },
-        { id: 'd', text: 'Only when the iterable has more than 100 items', isCorrect: false },
+        { id: 'a', text: 'When you need to loop over the result several times, since a generator replays its values on each pass', isCorrect: false },
+        { id: 'b', text: 'When you iterate the result once, for example passing it to `sum` or `any`, since values are made one at a time', isCorrect: true },
+        { id: 'c', text: 'When you need `len()` or indexing on the result, since a generator computes them without storing the items', isCorrect: false },
+        { id: 'd', text: 'Never for large inputs, since a generator must hold every value in memory before handing out the first one', isCorrect: false },
       ],
-      explanation: 'Key trade-offs: generators are O(1) memory but single-use — once iterated, they\'re exhausted; can\'t do `len()`, can\'t index, can\'t re-iterate. Lists are O(n) memory but fully re-playable. Rule of thumb: if you pipe the result into a reducer (`sum`, `max`, `any`, `all`, `next`) or into another generator, use `(...)`. If you need to use the collection multiple times or index into it, use `[...]`.',
+      explanation: 'Generators use O(1) memory but are single-use: once iterated they are exhausted, and they support neither `len()` nor indexing. Lists take O(n) memory but can be re-read and indexed. Rule of thumb: if the result goes straight into a reducer (`sum`, `max`, `any`, `all`, `next`) or into another generator, use `(...)`; if you need the collection more than once or need to index into it, use `[...]`. A generator never builds the full sequence, which is why it suits large inputs.',
       hints: [
         'Generator: O(1) memory, one-shot iteration',
         'List: O(n) memory, re-iterable and indexable',
@@ -1110,12 +1110,12 @@ ____(passing)`,
       course: Course.BACKEND,
       question: 'What is a list comprehension in Python?',
       options: [
-        { id: 'a', text: 'A concise way to create lists using the syntax `[expression for item in iterable]`. Equivalent to a for loop that appends. Example: `[x*2 for x in range(5)]` produces `[0, 2, 4, 6, 8]`.', isCorrect: true },
-        { id: 'b', text: 'A method that lists all the attributes and methods of a Python object', isCorrect: false },
-        { id: 'c', text: 'A special import statement that loads list-related utilities', isCorrect: false },
-        { id: 'd', text: 'A debugging tool that prints each element of a list on a separate line', isCorrect: false },
+        { id: 'a', text: 'An expression like `[x * 2 for x in nums]` that builds a new list from an iterable, replacing a loop that appends', isCorrect: true },
+        { id: 'b', text: 'A one-line loop that changes each item of the original list in place instead of building a new list', isCorrect: false },
+        { id: 'c', text: 'A shorter `for` statement that runs code for each item but does not produce any value', isCorrect: false },
+        { id: 'd', text: 'A list whose items are computed lazily, one at a time, only when each one is read', isCorrect: false },
       ],
-      explanation: 'A list comprehension is a compact syntax for creating a new list by transforming and/or filtering elements from an iterable. The basic form is `[expression for item in iterable]`. You can add a condition: `[expression for item in iterable if condition]`. It\'s equivalent to building a list with a for loop and `.append()`, but more concise and often faster.',
+      explanation: 'A list comprehension is a compact expression that creates a new list by transforming and/or filtering the items of an iterable: `[expression for item in iterable]`, optionally with `if condition` at the end. It is equivalent to building a list with a `for` loop and `.append()`. It produces a value (the new list) and leaves the original untouched. It is not lazy: the whole list is built at once, while round brackets give the lazy generator expression instead.',
       hints: [
         'Square brackets `[]` with a `for` inside = list comprehension',
         'You can add `if` at the end to filter elements',
