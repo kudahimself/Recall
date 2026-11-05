@@ -605,7 +605,8 @@ export interface TopicLesson {
     /** What the code prints: SQL result sets as `col | col` rows, Python stdout. */
     output?: string;
     /**
-     * false only for a Django / DRF example, which cannot run without a project:
+     * false only for a Django / DRF example, which cannot run without a project,
+     * or a GitHub Actions workflow, which cannot run without a runner:
      * check-lessons.js then checks everything but the run, and `output` is verified by hand.
      */
     runs?: false;
