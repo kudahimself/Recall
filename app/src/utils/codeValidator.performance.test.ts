@@ -16,6 +16,7 @@ const ACCEPTED: Record<string, string[]> = {
      ON dbo.FactOrders (CustomerKey, OrderDate)
      INCLUDE (Amount);`,
     `create nonclustered index IX_FactOrders_Cust_Date on dbo.FactOrders (CustomerKey, OrderDate) include (Amount)`,
+    `CREATE NONCLUSTERED INDEX IX_FactOrders_Cust_Date ON dbo.FactOrders (CustomerKey ASC, OrderDate ASC) INCLUDE (Amount);`,
   ],
   'tsql-anti-1': [
     `SELECT OrderId, Amount FROM dbo.FactOrders WHERE OrderDate >= '2026-01-01' AND OrderDate < '2027-01-01';`,

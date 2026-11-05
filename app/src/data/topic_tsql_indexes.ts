@@ -136,7 +136,7 @@ ____ (Amount);`,
     },
     explanation: 'The composite key `(CustomerKey, OrderDate)` supports a seek that filters on CustomerKey (and narrows by OrderDate), and `INCLUDE (Amount)` puts the returned measure at the leaf so the query is fully covered - no lookup back to the base table. Key order matters: CustomerKey leads because it is the primary filter. A plain `CREATE INDEX` is nonclustered by default, so leaving out `NONCLUSTERED` builds the same index.',
     hints: ['Key on (CustomerKey, OrderDate), leading column is the main filter', 'INCLUDE (Amount) to cover the SELECT'],
-    requires: [/CREATE\s+(NONCLUSTERED\s+)?INDEX/i, /INCLUDE/i, /\(\s*\[?CustomerKey\]?\s*,\s*\[?OrderDate\]?\s*\)/i],
+    requires: [/CREATE\s+(NONCLUSTERED\s+)?INDEX/i, /INCLUDE/i, /\(\s*\[?CustomerKey\]?(\s+(ASC|DESC))?\s*,\s*\[?OrderDate\]?(\s+(ASC|DESC))?\s*\)/i],
     tags: ['tsql', 'indexes', 'composite', 'include', 'covering-index'],
   },
   {
