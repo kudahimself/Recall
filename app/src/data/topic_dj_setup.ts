@@ -445,4 +445,42 @@ python manage.py migrate blog ___`,
       tags: ['django', 'setup', 'dbshell', 'flush', 'cli'],
       concepts: ['dj-setup'],
     },
+  {
+      id: 'dj-setup-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_SETUP,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'The project uses split settings, and `manage.py` defaults to `mysite.settings.base`. It is started with `DJANGO_SETTINGS_MODULE=mysite.settings.dev python manage.py shell`. What does the `print` typed into that shell output? The answer is one line: the value of `DEBUG`, a space, then the number of installed apps.',
+      code: `# manage.py
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings.base")
+
+# mysite/settings/base.py
+DEBUG = False
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "shop.apps.ShopConfig",
+]
+
+# mysite/settings/dev.py
+from .base import *
+
+DEBUG = True
+INSTALLED_APPS += ["debug_toolbar"]
+
+# typed into the shell
+from django.conf import settings
+print(settings.DEBUG, len(settings.INSTALLED_APPS))`,
+      expectedOutput: `True 8`,
+      explanation: '`setdefault` only fills `DJANGO_SETTINGS_MODULE` when it is not set already, so the variable on the command line wins and Django loads `mysite.settings.dev`. That module first pulls in everything from `base.py` with `from .base import *`, then overrides `DEBUG` and appends one app, so the shell sees `DEBUG = True` and the 7 base apps plus `debug_toolbar`, 8 in all.',
+      hints: ['The environment variable picks the settings module; setdefault never overwrites it.', 'dev.py starts from everything in base.py, then changes what it names.'],
+      tags: ['django', 'setup', 'settings', 'DJANGO_SETTINGS_MODULE', 'predict'],
+      concepts: ['dj-setup'],
+    },
 ];
