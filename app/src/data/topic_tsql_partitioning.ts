@@ -11,7 +11,6 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
-import { sampleTable } from './tsqlSampleTables';
 
 export const tsql_partitioning_questions: Question[] = [
   {

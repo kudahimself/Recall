@@ -422,6 +422,7 @@ Analytical & Window SQL questions set `tables` the same way.
 Transactions & Procedural T-SQL questions do too, for the tables they write (an INSERT or UPDATE target) as well as the ones they read; their predicts read a shown table instead of filling a temp table.
 Data Modeling in SQL questions do too, including the dimension tables a new fact table REFERENCES and the target and source of a MERGE; the Slowly Changing Dimensions questions carry their own versioned `dbo.DimProduct` rows (EffectiveDate, EndDate, IsCurrent).
 ELT & Transformation Patterns questions do too, for every staging source and load target (MERGE, USING, INSERT, DELETE); none fills a temp table, and every variable a cloze or predict assigns is declared in it.
+Performance & Optimization questions do too, including the table a `CREATE INDEX ... ON` builds on and the target of a partition `SWITCH TO`.
 `tsqlSampleTables.test.ts` fails if a question in any of these sections queries an existing table it does not show, or builds data inline.
 In SQL-course questions, backticks in the text, multiple-choice options and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
 
