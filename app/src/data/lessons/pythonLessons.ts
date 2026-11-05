@@ -5176,7 +5176,7 @@ server {
     worked: {
       language: CodeLanguage.PYTHON,
       runs: false,
-      code: `# bookshop on one server; requests: http /cart/, then https /assets/app.js, /covers/42.jpg and /cart/
+      code: `# requests: http /cart/, then https /assets/app.js, /covers/42.jpg and /cart/
 upstream bookshop_app {
     server 127.0.0.1:8000;
 }
@@ -5276,7 +5276,8 @@ SECURE_HSTS_SECONDS = 31536000
     worked: {
       language: CodeLanguage.PYTHON,
       runs: false,
-      code: `# bookshop/settings/base.py run on its own; no SECRET_KEY or CONN_MAX_AGE is set, and .env beside it holds:
+      code: `# bookshop/settings/base.py run on its own; SECRET_KEY and CONN_MAX_AGE are not set
+# .env beside it holds:
 #   DEBUG=off
 #   ALLOWED_HOSTS=books.example.org,www.books.example.org
 #   DATABASE_URL=postgres://shop:s3cret@db.internal:5432/bookshop
@@ -5290,20 +5291,21 @@ DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 DATABASES = {"default": env.db("DATABASE_URL")}
 print(DEBUG, env("CONN_MAX_AGE"), ALLOWED_HOSTS[1])
-print(DATABASES["default"]["ENGINE"])
-print(DATABASES["default"]["HOST"], DATABASES["default"]["PORT"], DATABASES["default"]["NAME"])
+db = DATABASES["default"]
+print(db["ENGINE"])
+print(db["HOST"], db["PORT"], db["NAME"])
 
 try:
     SECRET_KEY = env("SECRET_KEY")
 except ImproperlyConfigured as error:
     print("not started:", error)`,
       steps: [
-        "Lines 8-9: `Env` declares `DEBUG` as a bool and `CONN_MAX_AGE` as an int, each with a default, and `read_env` loads the three lines of `.env` into the environment.",
-        "Line 11: the text `off` is cast to `False`; without the cast, `DEBUG` would be the string `\"off\"`, which is true.",
-        "Lines 12 and 14: `env.list` splits the hosts on the comma, and `CONN_MAX_AGE`, set nowhere, takes its default 60 as an int.",
-        "Lines 13 and 15-16: `env.db` parses the URL into a `DATABASES` entry: the `postgres` scheme picks the PostgreSQL backend, and the host, port and database name come from the URL's parts.",
+        "Lines 9-10: `Env` declares `DEBUG` as a bool and `CONN_MAX_AGE` as an int, each with a default, and `read_env` loads the three lines of `.env` into the environment.",
+        "Line 12: the text `off` is cast to `False`; without the cast, `DEBUG` would be the string `\"off\"`, which is true.",
+        "Lines 13 and 15: `env.list` splits the hosts on the comma, and `CONN_MAX_AGE`, set nowhere, takes its default 60 as an int.",
+        "Lines 14 and 16-18: `env.db` parses the URL into a `DATABASES` entry: the `postgres` scheme picks the PostgreSQL backend, and the host, port and database name come from the URL's parts.",
         lines(
-          "Lines 18-21: `SECRET_KEY` has no default and is not set, so reading it raises `ImproperlyConfigured`.",
+          "Lines 20-23: `SECRET_KEY` has no default and is not set, so reading it raises `ImproperlyConfigured`.",
           "A real settings file leaves that error uncaught, so the server refuses to start instead of running without a key.",
         ),
       ],
@@ -5370,7 +5372,8 @@ urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`,
     worked: {
       language: CodeLanguage.PYTHON,
       runs: false,
-      code: `# python manage.py shell; MEDIA_ROOT = "/srv/bookshop/media", MEDIA_URL = "/media/", default storage, no media yet
+      code: `# python manage.py shell with the default storage and no media saved yet
+# settings.py: MEDIA_ROOT = "/srv/bookshop/media", MEDIA_URL = "/media/"
 # shop/models.py:
 #   def sample_path(book, filename):
 #       return f"samples/{book.isbn}/{filename}"
@@ -5387,15 +5390,16 @@ print(book.sample.url, book.sample.size)
 
 again = Book.objects.create(isbn="9780141439518")
 again.sample.save("chapter 1.pdf", ContentFile(b"%PDF-1.4"))
-print(again.sample.name == book.sample.name, again.sample.name.startswith("samples/9780141439518/chapter_1_"))`,
+suffixed = again.sample.name.startswith("samples/9780141439518/chapter_1_")
+print(again.sample.name == book.sample.name, suffixed)`,
       steps: [
-        "Lines 3-7: `upload_to` is a function here, so each book's samples get their own folder named by its ISBN.",
+        "Lines 4-8: `upload_to` is a function here, so each book's samples get their own folder named by its ISBN.",
         lines(
-          "Line 12: `save()` writes the file to `/srv/bookshop/media/samples/9780141439518/` and saves the row.",
+          "Line 13: `save()` writes the file to `/srv/bookshop/media/samples/9780141439518/` and saves the row.",
           "Django cleans the file name first, so the space becomes `_`.",
         ),
-        "Lines 13-14: `.name` is what the column stores, `.url` puts `MEDIA_URL` in front of it, and `.size` is the file's 8 bytes.",
-        "Lines 16-18: a second file with the same name does not overwrite the first, because the storage adds a random suffix such as `chapter_1_a1B2c3D.pdf`.",
+        "Lines 14-15: `.name` is what the column stores, `.url` puts `MEDIA_URL` in front of it, and `.size` is the file's 8 bytes.",
+        "Lines 17-20: a second file with the same name does not overwrite the first, because the storage adds a random suffix such as `chapter_1_a1B2c3D.pdf`.",
         "In production Nginx serves `/media/` from `/srv/bookshop/media`, or S3 holds the files, and none of these lines change.",
       ],
       output: `samples/9780141439518/chapter_1.pdf
@@ -5466,29 +5470,37 @@ Thing.objects.annotate(search=vector, rank=SearchRank(vector, query)).filter(sea
     worked: {
       language: CodeLanguage.PYTHON,
       runs: false,
-      code: `# python manage.py shell on PostgreSQL; Book(title, blurb, details = models.JSONField(default=dict)), no rows yet
+      code: `# python manage.py shell on PostgreSQL, no rows yet
+# library/models.py: Book(title, blurb = TextField, details = JSONField(default=dict))
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from django.db.models.fields.json import KeyTextTransform
 from library.models import Book
 
-Book.objects.create(title="River Songs", blurb="Poems of rivers and rain", details={"lang": "en", "shelf": {"floor": 2}, "awards": ["Costa"]})
-Book.objects.create(title="Night Trains", blurb="A thriller on a sleeper train", details={"lang": "fr", "shelf": {"floor": 1}, "awards": []})
-Book.objects.create(title="Rain Tales", blurb="Stories from a wet town", details={"lang": "en", "shelf": {"floor": 1}})
+Book.objects.create(title="River Songs", blurb="Poems of rivers and rain",
+                    details={"lang": "en", "shelf": {"floor": 2}, "awards": ["Costa"]})
+Book.objects.create(title="Night Trains", blurb="A thriller on a sleeper train",
+                    details={"lang": "fr", "shelf": {"floor": 1}, "awards": []})
+Book.objects.create(title="Rain Tales", blurb="Stories from a wet town",
+                    details={"lang": "en", "shelf": {"floor": 1}})
 
-print(Book.objects.filter(details__lang="en").count(), Book.objects.get(details__shelf__floor__gte=2).title)
-print(Book.objects.filter(details__has_key="awards").count(), Book.objects.filter(details__awards__contains=["Costa"]).count())
-print(list(Book.objects.annotate(lang=KeyTextTransform("lang", "details")).order_by("lang", "title").values_list("lang", "title")))
+books = Book.objects.all()
+print(books.filter(details__lang="en").count(), books.get(details__shelf__floor__gte=2).title)
+awarded = books.filter(details__has_key="awards").count()
+print(awarded, books.filter(details__awards__contains=["Costa"]).count())
+by_lang = books.annotate(lang=KeyTextTransform("lang", "details")).order_by("lang", "title")
+print(list(by_lang.values_list("lang", "title")))
 
-words = SearchVector("title", weight="A", config="english") + SearchVector("blurb", weight="B", config="english")
+words = (SearchVector("title", weight="A", config="english")
+         + SearchVector("blurb", weight="B", config="english"))
 wanted = SearchQuery("rain", config="english")
-found = Book.objects.annotate(doc=words, score=SearchRank(words, wanted)).filter(doc=wanted).order_by("-score")
-print([b.title for b in found])`,
+found = books.annotate(doc=words, score=SearchRank(words, wanted)).filter(doc=wanted)
+print([b.title for b in found.order_by("-score")])`,
       steps: [
-        "Line 10: two books have `lang` set to `en`, and only River Songs has a `shelf` whose `floor` is at least 2, so `get()` finds exactly one row.",
-        "Line 11: two books have an `awards` key, though Night Trains' list is empty, and only River Songs' list contains `Costa`.",
-        "Line 12: `KeyTextTransform` pulls `lang` out as text, so the rows sort by language and then by title.",
-        "Lines 14-16: the title is weighted `A` and the blurb `B`, and the query `rain` matches the word in Rain Tales' title and in River Songs' blurb, but not `train`.",
-        "Line 17: the title match carries the higher weight, so Rain Tales ranks first.",
+        "Line 15: two books have `lang` set to `en`, and only River Songs has a `shelf` whose `floor` is at least 2, so `get()` finds exactly one row.",
+        "Lines 16-17: two books have an `awards` key, though Night Trains' list is empty, and only River Songs' list contains `Costa`.",
+        "Lines 18-19: `KeyTextTransform` pulls `lang` out as text, so the rows sort by language and then by title.",
+        "Lines 21-24: the title is weighted `A` and the blurb `B`, and the query `rain` matches the word in Rain Tales' title and in River Songs' blurb, but not `train`.",
+        "Line 25: the title match carries the higher weight, so Rain Tales ranks first.",
       ],
       output: `2 River Songs
 2 1
