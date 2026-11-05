@@ -244,7 +244,7 @@ The learning path on Home shows each topic's lesson, ramp and review steps with 
 After a topic's lesson and ramp comes one small coding exercise the learner does in their own editor, sized for 10-30 minutes and answerable from that topic and earlier ones.
 Nothing runs in the browser: the files live in `exercises/<course>/<topic>/` (a `README.md` with the task and examples, a starter module with signatures and `TODO`s, and `test_*.py` pytest tests), and the reference solution sits apart in `exercises/solutions/<course>/<topic>/`, laid over the starter files.
 `TopicExercise` data in `data/exercises/index.ts` is what the app shows: Progress -> Topics renders the selected topic's exercise card (the task in brief, the folder path with a Copy button, the files and how to run `pytest`) with a done tick the learner sets, and the learning path adds an Exercise step after Review.
-Exercises are written one section per PR, like lessons: Backend Python Fundamentals so far.
+Exercises are written one section per PR, like lessons: Backend Python Fundamentals and Python Advanced so far.
 `exercises/check_exercises.py`, run by `npm test` (`data/exercises/exercises.test.ts`, which also keeps the list in step with the folders), runs each exercise's tests on a copy of its starter, where every test must fail, and on a copy with the reference solution laid over it, where every test must pass; it skips the starter check for a starter the learner has edited.
 
 **Drain queue definition:**

@@ -1,9 +1,9 @@
 /**
  * Exercises (src/data/exercises/) against the repo's exercises/ folder: every
  * entry points at a real folder whose README title, starter and tests match,
- * every folder has an entry, each Python Fundamentals topic has one, and
- * exercises/check_exercises.py passes (each exercise's tests fail on its
- * starter and pass on its reference solution), so an exercise cannot rot.
+ * every folder has an entry, each Python Fundamentals and Python Advanced topic
+ * has one, and exercises/check_exercises.py passes (each exercise's tests fail
+ * on its starter and pass on its reference solution), so an exercise cannot rot.
  */
 import fs from 'fs';
 import path from 'path';
@@ -51,11 +51,11 @@ describe('exercise list', () => {
     expect(folders.sort()).toEqual(Array.from(listed).sort());
   });
 
-  it('has an exercise for every Python Fundamentals topic, in path order', () => {
-    expect(BACKEND_SECTIONS['Python Fundamentals']).toBeDefined();
-    const units = getSectionUnits('Python Fundamentals').map(([, keys]) => keys);
-    const fundamentals = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
-    expect(fundamentals.map(e => e.topicKeys)).toEqual(units);
+  it.each(['Python Fundamentals', 'Python Advanced'])('has an exercise for every %s topic, in path order', section => {
+    expect(BACKEND_SECTIONS[section]).toBeDefined();
+    const units = getSectionUnits(section).map(([, keys]) => keys);
+    const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
+    expect(inSection.map(e => e.topicKeys)).toEqual(units);
   });
 });
 
