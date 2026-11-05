@@ -482,4 +482,24 @@ def lower_case(value):
     tags: ['django', 'templates', 'custom-filter', 'cloze'],
     concepts: ['dj-templates'],
   },
+  {
+    id: 'dj-templates-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_TEMPLATES,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'Run in `python manage.py shell`. What do the two `print` calls output? The answer is two lines, one per call.',
+    code: `from django.template import Context, Template
+
+t = Template("{{ shop|upper }}: {% for b in books %}{{ b|title }};{% empty %}none{% endfor %}")
+print(t.render(Context({"shop": "hay", "books": ["dune", "emma"]})))
+print(t.render(Context({"shop": "hay", "books": []})))`,
+    expectedOutput: `HAY: Dune;Emma;
+HAY: none`,
+    explanation: '`{{ }}` outputs a value, and a `|filter` changes it on the way out: `upper` gives `HAY` and `title` capitalises each word. `{% for %}` repeats its body once per item, so every title is followed by its `;`. When the list is empty the `{% empty %}` branch renders instead, so the second call prints `none` after the same `HAY: ` prefix.',
+    hints: ['A filter after the pipe transforms the value before it is printed.', '{% empty %} renders only when the loop has nothing to repeat.'],
+    tags: ['django', 'templates', 'filters', 'for-empty', 'predict'],
+    concepts: ['dj-templates'],
+  },
 ];

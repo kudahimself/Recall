@@ -143,7 +143,10 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
               <div className="rc-label">Output</div>
               <pre className="rc-output">{lesson.worked.output}</pre>
               <div className="rc-checked">
-                <CheckCircle2 size={12} /> This example is run by check-lessons.js on every test run, and its output matches.
+                <CheckCircle2 size={12} />{' '}
+                {lesson.worked.runs === false
+                  ? 'This example needs a Django project to run, so its output was checked by hand.'
+                  : 'This example is run by check-lessons.js on every test run, and its output matches.'}
               </div>
             </>
           )}

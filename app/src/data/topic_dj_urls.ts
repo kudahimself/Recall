@@ -430,4 +430,36 @@ urlpatterns = [
       tags: ['django', 'urls', 'namespace', 'app_name'],
       concepts: ['dj-view-patterns'],
     },
+  {
+      id: 'dj-urls-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_URLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Run in `python manage.py shell` for this project. What do the two `print` calls output? The answer is two lines, each a URL path starting with `/`.',
+      code: `# mysite/urls.py
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("shop/", include("books.urls")),
+]
+
+# books/urls.py
+app_name = "books"
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("<int:pk>/", views.detail, name="detail"),
+]
+
+# typed into the shell
+from django.urls import reverse
+print(reverse("books:detail", args=[7]))
+print(reverse("books:index"))`,
+      expectedOutput: `/shop/7/
+/shop/`,
+      explanation: '`reverse()` builds a path from a URL name, the inverse of routing. The `books:` part is the namespace set by `app_name`, and the `shop/` prefix comes from the `include()` in the project urls, so every books URL starts with `/shop/`. `args=[7]` fills the `<int:pk>` converter, giving `/shop/7/`, and the index route adds nothing to the prefix, giving `/shop/`.',
+      hints: ['The include() prefix comes first in every URL of the included app.', 'args fill the converters of the named route in order.'],
+      tags: ['django', 'urls', 'reverse', 'namespace', 'predict'],
+      concepts: ['dj-view-patterns'],
+    },
 ];

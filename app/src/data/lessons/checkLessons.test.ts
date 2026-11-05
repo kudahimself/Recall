@@ -138,3 +138,15 @@ test('a Python worked example runs on python3', () => {
   const r = probe(`return C.runPython("def gen():\\n    yield 1\\n    yield 2\\nprint(list(gen()))");`);
   expect(r.output).toBe('[1, 2]');
 });
+
+test('a Django worked example with runs: false is not run, and runs: false elsewhere fails', () => {
+  const r = probe(`
+    const { LESSONS } = require('./src/data/lessons/index.ts');
+    const base = LESSONS.find(l => l.id === 'tsql_select/1');
+    const django = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'from django.urls import reverse\\nprint(reverse("home"))', output: '/' } };
+    const plain = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'print(1)', output: '1' } };
+    return { django: (await C.checkLesson(django, new Set())).errors, plain: (await C.checkLesson(plain, new Set())).errors };
+  `);
+  expect(r.django.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  expect(r.plain.join('\n')).toMatch(/runs: false is only for a Django/);
+});

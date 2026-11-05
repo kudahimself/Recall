@@ -16,7 +16,9 @@
  *   - its worked example does not run, or prints something other than
  *     `worked.output` (SQL on sql.js, Python on python3), or a SQL result of
  *     more than one row comes from a statement without ORDER BY (row order
- *     would then depend on the engine);
+ *     would then depend on the engine); a Django / DRF example, which needs a
+ *     project to run, sets `worked.runs: false` and is not run (its output is
+ *     verified by hand), and `runs: false` on any other example fails;
  *   - the worked example repeats an exercise's solution: the solution (or one
  *     of its `-- OR` / `# OR` forms) appears in it verbatim, or the worked code
  *     holds 80% or more of the solution's essential tokens (check-leaks.js
@@ -56,6 +58,9 @@ const { rampRank } = require(path.join(APP, 'src/utils/spacedRepetition.ts'));
 const { getSectionUnits, SQL_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, WEBDEV_PATH_ORDER, DATA_ENG_PATH_ORDER } =
   require(path.join(APP, 'src/utils/courseConfig.ts'));
 const { familyOf } = require(path.join(APP, 'src/utils/spacedRepetition.ts'));
+
+/** A worked example that imports Django or DRF, the only kind allowed to skip its run. */
+const FRAMEWORK_IMPORT = /^\s*(from|import)\s+(django|rest_framework)\b/m;
 
 const MIN_EXERCISES = 3;
 const MAX_EXERCISES = 5;
@@ -486,6 +491,8 @@ async function checkLesson(lesson, seenIds) {
     err('worked example needs code and steps');
   } else if (w.output === undefined) {
     err('worked example has no output to check');
+  } else if (w.runs === false) {
+    if (w.language !== 'python' || !FRAMEWORK_IMPORT.test(w.code)) err('runs: false is only for a Django / DRF example that imports the framework');
   } else {
     const r = await runWorked(w);
     if (r.error) err(`worked example does not run: ${r.error}`);

@@ -604,6 +604,11 @@ export interface TopicLesson {
     steps: string[];
     /** What the code prints: SQL result sets as `col | col` rows, Python stdout. */
     output?: string;
+    /**
+     * false only for a Django / DRF example, which cannot run without a project:
+     * check-lessons.js then checks everything but the run, and `output` is verified by hand.
+     */
+    runs?: false;
   };
   /** 3-5 existing question ids of the topic, in ramp order. */
   exercises: string[];

@@ -573,7 +573,7 @@ export const backendOrderedQuestions: Question[] = [
   q('py-dj-setup-parsons-1'), q('py-dj-setup-parsons-2'), q('py-dj-setup-cloze-1'), q('py-dj-setup-cloze-2'),
   q('dj-setup-shell-cloze-1'), q('py-dj-setup-installed-apps'), q('py-dj-setup-settings-structure'), q('dj-setup-fixtures-mcq-1'),
   q('dj-setup-showmigrations-mcq-1'), q('dj-setup-dbshell-flush-mcq-1'), q('dj-setup-gap-1'), q('dj-setup-fixtures-cloze-1'),
-  q('dj-setup-reverse-migrate-cloze-1'), q('dj-setup-gap-2'),
+  q('dj-setup-reverse-migrate-cloze-1'), q('dj-setup-gap-2'), q('dj-setup-predict-1'),
 
   // ===== Topic.DJ_MODELS =====
   q('dj4e-fk-1'), q('dj4e-fk-2'), q('dj4e-m2m-1'), q('dj-models-predict-1'),
@@ -618,12 +618,12 @@ export const backendOrderedQuestions: Question[] = [
   q('py-dj-tpl-parsons-2'), q('py-dj-tpl-cloze-1'), q('py-dj-tpl-cloze-2'), q('py-dj-tpl-cloze-3'),
   q('dj-tmpl-1'), q('py-dj-tpl-url-tag'), q('py-dj-tpl-cloze-4'), q('dj-tmpl-3'),
   q('py-dj-tpl-cloze-5'), q('dj-tmpl-4'), q('py-dj-tpl-inheritance'), q('py-dj-tpl-include'),
-  q('dj-templates-custom-filter-cloze-1'), q('py-dj-tpl-custom-filter'),
+  q('dj-templates-custom-filter-cloze-1'), q('py-dj-tpl-custom-filter'), q('dj-templates-predict-1'),
 
   // ===== Topic.DJ_URLS =====
   q('dj-url-4'), q('py-dj-urls-parsons-1'), q('py-dj-urls-parsons-2'), q('py-dj-urls-cloze-1'),
   q('py-dj-urls-cloze-2'), q('py-dj-urls-cloze-3'), q('py-dj-urls-path-basic'), q('py-dj-urls-converters'),
-  q('py-dj-urls-include'), q('py-dj-urls-namespace'), q('py-dj-urls-cloze-4'), q('py-dj-urls-re-path'), q('py-dj-urls-reverse'),
+  q('py-dj-urls-include'), q('py-dj-urls-namespace'), q('py-dj-urls-cloze-4'), q('py-dj-urls-re-path'), q('py-dj-urls-reverse'), q('dj-urls-predict-1'),
 
   // ===== Topic.DJ_FORMS =====
   q('dj-forms-gap-1'), q('dj-forms-predict-1'), q('dj-forms-predict-3'), q('dj-forms-parsons-1'),
