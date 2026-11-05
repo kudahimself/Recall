@@ -208,4 +208,37 @@ class Account(models.Model):
     tags: ['django', 'managers', 'custom-manager', 'orm', 'cloze'],
     concepts: ['dj-model-manager-vs-queryset'],
   },
+  {
+      id: 'dj-custom-managers-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_CUSTOM_MANAGERS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: '`Note` is a model in the `shop` app, and the last five lines are typed into `python manage.py shell` on an empty table. What do the two `print` calls output? The answer is two lines: two numbers separated by a space, then a boolean.',
+      code: `from django.db import models
+
+class LiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+class Note(models.Model):
+    text = models.CharField(max_length=50)
+    is_deleted = models.BooleanField(default=False)
+    objects = LiveManager()
+    all_objects = models.Manager()
+
+# typed into the shell
+Note.objects.create(text="milk")
+Note.objects.create(text="eggs", is_deleted=True)
+Note.objects.create(text="tea")
+print(Note.objects.count(), Note.all_objects.count())
+print(Note.objects.filter(text="eggs").exists())`,
+      expectedOutput: `2 3
+False`,
+      explanation: '`create()` inserts every row, the soft-deleted one included, so the table holds 3 notes. Every query through `Note.objects` starts from `LiveManager.get_queryset()`, which adds `filter(is_deleted=False)`, so `count()` sees 2 and the lookup for "eggs" finds nothing. `all_objects` is a plain `models.Manager()`, so its count is all 3. This is the soft delete pattern: the default manager hides deleted rows, and a second manager keeps them reachable for admin views and restores.',
+      hints: ['create() saves the row whatever the manager filters.', 'Every query through objects starts from its get_queryset().'],
+      tags: ['django', 'managers', 'get_queryset', 'soft-delete', 'predict'],
+      concepts: ['dj-model-manager-vs-queryset'],
+    },
 ];

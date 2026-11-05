@@ -202,4 +202,41 @@ def register_user(username, email, password):
     tags: ['django', 'service-layer', 'celery', 'cloze'],
     concepts: ['dj-service-layer'],
   },
+  {
+      id: 'dj-service-layer-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_SERVICE_LAYER,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: '`shop.Book` has `title` and `stock`, and `shop.Order` has a foreign key `book` and a `qty`. This service function from `shop/services.py` is called from `python manage.py shell` on empty tables, with no request or view involved. What does it print? The answer is three lines: a word and a number, then a word and a title, then a number.',
+      code: `from django.db import transaction
+
+class OutOfStock(Exception):
+    pass
+
+def place_order(book, qty):
+    with transaction.atomic():
+        Order.objects.create(book=book, qty=qty)
+        if book.stock < qty:
+            raise OutOfStock(book.title)
+        book.stock -= qty
+        book.save()
+
+book = Book.objects.create(title="Dune", stock=2)
+for qty in [1, 5]:
+    try:
+        place_order(book, qty)
+        print("placed", book.stock)
+    except OutOfStock as err:
+        print("refused", err)
+print(Order.objects.count())`,
+      expectedOutput: `placed 1
+refused Dune
+1`,
+      explanation: 'The service holds the business rule, so a shell, a test, a view or a task can call it the same way. The first order fits the stock of 2, so it is saved and the stock drops to 1. The second asks for 5: its `Order` row is created, then `OutOfStock` is raised inside `transaction.atomic()`, which rolls the whole block back, that row included, before the exception reaches the caller. So only the first order is left and the count is 1. A view would catch `OutOfStock` and turn it into an HTTP error, keeping HTTP out of the service.',
+      hints: ['An exception leaving transaction.atomic() rolls back everything the block wrote.', 'The second Order row is created before the stock check fails.'],
+      tags: ['django', 'service-layer', 'transactions', 'predict'],
+      concepts: ['dj-service-layer', 'dj-transaction-atomic'],
+    },
 ];

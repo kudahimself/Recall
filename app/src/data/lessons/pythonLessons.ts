@@ -1,8 +1,8 @@
 /**
  * Backend (Python) lessons, one per topic, in course order.
  *
- * Sections 1-4, Python Fundamentals, Python Advanced, Django and Django Advanced &
- * Deployment: every topic.
+ * Sections 1-5, Python Fundamentals, Python Advanced, Django, Django Advanced &
+ * Deployment and DRF Production Patterns: every topic.
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on `python3 -I` and compares what it prints with `output`.
@@ -4389,6 +4389,327 @@ print(list(Book.objects.order_by("title").values_list("stock", flat=True)))`,
       'dj-management-parsons-1',
       'py-dj-deploy-gunicorn',
       'dj-mgmt-predict-1',
+    ],
+  },
+  {
+    id: 'dj_pagination_generics/1',
+    topicKeys: [Topic.DJ_PAGINATION_GENERICS],
+    step: 1,
+    title: 'Pagination & Generic Views',
+    idea: [
+      lines(
+        "DRF generic views are ready-made classes for the usual endpoints: give one a `queryset` and a `serializer_class`, and it handles the request, the serializer and the response.",
+        "`ListAPIView` answers GET with a list and `CreateAPIView` answers POST, while `RetrieveAPIView`, `UpdateAPIView` and `DestroyAPIView` work on one row found by the URL's `pk`.",
+        "Combined names such as `ListCreateAPIView` and `RetrieveUpdateDestroyAPIView` join them, each wired with `path(..., View.as_view())`, which suits an API that needs only part of CRUD or different settings for list and detail.",
+      ),
+      lines(
+        "Every list comes from `get_queryset()`, which by default returns the `queryset` attribute, and `get_object()` picks one row from it.",
+        "Override `get_queryset()` when the rows depend on the request, through `self.request.user`, `self.request.query_params` or `self.kwargs`.",
+      ),
+      lines(
+        "Pagination sends a long list a page at a time.",
+        "`PageNumberPagination` reads `?page=N`, cuts `page_size` rows, and wraps them in `count` (the total), `next`, `previous` and `results`.",
+        "Set `page_size_query_param` to let a client pick its own size, capped by `max_page_size`.",
+        "`CursorPagination` follows a cursor over a fixed ordering instead, which stays fast deep into a big table but cannot jump to page N.",
+        "Set one for every view with `DEFAULT_PAGINATION_CLASS` and `PAGE_SIZE` in `REST_FRAMEWORK`, or per view with `pagination_class`, and override `get_paginated_response(self, data)` to reshape the JSON, reading Django's `Page` from `self.page`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from rest_framework import generics
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+
+class ThingPages(PageNumberPagination):
+    page_size = 20                                    # rows per page; ?page=N picks one
+    def get_paginated_response(self, data):           # only to reshape the JSON
+        return Response({"count": self.page.paginator.count, "results": data})
+
+class ThingList(generics.ListCreateAPIView):          # GET list, POST create
+    serializer_class = ThingSerializer
+    pagination_class = ThingPages
+    def get_queryset(self):                           # runs per request
+        return Thing.objects.filter(owner=self.request.user).order_by("id")
+
+class ThingDetail(generics.RetrieveUpdateDestroyAPIView):   # GET, PUT, PATCH, DELETE
+    queryset = Thing.objects.all()                    # the same for every caller
+    serializer_class = ThingSerializer
+
+urlpatterns = [
+    path("things/", ThingList.as_view()),
+    path("things/<int:pk>/", ThingDetail.as_view()),
+]`,
+    },
+    pitfall: lines(
+      "A filter that depends on the caller cannot live in the `queryset` attribute, because the class body runs once at import, when there is no request.",
+      "Put it in `get_queryset()`, which DRF calls for each request with `self.request` and `self.kwargs` set, and give the rows an `order_by()` so the pages do not shift between calls.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; shop.Book has title and stock; SERVER_NAME="localhost" keeps the host in the default ALLOWED_HOSTS
+from rest_framework import generics, serializers
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.test import APIRequestFactory
+from shop.models import Book
+
+class BookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ["title"]
+
+class SmallPages(PageNumberPagination):
+    page_size = 2
+    page_size_query_param = "size"
+    max_page_size = 3
+
+class BookList(generics.ListAPIView):
+    serializer_class = BookSerializer
+    pagination_class = SmallPages
+
+    def get_queryset(self):
+        books = Book.objects.order_by("title")
+        if self.request.query_params.get("in_stock") == "yes":
+            books = books.filter(stock__gt=0)
+        return books
+
+for title, stock in [("Dune", 0), ("Emma", 3), ("Ivanhoe", 1), ("Middlemarch", 0), ("Persuasion", 2)]:
+    Book.objects.create(title=title, stock=stock)
+view = BookList.as_view()
+for params in [{}, {"in_stock": "yes", "size": 10}]:
+    data = view(APIRequestFactory(SERVER_NAME="localhost").get("/books/", params)).data
+    print(data["count"], [b["title"] for b in data["results"]], data["next"])`,
+      steps: [
+        "Lines 12-15: 2 rows per page by default, and a client may ask for another size with `?size=N`, capped at 3.",
+        "Lines 17-19: `ListAPIView` answers GET with no `get()` of its own, and only needs a serializer, the rows and, here, a pagination class.",
+        "Lines 21-25: `get_queryset()` runs for each request, so it can read the query string and drop the books out of stock, in title order.",
+        "Line 32, first call: `count` is all 5 books, page 1 holds Dune and Emma, and `next` is the full link to page 2.",
+        "Line 32, second call: 3 books are in stock and the asked size of 10 is cut to 3, so they all fit on one page and `next` is `None`.",
+      ],
+      output: `5 ['Dune', 'Emma'] http://localhost/books/?page=2
+3 ['Emma', 'Ivanhoe', 'Persuasion'] None`,
+    },
+    exercises: [
+      'dj-pagination-gap-2',
+      'dj-pagination-generics-cloze-1',
+      'celery-drf-14',
+      'dj-pagination-predict-1',
+      'dj-pagination-custom-cloze-1',
+    ],
+  },
+  {
+    id: 'dj_api_docs/1',
+    topicKeys: [Topic.DJ_API_DOCS],
+    step: 1,
+    title: 'API Documentation (drf-spectacular)',
+    idea: [
+      lines(
+        "OpenAPI is a JSON or YAML description of an API: its paths, the methods on each, the request and response bodies, and the auth it needs.",
+        "Swagger UI renders that description as an interactive page where you can send real requests, Redoc renders it as reference docs, and client generators turn it into typed SDKs.",
+      ),
+      lines(
+        "drf-spectacular writes the schema by reading your code: the URL patterns give the paths, each view's handlers give the methods, and each serializer becomes a named component whose properties are its fields.",
+        "Docs made this way do not drift from the code, since a new field or endpoint shows up the next time the schema is built.",
+      ),
+      lines(
+        "Set it up with `\"drf_spectacular\"` in `INSTALLED_APPS` and its `AutoSchema` as `DEFAULT_SCHEMA_CLASS` in `REST_FRAMEWORK`.",
+        "Then route `SpectacularAPIView` for the raw schema and `SpectacularSwaggerView` or `SpectacularRedocView` for the pages, giving them `url_name` of the schema route.",
+        "Where the guess falls short, `@extend_schema(...)` on one method sets that operation's `summary`, `description`, `request`, `responses={200: Serializer}`, `examples` and `tags`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# settings.py
+INSTALLED_APPS = [..., "rest_framework", "drf_spectacular"]
+REST_FRAMEWORK = {"DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema"}
+
+# urls.py
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+urlpatterns = [
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),        # raw OpenAPI
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema")),   # the page
+]
+
+# views.py: only where the guess falls short
+from drf_spectacular.utils import extend_schema
+
+class ThingViewSet(viewsets.ModelViewSet):
+    @extend_schema(summary="...", request=None, responses={200: OtherSerializer}, tags=["things"])
+    @action(detail=True, methods=["post"])
+    def verb(self, request, pk=None): ...`,
+    },
+    pitfall: lines(
+      "A plain `APIView` or an `@action` that returns some other shape gives drf-spectacular nothing true to read.",
+      "The first is documented with no body and a warning, and the second with the view's own serializer, so the docs look complete while describing the wrong JSON.",
+      "Read the warnings the schema build prints, and add `@extend_schema(request=..., responses=...)` to those methods.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; drf_spectacular is installed and its AutoSchema is DEFAULT_SCHEMA_CLASS
+from django.urls import path
+from drf_spectacular.generators import SchemaGenerator
+from drf_spectacular.utils import extend_schema
+from rest_framework import generics, serializers
+from shop.models import Book
+
+class BookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ["id", "title", "stock"]
+
+class BookDetail(generics.RetrieveUpdateAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+    @extend_schema(summary="Read one book", tags=["shop"])
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+urlpatterns = [path("books/<int:pk>/", BookDetail.as_view())]
+schema = SchemaGenerator(patterns=urlpatterns).get_schema(request=None, public=True)
+ops = schema["paths"]["/books/{id}/"]
+print(ops["get"]["summary"], ops["get"]["tags"], ops["patch"]["tags"])
+print(ops["get"]["responses"]["200"]["content"]["application/json"]["schema"])
+print(list(schema["components"]["schemas"]["Book"]["properties"]))`,
+      steps: [
+        "Lines 8-15: an ordinary serializer and update view, with nothing written for the docs.",
+        "Lines 17-19: `@extend_schema` on `get` sets a summary and a tag for that one operation, and the method only calls the parent's.",
+        "Line 22: `SchemaGenerator` is what `SpectacularAPIView` runs to serve the schema; it reads the one URL, and `<int:pk>` becomes the path parameter `{id}`.",
+        "Line 24: GET carries the decorator's summary and tag, while PATCH, untouched, keeps the tag guessed from the path's first part.",
+        "Lines 25-26: the response body points at a `Book` component, named after the serializer without `Serializer`, whose properties are the serializer's fields.",
+      ],
+      output: `Read one book ['shop'] ['books']
+{'$ref': '#/components/schemas/Book'}
+['id', 'title', 'stock']`,
+    },
+    exercises: [
+      'celery-drf-19',
+      'dj-api-docs-predict-1',
+      'dj-api-docs-cloze-1',
+      'dj-api-docs-urls-cloze-1',
+      'celery-drf-18',
+    ],
+  },
+  {
+    id: 'dj_custom_managers/1',
+    topicKeys: [Topic.DJ_CUSTOM_MANAGERS, Topic.DJ_SERVICE_LAYER],
+    step: 1,
+    title: 'Custom Managers & Service Layer',
+    idea: [
+      lines(
+        "A manager is a model's way in to its rows: `objects` is the one Django adds, and `all()`, `filter()`, `get()` and `create()` are its methods.",
+        "Subclass `models.Manager` and override `get_queryset()` to change what every query starts from, as a soft delete hides rows marked deleted.",
+        "The first manager a model declares is its default, so keep a plain `models.Manager()` under another name to reach every row.",
+      ),
+      lines(
+        "For named queries such as `published()`, write the methods on a `models.QuerySet` subclass, each returning `self.filter(...)`, and attach it with `objects = ThingQuerySet.as_manager()`.",
+        "Then `objects.published().recent()` chains into one SQL query, and a method that returns something other than rows, such as a stats dict, can stay on a manager.",
+      ),
+      lines(
+        "A service layer is a plain module, often `services.py`, whose functions hold the business rules of one action: the checks, the writes inside `transaction.atomic()`, and the side effects.",
+        "The view keeps the HTTP work, calling the service and turning its result or its exception into a response, while a command, a task or a test calls the same function with no request at all.",
+        "Logic about one model, such as an order's total, can stay a model method.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# models.py
+class ThingQuerySet(models.QuerySet):         # each method returns a QuerySet
+    def live(self):
+        return self.filter(is_deleted=False)
+    def owned_by(self, user):
+        return self.filter(owner=user)
+
+class Thing(models.Model):
+    objects = ThingQuerySet.as_manager()      # Thing.objects.live().owned_by(u)
+    all_objects = models.Manager()            # a second, plain manager
+
+# services.py: plain arguments in, a result or a domain error out
+class NotAllowed(Exception): ...
+
+def do_action(user, thing_id):
+    with transaction.atomic():
+        thing = Thing.objects.live().owned_by(user).get(pk=thing_id)
+        ...                                   # checks raise NotAllowed
+    return thing
+
+# views.py: HTTP only
+try:
+    thing = do_action(request.user, pk)
+except NotAllowed as err:
+    return Response({"detail": str(err)}, status=400)`,
+    },
+    pitfall: lines(
+      "Query methods written on a `Manager` subclass work only straight off `objects`: `Thing.objects.published().recent()` raises `AttributeError`, because `published()` returns a plain QuerySet.",
+      "Put the methods on a `QuerySet` subclass that return `self.filter(...)`, and attach it with `as_manager()`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# shop/models.py
+from django.db import models
+
+class BookQuerySet(models.QuerySet):
+    def on_sale(self):
+        return self.filter(hidden=False)
+
+    def in_stock(self):
+        return self.filter(stock__gt=0)
+
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    stock = models.IntegerField(default=0)
+    hidden = models.BooleanField(default=False)
+    objects = BookQuerySet.as_manager()
+
+# shop/services.py
+from django.db import transaction
+from .models import Book
+
+class SoldOut(Exception):
+    pass
+
+def sell(title):
+    with transaction.atomic():
+        books = Book.objects.select_for_update().on_sale().in_stock()
+        book = books.filter(title=title).first()
+        if book is None:
+            raise SoldOut(title)
+        book.stock -= 1
+        book.save()
+    return book.stock
+
+# python manage.py shell
+from shop.models import Book
+from shop.services import SoldOut, sell
+
+Book.objects.create(title="Dune", stock=1)
+Book.objects.create(title="Emma", stock=4, hidden=True)
+print(Book.objects.on_sale().in_stock().count(), Book.objects.count())
+for title in ["Dune", "Dune", "Emma"]:
+    try:
+        print(title, sell(title))
+    except SoldOut as err:
+        print("sold out:", err)`,
+      steps: [
+        "Lines 4-9: each method returns `self.filter(...)`, a QuerySet of the same class, so the methods chain in any order.",
+        "Line 15: `as_manager()` makes the QuerySet class the default manager, so a chain starts at `Book.objects`.",
+        "Lines 24-32: the service holds the rule for a sale: lock the row, refuse a book that is hidden or out of stock with a domain error, and save, all in one transaction.",
+        "Line 40: the chain is one query with both filters, so 1 of the 2 books is for sale.",
+        "Lines 41-45: the shell calls the service as a view, a task or a test would: Dune sells its last copy and is then sold out, and Emma is hidden, so it is refused too.",
+      ],
+      output: `1 2
+Dune 0
+sold out: Dune
+sold out: Emma`,
+    },
+    exercises: [
+      'dj-custom-managers-gap-1',
+      'dj-custom-managers-predict-1',
+      'celery-drf-24',
+      'dj-service-layer-predict-1',
+      'dj-custom-managers-queryset-cloze-1',
     ],
   },
 ];

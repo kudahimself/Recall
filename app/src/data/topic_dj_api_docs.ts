@@ -250,4 +250,40 @@ urlpatterns = [
     tags: ['drf-spectacular', 'SpectacularAPIView', 'SpectacularSwaggerView', 'urls', 'cloze'],
     concepts: ['dj-api-docs'],
   },
+  {
+      id: 'dj-api-docs-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_API_DOCS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'drf-spectacular is installed and set as `DEFAULT_SCHEMA_CLASS`, and `BookSerializer` is a `ModelSerializer` for `shop.Book`. The OpenAPI schema is generated straight from these two views and their URLs. What does the loop print? The answer is one line per path, in URL order: a Python list of the lowercase HTTP methods, as `sorted()` prints it.',
+      code: `from django.urls import path
+from drf_spectacular.generators import SchemaGenerator
+from rest_framework import generics
+
+class BookList(generics.ListCreateAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+class BookDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+urlpatterns = [
+    path("books/", BookList.as_view()),
+    path("books/<int:pk>/", BookDetail.as_view()),
+]
+schema = SchemaGenerator(patterns=urlpatterns).get_schema(request=None, public=True)
+for operations in schema["paths"].values():
+    print(sorted(operations))`,
+      expectedOutput: `['get', 'post']
+['delete', 'get', 'patch', 'put']`,
+      acceptableOutputs: [`["get", "post"]
+["delete", "get", "patch", "put"]`],
+      explanation: 'drf-spectacular builds the schema by reading the views, so each path lists one operation per HTTP method its view actually handles. `ListCreateAPIView` handles GET (list) and POST (create). `RetrieveUpdateDestroyAPIView` handles GET (retrieve), PUT and PATCH (full and partial update) and DELETE, so the detail path has four operations. Because the schema comes from the code, adding or removing a method on a view changes the docs with no hand edit.',
+      hints: ['The schema has one operation for each method the view class handles.', 'An update view handles both a full and a partial update.'],
+      tags: ['django', 'drf', 'drf-spectacular', 'openapi', 'predict'],
+      concepts: ['dj-api-docs'],
+    },
 ];
