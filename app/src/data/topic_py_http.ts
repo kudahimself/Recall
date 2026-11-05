@@ -952,4 +952,27 @@ with httpx.___() as client:
       tags: ['httpx', 'Client', 'raise_for_status'],
       concepts: ['py-json-serialization'],
     },
+{
+      id: 'py-http-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_HTTP,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'What does this code print? No request is sent: `.prepare()` only builds the request, and the answer is the one printed URL.',
+      code: `import requests
+
+req = requests.Request(
+    "GET",
+    "https://api.example.com/books",
+    params={"q": "data eng", "page": 2},
+)
+print(req.prepare().url)`,
+      expectedOutput: `https://api.example.com/books?q=data+eng&page=2`,
+      explanation:
+        '`params` is encoded into the query string for you: pairs are joined with `&` in dict order and the space in `data eng` becomes `+`. Building the URL by hand with an f-string would skip that encoding.',
+      hints: ['The dict becomes the query string after a `?`.'],
+      tags: ['http', 'requests', 'params'],
+      concepts: ['py-http-requests'],
+    },
 ];

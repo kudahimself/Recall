@@ -573,4 +573,25 @@ print(names)`,
       tags: ['type-hints', 'TypeGuard', 'narrowing', 'PEP-647'],
       concepts: ['py-type-hint-syntax'],
     },
+{
+      id: 'py-types-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_TYPE_HINTS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'What does this code print? Type the two printed lines.',
+      code: `def double(n: int) -> int:
+    return n * 2
+
+print(double("ab"))
+print(double(2.5))`,
+      expectedOutput: `abab
+5.0`,
+      explanation:
+        'Type hints are not enforced at runtime: Python ignores the `int` annotation, so `"ab" * 2` repeats the string and `2.5 * 2` is a float. Only a checker such as mypy, or a library that reads the annotations, reports the mismatch.',
+      hints: ['Does Python check the annotation when the function is called?'],
+      tags: ['type-hints', 'runtime', 'annotations'],
+      concepts: ['py-type-hint-syntax'],
+    },
 ];

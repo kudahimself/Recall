@@ -275,7 +275,7 @@ export const backendOrderedQuestions: Question[] = [
   q('py-adv-types-3'), q('py-types-protocol-1'), q('py-types-typeddict-1'), q('py-types-literal-1'),
   q('py-types-final-overload-1'), q('py-types-typeguard-1'), q('py-types-callable'), q('py-types-generic-class'),
   q('py-types-runtime'), q('py-types-paramspec'), q('py-type-hints-cloze-5'), q('py-type-hints-cloze-7'),
-  q('py-type-hints-cloze-9'),
+  q('py-type-hints-cloze-9'), q('py-types-predict-1'),
 
   // ===== Topic.PY_DATACLASSES =====
   q('py-dc-what'), q('py-gap-dataclasses-1'), q('py-dataclasses-parsons-6'), q('py-dataclasses-cloze-1'),
@@ -387,7 +387,7 @@ export const backendOrderedQuestions: Question[] = [
   q('py-http-4'), q('py-http-7'), q('py-http-statuscode-cloze-1'), q('py-http-8'), q('py-http-9'),
   q('py-http-10'), q('py-http-12'), q('py-http-6'), q('py-http-14'),
   q('py-http-15'), q('py-http-retry-mcq-1'), q('py-http-retry-cloze-2'), q('py-http-retry-cloze-3'),
-  q('py-http-retry-cloze-1'), q('py-http-5'), q('py-http-13'), q('py-http-16'),
+  q('py-http-retry-cloze-1'), q('py-http-5'), q('py-http-13'), q('py-http-16'), q('py-http-predict-1'),
 
   // ===== Topic.PY_ASYNC =====
   q('py-gap-async-1'), q('py-gap-async-2'), q('py-async-predict-1'), q('py-async-predict-7'),
@@ -536,7 +536,7 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.PY_PACKAGING =====
   q('py-packaging-1'), q('py-packaging-2'), q('py-packaging-3'), q('py-packaging-4'),
-  q('py-packaging-6'), q('py-packaging-5'),
+  q('py-packaging-6'), q('py-packaging-5'), q('py-packaging-predict-1'),
 
   // ===== Topic.PY_DAILY_PATTERNS =====
   q('be-infra-patterns-3'), q('be-infra-patterns-4'), q('be-infra-patterns-1'), q('be-infra-patterns-2'),

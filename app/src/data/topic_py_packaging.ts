@@ -9,6 +9,7 @@ import {
   Difficulty,
   Topic,
   Course,
+  CodeLanguage,
 } from '../types';
 
 export const py_packaging_questions: Question[] = [
@@ -143,5 +144,34 @@ export const py_packaging_questions: Question[] = [
       ],
       tags: ['packaging', 'entry-points', 'scripts', 'CLI'],
       concepts: ['py-packaging-tools', 'py-cli-tools'],
+    },
+{
+      id: 'py-packaging-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_PACKAGING,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'What does this code print? Type the two printed lines.',
+      code: `import tomllib
+
+text = """
+[project]
+name = "recall-tool"
+dependencies = ["requests>=2.31"]
+
+[project.scripts]
+rt = "recall_tool.cli:main"
+"""
+cfg = tomllib.loads(text)
+print(list(cfg["project"]))
+print(cfg["project"]["scripts"]["rt"])`,
+      expectedOutput: `['name', 'dependencies', 'scripts']
+recall_tool.cli:main`,
+      explanation:
+        '`[project.scripts]` is a table nested inside `[project]`, so `scripts` shows up as a key of `cfg["project"]`, after the plain keys written above it. Its entry `rt` maps the command name to the `module:function` that the installed command runs.',
+      hints: ['A dotted table header nests inside its parent table.'],
+      tags: ['packaging', 'pyproject', 'toml', 'entry-points'],
+      concepts: ['py-packaging-tools'],
     },
 ];
