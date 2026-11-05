@@ -2293,8 +2293,8 @@ if __name__ == "__main__":
         list(pool.map(fn, items))`,
     },
     pitfall: lines(
-      "An exception inside a job stays hidden until you call \`.result()\`, so a pool that never reads its futures fails silently.",
-      "Collect the futures, call \`.result()\` in a \`try\`, and handle the error where you can act on it.",
+      "An exception inside a job stays hidden until you call `.result()`, so a pool that never reads its futures fails silently.",
+      "Collect the futures, call `.result()` in a `try`, and handle the error where you can act on it.",
     ),
     worked: {
       language: CodeLanguage.PYTHON,
@@ -2373,8 +2373,8 @@ async def main():
 asyncio.run(main())                  # start the event loop`,
     },
     pitfall: lines(
-      "Calling a coroutine without \`await\` does nothing: \`fetch(1)\` only creates a coroutine object, Python warns that it was never awaited, and the work never happens.",
-      "Likewise a blocking call such as \`time.sleep(1)\` inside a coroutine freezes the whole loop, so use \`await asyncio.sleep(1)\`.",
+      "Calling a coroutine without `await` does nothing: `fetch(1)` only creates a coroutine object, Python warns that it was never awaited, and the work never happens.",
+      "Likewise a blocking call such as `time.sleep(1)` inside a coroutine freezes the whole loop, so use `await asyncio.sleep(1)`.",
     ),
     worked: {
       language: CodeLanguage.PYTHON,
@@ -2397,12 +2397,12 @@ async def main():
 
 asyncio.run(main())`,
       steps: [
-        "Line 11: calling \`fetch\` runs nothing and returns a coroutine object.",
-        "Line 12: its type is \`coroutine\`.",
-        "Line 13: \`await\` runs it to the end, so \"a\" is recorded and \`A\` is printed.",
-        "Line 14: \`gather\` starts both coroutines at once; \"fast\" finishes first, then \"slow\".",
+        "Line 11: calling `fetch` runs nothing and returns a coroutine object.",
+        "Line 12: its type is `coroutine`.",
+        "Line 13: `await` runs it to the end, so \"a\" is recorded and `A` is printed.",
+        "Line 14: `gather` starts both coroutines at once; \"fast\" finishes first, then \"slow\".",
         "Line 15: results come back in the order they were listed, not the order they finished.",
-        "Line 16: \`order\` shows the real finishing order: \"a\", then \"fast\", then \"slow\".",
+        "Line 16: `order` shows the real finishing order: \"a\", then \"fast\", then \"slow\".",
       ],
       output: `coroutine
 A
@@ -2448,8 +2448,8 @@ with tempfile.TemporaryDirectory() as tmp:   # deleted after the block
 shutil.which("git")               # path to a program, or None`,
     },
     pitfall: lines(
-      "Never build a command string from user input and run it with \`shell=True\`: input such as \`x; rm -rf ~\` becomes part of the command.",
-      "Pass a list of arguments with the default \`shell=False\`, and each item reaches the program as one value that the shell never interprets.",
+      "Never build a command string from user input and run it with `shell=True`: input such as `x; rm -rf ~` becomes part of the command.",
+      "Pass a list of arguments with the default `shell=False`, and each item reaches the program as one value that the shell never interprets.",
     ),
     worked: {
       language: CodeLanguage.PYTHON,
@@ -2468,12 +2468,12 @@ with tempfile.TemporaryDirectory() as tmp:
     print(sorted(p.name for p in pathlib.Path(tmp).iterdir()))
 print(pathlib.Path(tmp).exists())`,
       steps: [
-        "Line 3: the command is a list; \`capture_output\` and \`text\` collect what the child printed as a string.",
+        "Line 3: the command is a list; `capture_output` and `text` collect what the child printed as a string.",
         "Line 4: the output includes the newline, and the exit code is 0.",
-        "Lines 5-8: the child exits with code 3, and \`check=True\` turns that into \`CalledProcessError\`, so the code is read from the error.",
+        "Lines 5-8: the child exits with code 3, and `check=True` turns that into `CalledProcessError`, so the code is read from the error.",
         "Lines 9-12: the temporary folder holds the file written and its copy.",
-        "Line 13: \`sorted\` fixes the listing order.",
-        "Line 14: the folder was removed when the \`with\` block ended.",
+        "Line 13: `sorted` fixes the listing order.",
+        "Line 14: the folder was removed when the `with` block ended.",
       ],
       output: `'hi\\n' 0
 failed with 3
@@ -2525,8 +2525,8 @@ os.environ.get("API_KEY", "")       # config from the environment
 # from dotenv import load_dotenv; load_dotenv()   # fill it from .env`,
     },
     pitfall: lines(
-      "Everything on the command line is text until you say otherwise, so \`--days 7\` without \`type=int\` gives the string \`\"7\"\` and \`args.days + 1\` fails.",
-      "Give each numeric option a \`type\`, and use \`os.environ.get\` instead of \`os.environ[...]\` for settings that may be missing.",
+      "Everything on the command line is text until you say otherwise, so `--days 7` without `type=int` gives the string `\"7\"` and `args.days + 1` fails.",
+      "Give each numeric option a `type`, and use `os.environ.get` instead of `os.environ[...]` for settings that may be missing.",
     ),
     worked: {
       language: CodeLanguage.PYTHON,
@@ -2547,11 +2547,11 @@ os.environ["LOAN_DAYS"] = "21"
 print(int(os.environ.get("LOAN_DAYS", 14)), os.environ.get("MISSING", "none"))`,
       steps: [
         "Lines 3-6: one positional argument, an integer option with a default, and a flag.",
-        "Line 7: \`parse_args\` is given a list here so the example does not need a real command line; normally it reads \`sys.argv\`.",
-        "Line 8: \`--days 7\` was converted to the integer 7, so adding 1 works, and \`-v\` made the flag \`True\`.",
-        "Line 9: with only a title, \`days\` falls back to 14 and \`verbose\` stays \`False\`.",
-        "Lines 10-13: \`x\` cannot be converted to \`int\`, so argparse prints its usage message and exits with code 2, which the example catches.",
-        "Lines 14-15: an environment value is always text, so it is converted with \`int\`, and a missing name returns the default.",
+        "Line 7: `parse_args` is given a list here so the example does not need a real command line; normally it reads `sys.argv`.",
+        "Line 8: `--days 7` was converted to the integer 7, so adding 1 works, and `-v` made the flag `True`.",
+        "Line 9: with only a title, `days` falls back to 14 and `verbose` stays `False`.",
+        "Lines 10-13: `x` cannot be converted to `int`, so argparse prints its usage message and exits with code 2, which the example catches.",
+        "Lines 14-15: an environment value is always text, so it is converted with `int`, and a missing name returns the default.",
       ],
       output: `Dune 8 True
 Namespace(title='Emma', days=14, verbose=False)
@@ -2605,7 +2605,7 @@ dependencies = ["requests>=2.31"]     # ranges you accept
 loans = "loan_tool.cli:main"          # creates the \`loans\` command`,
     },
     pitfall: lines(
-      "\`pyproject.toml\` holds loose ranges such as \`requests>=2.31\`, so two installs on different days can get different versions.",
+      "`pyproject.toml` holds loose ranges such as `requests>=2.31`, so two installs on different days can get different versions.",
       "Commit the lockfile as well, and install from it in deployments, so everyone runs the exact versions you tested.",
     ),
     worked: {
@@ -2635,11 +2635,11 @@ with tempfile.TemporaryDirectory() as tmp:
     venv.create(tmp)
     print((pathlib.Path(tmp) / "pyvenv.cfg").exists())`,
       steps: [
-        "Lines 3-15: a small \`pyproject.toml\` as text; the table headers decide where each key lives.",
-        "Line 17: \`[project]\` becomes \`cfg[\"project\"]\`, whose dependencies are a list of two requirement strings.",
-        "Lines 19-20: the command target splits at the colon into the module \`loan_tool.cli\` and its function \`main\`.",
-        "Line 21: \`[tool.pytest.ini_options]\` nests under \`tool\`, the home for each tool's settings.",
-        "Lines 22-24: \`venv.create\` builds a bare environment in a temporary folder; its \`pyvenv.cfg\` file marks it as one.",
+        "Lines 3-15: a small `pyproject.toml` as text; the table headers decide where each key lives.",
+        "Line 17: `[project]` becomes `cfg[\"project\"]`, whose dependencies are a list of two requirement strings.",
+        "Lines 19-20: the command target splits at the colon into the module `loan_tool.cli` and its function `main`.",
+        "Line 21: `[tool.pytest.ini_options]` nests under `tool`, the home for each tool's settings.",
+        "Lines 22-24: `venv.create` builds a bare environment in a temporary folder; its `pyvenv.cfg` file marks it as one.",
       ],
       output: `loan-tool 0.3.0 2
 loan_tool.cli main
