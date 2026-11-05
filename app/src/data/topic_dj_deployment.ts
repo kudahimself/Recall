@@ -394,4 +394,29 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"`
       tags: ['django', 'deployment', '12-factor', 'config'],
       concepts: ['dj-deployment-cicd'],
     },
+  {
+      id: 'dj-deploy-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_DEPLOYMENT,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'A 12-factor `settings.py` reads its config from environment variables, which the platform exports as strings (the first two lines stand in for it). What do the two `print` calls output? The answer is two lines: two booleans separated by a space, then a Python list.',
+      code: `import os
+os.environ["DJANGO_DEBUG"] = "False"
+os.environ["DJANGO_ALLOWED_HOSTS"] = "shop.com,www.shop.com"
+
+DEBUG_BOOL = bool(os.environ.get("DJANGO_DEBUG"))
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+
+print(DEBUG_BOOL, DEBUG)
+print(ALLOWED_HOSTS)`,
+      expectedOutput: `True False
+['shop.com', 'www.shop.com']`,
+      explanation: 'An environment variable is always a string. `bool()` of any non-empty string is `True`, so `bool("False")` turns debug mode ON in production, the opposite of what was exported. Comparing the text, `== "True"`, gives a real `False`. `ALLOWED_HOSTS` must be a list, so the comma-separated string is split into one hostname per item.',
+      hints: ['Every environment variable arrives as a string.', 'bool() of a non-empty string is True, whatever the text says.'],
+      tags: ['django', 'deployment', '12-factor', 'settings', 'predict'],
+      concepts: ['dj-deployment-cicd'],
+    },
 ];

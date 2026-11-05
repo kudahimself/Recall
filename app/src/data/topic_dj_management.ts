@@ -309,4 +309,36 @@ ___("loaddata", "seed.json", verbosity=0)`,
       tags: ['django', 'management', 'check', 'deployment', 'security'],
       concepts: ['dj-deployment-cicd'],
     },
+  {
+      id: 'dj-mgmt-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_MANAGEMENT,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'The `shop` app has this custom command, and the two `call_command` lines are typed into `python manage.py shell`. What do they print? The answer is one greeting per line, in order.',
+      code: `# shop/management/commands/greet.py
+from django.core.management.base import BaseCommand
+
+class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument("name")
+        parser.add_argument("--times", type=int, default=1)
+
+    def handle(self, *args, **options):
+        for _ in range(options["times"]):
+            self.stdout.write(f"Hi {options['name']}")
+
+# typed into the shell
+from django.core.management import call_command
+call_command("greet", "Ann", times=2)
+call_command("greet", "Bo")`,
+      expectedOutput: `Hi Ann
+Hi Ann
+Hi Bo`,
+      explanation: '`call_command` runs the command in the same process, as `python manage.py greet ...` would. A positional argument after the command name fills `name`, and a keyword argument fills the option with that dest, so `times=2` acts like `--times 2` and the greeting is written twice. The second call leaves `--times` out, so `options["times"]` takes its `default=1` and Bo is greeted once. `self.stdout.write` ends each line for you.',
+      hints: ['Keyword arguments to call_command fill the options of the same name.', 'An option you leave out takes its default.'],
+      tags: ['django', 'management', 'call_command', 'add_arguments', 'predict'],
+      concepts: ['dj-management-commands'],
+    },
 ];
