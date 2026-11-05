@@ -23,7 +23,7 @@ export const py_modules_questions: Question[] = [
       question:
         'Fill in the dunder name and the special string used to guard top-level entrypoint code.',
       template: `if ___ == "___":
-      main()`,
+    main()`,
       blanks: ['__name__', '__main__'],
       solution: 'if __name__ == "__main__":\n    main()',
       explanation:
@@ -184,8 +184,8 @@ sys.___.append("/usr/local/mylibs")`,
       question:
         'Fill in the file name (with extension) that marks a directory as a Python package.',
       template: `mypkg/
-      ___
-      helpers.py`,
+    ___
+    helpers.py`,
       blanks: ['__init__.py'],
       solution: 'mypkg/\n    __init__.py\n    helpers.py',
       explanation:
@@ -299,7 +299,7 @@ print("os" in sys.___)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use a relative import to bring helper from the same package (one level up).',
+        'Inside a package module, use a relative import to bring process in from the helper module of the same package, then call it.',
       correctOrder: [
         'from .helper import process',
         '',
@@ -325,7 +325,7 @@ print("os" in sys.___)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use __all__ to declare the public API of a module so `from mymod import *` only exports those names.',
+        'Use __all__ to declare the public API of a module so `from mymod import *` only exports public_func. Put __all__ first, then public_func, then _private.',
       correctOrder: [
         '__all__ = ["public_func"]',
         '',
@@ -433,7 +433,7 @@ print("os" in sys.___)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Import a deeply nested submodule using dotted path.',
+        'Import urlparse from the urllib.parse submodule, parse "https://example.com/a/b", and print the path part.',
       correctOrder: [
         'from urllib.parse import urlparse',
         '',
@@ -546,12 +546,14 @@ print(type(math).__name__)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Assume mypkg/__init__.py contains `print("init"); from .sub import f`. What does this code print?',
+        'Assume mypkg/__init__.py contains `print("init")` and `from .sub import f`, and mypkg/sub.py contains `def f(): return "sub.f"`. What does this code print?',
       code: `import mypkg
-mypkg.f()`,
-      expectedOutput: `init`,
+import mypkg
+print(mypkg.f())`,
+      expectedOutput: `init
+sub.f`,
       explanation:
-        'A package\'s __init__.py runs ONCE when the package is first imported. The init imports f from .sub, making mypkg.f accessible. The print "init" runs once at import time. Calling mypkg.f() doesn\'t print anything additional unless f itself prints — and we don\'t know what f does.',
+        'A package\'s __init__.py runs ONCE, when the package is first imported, so "init" prints once even though mypkg is imported twice. The init imports f from .sub, which makes it reachable as mypkg.f, and calling it returns "sub.f".',
       hints: ['__init__.py runs at first package import.'],
       tags: ['modules', '__init__.py', 'package'],
       concepts: ['py-modules-imports'],
@@ -603,13 +605,13 @@ False`,
       language: CodeLanguage.PYTHON,
       question: 'What does this code print?',
       code: `import sys
-print("os" in sys.modules)
-import os
-print("os" in sys.modules)`,
-      expectedOutput: `False
+import json
+print("json" in sys.modules)
+print(sys.modules["json"] is json)`,
+      expectedOutput: `True
 True`,
       explanation:
-        'sys.modules is the cache of imported modules. Before `import os` runs, "os" is not in the cache (assuming a fresh interpreter where os hasn\'t been auto-imported). After import, it\'s cached. Re-importing checks this cache before reading the file.',
+        'sys.modules is the cache of imported modules, a dict from module name to module object. After `import json`, "json" is a key in it, and its value is the very module object the name json refers to - the import put it there. A later `import json` anywhere in the program finds it in this cache and does not run the file again.',
       hints: ['sys.modules is the cache of already-imported modules.'],
       tags: ['modules', 'sys.modules'],
       concepts: ['py-modules-imports'],
@@ -671,167 +673,6 @@ True`,
       concepts: ['py-modules-imports'],
     },
   {
-      id: 'pcpp-pickle-1',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_MODULES,
-      course: Course.BACKEND,
-      question: 'What does Python\'s `pickle` module do?',
-      options: [
-        { id: 'a', text: 'It converts Python objects to JSON format for web transmission', isCorrect: false },
-        { id: 'b', text: 'It serialises Python objects to a byte stream and deserialises them back — preserving their full structure', isCorrect: true },
-        { id: 'c', text: 'It compresses files to save disk space', isCorrect: false },
-        { id: 'd', text: 'It stores database connection objects across sessions', isCorrect: false },
-      ],
-      explanation: '`pickle` serialises (pickles) Python objects to a binary byte stream, which can be saved to a file or sent over a network, then deserialised (unpickled) back to the original object. Unlike JSON, pickle supports Python-specific types (sets, tuples, custom classes). Warning: never unpickle data from untrusted sources — it can execute arbitrary code.',
-      hints: [
-        '`pickle.dumps()` → bytes; `pickle.loads()` → object',
-        '`pickle.dump(obj, file)` → save; `pickle.load(file)` → load',
-      ],
-      tags: ['pickle', 'serialisation', 'persistence', 'modules'],
-      concepts: ['py-modules-imports'],
-    },
-  {
-      id: 'pcpp-pickle-2',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_MODULES,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Use `pickle` to serialise a Python dictionary to bytes, then deserialise it back and verify it\'s identical to the original. Use `pickle.dumps()` and `pickle.loads()` (no file needed).',
-      starterCode: `import pickle
-
-# Create dictionary: {"name": "Alice", "scores": [95, 87, 92], "active": True}
-# Serialise data to bytes, deserialise it back, and print the restored object and equality check
-`,
-      testCases: [
-        { input: '', expectedOutput: "{'name': 'Alice', 'scores': [95, 87, 92], 'active': True}\nTrue", description: 'Should restore identical object' },
-      ],
-      solution: `import pickle
-
-data = {
-    "name": "Alice",
-    "scores": [95, 87, 92],
-    "active": True,
-}
-
-serialised = pickle.dumps(data)
-restored = pickle.loads(serialised)
-
-print(restored)
-print(restored == data)`,
-      explanation: '`pickle.dumps(obj)` serialises to bytes. `pickle.loads(bytes)` deserialises back. The restored object is equal to the original but is a separate copy in memory. For files, use `pickle.dump(obj, file)` and `pickle.load(file)` with binary mode (`"wb"` / `"rb"`).',
-      hints: [
-        '`pickle.dumps()` (plural s) → bytes; `pickle.loads()` → object',
-        'For files use `pickle.dump()` / `pickle.load()` with `"wb"` / `"rb"` mode',
-      ],
-      tieredHints: {
-        apiSignature: 'pickle.dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None) -> bytes',
-        skeleton: `import pickle
-
-data = {
-    "name": "Alice",
-    "scores": [95, 87, 92],
-    "active": True,
-}
-
-serialised = ____.____(data)
-restored = pickle.____(____)
-
-print(____)
-____(restored == ____)`,
-      },
-      tags: ['pickle', 'serialisation', 'dumps', 'loads', 'persistence'],
-      concepts: ['py-pickle-serialization'],
-    },
-  {
-      id: 'pcpp-pickle-3',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_MODULES,
-      course: Course.BACKEND,
-      question: 'What is a key security concern with `pickle`, and what is a safer alternative for data exchange?',
-      options: [
-        { id: 'a', text: 'Pickle files are too large; use compression instead', isCorrect: false },
-        { id: 'b', text: 'Unpickling untrusted data can execute arbitrary code; JSON is safer for data exchange', isCorrect: true },
-        { id: 'c', text: 'Pickle cannot handle nested objects; use shelve instead', isCorrect: false },
-        { id: 'd', text: 'Pickle is too slow for large objects; use CSV instead', isCorrect: false },
-      ],
-      explanation: 'Pickle\'s main security risk: a malicious pickle payload can execute arbitrary Python code when unpickled. Never unpickle data received from untrusted sources (network, user uploads). For cross-language or cross-platform data exchange, use JSON, which only supports safe basic types. Use pickle only for internal Python-to-Python persistence with trusted data.',
-      hints: [
-        'Never `pickle.load()` data from unknown sources',
-        'JSON = human-readable and safe; Pickle = Python-only and potentially dangerous',
-      ],
-      tags: ['pickle', 'security', 'JSON', 'serialisation', 'trust'],
-      concepts: ['py-security-primitives', 'py-json-serialization'],
-    },
-  {
-      id: 'pcpp-shelve-1',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_MODULES,
-      course: Course.BACKEND,
-      question: 'How does the `shelve` module differ from `pickle`?',
-      options: [
-        { id: 'a', text: 'Shelve uses JSON; pickle uses binary', isCorrect: false },
-        { id: 'b', text: 'Shelve provides a persistent dictionary-like interface backed by pickle; pickle just serialises to bytes/files', isCorrect: true },
-        { id: 'c', text: 'Shelve is faster than pickle for large objects', isCorrect: false },
-        { id: 'd', text: 'Shelve works for strings only; pickle works for all types', isCorrect: false },
-      ],
-      explanation: '`shelve` builds on pickle to provide a persistent, dictionary-like store. You access values by string keys (`shelf["key"] = value`) and they are automatically pickled and stored in a database file. When you reopen the shelf later, the data is still there. It\'s like a persistent Python dict.',
-      hints: [
-        'Think of shelve as a persistent dict backed by pickle',
-        'Use `with shelve.open("filename") as shelf:` to open/close safely',
-      ],
-      tags: ['shelve', 'pickle', 'persistence', 'modules', 'database'],
-      concepts: ['py-modules-imports'],
-    },
-  {
-      id: 'pcpp-shelve-2',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_MODULES,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Open a shelf named `"user_data"` via `shelve.open()` as a context manager and store `{"name": "Alice", "score": 95}` under the key `"user_1"`. Then open the shelf again (a second `with` block, simulating a later session), retrieve the profile under `"user_1"`, and print `profile["name"]` and `profile["score"]`.',
-      starterCode: `# Open shelve "user_data" with a with-block and store the user_1 profile
-
-
-# Reopen the shelve in a new with-block, read user_1, and print name then score
-`,
-      testCases: [
-        { input: '', expectedOutput: 'Alice\n95', description: 'Should retrieve persisted data' },
-      ],
-      solution: `import shelve
-
-with shelve.open("user_data") as shelf:
-    shelf["user_1"] = {"name": "Alice", "score": 95}
-
-with shelve.open("user_data") as shelf:
-    profile = shelf["user_1"]
-    print(profile["name"])
-    print(profile["score"])`,
-      explanation: 'The first `with` block writes to the shelf. The second `with` block reopens it and reads the data back — simulating two separate program runs. The data persists between them. `shelve` automatically handles pickling/unpickling. Keys must be strings; values can be any picklable Python object.',
-      hints: [
-        'Keys are strings; values are any picklable objects',
-        'Use `with shelve.open(filename) as shelf:` for automatic closing',
-      ],
-      tieredHints: {
-        apiSignature: 'shelve.open(filename, flag="c", protocol=None, writeback=False) -> Shelf',
-        skeleton: `import shelve
-
-with ____.____("user_data") as shelf:
-    shelf["user_1"] = {"name": "Alice", "score": 95}
-
-with shelve.____("user_data") as ____:
-    profile = shelf[____]
-    print(____["name"])
-    ____(profile["score"])`,
-      },
-      tags: ['shelve', 'persistence', 'context-manager', 'with', 'pickle'],
-      concepts: ['py-context-manager-protocol'],
-    },
-  {
       id: 'pe1-modules-1',
       type: QuestionType.MULTIPLE_CHOICE,
       difficulty: Difficulty.BEGINNER,
@@ -839,12 +680,12 @@ with shelve.____("user_data") as ____:
       course: Course.BACKEND,
       question: 'What is the difference between `import math` and `from math import sqrt`?',
       options: [
-        { id: 'a', text: 'They are identical — both load the entire math module', isCorrect: false },
-        { id: 'b', text: '`import math` loads the whole module (access with `math.sqrt`); `from math import sqrt` imports only `sqrt` (access as just `sqrt`)', isCorrect: true },
-        { id: 'c', text: '`from math import sqrt` is slower', isCorrect: false },
-        { id: 'd', text: '`import math` only works in Python 2', isCorrect: false },
+        { id: 'a', text: 'They are identical: both let you call `sqrt(16)` and `math.sqrt(16)`', isCorrect: false },
+        { id: 'b', text: '`import math` binds the name `math` (call `math.sqrt`); `from math import sqrt` binds only `sqrt` (call `sqrt`)', isCorrect: true },
+        { id: 'c', text: '`from math import sqrt` runs only the `sqrt` part of the module, so the rest is never loaded', isCorrect: false },
+        { id: 'd', text: '`import math` copies every name in, so you can call `sqrt` without the `math.` prefix', isCorrect: false },
       ],
-      explanation: 'With `import math`, you access functions as `math.sqrt(16)`. With `from math import sqrt`, you call it directly as `sqrt(16)`. You can also do `from math import *` to import everything (but this is discouraged as it pollutes the namespace). Use `import module` when you use many things from it; `from module import name` for one or two specific items.',
+      explanation: 'With `import math`, you access functions as `math.sqrt(16)`. With `from math import sqrt`, you call it directly as `sqrt(16)`, and the name `math` is not defined. Either way Python runs the whole module once and caches it; the two forms only differ in which names they bind in your file. You can also do `from math import *` to import everything (but this is discouraged as it pollutes the namespace). Use `import module` when you use many things from it; `from module import name` for one or two specific items.',
       hints: [
         '`import math` → `math.sqrt()`, `from math import sqrt` → `sqrt()`',
         'The difference is in how you call the imported name',
@@ -879,8 +720,14 @@ with shelve.____("user_data") as ____:
 
 print(math.sqrt(144))
 print(round(math.pi, 4))
+print(math.ceil(4.3))
+# OR
+import math
+
+print(math.sqrt(144))
+print(f"{math.pi:.4f}")
 print(math.ceil(4.3))`,
-      explanation: '`math.sqrt(144)` returns `12.0` (a float). `math.pi` is the constant π ≈ 3.14159... and `round(value, decimals)` rounds to 4 places. `math.ceil(4.3)` rounds up to 5. Other useful `math` functions: `math.floor()`, `math.abs()`, `math.pow()`, `math.log()`.',
+      explanation: '`math.sqrt(144)` returns `12.0` (a float). `math.pi` is the constant π ≈ 3.14159... and `round(value, decimals)` rounds to 4 places. `math.ceil(4.3)` rounds up to 5. Other useful `math` functions: `math.floor()`, `math.fabs()`, `math.pow()`, `math.log()` (absolute value is usually the built-in `abs()`, there is no `math.abs`).',
       hints: [
         'Use `math.sqrt()`, `math.pi`, and `math.ceil()`',
         'Use `round(math.pi, 4)` to round to 4 decimal places',
@@ -919,7 +766,14 @@ print(math.____(4.3))`,
 options = ["rock", "paper", "scissors"]
 
 print(random.randint(1, 10))
-print(random.choice(options))`,
+print(random.choice(options))
+# OR
+from random import randint, choice
+
+options = ["rock", "paper", "scissors"]
+
+print(randint(1, 10))
+print(choice(options))`,
       explanation: '`random.randint(a, b)` returns a random integer between a and b **inclusive** (both ends included). `random.choice(sequence)` returns a random element from a non-empty sequence. Other useful functions: `random.random()` (float 0-1), `random.shuffle(list)` (shuffle in place), `random.sample(list, k)` (k unique random elements).',
       hints: [
         'Use `random.randint(1, 10)` for a random integer',

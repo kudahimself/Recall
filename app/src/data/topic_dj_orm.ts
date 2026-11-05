@@ -1469,4 +1469,21 @@ articles = Article.objects.prefetch_related(
       tags: ['django', 'orm', 'Prefetch', 'to_attr', 'n-plus-one', 'advanced'],
       concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
     },
+  {
+      id: 'be-sql-4',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_ORM,
+      course: Course.BACKEND,
+      question: 'What is the N+1 query problem in Django?',
+      options: [
+        { id: 'a', text: 'One query loads N rows, then reading a related object inside the loop runs one more query per row', isCorrect: true },
+        { id: 'b', text: 'A queryset is re-run from scratch every time you loop over it, so N loops cost N+1 queries', isCorrect: false },
+        { id: 'c', text: 'A query with N filters is split into N+1 separate queries, one per filter plus a final join', isCorrect: false },
+        { id: 'd', text: 'Slicing a queryset with [:N] fetches one extra row to check if more exist, so N+1 rows come back', isCorrect: false },
+      ],
+      explanation: 'Article.objects.all() runs one query for the list; then reading article.author inside the loop runs one extra query per article, N more in total. select_related("author") fetches the authors in the same query with a JOIN (for ForeignKey); prefetch_related("tags") runs one second query with an IN clause (for ManyToMany). Either removes the per-row queries. A queryset caches its rows after the first evaluation, filters combine into one WHERE clause, and slicing adds a LIMIT, so none of those cause it.',
+      tags: ['n+1', 'select_related', 'prefetch_related', 'django', 'performance'],
+      concepts: ['dj-n-plus-one', 'dj-select-related-vs-prefetch'],
+    },
 ];

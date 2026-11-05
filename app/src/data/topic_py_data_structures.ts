@@ -55,7 +55,7 @@ export const py_data_structures_questions: Question[] = [
           description: 'Should count word frequencies',
         },
       ],
-      solution: `words = ["hello", "world", "hello", "python", "world", "hello"]\n\nfreq = {}\nfor word in words:\n    freq[word] = freq.get(word, 0) + 1\n# OR\nfrom collections import Counter\nfreq = Counter(words)`,
+      solution: `words = ["hello", "world", "hello", "python", "world", "hello"]\n\nfreq = {}\nfor word in words:\n    freq[word] = freq.get(word, 0) + 1\n# OR\nfrom collections import Counter\n\nwords = ["hello", "world", "hello", "python", "world", "hello"]\n\nfreq = Counter(words)`,
       tieredHints: {
         apiSignature: 'dict.get(key, default=None)',
         skeleton: `words = [____, ____, ____, ____, ____, ____]\n\nfreq = ____\nfor word in words:\n    freq[____] = freq.____(word, ____) ____ ____`,
@@ -81,7 +81,7 @@ export const py_data_structures_questions: Question[] = [
           description: 'Should zip into dictionary',
         },
       ],
-      solution: `keys = ["name", "age", "city"]\nvalues = ["Alice", 30, "London"]\n\nresult = dict(zip(keys, values))`,
+      solution: `keys = ["name", "age", "city"]\nvalues = ["Alice", 30, "London"]\n\nresult = dict(zip(keys, values))\n# OR\nkeys = ["name", "age", "city"]\nvalues = ["Alice", 30, "London"]\n\nresult = {k: v for k, v in zip(keys, values)}`,
       tieredHints: {
         apiSignature: 'zip(*iterables) -> zip object',
         skeleton: `keys = ["name", "age", "city"]\nvalues = ["Alice", ____, "London"]\n\nresult = ____(____(____, ____))`,
@@ -107,7 +107,7 @@ export const py_data_structures_questions: Question[] = [
           description: 'Should create squares dict',
         },
       ],
-      solution: `squares = {n: n**2 for n in range(1, 6)}`,
+      solution: `squares = {n: n**2 for n in range(1, 6)}\n# OR\nsquares = {n: n * n for n in range(1, 6)}`,
       tieredHints: {
         apiSignature: 'range(start, stop, step=1) -> range',
         skeleton: `squares = {____: n ____ ____ for n in ____(____, ____)}`,
@@ -296,7 +296,7 @@ print(nums)`,
       question:
         'Fill in the builtin that yields (index, value) pairs for an iterable.',
       template: `for i, fruit in ___(["apple", "banana"], start=1):
-      print(i, fruit)`,
+    print(i, fruit)`,
       blanks: ['enumerate'],
       solution:
         'for i, fruit in enumerate(["apple", "banana"], start=1):\n    print(i, fruit)',
@@ -334,7 +334,7 @@ print(nums)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Make a deep copy of a nested list and confirm mutating the copy doesn\'t change the original.',
+        'Make a deep copy of a nested list, change the copy, then print the original a followed by the copy b to show the original is unchanged.',
       correctOrder: [
         'import copy',
         '',
@@ -586,7 +586,7 @@ print(nums)`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Iterate a list AND its index using enumerate(starting from 1).',
+        'Print each fruit with its position number, counting from 1, using enumerate.',
       correctOrder: [
         'fruits = ["apple", "banana", "cherry"]',
         'for i, fruit in enumerate(fruits, start=1):',
@@ -773,7 +773,7 @@ counts = Counter("aabbbccd")
 print(counts.most_common(2))`,
       expectedOutput: `[('b', 3), ('a', 2)]`,
       explanation:
-        'Counter("aabbbccd") tallies each char: a=2, b=3, c=2, d=1. .most_common(2) returns the top 2 as (element, count) tuples sorted by count descending. Ties are broken by insertion order — a came before c, both with count 2 — but a wins because it has count 2 vs c\'s count 2 still tie. Looking again: b=3 (top), a=2, c=2, d=1. Top 2: b and the first of the count-2 group, which is a (inserted before c).',
+        'Counter("aabbbccd") tallies each character: a=2, b=3, c=2, d=1. .most_common(2) returns the top 2 as (element, count) tuples, highest count first. b (3) comes first. a and c tie on 2, and ties keep the order the elements were first seen, so a (seen before c) takes second place.',
       hints: ['Top 2 by count; ties broken by insertion order.'],
       tags: ['data-structures', 'Counter', 'most_common'],
       concepts: ['py-collections-stdlib'],
@@ -949,6 +949,11 @@ print(squares)
       solution: `squares = []
 for i in range(1, 6):
     squares.append(i ** 2)
+print(squares)
+# OR
+squares = []
+for i in range(1, 6):
+    squares.append(i * i)
 print(squares)`,
       tieredHints: {
         apiSignature: 'list.append(object) -> None',
@@ -1310,6 +1315,14 @@ print(person.____())`,
     for word in text.split():
         counts[word] = counts.get(word, 0) + 1
     return counts
+
+result = word_count("the cat sat on the mat the cat")
+print(result)
+# OR
+from collections import Counter
+
+def word_count(text):
+    return dict(Counter(text.split()))
 
 result = word_count("the cat sat on the mat the cat")
 print(result)`,

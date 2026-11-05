@@ -659,6 +659,9 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `be-infra-dbperf-2` | INTERMEDIATE | `DJ_POSTGRES` | `topic_dj_postgres.ts` | 🟢 Completed | |
 | `dj-postgres-adv-1` | ADVANCED | `DJ_POSTGRES` | `topic_dj_postgres.ts` | 🟢 Completed | |
 | `dj-postgres-adv-2` | ADVANCED | `DJ_POSTGRES` | `topic_dj_postgres.ts` | 🟢 Completed | |
+| `be-sql-1` | BEGINNER | `DJ_POSTGRES` | `topic_dj_postgres.ts` | 🟢 Completed | |
+| `be-sql-2` | INTERMEDIATE | `DJ_POSTGRES` | `topic_dj_postgres.ts` | 🟢 Completed | |
+| `be-sql-3` | BEGINNER | `DJ_POSTGRES` | `topic_dj_postgres.ts` | 🟢 Completed | |
 
 
 ### REST (`topic_dj_rest.ts`)
@@ -818,9 +821,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 
 | ID | Difficulty | Topic | Source File | Status | Notes |
 |---|---|---|---|---|---|
-| `be-sql-1` | BEGINNER | `PY_BASICS` | `topic_py_basics.ts` | 🟢 Completed | |
-| `be-sql-2` | INTERMEDIATE | `PY_BASICS` | `topic_py_basics.ts` | 🟢 Completed | |
-| `be-sql-3` | BEGINNER | `PY_BASICS` | `topic_py_basics.ts` | 🟢 Completed | |
 | `py-basic-2` | BEGINNER | `PY_BASICS` | `topic_py_basics.ts` | 🟢 Completed | |
 | `py-basic-3` | BEGINNER | `PY_BASICS` | `topic_py_basics.ts` | 🟢 Completed | |
 | `py-basic-4` | BEGINNER | `PY_BASICS` | `topic_py_basics.ts` | 🟢 Completed | |
@@ -1147,8 +1147,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 
 | ID | Difficulty | Topic | Source File | Status | Notes |
 |---|---|---|---|---|---|
-| `pcpp-pickle-2` | INTERMEDIATE | `PY_MODULES` | `topic_py_modules.ts` | 🟢 Completed | |
-| `pcpp-shelve-2` | INTERMEDIATE | `PY_MODULES` | `topic_py_modules.ts` | 🟢 Completed | |
 | `pe1-modules-2` | BEGINNER | `PY_MODULES` | `topic_py_modules.ts` | 🟢 Completed | |
 | `pe1-modules-3` | BEGINNER | `PY_MODULES` | `topic_py_modules.ts` | 🟢 Completed | |
 
@@ -1230,6 +1228,8 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `py-json-2` | BEGINNER | `PY_SERIALIZATION` | `topic_py_serialization.ts` | 🟢 Completed | |
 | `py-json-3` | BEGINNER | `PY_SERIALIZATION` | `topic_py_serialization.ts` | 🟢 Completed | |
 | `py-json-4` | INTERMEDIATE | `PY_SERIALIZATION` | `topic_py_serialization.ts` | 🟢 Completed | |
+| `pcpp-pickle-2` | INTERMEDIATE | `PY_SERIALIZATION` | `topic_py_serialization.ts` | 🟢 Completed | |
+| `pcpp-shelve-2` | INTERMEDIATE | `PY_SERIALIZATION` | `topic_py_serialization.ts` | 🟢 Completed | |
 
 
 ### SHELL_OS (`topic_py_shell_os.ts`)

@@ -17,11 +17,11 @@ export const py_oop_questions: Question[] = [
       question: 'What is a class in Python?',
       options: [
         { id: 'a', text: 'A blueprint that defines the structure (attributes) and behavior (methods) for objects you create from it.', isCorrect: true },
-        { id: 'b', text: 'A type of variable that can only hold numbers.', isCorrect: false },
-        { id: 'c', text: 'A built-in function that converts data types.', isCorrect: false },
-        { id: 'd', text: 'A loop construct similar to `for` and `while`.', isCorrect: false },
+        { id: 'b', text: 'A single object that holds data; calling `Dog()` twice gives back that same object.', isCorrect: false },
+        { id: 'c', text: 'A named group of functions, like a module, that cannot hold any data of its own.', isCorrect: false },
+        { id: 'd', text: 'A special kind of dict whose keys must all be declared before the program runs.', isCorrect: false },
       ],
-      explanation: 'A class is a template — `class Dog: ...` defines what every Dog has and can do. Each call like `Dog("Rex")` creates an instance from that template. The class itself is not the data; the instances are.',
+      explanation: 'A class is a template — `class Dog: ...` defines what every Dog has and can do. Each call like `Dog("Rex")` creates a new, separate instance from that template, so two calls give two objects. A class bundles data (attributes) with behaviour (methods), which a module of plain functions does not.',
       tags: ['class', 'oop', 'beginner', 'python'],
       concepts: ['py-class-instance-distinction'],
     },
@@ -33,12 +33,12 @@ export const py_oop_questions: Question[] = [
       course: Course.BACKEND,
       question: 'In a method definition like `def __init__(self, name):`, what does `self` refer to?',
       options: [
-        { id: 'a', text: 'The instance currently being acted on — Python passes it automatically when you call `obj.method()`.', isCorrect: true },
-        { id: 'b', text: 'The class itself, not the instance.', isCorrect: false },
-        { id: 'c', text: 'A reserved keyword for inheritance.', isCorrect: false },
-        { id: 'd', text: 'An optional placeholder you can omit.', isCorrect: false },
+        { id: 'a', text: 'The instance the method was called on - Python passes it in for you when you call `obj.method()`.', isCorrect: true },
+        { id: 'b', text: 'The class the method is defined in, so every instance shares one and the same `self`.', isCorrect: false },
+        { id: 'c', text: 'A reserved keyword, so the first parameter must be spelled exactly `self`.', isCorrect: false },
+        { id: 'd', text: 'An optional parameter you can leave out of `def` when the method does not use it.', isCorrect: false },
       ],
-      explanation: '`self` is the convention name for the first parameter of an instance method. When you call `dog.bark()`, Python rewrites it as `Dog.bark(dog)` and passes `dog` as `self`. The name `self` is not a keyword — it is just a strongly-followed convention.',
+      explanation: '`self` is the convention name for the first parameter of an instance method. When you call `dog.bark()`, Python rewrites it as `Dog.bark(dog)` and passes `dog` as `self`. The name `self` is not a keyword - it is just a strongly-followed convention. It cannot be left out of `def`: Python still passes the instance, so a method defined without it fails with a TypeError when called on an instance.',
       tags: ['self', 'method', 'instance', 'beginner', 'python'],
       concepts: ['py-class-instance-distinction'],
     },
@@ -85,9 +85,9 @@ print(p.____)`,
       question:
         'Fill in the call that delegates initialization to the parent class.',
       template: `class Dog(Animal):
-      def __init__(self, name, breed):
-          ___().__init__(name)
-          self.breed = breed`,
+    def __init__(self, name, breed):
+        ___().__init__(name)
+        self.breed = breed`,
       blanks: ['super'],
       solution:
         'class Dog(Animal):\n    def __init__(self, name, breed):\n        super().__init__(name)\n        self.breed = breed',
@@ -107,9 +107,9 @@ print(p.____)`,
       question:
         'Fill in the decorator that turns a method into one that receives the class as cls.',
       template: `class User:
-      @___
-      def from_dict(cls, d):
-          return cls(d["name"])`,
+    @___
+    def from_dict(cls, d):
+        return cls(d["name"])`,
       blanks: ['classmethod'],
       solution:
         'class User:\n    @classmethod\n    def from_dict(cls, d):\n        return cls(d["name"])',
@@ -129,9 +129,9 @@ print(p.____)`,
       question:
         'Fill in the decorator that turns a method into one that takes neither self nor cls.',
       template: `class Math:
-      @___
-      def add(a, b):
-          return a + b`,
+    @___
+    def add(a, b):
+        return a + b`,
       blanks: ['staticmethod'],
       solution: 'class Math:\n    @staticmethod\n    def add(a, b):\n        return a + b',
       explanation:
@@ -150,9 +150,9 @@ print(p.____)`,
       question:
         'Fill in the decorator that exposes price as an attribute (no parens needed at access).',
       template: `class Item:
-      @___
-      def price(self):
-          return self.base + self.tax`,
+    @___
+    def price(self):
+        return self.base + self.tax`,
       blanks: ['property'],
       solution:
         'class Item:\n    @property\n    def price(self):\n        return self.base + self.tax',
@@ -172,8 +172,8 @@ print(p.____)`,
       question:
         'Fill in the implicit first parameter of an instance method.',
       template: `class Dog:
-      def bark(___):
-          print("woof")`,
+    def bark(___):
+        print("woof")`,
       blanks: ['self'],
       solution: 'class Dog:\n    def bark(self):\n        print("woof")',
       explanation:
@@ -192,7 +192,7 @@ print(p.____)`,
       question:
         'Fill in the builtin that checks if obj is an instance of cls (including subclasses).',
       template: `if ___(d, Animal):
-      print("is animal")`,
+    print("is animal")`,
       blanks: ['isinstance'],
       solution: 'if isinstance(d, Animal):\n    print("is animal")',
       explanation:
@@ -292,7 +292,7 @@ print(dog1.species ____ dog2.____)`,
       topic: Topic.PY_OOP,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a class called `Dog` with `name` and `breed` attributes set in the `__init__` method. Add a `bark()` method that returns the string "Woof!" (exactly — one "o" and one "f" doubled). Then create an instance of `Dog` with name "Rex" and breed "Labrador", and `print()` the result of calling its `bark()` method.',
+      question: 'Create a class called `Dog` with `name` and `breed` attributes set in the `__init__` method. Add a `bark()` method that returns the string "Woof!". Then create an instance of `Dog` with name "Rex" and breed "Labrador", and `print()` the result of calling its `bark()` method.',
       starterCode: `# Define the Dog class with __init__ and bark methods
 
 
@@ -319,9 +319,7 @@ print(dog1.species ____ dog2.____)`,
         return "Woof!"
 
 my_dog = Dog("Rex", "Labrador")
-print(my_dog.bark())   # Woof!
-print(my_dog.name)     # Rex
-print(my_dog.breed)    # Labrador`,
+print(my_dog.bark())   # Woof!`,
       explanation: '`__init__` is the constructor method — it runs automatically when you create a new object. `self` refers to the instance being created and lets you attach attributes to it. Methods are functions defined inside a class that take `self` as their first parameter, giving them access to the instance\'s data.',
       hints: [
         '`__init__` takes `self` plus any parameters you want to pass when creating an object',
@@ -339,9 +337,7 @@ print(my_dog.breed)    # Labrador`,
         return "____"
 
 my_dog = Dog("Rex", "Labrador")
-print(my_dog.____())
-print(my_dog.____)
-print(my_dog.____)`,
+print(my_dog.____())`,
       },
       tags: ['oop', 'class', '__init__', 'methods', 'basics'],
       concepts: ['py-class-instance-distinction', 'py-modules-imports'],
@@ -433,7 +429,7 @@ class Dog(____):
       question:
         'Fill in the syntax that declares Dog as a subclass of Animal.',
       template: `class Dog___Animal___:
-      pass`,
+    pass`,
       blanks: ['(', ')'],
       solution: 'class Dog(Animal):\n    pass',
       explanation:
@@ -482,7 +478,7 @@ class Dog(____):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use @classmethod to define an alternative constructor User.from_dict.',
+        'Give User an __init__ that stores name and age, then (after __init__) use @classmethod to add an alternative constructor User.from_dict.',
       correctOrder: [
         'class User:',
         '    def __init__(self, name, age):',
@@ -513,7 +509,7 @@ class Dog(____):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use @property to expose price as a computed attribute (with no setter).',
+        'Give Item an __init__ that stores base and tax, then (after __init__) use @property to expose price as a computed attribute (with no setter).',
       correctOrder: [
         'class Item:',
         '    def __init__(self, base, tax):',
@@ -812,10 +808,10 @@ False`,
       course: Course.BACKEND,
       question: 'What does `__dict__` return when called on an instance vs. a class?',
       options: [
-        { id: 'a', text: 'Both return the same dictionary', isCorrect: false },
+        { id: 'a', text: 'Both return the same dictionary, holding every attribute the instance can reach', isCorrect: false },
         { id: 'b', text: 'Instance `__dict__` holds instance variables; class `__dict__` holds class attributes and methods', isCorrect: true },
-        { id: 'c', text: '`__dict__` only exists on classes, not instances', isCorrect: false },
-        { id: 'd', text: '`__dict__` returns a list of method names', isCorrect: false },
+        { id: 'c', text: '`__dict__` exists only on classes; reading it on an instance raises AttributeError', isCorrect: false },
+        { id: 'd', text: 'Instance `__dict__` holds the methods; class `__dict__` holds the variables set in `__init__`', isCorrect: false },
       ],
       explanation: 'Every object in Python has a `__dict__` attribute. For an instance, `obj.__dict__` returns the instance\'s own namespace — just its instance variables. For a class, `MyClass.__dict__` returns the class namespace — class variables, methods, and special attributes. This is how Python\'s attribute lookup works: it checks instance `__dict__` first, then class `__dict__`.',
       hints: [
@@ -919,7 +915,7 @@ for animal in ____:
       topic: Topic.PY_OOP,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a `Vehicle` base class with `make` and `year`, then a `Car` subclass that adds `num_doors`. Use `super().__init__()` in `Car.__init__`. Add a `describe()` method to `Car`.',
+      question: 'Create a `Vehicle` base class with `make` and `year`, and a `describe()` method that returns `"{year} {make}"`. Then create a `Car` subclass that adds `num_doors`, calling `super().__init__()` in `Car.__init__`, and overrides `describe()` to return `"{year} {make} ({num_doors}-door)"`. Build `Car("Toyota", 2022, 4)` and print its `describe()` (`2022 Toyota (4-door)`), then its `make`.',
       starterCode: `# Define Vehicle with make and year, and a describe() that returns "{year} {make}"
 # Define Car(Vehicle) that adds num_doors and overrides describe()
 

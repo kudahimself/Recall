@@ -541,4 +541,84 @@ got bye`,
     tags: ['generators', 'coroutine', 'send', 'priming'],
     concepts: ['py-generator-yield'],
   },
+  {
+      id: 'py-functions-cloze-6',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_GENERATORS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the keyword that turns a function into a generator.',
+      template: `def squares(n):
+    for i in range(n):
+        ___ i * i`,
+      blanks: ['yield'],
+      solution: 'def squares(n):\n    for i in range(n):\n        yield i * i',
+      explanation:
+        'yield turns a function into a generator. Calling the function returns a generator object that produces values lazily. return ends iteration; yield suspends and resumes.',
+      hints: ['Five letters; same word as the verb meaning "produce".'],
+      tags: ['functions', 'generator', 'yield'],
+      concepts: ['py-generator-yield'],
+    },
+  {
+      id: 'py-functions-predict-5',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.PY_GENERATORS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'What does this code print?',
+      code: `def gen():
+    print("start")
+    yield 1
+    print("middle")
+    yield 2
+    print("end")
+
+g = gen()
+print("before")
+print(next(g))
+print(next(g))`,
+      expectedOutput: `before
+start
+1
+middle
+2`,
+      explanation:
+        'Generator functions don\'t run their body when called — they return a generator object. Each next() runs UP TO the next yield. So "before" prints first, then next() runs from start through the first yield (printing "start", then 1). Second next() resumes after the yield, prints "middle", yields 2.',
+      hints: ['Generators run lazily; next() advances to the next yield.'],
+      tags: ['functions', 'generator', 'yield'],
+      concepts: ['py-generator-yield'],
+    },
+  {
+      id: 'py-functions-parsons-7',
+      type: QuestionType.PARSONS,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.PY_GENERATORS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Build a generator function `squares(n)` that lazily yields `i * i` for each `i` in `0..n-1` using `yield` (no list built internally). Then drive it: loop over `squares(4)` and print each value on its own line.',
+      correctOrder: [
+        'def squares(n):',
+        '    for i in range(n):',
+        '        yield i * i',
+        '',
+        'for s in squares(4):',
+        '    print(s)',
+      ],
+      distractorLines: [
+        '    return i * i',
+        'def squares(n):',
+        '    return [i * i for i in range(n)]',
+      ],
+      solution:
+        'def squares(n):\n    for i in range(n):\n        yield i * i\n\nfor s in squares(4):\n    print(s)',
+      explanation:
+        'A function with yield is a GENERATOR — calling it returns a generator object that lazily produces values. return inside a generator stops iteration (StopIteration); using return INSTEAD of yield makes it a regular function.',
+      hints: ['yield makes it a generator; return ends iteration.'],
+      tags: ['functions', 'generator', 'yield'],
+      concepts: ['py-generator-yield'],
+    },
 ];
