@@ -80,6 +80,7 @@ House rules (check-lessons.js enforces the first two):
   Keep numbers integers (SQLite prints `12.5` where SQL Server prints `12.50`).
 - Python: plain `print` output; it runs on `python3 -I`.
   A Django / DRF example cannot run without a project: set `runs: false` (allowed only when the code imports `django` or `rest_framework`), say in a first-line comment what project and model it assumes, and verify `output` by hand.
+  A GitHub Actions workflow cannot run without a runner either: keep `language: CodeLanguage.PYTHON` as the bank's CI/CD questions do, set `runs: false` (allowed only when the code has top-level `on:` and `jobs:` and a job's `runs-on:`), and make `output` the lines its `run` steps print, verified by hand.
 - Set `output` to exactly what the code prints (SQL: `col | col` header and rows, a blank line between result sets).
   Run the checker to get it, then read it and confirm every value by hand against the steps.
 

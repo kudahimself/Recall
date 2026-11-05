@@ -145,7 +145,7 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
               <div className="rc-checked">
                 <CheckCircle2 size={12} />{' '}
                 {lesson.worked.runs === false
-                  ? 'This example needs a Django project to run, so its output was checked by hand.'
+                  ? `This example needs ${/^jobs:\s*$/m.test(lesson.worked.code) ? 'a GitHub Actions runner' : 'a Django project'} to run, so its output was checked by hand.`
                   : 'This example is run by check-lessons.js on every test run, and its output matches.'}
               </div>
             </>

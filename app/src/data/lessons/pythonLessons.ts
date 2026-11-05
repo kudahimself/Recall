@@ -4901,4 +4901,216 @@ db query for poetry
       'dj-redis-predict-1',
     ],
   },
+  {
+    id: 'dj_factory_boy/1',
+    topicKeys: [Topic.DJ_FACTORY_BOY],
+    step: 1,
+    title: 'Factory Boy & Advanced Testing',
+    idea: [
+      lines(
+        "A test needs rows in the database, and writing every required field by hand in each test is long and breaks whenever a model gains a field.",
+        "factory_boy keeps one factory per model with a default for every field, so a test names only the fields it cares about.",
+        "When a model gains a required field, only its factory changes.",
+      ),
+      lines(
+        "A factory subclasses `factory.django.DjangoModelFactory` and names its model in `class Meta`.",
+        "`Sequence(lambda n: ...)` gives each object a unique value from a counter, `Faker(\"name\")` a realistic random one, and `SubFactory(OtherFactory)` builds the related object for a foreign key.",
+        "Inside `class Params`, a `Trait` bundles several field values under one flag, so `UserFactory(admin=True)` turns them all on.",
+      ),
+      lines(
+        "Calling the factory, `F()` or `F.create()`, saves the object, while `F.build()` makes it in memory without saving.",
+        "`F.create_batch(n, field=value)` saves n objects with the same overrides.",
+        "Any keyword argument replaces that field's default for this call only.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# tests/factories.py
+import factory
+
+class ThingFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Thing                                   # the Django model
+
+    code = factory.Sequence(lambda n: f"code-{n}")      # unique: n = 0, 1, 2 ...
+    label = factory.Faker("word")                       # realistic random value
+    owner = factory.SubFactory(OwnerFactory)            # creates the FK row too
+
+    class Params:
+        flag = factory.Trait(field_a=True, field_b=1)   # ThingFactory(flag=True)
+
+# in a test
+obj = ThingFactory()                        # saved, every default filled in
+obj = ThingFactory(label="x", owner=o)      # override only what the test needs
+tmp = ThingFactory.build()                  # not saved: tmp.pk is None
+objs = ThingFactory.create_batch(n, field_a=True)`,
+    },
+    pitfall: lines(
+      "A `SubFactory` builds a new related object every time, so `PostFactory.create_batch(3)` also saves three different authors.",
+      "A test that expects the posts to share an author, or that counts users, then fails, or passes for the wrong reason.",
+      "Create the shared object once and pass it in, as in `PostFactory.create_batch(3, author=author)`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# library/factories.py; Member(card_no, full_name), Loan(member, book_title, returned=False)
+import factory
+from library.models import Loan, Member
+
+class MemberFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Member
+
+    card_no = factory.Sequence(lambda n: 1000 + n)
+    full_name = factory.Faker("name")
+
+class LoanFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Loan
+
+    member = factory.SubFactory(MemberFactory)
+    book_title = factory.Faker("sentence", nb_words=3)
+
+    class Params:
+        closed = factory.Trait(returned=True)
+
+# python manage.py shell on an empty database; a test runs the same calls
+from django.db.models import Count
+from library.factories import LoanFactory, MemberFactory
+from library.models import Loan, Member
+
+LoanFactory(closed=True)
+ana = MemberFactory(full_name="Ana Silva")
+LoanFactory.create_batch(2, member=ana)
+spare = LoanFactory.build()
+print(Member.objects.count(), Loan.objects.count(), spare.pk)
+print(list(Member.objects.annotate(n=Count("loan")).order_by("card_no").values_list("card_no", "n")))
+print(Loan.objects.filter(returned=False).count(), spare.member.card_no)`,
+      steps: [
+        "Lines 5-10: `MemberFactory` numbers cards from 1000 with a `Sequence` and fills a fake name with `Faker`, so every member is valid and unique without the caller giving either.",
+        "Lines 16-20: each loan creates its own member through the `SubFactory`, and the `closed` trait sets `returned=True` when a call passes `closed=True`.",
+        "Lines 27-29: the closed loan creates member 1000, Ana takes card 1001 (her name is overridden, her card is not), and `create_batch(2, member=ana)` saves two open loans that share her instead of making new members.",
+        "Line 30: `build()` makes a loan and its member in memory only, so `spare.pk` is None and nothing is saved, though its member still used up card 1002.",
+        "Lines 31-33: the database holds 2 members and 3 loans, card 1000 has one loan and Ana's card has two, and the 2 open loans are Ana's.",
+      ],
+      output: `2 3 None
+[(1000, 1), (1001, 2)]
+2 1002`,
+    },
+    exercises: [
+      'py-dj-factory-what',
+      'dj-factoryboy-predict-1',
+      'dj-factoryboy-trait-cloze-1',
+      'dj-factoryboy-batch-cloze-1',
+      'py-dj-factory-userfactory',
+    ],
+  },
+  {
+    id: 'dj_cicd/1',
+    topicKeys: [Topic.DJ_CICD],
+    step: 1,
+    title: 'CI/CD with GitHub Actions',
+    idea: [
+      lines(
+        "Continuous integration (CI) runs the tests on every push and pull request, so a change that breaks something is caught before it is merged.",
+        "Continuous delivery keeps every green build ready to release with one approval, and continuous deployment ships each green build of `main` with no approval at all.",
+      ),
+      lines(
+        "GitHub Actions reads workflows from `.github/workflows/*.yml`.",
+        "`on:` names the events that start a run, `jobs:` holds jobs that each run on a fresh machine named by `runs-on:`, and a job's `steps:` run in order.",
+        "A step is either a ready-made action, such as `uses: actions/checkout@v4`, or a shell command after `run:`.",
+        "A step that exits with a non-zero code, such as a failing test run, fails its job, and the steps after it are skipped.",
+      ),
+      lines(
+        "`needs: test` makes a job wait for `test` and run only if it passed, and `if:` adds a condition such as the branch or the event.",
+        "`strategy.matrix` runs a job once per value, and `cache: pip` on `setup-python` reuses downloaded packages between runs.",
+        // eslint-disable-next-line no-template-curly-in-string
+        "A secret saved in the repository settings reaches a step through `env:` as `${{ secrets.NAME }}`, and its value is masked as `***` in the log.",
+        "`environment: production` ties a job to that environment's own secrets and required reviewers.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]                  # events that start a run
+jobs:
+  test:
+    runs-on: ubuntu-latest                # a fresh machine for each job
+    strategy:
+      matrix:
+        python-version: ["3.x", "3.y"]    # one job per value
+    steps:                                # in order; a non-zero exit stops the job
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: \${{ matrix.python-version }}
+          cache: pip
+      - run: command                      # install, lint, test
+  deploy:
+    needs: test                           # only after test has passed
+    if: condition                         # e.g. a push to main
+    environment: production               # its secrets and reviewers
+    runs-on: ubuntu-latest
+    steps:
+      - run: command
+        env:
+          TOKEN: \${{ secrets.TOKEN }}     # masked as *** in the log`,
+    },
+    pitfall: lines(
+      "Jobs run in parallel unless `needs:` says otherwise.",
+      "A deploy job without `needs: test` starts at the same time as the tests and ships the build even when they then fail.",
+      "Give every deploy job `needs:` on the jobs that check the code, and an `if:` for the branch it deploys from.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# .github/workflows/checks.yml; this run is a push to main, echo steps stand in for commands
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: echo "18 tests passed"
+  release:
+    needs: checks
+    if: github.event_name == 'push'
+    environment: live
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "releasing with $SHIP_KEY"
+        env:
+          SHIP_KEY: \${{ secrets.SHIP_KEY }}`,
+      steps: [
+        "Lines 2-5: a run starts on a push to `main` and on every pull request.",
+        lines(
+          "Lines 7-15: `checks` checks out the code, installs Python 3.13 with pip downloads cached, and runs the suite, which the echo stands in for.",
+          "In the real file that step is `python manage.py test`, and a failing suite exits non-zero and fails the job.",
+        ),
+        "Lines 16-19: `release` waits for `checks` to pass, runs only for a push, and uses the `live` environment, where `SHIP_KEY` is saved as a secret.",
+        lines(
+          "Lines 22-24: the secret reaches the command as an environment variable, and GitHub masks its value as `***` in the log.",
+          "The real command would be a release script such as `./release.sh`.",
+        ),
+        "On a pull request, `release` is skipped by its `if:`, so only the first line would print.",
+      ],
+      output: `18 tests passed
+releasing with ***`,
+    },
+    exercises: [
+      'py-dj-cicd-what',
+      'dj-cicd-predict-1',
+      'py-dj-cicd-gha-tests',
+      'py-dj-cicd-secrets',
+      'py-dj-cicd-deploy-step',
+    ],
+  },
 ];

@@ -769,11 +769,11 @@ export const backendOrderedQuestions: Question[] = [
   // ===== Topic.DJ_FACTORY_BOY =====
   q('py-dj-factory-what'), q('dj-factoryboy-cloze-1'), q('py-dj-factory-userfactory'), q('py-dj-factory-subfactory'),
   q('dj-factoryboy-trait-cloze-1'), q('py-dj-factory-traits'), q('dj-factoryboy-batch-cloze-1'), q('py-dj-factory-usage-test'),
-  q('py-dj-factory-vs-fixture'),
+  q('py-dj-factory-vs-fixture'), q('dj-factoryboy-predict-1'),
 
   // ===== Topic.DJ_CICD =====
   q('py-dj-cicd-what'), q('py-dj-cicd-gha-tests'), q('py-dj-cicd-gha-matrix'), q('py-dj-cicd-gha-cache'),
-  q('py-dj-cicd-secrets'), q('dj-cicd-parsons-1'), q('py-dj-cicd-deploy-step'),
+  q('py-dj-cicd-secrets'), q('dj-cicd-parsons-1'), q('py-dj-cicd-deploy-step'), q('dj-cicd-predict-1'),
 
   // ===== Topic.DJ_NGINX =====
   q('be-infra-nginx-3'), q('dj-nginx-proxypass-cloze-1'), q('be-infra-nginx-1'), q('be-infra-nginx-2'),
