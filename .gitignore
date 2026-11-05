@@ -26,6 +26,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Python virtualenv (exercises/README.md)
+.venv/
+
 # editor/IDE
 .vscode/
 .idea/
