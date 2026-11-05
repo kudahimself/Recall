@@ -47,7 +47,7 @@ b = date(2024, 12, 31)
 print((b - a).days)`,
       expectedOutput: `365`,
       explanation:
-        'Subtracting two dates returns a timedelta. .days gives the day delta. 2024 is a leap year (Jan 1 → Dec 31 is 365 days; Dec 31 → Jan 1 next year would be 366).',
+        'Subtracting two dates returns a timedelta. .days gives the day delta. 2024 is a leap year with 366 days, so from Jan 1 to Dec 31 is 365 days; Jan 1 2024 to Jan 1 2025 would be 366.',
       hints: ['Date subtraction yields timedelta. 2024 is a leap year.'],
       tags: ['datetime', 'timedelta', 'leap-year'],
       concepts: ['py-datetime-handling'],
@@ -192,12 +192,12 @@ print(td.total_seconds())`,
       course: Course.BACKEND,
       question: 'What is the difference between a "naive" and an "aware" `datetime` object?',
       options: [
-        { id: 'a', text: 'There is no difference', isCorrect: false },
-        { id: 'b', text: 'A naive datetime has no `tzinfo` attached — it represents a wall-clock time with no timezone. An aware datetime carries a `tzinfo` (usually via `zoneinfo.ZoneInfo`) and represents a specific instant in UTC-anchored time.', isCorrect: true },
-        { id: 'c', text: 'Naive is faster; aware is slower but more accurate', isCorrect: false },
-        { id: 'd', text: 'Naive is for dates only; aware is for dates with times', isCorrect: false },
+        { id: 'a', text: 'A naive datetime is always in the local time zone of the machine, and an aware one is always stored in UTC whatever zone you pass', isCorrect: false },
+        { id: 'b', text: 'A naive datetime has no `tzinfo`, so it is a wall-clock time with no zone; an aware one carries a `tzinfo` and marks one exact moment', isCorrect: true },
+        { id: 'c', text: 'They differ only in how they print: you can compare or subtract a naive and an aware one, because Python treats the naive one as UTC', isCorrect: false },
+        { id: 'd', text: 'A naive datetime holds only a calendar date with no clock time, while an aware one holds both the date and the time of day', isCorrect: false },
       ],
-      explanation: 'Naive: `datetime.now()` → no tzinfo → ambiguous across timezones and DST. Aware: `datetime.now(ZoneInfo("Europe/Dublin"))` → unambiguous. In a backend you want ALL persisted datetimes to be aware (usually UTC). Mixing naive and aware in arithmetic raises `TypeError`. Use `zoneinfo.ZoneInfo` (3.9+) instead of `pytz`.',
+      explanation: 'Naive: `datetime.now()` → no tzinfo → ambiguous across timezones and DST. Aware: `datetime.now(ZoneInfo("Europe/Dublin"))` → unambiguous. In a backend you want ALL persisted datetimes to be aware (usually UTC). Mixing naive and aware in arithmetic raises `TypeError`. Use `zoneinfo.ZoneInfo` (3.9+) instead of `pytz`. A naive datetime is not assumed to be local time or UTC: it simply has no zone, which is why Python raises `TypeError` when you subtract it from an aware one or order them with `<`. An aware datetime keeps the zone you gave it rather than being converted to UTC, and both kinds hold a date and a time (the separate `date` type holds only a date).',
       hints: [
         'Naive = no tzinfo; aware = has tzinfo',
         'In 3.9+, use zoneinfo.ZoneInfo (not pytz)',
@@ -215,7 +215,7 @@ print(td.total_seconds())`,
       language: CodeLanguage.PYTHON,
       question: 'Build a timezone-AWARE `datetime` representing `2025-01-15 14:30:00` in UTC — use the built-in UTC tzinfo constant from the `datetime` module (no third-party dependencies needed). Print the instance formatted as an ISO-8601 string with offset (expect `2025-01-15T14:30:00+00:00`).',
       starterCode: `import datetime
-  `,
+`,
       testCases: [
         {
           input: 'UTC datetime ISO format',
@@ -294,7 +294,7 @@ print(utc.____(ZoneInfo("____")).____())`,
       language: CodeLanguage.PYTHON,
       question: 'Build two naive datetimes: `start` at `2025-01-01 09:00` and `end` at `2025-01-01 17:30`. Compute the duration between them by subtracting one from the other (the result is a `timedelta`) and assign it to `delta`. Print `delta` (expect `8:30:00`), then print the duration in total seconds as a float (expect `30600.0`).',
       starterCode: `import datetime
-  `,
+`,
       testCases: [
         {
           input: 'timedelta arithmetic',
@@ -340,7 +340,7 @@ print(delta.____())`,
       question:
         'Parse the string `"2025-01-15 14:30"` into a `datetime` instance using the classmethod that takes a string + a format directive. Use the directive `"%Y-%m-%d %H:%M"` matching year-month-day followed by hour:minute. Bind the result to `dt` and print it (expect `2025-01-15 14:30:00`). Then format the SAME `dt` back into a DIFFERENT shape — day/month/year with slashes (directive `"%d/%m/%Y"`) — using the instance method that formats a datetime to a string. Print the result (expect `15/01/2025`).',
       starterCode: `import datetime
-  `,
+`,
       testCases: [
         {
           input: 'strptime then strftime',
@@ -380,7 +380,7 @@ print(dt.____("____"))`,
       language: CodeLanguage.PYTHON,
       question: 'Build a path `p` by combining the three segments `"/var/log"`, `"app"`, and `"server.log"` using `pathlib.Path`\'s `/` join operator. Print the string form of the path (expect `/var/log/app/server.log` on POSIX). Then print three attributes of the path: the final component (expect `server.log`), the file extension (expect `.log`), and the parent directory (expect `/var/log/app`).',
       starterCode: `from pathlib import Path
-  `,
+`,
       testCases: [
         {
           input: 'pathlib joining and inspection',
@@ -423,7 +423,7 @@ print(p.____)`,
       language: CodeLanguage.PYTHON,
       question: 'Build a path `p` for the file `"greeting.txt"` using `pathlib.Path`. Using pathlib\'s one-shot writing helper, write the string `"hello world"` into the file. Then read the file back with pathlib\'s one-shot reading helper and print the result.',
       starterCode: `from pathlib import Path
-  `,
+`,
       testCases: [
         {
           input: 'write_text and read_text',

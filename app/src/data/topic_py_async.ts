@@ -160,10 +160,11 @@ async def main():
 
 asyncio.run(main())`,
       blanks: ['create_task'],
+      blankAlternates: [['ensure_future']],
       solution:
         'import asyncio\n\nasync def work():\n    return 42\n\nasync def main():\n    task = asyncio.create_task(work())\n    result = await task\n    print(result)\n\nasyncio.run(main())',
       explanation:
-        'asyncio.create_task wraps a coroutine in a Task and schedules it on the event loop immediately. The Task starts running on the next yield point — you can await it later to get its result.',
+        'asyncio.create_task wraps a coroutine in a Task and schedules it on the event loop immediately. The Task starts running at the next await point, and you can await it later to get its result. The older asyncio.ensure_future(coro) does the same for a coroutine, but create_task is the clearer modern name.',
       hints: ['Eleven-letter snake-case name: "create" then "task".'],
       tags: ['async', 'create_task'],
       concepts: ['py-async-coroutines'],
@@ -178,10 +179,10 @@ asyncio.run(main())`,
       question:
         'Fill in the dunder methods that make Block an async context manager.',
       template: `class Block:
-      async def ___(self):
-          return self
-      async def ___(self, exc_type, exc, tb):
-          pass`,
+    async def ___(self):
+        return self
+    async def ___(self, exc_type, exc, tb):
+        pass`,
       blanks: ['__aenter__', '__aexit__'],
       solution:
         'class Block:\n    async def __aenter__(self):\n        return self\n    async def __aexit__(self, exc_type, exc, tb):\n        pass',
@@ -401,13 +402,13 @@ asyncio.run(main())`,
       ],
       distractorLines: [
         '    with asyncio.timeout(1):',
-        '    except asyncio.TimeoutError:',
+        '    except asyncio.CancelledError:',
       ],
       solution:
         'import asyncio\n\nasync def main():\n    try:\n        async with asyncio.timeout(1):\n            await slow_op()\n    except TimeoutError:\n        print("slow")\n\nasyncio.run(main())',
       explanation:
-        'asyncio.timeout is an ASYNC context manager — must be used with `async with`, not plain `with`. On expiry it cancels the inner task and the failure surfaces as TimeoutError (the built-in, not asyncio.TimeoutError; both are aliased in 3.11+).',
-      hints: ['async context managers need async with — and catch the built-in TimeoutError.'],
+        'asyncio.timeout is an ASYNC context manager, so it must be used with `async with`, not plain `with`. On expiry it cancels the awaited work inside the block and turns that cancellation into the built-in TimeoutError when the block exits, so catching CancelledError outside the block never fires. (asyncio.TimeoutError is just another name for TimeoutError since 3.11.)',
+      hints: ['async context managers need async with, and the expired timeout surfaces as the built-in TimeoutError.'],
       tags: ['async', 'timeout', 'async-context-manager'],
       concepts: ['py-async-coroutines'],
     },
@@ -525,7 +526,7 @@ asyncio.run(main())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a simple async producer/consumer using asyncio.Queue. Producer puts 3 items; consumer prints them.',
+        'Build a simple async producer/consumer using asyncio.Queue: the producer puts 0, 1, 2 and then a None sentinel; the consumer prints each item until it gets None. Define producer first, then consumer, then main, which runs both with gather.',
       correctOrder: [
         'import asyncio',
         '',
@@ -554,8 +555,8 @@ asyncio.run(main())`,
       solution:
         'import asyncio\n\nasync def producer(q):\n    for i in range(3):\n        await q.put(i)\n    await q.put(None)\n\nasync def consumer(q):\n    while True:\n        item = await q.get()\n        if item is None:\n            break\n        print(item)\n\nasync def main():\n    q = asyncio.Queue()\n    await asyncio.gather(producer(q), consumer(q))\n\nasyncio.run(main())',
       explanation:
-        'asyncio.Queue is the async-native producer/consumer primitive. put/get are coroutines and must be awaited — sync .put/.get would either error or behave unexpectedly. The None sentinel is a common pattern for signaling end-of-stream.',
-      hints: ['Queue.put and .get are coroutines — both must be awaited.'],
+        'asyncio.Queue is the async-native producer/consumer primitive. put/get are coroutines and must be awaited - sync .put/.get would either error or behave unexpectedly. The None sentinel is a common pattern for signaling end-of-stream.',
+      hints: ['Queue.put and .get are coroutines - both must be awaited.'],
       tags: ['async', 'queue', 'producer-consumer'],
       concepts: ['py-async-coroutines'],
     },
@@ -600,7 +601,7 @@ asyncio.run(main())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        '`long_op()` is a coroutine that sleeps for 60 seconds. In `main()`, launch it as a background task, then stop it before it can finish and wait for it to wind down. As it stops, the coroutine should print `cancelled`. Assemble the complete program, including starting the event loop.',
+        '`long_op()` is a coroutine that sleeps for 60 seconds. In `main()`, launch it as a background task, then stop it before it can finish and wait for it to wind down. As it stops, the coroutine should print `cancelled` and then let the cancellation carry on (not swallow it). Assemble the complete program, including starting the event loop.',
       correctOrder: [
         'import asyncio',
         '',
@@ -630,7 +631,7 @@ asyncio.run(main())`,
       solution:
         'import asyncio\n\nasync def long_op():\n    try:\n        await asyncio.sleep(60)\n    except asyncio.CancelledError:\n        print("cancelled")\n        raise\n\nasync def main():\n    task = asyncio.create_task(long_op())\n    await asyncio.sleep(0)\n    task.cancel()\n    try:\n        await task\n    except asyncio.CancelledError:\n        pass\n\nasyncio.run(main())',
       explanation:
-        'task.cancel() requests cancellation; CancelledError is raised inside the task at the next await. The task SHOULD re-raise CancelledError after cleanup so cancellation propagates correctly. Tasks have no .stop() method.',
+        'task.cancel() requests cancellation; CancelledError is raised inside the task at the next await. The task should re-raise CancelledError after cleanup so the cancellation propagates; a bare `return` would swallow it and the task would look like it finished normally. The `await asyncio.sleep(0)` lets the task start before it is cancelled, otherwise it is cancelled before it ever reaches its try block and prints nothing. Tasks have no .stop() method.',
       hints: ['cancel() requests; the exception is raised at the next await. Re-raise after cleanup.'],
       tags: ['async', 'cancellation', 'CancelledError'],
       concepts: ['py-async-coroutines'],
@@ -642,7 +643,7 @@ asyncio.run(main())`,
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code print to standard output? (Leave out any warning Python writes to stderr.)',
       code: `import asyncio
 
 async def f():
@@ -651,7 +652,7 @@ async def f():
 print(type(f()).__name__)`,
       expectedOutput: `coroutine`,
       explanation:
-        'Calling an async def function does NOT execute the body — it returns a coroutine object. To run it, you must await it inside another coroutine or pass it to asyncio.run.',
+        'Calling an async def function does NOT execute the body - it returns a coroutine object, so the type name is `coroutine`. To run it, you must await it inside another coroutine or pass it to asyncio.run. Because this one is never awaited, Python also writes "RuntimeWarning: coroutine \'f\' was never awaited" to stderr, which is not part of the printed output.',
       hints: ['What does an async function return when called without await?'],
       tags: ['async', 'coroutine', 'lazy'],
       concepts: ['py-async-coroutines'],
@@ -779,7 +780,7 @@ done`,
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code print to standard output? (Leave out the traceback.)',
       code: `import asyncio
 
 async def f():
@@ -794,7 +795,7 @@ async def main():
 asyncio.run(main())`,
       expectedOutput: `1`,
       explanation:
-        'A coroutine can only be awaited ONCE. The first `await coro` runs it and yields 1, which is printed. The second `await coro` raises RuntimeError: cannot reuse already awaited coroutine — so execution stops before any further print. Only "1" appears in the captured output.',
+        'A coroutine can only be awaited ONCE. The first `await coro` runs it and yields 1, which is printed. The second `await coro` raises RuntimeError: cannot reuse already awaited coroutine - so execution stops before any further print. Only "1" appears in the captured output.',
       hints: ['Coroutines are single-use; what happens on the second await?'],
       tags: ['async', 'coroutine', 'reuse-error'],
       concepts: ['py-async-coroutines'],
@@ -887,7 +888,7 @@ asyncio.run(main())`,
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code print to standard output? (Leave out any warning Python writes to stderr.)',
       code: `import asyncio
 
 async def main():
@@ -899,8 +900,8 @@ asyncio.run(main())`,
       expectedOutput: `a
 b`,
       explanation:
-        'asyncio.sleep(0) is CALLED but never AWAITED. The result is a coroutine object that\'s immediately discarded — it never runs. The code prints "a" and "b" with no actual sleep, and you typically also see a "RuntimeWarning: coroutine was never awaited" at runtime (not part of stdout). The classic missing-await bug.',
-      hints: ['Calling a coroutine without await — what happens?'],
+        'asyncio.sleep(0) is CALLED but never AWAITED. The result is a coroutine object that\'s immediately discarded - it never runs. The code prints "a" and "b" with no actual sleep, and you typically also see a "RuntimeWarning: coroutine was never awaited" at runtime (not part of stdout). The classic missing-await bug.',
+      hints: ['Calling a coroutine without await - what happens?'],
       tags: ['async', 'missing-await', 'common-mistake'],
       concepts: ['py-async-coroutines'],
     },
@@ -1111,9 +1112,9 @@ ____.____(main())`,
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a coroutine `fetch_all` that takes a list of URL strings and returns a list of response bodies in the same order as the input. Use `aiohttp` to fetch each URL CONCURRENTLY. The requests must share a SINGLE HTTP session so connection pooling works — do NOT open a new session per URL. Use any internal helpers you want; the only public entry point is `fetch_all`. The function is awaited from an async context; you do not need to handle `asyncio.run` here.',
+      question: 'Write a coroutine `fetch_all` that takes a list of URL strings and returns a list of the response bodies (as text) in the same order as the input. Use `httpx` to fetch the URLs CONCURRENTLY, all through ONE shared `httpx.AsyncClient` so connections are reused - do NOT open a new client per URL. Use any helpers you want; the only public entry point is `fetch_all`. It is awaited from async code, so you do not need `asyncio.run` here.',
       starterCode: `import asyncio
-import aiohttp
+import httpx
 
 # async def fetch_all(urls: list[str]) -> list[str]
 `,
@@ -1125,42 +1126,48 @@ import aiohttp
         },
       ],
       solution: `import asyncio
-import aiohttp
+import httpx
 
-async def fetch_url(session: aiohttp.ClientSession, url: str) -> str:
-    """Fetch a single URL and return its text content."""
-    async with session.get(url) as response:
-        return await response.text()
+async def fetch_url(client: httpx.AsyncClient, url: str) -> str:
+    response = await client.get(url)
+    return response.text
 
 async def fetch_all(urls: list[str]) -> list[str]:
-    """Fetch all URLs concurrently and return results in order."""
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch_url(session, url) for url in urls]
+    async with httpx.AsyncClient() as client:
+        tasks = [fetch_url(client, url) for url in urls]
         results = await asyncio.gather(*tasks)
         return list(results)
+# OR
+import asyncio
+import httpx
+
+async def fetch_all(urls: list[str]) -> list[str]:
+    async with httpx.AsyncClient() as client:
+        responses = await asyncio.gather(*(client.get(url) for url in urls))
+        return [r.text for r in responses]
 `,
       tieredHints: {
         apiSignature: 'asyncio.gather(*aws, return_exceptions=False) -> list',
         skeleton: `import asyncio
-import aiohttp
+import httpx
 
-async def ____(session: aiohttp.____, url: ____) -> ____:
-    async with session.____(url) as response:
-        return await response.____()
+async def ____(client: httpx.____, url: ____) -> ____:
+    response = await client.____(url)
+    return response.____
 
 async def fetch_all(urls: list[____]) -> list[____]:
-    async with aiohttp.____() as session:
-        tasks = [____(session, url) for url in urls]
+    async with httpx.____() as client:
+        tasks = [____(client, url) for url in urls]
         results = await asyncio.____(*tasks)
         return ____(results)`,
       },
-      explanation: 'asyncio.gather runs multiple coroutines concurrently and returns results in the same order they were passed in. This is far faster than awaiting each URL sequentially because network I/O is the bottleneck — while one request waits for a response, others can proceed. The `async with` on both the session and response ensures proper resource cleanup.',
+      explanation: 'asyncio.gather runs multiple coroutines concurrently and returns their results in the order they were passed in. This is far faster than awaiting each URL in turn because network I/O is the bottleneck: while one request waits for a response, the others proceed. One `httpx.AsyncClient`, opened with `async with`, is shared by every request so its connection pool is reused and it is closed properly at the end; a client per URL would open a fresh connection each time. `response.text` is a plain attribute in httpx, so only the `client.get` call is awaited.',
       hints: [
-        'Create an aiohttp.ClientSession with async with',
-        'Use a list comprehension to build coroutine tasks',
-        'asyncio.gather(*tasks) runs them all concurrently',
+        'Open one httpx.AsyncClient with async with',
+        'Build one client.get coroutine per URL',
+        'asyncio.gather(*coros) runs them all concurrently and keeps input order',
       ],
-      tags: ['async', 'asyncio', 'aiohttp', 'gather', 'concurrency'],
+      tags: ['async', 'asyncio', 'httpx', 'gather', 'concurrency'],
       concepts: ['py-async-coroutines', 'py-event-loop'],
     },
   {
@@ -1214,7 +1221,7 @@ async def fetch_with_timeout(url: ____, timeout: ____) -> ____:
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write an async context manager class `AsyncDatabasePool` that simulates a connection pool. On `__aenter__`, it should "connect" (print a message and sleep briefly), store the connection, and return self. On `__aexit__`, it should "disconnect" (print and sleep). Include an async method `execute(query: str)` that returns a simulated result.',
+      question: 'Write an async context manager class `AsyncDatabasePool` that simulates a database connection pool. The constructor takes `db_url` and an optional `pool_size` (default 5), stores both as attributes, and starts with a `connected` attribute set to False. Entering prints `Connecting to <db_url> (pool_size=<pool_size>)...`, awaits a 0.1 s sleep, sets `connected` to True and returns the pool itself. Exiting prints `Disconnecting from <db_url>...`, awaits a 0.05 s sleep, sets `connected` to False and returns False so exceptions are not suppressed. An async method `execute(query)` raises RuntimeError with the message `Not connected to database` when not connected; otherwise it awaits a 0.01 s sleep and returns a dict with the keys `query` (the query string), `rows` (an empty list) and `status` (the string `ok`).',
       starterCode: `import asyncio
 
 class AsyncDatabasePool:
@@ -1281,11 +1288,11 @@ class AsyncDatabasePool:
         await asyncio.____(____)
         return {"query": ____, "rows": [], "status": "ok"}`,
       },
-      explanation: 'Async context managers use __aenter__ and __aexit__ instead of __enter__ and __exit__. They are essential for async resources like database connections, HTTP sessions, and file handles that need async setup/teardown. The "async with" syntax guarantees __aexit__ runs even if an exception occurs inside the block — just like regular context managers but supporting await. Returning False from __aexit__ means exceptions propagate normally.',
+      explanation: 'Async context managers use __aenter__ and __aexit__ instead of __enter__ and __exit__. They are essential for async resources like database connections, HTTP sessions, and file handles that need async setup/teardown. The "async with" syntax guarantees __aexit__ runs even if an exception occurs inside the block - just like regular context managers but supporting await. Returning False from __aexit__ means exceptions propagate normally.',
       hints: [
         '__aenter__ must return self (or the managed resource)',
         '__aexit__ receives exception info, return False to not suppress errors',
-        'Both methods are async — they can use await',
+        'Both methods are async - they can use await',
       ],
       tags: ['async', 'context-manager', 'async-context-manager', 'aenter', 'aexit', '__aenter__', '__aexit__', 'protocol'],
       concepts: ['py-async-coroutines', 'py-context-manager-protocol'],
@@ -1319,12 +1326,12 @@ class AsyncDatabasePool:
       course: Course.BACKEND,
       question: 'When should you use asyncio vs threading vs multiprocessing in Python?',
       options: [
-        { id: 'a', text: 'asyncio for CPU-bound work, threading for I/O-bound work, multiprocessing for GUI applications', isCorrect: false },
-        { id: 'b', text: 'asyncio for I/O-bound work with many concurrent connections, threading for I/O-bound work with blocking libraries, multiprocessing for CPU-bound work that needs true parallelism', isCorrect: true },
-        { id: 'c', text: 'They are interchangeable — all three achieve the same performance for any workload', isCorrect: false },
-        { id: 'd', text: 'asyncio for small programs, threading for medium programs, multiprocessing for large programs', isCorrect: false },
+        { id: 'a', text: 'asyncio for CPU-heavy work since it avoids the GIL, threading for I/O waits, multiprocessing for sharing memory between tasks', isCorrect: false },
+        { id: 'b', text: 'asyncio for many I/O waits with async libraries, threading for I/O with blocking libraries, multiprocessing for CPU-heavy work', isCorrect: true },
+        { id: 'c', text: 'threading for CPU-heavy work since threads use every core, asyncio for blocking libraries, multiprocessing for many connections', isCorrect: false },
+        { id: 'd', text: 'asyncio for small scripts, threading for medium programs, multiprocessing for large programs, whatever the workload', isCorrect: false },
       ],
-      explanation: 'asyncio excels at I/O-bound tasks with many concurrent operations (web servers, API calls) because coroutines are lightweight and switching is fast. Threading works for I/O-bound tasks when libraries don\'t support async (e.g., some database drivers). Multiprocessing bypasses the GIL for true CPU parallelism (data processing, image rendering). The GIL (Global Interpreter Lock) prevents threads from running Python bytecode in parallel, which is why threading doesn\'t help CPU-bound work but multiprocessing does.',
+      explanation: 'asyncio excels at I/O-bound tasks with many concurrent operations (web servers, API calls) because coroutines are lightweight and switching is fast. Threading works for I/O-bound tasks when libraries don\'t support async (e.g., some database drivers). Multiprocessing bypasses the GIL for true CPU parallelism (data processing, image rendering). The GIL (Global Interpreter Lock) prevents threads from running Python bytecode in parallel, which is why threading doesn\'t help CPU-bound work but multiprocessing does. asyncio does not avoid the GIL either: it runs on one thread, and a blocking library call inside it freezes the loop. Separate processes do not share memory by default, and program size has nothing to do with the choice - the kind of work does.',
       hints: [
         'The GIL limits threading for CPU work',
         'asyncio coroutines are cheaper than OS threads',
@@ -1566,7 +1573,7 @@ ____.____(main())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define a coroutine `risky` taking an integer `n`. It briefly yields to the event loop, then returns `n * 2` if `n` is even, else raises `ValueError` whose message is the text `bad ` followed by the value of `n` (use an f-string). In `main`, run the coroutine concurrently for inputs 1, 2, and 3. By default one failure would cancel the siblings — instead, use the `gather` kwarg that causes exceptions to appear AS ITEMS in the result list rather than propagating. Iterate the result list: for each item, print `"err"` if it is an `Exception` instance, otherwise print the value. Run `main` from sync code. Expected output on three lines: `err`, `4`, `err`.',
+        'Define a coroutine `risky` taking an integer `n`. It briefly yields to the event loop, then returns `n * 2` if `n` is even, else raises `ValueError` whose message is the text `bad ` followed by the value of `n` (use an f-string). In `main`, run the coroutine concurrently for inputs 1, 2, and 3. By default the first failure would be raised out of `gather` and you would lose the other results - instead, use the `gather` kwarg that causes exceptions to appear AS ITEMS in the result list rather than propagating. Iterate the result list: for each item, print `"err"` if it is an `Exception` instance, otherwise print the value. Run `main` from sync code. Expected output on three lines: `err`, `4`, `err`.',
       starterCode: `import asyncio
   `,
       testCases: [
@@ -1614,11 +1621,11 @@ async def main():
 ____.____(main())`,
       },
       explanation:
-        'By default, `gather` re-raises the first exception and cancels the other tasks. With `return_exceptions=True`, failures show up as items in the result list — you decide per-task whether to log, retry, or skip. Essential for batch operations where partial success is acceptable (fetching N URLs, processing N files). Combine with `isinstance(item, Exception)` to separate winners from losers.',
+        'By default, `gather` raises the first exception straight to the caller, so you never get the list of results (the other coroutines are not cancelled; they keep running in the background). With `return_exceptions=True`, failures show up as items in the result list - you decide per-task whether to log, retry, or skip. Essential for batch operations where partial success is acceptable (fetching N URLs, processing N files). Combine with `isinstance(item, Exception)` to separate winners from losers.',
       hints: [
-        'return_exceptions=True makes gather never raise — exceptions arrive in the list',
+        'return_exceptions=True makes gather never raise - exceptions arrive in the list',
         'Check `isinstance(item, Exception)` to separate failures',
-        'Without the flag, first failure cancels remaining tasks',
+        'Without the flag, the first failure is raised and the result list is lost',
       ],
       tags: ['async', 'gather', 'return_exceptions', 'error-handling'],
       concepts: ['py-async-coroutines', 'py-exception-hierarchy'],
@@ -2069,7 +2076,7 @@ ____.____(main())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a concurrent batch fetcher that mirrors a real production constraint. A helper coroutine `fetch_one` is pre-defined in the starter (it takes an integer `id` and returns `id * 10` after a tiny sleep). Write a coroutine `fetch_all` that takes a list of integer IDs and returns a list of results. The implementation must satisfy ALL three constraints at once:\n\n1. At most two fetches may be in flight at any moment — the rest wait their turn.\n2. Each individual fetch has a 50 ms budget. If it overruns, record the string `"timeout"` for that ID instead of raising.\n3. If any fetch raises an unexpected exception, record the string `"error"` for that ID — the rest of the batch must still produce results.\n\nThe returned list has one entry per input ID, in the SAME order. In `main`, invoke `fetch_all` with the six IDs `1, 2, 3, 4, 5, 6` and print the result. Run from sync code. In the happy path (the given `fetch_one` always succeeds quickly), expected output is `[10, 20, 30, 40, 50, 60]`.',
+        'Build a concurrent batch fetcher that mirrors a real production constraint. A helper coroutine `fetch_one` is pre-defined in the starter (it takes an integer `id` and returns `id * 10` after a tiny sleep). Write a coroutine `fetch_all` that takes a list of integer IDs and returns a list of results. The implementation must satisfy ALL three constraints at once:\n\n1. At most two fetches may be in flight at any moment - the rest wait their turn.\n2. Each individual fetch has a 50 ms budget. If it overruns, record the string `"timeout"` for that ID instead of raising.\n3. If any fetch raises an unexpected exception, record the string `"error"` for that ID - the rest of the batch must still produce results.\n\nThe returned list has one entry per input ID, in the SAME order. In `main`, invoke `fetch_all` with the six IDs `1, 2, 3, 4, 5, 6` and print the result. Run from sync code. In the happy path (the given `fetch_one` always succeeds quickly), expected output is `[10, 20, 30, 40, 50, 60]`.',
       starterCode: `import asyncio
 
 async def fetch_one(id: int) -> int:
@@ -2137,10 +2144,10 @@ async def main():
 ____.____(main())`,
       },
       explanation:
-        'This is the canonical "batch work against an external system" shape. `Semaphore(2)` caps in-flight work — the other four tasks wait. `wait_for(..., timeout=0.05)` enforces a per-call budget so one slow upstream cannot stall the batch. `gather(..., return_exceptions=True)` keeps the batch running when any single call raises; the caller then separates successes from failures with an `isinstance` check. Swap `fetch_one` for a real HTTP call through a shared `aiohttp.ClientSession` and this becomes a complete rate-limited, timeout-safe, partial-success fetcher.',
+        'This is the canonical "batch work against an external system" shape. `Semaphore(2)` caps in-flight work - the other four tasks wait. `wait_for(..., timeout=0.05)` enforces a per-call budget so one slow upstream cannot stall the batch. `gather(..., return_exceptions=True)` keeps the batch running when any single call raises; the caller then separates successes from failures with an `isinstance` check. Swap `fetch_one` for a real HTTP call through a shared `httpx.AsyncClient` and this becomes a complete rate-limited, timeout-safe, partial-success fetcher.',
       hints: [
         'Three concurrency controls layered: concurrency cap, per-call timeout, partial-success collection',
-        'Order matters: `async with sem:` outer, `wait_for` inside — acquire the slot only while the call runs',
+        'Order matters: `async with sem:` outer, `wait_for` inside - acquire the slot only while the call runs',
         '`return_exceptions=True` turns raises into list items; distinguish with `isinstance(r, Exception)`',
       ],
       tags: ['async', 'Semaphore', 'wait_for', 'gather', 'return_exceptions', 'advanced'],
@@ -2154,21 +2161,21 @@ ____.____(main())`,
       course: Course.BACKEND,
       question: 'When should you prefer `asyncio.TaskGroup` (3.11+) over `asyncio.gather`?',
       options: [
-        { id: 'a', text: 'Always — gather is deprecated', isCorrect: false },
+        { id: 'a', text: 'Always, because `gather` is deprecated since 3.11 and warns when it is called', isCorrect: false },
         {
           id: 'b',
-          text: 'Use `TaskGroup` by default: it provides STRUCTURED concurrency — you cannot accidentally leak a task past its scope, and any failure cancels siblings cleanly (errors raise as `ExceptionGroup`). Keep `gather(..., return_exceptions=True)` when you want to collect partial successes WITHOUT cancelling the others.',
+          text: 'When all tasks must succeed: one failure cancels the rest and no task outlives the block',
           isCorrect: true,
         },
-        { id: 'c', text: 'Only when you need return values — gather does not return values', isCorrect: false },
-        { id: 'd', text: 'TaskGroup only works with exactly three tasks', isCorrect: false },
+        { id: 'c', text: 'When you need return values, since `gather` runs the coroutines but discards their results', isCorrect: false },
+        { id: 'd', text: 'When the work is CPU-heavy, since a TaskGroup runs each task on its own thread', isCorrect: false },
       ],
       explanation:
-        'TaskGroup is the 3.11+ "structured concurrency" primitive: all child tasks are guaranteed to finish (or be cancelled) before the `async with` exits. One failure cancels the rest → the whole group fails as a unit → cleanup is trivial. `gather` is older and gives you two modes: re-raise first failure (and cancel others), or collect everything with `return_exceptions=True`. Rule of thumb: TaskGroup for "all must succeed", `gather(return_exceptions=True)` for "collect what succeeded".',
+        'TaskGroup is the 3.11+ "structured concurrency" primitive: all child tasks are guaranteed to finish (or be cancelled) before the `async with` exits, so no task leaks past its scope. One failure cancels the rest and the errors are raised together as an `ExceptionGroup`, so the group fails as a unit. `gather` is older but not deprecated, and it does return the results, in argument order. By default it raises the first failure to the caller while the other coroutines keep running unsupervised; with `return_exceptions=True` it collects everything, failures included. Neither one adds threads: both run tasks on the one event-loop thread, so CPU-heavy work still blocks. Rule of thumb: TaskGroup for "all must succeed", `gather(return_exceptions=True)` for "collect what succeeded".',
       hints: [
         'TaskGroup = all-or-nothing structured concurrency',
         'gather(return_exceptions=True) = collect partial results',
-        'TaskGroup prevents leaked tasks — can be a safety win in services',
+        'TaskGroup prevents leaked tasks - can be a safety win in services',
       ],
       tags: ['async', 'TaskGroup', 'gather', 'structured-concurrency'],
       concepts: ['py-async-coroutines'],
@@ -2181,20 +2188,20 @@ ____.____(main())`,
       course: Course.BACKEND,
       question: 'How does the asyncio event loop actually run your coroutines concurrently on a single thread?',
       options: [
-        { id: 'a', text: 'It spawns one OS thread per coroutine', isCorrect: false },
+        { id: 'a', text: 'It starts one OS thread per coroutine and lets the operating system switch between them', isCorrect: false },
         {
           id: 'b',
-          text: 'Coroutines are cooperative: each `await` on an I/O operation yields control back to the loop, which runs another ready coroutine until the I/O completes. One thread, many tasks, because the CPU is idle during I/O waits anyway.',
+          text: 'Each `await` on I/O hands control back to the loop, which runs another ready coroutine meanwhile',
           isCorrect: true,
         },
-        { id: 'c', text: 'The Python interpreter preempts coroutines every 5 milliseconds', isCorrect: false },
-        { id: 'd', text: 'Each `await` uses `fork()` to create a child process', isCorrect: false },
+        { id: 'c', text: 'It pauses each coroutine every few milliseconds and switches, whether or not it awaits', isCorrect: false },
+        { id: 'd', text: 'It runs each coroutine to the end before starting the next; `await` waits like a normal call', isCorrect: false },
       ],
       explanation:
-        'This is the single most important mental model for async Python: concurrency is COOPERATIVE — your code decides when to yield (at every `await`). The loop uses `select` / `epoll` / `kqueue` to multiplex thousands of file descriptors. If a coroutine never yields (e.g. a pure-Python CPU loop), NOTHING else runs — that coroutine blocks the event loop. This is why you use `to_thread` for blocking code and `multiprocessing` for CPU-bound work.',
+        'This is the single most important mental model for async Python: concurrency is COOPERATIVE - your code decides when to yield (at every `await`). There are no extra threads, and the loop never interrupts a coroutine on a timer; but it does not run them one after another either, because every `await` on something unfinished lets another coroutine run. The loop uses `select` / `epoll` / `kqueue` to multiplex thousands of file descriptors. If a coroutine never yields (e.g. a pure-Python CPU loop), NOTHING else runs - that coroutine blocks the event loop. This is why you use `to_thread` for blocking code and `multiprocessing` for CPU-bound work.',
       hints: [
         'Cooperative = each await is a voluntary yield point',
-        'Single thread runs everything — scales because I/O is usually idle CPU',
+        'Single thread runs everything - scales because I/O is usually idle CPU',
         'A coroutine that never yields freezes the whole event loop',
       ],
       tags: ['async', 'event-loop', 'cooperative', 'concepts'],
@@ -2208,14 +2215,14 @@ ____.____(main())`,
       course: Course.BACKEND,
       question: 'What is asynchronous programming?',
       options: [
-        { id: 'a', text: 'A way to make Python code run on multiple CPU cores simultaneously', isCorrect: false },
-        { id: 'b', text: 'Running multiple tasks concurrently — while one task waits (for network, disk, etc.), another can run. Python uses `async`/`await` keywords for this.', isCorrect: true },
-        { id: 'c', text: 'A technique for compiling Python code into machine code for faster execution', isCorrect: false },
-        { id: 'd', text: 'A debugging method that runs code line by line in reverse order', isCorrect: false },
+        { id: 'a', text: 'Running coroutines on several CPU cores at once, so number-crunching code finishes sooner', isCorrect: false },
+        { id: 'b', text: 'Letting other tasks run while one waits on slow I/O such as a network call, using `async`/`await`', isCorrect: true },
+        { id: 'c', text: 'Starting a new OS thread for every function call, so that no function ever has to wait', isCorrect: false },
+        { id: 'd', text: 'Putting a function call off until later, like a scheduled job, instead of running it right now', isCorrect: false },
       ],
-      explanation: 'Asynchronous programming lets your program do other work while waiting for slow operations (like network requests or file reads). Instead of blocking and doing nothing while waiting, async code can switch to another task. Python\'s `async` and `await` keywords make this possible through coroutines managed by an event loop.',
+      explanation: 'Asynchronous programming lets your program do other work while waiting for slow operations (like network requests or file reads). Instead of blocking and doing nothing while waiting, async code can switch to another task. Python\'s `async` and `await` keywords make this possible through coroutines managed by an event loop. It all happens on one thread and one core: it does not speed up number crunching, it does not start a thread per call, and it does not postpone work to a later time - the waiting periods are simply filled with other tasks.',
       hints: [
-        'Think about what happens when you wait for a website to respond — your program could be doing something else',
+        'Think about what happens when you wait for a website to respond - your program could be doing something else',
         'The key benefit is for I/O-bound work, not CPU-bound work',
       ],
       tags: ['async', 'concurrency', 'basics'],
@@ -2229,12 +2236,12 @@ ____.____(main())`,
       course: Course.BACKEND,
       question: 'What is the difference between synchronous and asynchronous code?',
       options: [
-        { id: 'a', text: 'Synchronous code is for web apps; asynchronous code is for desktop apps', isCorrect: false },
-        { id: 'b', text: 'Synchronous code uses functions; asynchronous code uses classes', isCorrect: false },
-        { id: 'c', text: 'Synchronous code is always faster because it runs on the main thread', isCorrect: false },
-        { id: 'd', text: 'Synchronous: each line waits for the previous to finish. Asynchronous: tasks can overlap during waiting periods, making it faster for I/O-bound work.', isCorrect: true },
+        { id: 'a', text: 'Synchronous code runs on one thread; asynchronous code gives each task its own thread', isCorrect: false },
+        { id: 'b', text: 'Asynchronous code is faster for every job, including heavy math, because tasks run in parallel', isCorrect: false },
+        { id: 'c', text: 'Asynchronous code runs its lines in any order, so results can come back shuffled', isCorrect: false },
+        { id: 'd', text: 'Synchronous code waits for each step to finish; async code runs other tasks while one waits on I/O', isCorrect: true },
       ],
-      explanation: 'In synchronous code, operations run one after another — each must complete before the next starts. In asynchronous code, when a task is waiting (e.g., for a network response), the program can run other tasks instead of sitting idle. Async is faster for I/O-bound work (network, files) but not for CPU-bound work (math, data processing) because it doesn\'t use multiple cores.',
+      explanation: 'In synchronous code, operations run one after another - each must complete before the next starts. In asynchronous code, when a task is waiting (e.g., for a network response), the program can run other tasks instead of sitting idle. Async is faster for I/O-bound work (network, files) but not for CPU-bound work (math, data processing) because it doesn\'t use multiple cores or extra threads: everything runs on one thread. Inside each coroutine the lines still run in order; only the switching between tasks happens at `await` points.',
       hints: [
         'Think "synchronous = sequential" and "asynchronous = concurrent"',
         'Async shines when there is a lot of waiting involved',
@@ -2299,7 +2306,7 @@ ____(result)`,
       topic: Topic.PY_ASYNC,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Make a single asynchronous HTTP request with `httpx`. Write an async coroutine `main` that opens an `httpx.AsyncClient` in an `async with` block, `await`s ONE GET to `"https://httpbin.org/get"`, gates on HTTP errors, and prints the JSON body\'s `"url"` value. Drive it with asyncio\'s entry-point function. Make exactly one request — no concurrency. Expect the URL printed back.',
+      question: 'Make a single asynchronous HTTP request with `httpx`. Write an async coroutine `main` that opens an `httpx.AsyncClient` in an `async with` block, `await`s ONE GET to `"https://httpbin.org/get"`, calls the response method that raises on a 4xx or 5xx status, and prints the JSON body\'s `"url"` value. Drive it with asyncio\'s entry-point function. Make exactly one request - no concurrency. Expect the URL printed back.',
       starterCode: `import asyncio
 import httpx
   `,
@@ -2333,7 +2340,7 @@ async def main():
 
 ____.____(main())`,
       },
-      explanation: '`httpx.AsyncClient` is the async counterpart of the synchronous `httpx.Client` (seen in the HTTP topic): same `.get` / `.raise_for_status()` / `.json()` API, but you `await` each request and open it with `async with`. `requests` cannot do this — it is sync-only — which is why an async service (FastAPI, asyncio) reaches for httpx. This is a SINGLE await; fetching many URLs at once is the job of `asyncio.gather` (shown with `aiohttp` in the concurrent-fetch question). httpx and aiohttp are the two common async HTTP clients — httpx also offers a matching sync client and HTTP/2.',
+      explanation: '`httpx.AsyncClient` is the async counterpart of the synchronous `httpx.Client` (seen in the HTTP topic): same `.get` / `.raise_for_status()` / `.json()` API, but you `await` each request and open it with `async with`. `requests` cannot do this - it is sync-only - which is why an async service (FastAPI, asyncio) reaches for httpx. This is a SINGLE await; fetching many URLs at once is the job of `asyncio.gather` (see the concurrent-fetch question). httpx also offers a matching sync client and HTTP/2.',
       hints: [
         'httpx.AsyncClient + async with',
         'await client.get(...) for a single request',
@@ -2447,7 +2454,7 @@ asyncio.run(main())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the asyncio primitive that caps concurrent holders, and the keyword that acquires it.',
+        'Fill in the keyword that acquires the shared limiter, then the asyncio primitive that lets at most 3 holders in at once.',
       template: `import asyncio
 
 async def worker(n, sem):
@@ -2462,12 +2469,78 @@ async def main():
 
 asyncio.run(main())`,
       blanks: ['async', 'Semaphore'],
+      blankAlternates: [[], ['BoundedSemaphore']],
       solution:
         'import asyncio\n\nasync def worker(n, sem):\n    async with sem:\n        await asyncio.sleep(0.01)\n        return n\n\nasync def main():\n    sem = asyncio.Semaphore(3)\n    results = await asyncio.gather(*[worker(i, sem) for i in range(6)])\n    print(results)\n\nasyncio.run(main())',
       explanation:
-        'asyncio.Semaphore(n) permits at most n coroutines inside its block at once; the rest wait. It is acquired with `async with` (not plain `with`) because release happens at an await point.',
+        'asyncio.Semaphore(n) permits at most n coroutines inside its block at once; the rest wait. It is acquired with `async with` (not plain `with`) because acquiring may have to wait, and waiting must be awaited. BoundedSemaphore works the same and also raises if it is released more times than acquired.',
       hints: ['async with; the primitive is a Semaphore.'],
       tags: ['async', 'asyncio', 'Semaphore', 'rate-limit', 'concurrency'],
       concepts: ['py-async-coroutines'],
+    },
+    {
+      id: 'py-concurrency-1',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_ASYNC,
+      course: Course.BACKEND,
+      question: 'A script resizes 10,000 images with pure-Python code: no network or disk waits, just arithmetic on pixels. It keeps one core of an 8-core machine busy for 40 minutes. Which change can make it finish sooner?',
+      options: [
+        { id: 'a', text: 'Hand the images to 8 threads with `threading`, so each thread runs its share on its own core', isCorrect: false },
+        { id: 'b', text: 'Hand the images to a pool of worker processes with `multiprocessing`, so each core runs its share', isCorrect: true },
+        { id: 'c', text: 'Make the resize function `async def` and run all 10,000 calls at once with `asyncio.gather`', isCorrect: false },
+        { id: 'd', text: 'None: a Python program can only ever use one core, so the work cannot be spread out', isCorrect: false },
+      ],
+      explanation: 'This is CPU-bound work: the time goes on running Python bytecode, not on waiting. Worker processes each have their own interpreter and their own GIL, so a process pool (`multiprocessing.Pool` or `ProcessPoolExecutor`) runs up to 8 resizes truly in parallel. Threads do not help here, because the GIL lets only one thread run Python bytecode at a time, so 8 threads still share one core. asyncio does not help either: every coroutine runs on the one event-loop thread, and a coroutine with no `await` on real I/O simply runs to the end before the next one starts. A single Python process uses one core for Python code, but a program can start several processes. Threads and asyncio pay off when the time goes on waiting (network, disk), not on computing.',
+      hints: [
+        'Is the time spent waiting, or computing?',
+        'The GIL lets one thread run Python bytecode at a time; each process has its own GIL',
+      ],
+      tags: ['concurrency', 'threading', 'multiprocessing', 'asyncio', 'gil'],
+      concepts: ['py-thread-vs-process', 'py-async-coroutines', 'py-event-loop', 'py-gil-implication'],
+    },
+    {
+      id: 'py-magic-aenter-vs-enter',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_ASYNC,
+      course: Course.BACKEND,
+      question: 'What is the relationship between `__enter__`/`__exit__` and `__aenter__`/`__aexit__`?',
+      options: [
+        { id: 'a', text: '`__aenter__`/`__aexit__` are older names for the same hooks; a plain `with` calls whichever pair exists', isCorrect: false },
+        { id: 'b', text: '`__aenter__`/`__aexit__` are coroutine versions used by `async with`, so setup and cleanup can `await`', isCorrect: true },
+        { id: 'c', text: '`__aenter__` runs before `__enter__` in every `with` block, to prepare anything the block will await', isCorrect: false },
+        { id: 'd', text: 'A plain `with` inside an `async def` function calls `__aenter__`/`__aexit__` instead, automatically', isCorrect: false },
+      ],
+      explanation: 'In async code, regular `__enter__` would block the event loop, because you can\'t `await` inside it. `__aenter__` and `__aexit__` are coroutines, so they can await (`await self.connect()`). `httpx.AsyncClient` is one example: `async with httpx.AsyncClient() as client:` opens and closes its connection pool with awaits. They are only used by `async with X() as y:`; a plain `with` always calls `__enter__`/`__exit__`, even inside an `async def`, and the two pairs never run together for one block. A class can implement both pairs so it works in sync AND async code; pick based on how callers need to use it.',
+      hints: [
+        'async with needs __aenter__ / __aexit__ (coroutines)',
+        'sync with needs __enter__ / __exit__',
+        'Both pairs can coexist on one class',
+      ],
+      tags: ['magic-methods', 'aenter', 'async-with'],
+      concepts: ['py-async-coroutines', 'py-magic-methods'],
+    },
+    {
+      id: 'py-concurrency-6',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_ASYNC,
+      course: Course.BACKEND,
+      question: 'What does `asyncio.to_thread(sync_fn, *args)` do, and when should you reach for it?',
+      options: [
+        { id: 'a', text: 'It runs the function on the event loop\'s own thread but pauses between its lines, so a blocking call no longer freezes other tasks.', isCorrect: false },
+        { id: 'b', text: 'It runs the blocking function in a worker thread and returns an awaitable, so async code can call a sync-only library without freezing the loop.', isCorrect: true },
+        { id: 'c', text: 'It rewrites the function into a coroutine once, so every later plain call to it becomes non-blocking without needing `await`.', isCorrect: false },
+        { id: 'd', text: 'It moves the whole event loop onto a new thread, so the calling thread is free to run blocking code while the tasks carry on.', isCorrect: false },
+      ],
+      explanation: '`asyncio.to_thread(fn, *args, **kwargs)` (Python 3.9+) is the escape hatch for blocking code: it hands the call to a thread from asyncio\'s default thread pool and gives you an awaitable, so the event loop keeps running other tasks while the call blocks that worker thread. It does not change the function: calling `fn` directly later still blocks. The event loop itself stays on its thread, and Python never pauses a plain function between lines to let other tasks run. Use it when you must call a sync-only library (such as a legacy database driver) from async code; `loop.run_in_executor(executor, fn, *args)` gives more control over the pool, and CPU-bound work belongs in processes.',
+      hints: [
+        'await asyncio.to_thread(sync_fn, *args)',
+        'Used to call blocking libs from async code',
+        'Runs in asyncio\'s default ThreadPoolExecutor',
+      ],
+      tags: ['asyncio', 'to_thread', 'blocking', 'executor'],
+      concepts: ['py-async-coroutines', 'py-event-loop'],
     },
 ];

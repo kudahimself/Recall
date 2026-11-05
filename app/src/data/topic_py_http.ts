@@ -21,12 +21,12 @@ export const py_http_questions: Question[] = [
       course: Course.BACKEND,
       question: 'What does `response.raise_for_status()` do when using the `requests` library?',
       options: [
-        { id: 'a', text: 'Prints the status code', isCorrect: false },
-        { id: 'b', text: 'Raises `requests.HTTPError` if the status is 4xx or 5xx; does nothing on 2xx/3xx. Use it before `.json()` to turn silent API failures into loud exceptions.', isCorrect: true },
-        { id: 'c', text: 'Logs the response body at ERROR level', isCorrect: false },
-        { id: 'd', text: 'Retries the request automatically', isCorrect: false },
+        { id: 'a', text: 'Raises an error for any status other than 200, so a 201 Created or a 204 No Content also raises', isCorrect: false },
+        { id: 'b', text: 'Raises `requests.HTTPError` if the status is 4xx or 5xx, and does nothing for 2xx or 3xx', isCorrect: true },
+        { id: 'c', text: 'Returns True for a 2xx status and False otherwise, without ever raising an exception', isCorrect: false },
+        { id: 'd', text: 'Retries the request until the server answers with a 2xx status, then returns that response', isCorrect: false },
       ],
-      explanation: 'By default `requests.get(...)` does NOT raise on a 500 — you get a Response object with `.status_code == 500`. Calling `.json()` on an error page may crash with a JSONDecodeError. `raise_for_status()` is the idiomatic gate: call it right after the request, then proceed safely. Pairs with `.json()` and `.text`.',
+      explanation: 'By default `requests.get(...)` does NOT raise on a 500 - you get a Response object with `.status_code == 500`. Calling `.json()` on an error page may crash with a JSONDecodeError. `raise_for_status()` is the idiomatic gate: call it right after the request, then proceed safely. Every 2xx (200, 201, 204) passes, so it is not a "200 only" check. The True/False check is the `.ok` attribute, not this method, and it never retries: retries need a retry policy mounted on a Session.',
       hints: [
         'Call raise_for_status() right after the request',
         'Only raises on 4xx/5xx; 2xx/3xx pass through silently',
@@ -229,12 +229,12 @@ except requests.____:
       course: Course.BACKEND,
       question: 'What does the `httpx` library offer that `requests` does not?',
       options: [
-        { id: 'a', text: 'Nothing — they are identical', isCorrect: false },
-        { id: 'b', text: 'A near-identical API to `requests` PLUS native `async`/`await` support via `AsyncClient`, HTTP/2 out of the box, and connection pooling by default. Ideal when an async codebase needs HTTP without bringing in aiohttp.', isCorrect: true },
-        { id: 'c', text: 'Only works with REST APIs, not SOAP', isCorrect: false },
-        { id: 'd', text: 'Auto-retries every request 3 times', isCorrect: false },
+        { id: 'a', text: 'Nothing new: httpx is a renamed copy of requests with the same features, kept only for compatibility', isCorrect: false },
+        { id: 'b', text: 'Nearly the same API as `requests`, plus native `async`/`await` support through `AsyncClient` and optional HTTP/2', isCorrect: true },
+        { id: 'c', text: 'Automatic retries: every httpx request is retried three times on failure, which requests cannot do', isCorrect: false },
+        { id: 'd', text: 'Async support, but only through an async-only API with different method names and no sync client', isCorrect: false },
       ],
-      explanation: '`httpx.Client()` ≈ `requests.Session()`. `httpx.AsyncClient()` gives you `await client.get(...)` — impossible with `requests` (sync-only). If your service is FastAPI or asyncio-based, httpx is the natural client. For sync-only scripts and tools, `requests` is still fine and has a larger ecosystem.',
+      explanation: '`httpx.Client()` ≈ `requests.Session()`: same `get`/`post`, `raise_for_status()` and `.json()`. `httpx.AsyncClient()` adds `await client.get(...)`, which `requests` (sync-only) cannot do, and HTTP/2 can be switched on. httpx does not retry failed requests by default, and requests can retry through a mounted retry policy, so retries are not the difference. If your service is FastAPI or asyncio-based, httpx is the natural client. For sync-only scripts and tools, `requests` is still fine and has a larger ecosystem.',
       hints: [
         'Sync API mirrors requests almost 1:1',
         'AsyncClient gives `await` support',
@@ -680,7 +680,7 @@ print(r.json()["files"]["____"])`,
       topic: Topic.PY_HTTP,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Download bytes without loading the whole body into memory. GET `"https://httpbin.org/bytes/1024"` with `requests`, enabling streaming via the kwarg that defers downloading the body. Iterate the body in chunks of 256 bytes using the response\'s chunk-iteration method, summing the length of each chunk into a running total. Print the total number of bytes received (expect `1024`).',
+      question: 'Download bytes without loading the whole body into memory. GET `"https://httpbin.org/bytes/1024"` with `requests`, enabling streaming via the kwarg that defers downloading the body. Gate on HTTP errors, then iterate the body in chunks of 256 bytes using the response\'s chunk-iteration method, summing the length of each chunk into a running total. Print the total number of bytes received (expect `1024`).',
       starterCode: `import requests
   `,
       testCases: [
@@ -794,7 +794,7 @@ session.mount("https://", adapter)
 r = session.get("https://httpbin.org/get", timeout=10)
 r.raise_for_status()
 print(r.json()["url"])`,
-      explanation: 'This is the *declarative, transport-level* retry: a `urllib3.Retry` policy (`total` attempts, exponential `backoff_factor`, the `status_forcelist` to retry on, and `respect_retry_after_header` so a 429/503 `Retry-After` is obeyed) wrapped in an `HTTPAdapter` and mounted on the session. Every request through the session then retries automatically — no manual loop. Contrast the hand-rolled `for`-loop with `time.sleep` backoff in the capstone: same goal, but this version pushes the logic into the HTTP layer where it belongs. `backoff_factor=0.5` waits ~0s, 0.5s, 1s, 2s between tries. (`Retry` imports from `urllib3.util.retry`, or in modern requests is re-exported from `requests.adapters`.)',
+      explanation: 'This is the *declarative, transport-level* retry: a `urllib3.Retry` policy (`total` attempts, exponential `backoff_factor`, the `status_forcelist` to retry on, and `respect_retry_after_header` so a 429/503 `Retry-After` is obeyed) wrapped in an `HTTPAdapter` and mounted on the session. Every request through the session then retries automatically - no manual loop. A hand-rolled `for` loop with `time.sleep` reaches the same goal, but this version pushes the logic into the HTTP layer where it belongs. With `backoff_factor=0.5`, urllib3 waits 0s before the first retry, then 1s, then 2s (unless a `Retry-After` header says otherwise). (`Retry` imports from `urllib3.util.retry`, or in modern requests is re-exported from `requests.adapters`.)',
       hints: [
         'Session + HTTPAdapter(max_retries=Retry(...)) + mount on both schemes',
         'Retry(total, backoff_factor, status_forcelist, respect_retry_after_header)',
@@ -896,7 +896,7 @@ retry = ___(
       solution:
         'from urllib3.util.retry import Retry\n\nretry = Retry(\n    total=3,\n    backoff_factor=0.5,\n    status_forcelist=[429, 500, 502, 503, 504],\n    respect_retry_after_header=True,\n)',
       explanation:
-        '`Retry` is the urllib3 policy object. `total` caps the attempts, `backoff_factor` sets the exponential wait (0.5 → ~0s, 0.5s, 1s, 2s), `status_forcelist` is the list of response codes that count as retryable, and `respect_retry_after_header=True` honours a server\'s `Retry-After` header on 429/503. This is the policy ONLY — it still needs an adapter to take effect.',
+        '`Retry` is the urllib3 policy object. `total` caps the attempts, `backoff_factor` sets the exponential wait (0.5 → 0s, 1s, 2s before the three retries), `status_forcelist` is the list of response codes that count as retryable, and `respect_retry_after_header=True` honours a server\'s `Retry-After` header on 429/503. This is the policy ONLY - it still needs an adapter to take effect.',
       hints: ['The policy class is Retry; the code list is status_forcelist.'],
       tags: ['requests', 'Retry', 'status_forcelist', 'backoff', 'resilience'],
       concepts: ['py-exception-hierarchy'],

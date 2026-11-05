@@ -174,6 +174,7 @@ print(re.findall(r"\\[(.*___)\\]", text))`,
 
 errors = re.findall(r"^ERROR.*", log, re.___)`,
       blanks: ['MULTILINE'],
+      blankAlternates: [['M']],
       solution: 'import re\n\nerrors = re.findall(r"^ERROR.*", log, re.MULTILINE)',
       explanation:
         're.MULTILINE changes the meaning of ^ and $ to per-line anchors (instead of whole-string). Often combined with re.IGNORECASE for log parsing. Aliases: re.M.',
@@ -195,9 +196,10 @@ errors = re.findall(r"^ERROR.*", log, re.___)`,
 m = re.search(r"hello", "HELLO WORLD", re.___)
 print(m.group())`,
       blanks: ['IGNORECASE'],
+      blankAlternates: [['I']],
       solution: 'import re\n\nm = re.search(r"hello", "HELLO WORLD", re.IGNORECASE)\nprint(m.group())',
       explanation:
-        're.IGNORECASE (alias re.I) makes letter matching case-insensitive. Without it, "hello" wouldn\'t match "HELLO". Use this rather than uppercasing both sides — it\'s clearer and faster.',
+        're.IGNORECASE (alias re.I) makes letter matching case-insensitive. Without it, "hello" wouldn\'t match "HELLO". Use this rather than uppercasing both sides - it\'s clearer and faster.',
       hints: ['All-caps name; "ignore" + "case".'],
       tags: ['regex', 'IGNORECASE', 'flags'],
       concepts: ['py-regex-syntax'],
@@ -216,10 +218,11 @@ print(m.group())`,
 m = re.match(___"\\d{4}", "2024")
 print(m.group())`,
       blanks: ['r'],
+      blankAlternates: [['R']],
       solution: 'import re\n\nm = re.match(r"\\d{4}", "2024")\nprint(m.group())',
       explanation:
-        'r"" is a raw string — backslashes are NOT processed as escape sequences. Without r, you\'d need "\\\\d{4}" to get a literal backslash. Always use raw strings for regex patterns.',
-      hints: ['Single letter prefix; same prefix as for raw bytes (without b).'],
+        'r"" is a raw string - backslashes are NOT processed as escape sequences. Without r, you\'d need "\\\\d{4}" to get a literal backslash. Always use raw strings for regex patterns.',
+      hints: ['A single letter before the opening quote; it stands for "raw".'],
       tags: ['regex', 'raw-string'],
       concepts: ['py-regex-syntax'],
     },
@@ -259,7 +262,7 @@ print(m.group())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Capture year, month, day from "2024-03-15" using groups.',
+        'Match "2024-03-15" with a raw-string pattern of three capturing groups, then print the year, month and day on one line.',
       correctOrder: [
         'import re',
         '',
@@ -274,7 +277,7 @@ print(m.group())`,
       solution:
         'import re\n\ndate = "2024-03-15"\nm = re.match(r"(\\d{4})-(\\d{2})-(\\d{2})", date)\nprint(m.group(1), m.group(2), m.group(3))',
       explanation:
-        'Group 0 is the WHOLE match; capture groups start at index 1. So group(1) = year, group(2) = month, group(3) = day. Without raw string, "\\d" might be interpreted as escape sequences.',
+        'Group 0 is the WHOLE match; capture groups start at index 1. So group(1) = year, group(2) = month, group(3) = day. Without the r prefix, "\\d" is an invalid escape that Python warns about (SyntaxWarning); it happens to reach re unchanged here, but an escape such as "\\b" would silently become a backspace, so always write patterns as raw strings.',
       hints: ['Group 0 = whole match; captures start at 1.'],
       tags: ['regex', 'groups', 'capture'],
       concepts: ['py-regex-syntax'],
@@ -287,7 +290,7 @@ print(m.group())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use named groups for the same date pattern, then access by name.',
+        'Match "2024-03-15" with a pattern of three named groups (year, month, day), then print the year by its group name.',
       correctOrder: [
         'import re',
         '',
@@ -296,13 +299,13 @@ print(m.group())`,
         'print(m.group("year"))',
       ],
       distractorLines: [
-        'r"(<year>\\d{4})-(<month>\\d{2})-(<day>\\d{2})"',
-        'print(m["year"])',
+        'm = re.match(r"(<year>\\d{4})-(<month>\\d{2})-(<day>\\d{2})", date)',
+        'print(m.year)',
       ],
       solution:
         'import re\n\ndate = "2024-03-15"\nm = re.match(r"(?P<year>\\d{4})-(?P<month>\\d{2})-(?P<day>\\d{2})", date)\nprint(m.group("year"))',
       explanation:
-        'Python\'s named group syntax is (?P<name>pattern) — the P prefix is Python-specific. Access via m.group("year") or m["year"] (3.6+). Plain (<name>...) is not valid in Python\'s re.',
+        'Python\'s named group syntax is (?P<name>pattern); the P is required. Without the ?P, (<year>...) is an ordinary group that looks for the literal text "<year>", so the match fails and m is None. Read a named group with m.group("year") (or m["year"]); a Match object has no .year attribute.',
       hints: ['Python named-group syntax: (?P<name>pattern). The P is required.'],
       tags: ['regex', 'named-groups'],
       concepts: ['py-regex-syntax'],
@@ -371,7 +374,7 @@ print(m.group())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Compile the email pattern once, then reuse it to test multiple addresses.',
+        'Compile the email pattern once, then reuse it to test "a@b.com" first and "not an email" second, printing True or False for each.',
       correctOrder: [
         'import re',
         '',
@@ -427,11 +430,11 @@ print(m.group())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Anchor a pattern to match only when "ERROR" is at the START of a line (multi-line text).',
+        'Find every line of the multi-line log that STARTS with "ERROR" (the word also appears at the end of another line) and print the list of matches.',
       correctOrder: [
         'import re',
         '',
-        'log = "INFO ok\\nERROR bad\\nINFO done"',
+        'log = "INFO ok\\nERROR bad\\nINFO retry after ERROR"',
         'errors = re.findall(r"^ERROR.*", log, re.MULTILINE)',
         'print(errors)',
       ],
@@ -440,9 +443,9 @@ print(m.group())`,
         'errors = re.findall(r"ERROR.*", log, re.MULTILINE)',
       ],
       solution:
-        'import re\n\nlog = "INFO ok\\nERROR bad\\nINFO done"\nerrors = re.findall(r"^ERROR.*", log, re.MULTILINE)\nprint(errors)',
+        'import re\n\nlog = "INFO ok\\nERROR bad\\nINFO retry after ERROR"\nerrors = re.findall(r"^ERROR.*", log, re.MULTILINE)\nprint(errors)',
       explanation:
-        'By default ^ matches only the very start of the string. With re.MULTILINE, ^ matches the start of each LINE — so "ERROR bad" is found. Without MULTILINE, ^ERROR fails because the string starts with "INFO".',
+        'By default ^ matches only the very start of the string. With re.MULTILINE, ^ matches the start of each LINE - so "ERROR bad" is found. Without MULTILINE, ^ERROR fails because the string starts with "INFO". Dropping the ^ would also pick up the "ERROR" at the end of the last line.',
       hints: ['^ is whole-string anchor by default; re.MULTILINE makes it line-anchor.'],
       tags: ['regex', 'anchors', 'MULTILINE'],
       concepts: ['py-regex-syntax'],
@@ -455,7 +458,7 @@ print(m.group())`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use a lazy quantifier .*? to extract the SHORTEST match between two markers.',
+        'Use a lazy quantifier .*? to capture the text inside each [ ] pair of "[a][b][c]", and print the list of captured texts.',
       correctOrder: [
         'import re',
         '',
@@ -470,7 +473,7 @@ print(m.group())`,
       solution:
         'import re\n\ntext = "[a][b][c]"\nmatches = re.findall(r"\\[(.*?)\\]", text)\nprint(matches)',
       explanation:
-        'Greedy .* matches as much as possible — so \\[(.*)\\] captures "a][b][c" (everything between the first [ and the last ]). Lazy .*? matches as little as possible — yielding "a", "b", "c" separately.',
+        'Greedy .* matches as much as possible - so \\[(.*)\\] captures "a][b][c" (everything between the first [ and the last ]). Lazy .*? matches as little as possible, yielding "a", "b", "c" separately. Without the parentheses, findall would return the brackets too: [\'[a]\', \'[b]\', \'[c]\'].',
       hints: ['Greedy = maximum match; lazy (?) = minimum match.'],
       tags: ['regex', 'greedy', 'lazy'],
       concepts: ['py-regex-syntax'],
@@ -741,6 +744,17 @@ def parse_log_entry(line: str) -> dict[str, str] | None:
         "message": match.group(3),
         "host": match.group(4),
     }
+
+# OR
+import re
+
+LOG_RE = re.compile(
+    r'\\[(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\]\\s+(?P<level>\\w+):\\s+(?P<message>.+?)\\s+\\(host=(?P<host>[^)]+)\\)'
+)
+
+def parse_log_entry(line: str) -> dict[str, str] | None:
+    m = LOG_RE.search(line)
+    return m.groupdict() if m else None
 `,
       tieredHints: {
         apiSignature: 're.search(pattern, string, flags=0) -> re.Match | None',
@@ -770,12 +784,12 @@ def parse_log_entry(line: str) -> dict[str, str] | None:
       course: Course.BACKEND,
       question: 'What is the difference between `re.match`, `re.search`, `re.fullmatch`, and `re.findall`?',
       options: [
-        { id: 'a', text: 'They are all aliases for the same function', isCorrect: false },
-        { id: 'b', text: '`re.match` tries to match only at the START of the string. `re.search` scans the whole string for the first match. `re.fullmatch` requires the pattern to match the ENTIRE string. `re.findall` returns a list of every non-overlapping match.', isCorrect: true },
-        { id: 'c', text: 'match is case-sensitive; search is not', isCorrect: false },
-        { id: 'd', text: 'findall is deprecated — always use match', isCorrect: false },
+        { id: 'a', text: '`match` returns the first match anywhere, `search` tries only at the start, `fullmatch` needs the whole string to match, and `findall` returns a list of all matches', isCorrect: false },
+        { id: 'b', text: '`match` tries only at the start, `search` returns the first match anywhere, `fullmatch` needs the whole string to match, and `findall` returns a list of all matches', isCorrect: true },
+        { id: 'c', text: '`match` needs the whole string to match, `search` returns the first match anywhere, `fullmatch` is the older name for `match`, and `findall` returns a list of all matches', isCorrect: false },
+        { id: 'd', text: '`match` tries only at the start, `search` returns every match anywhere as Match objects, `fullmatch` needs the whole string to match, and `findall` returns only the first match', isCorrect: false },
       ],
-      explanation: 'The commonest bug: using `re.match` when you meant `re.search`. `match` is anchored at position 0 and returns None for `"hello"` matching against `"ello"`. Use `search` when the pattern can appear anywhere, `fullmatch` for validation ("does this whole string parse as a valid X?"), `findall` to collect every occurrence.',
+      explanation: 'The commonest bug is using `re.match` when you meant `re.search`. `match` only tries at the start of the string, so `re.match("ello", "hello")` is `None` while `re.search("ello", "hello")` finds it. `match` does not need the whole string: `re.match(r"\\d+", "123abc")` succeeds, but `re.fullmatch(r"\\d+", "123abc")` is `None`, which is why `fullmatch` is the one for validation. `search` stops at the first match; `findall` collects every match into a list.',
       hints: [
         'match = anchored at start',
         'search = anywhere (first hit)',
@@ -815,7 +829,7 @@ print(bool(re.___(r"\\d+", "123abc")))`,
       language: CodeLanguage.PYTHON,
       question: 'Use the `re` function that requires the WHOLE string to match (not just a prefix or any substring) to validate whether a string looks like an email. The pattern should be `r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+"` — one or more non-at, non-whitespace chars, then `@`, then the same class again, then a dot, then the same class again. Print the bool result of matching `"user@example.com"` (expect `True`) and the bool result of matching `"not-an-email"` (expect `False`).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 'fullmatch of email pattern',
@@ -854,7 +868,7 @@ res2 = re.____(pattern, "____")`,
       language: CodeLanguage.PYTHON,
       question: 'Given `s = "2025-03-15"`, parse it with a regex that uses NAMED capture groups — three groups named `year` (4 digits), `month` (2 digits), and `day` (2 digits), separated by dashes. Use `re.search` to find the match, then extract all named groups as a dict using the match object\'s dict-returning method and print it (expect `{\'year\': \'2025\', \'month\': \'03\', \'day\': \'15\'}`).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 'named groups groupdict',
@@ -893,7 +907,7 @@ print(m.____())`,
       language: CodeLanguage.PYTHON,
       question: 'Given `text = "card 4111-1111-1111-1111 used"`, use the `re` substitution function to replace any credit-card-shaped sequence (four groups of four digits joined by dashes — pattern `r"\\d{4}-\\d{4}-\\d{4}-\\d{4}"`) with the string `"[REDACTED]"`. Print the redacted result (expect `card [REDACTED] used`).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 're.sub redaction',
@@ -930,7 +944,7 @@ print(re.____(r"____", "____", text))  # replace card-shaped runs`,
       language: CodeLanguage.PYTHON,
       question: 'Given `s = "a,b;c|d, e"`, split the string on ANY of three delimiters — comma, semicolon, or pipe — followed by optional whitespace. Use the `re` function that splits on a regex pattern (not a fixed string). The pattern `r"[,;|]\\s*"` is a character-class matching any of the three delimiters plus zero-or-more whitespace. Print the resulting list (expect `[\'a\', \'b\', \'c\', \'d\', \'e\']`).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 're.split on character class',
@@ -967,7 +981,7 @@ ____(____.____(r"____", ____))`,
       language: CodeLanguage.PYTHON,
       question: 'Compile the pattern `r"^hello"` into a reusable pattern object with two flags combined — case-insensitive matching AND treating `^`/`$` as line boundaries rather than string boundaries. Given `text = "Hello world\\nhello again\\nbye"`, use the compiled pattern\'s `findall` method on the text and print the result (expect `[\'Hello\', \'hello\']` — both lines that START with any-case "hello"; "bye" doesn\'t match).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 'compiled regex with flags',
@@ -1005,12 +1019,12 @@ ____(pattern.____(text))`,
       course: Course.BACKEND,
       question: 'What is the difference between `.*` and `.*?` in a regex?',
       options: [
-        { id: 'a', text: 'They are identical', isCorrect: false },
-        { id: 'b', text: '`.*` is greedy — it matches as MUCH as possible. `.*?` is lazy (non-greedy) — it matches as LITTLE as possible. Given `"<a><b>"` and the pattern `<.*>`, greedy matches the whole `<a><b>`; `<.*?>` matches just `<a>`.', isCorrect: true },
-        { id: 'c', text: 'The `?` makes the pattern case-insensitive', isCorrect: false },
-        { id: 'd', text: '`.*?` is deprecated syntax', isCorrect: false },
+        { id: 'a', text: '`.*` is greedy, so `<.*>` matches all of `"<a><b>"`; the `?` in `.*?` makes that run optional, so `<.*?>` matches the same `<a><b>`', isCorrect: false },
+        { id: 'b', text: '`.*` is greedy and takes as much as it can, so `<.*>` matches all of `"<a><b>"`; `.*?` takes as little as it can, so `<.*?>` matches `<a>`', isCorrect: true },
+        { id: 'c', text: '`.*` is lazy and stops at the first `>`, so `<.*>` matches `<a>` in `"<a><b>"`; `.*?` is greedy and runs to the last `>`, giving `<a><b>`', isCorrect: false },
+        { id: 'd', text: '`.*` stops at the end of a line while `.*?` may cross newlines, so on the one-line `"<a><b>"` both `<.*>` and `<.*?>` match `<a><b>`', isCorrect: false },
       ],
-      explanation: 'Greedy quantifiers (`*`, `+`, `?`, `{n,m}`) try to match the maximum possible and backtrack if needed. Adding `?` after any quantifier makes it lazy — match the minimum. Classic use: extracting individual HTML tags with `<.*?>` rather than gobbling across multiple tags. Even better for structured content: use a more specific pattern like `<[^>]+>` which doesn\'t need backtracking.',
+      explanation: 'Greedy quantifiers (`*`, `+`, `?`, `{n,m}`) match as much as possible and give back only what they must. A `?` placed after a quantifier makes it lazy, so it matches as little as possible: `<.*?>` stops at the first `>`. That `?` does not mean "optional" (that is a `?` after a plain character, as in `colou?r`), and neither form crosses a newline unless you pass `re.DOTALL`. For tags, a specific pattern such as `<[^>]+>` works too and needs no backtracking.',
       hints: [
         'Greedy (*) = match as much as possible',
         'Lazy (*?) = match as little as possible',
@@ -1028,7 +1042,7 @@ ____(pattern.____(text))`,
       language: CodeLanguage.PYTHON,
       question: 'Given `text = "cat 3 dog 7 bird 9"`, iterate all runs of digits using the `re` function that yields MATCH OBJECTS (not just strings — so you get positions too). Pattern: `r"\\d+"`. For each match, print a line `"<matched digits>@<start position>"` — the matched digits and the character index where they start in the string. Expected output on three lines: `3@4`, `7@10`, `9@17`.',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 're.finditer with positions',
@@ -1067,7 +1081,7 @@ for m in ____.____(r"____", text):
       language: CodeLanguage.PYTHON,
       question: 'Given `text = "this is is a test test case"`, collapse any consecutive duplicate word into a single occurrence using a regex with a BACKREFERENCE — the token `\\1` in the pattern matches whatever the first group already captured. The pattern `r"\\b(\\w+)\\s+\\1\\b"` means "a word, whitespace, then the SAME word again at a word boundary". Replace any such match with just the first group (replacement string `r"\\1"`) and run the substitution case-insensitively. Print the cleaned text (expect `this is a test case`).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 'backreference to collapse duplicates',
@@ -1105,12 +1119,12 @@ ____(cleaned)`,
       course: Course.BACKEND,
       question: 'What do `(?=...)`, `(?!...)`, `(?<=...)`, and `(?<!...)` do in a regex?',
       options: [
-        { id: 'a', text: 'They are comments — ignored at runtime', isCorrect: false },
-        { id: 'b', text: 'Zero-width assertions (lookaround): `(?=X)` positive lookahead (next chars are X, but don\'t consume), `(?!X)` negative lookahead (next chars are NOT X), `(?<=X)` positive lookbehind (previous chars ARE X), `(?<!X)` negative lookbehind (previous chars are NOT X). They match a position without consuming characters.', isCorrect: true },
-        { id: 'c', text: 'Alternate syntax for named groups', isCorrect: false },
-        { id: 'd', text: 'Flags for case-insensitivity', isCorrect: false },
+        { id: 'a', text: 'Non-capturing groups: the text inside is matched and kept in the match, but it is left out of `m.groups()`', isCorrect: false },
+        { id: 'b', text: 'Lookaround: each checks what comes after (`?=`, `?!`) or before (`?<=`, `?<!`) the current spot, without adding that text to the match', isCorrect: true },
+        { id: 'c', text: 'Inline flags: each one switches on a mode, such as case-insensitive or multiline matching, for the rest of the pattern', isCorrect: false },
+        { id: 'd', text: 'Named-group variants: the symbol after `?` names the group, so the text it matches can be read back with `m.group()`', isCorrect: false },
       ],
-      explanation: 'Lookaround matches a POSITION based on context without including that context in the match. Example: `\\d+(?= USD)` matches digits ONLY when followed by " USD", but the "USD" is not part of the match. Critical for password policies (e.g. "contains a digit AND contains a letter" = two positive lookaheads anchored at start). Python\'s `re` requires fixed-width lookbehind; for variable-width use the `regex` package.',
+      explanation: 'Lookaround is a zero-width check: `(?=X)` means X comes next, `(?!X)` means X does not come next, `(?<=X)` means X came just before, and `(?<!X)` means X did not come just before. The checked text is not part of the match: `\\d+(?= USD)` on "5 USD" matches just "5". A non-capturing group `(?:USD)` would instead consume "USD" and include it in the match. Inline flags look like `(?i)` and named groups like `(?P<name>...)`, so neither uses `=`, `!` or `<=` this way. Python\'s `re` requires a fixed-width lookbehind.',
       hints: [
         '(?=...) / (?!...) look ahead at what comes next',
         '(?<=...) / (?<!...) look back at what came before',
@@ -1128,7 +1142,7 @@ ____(cleaned)`,
       language: CodeLanguage.PYTHON,
       question: 'Given a log line `text = "level=info user=alice action=login status=200"`, parse it into a dict mapping each key to its value. Use a regex with TWO capture groups — a word of alphanumerics (`(\\w+)`), then a literal `=`, then a run of non-whitespace (`(\\S+)`). Pass this pattern to the `re` function that returns every match. With two groups present, the result is a list of `(key, value)` tuples — convert that list into a `dict` and print it (expect `{\'level\': \'info\', \'user\': \'alice\', \'action\': \'login\', \'status\': \'200\'}`).',
       starterCode: `import re
-  `,
+`,
       testCases: [
         {
           input: 'regex to parse key=value log line',
@@ -1280,7 +1294,7 @@ print(re.findall(r"___cat___", "cat category scatter"))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the metacharacter that matches ANY single character, so "c?t" matches cat, cot, and c@t alike.',
+        'Fill in the metacharacter that matches ANY single character, so the pattern matches cat, cot and c@t alike.',
       template: `import re
 
 # the wildcard: any ONE character between c and t
@@ -1290,7 +1304,7 @@ print(re.findall(r"c___t", "cat cot c@t cnt"))`,
         'import re\n\nprint(re.findall(r"c.t", "cat cot c@t cnt"))',
       explanation:
         ". matches any single character except a newline, so c.t matches cat, cot, c@t, and cnt → ['cat', 'cot', 'c@t', 'cnt']. To match a literal dot you escape it as \\.",
-      hints: ['A single punctuation mark — the regex wildcard for one character.'],
+      hints: ['A single punctuation mark - the regex wildcard for one character.'],
       tags: ['regex', 'dot', 'wildcard', 'primitive'],
       concepts: ['py-regex-syntax'],
     },
@@ -1302,7 +1316,7 @@ print(re.findall(r"c___t", "cat cot c@t cnt"))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the quantifier meaning ZERO or more of the preceding character, so "ab?c" also matches "ac" (no b at all).',
+        'Fill in the quantifier meaning ZERO or more of the preceding character, so the pattern also matches "ac" (no b at all).',
       template: `import re
 
 # zero-or-more "b" between a and c (so "ac" matches too)
@@ -1312,7 +1326,7 @@ print(re.findall(r"ab___c", "ac abc abbc"))`,
         'import re\n\nprint(re.findall(r"ab*c", "ac abc abbc"))',
       explanation:
         "* means 'zero or more of the preceding'. ab*c matches 'ac' (zero b), 'abc' (one b), and 'abbc' (two b) → ['ac', 'abc', 'abbc']. Compare + which requires at least one.",
-      hints: ['The quantifier that allows none at all — zero or more.'],
+      hints: ['The quantifier that allows none at all - zero or more.'],
       tags: ['regex', 'quantifier', 'star', 'primitive'],
       concepts: ['py-regex-syntax'],
     },
@@ -1324,7 +1338,7 @@ print(re.findall(r"ab___c", "ac abc abbc"))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the quantifier meaning ONE or more of the preceding character, so "ab?c" requires at least one b and does NOT match "ac".',
+        'Fill in the quantifier meaning ONE or more of the preceding character, so the pattern needs at least one b and does NOT match "ac".',
       template: `import re
 
 # one-or-more "b" between a and c (so "ac" does NOT match)
@@ -1334,7 +1348,7 @@ print(re.findall(r"ab___c", "ac abc abbc"))`,
         'import re\n\nprint(re.findall(r"ab+c", "ac abc abbc"))',
       explanation:
         "+ means 'one or more of the preceding'. ab+c needs at least one b, so it matches 'abc' and 'abbc' but NOT 'ac' → ['abc', 'abbc']. The key contrast with * (which allows zero).",
-      hints: ['The quantifier that requires at least one — one or more.'],
+      hints: ['The quantifier that requires at least one - one or more.'],
       tags: ['regex', 'quantifier', 'plus', 'primitive'],
       concepts: ['py-regex-syntax'],
     },
@@ -1852,10 +1866,10 @@ print(re.findall(r"___", "color colour"))   # -> ['color', 'colour']`,
       template: `import re
 
 m = re.search(r"___\\d{4}___-\\d{2}", "2024-03")
-print(m.group(1))   # -> '2024'`,
+print(m.group(1))   # -> 2024`,
       blanks: ['(', ')'],
       solution: 'import re\n\nm = re.search(r"(\\d{4})-\\d{2}", "2024-03")\nprint(m.group(1))',
-      explanation: "Plain parentheses ( ) create a capturing group. group(1) returns whatever the first group matched — here the year '2024'. group(0) would be the whole match '2024-03'.",
+      explanation: "Plain parentheses ( ) create a capturing group. group(1) returns whatever the first group matched - here the year '2024'. group(0) would be the whole match '2024-03'.",
       hints: ['A pair of plain round brackets around the part you want to capture.'],
       tags: ['regex', 'groups', 'capture', 'primitive'],
       concepts: ['py-regex-syntax'],
@@ -1872,8 +1886,9 @@ print(m.group(1))   # -> '2024'`,
 
 print(re.findall(r"___", "f(x) = (1)"))   # -> ['(', '(']`,
       blanks: ['\\('],
+      blankAlternates: [['[(]']],
       solution: 'import re\n\nprint(re.findall(r"\\(", "f(x) = (1)"))',
-      explanation: "( normally starts a group, so to match a literal parenthesis you escape it: \\( → ['(', '(']. The same applies to other metacharacters like \\[ \\{ \\+.",
+      explanation: "( normally starts a group, so to match a literal parenthesis you escape it: \\( → ['(', '(']. A one-character class, [(], works too, because ( has no special meaning inside brackets. The same escaping applies to other metacharacters like \\[ \\{ \\+.",
       hints: ['Backslash in front of the bracket makes it literal.'],
       tags: ['regex', 'escaping', 'literal', 'primitive'],
       concepts: ['py-regex-syntax'],

@@ -368,7 +368,7 @@ class Cell:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use @total_ordering to derive all comparison ops from __eq__ and __lt__.',
+        'Use @total_ordering on an Item class so all comparison ops come from __eq__ and __lt__. Write `__init__(self, p)` first, then `__eq__`, then `__lt__`, each comparing `self.p`.',
       correctOrder: [
         'from functools import total_ordering',
         '',
@@ -401,7 +401,7 @@ class Cell:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use @cached_property to compute area only once per instance.',
+        'Write a Rect class whose `__init__(self, w, h)` stores w and h, followed by an `area` that is computed only once per instance with @cached_property.',
       correctOrder: [
         'from functools import cached_property',
         '',
@@ -420,7 +420,7 @@ class Cell:
       solution:
         'from functools import cached_property\n\nclass Rect:\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n    @cached_property\n    def area(self):\n        return self.w * self.h',
       explanation:
-        'cached_property (3.8+) computes the value on first access, then STORES IT in the instance __dict__ — subsequent accesses skip the method entirely. Plain @property recomputes every time. Stacking @property + @cache doesn\'t work right with self.',
+        'cached_property (3.8+) computes the value on first access, then STORES IT in the instance __dict__ - subsequent accesses skip the method entirely. Plain @property recomputes every time. Stacking @property + @cache doesn\'t work right with self.',
       hints: ['cached_property = compute once per instance, store on instance.'],
       tags: ['functools', 'cached_property'],
       concepts: ['py-functools-cache-partial'],
@@ -433,7 +433,7 @@ class Cell:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use @singledispatch to write a generic function with type-specific implementations.',
+        'Use @singledispatch to write a generic `show(x)` that prints `unknown: ` followed by x, then register an int version (`int: ` label), then a str version (`str: ` label).',
       correctOrder: [
         'from functools import singledispatch',
         '',
@@ -450,13 +450,13 @@ class Cell:
         '    print(f"str: {x}")',
       ],
       distractorLines: [
-        '@show.register(int)',
+        '@singledispatch.register',
         '@show(int)',
       ],
       solution:
         'from functools import singledispatch\n\n@singledispatch\ndef show(x):\n    print(f"unknown: {x}")\n\n@show.register\ndef _(x: int):\n    print(f"int: {x}")\n\n@show.register\ndef _(x: str):\n    print(f"str: {x}")',
       explanation:
-        'singledispatch is single-arg type dispatch (Lisp-style generic functions). The base function is the fallback. Register variants via @show.register and use type ANNOTATIONS to declare which type each variant handles. The function name `_` is convention for "registered, not called directly".',
+        'singledispatch is single-arg type dispatch (Lisp-style generic functions). The base function is the fallback. Register variants via @show.register and use type ANNOTATIONS to declare which type each variant handles. The function name `_` is convention for "registered, not called directly". `register` belongs to the generic function `show`, not to `singledispatch`, so `@singledispatch.register` raises AttributeError. `@show(int)` calls show right away (printing "unknown: <class \'int\'>") and then tries to use its None result as a decorator, which raises TypeError. (`@show.register(int)` with the type passed explicitly is also valid.)',
       hints: ['@show.register reads the type from the parameter annotation.'],
       tags: ['functools', 'singledispatch'],
       concepts: ['py-functools-cache-partial'],
@@ -478,14 +478,14 @@ class Cell:
         '    return a + b',
       ],
       distractorLines: [
-        '@lru_cache',
-        '@lru_cache(128)',
+        '@lru_cache(size=128)',
+        '@cache(maxsize=128)',
       ],
       solution:
         'from functools import lru_cache\n\n@lru_cache(maxsize=128)\ndef slow_add(a, b):\n    return a + b',
       explanation:
-        'lru_cache(maxsize=N) keeps the N most-recently-used results, evicting LRU on overflow. maxsize must be a kwarg or use the decorator-without-args form (3.8+) `@lru_cache`. Bare `@lru_cache(128)` is positional and works in 3.8+, but the kwarg form is more explicit.',
-      hints: ['maxsize as a kwarg; explicit > positional.'],
+        'lru_cache(maxsize=N) keeps the N most-recently-used results, evicting the least recently used on overflow. The keyword is `maxsize`: `@lru_cache(size=128)` raises TypeError (unexpected keyword argument). `@cache` takes no size at all, since it is always unbounded, so `@cache(maxsize=128)` raises TypeError too (and `cache` is not imported here). `@lru_cache(128)` and bare `@lru_cache` would also give a 128-entry cache, but the keyword form says what the number means.',
+      hints: ['The keyword is maxsize, and it belongs to lru_cache.'],
       tags: ['functools', 'lru_cache'],
       concepts: ['py-functools-cache-partial'],
     },
@@ -528,7 +528,7 @@ class Cell:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use functools.partialmethod inside a class to bind self-aware partial methods.',
+        'Give a Cell class a `set_state(self, state)` method, then two shortcuts built with functools.partialmethod: first `set_alive` (state True), then `set_dead` (state False).',
       correctOrder: [
         'from functools import partialmethod',
         '',
@@ -540,12 +540,12 @@ class Cell:
       ],
       distractorLines: [
         '    set_alive = partial(set_state, True)',
-        '    set_alive = lambda self: self.set_state(True)',
+        '    set_alive = partialmethod(set_state(True))',
       ],
       solution:
         'from functools import partialmethod\n\nclass Cell:\n    def set_state(self, state):\n        self.state = state\n    set_alive = partialmethod(set_state, True)\n    set_dead = partialmethod(set_state, False)',
       explanation:
-        'partialmethod is the class-aware variant of partial — it correctly binds self when accessed on an instance. partial alone wouldn\'t treat self specially. The lambda alternative works but is less idiomatic.',
+        'partialmethod is the class-aware variant of partial: it binds self when accessed on an instance, so `c.set_alive()` calls `set_state(c, True)`. partial is not imported here, and even when it is, a partial object does not bind self, so `c.set_alive()` would call `set_state(True)` and fail for the missing state. `partialmethod(set_state(True))` calls set_state right away while the class body runs, which raises TypeError; pass the function uncalled, then the arguments to fix.',
       hints: ['partialmethod for inside classes; partial is for free functions.'],
       tags: ['functools', 'partialmethod'],
       concepts: ['py-functools-cache-partial'],
@@ -787,14 +787,14 @@ print(reduce(lambda a, b: a + [b * 2], [1, 2, 3], []))`,
       course: Course.BACKEND,
       question: 'What does `@functools.lru_cache(maxsize=128)` do when applied to a function?',
       options: [
-        { id: 'a', text: 'Speeds up every function call by running it on multiple threads', isCorrect: false },
-        { id: 'b', text: 'Memoises calls by positional and keyword args — subsequent calls with the same args return the cached result without re-executing the body. `maxsize` bounds the cache with LRU eviction.', isCorrect: true },
-        { id: 'c', text: 'Persists results to disk across program runs', isCorrect: false },
-        { id: 'd', text: 'Prevents the function from being called more than 128 times ever', isCorrect: false },
+        { id: 'a', text: 'It runs the body on several threads at once, so every call returns its result faster', isCorrect: false },
+        { id: 'b', text: 'It stores each result by its arguments, so a repeat call skips the body; at most 128 are kept', isCorrect: true },
+        { id: 'c', text: 'It saves each result to disk, so later runs of the program can reuse them without the body', isCorrect: false },
+        { id: 'd', text: 'It counts the calls and raises an error once the function has been called more than 128 times', isCorrect: false },
       ],
-      explanation: 'LRU (least-recently-used) cache keeps up to `maxsize` distinct (args, kwargs) → result entries. Args must be hashable. Best for pure functions with repeated calls on the same inputs. `maxsize=None` is unbounded (memory risk). In 3.9+ there is a simpler `@functools.cache` which is just `lru_cache(maxsize=None)`.',
+      explanation: 'An LRU (least-recently-used) cache keeps up to `maxsize` results, keyed by the call\'s positional and keyword arguments; a repeat call with the same arguments returns the stored result without running the body. When it is full, the least recently used entry is dropped, so `maxsize` limits the cache, not the number of calls. The cache lives in memory for the current run only (nothing goes to disk), and it does not use threads: the first call with new arguments runs the body as usual. Arguments must be hashable. Best for pure functions with repeated calls on the same inputs. `maxsize=None` is unbounded (memory risk). In 3.9+ there is a simpler `@functools.cache` which is just `lru_cache(maxsize=None)`.',
       hints: [
-        'Cache is keyed by (args, kwargs) — args must be hashable',
+        'Cache is keyed by (args, kwargs) - args must be hashable',
         'Only use on pure functions (no side effects, same inputs → same outputs)',
         '`@cache` (3.9+) is `lru_cache(maxsize=None)`',
       ],
@@ -855,7 +855,7 @@ print(____(30))`,
       topic: Topic.PY_FUNCTOOLS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define `log_base(base, x)` that returns `math.log(x, base)`. Using the `functools` helper that pre-binds arguments to a callable, build two specialised helpers — `log10` with `base` pre-bound to 10, and `log2` with `base` pre-bound to 2. Print `log10(1000)` rounded to 1 decimal (expect `3.0`) and `log2(8)` rounded to 1 decimal (expect `3.0`).',
+      question: 'Define `log_base(base, x)` that returns `math.log(x, base)`. Using the `functools` helper that pre-binds arguments to a callable, build two specialised helpers - `log10` with `base` pre-bound to 10, and `log2` with `base` pre-bound to 2. Print `log10(1000)` rounded to 1 decimal (expect `3.0`) and `log2(8)` rounded to 1 decimal (expect `3.0`).',
       starterCode: `import math
 import functools
 `,
@@ -894,7 +894,7 @@ print(____(log2(8), 1))`,
       },
       hints: [
         'functools.partial(fn, fixed_arg) → new callable that only needs the remaining args',
-        'You can bind by keyword too: partial(fn, base=2)',
+        'Pass the base positionally: with partial(log_base, base=2), log2(8) also sends 8 to base and raises TypeError',
         'Equivalent to `lambda x: fn(fixed, x)` but picklable and with a nicer repr',
       ],
       tags: ['functools', 'partial', 'currying'],
@@ -1016,7 +1016,7 @@ print(____)`,
       topic: Topic.PY_FUNCTOOLS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define a `Circle` class whose constructor takes a `radius`. Expose two attribute-style properties — `area` (`math.pi * radius ** 2`) and `circumference` (`2 * math.pi * radius`) — using the `functools` decorator that computes on first access and caches the result in the instance (so repeat reads skip the math). Build `c = Circle(5)` and print `round(c.area, 2)` (expect `78.54`) and `round(c.circumference, 2)` (expect `31.42`). Access them as attributes, not method calls.',
+      question: 'Define a `Circle` class whose constructor takes a `radius`. Expose two attribute-style properties - `area` (`math.pi * radius ** 2`) and `circumference` (`2 * math.pi * radius`) - using the `functools` decorator that computes on first access and caches the result in the instance (so repeat reads skip the math). Build `c = Circle(5)` and print `round(c.area, 2)` (expect `78.54`) and `round(c.circumference, 2)` (expect `31.42`). Access them as attributes, not method calls.',
       starterCode: `import math
 import functools
 `,
@@ -1045,7 +1045,7 @@ class Circle:
 c = Circle(5)
 print(round(c.area, 2))
 print(round(c.circumference, 2))`,
-      explanation: '`cached_property` turns a method into a read-only attribute whose value is computed on first access and stored in the instance `__dict__`. Subsequent accesses skip the computation. Unlike `@property`, there is no setter and no per-instance cache invalidation — if `self.radius` changes, `area` will NOT update. Use it only when inputs are immutable or you explicitly `del instance.area` to invalidate.',
+      explanation: '`cached_property` turns a method into an attribute whose value is computed on first access and stored in the instance `__dict__`. Subsequent accesses skip the computation. Unlike `@property`, it does not recompute: if `self.radius` changes, `area` will NOT update. Use it only when inputs are immutable or you explicitly `del instance.area` to invalidate.',
       tieredHints: {
         apiSignature: 'functools.cached_property(func)',
         skeleton: `import math
@@ -1069,7 +1069,7 @@ print(____(c.____, 2))`,
       },
       hints: [
         '@functools.cached_property turns a method into a cached attribute',
-        'Access with `c.area` (no parentheses) — NOT `c.area()`',
+        'Access with `c.area` (no parentheses) - NOT `c.area()`',
         'Invalidate by `del c.area` if inputs change',
       ],
       tags: ['functools', 'cached_property', 'lazy', 'classes'],

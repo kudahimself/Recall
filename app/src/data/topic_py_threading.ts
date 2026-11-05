@@ -16,7 +16,7 @@ export const py_threading_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the threading primitive that protects a critical section.',
+        'Fill in the plain (non-re-entrant) lock class that protects a critical section.',
       template: `import threading
 
 lock = threading.___()
@@ -140,11 +140,12 @@ def worker():
     with sem:
         print("working")`,
       blanks: ['Semaphore'],
+      blankAlternates: [['BoundedSemaphore']],
       solution:
         'import threading\n\nsem = threading.Semaphore(3)\n\ndef worker():\n    with sem:\n        print("working")',
       explanation:
-        'Semaphore(n) allows up to n concurrent holders — a counter-based generalization of Lock (which is Semaphore(1)). Useful for connection pools and rate limiters.',
-      hints: ['Nine-letter PascalCase — generalization of a lock.'],
+        'Semaphore(n) allows up to n concurrent holders - a counter-based generalization of Lock (which behaves like Semaphore(1)). Useful for connection pools and rate limiters. BoundedSemaphore(3) also works here; it additionally raises ValueError if released more times than acquired.',
+      hints: ['Nine-letter PascalCase - generalization of a lock.'],
       tags: ['concurrency', 'Semaphore'],
       concepts: ['py-thread-vs-process'],
     },
@@ -181,7 +182,7 @@ lock.release()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Protect a shared counter with a Lock so increments do not race. Declare the counter (starting at 0) first, then the lock that guards it.',
+        'Protect a shared counter with a Lock so increments do not race. Declare the counter (starting at 0) first, then the lock that guards it, then define `inc()`.',
       correctOrder: [
         'import threading',
         '',
@@ -195,13 +196,13 @@ lock.release()`,
       ],
       distractorLines: [
         '    counter += 1',
-        'lock = threading.RLock()',
+        '    lock = threading.Lock()',
         '    lock.acquire()',
       ],
       solution:
         'import threading\n\ncounter = 0\nlock = threading.Lock()\n\ndef inc():\n    global counter\n    with lock:\n        counter += 1',
       explanation:
-        '`counter += 1` is three operations: read, add, write. Without a lock, two threads can interleave and lose updates. `with lock:` is the canonical exception-safe form — auto-releases on raise.',
+        '`counter += 1` is three operations: read, add, write. Without a lock, two threads can interleave and lose updates. The lock must be shared: creating a new Lock inside `inc()` gives every call its own lock, so nothing is protected. `with lock:` is the canonical exception-safe form - it releases the lock even if the block raises.',
       hints: ['with lock: protects the read-modify-write.'],
       tags: ['concurrency', 'threading', 'lock'],
       concepts: ['py-thread-vs-process'],
@@ -214,7 +215,7 @@ lock.release()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use `threading.Thread` to run a `work(n)` function concurrently in two threads (passing `1` and `2` as arguments). Launch both threads, then wait for both to complete before the program ends.',
+        'Use `threading.Thread` to run a `work(n)` function concurrently in two threads: create `t1` (passing `1`), then `t2` (passing `2`). Start `t1` then `t2`, then join `t1` then `t2` so the program waits for both.',
       correctOrder: [
         'import threading',
         '',
@@ -236,7 +237,7 @@ lock.release()`,
       solution:
         'import threading\n\ndef work(n):\n    print(n)\n\nt1 = threading.Thread(target=work, args=(1,))\nt2 = threading.Thread(target=work, args=(2,))\nt1.start()\nt2.start()\nt1.join()\nt2.join()',
       explanation:
-        '.start() launches the thread (calls run() in a new OS thread). .run() called directly executes inline — no concurrency. .join() blocks until the thread finishes; without it, the main thread may exit first or you cannot rely on results.',
+        '.start() launches the thread (calls run() in a new OS thread). .run() called directly executes inline - no concurrency. .join() blocks until the thread finishes; without it, the main thread may exit first or you cannot rely on results.',
       hints: ['start launches; join waits.'],
       tags: ['concurrency', 'threading', 'Thread'],
       concepts: ['py-thread-vs-process'],
@@ -249,7 +250,7 @@ lock.release()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Set up a producer/consumer over a shared `queue.Queue` (module-level). Define `producer()` to add the numbers 0, 1, 2 to the queue, and `consumer()` to loop forever: retrieve each item, print it, and mark it as handled. Use the queue, not a plain list.',
+        'Set up a producer/consumer over a shared `queue.Queue`. Create the module-level queue first, then define `producer()` to add the numbers 0, 1, 2 to the queue, then `consumer()` to loop forever: retrieve each item, print it, and mark it as handled. Use the queue, not a plain list.',
       correctOrder: [
         'import queue',
         'import threading',
@@ -274,8 +275,8 @@ lock.release()`,
       solution:
         'import queue\nimport threading\n\nq = queue.Queue()\n\ndef producer():\n    for i in range(3):\n        q.put(i)\n\ndef consumer():\n    while True:\n        item = q.get()\n        print(item)\n        q.task_done()',
       explanation:
-        'queue.Queue is thread-safe and blocking — get() blocks until an item is available, put() blocks if maxsize is reached. A plain list is NOT thread-safe in this pattern; race conditions corrupt state.',
-      hints: ['queue.Queue.get/put — not list.append/pop.'],
+        'queue.Queue is thread-safe and blocking - get() blocks until an item is available, put() blocks if maxsize is reached. A plain list is NOT thread-safe in this pattern; race conditions corrupt state.',
+      hints: ['queue.Queue.get/put - not list.append/pop.'],
       tags: ['concurrency', 'queue', 'producer-consumer'],
       concepts: ['py-thread-vs-process'],
     },
@@ -287,7 +288,7 @@ lock.release()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use a `threading.Event` to coordinate a worker thread. Define `worker()` to block until the event is signaled, then print `"go"`. In the main thread, create and launch the thread, signal the event to release the worker, and wait for the thread to complete. Use an Event, not a boolean flag.',
+        'Use a `threading.Event` to coordinate a worker thread. Create the event first, then define `worker()` to block until the event is signaled and print `"go"`. In the main thread, create and launch the thread, signal the event to release the worker, and wait for the thread to complete. Use an Event, not a boolean flag.',
       correctOrder: [
         'import threading',
         '',
@@ -310,7 +311,7 @@ lock.release()`,
       solution:
         'import threading\n\nstarted = threading.Event()\n\ndef worker():\n    started.wait()\n    print("go")\n\nt = threading.Thread(target=worker)\nt.start()\nstarted.set()\nt.join()',
       explanation:
-        'Event is a thread-safe one-shot flag. .wait() blocks until .set() is called from another thread. Spinning on a bool wastes CPU and has no memory-barrier guarantee — Event uses a condition variable internally.',
+        'Event is a thread-safe one-shot flag. .wait() blocks until .set() is called from another thread. Spinning on a bool wastes CPU and has no memory-barrier guarantee - Event uses a condition variable internally.',
       hints: ['Event.wait blocks until Event.set.'],
       tags: ['concurrency', 'threading', 'Event'],
       concepts: ['py-thread-vs-process'],
@@ -355,7 +356,7 @@ lock.release()`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use a `threading.Semaphore(3)` to limit concurrent access to 3 holders. Define `worker()` to acquire the semaphore as a context manager and print `"working"` inside the protected block.',
+        'Use a `threading.Semaphore(3)` to limit concurrent access to 3 holders. Create the semaphore first, then define `worker()` to acquire it as a context manager and print `"working"` inside the protected block.',
       correctOrder: [
         'import threading',
         '',
@@ -373,8 +374,8 @@ lock.release()`,
       solution:
         'import threading\n\nsem = threading.Semaphore(3)\n\ndef worker():\n    with sem:\n        print("working")',
       explanation:
-        'Semaphore(n) allows up to n concurrent holders — a counter-based lock. Lock() allows only 1. BoundedSemaphore raises if released more than acquired (good for catching bugs).',
-      hints: ['Semaphore(n) — context-manager friendly.'],
+        'Semaphore(n) allows up to n concurrent holders - a counter-based lock. Lock() allows only 1. BoundedSemaphore raises if released more than acquired (good for catching bugs).',
+      hints: ['Semaphore(n) - context-manager friendly.'],
       tags: ['concurrency', 'threading', 'Semaphore'],
       concepts: ['py-thread-vs-process'],
     },
@@ -556,37 +557,15 @@ print(results)`,
       concepts: ['py-thread-vs-process'],
     },
 {
-      id: 'py-concurrency-1',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.PY_THREADING,
-      course: Course.BACKEND,
-      question: 'When should you reach for `threading` vs `multiprocessing` vs `asyncio` in Python?',
-      options: [
-        { id: 'a', text: 'They are interchangeable — pick whichever you know', isCorrect: false },
-        { id: 'b', text: '`asyncio` for high-concurrency I/O-bound work with cooperative scheduling. `threading` for I/O-bound work you cannot make async (legacy blocking libs). `multiprocessing` for CPU-bound work — the GIL means threads can\'t use multiple CPU cores for pure-Python computation.', isCorrect: true },
-        { id: 'c', text: 'Always use threads — they are always fastest', isCorrect: false },
-        { id: 'd', text: 'Only use multiprocessing — threading is deprecated', isCorrect: false },
-      ],
-      explanation: 'The GIL lets only one thread execute Python bytecode at a time, so threading gives you no CPU parallelism for pure-Python work — but it IS useful for I/O-bound blocking code (requests in a thread pool). `multiprocessing` spawns OS processes, each with its own interpreter/GIL, so it scales CPU-bound work across cores. `asyncio` is cooperative single-threaded concurrency — scales to tens of thousands of sockets but requires async-native libraries.',
-      hints: [
-        'CPU-bound → multiprocessing (bypasses GIL)',
-        'I/O-bound + async lib available → asyncio',
-        'I/O-bound + blocking lib only → threading',
-      ],
-      tags: ['concurrency', 'threading', 'multiprocessing', 'asyncio', 'gil'],
-      concepts: ['py-thread-vs-process', 'py-async-coroutines', 'py-event-loop', 'py-gil-implication'],
-    },
-{
       id: 'py-concurrency-4',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,
       topic: Topic.PY_THREADING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Protect a shared counter against race conditions using the `threading` module\'s mutual-exclusion primitive. Declare two module-level names: an integer counter starting at 0, and a lock instance. Define a function `increment_many(n)` that loops `n` times; inside each iteration, acquire the lock (via `with`) and increment the global counter by 1. Start TWO threads each running `increment_many` with 1000, join both to completion, and print the final counter (expect `2000`). Without the lock, interleaved read-modify-write sequences would lose updates — the increment operator is NOT atomic.',
+      question: 'Protect a shared counter against race conditions using the `threading` module\'s mutual-exclusion primitive. Declare two module-level names: an integer counter starting at 0, and a lock instance. Define a function `increment_many(n)` that loops `n` times; inside each iteration, acquire the lock (via `with`) and increment the global counter by 1. Start TWO threads each running `increment_many` with 1000, join both to completion, and print the final counter (expect `2000`). Without the lock, interleaved read-modify-write sequences would lose updates - the increment operator is NOT atomic.',
       starterCode: `from threading import Thread, Lock
-  `,
+`,
       testCases: [
         {
           input: 'two threads × 1000 increments with lock',
@@ -610,10 +589,10 @@ t2 = Thread(target=increment_many, args=(1000,))
 t1.start(); t2.start()
 t1.join(); t2.join()
 print(counter)`,
-      explanation: '`counter += 1` compiles to LOAD, ADD, STORE — three bytecodes. Two threads can both LOAD the same value, each ADD 1, then each STORE — losing one increment. `with lock:` guarantees only one thread is in the critical section. The GIL makes pure-Python ops atomic at the bytecode level, but compound ops like `+=` are NOT atomic. When in doubt, lock.',
+      explanation: '`counter += 1` compiles to LOAD, ADD, STORE - three bytecodes. Two threads can both LOAD the same value, each ADD 1, then each STORE - losing one increment. `with lock:` guarantees only one thread is in the critical section. The GIL makes pure-Python ops atomic at the bytecode level, but compound ops like `+=` are NOT atomic. When in doubt, lock.',
       hints: [
         'Use `with lock:` to enter/exit the critical section',
-        '+= is read-modify-write — not atomic',
+        '+= is read-modify-write - not atomic',
         'Always .join() threads before reading shared state',
       ],
       tieredHints: {

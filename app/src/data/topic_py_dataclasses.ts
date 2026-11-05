@@ -267,13 +267,13 @@ class User:
       ],
       distractorLines: [
         'class Point:',
-        '@dataclass()',
+        '    x = int',
         '    def __init__(self, x: int, y: int):',
       ],
       solution:
         'from dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: int\n    y: int',
       explanation:
-        '@dataclass auto-generates __init__, __repr__, and __eq__ from the annotated class attributes. Type annotations are required (otherwise the class attribute is ignored). @dataclass with no parens works in 3.7+; @dataclass() with empty parens also works.',
+        '@dataclass auto-generates __init__, __repr__, and __eq__ from the annotated class attributes, so no manual __init__ is needed. Type annotations are required: `x = int` is a plain class attribute holding the int type, not an annotation, so @dataclass ignores it and Point(1, 2) fails.',
       hints: ['@dataclass on top, annotated fields below — no manual __init__.'],
       tags: ['dataclasses', 'basic'],
       concepts: ['py-dataclass-defaults'],
@@ -344,7 +344,7 @@ class User:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Add ordering with @dataclass(order=True) so Items can be sorted by their natural field order. Declare `priority: int` as the FIRST attribute and `name: str` second, so comparison goes by priority first, then by name as the tiebreaker.',
+        'Add ordering with @dataclass(order=True) so Items can be sorted by their natural field order. Declare `priority: int` as the FIRST attribute and `name: str` second, so comparison goes by priority first, then by name as the tiebreaker. Sort the list with that ordering alone (no key function) and print it.',
       correctOrder: [
         'from dataclasses import dataclass',
         '',
@@ -364,7 +364,7 @@ class User:
       solution:
         'from dataclasses import dataclass\n\n@dataclass(order=True)\nclass Item:\n    priority: int\n    name: str\n\nitems = [Item(2, "b"), Item(1, "a")]\nitems.sort()\nprint(items)',
       explanation:
-        'order=True generates __lt__/__le__/__gt__/__ge__ that compare TUPLES OF FIELDS in declaration order. Items compare first by priority, then by name. Without order=True, sort would raise TypeError.',
+        'order=True generates __lt__/__le__/__gt__/__ge__ that compare TUPLES OF FIELDS in declaration order. Items compare first by priority, then by name, so a plain items.sort() works. A key=lambda i: i.priority sort ignores the name tiebreaker. Without order=True, sort would raise TypeError.',
       hints: ['Comparison is field-tuple-wise, in declaration order.'],
       tags: ['dataclasses', 'order', 'sorting'],
       concepts: ['py-dataclass-defaults'],
@@ -377,7 +377,7 @@ class User:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use __post_init__ to compute a derived attribute after the auto-init runs. Declare fields in order `w`, `h`, then `area`.',
+        'Use __post_init__ to compute a derived attribute after the auto-init runs. Declare fields in order `w`, `h`, then `area`, followed by the __post_init__ method.',
       correctOrder: [
         'from dataclasses import dataclass, field',
         '',
@@ -441,7 +441,7 @@ class User:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use kw_only=True (Python 3.10+) to force all fields to be keyword-only.',
+        'Use kw_only=True (Python 3.10+) to force all fields of Config (`host`, then `port` with default 5432) to be keyword-only, then build one with keyword arguments.',
       correctOrder: [
         'from dataclasses import dataclass',
         '',
@@ -534,7 +534,7 @@ class User:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use ClassVar to mark count as a class-level attribute (not a per-instance field).',
+        'Give Widget a `name: str` field, then use ClassVar to mark `count` (starting at 0) as a class-level attribute (not a per-instance field).',
       correctOrder: [
         'from dataclasses import dataclass',
         'from typing import ClassVar',
@@ -873,12 +873,12 @@ print(d.___)`,
       course: Course.BACKEND,
       question: 'When should you use a dataclass vs a namedtuple vs a regular class?',
       options: [
-        { id: 'a', text: 'Always use dataclass — namedtuple and regular classes are legacy patterns', isCorrect: false },
-        { id: 'b', text: 'Namedtuple for all data, regular class for all behavior, dataclass never', isCorrect: false },
-        { id: 'c', text: 'Dataclass and namedtuple are identical — use either one interchangeably', isCorrect: false },
-        { id: 'd', text: 'Dataclass for mutable structured data with methods; namedtuple for lightweight immutable records; regular class when you need full control over __init__, inheritance, or metaclasses', isCorrect: true },
+        { id: 'a', text: 'Dataclass for immutable records; namedtuple for mutable data with methods; regular class only for classes that hold no data', isCorrect: false },
+        { id: 'b', text: 'Namedtuple when fields must be type-checked at runtime; dataclass for records that unpack like tuples; regular class for the rest', isCorrect: false },
+        { id: 'c', text: 'Dataclass and namedtuple for the same jobs, since both are tuples underneath; regular class whenever you need any methods', isCorrect: false },
+        { id: 'd', text: 'Dataclass for mutable data with methods; namedtuple for lightweight immutable records; regular class when you need full control over `__init__`', isCorrect: true },
       ],
-      explanation: 'Dataclasses are best for "data holder" objects that may need mutability, methods, and defaults — they generate boilerplate but remain regular classes. Namedtuples are more lightweight, immutable, iterable, and memory-efficient (no __dict__), ideal for simple records like coordinates or database rows. Regular classes give full control when you need custom __init__ logic, complex inheritance, descriptors, or metaclasses. Key difference: namedtuples can be unpacked (x, y = point) and indexed (point[0]), dataclasses cannot.',
+      explanation: 'Dataclasses suit data holders that may need mutability, methods and defaults; they generate boilerplate but remain regular classes, not tuples. Namedtuples are lighter, immutable and memory-efficient (no `__dict__`), ideal for simple records like coordinates or database rows, and they can be unpacked (`x, y = point`) and indexed (`point[0]`), which dataclasses cannot. Neither checks field types at runtime, and all three kinds of class can have methods. A regular class gives full control when you need custom `__init__` logic, complex inheritance, descriptors or metaclasses.',
       hints: [
         'namedtuple instances can be unpacked and indexed like tuples',
         'dataclasses have __dict__, namedtuples don\'t (less memory)',
@@ -894,12 +894,12 @@ print(d.___)`,
       course: Course.BACKEND,
       question: 'What does the `@dataclass` decorator generate automatically for your class?',
       options: [
-        { id: 'a', text: 'Nothing — it\'s a type annotation', isCorrect: false },
-        { id: 'b', text: '`__init__` (from the type-annotated fields in order), `__repr__` (readable representation), and `__eq__` (field-by-field equality). You can opt into `__lt__/__gt__/...` via `order=True`, `__hash__` via `frozen=True`, or into `slots=True` for memory-efficient instances (3.10+).', isCorrect: true },
-        { id: 'c', text: 'A database table mapping', isCorrect: false },
-        { id: 'd', text: 'Automatic validation of every field at runtime', isCorrect: false },
+        { id: 'a', text: 'Only `__init__`; you still write `__repr__` and `__eq__` yourself to get readable prints and comparison by value', isCorrect: false },
+        { id: 'b', text: '`__init__`, `__repr__` and `__eq__`, built from the annotated fields in the order they are declared', isCorrect: true },
+        { id: 'c', text: '`__init__`, `__repr__` and `__hash__`, so every dataclass instance can be used as a dict key or in a set', isCorrect: false },
+        { id: 'd', text: '`__init__` and `__repr__`, plus checks that convert or reject field values that do not match their hints', isCorrect: false },
       ],
-      explanation: '`@dataclass` exists so you stop writing the same `__init__(self, a, b, c): self.a = a; self.b = b; self.c = c` over and over. It\'s stdlib (no deps), fast (generates bytecode at class-creation time), and gives you value-object semantics for free. Unlike pydantic, it does NOT validate — types are documentation only.',
+      explanation: '`@dataclass` exists so you stop writing `__init__(self, a, b): self.a = a; self.b = b` by hand. By default it writes `__init__`, `__repr__` and `__eq__` from the annotated fields, in declaration order. It does not make instances hashable: with the default `eq=True` and no `frozen=True`, `__hash__` is set to `None`, so an instance cannot be a dict key or a set member. It does not check or convert field values either; the hints are documentation only (pydantic is the tool for validation). Comparison methods (`order=True`), immutability with hashing (`frozen=True`) and `slots=True` are opt-ins.',
       hints: [
         '@dataclass = auto __init__ / __repr__ / __eq__',
         'Opt-ins: order=True, frozen=True, slots=True (3.10+)',
@@ -917,7 +917,7 @@ print(d.___)`,
       language: CodeLanguage.PYTHON,
       question: 'Define a two-field record type `Point` with integer fields `x` and `y` using the stdlib decorator that auto-generates `__init__` and `__repr__`. Build a `Point` with coordinates (3, 4), print the instance (expect `Point(x=3, y=4)`), then print the sum of its fields (expect `7`).',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'basic dataclass',
@@ -966,7 +966,7 @@ print(p.x ____ p.y)`,
       language: CodeLanguage.PYTHON,
       question: 'Define a `Cart` dataclass with a single `items` field holding a list of strings — each new `Cart` must start with its own independent empty list rather than sharing one across instances (the classic "mutable default" trap). Build two carts `a` and `b`, append `"apple"` to `a.items`, then print `a.items` (expect `[\'apple\']`) and `b.items` (expect `[]` — proving they are independent).',
       starterCode: `from dataclasses import dataclass, field
-  `,
+`,
       testCases: [
         {
           input: 'default_factory avoids shared mutable',
@@ -1015,9 +1015,9 @@ print(b.items)`,
       topic: Topic.PY_DATACLASSES,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define a `Rectangle` dataclass with float fields `width` and `height` that callers supply, plus a float field `area` that is NOT accepted by `__init__` — `area` must be derived from width × height after construction, using the dataclass post-construction hook. Build `r = Rectangle(3, 4)` and print `r.area` (expect `12.0`). Because `area` is excluded from `__init__`, a call like `Rectangle(3, 4, 999)` would fail.',
+      question: 'Define a `Rectangle` dataclass with float fields `width` and `height` that callers supply, plus a float field `area` that is NOT accepted by `__init__`; `area` must be derived from width × height after construction, using the dataclass post-construction hook. Build `r = Rectangle(3.0, 4.0)` and print `r.area` (expect `12.0`). Because `area` is excluded from `__init__`, a call like `Rectangle(3.0, 4.0, 99.0)` would fail.',
       starterCode: `from dataclasses import dataclass, field
-  `,
+`,
       testCases: [
         {
           input: 'field(init=False) + __post_init__',
@@ -1036,7 +1036,7 @@ class Rectangle:
     def __post_init__(self):
         self.area = self.width * self.height
 
-r = Rectangle(3, 4)
+r = Rectangle(3.0, 4.0)
 print(r.area)`,
       tieredHints: {
         apiSignature: 'field(*, init=True, default=MISSING, repr=True)',
@@ -1051,7 +1051,7 @@ class Rectangle:
     def ____(self):
         self.area = self.width ____ self.height
 
-r = ____(3, 4)
+r = ____(3.0, 4.0)
 print(r.area)`,
       },
       explanation: '`field(init=False)` excludes a field from `__init__` so callers cannot set it directly. `__post_init__` runs right after `__init__` and is the canonical place to compute derived state or validate combinations of fields. Also useful for any setup that needs the fully-initialized instance — opening a resource, precomputing an index, etc.',
@@ -1072,7 +1072,7 @@ print(r.area)`,
       language: CodeLanguage.PYTHON,
       question: 'Define a `Credentials` dataclass with two string fields — `user`, which should appear in the auto-generated `__repr__` as normal, and `password`, which must be HIDDEN from the repr (but still readable as an attribute). Build `c = Credentials(user="alice", password="s3cr3t")` and print `c` (expect `Credentials(user=\'alice\')` — password omitted). Then print `c.password` directly to confirm the value is still stored (expect `s3cr3t`).',
       starterCode: `from dataclasses import dataclass, field
-  `,
+`,
       testCases: [
         {
           input: 'repr=False hides password from log-style repr',
@@ -1121,7 +1121,7 @@ print(c.____)`,
       language: CodeLanguage.PYTHON,
       question: 'Define a `Version` dataclass with three integer fields `major`, `minor`, `patch` that supports `<` `<=` `>` `>=` comparisons (field-by-field in declaration order). Build `v1 = Version(1, 2, 3)` and `v2 = Version(1, 3, 0)`, then print `v1 < v2`.',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'order=True enables < <= > >=',
@@ -1172,7 +1172,7 @@ print(v1 ____ v2)`,
       language: CodeLanguage.PYTHON,
       question: 'Define a linked-list `Node` dataclass with an integer `value` field and a `next` field typed as `Node | None`, using the 3.10+ option that replaces the per-instance `__dict__` with fixed slots. Build `n = Node(1, None)` and print `n.value`.',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'slots=True',
@@ -1218,12 +1218,12 @@ print(n.value)`,
       course: Course.BACKEND,
       question: 'When would you pick a `dataclass` over `typing.NamedTuple` or `pydantic.BaseModel`?',
       options: [
-        { id: 'a', text: 'Never — they are interchangeable', isCorrect: false },
-        { id: 'b', text: 'Pick `dataclass` when you want a mutable value object with methods + no dependency. Pick `NamedTuple` for an IMMUTABLE tuple-compatible record (supports indexing, unpacking). Pick `pydantic.BaseModel` when you need runtime VALIDATION, coercion, and JSON serialization — especially for API boundaries.', isCorrect: true },
-        { id: 'c', text: 'dataclass is deprecated — always use pydantic', isCorrect: false },
-        { id: 'd', text: 'NamedTuple is always fastest', isCorrect: false },
+        { id: 'a', text: '`dataclass` when incoming data must be validated; `NamedTuple` when the record needs methods; `pydantic.BaseModel` when you want no dependency', isCorrect: false },
+        { id: 'b', text: '`dataclass` for a mutable record with no dependency; `NamedTuple` for an immutable record that unpacks like a tuple; `BaseModel` to validate untrusted input', isCorrect: true },
+        { id: 'c', text: '`dataclass` for immutable records; `NamedTuple` for mutable records with defaults; `BaseModel` only when the data must be stored in a database', isCorrect: false },
+        { id: 'd', text: 'Only for speed: all three validate fields the same way, but `dataclass` builds instances fastest, `NamedTuple` next and `BaseModel` last', isCorrect: false },
       ],
-      explanation: 'Picking rule: does untrusted data ever construct an instance? → pydantic. Does tuple indexing / unpacking matter (e.g. interop with an API expecting tuples)? → NamedTuple. Otherwise → dataclass. All three generate `__init__` / `__repr__` / `__eq__`. Dataclass is a stdlib middle ground — flexible, mutable by default (frozen=True if you want immutability), no dependency, no validation.',
+      explanation: 'Picking rule: does untrusted data construct the instance? Use pydantic, which validates and coerces. Does tuple indexing or unpacking matter (for example an API that expects tuples)? Use `NamedTuple`, which is immutable. Otherwise use a dataclass: stdlib, no dependency, mutable by default (`frozen=True` if you want immutability) and no validation. Dataclasses and NamedTuples never validate field types, both can have methods, and none of the three is about database storage. All three generate `__init__`, `__repr__` and `__eq__`.',
       hints: [
         'dataclass: stdlib, mutable, no validation',
         'NamedTuple: immutable, tuple-compatible',
@@ -1241,7 +1241,7 @@ print(n.value)`,
       language: CodeLanguage.PYTHON,
       question: 'Define a `User` dataclass with a string `name` and integer `age`. Build `u = User("Alice", 30)`. Using the `dataclasses` stdlib helpers, print the dict representation of `u` (expect `{\'name\': \'Alice\', \'age\': 30}`), then print its tuple representation (expect `(\'Alice\', 30)`).',
       starterCode: `from dataclasses import dataclass, asdict, astuple
-  `,
+`,
       testCases: [
         {
           input: 'asdict and astuple',
@@ -1272,7 +1272,7 @@ u = ____("Alice", 30)
 print(____(u))
 print(____(u))`,
       },
-      explanation: '`asdict` recursively converts nested dataclasses, lists, tuples, and dicts. Useful for JSON serialization: `json.dumps(asdict(user))`. `astuple` returns a flat tuple — handy for unpacking. Both are one-shot conversions; they don\'t "view" the instance. For round-tripping use pydantic or write a classmethod `from_dict`.',
+      explanation: '`asdict` recursively converts nested dataclasses, lists, tuples, and dicts. Useful for JSON serialization: `json.dumps(asdict(user))`. `astuple` returns the field values as a tuple (nested dataclasses become nested tuples), handy for unpacking. Both are one-shot conversions; they don\'t "view" the instance. For round-tripping use pydantic or write a classmethod `from_dict`.',
       hints: [
         'asdict walks nested dataclasses recursively',
         'Combines nicely with json.dumps',
@@ -1290,7 +1290,7 @@ print(____(u))`,
       language: CodeLanguage.PYTHON,
       question: 'Define an `Animal` dataclass with a string field `name`, then a `Dog` dataclass that inherits from `Animal` and adds a string field `breed`. Build `d = Dog(name="Rex", breed="Labrador")` and print `d`.',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'dataclass inheritance',
@@ -1344,7 +1344,7 @@ print(d)`,
       question:
         'Define a `Config` dataclass with a string `host` field and integer `port` field, configured so instances are immutable. Build `c = Config("localhost", 5432)` and print it.',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'frozen Config',
@@ -1393,7 +1393,7 @@ print(c)`,
       question:
         'Define an `Age` dataclass with a single integer field `years`. Use `__post_init__` to validate: when `years` is negative, raise `ValueError("years must be non-negative")`. Build `a = Age(30)` and print `a.years`.',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'Age(30)',
@@ -1448,7 +1448,7 @@ print(a.years)`,
       question:
         'Define a `Version` dataclass with integer fields `major`, `minor`, and `patch`. It must be both immutable and sortable. Create two instances representing versions 1.2.3 and 1.3.0, print whether the first is less than the second, and print the size of a set containing these instances and a duplicate of the first (demonstrating value-based hashability).',
       starterCode: `from dataclasses import dataclass
-  `,
+`,
       testCases: [
         {
           input: 'frozen + order: comparable and hashable',
@@ -1505,12 +1505,12 @@ print(____(s))`,
       course: Course.BACKEND,
       question: 'What is a dataclass in Python?',
       options: [
-        { id: 'a', text: 'A special database connection class provided by the `sqlite3` module', isCorrect: false },
-        { id: 'b', text: 'A class that can only store data and cannot have any methods', isCorrect: false },
-        { id: 'c', text: 'A class decorator (`@dataclass`) that auto-generates `__init__`, `__repr__`, and `__eq__` from field definitions, reducing boilerplate for data containers', isCorrect: true },
-        { id: 'd', text: 'A way to validate data types at runtime using Python\'s type system', isCorrect: false },
+        { id: 'a', text: 'A class whose instances are saved as rows of a database table, set up through the `sqlite3` module', isCorrect: false },
+        { id: 'b', text: 'A class that can only hold data: adding your own methods to it raises an error', isCorrect: false },
+        { id: 'c', text: 'A class marked `@dataclass`, which writes `__init__`, `__repr__` and `__eq__` from its annotated fields', isCorrect: true },
+        { id: 'd', text: 'A class whose annotated fields are checked at runtime, so passing a wrong type raises a `TypeError`', isCorrect: false },
       ],
-      explanation: 'The `@dataclass` decorator (from the `dataclasses` module, Python 3.7+) automatically generates common special methods based on your field definitions. Instead of writing a full `__init__` to assign each attribute, a `__repr__` for string representation, and an `__eq__` for comparison, the decorator creates them for you. You just define the fields with type annotations and the decorator handles the rest.',
+      explanation: 'The `@dataclass` decorator (from the `dataclasses` module, Python 3.7+) generates the common special methods from your field definitions: `__init__` to assign each field, `__repr__` for printing and `__eq__` for comparing by value. It is still a normal class, so you can add your own methods. It has nothing to do with databases, and it does not check types: the annotations are not enforced at runtime.',
       hints: [
         'Dataclasses reduce boilerplate — you define fields, Python generates methods',
         'They still support custom methods, unlike plain tuples or dicts',
@@ -1525,7 +1525,7 @@ print(____(s))`,
       topic: Topic.PY_DATACLASSES,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a dataclass called `Point` with two fields: `x: float` and `y: float`. Create two instances with the same coordinates and verify they are equal using `==`. Also create a third point with different coordinates and verify it is NOT equal.',
+      question: 'Create a dataclass called `Point` with two fields: `x: float` and `y: float`. Create `p1` and `p2` at (1.0, 2.0) and `p3` at (3.0, 4.0). Print `p1 == p2` (expect `True`), then print `p1 == p3` (expect `False`).',
       starterCode: `from dataclasses import dataclass
 
 # Define the Point dataclass
@@ -1560,9 +1560,8 @@ p1 = Point(1.0, 2.0)
 p2 = Point(1.0, 2.0)
 p3 = Point(3.0, 4.0)
 
-print(p1 == p2)  # True  — auto-generated __eq__ compares fields
-print(p1 == p3)  # False
-print(p1)        # Point(x=1.0, y=2.0) — auto-generated __repr__`,
+print(p1 == p2)  # True - auto-generated __eq__ compares fields
+print(p1 == p3)  # False`,
       tieredHints: {
         apiSignature: '@dataclass(*, init=True, repr=True, eq=True)',
         skeleton: `from dataclasses import ____
@@ -1577,8 +1576,7 @@ p2 = ____(1.0, 2.0)
 p3 = ____(3.0, 4.0)
 
 print(p1 ____ p2)
-print(p1 ____ p3)
-print(p1)`,
+print(p1 ____ p3)`,
       },
       explanation: 'The `@dataclass` decorator reads the type-annotated fields (`x: float`, `y: float`) and auto-generates: (1) `__init__` so you can write `Point(1.0, 2.0)`, (2) `__repr__` so printing shows `Point(x=1.0, y=2.0)`, and (3) `__eq__` so two Points with the same x and y are considered equal. Without `@dataclass`, a regular class would compare by identity (memory address), not by field values.',
       hints: [

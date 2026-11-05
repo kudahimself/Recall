@@ -21,12 +21,12 @@ export const py_shell_os_questions: Question[] = [
       course: Course.BACKEND,
       question: 'Why should you avoid `subprocess.run("ls " + user_input, shell=True)` and prefer a list-form invocation instead?',
       options: [
-        { id: 'a', text: 'List form is faster', isCorrect: false },
-        { id: 'b', text: '`shell=True` runs the command through a shell, so any metacharacter in `user_input` (e.g. `"; rm -rf ~"`) is interpreted — classic shell-injection. The list form (`["ls", user_input]`) passes arguments directly to the OS, so `user_input` is treated as a single argument, regardless of its contents.', isCorrect: true },
-        { id: 'c', text: 'shell=True is deprecated', isCorrect: false },
-        { id: 'd', text: 'List form captures stdout; string form does not', isCorrect: false },
+        { id: 'a', text: '`shell=True` is deprecated, so the call prints a DeprecationWarning and may stop working in a later Python', isCorrect: false },
+        { id: 'b', text: 'The shell interprets characters in `user_input`, so `; rm -rf ~` runs as a second command; a list passes it as one argument', isCorrect: true },
+        { id: 'c', text: 'With `shell=True` the output cannot be captured, so `result.stdout` is always `None` even with `capture_output=True`', isCorrect: false },
+        { id: 'd', text: 'Both forms are equally safe, but the string form only works on Linux, so the list form is chosen for portability', isCorrect: false },
       ],
-      explanation: 'This is one of the most common CVEs in Python code. String + shell=True + any user-controlled input = remote code execution. Rules: (1) use a list, (2) avoid shell=True unless you actually need shell features (pipes, redirection, globs); (3) if you MUST use shell=True, use `shlex.quote(user_input)` on every interpolated piece. Modern advice: `subprocess.run(["ls", path], check=True, capture_output=True, text=True)` covers 95% of cases.',
+      explanation: 'This is one of the most common CVEs in Python code. String + shell=True + any user-controlled input = remote code execution: the shell treats `;`, `&&`, `|` and backticks in the input as command syntax, while the list form hands `user_input` to `ls` as a single argument whatever it contains. `shell=True` is not deprecated and still captures output like any other call, and the danger is the same on every platform - it is a security problem, not a portability one. Rules: (1) use a list, (2) avoid shell=True unless you actually need shell features (pipes, redirection, globs); (3) if you MUST use shell=True, use `shlex.quote(user_input)` on every interpolated piece. Modern advice: `subprocess.run(["ls", path], check=True, capture_output=True, text=True)` covers 95% of cases.',
       hints: [
         'shell=True + string interpolation = injection risk',
         'Use list args: subprocess.run(["cmd", "arg1", "arg2"])',
@@ -42,7 +42,7 @@ export const py_shell_os_questions: Question[] = [
       topic: Topic.PY_SHELL_OS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Run the command `echo hello` using the `subprocess` module\'s one-shot run function. Pass the command as a LIST (never a string — injection-safe) of `["echo", "hello"]`. Configure four common kwargs: capture stdout/stderr, decode output as text (not bytes), and raise on non-zero exit. Bind the completed-process object to `result`. Print the stripped stdout (expect `hello`) and the return code (expect `0`).',
+      question: 'Run the command `echo hello` using the `subprocess` module\'s one-shot run function. Pass the command as a LIST (never a string - injection-safe) of `["echo", "hello"]`. Configure three common kwargs: capture stdout/stderr, decode output as text (not bytes), and raise on non-zero exit. Bind the completed-process object to `result`. Print the stripped stdout (expect `hello`) and the return code (expect `0`).',
       starterCode: `import subprocess
   `,
       testCases: [
@@ -62,7 +62,7 @@ result = subprocess.run(
 )
 print(result.stdout.strip())
 print(result.returncode)`,
-      explanation: 'The four keyword args you almost always want with `subprocess.run`: `capture_output=True` (keeps stdout/stderr), `text=True` (decode to str using default encoding — without it you get bytes), `check=True` (raise `CalledProcessError` on non-zero exit), `timeout=N` (seconds). `.stdout` always has a trailing newline from the command — strip it. For pipes and complex flows, use `Popen` directly; for one-shot calls, `run` is the answer.',
+      explanation: 'The four keyword args you almost always want with `subprocess.run`: `capture_output=True` (keeps stdout/stderr), `text=True` (decode to str using default encoding - without it you get bytes), `check=True` (raise `CalledProcessError` on non-zero exit), `timeout=N` (seconds). `.stdout` always has a trailing newline from the command - strip it. For pipes and complex flows, use `Popen` directly; for one-shot calls, `run` is the answer.',
       hints: [
         'capture_output=True → access .stdout and .stderr',
         'text=True → get str instead of bytes',
@@ -458,7 +458,7 @@ value = os.environ.___("HOME", "/tmp")`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Copy a file to a new path with shutil, then print the copy\'s contents.',
+        'Write "hello" to a.txt, copy it to b.txt with shutil (keeping a.txt), then print the copy\'s contents. Import shutil first, then Path.',
       correctOrder: [
         'import shutil',
         'from pathlib import Path',
@@ -470,12 +470,12 @@ value = os.environ.___("HOME", "/tmp")`,
       distractorLines: [
         'shutil.move("a.txt", "b.txt")',
         'shutil.copytree("a.txt", "b.txt")',
-        'Path("a.txt").copy("b.txt")',
+        'shutil.copy("b.txt", "a.txt")',
       ],
       solution:
         'import shutil\nfrom pathlib import Path\n\nPath("a.txt").write_text("hello")\nshutil.copy("a.txt", "b.txt")\nprint(Path("b.txt").read_text())',
       explanation:
-        'shutil.copy(src, dst) duplicates a file, leaving the original in place. move would delete the source; copytree is for whole directory trees (and errors on a plain file); Path has no .copy method — copying lives in shutil, not pathlib.',
+        'shutil.copy(src, dst) duplicates a file, leaving the original in place. move would delete the source; copytree is for whole directory trees (and errors on a plain file). The arguments go source first, then destination: shutil.copy("b.txt", "a.txt") would try to copy the missing b.txt and raise FileNotFoundError. (Python 3.14 also added Path.copy, but this exercise uses shutil.)',
       hints: ['shutil.copy duplicates a file; move would remove the source.'],
       tags: ['shutil', 'filesystem', 'copy'],
       concepts: ['py-shell-os-interop'],

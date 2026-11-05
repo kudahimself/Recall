@@ -23,7 +23,7 @@ export const py_context_managers_questions: Question[] = [
       question:
         'Fill in the keyword that opens a context-managed block and the keyword that binds the value.',
       template: `___ open("data.txt") ___ f:
-      print(f.read())`,
+    print(f.read())`,
       blanks: ['with', 'as'],
       solution: 'with open("data.txt") as f:\n    print(f.read())',
       explanation:
@@ -42,10 +42,10 @@ export const py_context_managers_questions: Question[] = [
       question:
         'Fill in the dunder pair that makes Block a context manager.',
       template: `class Block:
-      def ___(self):
-          return self
-      def ___(self, exc_type, exc, tb):
-          pass`,
+    def ___(self):
+        return self
+    def ___(self, exc_type, exc, tb):
+        pass`,
       blanks: ['__enter__', '__exit__'],
       solution:
         'class Block:\n    def __enter__(self):\n        return self\n    def __exit__(self, exc_type, exc, tb):\n        pass',
@@ -165,10 +165,10 @@ with ___(KeyError):
       question:
         'Fill in the return value that suppresses a caught exception in __exit__.',
       template: `class Swallow:
-      def __enter__(self):
-          return self
-      def __exit__(self, exc_type, exc, tb):
-          return ___`,
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc, tb):
+        return ___`,
       blanks: ['True'],
       solution:
         'class Swallow:\n    def __enter__(self):\n        return self\n    def __exit__(self, exc_type, exc, tb):\n        return True',
@@ -188,7 +188,7 @@ with ___(KeyError):
       question:
         'Fill in the punctuation that separates two context managers in a single with-statement.',
       template: `with open("a.txt") as fa___ open("b.txt") as fb:
-      print(fa.read(), fb.read())`,
+    print(fa.read(), fb.read())`,
       blanks: [','],
       solution:
         'with open("a.txt") as fa, open("b.txt") as fb:\n    print(fa.read(), fb.read())',
@@ -206,10 +206,15 @@ with ___(KeyError):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the parameters __exit__ receives when an exception triggers the exit.',
+        'Fill in names for the three parameters __exit__ receives after self when an exception triggers the exit (exception type, exception object, traceback).',
       template: `def __exit__(self, ___, ___, ___):
-      pass`,
+    pass`,
       blanks: ['exc_type', 'exc', 'tb'],
+      blankAlternates: [
+        ['kind', 'type', 'etype', 'typ', 'exctype', 'exc_cls'],
+        ['err', 'exc_val', 'exc_value', 'value', 'val', 'e', 'error', 'exception'],
+        ['exc_tb', 'traceback', 'trace'],
+      ],
       solution: 'def __exit__(self, exc_type, exc, tb):\n    pass',
       explanation:
         '__exit__ receives the exception type, the exception instance, and the traceback. On normal exit (no exception) all three are None. The names are conventional — Python passes them positionally.',
@@ -248,7 +253,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a class-based context manager that prints "open" on enter and "close" on exit.',
+        'Build a class-based context manager Block that prints "open" on enter and "close" on exit, then use it around print("inside"). Define __enter__ first, then __exit__.',
       correctOrder: [
         'class Block:',
         '    def __enter__(self):',
@@ -280,7 +285,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build the same context manager using @contextlib.contextmanager and a generator.',
+        'Build a context manager block() with @contextlib.contextmanager and a generator: it prints "open", yields, then prints "close". Use it around print("inside").',
       correctOrder: [
         'from contextlib import contextmanager',
         '',
@@ -314,7 +319,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a contextmanager-decorator version that performs cleanup even when the body raises, using try/finally around yield.',
+        'Build a @contextmanager generator session() that prints "open", yields, and prints "close" even when the body raises, using try/finally around the yield.',
       correctOrder: [
         'from contextlib import contextmanager',
         '',
@@ -377,7 +382,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Make __exit__ swallow ValueError but propagate other exceptions.',
+        'Build a context manager class SwallowVE whose __enter__ returns self and whose __exit__ swallows ValueError but lets other exceptions propagate (return True or False explicitly). Define __enter__ first, then __exit__.',
       correctOrder: [
         'class SwallowVE:',
         '    def __enter__(self):',
@@ -388,13 +393,13 @@ with ___() as stack:
         '        return False',
       ],
       distractorLines: [
-        '        return exc_type is ValueError',
-        '        return None',
+        '        if exc is ValueError:',
+        '        if isinstance(exc_type, ValueError):',
       ],
       solution:
         'class SwallowVE:\n    def __enter__(self):\n        return self\n    def __exit__(self, exc_type, exc, tb):\n        if exc_type is ValueError:\n            return True\n        return False',
       explanation:
-        '__exit__ returning True suppresses the exception. Returning False (or None) lets it propagate. Returning the boolean condition directly (`return exc_type is ValueError`) also works, but the explicit form is clearer about the intent.',
+        '__exit__ returning True suppresses the exception. Returning False (or None) lets it propagate. The check must use exc_type, which holds the exception class: `exc is ValueError` compares the exception object with the class and is never true, and `isinstance(exc_type, ValueError)` asks whether the class itself is a ValueError object, which is also never true (`isinstance(exc, ValueError)` would work). Returning the condition directly (`return exc_type is ValueError`) is a shorter equivalent.',
       hints: ['True suppresses, False/None propagates.'],
       tags: ['context-manager', '__exit__', 'exception-suppression'],
       concepts: ['py-context-manager-protocol'],
@@ -407,7 +412,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use multiple context managers in a single with statement: open two files, in and out.',
+        'Copy in.txt into out.txt with one with statement: open in.txt for reading as fin and out.txt for writing as fout, then write the contents of fin to fout.',
       correctOrder: [
         'with open("in.txt") as fin, open("out.txt", "w") as fout:',
         '    fout.write(fin.read())',
@@ -432,7 +437,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a contextlib.suppress-style context manager: ignore FileNotFoundError raised inside the block.',
+        'Use contextlib.suppress to open missing.txt and silently ignore the FileNotFoundError it raises.',
       correctOrder: [
         'from contextlib import suppress',
         '',
@@ -460,7 +465,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a "reentrant" context manager class that tracks how many times it\'s been entered.',
+        'Build a context manager class Reentrant that tracks how deeply it is currently entered in self.depth: 0 at the start, one more on each enter, one less on each exit. __enter__ returns the instance itself. Define __init__, then __enter__, then __exit__.',
       correctOrder: [
         'class Reentrant:',
         '    def __init__(self):',
@@ -492,7 +497,7 @@ with ___() as stack:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a contextmanager that temporarily changes a config dict and restores it on exit.',
+        'Build a @contextmanager generator temp_config(config, **overrides) that saves the old values of the overridden keys, applies the overrides to the config dict, yields the config, and restores the saved values on exit even if the block raises.',
       correctOrder: [
         'from contextlib import contextmanager',
         '',
@@ -537,13 +542,13 @@ with ___() as stack:
         '    print(time.perf_counter() - start)',
       ],
       distractorLines: [
-        '    yield start',
+        '    print(start - time.perf_counter())',
         '    print(time.perf_counter())',
       ],
       solution:
         'import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timing():\n    start = time.perf_counter()\n    yield\n    print(time.perf_counter() - start)',
       explanation:
-        'Capture start before yield (setup); compute and print the delta after yield (teardown). time.perf_counter() alone (without subtraction) prints the absolute timestamp — meaningless without comparison.',
+        'Capture start before yield (setup); compute and print the delta after yield (teardown). time.perf_counter() alone (without subtraction) prints the absolute timestamp, which is meaningless without comparison, and `start - time.perf_counter()` subtracts the wrong way round and prints a negative number.',
       hints: ['Capture start before yield; compute delta after.'],
       tags: ['context-manager', 'timing'],
       concepts: ['py-context-manager-protocol'],
@@ -814,7 +819,7 @@ Outer out`,
       topic: Topic.PY_CONTEXT_MANAGERS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code print to standard output? If the program raises an error, leave out the traceback.',
       code: `from contextlib import contextmanager
 
 @contextmanager
@@ -826,7 +831,7 @@ with double_yield() as v:
     print(v)`,
       expectedOutput: `1`,
       explanation:
-        'A @contextmanager generator must yield EXACTLY ONCE. The first yield runs as setup (binding v=1) and the body runs. On exit, the generator resumes and hits the second yield — at which point @contextmanager raises RuntimeError. But the body completes first, so "1" prints before the RuntimeError on exit.',
+        'A @contextmanager generator must yield EXACTLY ONCE. The first yield runs as setup (binding v=1) and the body runs. On exit, the generator resumes and hits the second yield - at which point @contextmanager raises RuntimeError("generator didn\'t stop"). But the body completes first, so "1" is printed before the RuntimeError, whose traceback goes to standard error.',
       hints: ['How many times must a @contextmanager generator yield?'],
       tags: ['context-manager', 'contextmanager-decorator', 'common-mistake'],
       concepts: ['py-context-manager-protocol'],
@@ -923,12 +928,12 @@ class Timer:
       course: Course.BACKEND,
       question: 'Why are context managers important, and what problem do they solve compared to try/finally?',
       options: [
-        { id: 'a', text: 'Context managers are faster than try/finally because they use C-level optimizations', isCorrect: false },
-        { id: 'b', text: 'Context managers prevent all exceptions from propagating, making code crash-proof', isCorrect: false },
-        { id: 'c', text: 'Context managers are only used for file I/O — try/finally is better for all other cleanup', isCorrect: false },
-        { id: 'd', text: 'Context managers encapsulate resource setup/teardown into a reusable protocol, guaranteeing cleanup runs even on exceptions — eliminating the repetitive try/finally pattern', isCorrect: true },
+        { id: 'a', text: 'They run faster than try/finally, because `with` is compiled into a cheaper C-level cleanup path', isCorrect: false },
+        { id: 'b', text: 'They stop every exception from propagating, so code inside a `with` block can never crash the program', isCorrect: false },
+        { id: 'c', text: 'They only work for file I/O; locks, connections and other resources still need a hand-written try/finally', isCorrect: false },
+        { id: 'd', text: 'They package setup and cleanup in one reusable object, so cleanup always runs without repeating try/finally', isCorrect: true },
       ],
-      explanation: 'Context managers solve the resource management problem: ensuring cleanup (closing files, releasing locks, restoring state, deleting temp files) happens regardless of how a code block exits. While try/finally also guarantees cleanup, it requires manually writing setup and teardown code at every usage site. Context managers encapsulate this into a reusable object — `with open(f) as file` is shorter and less error-prone than `f = open(); try: ... finally: f.close()`. They work for any resource: database connections, network sockets, locks, temporary state changes, and more.',
+      explanation: 'Context managers solve the resource management problem: ensuring cleanup (closing files, releasing locks, restoring state, deleting temp files) happens regardless of how a code block exits. While try/finally also guarantees cleanup, it requires manually writing setup and teardown code at every usage site. Context managers encapsulate this into a reusable object - `with open(f) as file` is shorter and less error-prone than `f = open(); try: ... finally: f.close()`. They work for any resource: database connections, network sockets, locks, temporary state changes, and more. They are not faster than try/finally, and they do not stop exceptions: unless `__exit__` returns `True`, the error still propagates after the cleanup.',
       hints: [
         'Context managers guarantee __exit__ runs, like finally',
         'The key benefit is reusability and encapsulation',
@@ -944,12 +949,12 @@ class Timer:
       course: Course.BACKEND,
       question: 'What does the `with` statement guarantee?',
       options: [
-        { id: 'a', text: 'It catches every exception automatically', isCorrect: false },
-        { id: 'b', text: 'That a paired setup / teardown runs regardless of HOW the block exits — normal completion OR exception. `__enter__` runs on entry, and `__exit__` ALWAYS runs on exit. Idiomatic for files, locks, DB connections, temp dirs, database transactions, anywhere resources need deterministic cleanup.', isCorrect: true },
-        { id: 'c', text: 'That the block runs faster', isCorrect: false },
-        { id: 'd', text: 'That variables inside the block are local', isCorrect: false },
+        { id: 'a', text: 'Any exception raised in the block is caught and hidden, so the program carries on after it', isCorrect: false },
+        { id: 'b', text: 'The cleanup step (`__exit__`) runs when the block ends, whether it finishes normally or raises', isCorrect: true },
+        { id: 'c', text: 'The cleanup step runs only when the block finishes normally; an exception skips it', isCorrect: false },
+        { id: 'd', text: 'Names assigned inside the block are deleted when it ends, so `f` cannot be used after it', isCorrect: false },
       ],
-      explanation: '`with X as y: BODY` is syntactic sugar for `y = X.__enter__(); try: BODY; finally: X.__exit__(exc_type, exc_val, tb)`. The `__exit__` method runs even if BODY raises. This is critical for not leaking file descriptors, sockets, locks, or open transactions. Cleanest alternative to nested try/finally blocks and the #1 way to write leak-free resource code.',
+      explanation: '`with X as y: BODY` is syntactic sugar for `y = X.__enter__(); try: BODY; finally: X.__exit__(exc_type, exc_val, tb)`. The `__exit__` method runs even if BODY raises, which is what keeps files, sockets, locks and open transactions from leaking. It does not hide the exception: unless `__exit__` returns `True`, the error carries on after the cleanup. A `with` block is not a new scope either: `f` is still bound after the block (the file is just closed).',
       hints: [
         'Equivalent to try/finally with __enter__ / __exit__',
         '__exit__ ALWAYS runs — on success AND on exception',
@@ -1335,12 +1340,12 @@ print("____")`,
       course: Course.BACKEND,
       question: 'Why reach for a context manager instead of a `try`/`finally`?',
       options: [
-        { id: 'a', text: 'They are always equivalent — purely stylistic', isCorrect: false },
-        { id: 'b', text: 'A context manager encapsulates the setup/teardown pair in ONE object you can name, reuse, and compose. Callers just write `with X():` — no risk of forgetting `finally`. A bare `try/finally` works, but every caller must rewrite the cleanup code and can skip it by accident.', isCorrect: true },
-        { id: 'c', text: '`try/finally` is deprecated', isCorrect: false },
-        { id: 'd', text: 'Context managers are ~10× faster at runtime', isCorrect: false },
+        { id: 'a', text: 'A `finally` block is skipped when the error is not caught by an `except`, but `__exit__` always runs', isCorrect: false },
+        { id: 'b', text: 'It packs setup and cleanup into one reusable object, so each caller writes `with X():` and cannot forget the cleanup', isCorrect: true },
+        { id: 'c', text: 'A context manager also catches the block\'s exceptions, so callers no longer need any `except` clause', isCorrect: false },
+        { id: 'd', text: 'A `try`/`finally` can only release one resource, while one `with` statement can hold several at once', isCorrect: false },
       ],
-      explanation: 'The core benefit is ENCAPSULATION. Once you write `timed_db_connection()` as a context manager, every caller gets guaranteed connect/disconnect with timing without the risk of forgetting the `finally` clause. This is why the Python standard library is full of them: `open`, `threading.Lock`, `tempfile.TemporaryDirectory`, `contextlib.suppress`, `asyncpg.Connection`. Libraries that skip this force every caller to rewrite cleanup logic.',
+      explanation: 'The core benefit is ENCAPSULATION. Once you write `timed_db_connection()` as a context manager, every caller gets guaranteed connect/disconnect with timing without the risk of forgetting the `finally` clause. This is why the Python standard library is full of them: `open`, `threading.Lock`, `tempfile.TemporaryDirectory`, `contextlib.suppress`. The guarantee itself is the same as `try`/`finally`: a `finally` block also runs when the error is not caught, and a `finally` can release as many resources as you write in it. A context manager does not catch errors either; unless `__exit__` returns `True`, the exception still reaches the caller.',
       hints: [
         'CM = named, reusable, composable setup/teardown pair',
         'try/finally works but gets repeated everywhere',
@@ -1440,12 +1445,12 @@ def safe():
       course: Course.BACKEND,
       question: 'What is a context manager in Python?',
       options: [
-        { id: 'a', text: 'A design pattern for managing global variables across multiple modules', isCorrect: false },
-        { id: 'b', text: 'An object that defines setup and cleanup actions using the `with` statement. It guarantees cleanup runs even if an error occurs. Most common example: `with open(file) as f:` — the file is always closed.', isCorrect: true },
-        { id: 'c', text: 'A tool that manages the execution context of threads in multithreaded programs', isCorrect: false },
-        { id: 'd', text: 'A Python IDE feature that tracks which variables are in scope at any point', isCorrect: false },
+        { id: 'a', text: 'A wrapper that catches and logs any error raised inside its `with` block, so the block never crashes', isCorrect: false },
+        { id: 'b', text: 'An object used with `with` that runs setup on entry and cleanup on exit, even if the block raises', isCorrect: true },
+        { id: 'c', text: 'Any object that has a `close()` method; `with` simply calls `close()` on it when the block ends', isCorrect: false },
+        { id: 'd', text: 'A block that makes the names assigned inside `with` local, so they are deleted when it ends', isCorrect: false },
       ],
-      explanation: 'A context manager handles setup and teardown of resources automatically. When you write `with open("file.txt") as f:`, Python calls the file\'s `__enter__` method (opens the file), gives you the file object as `f`, and guarantees `__exit__` runs when the `with` block ends (closes the file) — even if an exception occurs inside the block. This prevents resource leaks.',
+      explanation: 'A context manager handles setup and teardown of resources automatically. When you write `with open("file.txt") as f:`, Python calls the file\'s `__enter__` method, gives you its return value (the file object) as `f`, and guarantees `__exit__` runs when the `with` block ends (closing the file), even if an exception occurs inside the block. This prevents resource leaks. What makes an object a context manager is the pair `__enter__`/`__exit__`, not a `close()` method. It does not swallow errors (unless `__exit__` returns `True`), and it does not create a new scope: `f` still exists after the block.',
       hints: [
         'The `with` keyword is the telltale sign of a context manager',
         'Think "automatic cleanup" — the resource is always properly released',

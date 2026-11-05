@@ -52,7 +52,7 @@ class User(BaseModel):
       solution:
         'from pydantic import BaseModel, Field\n\nclass User(BaseModel):\n    age: int = Field(ge=0, le=150)',
       explanation:
-        'ge = greater-or-equal, le = less-or-equal. Also gt (strict), lt (strict). Pydantic v1\'s min/max kwargs were renamed.',
+        'ge = greater-or-equal, le = less-or-equal. Also gt (strict), lt (strict). Field has no min/max keywords: pydantic only warns about an unknown keyword and adds no check for it.',
       hints: ['Two-letter names matching the operator semantics.'],
       tags: ['pydantic', 'Field'],
       concepts: ['py-pydantic-validation'],
@@ -79,7 +79,7 @@ class User(BaseModel):
       solution:
         'from pydantic import BaseModel, field_validator\n\nclass User(BaseModel):\n    name: str\n\n    @field_validator("name")\n    @classmethod\n    def upper(cls, v: str) -> str:\n        return v.upper()',
       explanation:
-        'Pydantic v2 renamed @validator → @field_validator. Requires @classmethod stacked beneath. Receives cls and the value, returns cleaned value or raises ValueError.',
+        'Pydantic v2 renamed @validator → @field_validator. Stack @classmethod beneath it (the documented form; the validator belongs to the class, not an instance). Receives cls and the value, returns cleaned value or raises ValueError.',
       hints: ['Snake-case: "field" + "_validator".'],
       tags: ['pydantic', 'field_validator'],
       concepts: ['py-pydantic-validation'],
@@ -244,7 +244,7 @@ class Cart(BaseModel):
       solution:
         'from pydantic import BaseModel, Field\n\nclass Cart(BaseModel):\n    items: list[str] = Field(default_factory=list)',
       explanation:
-        'Same name and semantics as dataclasses.field(default_factory=...). Required for mutable defaults — using a literal [] raises ValueError.',
+        'Same name and semantics as dataclasses.field(default_factory=...): pydantic calls the function once for every new instance. Unlike dataclasses, pydantic also accepts a plain `= []` default and copies it for each instance, but default_factory is the general tool whenever a default must be built per object (a new list, the current time, a fresh id).',
       hints: ['Same name as the dataclasses kwarg.'],
       tags: ['pydantic', 'default_factory'],
       concepts: ['py-pydantic-validation'],
@@ -257,7 +257,7 @@ class Cart(BaseModel):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define a User Pydantic model with name and age fields, then validate input data.',
+        'Define a `User` Pydantic model with a `name` (str) field, then an `age` (int) field. Build `User(name="Alice", age=30)` and print its name.',
       correctOrder: [
         'from pydantic import BaseModel',
         '',
@@ -304,7 +304,7 @@ class Cart(BaseModel):
       solution:
         'from pydantic import BaseModel, Field\n\nclass User(BaseModel):\n    name: str\n    age: int = Field(ge=0, le=150)',
       explanation:
-        'Field(ge=, le=, gt=, lt=) sets numeric bounds. The kwarg names mirror operator names: ge=greater-or-equal, le=less-or-equal. Pydantic v2 dropped Field(min=, max=) — those were v1.',
+        'Field(ge=, le=, gt=, lt=) sets numeric bounds. The kwarg names mirror operator names: ge=greater-or-equal, le=less-or-equal. Field has no min/max keywords: pydantic only warns about the unknown keywords and checks nothing, so `age=-5` would still be accepted.',
       hints: ['Pydantic uses ge/le/gt/lt, not min/max.'],
       tags: ['pydantic', 'Field', 'constraints'],
       concepts: ['py-pydantic-validation'],
@@ -336,7 +336,7 @@ class Cart(BaseModel):
       solution:
         'from pydantic import BaseModel, field_validator\n\nclass Address(BaseModel):\n    country: str\n\n    @field_validator("country")\n    @classmethod\n    def upper(cls, v: str) -> str:\n        return v.upper()',
       explanation:
-        'Pydantic v2 uses field_validator (the v1 name was @validator). It receives cls (so @classmethod is required), the value, and returns the cleaned value. Raise ValueError to reject. Don\'t use self — these aren\'t instance methods.',
+        'Pydantic v2 uses field_validator (the v1 name was @validator, which is not imported here). It receives cls (so it is written as a @classmethod), the value, and returns the cleaned value. Raise ValueError to reject. Don\'t use self - these aren\'t instance methods, and pydantic refuses a validator whose first parameter is self.',
       hints: ['v2: @field_validator + @classmethod. Receives cls, returns cleaned value.'],
       tags: ['pydantic', 'field_validator'],
       concepts: ['py-pydantic-validation'],
@@ -383,7 +383,7 @@ class Cart(BaseModel):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Serialize a Pydantic model to a dict and to JSON.',
+        'Serialize a Pydantic model to a dict and then to JSON, using the Pydantic v2 method names (not the deprecated v1 ones).',
       correctOrder: [
         'from pydantic import BaseModel',
         '',
@@ -460,13 +460,13 @@ class Cart(BaseModel):
         '        return self.width * self.height',
       ],
       distractorLines: [
-        '    @computed_field()',
+        '        return width * height',
         '    area: int = property(...)',
       ],
       solution:
         'from pydantic import BaseModel, computed_field\n\nclass Rect(BaseModel):\n    width: int\n    height: int\n\n    @computed_field\n    @property\n    def area(self) -> int:\n        return self.width * self.height',
       explanation:
-        'computed_field exposes a derived value in model_dump output. Stack with @property — order matters (@computed_field on top, @property below). Without computed_field, regular @property works but isn\'t serialized.',
+        'computed_field exposes a derived value in model_dump output. Stack with @property - order matters (@computed_field on top, @property below). Without computed_field, regular @property works but isn\'t serialized. Inside the method, read the fields through self: a bare `width * height` is a NameError.',
       hints: ['Stack: @computed_field on top, @property below.'],
       tags: ['pydantic', 'computed_field'],
       concepts: ['py-pydantic-validation'],
@@ -493,13 +493,13 @@ class Cart(BaseModel):
       ],
       distractorLines: [
         'except TypeError as e:',
-        'except ValueError as e:',
+        'except ValidationError:',
       ],
       solution:
         'from pydantic import BaseModel, ValidationError\n\nclass User(BaseModel):\n    age: int\n\ntry:\n    User(age="not a number")\nexcept ValidationError as e:\n    print(e.errors())',
       explanation:
-        'Pydantic raises ValidationError (a subclass of ValueError but distinct from plain TypeError). .errors() returns a structured list of {loc, msg, type, input} dicts — easy to surface in HTTP responses.',
-      hints: ['ValidationError, not TypeError. .errors() for structured output.'],
+        'Pydantic raises ValidationError (a subclass of ValueError, never a TypeError). The except clause must bind it with `as e`: `except ValidationError:` catches the error but leaves `e` undefined, so `e.errors()` fails with NameError. .errors() returns a structured list of {loc, msg, type, input} dicts - easy to surface in HTTP responses.',
+      hints: ['ValidationError, not TypeError, bound with `as e`. .errors() for structured output.'],
       tags: ['pydantic', 'ValidationError'],
       concepts: ['py-pydantic-validation'],
     },
@@ -511,7 +511,7 @@ class Cart(BaseModel):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Configure a model to allow extra="forbid" so unknown fields raise.',
+        'Configure a model, in the Pydantic v2 style, with extra="forbid" so unknown fields raise.',
       correctOrder: [
         'from pydantic import BaseModel, ConfigDict',
         '',
@@ -540,7 +540,7 @@ class Cart(BaseModel):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Define a field with a default factory for a mutable default (avoiding the classic shared-state trap).',
+        'Give `Cart.items` a default that is built by calling a factory each time a Cart is created, using Field\'s factory keyword, so every cart starts with its own empty list.',
       correctOrder: [
         'from pydantic import BaseModel, Field',
         '',
@@ -548,14 +548,14 @@ class Cart(BaseModel):
         '    items: list[str] = Field(default_factory=list)',
       ],
       distractorLines: [
-        '    items: list[str] = []',
-        '    items: list[str] = Field(default=[])',
+        '    items: list[str] = Field(default_factory=list())',
+        '    items: list[str] = Field(default=list)',
       ],
       solution:
         'from pydantic import BaseModel, Field\n\nclass Cart(BaseModel):\n    items: list[str] = Field(default_factory=list)',
       explanation:
-        'Like dataclasses, Pydantic also forbids mutable default literals — `items: list[str] = []` raises ValueError. Use Field(default_factory=list) for fresh-per-instance lists. Same pattern as dataclasses.field(default_factory=...).',
-      hints: ['Same trap as dataclasses; same fix: default_factory.'],
+        '`default_factory=list` stores the function `list` and calls it for every new Cart, so each cart gets its own empty list. `default_factory=list()` passes an already-built empty list instead of something to call, so pydantic has no factory and `Cart()` fails with "Field required". `default=list` makes the default the `list` class itself, so `Cart().items` would be the type, not a list. Same pattern as dataclasses.field(default_factory=...). (Unlike dataclasses, pydantic also accepts a plain `= []` and copies it per instance; default_factory is the general tool for defaults that must be built per object.)',
+      hints: ['Pass the function itself (list), not a list built from it.'],
       tags: ['pydantic', 'default_factory'],
       concepts: ['py-pydantic-validation'],
     },
@@ -892,12 +892,12 @@ print(p.model_dump())`,
       course: Course.BACKEND,
       question: 'What does pydantic give you that a plain `dataclass` does not?',
       options: [
-        { id: 'a', text: 'Nothing — they are equivalent', isCorrect: false },
-        { id: 'b', text: 'Runtime data validation and coercion based on type hints. `BaseModel` subclasses validate inputs on construction (raising `ValidationError` on bad data), coerce compatible types (e.g. "42" → int 42), and support nested models, custom validators, JSON schema export, and `.model_dump()` / `.model_validate_json()` round-trips.', isCorrect: true },
-        { id: 'c', text: 'Faster attribute access only', isCorrect: false },
-        { id: 'd', text: 'Database ORM capabilities', isCorrect: false },
+        { id: 'a', text: 'Nothing at runtime: both use the type hints only for editors and type checkers, so a wrong type is stored as given', isCorrect: false },
+        { id: 'b', text: 'Runtime validation: building a model checks and converts the data against the type hints, and bad data raises ValidationError', isCorrect: true },
+        { id: 'c', text: 'Only serialization: a dataclass already checks its types at runtime, and pydantic adds turning the object into a dict or JSON', isCorrect: false },
+        { id: 'd', text: 'Strict type checks that reject any value not already of the declared type, so `age="42"` for an int field always raises', isCorrect: false },
       ],
-      explanation: 'Dataclasses are static containers — type hints are documentation only. Pydantic enforces them at runtime: you cannot construct a `User(age="not a number")` without a `ValidationError`. Used by FastAPI, drf-spectacular, LangChain. In v2, use `.model_dump()`, `.model_validate(obj)`, `.model_validate_json(s)`, `.model_dump_json()`.',
+      explanation: 'Dataclasses are static containers - their type hints are documentation only, so `age="42"` is stored as a string and nothing is checked. Pydantic enforces the hints at runtime: you cannot construct a `User(age="not a number")` without a `ValidationError`. It also converts compatible input by default, so `age="42"` becomes the int 42 rather than an error (strict mode turns that off). Serialization (`model_dump()`, `model_dump_json()`) is a bonus, not the main difference: dataclasses have `asdict()` too. Used by FastAPI for request/response validation.',
       hints: [
         'pydantic validates + coerces at runtime',
         'Raises ValidationError on bad inputs',
@@ -1038,7 +1038,7 @@ try:
     Product(name="Widget", price=-1)
 except ValidationError:
     print("invalid")`,
-      explanation: 'Field validators run AFTER type coercion. Raise `ValueError` (or `AssertionError`) from them — pydantic wraps it in a `ValidationError` automatically. Must be classmethods decorated with `@field_validator("field_name")`. For cross-field logic (e.g. `start_date < end_date`), use `@model_validator(mode="after")`.',
+      explanation: 'Field validators run AFTER type coercion. Raise `ValueError` (or `AssertionError`) from them - pydantic wraps it in a `ValidationError` automatically. Write them as classmethods decorated with `@field_validator("field_name")`. For cross-field logic (e.g. `start_date < end_date`), use `@model_validator(mode="after")`.',
       hints: [
         '@field_validator("field_name") + @classmethod',
         'Raise ValueError inside the validator — pydantic rewraps it',

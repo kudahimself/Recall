@@ -243,13 +243,13 @@ print(c.___(2))`,
         'print(p.x, p.y)',
       ],
       distractorLines: [
-        'Point = namedtuple("Point", "x,y")',
+        'Point = namedtuple(["x", "y"])',
         'Point = namedtuple("Point", x, y)',
       ],
       solution:
         'from collections import namedtuple\n\nPoint = namedtuple("Point", ["x", "y"])\np = Point(1, 2)\nprint(p.x, p.y)',
       explanation:
-        'namedtuple takes the type name and a list of field names. A space-separated or list-of-strings field spec works; "x,y" with a comma fails because namedtuple\'s string mode splits on whitespace. Bare names without quotes is a NameError.',
+        'namedtuple takes the type name first, then the field names (a list of strings, or one string such as "x y"). Leaving out the type name raises TypeError, because the list is taken as the name and field_names is missing. Bare names without quotes are a NameError.',
       hints: ['Fields as a list of strings, or a space-separated string.'],
       tags: ['collections', 'namedtuple'],
       concepts: ['py-collections-stdlib'],
@@ -292,7 +292,7 @@ print(c.___(2))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a fixed-capacity ring buffer using deque(maxlen=3) so it auto-drops oldest when full.',
+        'Build a ring buffer `buf` with deque(maxlen=3) so it drops the oldest item when full, append 1, 2, 3 and 4 in that order, then print it as a list.',
       correctOrder: [
         'from collections import deque',
         '',
@@ -310,7 +310,7 @@ print(c.___(2))`,
       solution:
         'from collections import deque\n\nbuf = deque(maxlen=3)\nbuf.append(1)\nbuf.append(2)\nbuf.append(3)\nbuf.append(4)\nprint(list(buf))',
       explanation:
-        'deque(maxlen=N) caps the size — appending past N silently drops from the OPPOSITE end. So pushing 1,2,3,4 keeps [2,3,4]. deque(3) treats 3 as the iterable to initialize from (TypeError because int isn\'t iterable).',
+        'deque(maxlen=N) caps the size - appending past N silently drops from the OPPOSITE end. So pushing 1,2,3,4 keeps [2,3,4]. deque(3) treats 3 as the iterable to initialize from (TypeError because int isn\'t iterable).',
       hints: ['maxlen kwarg; auto-evicts oldest when full.'],
       tags: ['collections', 'deque', 'maxlen'],
       concepts: ['py-collections-stdlib'],
@@ -353,7 +353,7 @@ print(c.___(2))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Group records by their type field using defaultdict(list).',
+        'Given `records = [("a", 1), ("b", 2), ("a", 3)]`, create `groups` with defaultdict(list) (records first, then groups), add each number to the list under its letter, and print `groups` as a plain dict.',
       correctOrder: [
         'from collections import defaultdict',
         '',
@@ -370,8 +370,8 @@ print(c.___(2))`,
       solution:
         'from collections import defaultdict\n\nrecords = [("a", 1), ("b", 2), ("a", 3)]\ngroups = defaultdict(list)\nfor k, v in records:\n    groups[k].append(v)\nprint(dict(groups))',
       explanation:
-        'defaultdict(list) — pass list (the type, no parens) as the factory. Each missing key gets a fresh empty list. Passing [] would share ONE list across all keys (similar to mutable-default-arg trap).',
-      hints: ['list (no parens) — the type itself is the factory.'],
+        'defaultdict(list): pass list (the type, no parens) as the factory, and it is called to make a fresh empty list for each missing key. Passing [] fails with TypeError, because the factory must be a callable and a list is not. `groups[k] = v` would overwrite, keeping only the last number per letter instead of collecting them.',
+      hints: ['list (no parens) - the type itself is the factory.'],
       tags: ['collections', 'defaultdict', 'grouping'],
       concepts: ['py-collections-stdlib'],
     },
@@ -410,7 +410,7 @@ print(c.___(2))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use OrderedDict.move_to_end to promote a key to the back, modeling LRU access.',
+        'Model LRU access with an OrderedDict `cache`: insert "a": 1, "b": 2 and "c": 3 in that order, move "a" to the back with move_to_end, then print the keys as a list.',
       correctOrder: [
         'from collections import OrderedDict',
         '',
@@ -441,7 +441,7 @@ print(c.___(2))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use Counter arithmetic to find the difference between two letter counts.',
+        'Count the letters of "aaabb" into `a`, then the letters of "aab" into `b`, and print what is left of `a` after taking away `b`\'s counts, using Counter arithmetic.',
       correctOrder: [
         'from collections import Counter',
         '',
@@ -456,7 +456,7 @@ print(c.___(2))`,
       solution:
         'from collections import Counter\n\na = Counter("aaabb")\nb = Counter("aab")\nprint(a - b)',
       explanation:
-        'Counter supports +, -, &, | as multiset operations. - subtracts counts and DROPS non-positive results — gives Counter({"a": 1, "b": 1}). .subtract() mutates in place AND keeps negatives, different semantics.',
+        'Counter supports +, -, &, | as multiset operations. - subtracts counts and DROPS non-positive results - gives Counter({"a": 1, "b": 1}). .subtract() mutates in place AND keeps negatives, different semantics.',
       hints: ['Counter has + - & | operators for multiset math.'],
       tags: ['collections', 'Counter', 'arithmetic'],
       concepts: ['py-collections-stdlib'],
@@ -469,7 +469,7 @@ print(c.___(2))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build an O(1)-extend-on-both-ends queue with deque.appendleft for prepending.',
+        'Start a deque `q` holding [2, 3], add 1 to the front with appendleft, then add 4 to the back, and print it as a list.',
       correctOrder: [
         'from collections import deque',
         '',
@@ -480,12 +480,12 @@ print(c.___(2))`,
       ],
       distractorLines: [
         'q.prepend(1)',
-        'q.insert(0, 1)',
+        'q.append(1)',
       ],
       solution:
         'from collections import deque\n\nq = deque([2, 3])\nq.appendleft(1)\nq.append(4)\nprint(list(q))',
       explanation:
-        'deque.appendleft is O(1) — same as append at the right end. list.insert(0, x) is O(n) (shifts everything). There\'s no .prepend method. Both ends of a deque are cheap; both ends of a list are not.',
+        'deque.appendleft adds to the front in O(1), just as append adds to the back. append(1) would put 1 at the back, giving [2, 3, 1, 4]. There is no .prepend method. A list can only grow cheaply at the back: list.insert(0, x) is O(n) because it shifts everything.',
       hints: ['appendleft for the front; both ends are O(1).'],
       tags: ['collections', 'deque', 'appendleft'],
       concepts: ['py-collections-stdlib'],
@@ -514,7 +514,7 @@ print(c.___(2))`,
       solution:
         'from collections import defaultdict\n\ntree = defaultdict(lambda: defaultdict(list))\ntree["fruit"]["red"].append("apple")\ntree["fruit"]["yellow"].append("banana")\nprint(tree["fruit"]["red"])',
       explanation:
-        'For nested defaultdicts, the OUTER factory must produce a NEW defaultdict per call — that\'s why you need the lambda. Passing `defaultdict(list)` directly evaluates ONCE — every outer key would share the same inner defaultdict.',
+        'For nested defaultdicts, the OUTER factory must be a callable that builds a NEW inner defaultdict(list) each time, which is what the lambda does. Passing `defaultdict(list)` directly hands over a dict, not a callable, so it raises TypeError ("first argument must be callable or None"). `defaultdict(defaultdict)` runs, but each inner defaultdict has no factory of its own, so `tree["fruit"]["red"]` raises KeyError.',
       hints: ['Outer factory must be a lambda that creates a fresh inner defaultdict.'],
       tags: ['collections', 'defaultdict', 'nested'],
       concepts: ['py-collections-stdlib'],
@@ -719,14 +719,14 @@ print(p._asdict())`,
       topic: Topic.PY_COLLECTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write `analyze_text` taking a `text` string and optional integer `top_n` defaulting to 5. Return a summary dict of the word-frequency shape. Tokenise the text into LOWERCASE word tokens — a "word" is a run of ASCII letters, so punctuation and whitespace should be stripped and case ignored. From those tokens build a dict with three keys:\n\n- `"total_unique"` — the number of DISTINCT word tokens.\n- `"top_words"` — the top-N most frequent tokens as `(word, count)` pairs, ranked count-descending.\n- `"hapax"` — a list of every word that occurs EXACTLY ONCE, in first-seen order.\n\nExample input `("the cat sat on the mat the cat", top_n=3)` → `{"total_unique": 4, "top_words": [("the", 3), ("cat", 2), ("sat", 1)], "hapax": ["sat", "on", "mat"]}`.',
+      question: 'Write `analyze_text` taking a `text` string and optional integer `top_n` defaulting to 5. Return a summary dict of the word-frequency shape. Tokenise the text into LOWERCASE word tokens - a "word" is a run of ASCII letters, so punctuation and whitespace should be stripped and case ignored. From those tokens build a dict with three keys:\n\n- `"total_unique"` - the number of DISTINCT word tokens.\n- `"top_words"` - the top-N most frequent tokens as `(word, count)` pairs, ranked count-descending.\n- `"hapax"` - a list of every word that occurs EXACTLY ONCE, in first-seen order.\n\nExample input `("the cat sat on the mat the cat", top_n=3)` → `{"total_unique": 5, "top_words": [("the", 3), ("cat", 2), ("sat", 1)], "hapax": ["sat", "on", "mat"]}`.',
       starterCode: `def analyze_text(text: str, top_n: int = 5) -> dict:
-      ...
+    ...
   `,
       testCases: [
         {
           input: '"the cat sat on the mat the cat", top_n=3',
-          expectedOutput: '{"total_unique": 4, "top_words": [("the", 3), ("cat", 2), ("sat", 1)], "hapax": ["sat", "on", "mat"]}',
+          expectedOutput: '{"total_unique": 5, "top_words": [("the", 3), ("cat", 2), ("sat", 1)], "hapax": ["sat", "on", "mat"]}',
           description: 'Should use Counter for text analysis',
         },
       ],
@@ -858,12 +858,12 @@ def ____(entries: ____) -> ____:
       course: Course.BACKEND,
       question: 'Which `collections` helper matches each use case: counting occurrences, grouping by key with auto-default, fast popleft queue, fixed-field record?',
       options: [
-        { id: 'a', text: 'All four are the same class', isCorrect: false },
-        { id: 'b', text: '`Counter` for counting, `defaultdict` for group-by with auto-default values, `deque` for fast appends/pops at both ends (O(1) popleft), `namedtuple` for a lightweight immutable record with fixed field names.', isCorrect: true },
-        { id: 'c', text: '`OrderedDict` for everything', isCorrect: false },
-        { id: 'd', text: '`list` and `dict` are the only ones you need', isCorrect: false },
+        { id: 'a', text: 'Counting: `Counter`; grouping: `ChainMap`; queue: `deque`; record: `namedtuple`', isCorrect: false },
+        { id: 'b', text: 'Counting: `Counter`; grouping: `defaultdict`; queue: `deque`; record: `namedtuple`', isCorrect: true },
+        { id: 'c', text: 'Counting: `defaultdict`; grouping: `Counter`; queue: `deque`; record: `namedtuple`', isCorrect: false },
+        { id: 'd', text: 'Counting: `Counter`; grouping: `defaultdict`; queue: `deque`; record: `OrderedDict`', isCorrect: false },
       ],
-      explanation: 'Reach for the right tool: `Counter({"a": 3, "b": 1})` beats `{"a": 3, "b": 1}` for frequency with `.most_common()`. `defaultdict(list)` beats `dict` for "group these by key". `deque` beats `list` when popping from the front (`list.pop(0)` is O(n), `deque.popleft()` is O(1)). `namedtuple` beats `tuple` when you want `p.x`, `p.y` instead of `p[0]`, `p[1]`. These four cover 90% of real usage.',
+      explanation: 'Reach for the right tool: `Counter({"a": 3, "b": 1})` beats `{"a": 3, "b": 1}` for frequency with `.most_common()`. `defaultdict(list)` beats `dict` for "group these by key", because a missing key starts as an empty list. `deque` beats `list` when popping from the front (`list.pop(0)` is O(n), `deque.popleft()` is O(1)). `namedtuple` beats `tuple` when you want `p.x`, `p.y` instead of `p[0]`, `p[1]`. `ChainMap` layers whole dicts for lookups (overrides over defaults); it does not collect items per key. `Counter` only counts, so it cannot hold a list of items per key. `OrderedDict` is a dict that remembers key order, not a record with fixed field names.',
       hints: [
         'Counter: frequency + most_common',
         'defaultdict(list/set/int): auto-init on first access',
@@ -974,7 +974,7 @@ print(____(q))`,
       topic: Topic.PY_COLLECTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a fixed-size sliding-window collection `tail` using the `collections` double-ended queue type bounded to a max length of 3 — once full, appending more items automatically discards the oldest from the other end. Append the integers `1, 2, 3, 4, 5` in order, then print the final contents as a list (expect `[3, 4, 5]` — only the last three survived).',
+      question: 'Build a fixed-size sliding-window collection `tail` using the `collections` double-ended queue type bounded to a max length of 3 - once full, appending more items automatically discards the oldest from the other end. Append the integers `1, 2, 3, 4, 5` in order, then print the final contents as a list (expect `[3, 4, 5]` - only the last three survived).',
       starterCode: `from collections import deque
   `,
       testCases: [
@@ -990,6 +990,13 @@ tail = deque(maxlen=3)
 for n in range(1, 6):
     tail.append(n)
 
+print(list(tail))
+# OR
+from collections import deque
+
+tail = deque(maxlen=3)
+tail.extend([1, 2, 3, 4, 5])
+
 print(list(tail))`,
       tieredHints: {
         apiSignature: 'deque(maxlen=N)',
@@ -1001,9 +1008,9 @@ for n in ____(____, ____):  # 1, 6
 
 print(____(tail))`,
       },
-      explanation: 'A bounded deque is the cleanest way to "keep the last N items" — no manual slicing, no size checks. Common uses: keeping the last N log lines for a diagnostic endpoint, moving averages over fixed windows, last-N-events buffers. Appending to a full deque automatically discards the other end.',
+      explanation: 'A bounded deque is the cleanest way to "keep the last N items" - no manual slicing, no size checks. Common uses: keeping the last N log lines for a diagnostic endpoint, moving averages over fixed windows, last-N-events buffers. Appending to a full deque automatically discards the other end.',
       hints: [
-        'deque(maxlen=N) — append to full deque drops from the other end',
+        'deque(maxlen=N) - append to full deque drops from the other end',
         'Ideal for sliding windows, rolling buffers',
         'No manual length checks needed',
       ],
@@ -1060,7 +1067,7 @@ print(p)`,
       topic: Topic.PY_COLLECTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Given `defaults = {"debug": False, "port": 8000}` and `overrides = {"port": 9000}`, build a layered config view `cfg` using the `collections` class that chains multiple dicts with left-to-right lookup precedence — overrides must win over defaults. Print the value for `"debug"` (expect `False` — falls through to defaults since overrides doesn\'t have it) and the value for `"port"` (expect `9000` — overrides wins).',
+      question: 'Given `defaults = {"debug": False, "port": 8000}` and `overrides = {"port": 9000}`, build a layered config view `cfg` using the `collections` class that chains multiple dicts with left-to-right lookup precedence - overrides must win over defaults. Print the value for `"debug"` (expect `False` - falls through to defaults since overrides doesn\'t have it) and the value for `"port"` (expect `9000` - overrides wins).',
       starterCode: `from collections import ChainMap
   `,
       testCases: [
@@ -1089,9 +1096,9 @@ cfg = ____(____, ____)  # overrides, defaults
 print(cfg[____])  # "debug"
 print(cfg[____])  # "port"`,
       },
-      explanation: '`ChainMap(*maps)` looks up keys left-to-right — first match wins. Great for layered config (CLI flags > env > file > defaults), scope resolution (locals → enclosing → globals → builtins — actually how Python resolves names), or diff-style overlays. `cfg.maps` exposes the underlying list. Mutations (`cfg["x"] = 1`) only ever touch `maps[0]` — the underlying dicts stay pristine.',
+      explanation: '`ChainMap(*maps)` looks up keys left-to-right - first match wins. Great for layered config (CLI flags > env > file > defaults), scope resolution (locals → enclosing → globals → builtins - actually how Python resolves names), or diff-style overlays. `cfg.maps` exposes the underlying list. Writes (`cfg["x"] = 1`) only ever change `maps[0]` (here `overrides`); the later dicts are never changed.',
       hints: [
-        'ChainMap(first, second, ...) — first wins',
+        'ChainMap(first, second, ...) - first wins',
         'Mutations only affect maps[0]',
         'Perfect for config layering',
       ],
@@ -1154,16 +1161,16 @@ print(a ____ b)  # +`,
       course: Course.BACKEND,
       question: 'Given that regular `dict` preserves insertion order since Python 3.7, when is `collections.OrderedDict` still useful?',
       options: [
-        { id: 'a', text: 'Never — it\'s completely redundant', isCorrect: false },
-        { id: 'b', text: 'When you need `.move_to_end(key, last=True/False)` to reorder, when equality should compare by insertion order (plain dict ignores order in `==`), or when you want `.popitem(last=False)` for FIFO eviction. Building LRU caches is the classic use case.', isCorrect: true },
-        { id: 'c', text: 'Only in Python 2', isCorrect: false },
-        { id: 'd', text: 'For any dict larger than 1 million items', isCorrect: false },
+        { id: 'a', text: 'Never: a plain dict now has the same methods and the same order-aware `==`', isCorrect: false },
+        { id: 'b', text: 'When you need order-aware `==`, or `move_to_end()` and `popitem(last=False)`', isCorrect: true },
+        { id: 'c', text: 'When you need the keys kept sorted, since it re-sorts them on every insert', isCorrect: false },
+        { id: 'd', text: 'When order must be guaranteed, since a plain dict keeps it only by accident', isCorrect: false },
       ],
-      explanation: 'Since 3.7, regular `dict` preserves insertion order — but `OrderedDict` still has ordering as part of its CONTRACT (3.7 guarantees it for dict, but the semantic meaning stays with OrderedDict). Key differences: `OrderedDict == OrderedDict` compares order too; `dict == dict` ignores order. `.move_to_end()` and `.popitem(last=False)` (O(1) either end) don\'t exist on `dict`. For LRU caches, `functools.lru_cache` usually beats hand-rolling.',
+      explanation: 'Since 3.7, a regular `dict` is guaranteed to keep insertion order, so that alone is no reason to pick `OrderedDict`. The differences that remain: `OrderedDict == OrderedDict` compares order too, while `dict == dict` ignores it; and `.move_to_end()` and `.popitem(last=False)` (O(1) at either end) do not exist on `dict`. That makes `OrderedDict` the classic base for a hand-rolled LRU cache, though `functools.lru_cache` usually beats hand-rolling. "Ordered" means insertion order, not sorted order: neither type sorts its keys.',
       hints: [
         'move_to_end + popitem(last=False) are OrderedDict-only',
         'Equality compares order in OrderedDict, not in dict',
-        'Plain dict preserves insertion order (3.7+) but doesn\'t advertise it',
+        'Plain dict keeps insertion order (guaranteed since 3.7), but its == ignores order',
       ],
       tags: ['collections', 'OrderedDict', 'dict', 'ordering'],
       concepts: ['py-collections-stdlib', 'py-dict-key-hashability'],
@@ -1202,11 +1209,11 @@ print(____(d))
 d.____(____)  # -3
 print(____(d))`,
       },
-      explanation: '`rotate(n)` shifts elements circularly — positive n rotates right, negative n rotates left. O(n) in the number of steps. Much faster than slice-reassignment `d = d[-n:] + d[:-n]` which allocates two new slices. Use for circular buffers, round-robin dispatch, Caesar-cipher-style encodings.',
+      explanation: '`rotate(n)` shifts elements circularly - positive n rotates right, negative n rotates left. O(k) for k steps. A deque cannot be sliced, so the list version `xs = xs[-n:] + xs[:-n]` has to build two new lists; `rotate` works in place. Use for circular buffers, round-robin dispatch, Caesar-cipher-style encodings.',
       hints: [
         'd.rotate(n) rotates right (positive) or left (negative)',
-        'In-place — no new deque allocated',
-        'O(n) where n is the step count',
+        'In-place - no new deque allocated',
+        'O(k) where k is the step count',
       ],
       tags: ['collections', 'deque', 'rotate'],
       concepts: ['py-collections-stdlib'],

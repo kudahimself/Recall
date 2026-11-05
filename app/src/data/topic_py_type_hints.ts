@@ -23,7 +23,7 @@ export const py_type_hints_questions: Question[] = [
       question:
         'Fill in the modern PEP 585 lowercase generic for a list of ints.',
       template: `def total(nums: ___[int]) -> int:
-      return sum(nums)`,
+    return sum(nums)`,
       blanks: ['list'],
       solution: 'def total(nums: list[int]) -> int:\n    return sum(nums)',
       explanation:
@@ -42,7 +42,7 @@ export const py_type_hints_questions: Question[] = [
       question:
         'Fill in the modern PEP 604 union for "either str or None" (Python 3.10+).',
       template: `def find(name: str) -> str ___ None:
-      ...`,
+    ...`,
       blanks: ['|'],
       solution: 'def find(name: str) -> str | None:\n    ...',
       explanation:
@@ -126,7 +126,7 @@ def first(items: list[T]) -> T:
       question:
         'Fill in the lowercase generic for a dict mapping str to int.',
       template: `def counts() -> ___[str, int]:
-      return {"a": 1, "b": 2}`,
+    return {"a": 1, "b": 2}`,
       blanks: ['dict'],
       solution: 'def counts() -> dict[str, int]:\n    return {"a": 1, "b": 2}',
       explanation:
@@ -164,7 +164,7 @@ class HasName(___):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the typing tool for a fixed-length tuple of (int, str, bool).',
+        'Fill in the lowercase built-in generic for a fixed-length tuple of (int, str, bool).',
       template: `record: ___[int, str, bool]`,
       blanks: ['tuple'],
       solution: 'record: tuple[int, str, bool]',
@@ -204,7 +204,7 @@ mode: ___["r", "w", "a"]`,
       question:
         'Fill in the value used to mark a function that doesn\'t return anything.',
       template: `def log(msg: str) -> ___:
-      print(msg)`,
+    print(msg)`,
       blanks: ['None'],
       solution: 'def log(msg: str) -> None:\n    print(msg)',
       explanation:
@@ -226,7 +226,7 @@ mode: ___["r", "w", "a"]`,
         { id: 'c', text: '`def parse_config(filename: str) -> Union[dict, None, str, int]:`', isCorrect: false },
         { id: 'd', text: '`def parse_config(filename: str) -> Optional[dict[str, Union(str, int)]]:`', isCorrect: false },
       ],
-      explanation: '`Optional[X]` is shorthand for `Union[X, None]`. In 3.10+ the cleaner spelling is `X | None`. For a dict with mixed-type values, parametrise both the key and value types: `dict[str, str | int]` (or `dict[str, Union[str, int]]`). Option (b) is untyped (`dict` with no parameters loses info). (c) flattens everything into one union — the return is not a bare str or int, it is a dict of them. (d) uses `Union(...)` with parentheses — it must be subscripted with square brackets: `Union[str, int]`.',
+      explanation: '`Optional[X]` is shorthand for `Union[X, None]`, and on 3.10+ the cleaner spelling is `X | None`. For a dict with mixed-type values, parametrise both the key and the value type: `dict[str, str | int]` (or `dict[str, Union[str, int]]`). `Optional[dict]` with an unannotated `filename` loses the parameter type and the key and value types. `Union[dict, None, str, int]` flattens everything into one union, but the function never returns a bare str or int, it returns a dict of them. `Union(str, int)` with round brackets is a call, not a type: `Union` must be subscripted with square brackets, `Union[str, int]`.',
       hints: [
         'Optional[X] = X | None = Union[X, None]',
         'dict[K, V] — parametrise keys and values',
@@ -244,11 +244,11 @@ mode: ___["r", "w", "a"]`,
       question: 'Which is the correct way to declare a generic `Repository` class parametrised by a type variable `T`, with an `add(item: T) -> None` method that appends to an internal `list[T]`?',
       options: [
         { id: 'a', text: '`T = TypeVar("T")` then `class Repository(Generic[T]):` with `self._items: list[T] = []` and `def add(self, item: T) -> None: self._items.append(item)`', isCorrect: true },
-        { id: 'b', text: '`class Repository<T>:` with `def add(self, item: T) -> None:` — TypeScript-style angle brackets', isCorrect: false },
-        { id: 'c', text: '`class Repository(Generic):` with `def add(self, item: Generic) -> None:` — no TypeVar needed', isCorrect: false },
-        { id: 'd', text: '`T = "any"` then `class Repository[T]:` — strings become type variables', isCorrect: false },
+        { id: 'b', text: '`class Repository<T>:` with `def add(self, item: T) -> None:` - TypeScript-style angle brackets', isCorrect: false },
+        { id: 'c', text: '`class Repository(Generic):` with `def add(self, item: Generic) -> None:` - no TypeVar needed', isCorrect: false },
+        { id: 'd', text: '`T = TypeVar("T")` then a plain `class Repository:` with `self._items: list[T] = []` - using `T` inside makes it generic', isCorrect: false },
       ],
-      explanation: '`TypeVar("T")` names a type variable; `Generic[T]` makes the class parametrisable so `Repository[int]` and `Repository[str]` are distinct types to the checker. Inside the class, `T` refers to the concrete type the caller picks, keeping `_items`, `add`, and `get` all consistent. (b) is TypeScript syntax, not Python. (c) drops the variable entirely — `Generic` alone is not a type. (d) makes `T` a string, which is not how type variables work. PEP 695 (3.12+) adds a shorter form: `class Repository[T]: ...` — no `Generic`/`TypeVar` import — but the traditional spelling in (a) is what runs on most versions.',
+      explanation: '`TypeVar("T")` names a type variable, and `Generic[T]` makes the class parametrisable, so `Repository[int]` and `Repository[str]` are distinct types to the checker. Inside the class, `T` stands for the type the caller picks, keeping `_items` and `add` consistent. Angle brackets (`class Repository<T>`) are TypeScript syntax and a syntax error in Python. `class Repository(Generic):` fails when the class is created: plain `Generic` needs a type variable in its brackets. Using `T` in the annotations of a plain class does not make the class generic; the checker reports `T` as unbound, because nothing ties it to the class. Python 3.12+ (PEP 695) adds the shorter `class Repository[T]: ...` with no `Generic` or `TypeVar` import, but the `Generic[T]` spelling works on every version.',
       hints: [
         'TypeVar creates a placeholder type',
         'Generic[T] makes the class parameterizable',
@@ -313,7 +313,7 @@ mode: ___["r", "w", "a"]`,
         { id: 'c', text: '`class Box(Generic):` then use the string `"T"` as the type annotation — Generic infers the parameter', isCorrect: false },
         { id: 'd', text: '`T = type("T", (), {})` then `class Box(T):` — TypeVars are dynamically created classes', isCorrect: false },
       ],
-      explanation: '`TypeVar("T")` names a type variable; `Generic[T]` parametrises the class so `Box[int]` and `Box[str]` are distinct types to a checker. At runtime the `[int]` subscription is a no-op — this is purely compile-time information. (b) uses TypeScript syntax. (c) misuses `Generic` (it needs the TypeVar in its subscript). (d) builds a runtime class, not a type variable. PEP 695 (3.12+) has the shorter `class Box[T]: ...` — no `Generic`/`TypeVar` imports — but (a) is the portable spelling.',
+      explanation: '`TypeVar("T")` names a type variable, and `Generic[T]` parametrises the class, so `Box[int]` and `Box[str]` are distinct types to a checker. At runtime the `[int]` subscription changes nothing; it is information for the checker. Angle brackets are TypeScript syntax and a syntax error in Python. `Generic` needs a type variable in its brackets, and the string `"T"` used as an annotation only refers to a class named `T`. `type("T", (), {})` builds an ordinary runtime class, not a type variable. Python 3.12+ (PEP 695) has the shorter `class Box[T]: ...` with no `Generic` or `TypeVar` import, but the `Generic[T]` spelling works on every version.',
       hints: [
         'T = TypeVar("T"); class Box(Generic[T])',
         'Box[int], Box[str] — distinct types to the checker',
@@ -330,12 +330,12 @@ mode: ___["r", "w", "a"]`,
       course: Course.BACKEND,
       question: 'What does Python do with type hints at runtime?',
       options: [
-        { id: 'a', text: 'Validates them — raises TypeError on mismatch', isCorrect: false },
-        { id: 'b', text: 'Stores them in `__annotations__` but does NO runtime enforcement. Hints are documentation for humans and input for type checkers (mypy, Pyright, Pyre). To get runtime validation you need pydantic, beartype, or manual `isinstance` checks.', isCorrect: true },
-        { id: 'c', text: 'Compiles them to machine code', isCorrect: false },
-        { id: 'd', text: 'Silently deletes them', isCorrect: false },
+        { id: 'a', text: 'Checks each argument against its hint on every call and raises `TypeError` on a mismatch', isCorrect: false },
+        { id: 'b', text: 'Stores them in `__annotations__` but never checks them, so a call with the wrong type still runs', isCorrect: true },
+        { id: 'c', text: 'Converts each argument to its hinted type, so `add("2", "3")` with `int` hints returns `5`', isCorrect: false },
+        { id: 'd', text: 'Discards them when the module is compiled, so they exist only in the source file', isCorrect: false },
       ],
-      explanation: 'This surprises beginners: `def add(a: int, b: int) -> int: return a + b` accepts `add("x", "y")` at runtime with no complaint (returns `"xy"`). Type hints are CHECKED by tools (mypy, Pyright) — at runtime they\'re inert metadata on `__annotations__`. For runtime enforcement: pydantic (validation + coercion), beartype (decorator that checks types per call), or the stricter `typing.get_type_hints()` introspection.',
+      explanation: 'This surprises beginners: `def add(a: int, b: int) -> int: return a + b` accepts `add("x", "y")` at runtime with no complaint and returns `"xy"`. Python neither checks nor converts the arguments. The hints are not thrown away either: they stay on the function as `add.__annotations__`, where type checkers (mypy, Pyright), editors and libraries can read them. For runtime enforcement use a library that reads the annotations, such as pydantic (validation and coercion) or beartype, or write explicit `isinstance` checks.',
       hints: [
         'Python stores hints in __annotations__; does not enforce',
         'For runtime checks: pydantic, beartype, or explicit isinstance',
@@ -353,11 +353,11 @@ mode: ___["r", "w", "a"]`,
       question: 'Which signature correctly types a generic decorator that preserves the wrapped function\'s full argument signature and return type?',
       options: [
         { id: 'a', text: '`P = ParamSpec("P"); R = TypeVar("R")` then `def log_calls(fn: Callable[P, R]) -> Callable[P, R]:` with `def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:`', isCorrect: true },
-        { id: 'b', text: '`def log_calls(fn: Callable[..., Any]) -> Callable[..., Any]:` — `...` is how you preserve any signature', isCorrect: false },
-        { id: 'c', text: '`T = TypeVar("T")` then `def log_calls(fn: T) -> T:` — a TypeVar alone captures the whole callable', isCorrect: false },
-        { id: 'd', text: '`def log_calls(fn: Callable) -> Callable:` — omit the type parameters so the decorator stays generic', isCorrect: false },
+        { id: 'b', text: '`def log_calls(fn: Callable[..., Any]) -> Callable[..., Any]:` - `...` is how you preserve any signature', isCorrect: false },
+        { id: 'c', text: '`def log_calls(fn: Callable[[Any], R]) -> Callable[[Any], R]:` - one `Any` in the list stands for any number of arguments', isCorrect: false },
+        { id: 'd', text: '`def log_calls(fn: Callable) -> Callable:` - omit the type parameters so the decorator stays generic', isCorrect: false },
       ],
-      explanation: '`ParamSpec` (PEP 612, 3.10+) is the only construct that captures the full `(*args, **kwargs)` shape of a callable. `Callable[P, R]` plus `*args: P.args, **kwargs: P.kwargs` passes the captured signature through the wrapper, so callers of the decorated function still get argument-name autocomplete and per-call type checking. (b) collapses everything to `Any` — callers lose all signature info. (c) binds `T` to the whole callable type; mypy will not relate input args to output args through `T`. (d) is a bare `Callable` with no parameters at all — also loses info.',
+      explanation: '`ParamSpec` (PEP 612, 3.10+) captures the whole parameter list of a callable. `Callable[P, R]` plus `*args: P.args, **kwargs: P.kwargs` passes that captured signature through the wrapper, so callers of the decorated function keep argument-name completion and per-call type checking. `Callable[..., Any]` accepts any arguments and returns `Any`, so callers lose all signature information. `Callable[[Any], R]` means exactly one positional argument, not any number, so a function with two parameters no longer fits. A bare `Callable` with no parameters also throws the information away.',
       hints: [
         'P = ParamSpec("P"); Callable[P, R] captures full signature',
         'Use P.args and P.kwargs in the wrapper signature',
@@ -374,12 +374,12 @@ mode: ___["r", "w", "a"]`,
       course: Course.BACKEND,
       question: 'What are type hints in Python?',
       options: [
-        { id: 'a', text: 'Compiler directives that prevent code from running if the wrong type is passed', isCorrect: false },
-        { id: 'b', text: 'Optional annotations that document expected types (e.g., `def greet(name: str) -> str`). They are NOT enforced at runtime — they exist for documentation, IDE support, and static analysis tools like mypy.', isCorrect: true },
-        { id: 'c', text: 'A way to convert variables from one type to another, like `int("42")`', isCorrect: false },
-        { id: 'd', text: 'Error messages that Python displays when you use the wrong data type', isCorrect: false },
+        { id: 'a', text: 'Checks that Python runs on every call, raising a `TypeError` when an argument has the wrong type', isCorrect: false },
+        { id: 'b', text: 'Labels for the expected types, like `def greet(name: str) -> str`, that Python stores but never checks', isCorrect: true },
+        { id: 'c', text: 'Instructions that convert each argument to the given type, so `n: int` turns `"42"` into `42`', isCorrect: false },
+        { id: 'd', text: 'Declarations that fix a variable\'s type, so assigning a value of another type later raises an error', isCorrect: false },
       ],
-      explanation: 'Type hints (added in Python 3.5+) let you annotate the expected types of function parameters, return values, and variables. They do NOT change how Python runs your code — you can still pass any type and Python won\'t stop you. Their value comes from: (1) documentation for other developers, (2) IDE autocompletion and error detection, (3) static analysis tools like mypy that can catch type errors before runtime.',
+      explanation: 'Type hints label the expected types of parameters, return values and variables. Python keeps them but does not act on them: `greet(42)` runs without an error, nothing is converted, and a variable can later be given a value of another type. Their value comes from tools that read them: editors use them for autocompletion and warnings, and static checkers such as mypy report mismatches before the code runs.',
       hints: [
         'The key word is "optional" — Python doesn\'t enforce them',
         'They use colon syntax for parameters and `->` for return types',
@@ -395,13 +395,13 @@ mode: ___["r", "w", "a"]`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Write a function named `calculate_area` that takes two parameters, `width` and `height`, with full type hints — annotate each parameter as `float` and annotate the return type as `float` — and returns the product of the two. Then declare a module-level variable `names` annotated as a list of strings (use lowercase PEP 585 syntax) and initialise it to the list containing "Alice" and "Bob". Print the result of calling `calculate_area` with 5.0 and 3.0, then print `names`.',
-      starterCode: `# Define calculate_area with float type hints on both params and the return type
+      starterCode: `# Define calculate_area
 
 
-# Declare names: list[str] = ["Alice", "Bob"]
+# Declare the names list
 
 
-# Print calculate_area(5.0, 3.0) and names
+# Print the area for 5.0 and 3.0, then print names
 `,
       testCases: [
         {
@@ -421,7 +421,7 @@ mode: ___["r", "w", "a"]`,
 names: list[str] = ["Alice", "Bob"]
 
 print(calculate_area(5.0, 3.0))  # 15.0
-print(names)  # ["Alice", "Bob"]`,
+print(names)  # ['Alice', 'Bob']`,
       explanation: 'Parameter type hints use colon syntax: `width: float`. Return type hints use arrow syntax: `-> float`. Variable type hints also use colons: `names: list[str]`. Since Python 3.9+ (PEP 585), you can parametrise the built-in `list`, `dict`, `tuple`, `set` directly — no `typing` import needed. In older versions you had to write `from typing import List` and use `List[str]`, but that form is now the legacy style. Remember: these hints don\'t change behavior — they\'re purely informational.',
       hints: [
         'Parameters: `width: float, height: float`',
@@ -449,12 +449,12 @@ print(names)`,
       course: Course.BACKEND,
       question: 'In Python 3.10+, what is the difference between `str | None` and `Optional[str]`?',
       options: [
-        { id: 'a', text: 'They behave differently — one is stricter', isCorrect: false },
-        { id: 'b', text: 'They are equivalent. PEP 604 added `X | Y` as native union syntax; `Optional[X]` from `typing` is exactly `X | None`. The `|` form is shorter and does not need a typing import — prefer it in new 3.10+ code.', isCorrect: true },
-        { id: 'c', text: '`str | None` is a runtime error', isCorrect: false },
-        { id: 'd', text: 'Optional only works on custom classes', isCorrect: false },
+        { id: 'a', text: '`Optional[str]` gives the parameter a default of `None`, so callers may leave it out; `str | None` still requires an argument', isCorrect: false },
+        { id: 'b', text: 'None: both mean a `str` or `None`; the `|` form is the newer spelling and needs no `typing` import', isCorrect: true },
+        { id: 'c', text: '`str | None` is checked every time the function is called, while `Optional[str]` is only read by type checkers', isCorrect: false },
+        { id: 'd', text: '`str | None` raises a `TypeError` at runtime unless the module starts with `from __future__ import annotations`', isCorrect: false },
       ],
-      explanation: 'PEP 604 (Python 3.10+) lets you write `str | None`, `int | float`, `list[int] | None` without importing from `typing`. It is exactly `Union[str, None]` / `Optional[str]` at the type-checker level. On 3.9 and below you still need `from __future__ import annotations` or `Optional[X]`. Mypy, Pyright, and IDE type checkers treat them identically.',
+      explanation: 'PEP 604 (Python 3.10+) lets you write `str | None`, `int | float` or `list[int] | None` without importing from `typing`, and it means exactly the same as `Optional[str]` / `Union[str, None]`. Neither form adds a default value: `def f(x: Optional[str])` still needs an argument, so write `x: str | None = None` when the argument may be left out. Neither form is checked when the function runs; only type checkers such as mypy and Pyright read them, and they treat both the same. The `TypeError` only happens on Python 3.9 and older, where `str | None` was not supported at runtime and you needed `from __future__ import annotations` or `Optional[str]`.',
       hints: [
         '`X | Y` is PEP 604 native union syntax',
         'No typing import required on 3.10+',
@@ -476,7 +476,7 @@ print(names)`,
         { id: 'c', text: '`def shut_it_down(resource: object) -> None:` — `object` accepts any value with any methods', isCorrect: false },
         { id: 'd', text: '`def shut_it_down(resource: Callable[[], None]) -> None:` — `Callable` is the standard way to describe "has a method"', isCorrect: false },
       ],
-      explanation: '`Protocol` (PEP 544) gives you duck-typing with type-checker teeth: any class whose methods match the shape satisfies the protocol — no inheritance declaration needed. (b) uses an `ABC` which requires explicit inheritance — callers can\'t pass arbitrary third-party classes. (c) accepts any object but the type checker won\'t know `.close()` exists, so `resource.close()` becomes an attribute error in mypy. (d) types `resource` as a callable, not an object with a `.close()` method. Decorate a Protocol with `@runtime_checkable` if you want `isinstance()` to work on it too.',
+      explanation: '`Protocol` (PEP 544) gives duck typing that a type checker understands: any class whose methods match the shape satisfies the protocol, with no inheritance needed. An `ABC` with `@abstractmethod` only accepts classes that inherit from it, so arbitrary third-party classes cannot be passed. Annotating with `object` accepts anything, but the checker then does not know `.close()` exists and flags `resource.close()`. `Callable[[], None]` describes something you call directly, `resource()`, not an object with a `.close()` method. Decorate a Protocol with `@runtime_checkable` if you also want `isinstance()` to work on it.',
       hints: [
         'Protocol is in typing (3.8+)',
         'Structural typing — shape match, no inheritance required',
@@ -498,7 +498,7 @@ print(names)`,
         { id: 'c', text: '`User = dict[str, str | int]` — a type alias for any dict with string keys and str/int values', isCorrect: false },
         { id: 'd', text: '`@dataclass class User: id: int; name: str; email: str` — dataclasses are the dict-schema primitive', isCorrect: false },
       ],
-      explanation: '`TypedDict` is specifically for giving a dict schema without changing its runtime type — useful for API payloads and request bodies that must stay as dicts. (b) makes a plain class — instances are not dicts and do not subscript with `["name"]`. (c) is a type alias, but it cannot enforce that specific keys (`"id"`, `"name"`, `"email"`) are present — any `str`-keyed dict would pass. (d) creates a dataclass — instances are objects with attribute access, not dicts. Pair `TypedDict` with `total=False` or per-key `NotRequired` for optional fields.',
+      explanation: '`TypedDict` gives a dict a schema without changing its runtime type, which suits API payloads and request bodies that must stay dicts. A plain annotated class makes instances that are not dicts and do not support `["name"]`. The alias `dict[str, str | int]` cannot say which keys (`"id"`, `"name"`, `"email"`) must be present or which value type each one has, so any `str`-keyed dict passes. A dataclass creates objects with attribute access, not dicts. Use `total=False` or per-key `NotRequired` for optional keys.',
       hints: [
         'TypedDict gives type checkers a dict schema',
         'Runtime representation is still a plain dict',
@@ -520,7 +520,7 @@ print(names)`,
         { id: 'c', text: '`def set_log_level(level: Enum["DEBUG", "INFO", "WARNING", "ERROR"]) -> str:`', isCorrect: false },
         { id: 'd', text: '`def set_log_level(level: str) -> str:` — then add a runtime `assert level in {...}`', isCorrect: false },
       ],
-      explanation: '`Literal[...]` narrows a type to a set of specific values — the type checker flags anything outside the set. Use for string enums, HTTP methods (`Literal["GET","POST","PUT","DELETE"]`), or two-state flags. (b) is not valid annotation syntax — Python annotations are types, not boolean expressions. (c) misuses `Enum` — `Enum` is a base class you subclass to create members, not a subscriptable type. (d) gives up static checking entirely and relies on runtime validation. Combine `Literal` with `@overload` when return types depend on the literal argument.',
+      explanation: '`Literal[...]` narrows a type to a set of specific values, and the type checker flags anything outside the set. Use it for fixed strings such as log levels or HTTP methods (`Literal["GET", "POST"]`). `str in [...]` is not a type: an annotation must describe a type, not a true/false test. `Enum` is a base class you subclass to create members, not something you subscript with values. A plain `str` with a runtime `assert` gives up static checking: the checker accepts `set_log_level("FOO")` and the mistake only shows up when the code runs. Combine `Literal` with `@overload` when the return type depends on the literal argument.',
       hints: [
         'Literal["a", "b"] restricts to exactly those values',
         'Type checker enforces; runtime does not validate',
@@ -537,12 +537,12 @@ print(names)`,
       course: Course.BACKEND,
       question: 'What do `typing.Final` and `typing.overload` do?',
       options: [
-        { id: 'a', text: 'They are deprecated aliases for `const` and `def`', isCorrect: false },
-        { id: 'b', text: '`Final` marks a variable as not-to-be-reassigned (constant) for type checkers. `@overload` lets you declare multiple type signatures for the same function so return types can depend on input types — the final non-decorated definition is the actual implementation.', isCorrect: true },
-        { id: 'c', text: '`Final` makes attributes private; `overload` is the new dunder method', isCorrect: false },
-        { id: 'd', text: 'Both are no-ops at runtime and do nothing useful', isCorrect: false },
+        { id: 'a', text: '`Final` makes reassigning the name raise an error at runtime; `@overload` lets you write several bodies and Python runs the one whose hints match', isCorrect: false },
+        { id: 'b', text: '`Final` tells type checkers a name must not be reassigned; `@overload` declares extra signatures for one function, followed by one real implementation', isCorrect: true },
+        { id: 'c', text: '`Final` stops a class from being subclassed; `@overload` marks a method that replaces the parent class\'s version of the same method', isCorrect: false },
+        { id: 'd', text: '`Final` freezes the value, so a `Final` list can no longer be changed; `@overload` checks each call\'s arguments against the declared hints at runtime', isCorrect: false },
       ],
-      explanation: '`MAX_RETRIES: Final = 3` tells mypy that reassigning `MAX_RETRIES` later is an error — true constants in Python. `@overload` lets you write signatures like `def fetch(key: Literal["id"]) -> int` and `def fetch(key: Literal["name"]) -> str` above the real implementation, so callers get precise return types per key. Both are type-checker-only — at runtime they are no-ops.',
+      explanation: '`MAX_RETRIES: Final = 3` tells a type checker that reassigning `MAX_RETRIES` later is an error. Python itself does not stop the reassignment, and `Final` only covers the name, so a `Final` list can still be appended to. `@overload` lets you stack signatures such as `def fetch(key: Literal["id"]) -> int` and `def fetch(key: Literal["name"]) -> str` above one undecorated implementation, so callers get a precise return type per call. Python does not choose between overloads or check arguments at runtime: only the last, undecorated `def` ever runs. Blocking subclassing is a different tool, the `@final` decorator, and replacing a parent method is plain overriding (marked with `@override`).',
       hints: [
         'Final: "this name will never be reassigned"',
         '@overload: multiple signatures above one impl — type checker picks the matching one',
@@ -557,14 +557,14 @@ print(names)`,
       difficulty: Difficulty.INTERMEDIATE,
       topic: Topic.PY_TYPE_HINTS,
       course: Course.BACKEND,
-      question: 'You have `mixed: list[object]` and a runtime check `all(isinstance(x, str) for x in items)`. Inside the `if` branch you want the type checker to treat `mixed` as `list[str]` (so `", ".join(mixed)` type-checks). How do you declare the predicate?',
+      question: 'You have `mixed: list[object]` and a helper `is_list_of_str(items)` that returns `all(isinstance(x, str) for x in items)`. Inside `if is_list_of_str(mixed):` you want the type checker to treat `mixed` as `list[str]` (so `", ".join(mixed)` type-checks). How do you declare the helper?',
       options: [
         { id: 'a', text: '`def is_list_of_str(items: list[object]) -> TypeGuard[list[str]]: return all(isinstance(x, str) for x in items)`', isCorrect: true },
         { id: 'b', text: '`def is_list_of_str(items: list[object]) -> bool: return all(isinstance(x, str) for x in items)` — a regular `bool` return narrows automatically', isCorrect: false },
         { id: 'c', text: '`def is_list_of_str(items: list[object]) -> list[str]: return items if all(isinstance(x, str) for x in items) else []`', isCorrect: false },
         { id: 'd', text: '`def is_list_of_str(items: list[object]) -> Narrow[list[str]]: ...` — `Narrow` is the narrowing construct in `typing`', isCorrect: false },
       ],
-      explanation: '`TypeGuard[X]` (PEP 647, 3.10+) marks a function as a narrowing predicate: when it returns True, the checker treats the argument as `X` inside the true branch. (b) is a plain bool — the checker has no way to know what the True case implies about `items`, so `", ".join(mixed)` still errors. (c) returns the list itself, not a bool — the caller would then have to handle the empty-list-as-falsy pattern manually. (d) invents a name that does not exist in `typing`. `TypeIs` (PEP 742, 3.13+) is similar but also narrows the else branch.',
+      explanation: '`TypeGuard[X]` (PEP 647, 3.10+) marks a function as a narrowing predicate: when it returns True, the checker treats the argument as `X` inside the if branch. A plain `bool` return tells the checker nothing about what True means for `items`, so `", ".join(mixed)` still errors. Returning the list itself is not a predicate: `mixed` keeps its type, and an empty list would read as false. There is no `Narrow` in `typing`. `TypeIs` (PEP 742, 3.13+) is similar but also narrows the else branch.',
       hints: [
         'TypeGuard[X] marks a narrowing predicate',
         'Return True → checker narrows the arg to X in the if branch',

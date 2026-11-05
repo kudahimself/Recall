@@ -65,13 +65,17 @@ with ThreadPoolExecutor() as ex:
         'Fill in the executor class for CPU-bound parallelism (bypasses the GIL).',
       template: `from concurrent.futures import ___
 
-with ___() as ex:
-    print(list(ex.map(cpu_heavy, [10**6, 10**6])))`,
+def cpu_heavy(n):
+    return sum(i * i for i in range(n))
+
+if __name__ == "__main__":
+    with ___() as ex:
+        print(list(ex.map(cpu_heavy, [10**6, 10**6])))`,
       blanks: ['ProcessPoolExecutor', 'ProcessPoolExecutor'],
       solution:
-        'from concurrent.futures import ProcessPoolExecutor\n\nwith ProcessPoolExecutor() as ex:\n    print(list(ex.map(cpu_heavy, [10**6, 10**6])))',
+        'from concurrent.futures import ProcessPoolExecutor\n\ndef cpu_heavy(n):\n    return sum(i * i for i in range(n))\n\nif __name__ == "__main__":\n    with ProcessPoolExecutor() as ex:\n        print(list(ex.map(cpu_heavy, [10**6, 10**6])))',
       explanation:
-        'ProcessPoolExecutor uses separate processes — each has its own GIL, so CPU work runs in parallel. ThreadPoolExecutor is GIL-bound and serializes CPU code.',
+        'ProcessPoolExecutor uses separate processes - each has its own GIL, so CPU work runs in parallel. ThreadPoolExecutor is GIL-bound and serializes CPU code. The `if __name__ == "__main__":` guard is needed because each worker process imports the module again.',
       hints: ['CamelCase: "Process" + "Pool" + "Executor".'],
       tags: ['concurrency', 'ProcessPoolExecutor', 'GIL'],
       concepts: ['py-gil-implication'],
@@ -84,7 +88,7 @@ with ___() as ex:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use a ThreadPoolExecutor to fetch URLs in parallel and collect results.',
+        'A `fetch(url)` function is already defined. Use a ThreadPoolExecutor with at most 4 worker threads to fetch the URLs in parallel, collect the results into a list, and print it after the pool has shut down.',
       correctOrder: [
         'from concurrent.futures import ThreadPoolExecutor',
         '',
@@ -103,7 +107,7 @@ with ___() as ex:
       solution:
         'from concurrent.futures import ThreadPoolExecutor\n\nurls = ["a", "b", "c"]\n\nwith ThreadPoolExecutor(max_workers=4) as ex:\n    results = list(ex.map(fetch, urls))\n\nprint(results)',
       explanation:
-        'Wrapping the executor in `with` guarantees shutdown. ex.map returns a lazy iterator — without list(), the work runs as it is iterated, possibly after the executor closes. submit returns Future objects, not results.',
+        'Wrapping the executor in `with` guarantees shutdown. ex.map returns an iterator of results, not a list: without list(), `print(results)` shows a generator object instead of the values. `ThreadPoolExecutor()` with no argument picks its own worker count instead of the 4 asked for. submit returns Future objects, not results.',
       hints: ['Wrap map in list() to materialize results inside the with-block.'],
       tags: ['concurrency', 'ThreadPoolExecutor', 'futures'],
       concepts: ['py-thread-vs-process'],
@@ -136,7 +140,7 @@ with ___() as ex:
       solution:
         'from concurrent.futures import ProcessPoolExecutor\n\ndef cpu_heavy(n):\n    return sum(i*i for i in range(n))\n\nif __name__ == "__main__":\n    with ProcessPoolExecutor() as ex:\n        results = list(ex.map(cpu_heavy, [10**6, 10**6]))\n        print(results)',
       explanation:
-        'CPU-bound Python is GIL-bound — threads share one interpreter and serialize. Processes have separate interpreters and run truly in parallel. The `if __name__ == "__main__":` guard is required on Windows/macOS-spawn.',
+        'CPU-bound Python is GIL-bound - threads share one interpreter and serialize. Processes have separate interpreters and run truly in parallel. The `if __name__ == "__main__":` guard is required: each worker process imports the module again, and without the guard it would try to start its own pool and fail with a RuntimeError. Workers start that way on Windows and macOS (spawn) and, since Python 3.14, on Linux too (forkserver).',
       hints: ['CPU-bound → ProcessPoolExecutor; the __name__ guard is required.'],
       tags: ['concurrency', 'multiprocessing', 'GIL'],
       concepts: ['py-thread-vs-process', 'py-gil-implication'],
@@ -149,7 +153,7 @@ with ___() as ex:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Submit work and use as_completed to handle results as they finish.',
+        'A `work(n)` function is already defined. Submit `work(i)` for `i` in `range(5)` to a ThreadPoolExecutor and print each result as soon as its task finishes.',
       correctOrder: [
         'from concurrent.futures import ThreadPoolExecutor, as_completed',
         '',
@@ -166,7 +170,7 @@ with ___() as ex:
       solution:
         'from concurrent.futures import ThreadPoolExecutor, as_completed\n\nwith ThreadPoolExecutor() as ex:\n    futures = [ex.submit(work, i) for i in range(5)]\n    for fut in as_completed(futures):\n        print(fut.result())',
       explanation:
-        'as_completed yields futures in completion order, so you process fast tasks immediately. Iterating the original list yields submission order — slow tasks stall the loop. fut.result() unwraps the value (or re-raises the exception).',
+        'as_completed yields futures in completion order, so you process fast tasks immediately. Iterating the original list yields submission order - slow tasks stall the loop. fut.result() unwraps the value (or re-raises the exception).',
       hints: ['as_completed yields in finish order, not submission order.'],
       tags: ['concurrency', 'as_completed', 'futures'],
       concepts: ['py-thread-vs-process'],
@@ -179,7 +183,7 @@ with ___() as ex:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Run a multiprocessing.Pool with map for parallel CPU work.',
+        'Use a `multiprocessing.Pool` of 4 processes, opened with `with`, to map `square` over `range(5)` in parallel and print the list of results.',
       correctOrder: [
         'from multiprocessing import Pool',
         '',
@@ -198,7 +202,7 @@ with ___() as ex:
       solution:
         'from multiprocessing import Pool\n\ndef square(x):\n    return x * x\n\nif __name__ == "__main__":\n    with Pool(4) as p:\n        print(p.map(square, range(5)))',
       explanation:
-        'multiprocessing.Pool.map distributes work across processes. The `if __name__ == "__main__":` guard prevents the spawn re-importing the module from re-launching the pool indefinitely (Windows/spawn). Without `with`, you must call .close() and .join() manually.',
+        'multiprocessing.Pool.map distributes work across processes. The `if __name__ == "__main__":` guard is needed because each worker process imports the module again; without it the import would try to start another pool and fail with a RuntimeError. Workers start that way on Windows and macOS (spawn) and, since Python 3.14, on Linux too (forkserver). Without `with`, you must call .close() and .join() yourself.',
       hints: ['__main__ guard + with Pool(n).'],
       tags: ['concurrency', 'multiprocessing', 'Pool'],
       concepts: ['py-thread-vs-process'],
@@ -373,28 +377,6 @@ ____(sorted(results))`,
       },
       tags: ['concurrency', 'ThreadPoolExecutor', 'as_completed', 'futures'],
       concepts: ['py-thread-vs-process'],
-    },
-{
-      id: 'py-concurrency-6',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_FUTURES,
-      course: Course.BACKEND,
-      question: 'What does `asyncio.to_thread(sync_fn, *args)` do, and when should you reach for it?',
-      options: [
-        { id: 'a', text: 'It is a deprecated alias for `asyncio.gather`', isCorrect: false },
-        { id: 'b', text: 'It offloads a blocking synchronous function to a thread from asyncio\'s default executor, returning an awaitable. Use it when you MUST call a sync-only library (e.g. legacy DB driver) from async code without blocking the event loop.', isCorrect: true },
-        { id: 'c', text: 'It converts any sync function into an async one permanently', isCorrect: false },
-        { id: 'd', text: 'It is only available inside a `with` block', isCorrect: false },
-      ],
-      explanation: '`asyncio.to_thread(fn, *args, **kwargs)` (3.9+) is the idiomatic escape hatch: it runs a blocking function in a thread and gives you an awaitable so your async code doesn\'t freeze. Alternatives: `loop.run_in_executor(executor, fn, *args)` for more control over the pool. Rule of thumb: async-first when you can, to_thread when you must call blocking code, processes when it\'s CPU-bound.',
-      hints: [
-        'await asyncio.to_thread(sync_fn, *args)',
-        'Used to call blocking libs from async code',
-        'Runs in asyncio\'s default ThreadPoolExecutor',
-      ],
-      tags: ['asyncio', 'to_thread', 'blocking', 'executor'],
-      concepts: ['py-async-coroutines', 'py-event-loop'],
     },
 {
       id: 'py-fut-beg-executor',

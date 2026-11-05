@@ -84,14 +84,14 @@ def test_name(___):
       '    assert empty_dict == {"x": 1}',
     ],
     distractorLines: [
-      '@pytest.fixture()',
+      '@pytest.mark.fixture',
       'def test_uses_dict():',
       '    empty_dict = {}',
     ],
     solution:
       'import pytest\n\n@pytest.fixture\ndef empty_dict():\n    return {}\n\ndef test_uses_dict(empty_dict):\n    empty_dict["x"] = 1\n    assert empty_dict == {"x": 1}',
     explanation:
-      'A fixture is declared with @pytest.fixture (no parens needed for default scope). Tests request fixtures by NAME via parameter — pytest matches fixture names to function parameters automatically. Each test gets a fresh result by default.',
+      'A fixture is declared with @pytest.fixture (no parens needed for default scope). `@pytest.mark.fixture` is not the same thing: `pytest.mark` only tags tests (like `parametrize` or `skip`), so `empty_dict` would not be a fixture and the test would error with "fixture \'empty_dict\' not found". Tests request fixtures by NAME via parameter - pytest matches fixture names to function parameters automatically. Each test gets a fresh result by default.',
     hints: ['@pytest.fixture; tests receive it by parameter name.'],
     tags: ['testing', 'fixture'],
     concepts: ['py-test-isolation'],
@@ -103,7 +103,7 @@ def test_name(___):
     topic: Topic.PY_FIXTURES,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'pytest runs the tests top-to-bottom (use `pytest -s` to see prints). What does this print?',
+    question: 'This test file is run with `pytest -s` (so the prints are shown), and the tests run top to bottom. Type only the lines the two `print` calls write, leaving out pytest\'s own report (the file name, the dots and the summary).',
     code: `import pytest
 
 @pytest.fixture
@@ -193,13 +193,13 @@ def test_greeting(____):
     ],
     distractorLines: [
       '    return conn',
-      '@pytest.fixture(autouse=True)',
+      '@contextmanager',
       '    finally:',
     ],
     solution:
       'import pytest\n\n@pytest.fixture\ndef db():\n    conn = open_connection()\n    yield conn\n    conn.close()',
     explanation:
-      'A fixture that yields acts as a generator: code BEFORE yield is setup, the yielded value is what the test receives, code AFTER yield is teardown. This is the canonical pattern for cleanup. With return, you have no place to put teardown.',
+      'A fixture that yields acts as a generator: code BEFORE yield is setup, the yielded value is what the test receives, code AFTER yield is teardown. This is the canonical pattern for cleanup. With return, you have no place to put teardown. The yield works like `@contextmanager`, but the decorator is still `@pytest.fixture`: `@contextmanager` makes a with-block helper, not a fixture (and it is not even imported here). No try/finally is needed either, because pytest runs the code after yield even when the test fails.',
     hints: ['yield separates setup from teardown — like @contextmanager.'],
     tags: ['testing', 'fixture', 'teardown'],
     concepts: ['py-test-isolation'],
@@ -211,7 +211,7 @@ def test_greeting(____):
     topic: Topic.PY_FIXTURES,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Fill in the kwarg that controls how often a fixture is rebuilt, and the value for "once per file".',
+    question: 'Fill in the kwarg that controls how often a fixture is rebuilt (here, once per file).',
     template: `import pytest
 
 @pytest.fixture(___="module")
@@ -424,7 +424,7 @@ def test_writes_file(tmp_path):
     topic: Topic.PY_FIXTURES,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: "Fill in pytest's built-in fixture for capturing stdout/stderr, and the method that returns what was captured.",
+    question: "Fill in pytest's built-in fixture for capturing stdout/stderr (the same name goes in both blanks).",
     template: `def test_prints(___):
     print("hi")
     captured = ___.readouterr()
@@ -433,7 +433,7 @@ def test_writes_file(tmp_path):
     solution: 'def test_prints(capsys):\n    print("hi")\n    captured = capsys.readouterr()\n    assert captured.out == "hi\\n"',
     explanation:
       'capsys is a built-in fixture; capsys.readouterr() returns an object with .out and .err holding everything printed since the last read, then clears the buffers.',
-    hints: ['Blend of "cap" + "sys(tem)"; method name is "read" + "out" + "err".'],
+    hints: ['Blend of "cap" + "sys(tem)"; the same name goes in both blanks.'],
     tags: ['pytest', 'fixture', 'capsys', 'builtin'],
     concepts: ['py-test-isolation'],
   },
@@ -489,7 +489,7 @@ def test_announce(____):
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
     question:
-      'Compose a pytest fixture WITH a parametrize decorator on the same test. Define a minimal `Calculator` class with a single method `add(self, a, b)` that returns their sum. Define a pytest fixture `calc` that returns a fresh `Calculator()`. Define `test_add` that takes `calc` (from the fixture) plus `a`, `b`, `expected` (from the parametrize rows) and asserts `calc.add(a, b) == expected`. Parametrize over three rows: `(2, 3, 5)`, `(0, 0, 0)`, `(-1, 1, 0)`. The test runs three times — once per row — each time receiving the same fixture-built calculator.',
+      'Compose a pytest fixture WITH a parametrize decorator on the same test. Define a minimal `Calculator` class with a single method `add(self, a, b)` that returns their sum. Define a pytest fixture `calc` that returns a fresh `Calculator()`. Define `test_add` that takes `calc` (from the fixture) plus `a`, `b`, `expected` (from the parametrize rows) and asserts `calc.add(a, b) == expected`. Parametrize over three rows: `(2, 3, 5)`, `(0, 0, 0)`, `(-1, 1, 0)`. The test runs three times (once per row), and each run gets a fresh calculator from the fixture.',
     starterCode: `import pytest
   `,
     testCases: [
@@ -517,7 +517,7 @@ def calc():
 def test_add(calc, a, b, expected):
     assert calc.add(a, b) == expected`,
     explanation:
-      'Fixtures and parametrize compose by position: the test receives the fixture-injected arg (`calc`) PLUS the parametrize-rotated args (`a`, `b`, `expected`). pytest builds the fixture fresh per test invocation by default (or reuses across the fixture\'s scope). The `ids=` kwarg on parametrize gives readable names in the output — "test_add[positive]" instead of "test_add[2-3-5]". This composition is the everyday pytest shape: one fixture for the system under test, parametrize for the input matrix.',
+      'Fixtures and parametrize compose by name: the test receives the fixture-injected arg (`calc`) PLUS the parametrize-rotated args (`a`, `b`, `expected`). pytest builds the fixture fresh per test invocation by default (or reuses across the fixture\'s scope). The `ids=` kwarg on parametrize gives readable names in the output - "test_add[positive]" instead of "test_add[2-3-5]". This composition is the everyday pytest shape: one fixture for the system under test, parametrize for the input matrix.',
     hints: [
       'Fixture param name + parametrize param names share the function signature',
       'Fixture rebuilds per test invocation (default function scope)',
@@ -561,7 +561,7 @@ def test_add(____, a, b, expected):
       { id: 'c', text: 'It stores the recorded pass/fail history so pytest can re-run only the previously failing tests', isCorrect: false },
       { id: 'd', text: 'It is the config file where you set markers, addopts, and the minimum required pytest version', isCorrect: false },
     ],
-    explanation: 'conftest.py supplies fixtures (and hooks/plugins) to all tests in its directory tree — pytest discovers it automatically, so tests use those fixtures WITHOUT importing anything. A conftest.py deeper in the tree extends or overrides one higher up. Project-wide configuration like markers, addopts, and minversion lives in pytest.ini / pyproject.toml (option D), not conftest.py.',
+    explanation: 'conftest.py supplies fixtures (and hooks/plugins) to all tests in its directory tree - pytest discovers it automatically, so tests use those fixtures WITHOUT importing anything. A conftest.py deeper in the tree extends or overrides one higher up. Project-wide configuration like markers, addopts, and minversion lives in pytest.ini / pyproject.toml, not conftest.py.',
     hints: [
       'Shared fixtures/hooks, auto-discovered — no import',
       'Nearer conftest.py overrides ones higher up',
@@ -643,7 +643,7 @@ def test_is_positive(____):
     topic: Topic.PY_FIXTURES,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Write pytest tests for a `Calculator` class (define it inline) with a `divide` method that raises `ZeroDivisionError` with message `"Cannot divide by zero"` on a zero divisor. Instantiate `Calculator` once via a shared fixture. Parametrize the normal-division test over (a, b, expected):\n\n(10, 2, 5.0)\n(7, 2, 3.5)\n(-9, 3, -3.0)\n(0, 5, 0.0)\n\nThen assert the zero-divisor case with `pytest.raises(ZeroDivisionError, match=...)`.',
+    question: 'Write pytest tests for a `Calculator` class (define it inline) with a `divide` method that raises `ZeroDivisionError` with message `"Cannot divide by zero"` on a zero divisor. Provide the `Calculator` instance through a fixture named `calc`. Write `test_divide`, parametrized over (a, b, expected):\n\n(10, 2, 5.0)\n(7, 2, 3.5)\n(-9, 3, -3.0)\n(0, 5, 0.0)\n\nThen write `test_divide_by_zero`, which asserts the zero-divisor case with `pytest.raises(ZeroDivisionError, match=...)`.',
     starterCode: `import pytest
 
 class Calculator:
