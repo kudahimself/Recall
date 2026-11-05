@@ -423,6 +423,7 @@ Transactions & Procedural T-SQL questions do too, for the tables they write (an 
 Data Modeling in SQL questions do too, including the dimension tables a new fact table REFERENCES and the target and source of a MERGE; the Slowly Changing Dimensions questions carry their own versioned `dbo.DimProduct` rows (EffectiveDate, EndDate, IsCurrent).
 ELT & Transformation Patterns questions do too, for every staging source and load target (MERGE, USING, INSERT, DELETE); none fills a temp table, and every variable a cloze or predict assigns is declared in it.
 Performance & Optimization questions do too, including the table a `CREATE INDEX ... ON` builds on and the target of a partition `SWITCH TO`.
+Cloud Warehouse SQL questions do too, including the source of a Synapse CTAS; a question that creates its own table (the distribution cloze) shows nothing for it, and only the QUALIFY predict keeps a CTE, because the CTE is what it contrasts with QUALIFY.
 `tsqlSampleTables.test.ts` fails if a question in any of these sections queries an existing table it does not show, or builds data inline.
 In SQL-course questions, backticks in the text, multiple-choice options and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
 

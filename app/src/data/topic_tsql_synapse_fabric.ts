@@ -1,6 +1,6 @@
 /**
- * Topic.TSQL_SYNAPSE_FABRIC — SQL for Data Engineering (T-SQL).
- * Pillar 8 (Cloud Warehouse): Synapse Dedicated SQL Pool / Fabric Warehouse —
+ * Topic.TSQL_SYNAPSE_FABRIC - SQL for Data Engineering (T-SQL).
+ * Pillar 8 (Cloud Warehouse): Synapse Dedicated SQL Pool / Fabric Warehouse -
  * DISTRIBUTION = HASH / ROUND_ROBIN / REPLICATE, CTAS, columnstore, statistics.
  */
 import {
@@ -11,6 +11,7 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { sampleTable } from './tsqlSampleTables';
 
 export const tsql_synapse_fabric_questions: Question[] = [
   {
@@ -21,10 +22,10 @@ export const tsql_synapse_fabric_questions: Question[] = [
     course: Course.SQL,
     question: 'In a Synapse Dedicated SQL Pool, what do the three table distribution options (HASH, ROUND_ROBIN, REPLICATE) control?',
     options: [
-      { id: 'a', text: 'How a table\'s rows are spread across the 60 distributions/nodes — by hashing a column, evenly round-robin, or by copying the whole table to every node.', isCorrect: true },
-      { id: 'b', text: 'How often the table is backed up to cloud storage.', isCorrect: false },
-      { id: 'c', text: 'Which users are allowed to query the table.', isCorrect: false },
-      { id: 'd', text: 'The compression algorithm used for each column.', isCorrect: false },
+      { id: 'a', text: 'Where each row is stored across the 60 distributions: by hashing a column, dealt out evenly, or copied in full to every node.', isCorrect: true },
+      { id: 'b', text: 'How a table is split into date partitions, and which of those partitions are kept in memory.', isCorrect: false },
+      { id: 'c', text: 'Which compute node the query coordinator runs on, and how many replicas it keeps for failover.', isCorrect: false },
+      { id: 'd', text: 'How each column is compressed on disk, chosen separately for every column.', isCorrect: false },
     ],
     explanation: 'Distribution decides where each row physically lives across the pool\'s 60 distributions. HASH places rows by hashing a chosen column (co-locates matching keys to avoid shuffles), ROUND_ROBIN spreads rows evenly with no key logic (fast loads, good for staging), and REPLICATE copies the full table to every node (best for small dimensions).',
     hints: ['Controls row placement across the 60 distributions', 'HASH / ROUND_ROBIN / REPLICATE'],
@@ -38,12 +39,12 @@ export const tsql_synapse_fabric_questions: Question[] = [
     course: Course.SQL,
     question: 'Which distribution choice fits each table: a huge fact, a tiny lookup dimension, and a transient staging table?',
     options: [
-      { id: 'a', text: 'HASH (on a common join key) for the huge fact, REPLICATE for the tiny dimension, ROUND_ROBIN for the staging table.', isCorrect: true },
-      { id: 'b', text: 'REPLICATE for the huge fact, HASH for the tiny dimension, REPLICATE for staging.', isCorrect: false },
-      { id: 'c', text: 'ROUND_ROBIN for everything, since even spreading is always optimal.', isCorrect: false },
-      { id: 'd', text: 'HASH for all three tables, because hashing is always the fastest.', isCorrect: false },
+      { id: 'a', text: 'HASH on a common join key for the fact, REPLICATE for the dimension, and ROUND_ROBIN for staging.', isCorrect: true },
+      { id: 'b', text: 'REPLICATE for the fact, HASH for the dimension, and ROUND_ROBIN for staging.', isCorrect: false },
+      { id: 'c', text: 'ROUND_ROBIN for the fact, REPLICATE for the dimension, and HASH for staging.', isCorrect: false },
+      { id: 'd', text: 'HASH for the fact, ROUND_ROBIN for the dimension, and REPLICATE for staging.', isCorrect: false },
     ],
-    explanation: 'Match distribution to the table\'s role: HASH a large fact on the column it most often joins/aggregates by so matching rows co-locate (minimal shuffle); REPLICATE small dimensions so every node has a local copy for joins; ROUND_ROBIN staging because loads are fast and you haven\'t picked a key yet. A bad fact hash key causes skew or constant data movement.',
+    explanation: 'Match distribution to the table\'s role: HASH a large fact on the column it most often joins or aggregates by so matching rows co-locate (minimal shuffle); REPLICATE small dimensions so every node has a local copy for joins; ROUND_ROBIN staging because loads are fast and you have not picked a key yet. Replicating a huge fact copies it to every node, and round-robin on the fact forces a shuffle for every join. A bad fact hash key causes skew or constant data movement.',
     hints: ['Big fact → HASH on join key', 'Small dim → REPLICATE; staging → ROUND_ROBIN'],
     tags: ['tsql', 'synapse', 'distribution', 'tradeoffs'],
   },
@@ -55,12 +56,12 @@ export const tsql_synapse_fabric_questions: Question[] = [
     course: Course.SQL,
     question: 'Why is CTAS (`CREATE TABLE AS SELECT`) the preferred way to transform/load big tables in Synapse?',
     options: [
-      { id: 'a', text: 'It creates and bulk-populates a new distributed, columnstore table in one parallel, minimally-logged operation — far more efficient than INSERT…SELECT for large transforms.', isCorrect: true },
-      { id: 'b', text: 'It is the only statement allowed in Synapse; INSERT and UPDATE are unsupported.', isCorrect: false },
-      { id: 'c', text: 'It runs entirely on a single node, which makes it deterministic.', isCorrect: false },
-      { id: 'd', text: 'It avoids creating any indexes or distribution, leaving the table unstructured.', isCorrect: false },
+      { id: 'a', text: 'It creates the table and loads it in one parallel statement, with the distribution and the index set in that same statement.', isCorrect: true },
+      { id: 'b', text: 'It copies the shape of the query and leaves the new table empty until a later INSERT fills it.', isCorrect: false },
+      { id: 'c', text: 'It keeps the source table\'s distribution and indexes, so there is nothing left to choose.', isCorrect: false },
+      { id: 'd', text: 'It updates the rows of an existing table in place, so no new table is created.', isCorrect: false },
     ],
-    explanation: 'CTAS builds a brand-new table from a query and bulk-loads it in parallel across distributions, fully logged at minimal cost, letting you set DISTRIBUTION and (clustered columnstore) index in the same statement. It is the Synapse workhorse for create-and-load transforms and for redistributing a table on a better hash key.',
+    explanation: 'CTAS builds a brand-new table from a query and bulk-loads it in parallel across distributions with minimal logging, letting you set DISTRIBUTION and the (clustered columnstore) index in the same statement. Without a `WITH` clause the new table gets the defaults, not the source table\'s layout. It is the Synapse workhorse for create-and-load transforms and for redistributing a table on a better hash key.',
     hints: ['Create + parallel bulk-load + set distribution/index in one statement', 'Beats INSERT…SELECT for big transforms'],
     tags: ['tsql', 'synapse', 'ctas'],
   },
@@ -70,15 +71,15 @@ export const tsql_synapse_fabric_questions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.TSQL_SYNAPSE_FABRIC,
     course: Course.SQL,
-    question: 'Why does Synapse rely on manually-created/updated statistics more than a typical SQL Server instance?',
+    question: 'Why do statistics matter even more in Synapse than on a single SQL Server instance?',
     options: [
-      { id: 'a', text: 'Good cardinality estimates are critical for the distributed cost-based optimizer to pick the right data-movement plan; stale/missing stats lead to bad redistribution choices and slow queries.', isCorrect: true },
-      { id: 'b', text: 'Statistics are decorative in Synapse and have no effect on query plans.', isCorrect: false },
-      { id: 'c', text: 'Synapse cannot run any query until statistics are dropped first.', isCorrect: false },
-      { id: 'd', text: 'Statistics control user permissions in Synapse rather than query plans.', isCorrect: false },
+      { id: 'a', text: 'The optimizer picks how to move data between nodes from row-count estimates, so stale statistics can trigger a costly redistribution.', isCorrect: true },
+      { id: 'b', text: 'Statistics decide which distribution each row is stored in, so stale ones leave rows on the wrong node.', isCorrect: false },
+      { id: 'c', text: 'Statistics are copied to every node at query time, so keeping more of them makes every query slower.', isCorrect: false },
+      { id: 'd', text: 'Statistics control how columnstore rowgroups are compressed, so stale ones only waste storage and never change a plan.', isCorrect: false },
     ],
-    explanation: 'In an MPP optimizer, the plan must decide how to move data between nodes (broadcast vs shuffle vs co-located). Those decisions hinge on row-count estimates, so accurate statistics matter even more than on a single instance — out-of-date stats can push the optimizer into a costly redistribution. Keeping stats current is a standard Synapse maintenance task.',
-    hints: ['Distributed optimizer needs good estimates for movement plans', 'Stale stats → bad redistribution'],
+    explanation: 'In an MPP optimizer, the plan must decide how to move data between nodes (broadcast, shuffle or co-located). Those decisions hinge on row-count estimates, so accurate statistics matter even more than on a single instance, and out-of-date statistics can push the optimizer into a costly redistribution. The distribution of a row comes from the table\'s DISTRIBUTION option, not from statistics. Keeping statistics current is a standard Synapse maintenance task.',
+    hints: ['Distributed optimizer needs good estimates for movement plans', 'Stale statistics lead to bad redistribution'],
     tags: ['tsql', 'synapse', 'statistics'],
   },
   {
@@ -88,9 +89,8 @@ export const tsql_synapse_fabric_questions: Question[] = [
     topic: Topic.TSQL_SYNAPSE_FABRIC,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the Synapse table options: hash-distribute the fact on CustomerKey and store it as a clustered columnstore.',
-    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
-CREATE TABLE dbo.FactSales (
+    question: 'Complete the table options of this new fact table. Rows with the same CustomerKey must land in the same distribution, and the table\'s main storage is the compressed column-store format.',
+    template: `CREATE TABLE dbo.FactSalesNew (
     CustomerKey INT NOT NULL,
     Amount      DECIMAL(12, 2) NOT NULL
 )
@@ -99,7 +99,7 @@ WITH (
     CLUSTERED ___ INDEX
 );`,
     blanks: ['HASH', 'COLUMNSTORE'],
-    solution: `CREATE TABLE dbo.FactSales (
+    solution: `CREATE TABLE dbo.FactSalesNew (
     CustomerKey INT NOT NULL,
     Amount      DECIMAL(12, 2) NOT NULL
 )
@@ -118,8 +118,10 @@ WITH (
     topic: Topic.TSQL_SYNAPSE_FABRIC,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'In Synapse, use CTAS to build `dbo.FactSalesByCustomer` from a query that selects `CustomerKey` and `SUM(Amount) AS TotalAmount` from `dbo.FactSales` grouped by `CustomerKey`. The new table must be HASH-distributed on `CustomerKey` and stored as a clustered columnstore. Write the CREATE TABLE AS SELECT.',
-    starterCode: `-- Create dbo.FactSalesByCustomer using CTAS with HASH distribution on CustomerKey and a clustered columnstore index
+    question: 'In Synapse, use CTAS to build `dbo.FactSalesByCustomer` from a query that selects `CustomerKey` and `SUM(Amount) AS TotalAmount` from `dbo.FactSales` grouped by `CustomerKey`. The new table must be HASH-distributed on `CustomerKey` and stored as a clustered columnstore index. Write the CREATE TABLE AS SELECT.',
+    tables: [sampleTable('dbo.FactSales', ['CustomerKey', 'Amount'])],
+    starterCode: `-- dbo.FactSales (CustomerKey, Amount)
+-- Build dbo.FactSalesByCustomer with CTAS: HASH on CustomerKey, columnstore storage
 `,
     testCases: [
       {
@@ -151,7 +153,7 @@ SELECT CustomerKey, ____(Amount) AS TotalAmount
 FROM dbo.FactSales
 GROUP BY ____;`,
     },
-    requires: [/DISTRIBUTION/i],
+    requires: [/DISTRIBUTION\s*=\s*HASH\s*\(\s*\[?CustomerKey\]?\s*\)/i, /CLUSTERED\s+COLUMNSTORE\s+INDEX/i, /\bAS\s+SELECT\b/i],
     tags: ['tsql', 'synapse', 'ctas', 'distribution', 'columnstore'],
   },
   {

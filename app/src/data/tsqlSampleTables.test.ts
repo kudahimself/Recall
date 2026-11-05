@@ -457,3 +457,48 @@ describe('Performance & Optimization questions show the tables they use', () => 
     cloze.forEach(q => expect(q.question).not.toMatch(/RANGE RIGHT/));
   });
 });
+
+const CLOUD = new Set<string>([Topic.TSQL_MPP_MODEL, Topic.TSQL_SYNAPSE_FABRIC, Topic.TSQL_OTHER_WAREHOUSES]);
+
+const cloudSection: Question[] = questions.filter(q => CLOUD.has(q.topic));
+
+describe('Cloud Warehouse SQL questions show the tables they use', () => {
+  it('has the whole section to check', () => {
+    expect(cloudSection.length).toBe(19);
+  });
+
+  it('every existing table a question reads is one of the tables it shows', () => {
+    // Concept MCQs run against no data; a CREATE TABLE target is made by the question itself.
+    const offenders = cloudSection
+      .filter(q => q.type !== QuestionType.MULTIPLE_CHOICE)
+      .flatMap(q => {
+        const sql = questionSql(q);
+        const created = createdNames(sql);
+        const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+        return referencedTables(sql)
+          .filter(t => !created.has(t) && !shown.has(t))
+          .map(t => `${q.id} uses ${t} without showing it`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question uses, with rows that fit its columns', () => {
+    const offenders = cloudSection.flatMap(q => {
+      const refs = new Set(referencedTables(questionSql(q)));
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) ? [] : [`${q.id} shows ${t.name} but never uses it`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every predict shows its table, and only the QUALIFY predict keeps a CTE (the CTE is what it teaches)', () => {
+    const predicts = cloudSection.filter(q => q.type === QuestionType.PREDICT_OUTPUT);
+    expect(predicts.filter(q => (q.tables ?? []).length === 0).map(q => q.id)).toEqual([]);
+    const inline = cloudSection
+      .filter(q => /\(\s*VALUES\b/i.test(questionSql(q)) || /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(questionSql(q)))
+      .map(q => q.id);
+    expect(inline).toEqual(['tsql-other-predict-1']);
+  });
+});
