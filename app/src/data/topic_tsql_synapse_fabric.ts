@@ -121,7 +121,7 @@ WITH (
     question: 'In Synapse, use CTAS to build `dbo.FactSalesByCustomer` from a query that selects `CustomerKey` and `SUM(Amount) AS TotalAmount` from `dbo.FactSales` grouped by `CustomerKey`. The new table must be HASH-distributed on `CustomerKey` and stored as a clustered columnstore index. Write the CREATE TABLE AS SELECT.',
     tables: [sampleTable('dbo.FactSales', ['CustomerKey', 'Amount'])],
     starterCode: `-- dbo.FactSales (CustomerKey, Amount)
--- Build dbo.FactSalesByCustomer with CTAS: HASH on CustomerKey, clustered columnstore index
+-- Build dbo.FactSalesByCustomer with CTAS: HASH on CustomerKey, columnstore storage
 `,
     testCases: [
       {

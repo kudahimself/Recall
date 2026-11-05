@@ -57,6 +57,14 @@ describe('Cloud Warehouse SQL coding question rejects near-miss wrong answers', 
   });
 });
 
+describe('Cloud Warehouse SQL coding question starter does not satisfy its own requirements', () => {
+  it(`${ID} kept starter comment plus a HEAP table fails on the missing columnstore clause`, () => {
+    const r = grade(`${q.starterCode}CREATE TABLE dbo.FactSalesByCustomer WITH (DISTRIBUTION = HASH(CustomerKey), HEAP) AS SELECT CustomerKey, SUM(Amount) AS TotalAmount FROM dbo.FactSales GROUP BY CustomerKey;`);
+    expect(r.verdict).toBe('fail');
+    expect(r.error).toMatch(/COLUMNSTORE/);
+  });
+});
+
 describe('Cloud Warehouse SQL predict questions state the answer they expect', () => {
   const predicts = questions.filter(
     (p): p is PredictOutputQuestion =>
