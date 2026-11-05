@@ -40,57 +40,6 @@ export const dj_auth_questions: Question[] = [
       concepts: ['dj-auth-token-vs-session', 'py-decorator-application'],
     },
 {
-      id: 'dj-auth-jwt-cloze-1',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.DJ_AUTH,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Fill in the two class-level attributes a DRF APIView uses to require a valid JWT and an authenticated user.',
-      template: `from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
-
-class ProtectedView(APIView):
-    ___ = [JWTAuthentication]
-    ___ = [IsAuthenticated]`,
-      blanks: ['authentication_classes', 'permission_classes'],
-      solution: 'from rest_framework.views import APIView\nfrom rest_framework.permissions import IsAuthenticated\nfrom rest_framework_simplejwt.authentication import JWTAuthentication\n\nclass ProtectedView(APIView):\n    authentication_classes = [JWTAuthentication]\n    permission_classes = [IsAuthenticated]',
-      explanation: '`authentication_classes` defines HOW to authenticate (here: parse a JWT from the `Authorization` header); `permission_classes` defines WHO may proceed once authenticated (`IsAuthenticated` = any logged-in user). DRF runs authentication first, then checks permissions.',
-      hints: ['One attribute for HOW, one for WHO', 'Both take a list of classes'],
-      tags: ['django', 'drf', 'jwt', 'authentication', 'permissions', 'cloze'],
-      concepts: ['dj-auth-token-vs-session'],
-    },
-{
-      id: 'be-auth-3',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_AUTH,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Write a DRF `APIView` named `ProtectedView` that authenticates requests with `JWTAuthentication` (from `rest_framework_simplejwt.authentication`) and lets only authenticated users in, via the `IsAuthenticated` permission. Its `get` method returns a `Response` of `{"message": f"Hello, {username}!"}` using the requesting user\'s username.',
-      starterCode: `# Define ProtectedView(APIView): set its authentication to use
-# JWTAuthentication and its permissions to require an authenticated
-# user; get() returns a Response greeting request.user.username.
-`,
-      testCases: [
-        {
-          input: 'JWT protected API',
-          expectedOutput: 'authentication_classes and permission_classes',
-          description: 'Should require JWT auth',
-        },
-      ],
-      solution: `from rest_framework.views import APIView\nfrom rest_framework.response import Response\nfrom rest_framework.permissions import IsAuthenticated\nfrom rest_framework_simplejwt.authentication import JWTAuthentication\n\nclass ProtectedView(APIView):\n    authentication_classes = [JWTAuthentication]\n    permission_classes = [IsAuthenticated]\n\n    def get(self, request):\n        return Response({"message": f"Hello, {request.user.username}!"})`,
-      explanation: 'authentication_classes defines HOW to authenticate (JWT token in Authorization header). permission_classes defines WHO can access (IsAuthenticated = any logged-in user). DRF checks both: first authenticates, then checks permissions.',
-      hints: ['authentication_classes = [JWTAuthentication]', 'permission_classes = [IsAuthenticated]', 'Client sends: Authorization: Bearer <token>'],
-      tieredHints: {
-        apiSignature: 'APIView.authentication_classes = [AuthenticationClass]; APIView.permission_classes = [PermissionClass]',
-        skeleton: 'from rest_framework.views import ____\nfrom rest_framework.response import ____\nfrom rest_framework.permissions import ____\nfrom rest_framework_simplejwt.authentication import ____\n\nclass ProtectedView(____):\n    ____ = [____]\n    ____ = [____]\n\n    def get(self, request):\n        return ____({"message": f"Hello, {____.user.username}!"})',
-      },
-      tags: ['jwt', 'drf', 'authentication', 'permissions', 'django'],
-      concepts: ['dj-auth-token-vs-session', 'dj-permission-class'],
-    },
-{
       id: 'be-auth-4',
       type: QuestionType.MULTIPLE_CHOICE,
       difficulty: Difficulty.BEGINNER,

@@ -241,4 +241,70 @@ False`,
       tags: ['django', 'managers', 'get_queryset', 'soft-delete', 'predict'],
       concepts: ['dj-model-manager-vs-queryset'],
     },
+  {
+      id: 'dj-orm-adv-3',
+      type: QuestionType.CODING,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.DJ_CUSTOM_MANAGERS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: `Build an \`Article\` model that combines three production patterns:
+
+  1. A custom QuerySet exposing two chainable filters: \`published()\` narrows to status="published", and \`recent(days=7)\` (the \`days\` keyword defaulting to 7) narrows to articles created within the last N days. Hook it up so the model's default manager exposes both as chainable on \`Article.objects\` (e.g. \`Article.objects.published().recent(days=7)\`).
+  2. The primary key is a UUID (not the default auto-incrementing integer).
+  3. A read-only \`is_recent\` attribute on each instance returns True iff the article was created within the last 24 hours, evaluated against the current time.
+
+  The model also has \`title\` (CharField, max 200), \`status\` (CharField, max 20), and \`created_at\` (auto_now_add).`,
+      starterCode: `import uuid
+from datetime import timedelta
+from django.db import models
+from django.utils import timezone
+`,
+      testCases: [
+        {
+          input: 'Article.objects.published().recent(days=7)',
+          expectedOutput: 'chainable QuerySet via as_manager() + UUID pk + computed property',
+          description: '3 production patterns combined',
+        },
+      ],
+      solution: `import uuid
+from datetime import timedelta
+from django.db import models
+from django.utils import timezone
+
+
+class ArticleQuerySet(models.QuerySet):
+    def published(self):
+        return self.filter(status="published")
+
+    def recent(self, days=7):
+        cutoff = timezone.now() - timedelta(days=days)
+        return self.filter(created_at__gte=cutoff)
+
+
+class Article(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    status = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = ArticleQuerySet.as_manager()
+
+    @property
+    def is_recent(self):
+        return timezone.now() - self.created_at < timedelta(hours=24)`,
+      explanation: 'Custom `QuerySet.as_manager()` is the modern way to make filter methods chainable — defining them on a `Manager` instead would break chaining (you can\'t call `Article.objects.published().recent()`). UUID primary keys hide row counts from clients and avoid integer-enumeration attacks; pass `default=uuid.uuid4` (the function itself, not a call). `@property` exposes computed values without storing them — useful for "derived from `created_at`" facts the DB doesn\'t need to know.',
+      hints: [
+        'Custom QuerySet + as_manager() = chainable filters',
+        'UUID default takes the callable, not uuid.uuid4()',
+        '@property for computed-from-other-fields values',
+        'timezone.now(), not datetime.now()',
+      ],
+      tieredHints: {
+        apiSignature: 'QuerySet.as_manager() -> Manager',
+        skeleton: 'import uuid\nfrom datetime import ____\nfrom django.db import ____\nfrom django.utils import ____\n\n\nclass ArticleQuerySet(models.____):\n    def ____(self):\n        return self.____(____="____")\n\n    def ____(self, days=7):\n        cutoff = timezone.____() - ____(days=days)\n        return self.____(____=cutoff)\n\n\nclass Article(models.____):\n    id = models.____(primary_key=True, default=uuid.____, editable=False)\n    title = models.____(____=200)\n    status = models.____(____=20)\n    created_at = models.____(____=True)\n\n    objects = ArticleQuerySet.____()\n\n    @____\n    def ____(self):\n        return timezone.____() - self.____ < ____(hours=24)',
+      },
+      tags: ['django', 'orm', 'QuerySet', 'as_manager', 'UUIDField', 'property', 'advanced'],
+      concepts: ['dj-model-construction', 'dj-orm-query-construction'],
+    },
 ];

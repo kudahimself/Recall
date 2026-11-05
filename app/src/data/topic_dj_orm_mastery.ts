@@ -438,4 +438,288 @@ print(len(connection.queries))`,
       tags: ['django', 'orm', 'n-plus-one', 'select_related', 'predict'],
       concepts: ['dj-orm-query-construction', 'dj-n-plus-one'],
     },
+  {
+      id: 'dj4e-fk-5',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      question: 'What is `select_related()` in Django and when should you use it?',
+      options: [
+        { id: 'a', text: 'It selects only specific fields from the database', isCorrect: false },
+        { id: 'b', text: 'It caches query results for 5 minutes', isCorrect: false },
+        { id: 'c', text: 'It selects related objects asynchronously in the background', isCorrect: false },
+        { id: 'd', text: 'It performs a SQL JOIN to fetch related ForeignKey objects in a single query, avoiding N+1 queries', isCorrect: true },
+      ],
+      explanation: 'The N+1 problem: if you query 100 books and access `book.author.name` in a loop, Django makes 100 extra queries (one per book). `Book.objects.select_related("author")` does a single JOIN and fetches all authors at once. Use `select_related` for ForeignKey/OneToOne fields (forward relations). Use `prefetch_related` for ManyToMany or reverse FK relations.',
+      hints: [
+        '`select_related` = one SQL JOIN; no extra queries per object',
+        'Use for ForeignKey (forward). Use `prefetch_related` for M2M or reverse FK',
+      ],
+      tags: ['django', 'ORM', 'select_related', 'N+1', 'performance', 'JOIN'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
+    },
+  {
+      id: 'dj4e-m2m-5',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      question: 'What is `prefetch_related()` and how does it differ from `select_related()`?',
+      options: [
+        { id: 'a', text: 'They are identical — use either one for any relationship type', isCorrect: false },
+        { id: 'b', text: '`select_related` uses SQL JOINs (for FK/O2O); `prefetch_related` makes separate queries and joins in Python (for M2M or reverse FK)', isCorrect: true },
+        { id: 'c', text: '`prefetch_related` is only for GenericForeignKey; `select_related` is for everything else', isCorrect: false },
+        { id: 'd', text: '`prefetch_related` caches the result; `select_related` always queries fresh', isCorrect: false },
+      ],
+      explanation: '`select_related` does a SQL JOIN — efficient for FK/O2O (forward relations). `prefetch_related` does two separate queries and joins the results in Python — necessary for M2M and reverse FK relations (where a JOIN would cause row duplication). For `Article.objects.prefetch_related("tags")`, Django does: 1) get all articles, 2) get all tags for those articles, 3) Python-side join.',
+      hints: [
+        'FK forward → `select_related` (JOIN); M2M or reverse FK → `prefetch_related` (2 queries)',
+        'Both solve N+1 but with different SQL strategies',
+      ],
+      tags: ['django', 'ORM', 'prefetch_related', 'select_related', 'performance', 'M2M'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'be-sql-4',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      question: 'What is the N+1 query problem in Django?',
+      options: [
+        { id: 'a', text: 'One query loads N rows, then reading a related object inside the loop runs one more query per row', isCorrect: true },
+        { id: 'b', text: 'A queryset is re-run from scratch every time you loop over it, so N loops cost N+1 queries', isCorrect: false },
+        { id: 'c', text: 'A query with N filters is split into N+1 separate queries, one per filter plus a final join', isCorrect: false },
+        { id: 'd', text: 'Slicing a queryset with [:N] fetches one extra row to check if more exist, so N+1 rows come back', isCorrect: false },
+      ],
+      explanation: 'Article.objects.all() runs one query for the list; then reading article.author inside the loop runs one extra query per article, N more in total. select_related("author") fetches the authors in the same query with a JOIN (for ForeignKey); prefetch_related("tags") runs one second query with an IN clause (for ManyToMany). Either removes the per-row queries. A queryset caches its rows after the first evaluation, filters combine into one WHERE clause, and slicing adds a LIMIT, so none of those cause it.',
+      tags: ['n+1', 'select_related', 'prefetch_related', 'django', 'performance'],
+      concepts: ['dj-n-plus-one', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'py-dj-orm-select-vs-prefetch',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      question: 'When do you use `select_related` vs `prefetch_related`?',
+      options: [
+        { id: 'a', text: 'They\'re interchangeable — both trigger a SQL JOIN, and Django simply uses whichever appears first in the queryset chain', isCorrect: false },
+        { id: 'b', text: '`select_related` for "one" sides (FK, OneToOne): a SQL JOIN, one query. `prefetch_related` for "many" sides (M2M, reverse FK): a second query merged in Python', isCorrect: true },
+        { id: 'c', text: '`select_related` is Postgres-only because it relies on JOIN optimisations; on SQLite and MySQL you must use `prefetch_related`', isCorrect: false },
+        { id: 'd', text: '`prefetch_related` is deprecated — recent Django versions fold its behaviour into `select_related` automatically', isCorrect: false },
+      ],
+      explanation: 'Cardinality matters because JOINing a many-to-many would multiply rows. `select_related("author")` is a JOIN; `prefetch_related("tags")` is a second query. You can combine them: `Post.objects.select_related("author").prefetch_related("tags", "comments__user")`. The `__` traverses relations; `comments__user` prefetches comments AND their users, minimising queries. Watch the total query count with Django Debug Toolbar.',
+      hints: [
+        'select_related: FK / OneToOne → JOIN, one query',
+        'prefetch_related: M2M / reverse FK → second query, merge in Python',
+        'Combine them; use Debug Toolbar to verify',
+      ],
+      tags: ['django', 'orm', 'select_related', 'prefetch_related'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'dj-orm-prefetch-obj-mcq-1',
+      type: QuestionType.MULTIPLE_CHOICE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      question: 'Why pass a `Prefetch(...)` object to `prefetch_related` instead of just the relation name as a string?',
+      options: [
+        { id: 'a', text: 'The bare string prefetches ALL related rows; a `Prefetch` object lets you supply a filtered or ordered `queryset` and stash the result under a custom `to_attr`', isCorrect: true },
+        { id: 'b', text: 'The string form has been deprecated; current Django only accepts `Prefetch` objects and emits a warning whenever a plain relation name is passed', isCorrect: false },
+        { id: 'c', text: 'A `Prefetch` object converts the second query into a SQL JOIN, whereas the string form always issues a separate query that is merged back in Python', isCorrect: false },
+        { id: 'd', text: 'It has no runtime effect at all — `Prefetch` is purely a typing helper that documents the relation\'s cardinality for IDEs and static type checkers', isCorrect: false },
+      ],
+      explanation: 'A bare `prefetch_related("comments")` pulls every related comment. `Prefetch("comments", queryset=Comment.objects.filter(approved=True), to_attr="approved_comments")` lets you control the inner queryset (filter, order, even `select_related` on it) and store it on a separate attribute so it doesn\'t clobber the default related manager. Both still run as a second query merged in Python — the object form just makes that query yours to shape.',
+      hints: [
+        'String form = all related rows; object form = your queryset',
+        'to_attr stores the result on a custom attribute',
+        'Still a second query, just shaped by you',
+      ],
+      tags: ['django', 'orm', 'Prefetch', 'prefetch_related'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'dj-orm-cloze-2',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Eager-load article authors (FK) AND their tags (M2M) in one access pattern.',
+      template: `articles = (
+    Article.objects
+    .___("author")
+    .___("tags")
+    .all()
+)`,
+      blanks: ['select_related', 'prefetch_related'],
+      solution: 'articles = (\n    Article.objects\n    .select_related("author")\n    .prefetch_related("tags")\n    .all()\n)',
+      explanation: '`select_related` does a SQL JOIN — works for ForeignKey and OneToOne. `prefetch_related` issues a separate query and joins in Python — required for ManyToMany and reverse FK. Mixing them in one chain is the canonical fix for N+1.',
+      hints: ['select_related for FK/OneToOne', 'prefetch_related for M2M / reverse FK'],
+      tags: ['django', 'orm', 'select_related', 'prefetch_related', 'cloze'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'dj-orm-parsons-2',
+      type: QuestionType.PARSONS,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Avoid the N+1 problem: fetch all comments and access `comment.article.title` for each without one query per comment. Use the queryset method that JOINs ForeignKey targets, and put it before `.all()`.',
+      correctOrder: [
+        'comments = (',
+        '    Comment.objects',
+        '    .select_related("article")',
+        '    .all()',
+        ')',
+        'for c in comments:',
+        '    print(c.article.title)',
+      ],
+      distractorLines: [
+        '    .prefetch_related("article")',
+        '    .join("article")',
+        '    .include("article")',
+      ],
+      solution: 'comments = (\n    Comment.objects\n    .select_related("article")\n    .all()\n)\nfor c in comments:\n    print(c.article.title)',
+      explanation: '`select_related` does an SQL JOIN and pulls related rows in the same query - for ForeignKey and OneToOne. `prefetch_related` issues a separate query and joins in Python - for ManyToMany and reverse FK. Without either, accessing `c.article.title` triggers one extra SELECT per comment (the N+1 problem).',
+      hints: ['select_related for FK/OneToOne', 'prefetch_related for M2M / reverse FK', 'No JOIN method called .join'],
+      tags: ['django', 'orm', 'select_related', 'n-plus-one', 'parsons'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
+    },
+  {
+      id: 'py-dj-orm-select-related',
+      type: QuestionType.CODING,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Use `select_related` to eliminate N+1 queries on a ForeignKey. Given a `Post` model with `author = ForeignKey(User, ...)`, write a `run()` function that iterates every post and prints `f"{post.title} by {post.author.username}"`, loading each post\'s author in a SINGLE JOIN query (not one query per post). Without eager-loading, every iteration fires a separate query for `post.author`; calling `select_related` on the `author` FK makes Django do ONE JOIN query and pre-populate `post.author`.',
+      starterCode: `# Write run(): print one "<title> by <author username>" line per post,
+# loading each post's author in a single JOIN instead of a query per post.
+`,
+      testCases: [
+        {
+          input: 'ForeignKey preloading',
+          expectedOutput: 'Single SQL query including author columns via JOIN',
+          description: 'select_related for FK and OneToOne',
+        },
+      ],
+      solution: `from .models import Post
+
+def run():
+    qs = Post.objects.select_related("author").all()
+    for post in qs:
+        print(f"{post.title} by {post.author.username}")`,
+      explanation: '`select_related(*fields)` adds SQL JOINs — one query for the whole list. Works for `ForeignKey` and `OneToOneField`. For 100 posts without it: 1 + 100 = 101 queries. With it: 1. Chain multiple: `.select_related("author", "category")`. Traverse relations: `.select_related("author__profile")`. Doesn\'t work for `ManyToMany` or reverse FK — use `prefetch_related` for those.',
+      hints: [
+        'select_related for FK / OneToOne — uses SQL JOIN',
+        'Single query instead of N+1',
+        'Traverse relations with __: "author__profile"',
+      ],
+      tieredHints: {
+        apiSignature: 'QuerySet.select_related(*fields)',
+        skeleton: 'from .models import Post\n\ndef run():\n    qs = Post.____.____("____").____()\n    for ____ in qs:\n        print(f"{____.____} by {____.____.____}")',
+      },
+      tags: ['django', 'orm', 'select_related', 'n-plus-1'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'py-dj-orm-prefetch',
+      type: QuestionType.CODING,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Use `prefetch_related` with `"tags"` for a many-to-many reverse lookup. Given a `Post` model whose `tags` attribute is a `ManyToManyField` to `Tag`, fetch all posts with the tags prefetched — one additional query TOTAL, not per post. Iterate the queryset inside a `run` function and for each post print a line of the form `"<title>: <comma-separated tag names>"` — build the tag name list by joining the `name` of each tag in `post.tags.all()` with `", "`.',
+      starterCode: `# Write run(): iterate all posts and print "<title>: <tag names>"
+# (tag names comma-separated), prefetching the M2M tags so the
+# whole tag set loads in one extra query, not one per post.
+`,
+      testCases: [
+        {
+          input: 'M2M preloading',
+          expectedOutput: 'Two queries total: one for posts, one for ALL related tags',
+          description: 'prefetch_related does a second query, merges in Python',
+        },
+      ],
+      solution: `from .models import Post
+
+def run():
+    for p in Post.objects.prefetch_related("tags"):
+        names = ", ".join(t.name for t in p.tags.all())
+        print(f"{p.title}: {names}")`,
+      explanation: '`prefetch_related` does two queries (one for the main model, one for the related table) and matches them in Python — works for M2M, reverse FK, reverse OneToOne. Without it, `post.tags.all()` fires per iteration. Can be composed with `select_related` in the same queryset: `.select_related("author").prefetch_related("tags", "comments__user")`. For complex filtering of prefetches, use `Prefetch(...)` objects.',
+      hints: [
+        'prefetch_related for M2M and reverse FK',
+        'Two queries total — not per parent',
+        'Composable with select_related in the same queryset',
+      ],
+      tieredHints: {
+        apiSignature: 'QuerySet.prefetch_related(*lookups)',
+        skeleton: 'from .models import Post\n\ndef run():\n    for p in Post.____.____("____"):\n        names = ", ".join(t.____ for t in p.____.____())\n        print(f"{p.____}: {names}")',
+      },
+      tags: ['django', 'orm', 'prefetch_related', 'm2m'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'dj-orm-prefetch-obj-cloze-1',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fill in (1) the object wrapper that customises a prefetch, and (2) the keyword that stores the filtered result on a separate attribute.',
+      template: `approved = Comment.objects.filter(approved=True)
+
+articles = Article.objects.prefetch_related(
+    ___("comments", queryset=approved, ___="approved_comments")
+)`,
+      blanks: ['Prefetch', 'to_attr'],
+      solution: 'approved = Comment.objects.filter(approved=True)\n\narticles = Article.objects.prefetch_related(\n    Prefetch("comments", queryset=approved, to_attr="approved_comments")\n)',
+      explanation: '`Prefetch(lookup, queryset=..., to_attr=...)` replaces the default "fetch all" prefetch with your own filtered/ordered queryset, and `to_attr` parks the result on `article.approved_comments` instead of overwriting the `article.comments` manager. Each article then exposes a plain Python list of just its approved comments — with no extra query per article.',
+      hints: ['The prefetch-customising object, then the attribute-naming keyword'],
+      tags: ['django', 'orm', 'Prefetch', 'to_attr', 'cloze'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
+    },
+  {
+      id: 'dj-orm-prefetch-obj-adv-1',
+      type: QuestionType.CODING,
+      difficulty: Difficulty.ADVANCED,
+      topic: Topic.DJ_ORM_MASTERY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Fetch all Articles and attach to each one ONLY its approved comments, under the attribute `approved_comments`, using a single extra query for the comments (not one per article). `Comment` has a ForeignKey `article` (related_name "comments") and a boolean `approved`. Assign the queryset to `articles`.',
+      starterCode: `# Prefetch only approved comments onto each article as .approved_comments
+`,
+      testCases: [
+        {
+          input: 'filtered prefetch onto a custom attribute',
+          expectedOutput: 'Prefetch(queryset=..., to_attr=...) - one extra query',
+          description: 'Per-article filtered related list without N+1',
+        },
+      ],
+      solution: `from django.db.models import Prefetch
+from .models import Article, Comment
+
+approved = Comment.objects.filter(approved=True)
+articles = Article.objects.prefetch_related(
+    Prefetch("comments", queryset=approved, to_attr="approved_comments")
+)`,
+      explanation: 'A bare `prefetch_related("comments")` would load every comment; here we hand `Prefetch` a *filtered* queryset so only approved comments are fetched - in one batched query for all articles. `to_attr="approved_comments"` stores them as a plain list on each article (leaving the default `comments` manager untouched). Reading `article.approved_comments` then costs zero extra queries.',
+      hints: [
+        'Build the filtered Comment queryset first',
+        'Wrap it in Prefetch("comments", queryset=..., to_attr=...)',
+        'to_attr exposes a per-article list with no N+1',
+      ],
+      tieredHints: {
+        apiSignature: 'Prefetch(lookup, queryset=None, to_attr=None)',
+        skeleton: 'from django.db.models import ____\nfrom .models import Article, Comment\n\napproved = Comment.____.____(approved=True)\narticles = Article.____.____(\n    ____("____", queryset=approved, ____="approved_comments")\n)',
+      },
+      tags: ['django', 'orm', 'Prefetch', 'to_attr', 'n-plus-one', 'advanced'],
+      concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
+    },
 ];
