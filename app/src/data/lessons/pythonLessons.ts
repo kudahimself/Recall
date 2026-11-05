@@ -5113,4 +5113,394 @@ releasing with ***`,
       'py-dj-cicd-deploy-step',
     ],
   },
+  {
+    id: 'dj_nginx/1',
+    topicKeys: [Topic.DJ_NGINX],
+    step: 1,
+    title: 'Nginx & Reverse Proxy',
+    idea: [
+      lines(
+        "In production a request goes from the client to Nginx, then to Gunicorn, then to Django, and the response comes back the same way.",
+        "Nginx does the work that needs no Python: it terminates HTTPS, redirects plain HTTP to HTTPS, and serves static and media files straight from disk.",
+        "Everything else it passes to Gunicorn, whose few worker processes each run Django for one request at a time.",
+        "Nginx also buffers slow clients, so a worker is free again as soon as Django has answered.",
+      ),
+      lines(
+        "A `server` block answers for its `server_name` on the port it `listen`s on.",
+        "Inside it, each `location` block handles the paths that start with its prefix, and the longest matching prefix wins.",
+        "`return 301 https://$host$request_uri;` in the port 80 block sends every plain HTTP request to the same address over HTTPS.",
+      ),
+      lines(
+        "`alias` swaps the matched prefix for a directory, while `root` adds the whole path, prefix included, to its directory.",
+        "`proxy_pass http://name;` sends the request to an `upstream` block that names Gunicorn's socket or port.",
+        "`proxy_set_header` passes on what Django would otherwise lose behind the proxy: the original `Host`, the client's address in `X-Forwarded-For`, and the scheme in `X-Forwarded-Proto`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `upstream app_server {
+    server unix:/run/gunicorn.sock;               # where Gunicorn listens
+}
+
+server {
+    listen 80;
+    server_name example.com;
+    return 301 https://$host$request_uri;         # plain HTTP -> HTTPS
+}
+
+server {
+    listen 443 ssl;
+    server_name example.com;
+    ssl_certificate     /path/fullchain.pem;
+    ssl_certificate_key /path/privkey.pem;
+
+    location /static/ {
+        alias /path/to/collected/;                # /static/x -> /path/to/collected/x
+    }
+    location /media/ {
+        root /path/to;                            # /media/x -> /path/to/media/x
+    }
+    location / {                                  # everything else goes to Django
+        proxy_pass http://app_server;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}`,
+    },
+    pitfall: lines(
+      "Writing `root` where `alias` is meant sends Nginx to the wrong directory, and every static file returns 404 although `collectstatic` put it in place.",
+      "Under `location /static/`, `root /srv/app/collected;` looks for `/static/site.css` at `/srv/app/collected/static/site.css`.",
+      "Use `alias` when the directory is not named like the URL prefix, and end both the location and the alias with `/`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# bookshop on one server; requests: http /cart/, then https /assets/app.js, /covers/42.jpg and /cart/
+upstream bookshop_app {
+    server 127.0.0.1:8000;
+}
+server {
+    listen 80;
+    server_name books.example.org;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name books.example.org;
+    location /assets/ {
+        alias /var/www/bookshop/static/;
+    }
+    location /covers/ {
+        root /var/www/bookshop;
+    }
+    location / {
+        proxy_pass http://bookshop_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}`,
+      steps: [
+        "Lines 2-4: the `upstream` gives Gunicorn's address a name, `bookshop_app`, for `proxy_pass` to use.",
+        "Lines 5-9: the plain HTTP request reaches the port 80 block, which answers 301 with the same host and path on `https://`, and the browser asks again there.",
+        "Lines 13-15: `alias` swaps `/assets/` for the static directory, so `/assets/app.js` is read from `/var/www/bookshop/static/app.js` and Django never sees it.",
+        "Lines 16-18: `root` keeps the prefix, so `/covers/42.jpg` is read from `/var/www/bookshop/covers/42.jpg`.",
+        lines(
+          "Lines 19-23: `/cart/` matches only `location /`, so it goes to Gunicorn with the original host and the scheme `https`.",
+          "Django trusts that scheme once `SECURE_PROXY_SSL_HEADER = (\"HTTP_X_FORWARDED_PROTO\", \"https\")` is set, and `request.is_secure()` is then true.",
+        ),
+      ],
+      output: `http /cart/ -> 301 to https://books.example.org/cart/
+/assets/app.js -> file /var/www/bookshop/static/app.js
+/covers/42.jpg -> file /var/www/bookshop/covers/42.jpg
+/cart/ -> Gunicorn at 127.0.0.1:8000, Host books.example.org, X-Forwarded-Proto https`,
+    },
+    exercises: [
+      'be-infra-nginx-3',
+      'dj-nginx-predict-1',
+      'dj-nginx-proxypass-cloze-1',
+      'be-infra-nginx-1',
+    ],
+  },
+  {
+    id: 'dj_settings/1',
+    topicKeys: [Topic.DJ_SETTINGS],
+    step: 1,
+    title: 'Django Settings & Environment',
+    idea: [
+      lines(
+        "Settings that differ between machines, or must stay secret, come from the environment instead of the code: `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, and database and API credentials.",
+        "The code is committed, the `.env` file holding the real values is listed in `.gitignore`, and the server sets the same variables in its own configuration.",
+        "A secret that was ever committed stays in the git history, so it has to be changed, not just deleted.",
+      ),
+      lines(
+        "django-environ reads them: `environ.Env(DEBUG=(bool, False))` declares a variable's type and default, `environ.Env.read_env(path)` loads a `.env` file, and `env(\"NAME\")` returns the value cast to its type.",
+        "`env.list(\"NAME\")` splits a comma-separated value, and `env.db(\"DATABASE_URL\")` turns a URL such as `postgres://user:pass@host:5432/db` into a `DATABASES` entry.",
+        "A variable with no default that is not set raises `ImproperlyConfigured` at start-up, which is what you want for `SECRET_KEY`.",
+      ),
+      lines(
+        "Split settings keep what every environment shares in `base.py`, and `development.py` and `production.py` start with `from .base import *` and change only what differs.",
+        "`DJANGO_SETTINGS_MODULE` chooses the file.",
+        "Production turns `DEBUG` off and the security settings on, such as `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` and `SECURE_HSTS_SECONDS`, and `python manage.py check --deploy` lists any that are missing.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# settings/base.py
+import environ
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+env = environ.Env(DEBUG=(bool, False))            # NAME=(cast, default)
+environ.Env.read_env(BASE_DIR / ".env")           # .env is in .gitignore
+
+SECRET_KEY = env("SECRET_KEY")                    # no default: must be set
+DEBUG = env("DEBUG")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
+DATABASES = {"default": env.db("DATABASE_URL")}
+
+# settings/production.py
+from .base import *                               # then only what differs
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000
+
+# DJANGO_SETTINGS_MODULE=project.settings.production picks the file`,
+    },
+    pitfall: lines(
+      "Every environment variable is a string, so `DEBUG = os.environ.get(\"DEBUG\", False)` gives the string `\"False\"` on a server that sets it.",
+      "Any non-empty string is true, so production runs with `DEBUG` on and shows tracebacks and settings to anyone who triggers an error.",
+      "Declare a cast for every variable that is not text, as in `environ.Env(DEBUG=(bool, False))`, or read it with `env.bool(\"DEBUG\")`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# bookshop/settings/base.py run on its own; no SECRET_KEY or CONN_MAX_AGE is set, and .env beside it holds:
+#   DEBUG=off
+#   ALLOWED_HOSTS=books.example.org,www.books.example.org
+#   DATABASE_URL=postgres://shop:s3cret@db.internal:5432/bookshop
+import environ
+from django.core.exceptions import ImproperlyConfigured
+
+env = environ.Env(DEBUG=(bool, True), CONN_MAX_AGE=(int, 60))
+environ.Env.read_env(".env")
+
+DEBUG = env("DEBUG")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+DATABASES = {"default": env.db("DATABASE_URL")}
+print(DEBUG, env("CONN_MAX_AGE"), ALLOWED_HOSTS[1])
+print(DATABASES["default"]["ENGINE"])
+print(DATABASES["default"]["HOST"], DATABASES["default"]["PORT"], DATABASES["default"]["NAME"])
+
+try:
+    SECRET_KEY = env("SECRET_KEY")
+except ImproperlyConfigured as error:
+    print("not started:", error)`,
+      steps: [
+        "Lines 8-9: `Env` declares `DEBUG` as a bool and `CONN_MAX_AGE` as an int, each with a default, and `read_env` loads the three lines of `.env` into the environment.",
+        "Line 11: the text `off` is cast to `False`; without the cast, `DEBUG` would be the string `\"off\"`, which is true.",
+        "Lines 12 and 14: `env.list` splits the hosts on the comma, and `CONN_MAX_AGE`, set nowhere, takes its default 60 as an int.",
+        "Lines 13 and 15-16: `env.db` parses the URL into a `DATABASES` entry: the `postgres` scheme picks the PostgreSQL backend, and the host, port and database name come from the URL's parts.",
+        lines(
+          "Lines 18-21: `SECRET_KEY` has no default and is not set, so reading it raises `ImproperlyConfigured`.",
+          "A real settings file leaves that error uncaught, so the server refuses to start instead of running without a key.",
+        ),
+      ],
+      output: `False 60 www.books.example.org
+django.db.backends.postgresql
+db.internal 5432 bookshop
+not started: Set the SECRET_KEY environment variable`,
+    },
+    exercises: [
+      'be-infra-settings-2',
+      'be-infra-settings-3',
+      'dj-settings-predict-1',
+      'dj-settings-cloze-1',
+      'be-infra-settings-1',
+    ],
+  },
+  {
+    id: 'dj_file_uploads/1',
+    topicKeys: [Topic.DJ_FILE_UPLOADS],
+    step: 1,
+    title: 'File Uploads & Storage',
+    idea: [
+      lines(
+        "A `FileField` or `ImageField` keeps only the file's name in its database column, such as `avatars/2026/11/ana.png`, and hands the file itself to the storage backend.",
+        "`upload_to` is the folder inside the storage: a string that may hold date codes such as `%Y/%m/`, or a function of the instance and the file name.",
+        "`ImageField` also checks that the upload really is an image, which needs Pillow.",
+      ),
+      lines(
+        "The default `FileSystemStorage` writes files under `MEDIA_ROOT`, a directory on disk, and `field.url` puts `MEDIA_URL`, a URL prefix such as `/media/`, in front of the stored name.",
+        "`field.path` is the full path on disk.",
+        "A file whose name is already taken gets a random suffix instead of overwriting the old one.",
+      ),
+      lines(
+        "Uploads arrive in `request.FILES`, or in DRF's `request.data` with a multipart parser, and a serializer's `validate_<field>` method can refuse files that are too large or of the wrong type.",
+        "In development, `static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)` in `urls.py` serves the files.",
+        "In production Nginx serves `MEDIA_ROOT`, or django-storages keeps the files on S3, where every server can reach them, with no change to models or views.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# settings.py
+MEDIA_ROOT = BASE_DIR / "media"          # where files are written on disk
+MEDIA_URL = "/media/"                    # the URL prefix they are served under
+# S3 instead: STORAGES = {"default": {"BACKEND": "storages.backends.s3.S3Storage"}, ...}
+
+# models.py
+class Thing(models.Model):
+    attachment = models.FileField(upload_to="folder/%Y/%m/")   # ImageField for images
+
+# in code
+thing.attachment.save("name.ext", content)   # writes the file and saves the row
+thing.attachment.name                        # "folder/2026/11/name.ext", the stored value
+thing.attachment.url                         # MEDIA_URL + name
+thing.attachment.path                        # MEDIA_ROOT / name, local storage only
+
+# urls.py, development only
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`,
+    },
+    pitfall: lines(
+      "`static()` in `urls.py` adds its pattern only while `DEBUG` is on, so after deploying with `DEBUG = False` every uploaded file returns 404.",
+      "Serving them through Django would be the wrong fix anyway: each download holds a Gunicorn worker until the last byte is sent.",
+      "Have Nginx serve `MEDIA_URL` from `MEDIA_ROOT` with an `alias`, or move the files to S3 with django-storages.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; MEDIA_ROOT = "/srv/bookshop/media", MEDIA_URL = "/media/", default storage, no media yet
+# shop/models.py:
+#   def sample_path(book, filename):
+#       return f"samples/{book.isbn}/{filename}"
+#   class Book(models.Model):
+#       isbn = models.CharField(max_length=13)
+#       sample = models.FileField(upload_to=sample_path, blank=True)
+from django.core.files.base import ContentFile
+from shop.models import Book
+
+book = Book.objects.create(isbn="9780141439518")
+book.sample.save("chapter 1.pdf", ContentFile(b"%PDF-1.4"))
+print(book.sample.name)
+print(book.sample.url, book.sample.size)
+
+again = Book.objects.create(isbn="9780141439518")
+again.sample.save("chapter 1.pdf", ContentFile(b"%PDF-1.4"))
+print(again.sample.name == book.sample.name, again.sample.name.startswith("samples/9780141439518/chapter_1_"))`,
+      steps: [
+        "Lines 3-7: `upload_to` is a function here, so each book's samples get their own folder named by its ISBN.",
+        lines(
+          "Line 12: `save()` writes the file to `/srv/bookshop/media/samples/9780141439518/` and saves the row.",
+          "Django cleans the file name first, so the space becomes `_`.",
+        ),
+        "Lines 13-14: `.name` is what the column stores, `.url` puts `MEDIA_URL` in front of it, and `.size` is the file's 8 bytes.",
+        "Lines 16-18: a second file with the same name does not overwrite the first, because the storage adds a random suffix such as `chapter_1_a1B2c3D.pdf`.",
+        "In production Nginx serves `/media/` from `/srv/bookshop/media`, or S3 holds the files, and none of these lines change.",
+      ],
+      output: `samples/9780141439518/chapter_1.pdf
+/media/samples/9780141439518/chapter_1.pdf 8
+False True`,
+    },
+    exercises: [
+      'be-infra-uploads-3',
+      'dj-uploads-predict-1',
+      'dj-uploads-basics-cloze-1',
+      'be-infra-uploads-1',
+    ],
+  },
+  {
+    id: 'dj_postgres/1',
+    topicKeys: [Topic.DJ_POSTGRES],
+    step: 1,
+    title: 'PostgreSQL Features',
+    idea: [
+      lines(
+        "PostgreSQL is the database Django recommends for production: it serves many connections writing at once, and `django.contrib.postgres` adds what SQLite lacks, such as `ArrayField`, range fields and full-text search.",
+        "A `models.JSONField` is stored as `jsonb`, binary JSON that can be indexed and queried.",
+      ),
+      lines(
+        "JSON lookups chain keys with `__` as relations do: `filter(data__author=\"ada\")` compares a key, and `data__shelf__floor__gte=2` goes deeper and compares a number.",
+        "`data__tags__contains=[\"py\"]` matches when the stored value holds that subset, and `data__has_key=\"isbn\"` when the key exists.",
+        "`KeyTextTransform(\"key\", \"data\")` pulls a key out as text for `annotate()` and `order_by()`, and the field takes `default=dict`, the callable, never `{}`.",
+      ),
+      lines(
+        "`Meta.indexes = [models.Index(fields=[\"a\", \"-b\"])]` adds a composite index for queries that filter on `a` and sort by `b` newest first, and a `GinIndex` speeds up `jsonb` lookups.",
+        "Full-text search builds a `SearchVector` from text columns, weighted `A` to `D`, parses the user's words with `SearchQuery`, which matches word stems, and scores rows with `SearchRank`.",
+        "`EXPLAIN ANALYZE` shows whether a query used an index or read the whole table.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+from django.db import models
+from django.db.models.fields.json import KeyTextTransform
+
+class Thing(models.Model):
+    kind = models.CharField(max_length=20)
+    created = models.DateTimeField(auto_now_add=True)
+    body = models.TextField()
+    data = models.JSONField(default=dict)                  # jsonb; default=dict, not {}
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["kind", "-created"]),      # filter on kind, newest first
+            GinIndex(fields=["data"]),                      # fast jsonb lookups
+        ]
+
+Thing.objects.filter(data__key="v")                        # a key equals a value
+Thing.objects.filter(data__outer__inner__gt=5)             # a nested key, compared
+Thing.objects.filter(data__items__contains=["x"])          # the stored value holds this subset
+Thing.objects.annotate(k=KeyTextTransform("key", "data")).order_by("k")
+
+vector = SearchVector("body")
+query = SearchQuery("words")
+Thing.objects.annotate(search=vector, rank=SearchRank(vector, query)).filter(search=query).order_by("-rank")`,
+    },
+    pitfall: lines(
+      "`jsonb` is for attributes that differ from row to row and are read with the row, such as a product's specifications.",
+      "A value you filter, join or total on, such as a customer id or an order's lines, belongs in its own column or table, where a foreign key keeps it valid and a plain index serves it.",
+      "In JSON, every query has to dig it out, and nothing stops a row from holding a typo or missing the key.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell on PostgreSQL; Book(title, blurb, details = models.JSONField(default=dict)), no rows yet
+from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+from django.db.models.fields.json import KeyTextTransform
+from library.models import Book
+
+Book.objects.create(title="River Songs", blurb="Poems of rivers and rain", details={"lang": "en", "shelf": {"floor": 2}, "awards": ["Costa"]})
+Book.objects.create(title="Night Trains", blurb="A thriller on a sleeper train", details={"lang": "fr", "shelf": {"floor": 1}, "awards": []})
+Book.objects.create(title="Rain Tales", blurb="Stories from a wet town", details={"lang": "en", "shelf": {"floor": 1}})
+
+print(Book.objects.filter(details__lang="en").count(), Book.objects.get(details__shelf__floor__gte=2).title)
+print(Book.objects.filter(details__has_key="awards").count(), Book.objects.filter(details__awards__contains=["Costa"]).count())
+print(list(Book.objects.annotate(lang=KeyTextTransform("lang", "details")).order_by("lang", "title").values_list("lang", "title")))
+
+words = SearchVector("title", weight="A", config="english") + SearchVector("blurb", weight="B", config="english")
+wanted = SearchQuery("rain", config="english")
+found = Book.objects.annotate(doc=words, score=SearchRank(words, wanted)).filter(doc=wanted).order_by("-score")
+print([b.title for b in found])`,
+      steps: [
+        "Line 10: two books have `lang` set to `en`, and only River Songs has a `shelf` whose `floor` is at least 2, so `get()` finds exactly one row.",
+        "Line 11: two books have an `awards` key, though Night Trains' list is empty, and only River Songs' list contains `Costa`.",
+        "Line 12: `KeyTextTransform` pulls `lang` out as text, so the rows sort by language and then by title.",
+        "Lines 14-16: the title is weighted `A` and the blurb `B`, and the query `rain` matches the word in Rain Tales' title and in River Songs' blurb, but not `train`.",
+        "Line 17: the title match carries the higher weight, so Rain Tales ranks first.",
+      ],
+      output: `2 River Songs
+2 1
+[('en', 'Rain Tales'), ('en', 'River Songs'), ('fr', 'Night Trains')]
+['Rain Tales', 'River Songs']`,
+    },
+    exercises: [
+      'be-infra-postgres-2',
+      'dj-postgres-predict-1',
+      'dj-postgres-cloze-1',
+      'dj-postgres-keytexttransform-cloze-1',
+      'dj-postgres-fts-cloze-1',
+    ],
+  },
 ];
