@@ -18,7 +18,8 @@ setup() { # fresh tree; fake npm writes $BUILD_PATH/index.html unless FAKE_NPM_F
 #!/usr/bin/env bash
 if [ "$1" = ci ]; then # fake `npm ci`: logged separately; marks the install like npm does, unless FAKE_NPM_CI_FAIL=1
   echo ci >> "$FAKE_NPM_CI_LOG"; [ "${FAKE_NPM_CI_FAIL:-0}" = 1 ] && exit 1
-  touch node_modules/.package-lock.json; exit 0
+  touch node_modules/.package-lock.json
+  sleep 1; mkdir -p public/monaco/vs; echo loader > public/monaco/vs/loader.js; exit 0 # like copy-monaco.js: files dated after the build stamp
 fi
 echo run >> "$FAKE_NPM_LOG"
 sleep "${FAKE_NPM_SLEEP:-0}"
@@ -66,6 +67,7 @@ check "failed npm ci: logged" "$(grep -c 'build failed: npm ci' "$T/state/recall
 
 setup; rm -rf "$T/tree/app/node_modules"; build
 check "no node_modules: npm ci" "$(cis)" "1"
+build; check "after npm ci: copied monaco files do not trigger another build" "$(runs)" "1"
 
 setup; mkdir -p "$T/tree/app/build.old"; echo "<html>old</html>" > "$T/tree/app/build.old/index.html"; touch -d '2 hours ago' "$T/tree/app/src/a.ts" "$T/tree/app/package.json"; build
 check "interrupted swap: build.old restored" "$(cat "$T/tree/app/build/index.html")$(runs)" "<html>old</html>0"

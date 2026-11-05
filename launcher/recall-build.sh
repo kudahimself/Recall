@@ -17,7 +17,8 @@ if [ ! -d "$APP/build" ] && [ -d "$APP/build.old" ]; then mv "$APP/build.old" "$
 rm -rf "$APP/build.tmp" "$APP/build.old"
 
 BUILD="$APP/build/index.html"
-if [ -f "$BUILD" ] && [ -z "$(find "$APP/src" "$APP/public" "$APP/package.json" "$APP/package-lock.json" "$APP/tsconfig.json" -newer "$BUILD" -type f -print -quit 2>/dev/null)" ]; then
+# app/public/monaco is copied from node_modules (tracked through package-lock.json), so its file times are skipped.
+if [ -f "$BUILD" ] && [ -z "$(find "$APP/src" "$APP/public" "$APP/package.json" "$APP/package-lock.json" "$APP/tsconfig.json" -path "$APP/public/monaco" -prune -o -newer "$BUILD" -type f -print -quit 2>/dev/null)" ]; then
   echo ok > "$STATE/build.status"
   exit 0
 fi
