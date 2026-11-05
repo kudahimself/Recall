@@ -1652,4 +1652,1005 @@ set is not JSON
       'py-json-2',
     ],
   },
+  {
+    id: 'py_testing_basics/1',
+    topicKeys: [Topic.PY_TESTING_BASICS],
+    step: 1,
+    title: 'Testing Basics (pytest)',
+    idea: [
+      lines(
+        "pytest collects files named `test_*.py` and runs every function whose name starts with `test_`.",
+        "A test is plain Python that checks results with `assert`; it passes if nothing is raised and fails if an `assert` is false, and pytest shows the values on both sides.",
+      ),
+      lines(
+        "A tidy test has three parts: arrange the inputs, act by calling the code, and assert on the result.",
+        "`with pytest.raises(TypeError):` passes only if its block raises that error, and `match=\"text\"` also checks the message.",
+      ),
+      lines(
+        "`@pytest.mark.parametrize(\"a, b, want\", [(1, 1, 2), (0, 5, 5)])` runs one test per row, each reported on its own.",
+        "Run everything with `pytest`, one file with `pytest test_x.py`, and pick tests by name with `-k word`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# test_math.py
+import pytest
+from math_tools import add
+
+def test_add():
+    result = add(2, 3)            # act
+    assert result == 5            # assert
+
+def test_bad_input():
+    with pytest.raises(TypeError):
+        add(1, "a")               # must raise TypeError
+
+@pytest.mark.parametrize("a, b, want", [(1, 1, 2), (0, 5, 5)])
+def test_cases(a, b, want):       # runs once per row
+    assert add(a, b) == want`,
+    },
+    pitfall: lines(
+      "pytest only runs what it can find: a function not named `test_...`, or a file not named `test_*.py`, is skipped without any warning.",
+      "A helper called `check_total` will never run, so name every test with the `test_` prefix and look for the dot in the report.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import pathlib, tempfile
+import pytest
+
+SRC = '''
+import pytest
+
+def add(a, b):
+    return a + b
+
+def test_add():
+    assert add(2, 3) == 5
+
+def test_wrong():
+    assert add(2, 2) == 5
+
+def test_error():
+    with pytest.raises(TypeError):
+        add(1, "a")
+
+@pytest.mark.parametrize("a, b, want", [(1, 1, 2), (0, 5, 5)])
+def test_cases(a, b, want):
+    assert add(a, b) == want
+
+def check_total():
+    assert False
+'''
+
+class Show:
+    def pytest_runtest_logreport(self, report):
+        if report.when == "call":
+            print(report.nodeid.split("::")[1], report.outcome)
+
+folder = pathlib.Path(tempfile.mkdtemp())
+(folder / "test_math.py").write_text(SRC)
+print(int(pytest.main(["-p", "no:terminal", "-p", "no:cacheprovider", str(folder)], plugins=[Show()])))`,
+      steps: [
+        "Lines 4-26: `SRC` holds a small test file, the part you would normally save as `test_math.py`; the rest of the example only runs it and reports.",
+        "Lines 10-11: `test_add` asserts that `add(2, 3)` equals 5, which holds, so it passes.",
+        "Lines 13-14: `test_wrong` asserts a false statement, so pytest marks it failed.",
+        "Lines 16-18: `pytest.raises` passes because `1 + \"a\"` raises `TypeError`.",
+        "Lines 20-22: `parametrize` makes two tests from one function, named after the row values.",
+        "Lines 24-25: `check_total` does not start with `test_`, so it never runs and never appears in the report.",
+        "Lines 28-35: a small plugin prints each test's outcome, and `pytest.main` returns 1 because one test failed.",
+      ],
+      output: `test_add passed
+test_wrong failed
+test_error passed
+test_cases[1-1-2] passed
+test_cases[0-5-5] passed
+1`,
+    },
+    exercises: [
+      'py-gap-testing-1',
+      'py-ptest-discovery-1',
+      'py-testing-predict-3',
+      'py-gap-testing-3',
+    ],
+  },
+  {
+    id: 'py_fixtures/1',
+    topicKeys: [Topic.PY_FIXTURES],
+    step: 1,
+    title: 'Pytest Fixtures',
+    idea: [
+      lines(
+        "A fixture is a function marked `@pytest.fixture` that prepares something a test needs: data, a file, a connection.",
+        "A test asks for it by naming it as a parameter, and pytest runs the fixture and passes in what it returned.",
+      ),
+      lines(
+        "By default every test gets a fresh copy, so tests cannot leak changes into each other.",
+        "`scope=\"module\"` or `scope=\"session\"` shares one instance across many tests, which suits slow setup such as a database connection.",
+      ),
+      lines(
+        "A fixture that uses `yield` instead of `return` also has cleanup: the code before `yield` is setup, the yielded value goes to the test, and the code after runs when the test is over, even if it failed.",
+        "Fixtures can request other fixtures, and a fixture placed in `conftest.py` is available to every test beside it.",
+        "Built-in fixtures include `tmp_path` for a temporary folder and `monkeypatch` for temporary changes.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import pytest
+
+@pytest.fixture
+def cart():                          # function scope: new for each test
+    items = []                       # setup
+    yield items                      # value handed to the test
+    items.clear()                    # cleanup, runs after the test
+
+@pytest.fixture(scope="module")
+def conn():                          # one shared instance per file
+    return connect()
+
+def test_add(cart, conn):            # request fixtures by parameter name
+    cart.append("x")
+    assert cart == ["x"]
+
+def test_file(tmp_path):             # built-in: a fresh temp folder
+    (tmp_path / "a.txt").write_text("hi")`,
+    },
+    pitfall: lines(
+      "Call a fixture by name as a parameter, never as a function: writing `cart()` in a test fails, and a fixture with a wider scope is shared, so a test that changes it affects the next one.",
+      "Keep mutable state in the default function scope, and give shared fixtures only read-only or reset-after-use data.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import pathlib, tempfile
+import pytest
+
+SRC = '''
+import pytest
+
+@pytest.fixture
+def shelf():
+    print("setup")
+    yield ["Dune"]
+    print("teardown")
+
+@pytest.fixture(scope="module")
+def conn():
+    print("connect")
+    return "db"
+
+def test_add(shelf, conn):
+    shelf.append("Emma")
+    assert len(shelf) == 2
+
+def test_fresh(shelf, conn):
+    assert shelf == ["Dune"]
+'''
+
+class Show:
+    def pytest_runtest_logreport(self, report):
+        if report.when == "call":
+            print(report.nodeid.split("::")[1], report.outcome)
+
+folder = pathlib.Path(tempfile.mkdtemp())
+(folder / "test_shelf.py").write_text(SRC)
+pytest.main(["-s", "-p", "no:terminal", "-p", "no:cacheprovider", str(folder)], plugins=[Show()])`,
+      steps: [
+        "Lines 4-24: `SRC` is the test file; the rest of the example runs it, with `-s` so the prints show.",
+        "Lines 7-11: `shelf` prints \"setup\", hands a one-book list to the test, then prints \"teardown\" afterwards.",
+        "Lines 13-16: `conn` has module scope, so \"connect\" prints once for the whole file.",
+        "Lines 18-20: `test_add` receives the fixtures by name and appends a second book to its own list.",
+        "Lines 22-23: `test_fresh` gets a brand new `shelf`, so it sees one book, not two.",
+        "The output shows \"connect\" once, and \"setup\" and \"teardown\" around each test.",
+      ],
+      output: `connect
+setup
+test_add passed
+teardown
+setup
+test_fresh passed
+teardown`,
+    },
+    exercises: [
+      'py-fix-whatis-1',
+      'py-fix-predict-1',
+      'py-testing-parsons-4',
+      'py-fix-cloze-1',
+    ],
+  },
+  {
+    id: 'py_mocking/1',
+    topicKeys: [Topic.PY_MOCKING],
+    step: 1,
+    title: 'Mocking & Patching',
+    idea: [
+      lines(
+        "A mock is a stand-in object from `unittest.mock` that you put in place of a real collaborator such as an API client or the clock.",
+        "Any attribute you read or method you call on a `Mock` exists and records the call.",
+      ),
+      lines(
+        "`m.return_value = x` sets what calling `m()` returns, and `m.side_effect = [a, b]` returns `a` then `b`, while `m.side_effect = SomeError(...)` makes the call raise.",
+        "Afterwards check the calls with `m.assert_called_once_with(args)`, `m.call_count` and `m.call_args`.",
+      ),
+      lines(
+        "`patch(\"module.name\")` swaps a real name for a mock for the length of a `with` block or a decorated test, then puts the real one back.",
+        "Patch the name where it is looked up, not where it was defined.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from unittest.mock import Mock, patch
+
+m = Mock()
+m.get.return_value = {"id": 1}        # m.get(...) returns this
+m.get.side_effect = [10, ValueError]  # first call 10, then raises
+m.get("a")
+m.get.assert_called_once_with("a")    # fails if args or count differ
+m.get.call_count, m.get.call_args     # how it was called
+
+with patch("app.service.requests.get") as fake:   # name as used by app.service
+    fake.return_value.status_code = 200
+    run()                                         # code under test sees the fake`,
+    },
+    pitfall: lines(
+      "`patch` must name the place the code under test looks the name up: if `app.py` does `from time import sleep`, patch `app.sleep`, not `time.sleep`.",
+      "Patching the original module leaves `app.py` holding its own reference to the real function.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import time
+from unittest.mock import Mock, patch
+
+def total_due(client, member):
+    return sum(client.fines(member))
+
+client = Mock()
+client.fines.return_value = [2, 5]
+print(total_due(client, "ann"))
+client.fines.assert_called_once_with("ann")
+print(client.fines.call_count, client.fines.call_args.args)
+
+client.fines.side_effect = [[1], ConnectionError("down")]
+print(total_due(client, "bo"))
+try:
+    total_due(client, "cy")
+except ConnectionError as err:
+    print("raised", err)
+
+with patch("time.sleep") as fake:
+    time.sleep(10)
+    print(fake.call_args.args, fake.called)`,
+      steps: [
+        "Lines 8-9: `return_value` makes `client.fines(...)` answer \"[2, 5]\", so `total_due` adds them to 7.",
+        "Line 10: the assertion passes silently because `fines` was called once with \"ann\".",
+        "Line 11: the mock recorded one call and its arguments.",
+        "Lines 13-14: with a list as `side_effect`, the first call returns `[1]`.",
+        "Lines 15-18: the second call raises the `ConnectionError`, which the example catches.",
+        "Lines 20-22: inside the `with`, `time.sleep` is a mock, so the call returns at once and is recorded; afterwards the real `sleep` is back.",
+      ],
+      output: `7
+1 ('ann',)
+1
+raised down
+(10,) True`,
+    },
+    exercises: [
+      'py-mock-1',
+      'py-testing-predict-1',
+      'py-mock-cloze-1',
+      'py-mock-3',
+    ],
+  },
+  {
+    id: 'py_pydantic/1',
+    topicKeys: [Topic.PY_PYDANTIC],
+    step: 1,
+    title: 'Pydantic Data Validation',
+    idea: [
+      lines(
+        "A pydantic model is a class that inherits `BaseModel` and declares fields with type hints.",
+        "Creating an object validates the data against those hints, so bad input fails at the edge of your program instead of deep inside it.",
+      ),
+      lines(
+        "Validation also converts: for an `int` field the text `\"41\"` becomes `41`.",
+        "Data that cannot be converted raises `ValidationError`, whose `.errors()` lists the field, the kind of problem and a message for each failure.",
+      ),
+      lines(
+        "`Field(ge=0, max_length=20)` adds limits, and a default makes a field optional: `tags: list[str] = []`, `note: str | None = None`.",
+        "`m.model_dump()` gives a dict, `m.model_dump_json()` gives JSON text, and `Model.model_validate(data)` builds a model from a dict.",
+        "`@field_validator(\"name\")` adds a custom check for one field.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pydantic import BaseModel, Field, ValidationError
+
+class User(BaseModel):
+    email: str                       # required
+    age: int = Field(ge=0)           # required, at least 0
+    tags: list[str] = []             # optional, own copy per object
+    note: str | None = None          # optional
+
+u = User(email="a@x.org", age="41")  # "41" is converted to 41
+u.model_dump()                       # {'email': ..., 'age': 41, ...}
+User.model_validate({"email": "b@x.org", "age": 3})
+
+try:
+    User(age=-1)
+except ValidationError as e:
+    e.errors()                       # one entry per failing field`,
+    },
+    pitfall: lines(
+      "By default pydantic converts rather than rejects, so `age=\"41\"` quietly becomes `41` and `\"true\"` becomes `True`.",
+      "Use `strict=True` on the field or model when a wrong type should be an error, and remember that assigning to a field later is not validated unless you ask for it.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from pydantic import BaseModel, Field, ValidationError
+
+class Member(BaseModel):
+    email: str
+    age: int = Field(ge=0)
+    tags: list[str] = []
+
+m = Member(email="a@x.org", age="41")
+print(m)
+print(m.age + 1, m.model_dump())
+try:
+    Member(email="b@x.org", age=-1)
+except ValidationError as e:
+    print(e.error_count(), e.errors()[0]["loc"])
+try:
+    Member(age=3)
+except ValidationError as e:
+    print(e.errors()[0]["type"])`,
+      steps: [
+        "Lines 3-6: three fields; \"email\" and \"age\" are required, \"tags\" has a default, and \"age\" must be at least 0.",
+        "Line 8: the text \"41\" is converted to the integer 41 during validation.",
+        "Line 10: because `age` is a real `int`, adding 1 gives 42, and `model_dump` returns the fields as a plain dict.",
+        "Lines 11-14: `-1` breaks the `ge=0` rule, so one error is collected and its location is the field `age`.",
+        "Lines 15-18: leaving out `email` is reported with the kind `missing`.",
+      ],
+      output: `email='a@x.org' age=41 tags=[]
+42 {'email': 'a@x.org', 'age': 41, 'tags': []}
+1 ('age',)
+missing`,
+    },
+    exercises: [
+      'py-pydantic-1',
+      'py-pydantic-predict-11',
+      'py-pydantic-parsons-11',
+      'py-pydantic-cloze-6',
+      'py-pydantic-5',
+    ],
+  },
+  {
+    id: 'py_http/1',
+    topicKeys: [Topic.PY_HTTP],
+    step: 1,
+    title: 'HTTP Clients (requests, httpx)',
+    idea: [
+      lines(
+        "`requests` is the everyday HTTP client: `requests.get(url, params={...}, timeout=5)` sends a GET, and `requests.post(url, json={...})` sends a JSON body and sets the content type.",
+        "`httpx` has almost the same API and adds async support and HTTP/2.",
+      ),
+      lines(
+        "The returned response has `.status_code`, `.ok`, `.text`, `.headers` and `.json()`.",
+        "A 404 or 500 is not an error to Python: the call succeeds and only `r.raise_for_status()` turns a 4xx or 5xx into an `HTTPError`.",
+      ),
+      lines(
+        "Always pass `timeout`, because the default is to wait forever.",
+        "A `Session` (or an httpx `Client`) reuses the connection and shares headers such as `Authorization` across calls, and a retry policy can be mounted on it for transient failures.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import requests
+
+r = requests.get(url, params={"q": "x"}, timeout=5)   # always a timeout
+r.raise_for_status()                # 4xx / 5xx -> requests.HTTPError
+data = r.json()                     # parse the JSON body
+r.status_code, r.ok
+
+requests.post(url, json={"a": 1}, timeout=5)   # JSON body + content type
+
+with requests.Session() as s:       # reuse connection, share headers
+    s.headers["Authorization"] = "Bearer TOKEN"
+    s.get(url, timeout=5)`,
+    },
+    pitfall: lines(
+      "A failing status does not raise by itself: `requests.get(url)` happily returns a 500 response, and `r.json()` then parses the error page or fails.",
+      "Call `r.raise_for_status()` before you use the body, and pass a `timeout` so a stalled server cannot hang the program.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import io
+import requests
+
+def reply(code):
+    r = requests.Response()
+    r.status_code = code
+    r.raw = io.BytesIO(b'{"title": "Dune"}')
+    r.url = "https://api.example.com/books"
+    return r
+
+ok, gone = reply(200), reply(404)
+print(ok.status_code, ok.ok, ok.json()["title"])
+print(gone.ok)
+try:
+    gone.raise_for_status()
+except requests.HTTPError as e:
+    print("raised", e.response.status_code)
+req = requests.Request("POST", "https://api.example.com/books", json={"title": "Emma"}, params={"v": 2}).prepare()
+print(req.url, req.headers["Content-Type"], req.body)`,
+      steps: [
+        "Lines 4-9: `reply` builds a response by hand so the example runs without a network; `requests.get` would return the same kind of object.",
+        "Lines 11-12: a 200 response is `ok`, and `.json()` parses its body.",
+        "Line 13: a 404 response is not `ok`, yet creating it raised nothing.",
+        "Lines 14-17: only `raise_for_status()` turns the 404 into an `HTTPError`, which carries the response.",
+        "Lines 18-19: `.prepare()` builds the request without sending it: `params` end up in the URL, and `json=` becomes a JSON body with its content type.",
+      ],
+      output: `200 True Dune
+False
+raised 404
+https://api.example.com/books?v=2 application/json b'{"title": "Emma"}'`,
+    },
+    exercises: [
+      'py-http-1',
+      'py-http-parsons-3',
+      'py-http-3',
+      'py-http-predict-1',
+    ],
+  },
+  {
+    id: 'py_security/1',
+    topicKeys: [Topic.PY_SECURITY],
+    step: 1,
+    title: 'Security Primitives (hashing, tokens, HMAC)',
+    idea: [
+      lines(
+        "A hash such as `hashlib.sha256(data).hexdigest()` turns bytes into a fixed-size fingerprint: the same input always gives the same digest, and you cannot work back to the input.",
+        "Use SHA-256 or newer; MD5 and SHA-1 are broken for security.",
+      ),
+      lines(
+        "A plain fast hash is wrong for passwords, because attackers can try billions per second.",
+        "Hash passwords with a random salt and a deliberately slow function such as `hashlib.pbkdf2_hmac`, or a library such as bcrypt or argon2.",
+      ),
+      lines(
+        "`hmac.new(key, message, hashlib.sha256)` signs a message with a secret key, so only someone with the key can make a matching tag.",
+        "Compare tags with `hmac.compare_digest(a, b)`, which takes the same time whatever the input.",
+        "Generate tokens, salts and keys with `secrets` (`token_urlsafe`, `token_hex`, `token_bytes`), never with `random`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import hashlib, hmac, secrets
+
+hashlib.sha256(b"data").hexdigest()            # fingerprint of bytes
+salt = secrets.token_bytes(16)                 # random salt
+hashlib.pbkdf2_hmac("sha256", b"pw", salt, 600_000)   # slow, salted
+
+tag = hmac.new(key, msg, hashlib.sha256).hexdigest()  # signed with a key
+hmac.compare_digest(tag, other)                # safe comparison
+
+secrets.token_urlsafe(32)                      # unguessable token
+secrets.choice(["a", "b", "c"])                # secure random pick`,
+    },
+    pitfall: lines(
+      "`random` is a predictable generator meant for simulations, so a token or password reset code made with `random.randint` can be guessed.",
+      "Use the `secrets` module for anything an attacker must not be able to predict.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import hashlib, hmac, secrets
+
+digest = hashlib.sha256(b"hello").hexdigest()
+print(digest[:12], len(digest))
+key = b"server-key"
+tag = hmac.new(key, b"user=7", hashlib.sha256).hexdigest()
+print(hmac.compare_digest(tag, hmac.new(key, b"user=7", hashlib.sha256).hexdigest()))
+print(hmac.compare_digest(tag, hmac.new(key, b"user=8", hashlib.sha256).hexdigest()))
+salt = b"fixed-salt"
+key1 = hashlib.pbkdf2_hmac("sha256", b"pw", salt, 1000)
+print(len(key1), key1 == hashlib.pbkdf2_hmac("sha256", b"pw", salt, 1000))
+print(len(secrets.token_hex(16)), secrets.token_urlsafe(8) != secrets.token_urlsafe(8))`,
+      steps: [
+        "Lines 3-4: a SHA-256 digest is 64 hex characters, and the first twelve are the same on every run.",
+        "Lines 5-7: signing the same message with the same key gives the same tag, and `compare_digest` confirms it.",
+        "Line 8: changing the message to `user=8` gives a different tag, so the check fails.",
+        "Lines 9-11: key stretching with the same password and salt is repeatable, and returns 32 bytes; in real code the salt comes from `secrets.token_bytes(16)` and the count is far higher.",
+        "Line 12: `token_hex(16)` is 32 hex characters, and two `token_urlsafe` calls differ.",
+      ],
+      output: `2cf24dba5fb0 64
+True
+False
+32 True
+32 True`,
+    },
+    exercises: [
+      'py-security-1',
+      'py-security-predict-2',
+      'py-security-cloze-10',
+      'py-security-4',
+    ],
+  },
+  {
+    id: 'py_threading/1',
+    topicKeys: [Topic.PY_THREADING],
+    step: 1,
+    title: 'Threading & Synchronization',
+    idea: [
+      lines(
+        "A thread runs a function alongside the rest of the program.",
+        "`t = Thread(target=fn, args=(x,))` creates one, `t.start()` begins it, and `t.join()` waits for it to finish.",
+        "Because of the GIL only one thread runs Python code at a time, so threads speed up programs that wait on files or the network, not ones that crunch numbers.",
+      ),
+      lines(
+        "Threads share memory, so two threads updating the same value can interleave: `count += 1` is a read, an add and a write, and updates can be lost.",
+        "A `Lock` fixes that: `with lock:` lets one thread at a time into the block.",
+      ),
+      lines(
+        "`queue.Queue` passes work between threads safely with `put` and `get`.",
+        "`Event` lets one thread signal others with `set()` and `wait()`.",
+        "A daemon thread, `Thread(daemon=True)`, does not keep the program alive at exit.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import threading
+from queue import Queue
+
+lock = threading.Lock()
+count = 0
+
+def work(n):
+    global count
+    for _ in range(n):
+        with lock:                  # one thread at a time in here
+            count += 1
+
+t = threading.Thread(target=work, args=(1000,))
+t.start()                           # runs alongside
+t.join()                            # wait until it ends
+
+jobs = Queue()
+jobs.put("task")                    # thread-safe hand-off
+jobs.get()`,
+    },
+    pitfall: lines(
+      "Shared state needs a lock: without `with lock:` around `count += 1`, several threads can read the same old value and the total comes out too low.",
+      "Also call `join()`: without it the main thread can print or exit before the workers are done.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import threading
+
+count = 0
+lock = threading.Lock()
+done = []
+
+def work(name, n):
+    global count
+    for _ in range(n):
+        with lock:
+            count += 1
+    done.append(name)
+
+threads = [threading.Thread(target=work, args=(f"t{i}", 1000)) for i in range(4)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+print(count, sorted(done))`,
+      steps: [
+        "Lines 7-12: each worker adds 1 to the shared \"count\" a thousand times, taking the lock around every update, then records its name.",
+        "Line 14: four threads are created but nothing runs yet.",
+        "Lines 15-16: `start()` lets all four run at once.",
+        "Lines 17-18: `join()` makes the main thread wait for every worker.",
+        "Line 19: the lock made each update safe, so the total is exactly 4000; `sorted` gives the names a fixed order because the threads can finish in any order.",
+      ],
+      output: `4000 ['t0', 't1', 't2', 't3']`,
+    },
+    exercises: [
+      'py-thread-beg-what',
+      'py-concurrency-parsons-1',
+      'py-concurrency-cloze-1',
+      'py-concurrency-predict-3',
+    ],
+  },
+  {
+    id: 'py_futures/1',
+    topicKeys: [Topic.PY_FUTURES],
+    step: 1,
+    title: 'Parallelism (futures, multiprocessing)',
+    idea: [
+      lines(
+        "`concurrent.futures` gives a pool of workers so you do not manage threads yourself.",
+        "`ThreadPoolExecutor` suits work that waits, such as network calls, and `ProcessPoolExecutor` runs separate processes for CPU-heavy work, avoiding the GIL.",
+      ),
+      lines(
+        "`pool.map(fn, items)` runs `fn` on every item and returns the results in input order.",
+        "`pool.submit(fn, x)` starts one job and returns a `Future`; `fut.result()` waits for the answer.",
+        "`as_completed(futures)` hands back futures in the order they finish.",
+      ),
+      lines(
+        "Using the pool in a `with` block waits for all jobs and shuts it down.",
+        "If a job raises, nothing happens until you ask for the result: `fut.result()` (or reading from `map`) re-raises the error in your code.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from concurrent.futures import ThreadPoolExecutor, as_completed
+
+with ThreadPoolExecutor(max_workers=4) as pool:    # waits at the end
+    out = list(pool.map(fn, items))                # results in input order
+    fut = pool.submit(fn, x)                       # one job -> Future
+    fut.result()                                   # blocks; re-raises errors
+    for done in as_completed([fut]):               # in order of finishing
+        done.result()
+
+# CPU-bound: ProcessPoolExecutor, with the entry-point guard
+if __name__ == "__main__":
+    with ProcessPoolExecutor() as pool:
+        list(pool.map(fn, items))`,
+    },
+    pitfall: lines(
+      "An exception inside a job stays hidden until you call \`.result()\`, so a pool that never reads its futures fails silently.",
+      "Collect the futures, call \`.result()\` in a \`try\`, and handle the error where you can act on it.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def cube(n):
+    if n == 3:
+        raise ValueError("bad 3")
+    return n ** 3
+
+with ThreadPoolExecutor(max_workers=3) as pool:
+    print(list(pool.map(cube, [1, 2, 4])))
+    jobs = [pool.submit(cube, n) for n in [2, 3, 5]]
+    for n, fut in zip([2, 3, 5], jobs):
+        try:
+            print(n, fut.result())
+        except ValueError as err:
+            print(n, "failed:", err)
+    print(sorted(f.result() for f in as_completed([pool.submit(cube, n) for n in (1, 6)])))`,
+      steps: [
+        "Line 9: `map` returns the cubes in input order, whichever worker finished first.",
+        "Line 10: `submit` starts three jobs at once and returns a future for each.",
+        "Lines 11-15: nothing failed visibly while the jobs ran; the `ValueError` from the job for 3 surfaces only when `result()` is called.",
+        "Line 16: `as_completed` yields futures as they finish, so `sorted` fixes the order before printing.",
+        "The `with` block ends only after every job is done.",
+      ],
+      output: `[1, 8, 64]
+2 8
+3 failed: bad 3
+5 125
+[1, 216]`,
+    },
+    exercises: [
+      'py-fut-beg-executor',
+      'py-concurrency-parsons-3',
+      'py-concurrency-cloze-3',
+      'py-concurrency-predict-1',
+    ],
+  },
+  {
+    id: 'py_async/1',
+    topicKeys: [Topic.PY_ASYNC],
+    step: 1,
+    title: 'Async/Await',
+    idea: [
+      lines(
+        "`async def` defines a coroutine function.",
+        "Calling it does not run the body; it returns a coroutine object, and the body runs only when something awaits it.",
+        "`asyncio.run(main())` starts the event loop and runs the top-level coroutine to the end.",
+      ),
+      lines(
+        "`await x` pauses the current coroutine until `x` is done and lets the loop run other coroutines meanwhile.",
+        "That makes async good at many waits at once, such as network calls: one thread, many tasks.",
+        "`asyncio.sleep(n)` waits without blocking the loop.",
+      ),
+      lines(
+        "`await asyncio.gather(a(), b())` runs coroutines concurrently and returns their results in the order you listed them.",
+        "`asyncio.create_task(coro)` starts one in the background and returns a task you can await later.",
+        "`async for` and `async with` are the awaiting versions of `for` and `with`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import asyncio
+
+async def fetch(x):                  # a coroutine function
+    await asyncio.sleep(0.1)         # pause, loop runs others
+    return x * 2
+
+async def main():
+    one = await fetch(1)                              # run it, wait for it
+    both = await asyncio.gather(fetch(2), fetch(3))   # concurrent; ordered list
+    task = asyncio.create_task(fetch(4))              # start in the background
+    return one, both, await task
+
+asyncio.run(main())                  # start the event loop`,
+    },
+    pitfall: lines(
+      "Calling a coroutine without \`await\` does nothing: \`fetch(1)\` only creates a coroutine object, Python warns that it was never awaited, and the work never happens.",
+      "Likewise a blocking call such as \`time.sleep(1)\` inside a coroutine freezes the whole loop, so use \`await asyncio.sleep(1)\`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import asyncio
+
+order = []
+
+async def fetch(name, delay):
+    await asyncio.sleep(delay)
+    order.append(name)
+    return name.upper()
+
+async def main():
+    first = fetch("a", 0)
+    print(type(first).__name__)
+    print(await first)
+    results = await asyncio.gather(fetch("slow", 0.05), fetch("fast", 0.01))
+    print(results)
+    print(order)
+
+asyncio.run(main())`,
+      steps: [
+        "Line 11: calling \`fetch\` runs nothing and returns a coroutine object.",
+        "Line 12: its type is \`coroutine\`.",
+        "Line 13: \`await\` runs it to the end, so \"a\" is recorded and \`A\` is printed.",
+        "Line 14: \`gather\` starts both coroutines at once; \"fast\" finishes first, then \"slow\".",
+        "Line 15: results come back in the order they were listed, not the order they finished.",
+        "Line 16: \`order\` shows the real finishing order: \"a\", then \"fast\", then \"slow\".",
+      ],
+      output: `coroutine
+A
+['SLOW', 'FAST']
+['a', 'fast', 'slow']`,
+    },
+    exercises: [
+      'py-gap-async-1',
+      'py-async-predict-1',
+      'py-async-mcq-event-loop',
+      'py-async-predict-2',
+    ],
+  },
+  {
+    id: 'py_shell_os/1',
+    topicKeys: [Topic.PY_SHELL_OS],
+    step: 1,
+    title: 'Shell & OS Interop (subprocess, shutil, tempfile)',
+    idea: [
+      lines(
+        "`subprocess.run([\"cmd\", \"arg\"])` runs another program and waits for it.",
+        "Pass the command as a list, add `capture_output=True, text=True` to get `result.stdout` as a string, and `check=True` to raise `CalledProcessError` on a non-zero exit code.",
+        "`result.returncode` holds the exit code, where 0 means success.",
+      ),
+      lines(
+        "`shutil` works on files and folders: `copy`, `move`, `rmtree` and `which(\"git\")` to find a program.",
+        "`tempfile.TemporaryDirectory()` gives a scratch folder that is deleted when its `with` block ends.",
+        "`os.environ` holds environment variables and `os.getcwd()` the current folder.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import subprocess, shutil, tempfile, pathlib
+
+res = subprocess.run(["ls", "-l"], capture_output=True, text=True, check=True)
+res.stdout, res.returncode        # output text, exit code (0 = ok)
+
+with tempfile.TemporaryDirectory() as tmp:   # deleted after the block
+    src = pathlib.Path(tmp) / "a.txt"
+    src.write_text("hi")
+    shutil.copy(src, pathlib.Path(tmp) / "b.txt")
+
+shutil.which("git")               # path to a program, or None`,
+    },
+    pitfall: lines(
+      "Never build a command string from user input and run it with \`shell=True\`: input such as \`x; rm -rf ~\` becomes part of the command.",
+      "Pass a list of arguments with the default \`shell=False\`, and each item reaches the program as one value that the shell never interprets.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import subprocess, shutil, tempfile, pathlib, sys
+
+res = subprocess.run([sys.executable, "-c", "print('hi')"], capture_output=True, text=True, check=True)
+print(repr(res.stdout), res.returncode)
+try:
+    subprocess.run([sys.executable, "-c", "raise SystemExit(3)"], check=True)
+except subprocess.CalledProcessError as e:
+    print("failed with", e.returncode)
+with tempfile.TemporaryDirectory() as tmp:
+    src = pathlib.Path(tmp) / "a.txt"
+    src.write_text("hello")
+    shutil.copy(src, pathlib.Path(tmp) / "b.txt")
+    print(sorted(p.name for p in pathlib.Path(tmp).iterdir()))
+print(pathlib.Path(tmp).exists())`,
+      steps: [
+        "Line 3: the command is a list; \`capture_output\` and \`text\` collect what the child printed as a string.",
+        "Line 4: the output includes the newline, and the exit code is 0.",
+        "Lines 5-8: the child exits with code 3, and \`check=True\` turns that into \`CalledProcessError\`, so the code is read from the error.",
+        "Lines 9-12: the temporary folder holds the file written and its copy.",
+        "Line 13: \`sorted\` fixes the listing order.",
+        "Line 14: the folder was removed when the \`with\` block ended.",
+      ],
+      output: `'hi\\n' 0
+failed with 3
+['a.txt', 'b.txt']
+False`,
+    },
+    exercises: [
+      'py-shell-predict-1',
+      'py-shell-parsons-3',
+      'py-shell-cloze-3',
+      'py-shell-6',
+      'py-shell-1',
+    ],
+  },
+  {
+    id: 'py_cli/1',
+    topicKeys: [Topic.PY_CLI],
+    step: 1,
+    title: 'CLI Tools & Config (argparse, click, dotenv)',
+    idea: [
+      lines(
+        "`argparse` turns command-line words into values.",
+        "Create `parser = ArgumentParser(description=...)`, register arguments with `parser.add_argument(...)`, then call `args = parser.parse_args()`.",
+        "A plain name such as `\"title\"` is a required positional argument, and `\"--days\"` is an option.",
+      ),
+      lines(
+        "`type=int` converts the text, `default=14` fills in when it is missing, and `action=\"store_true\"` makes a flag that is `True` only if given.",
+        "A bad value or a missing argument prints usage and exits with code 2, and `-h` writes the help for you.",
+        "`click` gives the same result with decorators on a function.",
+      ),
+      lines(
+        "Settings that change by machine, such as keys and URLs, belong in environment variables: `os.environ.get(\"KEY\", default)`.",
+        "`dotenv.load_dotenv()` reads a `.env` file into `os.environ` first, and the `.env` file stays out of git.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import argparse, os
+
+parser = argparse.ArgumentParser(description="Lend books")
+parser.add_argument("title")                          # required positional
+parser.add_argument("--days", type=int, default=14)   # option, converted to int
+parser.add_argument("-v", "--verbose", action="store_true")   # flag
+
+args = parser.parse_args()          # reads sys.argv
+args.title, args.days, args.verbose
+
+os.environ.get("API_KEY", "")       # config from the environment
+# from dotenv import load_dotenv; load_dotenv()   # fill it from .env`,
+    },
+    pitfall: lines(
+      "Everything on the command line is text until you say otherwise, so \`--days 7\` without \`type=int\` gives the string \`\"7\"\` and \`args.days + 1\` fails.",
+      "Give each numeric option a \`type\`, and use \`os.environ.get\` instead of \`os.environ[...]\` for settings that may be missing.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import argparse, os
+
+parser = argparse.ArgumentParser(description="Lend books")
+parser.add_argument("title")
+parser.add_argument("--days", type=int, default=14)
+parser.add_argument("-v", "--verbose", action="store_true")
+args = parser.parse_args(["Dune", "--days", "7", "-v"])
+print(args.title, args.days + 1, args.verbose)
+print(parser.parse_args(["Emma"]))
+try:
+    parser.parse_args(["Emma", "--days", "x"])
+except SystemExit as e:
+    print("exit", e.code)
+os.environ["LOAN_DAYS"] = "21"
+print(int(os.environ.get("LOAN_DAYS", 14)), os.environ.get("MISSING", "none"))`,
+      steps: [
+        "Lines 3-6: one positional argument, an integer option with a default, and a flag.",
+        "Line 7: \`parse_args\` is given a list here so the example does not need a real command line; normally it reads \`sys.argv\`.",
+        "Line 8: \`--days 7\` was converted to the integer 7, so adding 1 works, and \`-v\` made the flag \`True\`.",
+        "Line 9: with only a title, \`days\` falls back to 14 and \`verbose\` stays \`False\`.",
+        "Lines 10-13: \`x\` cannot be converted to \`int\`, so argparse prints its usage message and exits with code 2, which the example catches.",
+        "Lines 14-15: an environment value is always text, so it is converted with \`int\`, and a missing name returns the default.",
+      ],
+      output: `Dune 8 True
+Namespace(title='Emma', days=14, verbose=False)
+exit 2
+21 none`,
+    },
+    exercises: [
+      'py-cli-1',
+      'py-cli-predict-1',
+      'py-cli-2',
+      'py-cli-6',
+    ],
+  },
+  {
+    id: 'py_packaging/1',
+    topicKeys: [Topic.PY_PACKAGING],
+    step: 1,
+    title: 'Packaging & Environments (venv, pyproject, uv)',
+    idea: [
+      lines(
+        "A virtual environment, `python -m venv .venv`, is a private folder of installed packages for one project.",
+        "Each project gets its own versions, and nothing is installed into the system Python.",
+        "Activate it, or run its `python` directly, before you `pip install`.",
+      ),
+      lines(
+        "`pyproject.toml` is the one file that describes a project: `[project]` holds the name, version, `requires-python` and `dependencies`, and other tables such as `[tool.pytest.ini_options]` configure tools.",
+        "`[project.scripts]` maps a command name to `module:function`, so installing the project creates that command.",
+      ),
+      lines(
+        "`pip install -e .` installs your project in editable mode, so changes to the code apply at once.",
+        "`uv` is a very fast installer and environment manager: `uv venv`, `uv add requests` and `uv sync`.",
+        "A lockfile such as `uv.lock` records the exact versions that were installed, while `pyproject.toml` states the ranges you accept.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# shell
+python -m venv .venv         # create the environment
+source .venv/bin/activate    # use it (Windows: .venv\\Scripts\\activate)
+pip install -e .             # install this project, editable
+uv add requests              # or: add a dependency with uv
+
+# pyproject.toml
+[project]
+name = "loan-tool"
+version = "0.3.0"
+requires-python = ">=3.10"
+dependencies = ["requests>=2.31"]     # ranges you accept
+
+[project.scripts]
+loans = "loan_tool.cli:main"          # creates the \`loans\` command`,
+    },
+    pitfall: lines(
+      "\`pyproject.toml\` holds loose ranges such as \`requests>=2.31\`, so two installs on different days can get different versions.",
+      "Commit the lockfile as well, and install from it in deployments, so everyone runs the exact versions you tested.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import tomllib, venv, tempfile, pathlib
+
+text = """
+[project]
+name = "loan-tool"
+version = "0.3.0"
+requires-python = ">=3.10"
+dependencies = ["requests>=2.31", "click~=8.1"]
+
+[project.scripts]
+loans = "loan_tool.cli:main"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+"""
+cfg = tomllib.loads(text)
+proj = cfg["project"]
+print(proj["name"], proj["version"], len(proj["dependencies"]))
+module, func = proj["scripts"]["loans"].split(":")
+print(module, func)
+print(list(cfg["tool"]))
+with tempfile.TemporaryDirectory() as tmp:
+    venv.create(tmp)
+    print((pathlib.Path(tmp) / "pyvenv.cfg").exists())`,
+      steps: [
+        "Lines 3-15: a small \`pyproject.toml\` as text; the table headers decide where each key lives.",
+        "Line 17: \`[project]\` becomes \`cfg[\"project\"]\`, whose dependencies are a list of two requirement strings.",
+        "Lines 19-20: the command target splits at the colon into the module \`loan_tool.cli\` and its function \`main\`.",
+        "Line 21: \`[tool.pytest.ini_options]\` nests under \`tool\`, the home for each tool's settings.",
+        "Lines 22-24: \`venv.create\` builds a bare environment in a temporary folder; its \`pyvenv.cfg\` file marks it as one.",
+      ],
+      output: `loan-tool 0.3.0 2
+loan_tool.cli main
+['pytest']
+True`,
+    },
+    exercises: [
+      'py-packaging-1',
+      'py-packaging-6',
+      'py-packaging-5',
+      'py-packaging-predict-1',
+    ],
+  },
 ];
