@@ -628,4 +628,1028 @@ returned 75
       'pcpp-dec-3',
     ],
   },
+  {
+    id: 'py_type_hints/1',
+    topicKeys: [Topic.PY_TYPE_HINTS, Topic.PY_DATACLASSES],
+    step: 1,
+    title: 'Type Hints & Dataclasses',
+    idea: [
+      lines(
+        "A type hint labels what a name should hold: `n: int` for a parameter, `-> str` for a return value and `count: int = 0` for a variable.",
+        "Python keeps the labels but never checks them; a tool such as mypy, or a library that reads them, does.",
+      ),
+      lines(
+        "Modern hints use the built-in names: `list[int]`, `dict[str, int]` and `tuple[int, str]`.",
+        "`str | None` means a string or nothing (3.10+, the older spelling is `Optional[str]`), `Callable[[int], bool]` describes a function and `-> None` marks one that returns nothing.",
+      ),
+      lines(
+        "`@dataclass` turns a class of annotated fields into a record: it writes `__init__`, `__repr__` and `__eq__` for you.",
+        "A field can have a default, `qty: int = 0`, but a list or dict default needs `field(default_factory=list)` so each object gets its own.",
+        "`frozen=True` makes the record read-only and `asdict(obj)` turns it into a dict.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `def area(w: float, h: float) -> float:   # parameter and return hints
+    return w * h
+
+names: list[str] = []                    # variable hint
+nickname: str | None = None              # a string or nothing
+
+from dataclasses import dataclass, field, asdict
+
+@dataclass
+class Item:
+    sku: str                                       # required field
+    qty: int = 0                                   # field with a default
+    tags: list[str] = field(default_factory=list)  # a fresh list per object
+
+asdict(Item("a1"))    # {'sku': 'a1', 'qty': 0, 'tags': []}`,
+    },
+    pitfall: lines(
+      "A hint is a label, not a rule: nothing stops a call with the wrong type, and a dataclass does not convert or check its fields either.",
+      "`Item(\"a1\", qty=\"many\")` builds fine and keeps the string, so run a type checker or validate the input yourself.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from dataclasses import dataclass, field, asdict
+
+@dataclass
+class Book:
+    isbn: str
+    copies: int = 1
+    tags: list[str] = field(default_factory=list)
+
+def total(books: list[Book]) -> int:
+    return sum(b.copies for b in books)
+
+a = Book("111", 3)
+b = Book("222", copies="two")
+c = Book("111", 3)
+print(a)
+print(a == c, a is c)
+print(b.copies)
+print(total([a, c]))
+print(asdict(a))`,
+      steps: [
+        "Lines 3-7: `@dataclass` reads the three annotated fields and writes `__init__`, `__repr__` and `__eq__`; `tags` gets its own empty list for every `Book`.",
+        "Lines 9-10: the hints say `total` takes a list of `Book` and returns an `int`, and the body just sums `copies`.",
+        "Line 15: the generated `__repr__` shows the class name and every field.",
+        "Line 16: the generated `__eq__` compares field by field, so `a == c` is `True`, while `is` asks for the same object and gives `False`.",
+        "Line 17: `copies=\"two\"` breaks the `int` hint, yet Python stores it without complaint.",
+        "Lines 18-19: `total` adds `3 + 3`, and `asdict` returns the fields as a plain dict.",
+      ],
+      output: `Book(isbn='111', copies=3, tags=[])
+True False
+two
+6
+{'isbn': '111', 'copies': 3, 'tags': []}`,
+    },
+    exercises: [
+      'py-types-union-1',
+      'py-types-predict-1',
+      'py-type-hints-cloze-10',
+      'py-dataclasses-cloze-2',
+      'py-gap-typehints-2',
+    ],
+  },
+  {
+    id: 'py_comprehensions/1',
+    topicKeys: [Topic.PY_COMPREHENSIONS],
+    step: 1,
+    title: 'Comprehensions',
+    idea: [
+      lines(
+        "A comprehension builds a collection in one expression: `[expr for x in items]` is a list, `{expr for x in items}` a set and `{k: v for x in items}` a dict.",
+        "It reads as \"expr, for each x in items\", and it replaces a loop that starts from an empty list and calls `.append`.",
+      ),
+      lines(
+        "An `if` after the loop keeps only some items: `[x for x in items if x > 0]`.",
+        "To choose between two values instead, put `a if cond else b` in front of the `for`: `[\"hi\" if x else \"lo\" for x in items]`.",
+        "Extra `for` clauses nest, with the outer loop first.",
+      ),
+      lines(
+        "With round brackets, `(expr for x in items)` is a generator expression: it produces values one at a time and builds no list.",
+        "The loop variable stays inside the comprehension and does not leak into the code around it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `[f(x) for x in xs]                # list: one value per item
+[x for x in xs if keep(x)]        # filter: the if goes LAST
+[a if cond(x) else b for x in xs] # choose: if/else goes FIRST
+{x: f(x) for x in xs}             # dict
+{f(x) for x in xs}                # set: duplicates dropped
+[(i, j) for i in xs for j in ys]  # nested: outer loop first
+(f(x) for x in xs)                # generator: lazy, no list`,
+    },
+    pitfall: lines(
+      "The `if` at the end only filters, so `[x for x in xs if x > 0 else 0]` is a syntax error.",
+      "When every item should produce a value, move the whole conditional in front of the `for`: `[x if x > 0 else 0 for x in xs]`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `titles = ["dune", "emma", "ubik", "hamlet", "dune"]
+lengths = [len(t) for t in titles]
+long_ones = [t.title() for t in titles if len(t) > 4]
+tags = ["long" if len(t) > 4 else "short" for t in titles]
+initial = {t: t[0].upper() for t in titles}
+firsts = {t[0] for t in titles}
+even_slots = [(i, t) for i, t in enumerate(titles) if i % 2 == 0]
+print(lengths, long_ones)
+print(tags)
+print(initial)
+print(sorted(firsts), even_slots)`,
+      steps: [
+        "Line 2: one value per title, so the list has five lengths.",
+        "Line 3: the trailing `if` filters, so only \"hamlet\" is long enough to be kept and capitalised.",
+        "Line 4: `if`/`else` in front of the `for` picks a label for every title, so the list still has five items.",
+        "Line 5: a dict comprehension; the repeated key \"dune\" is written twice and ends up once.",
+        "Line 6: a set comprehension keeps one copy of each first letter.",
+        "Line 7: `enumerate` supplies the index, and the filter keeps positions 0, 2 and 4.",
+        "Lines 8-11: sets have no order, so `sorted` gives a stable print.",
+      ],
+      output: `[4, 4, 4, 6, 4] ['Hamlet']
+['short', 'short', 'short', 'long', 'short']
+{'dune': 'D', 'emma': 'E', 'ubik': 'U', 'hamlet': 'H'}
+['d', 'e', 'h', 'u'] [(0, 'dune'), (2, 'ubik'), (4, 'dune')]`,
+    },
+    exercises: [
+      'py-comp-what-is',
+      'py-comprehensions-predict-1',
+      'py-comprehensions-parsons-1',
+      'py-comprehensions-cloze-5',
+      'py-comp-squared-evens',
+    ],
+  },
+  {
+    id: 'py_generators/1',
+    topicKeys: [Topic.PY_GENERATORS],
+    step: 1,
+    title: 'Generators (yield, coroutines)',
+    idea: [
+      lines(
+        "A function with `yield` in its body is a generator function.",
+        "Calling it runs none of the body; it returns a generator object that produces values on demand.",
+        "`next(gen)` runs the body up to the next `yield`, hands out that value and pauses, keeping its local variables.",
+      ),
+      lines(
+        "A `for` loop, `list(gen)` or `sum(gen)` keep calling `next` for you.",
+        "When the body ends, the generator raises `StopIteration`, which a `for` loop treats as the signal to stop.",
+        "Because values are made one at a time, a generator can describe a huge or endless sequence without holding it in memory.",
+      ),
+      lines(
+        "`yield from other` hands out every value of another iterable.",
+        "`gen.send(x)` resumes the generator and makes the paused `yield` evaluate to `x`, which is how a generator works as a coroutine.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `def gen(n):
+    for i in range(n):
+        yield i * 2            # pause here, hand out the value
+
+g = gen(3)                     # nothing has run yet
+next(g)                        # 0: runs to the first yield
+list(g)                        # [2, 4]: the rest
+list(g)                        # []: already used up
+
+evens = (i * 2 for i in range(3))   # generator expression
+yield from items                    # inside a generator: hand out each item`,
+    },
+    pitfall: lines(
+      "A generator can be read only once: after it is exhausted, a second loop or `list()` over it gives nothing and raises no error.",
+      "Call the generator function again for a fresh one, or build a list when you need the values twice.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `def read_pages(total):
+    page = 1
+    while page <= total:
+        print("load", page)
+        yield page
+        page += 1
+
+pages = read_pages(2)
+print("created")
+print(next(pages))
+print(next(pages))
+print(list(pages))
+nums = (n * 2 for n in range(3))
+print(sum(nums), sum(nums))`,
+      steps: [
+        "Line 8: calling `read_pages(2)` only creates the generator, so nothing has printed yet.",
+        "Line 9: \"created\" is therefore the first line of output.",
+        "Line 10: the first `next` runs the body to the first `yield`, printing \"load 1\" and handing out `1`.",
+        "Line 11: the second `next` resumes after the `yield`, bumps `page`, and runs on to \"load 2\" and `2`.",
+        "Line 12: the third request finds the loop finished, so `list` gets nothing and prints `[]`.",
+        "Lines 13-14: the first `sum` uses up the generator expression (0 + 2 + 4), so the second `sum` starts from an empty one.",
+      ],
+      output: `created
+load 1
+1
+load 2
+2
+[]
+6 0`,
+    },
+    exercises: [
+      'pe1-gen-1',
+      'py-gen-predict-lazy',
+      'py-gen-parsons-1',
+      'pe1-gen-2',
+    ],
+  },
+  {
+    id: 'py_collections/1',
+    topicKeys: [Topic.PY_COLLECTIONS, Topic.PY_ITERTOOLS],
+    step: 1,
+    title: 'Collections & Itertools',
+    idea: [
+      lines(
+        "`collections` adds containers for common jobs.",
+        "`Counter(items)` counts how often each item occurs and `.most_common(n)` lists the top n, `defaultdict(list)` creates a missing key's value on first use, and `deque(maxlen=n)` keeps only the last n items.",
+        "`namedtuple(\"Point\", \"x y\")` makes a tuple whose fields also have names, and `ChainMap(top, base)` looks a key up in `top` first, then in `base`.",
+      ),
+      lines(
+        "`itertools` builds and combines iterators without making lists.",
+        "`chain(a, b)` joins iterables, `islice(it, start, stop)` takes a slice of any iterator, `product(a, b)` gives every pair and `combinations(xs, 2)` every unordered pair.",
+        "`groupby(items, key)` groups runs of equal keys.",
+      ),
+      lines(
+        "Most itertools functions return an iterator, so wrap them in `list()` to see the values.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from collections import Counter, defaultdict, deque, namedtuple, ChainMap
+from itertools import chain, islice, groupby, product
+
+Counter(xs).most_common(2)        # [(item, count), ...] biggest first
+groups = defaultdict(list)        # missing key starts as []
+groups[k].append(v)
+last3 = deque(xs, maxlen=3)       # drops the oldest on overflow
+Pt = namedtuple("Pt", "x y")
+ChainMap(overrides, defaults)     # lookups try overrides first
+
+list(chain(a, b))                 # a then b
+list(islice(it, 2, 5))            # items 2, 3, 4 of any iterator
+list(product(a, b))               # every (a_item, b_item) pair
+for key, run in groupby(sorted(xs)):   # runs of equal keys
+    list(run)`,
+    },
+    pitfall: lines(
+      "`groupby` only groups neighbours: equal items that are not next to each other end up in separate groups.",
+      "Sort by the same key first, `groupby(sorted(xs))`, when you want one group per value.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from collections import Counter, defaultdict, deque
+from itertools import chain, groupby, islice
+
+loans = ["Dune", "Emma", "Dune", "Ubik", "Emma", "Dune"]
+print(Counter(loans).most_common(2))
+by_letter = defaultdict(list)
+for t in loans:
+    by_letter[t[0]].append(t)
+print(dict(by_letter))
+print(list(deque(loans, maxlen=3)))
+print([k for k, g in groupby(loans)])
+print([(k, len(list(g))) for k, g in groupby(sorted(loans))])
+print(list(islice(chain(loans, "xy"), 5, 8)))`,
+      steps: [
+        "Line 5: `Counter` counts each title, and `most_common(2)` keeps the two biggest as (title, count) pairs.",
+        "Lines 6-9: the first `by_letter[\"D\"]` creates an empty list by itself, so `.append` works on a brand new key.",
+        "Line 10: with `maxlen=3` the deque keeps only the three newest loans.",
+        "Line 11: no two neighbours are equal, so `groupby` on the raw list makes six single-item groups, and the keys repeat.",
+        "Line 12: sorting first puts equal titles side by side, giving one group per title.",
+        "Line 13: `chain` joins the list and the letters \"x\", \"y\"; `islice` takes positions 5, 6 and 7 of that stream.",
+      ],
+      output: `[('Dune', 3), ('Emma', 2)]
+{'D': ['Dune', 'Dune', 'Dune'], 'E': ['Emma', 'Emma'], 'U': ['Ubik']}
+['Ubik', 'Emma', 'Dune']
+['Dune', 'Emma', 'Dune', 'Ubik', 'Emma', 'Dune']
+[('Dune', 3), ('Emma', 2), ('Ubik', 1)]
+['Dune', 'x', 'y']`,
+    },
+    exercises: [
+      'py-coll-types-overview',
+      'py-iter-what',
+      'py-collections-predict-10',
+      'py-itertools-predict-1',
+      'py-collections-parsons-4',
+    ],
+  },
+  {
+    id: 'py_functools/1',
+    topicKeys: [Topic.PY_FUNCTOOLS],
+    step: 1,
+    title: 'functools Deep Dive',
+    idea: [
+      lines(
+        "`@lru_cache` (or `@cache`) remembers a function's results by its arguments, so a repeat call returns the stored value without running the body.",
+        "`fn.cache_info()` shows the hits and misses.",
+      ),
+      lines(
+        "`partial(fn, a)` makes a new function with some arguments already filled in: `partial(int, base=2)` reads binary.",
+        "`reduce(fn, items, start)` folds a sequence into one value by applying `fn(acc, item)` left to right.",
+      ),
+      lines(
+        "When you write a decorator, `@wraps(fn)` on the inner function copies the original's `__name__` and docstring onto it.",
+        "`@cached_property`, `@singledispatch` and `@total_ordering` cover one-time attributes, type-based dispatch and comparison methods.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from functools import lru_cache, partial, reduce, wraps
+
+@lru_cache(maxsize=None)       # same arguments -> stored result
+def f(x): ...
+f.cache_info()                 # hits, misses, size
+
+to_bin = partial(int, base=2)  # fn with arguments pre-filled
+reduce(lambda acc, x: acc + x, xs, 0)   # fold left to right, start at 0
+
+def deco(fn):
+    @wraps(fn)                 # keep fn's name and docstring
+    def inner(*a, **k): return fn(*a, **k)
+    return inner`,
+    },
+    pitfall: lines(
+      "A cached function skips its body on a repeat call, so any side effect inside it, such as a print or a write, happens only the first time.",
+      "The arguments must be hashable too: passing a list raises `TypeError`, so pass a tuple instead.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from functools import lru_cache, partial, reduce
+
+calls = []
+
+@lru_cache(maxsize=None)
+def fine(days):
+    calls.append(days)
+    return days * 5
+
+print(fine(3), fine(3), fine(4))
+print(calls, fine.cache_info().hits)
+pay = partial(int, base=2)
+print(pay("101"))
+print(reduce(lambda acc, n: acc + n, [4, 5, 6], 100))`,
+      steps: [
+        "Lines 5-8: `lru_cache` wraps `fine`; the body records each real run in `calls`.",
+        "Line 10: `fine(3)` runs the body, the second `fine(3)` is answered from the cache, and `fine(4)` runs it again.",
+        "Line 11: the body ran only for 3 and 4, and the cache served one hit.",
+        "Lines 12-13: `partial(int, base=2)` is `int` with the base fixed, so `\"101\"` reads as binary five.",
+        "Line 14: `reduce` starts at 100 and adds 4, 5 and 6 in turn.",
+      ],
+      output: `15 15 20
+[3, 4] 1
+5
+115`,
+    },
+    exercises: [
+      'py-functools-1',
+      'py-functools-predict-1',
+      'py-functools-cloze-5',
+      'py-functools-3',
+    ],
+  },
+  {
+    id: 'py_context_managers/1',
+    topicKeys: [Topic.PY_CONTEXT_MANAGERS],
+    step: 1,
+    title: 'Context Managers',
+    idea: [
+      lines(
+        "`with thing as name:` runs setup, then the block, then cleanup, and the cleanup runs even if the block raises.",
+        "Files, locks and database connections use it so they are always released.",
+      ),
+      lines(
+        "A class becomes a context manager with two methods: `__enter__` runs first and its return value is what `as` binds, and `__exit__(kind, err, tb)` runs last.",
+        "If `__exit__` returns `True` the exception is swallowed, otherwise it carries on.",
+      ),
+      lines(
+        "Often it is shorter to write a generator and decorate it with `@contextmanager`: the code before `yield` is the setup, the yielded value is bound by `as`, and the code after is the cleanup.",
+        "`ExitStack` collects any number of context managers that you only know about at run time.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from contextlib import contextmanager, ExitStack
+
+class Res:
+    def __enter__(self):
+        return self                  # bound by "as"
+    def __exit__(self, kind, err, tb):
+        ...                          # always runs; return True to swallow err
+
+@contextmanager
+def res():
+    setup()
+    try:
+        yield value                  # the block runs here
+    finally:
+        cleanup()                    # runs even if the block raised
+
+with res() as v:
+    ...
+with ExitStack() as stack:
+    files = [stack.enter_context(open(p)) for p in paths]`,
+    },
+    pitfall: lines(
+      "In a `@contextmanager` generator, an error in the block is raised at the `yield`, so code after it is skipped unless it sits in a `finally`.",
+      "Put the cleanup in `try`/`finally` around the `yield`, or it will not run when the block fails.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from contextlib import contextmanager
+
+log = []
+
+@contextmanager
+def opened(label):
+    log.append("open " + label)
+    try:
+        yield label.upper()
+    finally:
+        log.append("close " + label)
+
+with opened("desk") as shown:
+    log.append("use " + shown)
+try:
+    with opened("lamp"):
+        raise KeyError("boom")
+except KeyError:
+    log.append("caught")
+print(log)`,
+      steps: [
+        "Lines 5-11: everything before `yield` is setup and everything in `finally` is cleanup; the yielded \"DESK\" is what `as` receives.",
+        "Lines 13-14: the block runs between \"open desk\" and \"close desk\", with `shown` holding the yielded value.",
+        "Lines 15-17: the `KeyError` is raised inside the block, and the generator sees it at the `yield`.",
+        "Lines 8-11: because the cleanup is in `finally`, \"close lamp\" is still recorded before the error moves on.",
+        "Lines 18-19: the `with` does not swallow the error, so the `except` runs and adds \"caught\" last.",
+      ],
+      output: `['open desk', 'use DESK', 'close desk', 'open lamp', 'close lamp', 'caught']`,
+    },
+    exercises: [
+      'py-ctx-what',
+      'py-ctx-exitstack-parsons',
+      'py-context-managers-cloze-3',
+      'py-ctx-vs-try-finally',
+      'py-context-managers-predict-1',
+    ],
+  },
+  {
+    id: 'py_magic_methods/1',
+    topicKeys: [Topic.PY_MAGIC_METHODS],
+    step: 1,
+    title: 'Magic Methods',
+    idea: [
+      lines(
+        "A magic (dunder) method is a method with double underscores on both sides that Python calls for you when an object meets a built-in feature.",
+        "You never call `__len__` yourself; you write `len(obj)` and Python calls it.",
+      ),
+      lines(
+        "`__repr__` gives the developer view and `__str__` the friendly one: `print(obj)` uses `__str__` and falls back to `__repr__`, while lists and the debugger show `__repr__`.",
+        "`__eq__` defines `==`, `__lt__` defines `<`, and `__add__` defines `+`.",
+      ),
+      lines(
+        "`__len__` powers `len(obj)` and truthiness, `__iter__` makes the object work in `for` and `in`, and `__getitem__` powers `obj[i]`.",
+        "`__call__` lets an instance be called like a function, and `__hash__` lets it be a dict key or set member.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class Box:
+    def __init__(self, items): self.items = list(items)
+    def __repr__(self): return f"Box({self.items!r})"   # repr(b), debugging
+    def __str__(self): return f"{len(self)} items"      # print(b), str(b)
+    def __len__(self): return len(self.items)           # len(b), bool(b)
+    def __iter__(self): return iter(self.items)         # for x in b, x in b
+    def __getitem__(self, i): return self.items[i]      # b[i]
+    def __add__(self, other): return Box(self.items + other.items)  # b + c
+    def __eq__(self, other): return self.items == other.items       # b == c
+    def __call__(self, x): return x in self.items       # b(x)`,
+    },
+    pitfall: lines(
+      "Only `__str__` is used by `print`, but a list prints its members with `__repr__`, so a class with just `__str__` shows an unhelpful `<Box object at 0x...>` inside a list.",
+      "Write `__repr__` first; `__str__` can be added later, and without it Python reuses `__repr__`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `class Shelf:
+    def __init__(self, *books):
+        self.books = list(books)
+    def __repr__(self):
+        return f"Shelf({self.books!r})"
+    def __str__(self):
+        return f"{len(self)} books"
+    def __len__(self):
+        return len(self.books)
+    def __iter__(self):
+        return iter(self.books)
+    def __add__(self, other):
+        return Shelf(*self.books, *other.books)
+
+shelf = Shelf("Dune", "Emma")
+more = shelf + Shelf("Ubik")
+print(shelf)
+print([shelf])
+print(len(more), "Emma" in more, bool(Shelf()))
+print(list(more))`,
+      steps: [
+        "Line 17: `print(shelf)` calls `__str__`, which builds its text from `len(self)`, so `__len__` runs too.",
+        "Line 18: a list shows its members with `__repr__`, so the output is the developer view.",
+        "Line 16: `+` calls `__add__`, which returns a new `Shelf` holding all three books.",
+        "Line 19: `\"Emma\" in more` has no `__contains__`, so Python walks `__iter__`; `bool(Shelf())` uses `__len__`, and a length of 0 is falsy.",
+        "Line 20: `list(more)` also walks `__iter__`.",
+      ],
+      output: `2 books
+[Shelf(['Dune', 'Emma'])]
+3 True False
+['Dune', 'Emma', 'Ubik']`,
+    },
+    exercises: [
+      'py-gap-magic-1',
+      'py-adv-magic-3',
+      'py-magic-methods-predict-1',
+      'py-magic-methods-parsons-8',
+    ],
+  },
+  {
+    id: 'py_oop_advanced/1',
+    topicKeys: [Topic.PY_OOP_ADVANCED],
+    step: 1,
+    title: 'Advanced OOP & ABCs',
+    idea: [
+      lines(
+        "A subclass can override a method, and `super().method()` calls the parent's version so you extend it instead of rewriting it.",
+        "That includes `super().__init__(...)`, which runs the parent's setup.",
+      ),
+      lines(
+        "An abstract base class, `class Base(ABC)`, marks methods with `@abstractmethod`.",
+        "You cannot create an instance of `Base`, or of a subclass that has not overridden every abstract method, so the class states a contract its children must meet.",
+      ),
+      lines(
+        "With several parents, Python searches classes in the method resolution order (MRO), which `Cls.__mro__` lists.",
+        "`@property` exposes a method as an attribute, and `@x.setter` lets assignment run code.",
+        "`__slots__` fixes the attribute names to save memory, and `__name` is mangled to `_Class__name`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from abc import ABC, abstractmethod
+
+class Base(ABC):
+    def __init__(self, n): self.n = n
+    @abstractmethod
+    def run(self): ...               # children must override
+
+class Child(Base):
+    def __init__(self, n, m):
+        super().__init__(n)          # run the parent's setup
+        self.m = m
+    def run(self):
+        return super().other() + 1   # call the parent's version
+
+    @property
+    def double(self): return self.n * 2   # child.double, no brackets
+
+Child.__mro__                        # search order for attributes`,
+    },
+    pitfall: lines(
+      "A subclass that defines its own `__init__` replaces the parent's, so the parent's attributes never exist unless it calls `super().__init__(...)`.",
+      "The error appears later, as an `AttributeError` on some method that expects them.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from abc import ABC, abstractmethod
+
+class Item(ABC):
+    def __init__(self, title):
+        self.title = title
+    @abstractmethod
+    def fee(self, days): ...
+
+class Book(Item):
+    def fee(self, days):
+        return days * 2
+
+class Dvd(Book):
+    def fee(self, days):
+        return super().fee(days) + 5
+
+try:
+    Item("x")
+except TypeError:
+    print("abstract")
+print(Book("Dune").fee(3), Dvd("Ubik").fee(3))
+print([c.__name__ for c in Dvd.__mro__])`,
+      steps: [
+        "Lines 6-7: \"fee\" is abstract, so `Item` is a contract, not something to create.",
+        "Lines 17-20: building `Item` raises `TypeError`, so \"abstract\" is printed.",
+        "Lines 9-11: `Book` overrides `fee`, and it inherits `__init__` from `Item`, which sets `title`.",
+        "Lines 13-15: `Dvd.fee` calls `super().fee(days)`, which is `Book`'s version (6), and adds 5.",
+        "Line 21: `3 * 2` is 6 for the book and `6 + 5` is 11 for the DVD.",
+        "Line 22: the MRO lists the classes searched, child first, then each parent, ending with `object`.",
+      ],
+      output: `abstract
+6 11
+['Dvd', 'Book', 'Item', 'ABC', 'object']`,
+    },
+    exercises: [
+      'py-oopadv-beg-1',
+      'pcpp-inherit-1',
+      'py-oop-cloze-5',
+      'py-oop-predict-2',
+    ],
+  },
+  {
+    id: 'py_metaclasses/1',
+    topicKeys: [Topic.PY_METACLASSES],
+    step: 1,
+    title: 'Metaclasses & Introspection',
+    idea: [
+      lines(
+        "In Python a class is an object too, and it was made by another class.",
+        "`type(obj)` gives an object's class, and `type(Cls)` gives the class of a class, which is `type` unless you say otherwise.",
+        "That class-of-a-class is the metaclass.",
+      ),
+      lines(
+        "`type(\"Name\", (Base,), {\"x\": 1})` builds a class at run time from a name, a tuple of parents and a dict of attributes.",
+        "`class C(metaclass=Meta)` builds `C` with your own metaclass, and a method such as `Meta.__init__(cls, name, bases, ns)` then runs once for every class created that way.",
+        "For simple hooks, `__init_subclass__` on the parent does the same job with less machinery.",
+      ),
+      lines(
+        "Introspection reads an object's structure: `Cls.__name__`, `Cls.__bases__`, `Cls.__mro__`, `obj.__dict__`, `hasattr`, `getattr(obj, \"x\", default)` and the `inspect` module.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class Meta(type):
+    def __init__(cls, name, bases, ns):   # runs for each class made with Meta
+        super().__init__(name, bases, ns)
+
+class C(metaclass=Meta): ...
+
+type(C)                          # Meta: the class of a class
+C.__bases__                      # (object,): the parents
+D = type("D", (C,), {"x": 1})    # a class made at run time
+hasattr(D, "x")                  # True
+getattr(D, "y", "none")          # 'none': default instead of an error
+D.__dict__.keys()                # the attributes D defines`,
+    },
+    pitfall: lines(
+      "A metaclass is not a parent class: `type(Dog)` is the class that built `Dog`, while `Dog.__bases__` lists the classes it inherits from.",
+      "`isinstance(Dog(), Animal)` follows inheritance, and `isinstance(Dog, Meta)` follows the metaclass.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `class Registry(type):
+    names = []
+    def __init__(cls, name, bases, ns):
+        super().__init__(name, bases, ns)
+        Registry.names.append(name)
+
+class Plugin(metaclass=Registry):
+    pass
+
+class Csv(Plugin):
+    pass
+
+Tiny = type("Tiny", (Csv,), {"size": 3})
+print(Registry.names)
+print(type(Csv).__name__, type(Csv()).__name__, Csv.__bases__[0].__name__)
+print(Tiny.size, isinstance(Tiny(), Plugin), isinstance(Csv, Registry))
+print(hasattr(Tiny, "size"), getattr(Tiny, "missing", "none"))`,
+      steps: [
+        "Lines 1-5: `Registry` is a metaclass, a subclass of `type`; its `__init__` runs each time a class is built with it.",
+        "Lines 7-11: `Plugin` and `Csv` are created, so their names are recorded; `Csv` gets the metaclass by inheriting from `Plugin`.",
+        "Line 13: `type(...)` with three arguments builds `Tiny` at run time, and the recorded names grow to include it.",
+        "Line 15: `type(Csv)` is `Registry`, `type(Csv())` is `Csv`, and `Csv.__bases__[0]` is its parent `Plugin`.",
+        "Line 16: `Tiny` inherits from `Plugin`, so the instance check is `True`, and `Csv` is itself an instance of `Registry`.",
+        "Line 17: `hasattr` finds the `size` that was passed in the dict, and `getattr` returns its default for a missing name.",
+      ],
+      output: `['Plugin', 'Csv', 'Tiny']
+Registry Csv Plugin
+3 True True
+True none`,
+    },
+    exercises: [
+      'py-meta-beg-1',
+      'py-meta-beg-3',
+      'py-meta-int-2',
+      'pcpp-meta-6',
+    ],
+  },
+  {
+    id: 'py_regex/1',
+    topicKeys: [Topic.PY_REGEX],
+    step: 1,
+    title: 'Regex',
+    idea: [
+      lines(
+        "The `re` module finds text by pattern.",
+        "Write patterns as raw strings, `r\"\\d+\"`, so backslashes reach the regex engine unchanged.",
+        "`\\d` is a digit, `\\w` a word character, `\\s` whitespace, `.` any character, and `+`, `*` and `?` repeat the item before them.",
+      ),
+      lines(
+        "`re.search(p, s)` finds the first match anywhere, `re.match` only at the start, `re.fullmatch` only if the whole string matches, and `re.findall` returns every match as a list.",
+        "A match object gives `.group()`, and parentheses capture parts: `(\\d+)` is group 1, and `(?P<id>\\d+)` names it.",
+      ),
+      lines(
+        "`re.sub(p, repl, s)` replaces matches.",
+        "Repeats are greedy and take as much as they can, so `<.+>` swallows too much; add `?`, as in `<.+?>`, to take as little as possible.",
+        "No match gives `None`, which is why you test before calling `.group()`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import re
+
+re.search(r"\\d+", s)          # first match anywhere, or None
+re.match(r"\\d+", s)           # must match at the START
+re.fullmatch(r"\\d+", s)       # the WHOLE string must match
+re.findall(r"id=(\\d+)", s)    # list of the captured groups
+m = re.search(r"(?P<n>\\d+)", s)
+m.group("n") if m else None   # None-check before using the match
+re.sub(r"\\s+", " ", s)        # replace every match
+re.findall(r"<.+?>", s)       # lazy: shortest match`,
+    },
+    pitfall: lines(
+      "`re.match` looks only at the start of the string, so `re.match(r\"\\d+\", \"id 42\")` is `None` even though a number is there.",
+      "Use `re.search` to look anywhere, and `re.fullmatch` to validate a whole value.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import re
+
+log = "err 404 at /home; err 500 at /api; ok 200 at /"
+print(re.match(r"\\d+", log))
+print(re.search(r"\\d+", log).group())
+print(re.findall(r"err (\\d+)", log))
+m = re.search(r"(?P<code>\\d+) at (?P<path>/\\w*)", log)
+print(m["code"], m.group("path"))
+print(re.sub(r"\\d+", "N", log))
+print(bool(re.fullmatch(r"\\d+", "404x")), re.findall(r"<.+?>", "<a><b>"))`,
+      steps: [
+        "Line 4: the string starts with \"err\", so `match` finds no digits at the start and returns `None`.",
+        "Line 5: `search` scans on and finds \"404\"; `.group()` returns the matched text.",
+        "Line 6: `findall` with one group returns just the captured digits of each \"err\" entry, so \"ok 200\" is left out.",
+        "Lines 7-8: the named groups pick the first code and the path after it.",
+        "Line 9: `sub` replaces every run of digits with \"N\".",
+        "Line 10: `fullmatch` fails because of the trailing \"x\", and the lazy `.+?` stops at the first `>`, giving two tags.",
+      ],
+      output: `None
+404
+['404', '500']
+404 /home
+err N at /home; err N at /api; ok N at /
+False ['<a>', '<b>']`,
+    },
+    exercises: [
+      'py-regex-match-vs-search',
+      'py-regex-predict-1',
+      'py-regex-parsons-1',
+      'py-regex-fullmatch-email',
+    ],
+  },
+  {
+    id: 'py_logging/1',
+    topicKeys: [Topic.PY_LOGGING],
+    step: 1,
+    title: 'Logging (Python stdlib)',
+    idea: [
+      lines(
+        "`logging` replaces `print` for messages that a program keeps: each one has a level, a name and a format, and you choose where it goes.",
+        "The levels, from least to most serious, are DEBUG, INFO, WARNING, ERROR and CRITICAL.",
+      ),
+      lines(
+        "`logging.basicConfig(level=..., format=...)` sets up the root logger once.",
+        "Each module then asks for its own logger with `log = logging.getLogger(__name__)` and calls `log.info(...)`, `log.warning(...)` and so on.",
+        "A logger shows a message only if its level is at or above the logger's threshold, and the default threshold is WARNING.",
+      ),
+      lines(
+        "Pass values as arguments, `log.info(\"lent %s\", title)`, not as a ready-made string: Python builds the text only if the message is shown.",
+        "Logger names form a tree split on dots, so `\"shop.loans\"` is a child of `\"shop\"` and inherits its level and handlers.",
+        "`log.exception(...)` inside an `except` block adds the traceback.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import logging
+
+logging.basicConfig(
+    level=logging.INFO,                        # show INFO and above
+    format="%(levelname)s %(name)s %(message)s",
+)
+log = logging.getLogger(__name__)              # one logger per module
+
+log.debug("hidden at INFO level")
+log.info("lent %s to %s", title, who)          # lazy %-style arguments
+log.warning("late: %d days", days)
+try:
+    risky()
+except Exception:
+    log.exception("failed")                    # ERROR plus the traceback`,
+    },
+    pitfall: lines(
+      "Out of the box only WARNING and above are shown, so `log.info(...)` prints nothing until you set the level.",
+      "Call `basicConfig(level=logging.INFO)` once at start-up, not in every module.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    format="%(levelname)s %(name)s %(message)s",
+)
+log = logging.getLogger("shop.loans")
+log.debug("hidden %s", 1)
+log.info("lent %s to %s", "Dune", "Ann")
+log.warning("late: %d days", 4)
+logging.getLogger("shop").setLevel(logging.ERROR)
+log.warning("muted")
+log.error("kept")`,
+      steps: [
+        "Lines 4-8: `basicConfig` sets the root level to INFO and the layout of each line; `stream=sys.stdout` sends it to the output.",
+        "Line 10: DEBUG is below INFO, so the message is dropped.",
+        "Line 11: INFO passes, and the `%s` slots are filled with \"Dune\" and \"Ann\".",
+        "Line 12: the warning shows with its level name and the logger's name.",
+        "Lines 13-14: raising the parent logger \"shop\" to ERROR also applies to its child \"shop.loans\", so the next warning is muted.",
+        "Line 15: an ERROR is at the threshold, so it is shown.",
+      ],
+      output: `INFO shop.loans lent Dune to Ann
+WARNING shop.loans late: 4 days
+ERROR shop.loans kept`,
+    },
+    exercises: [
+      'py-logging-1',
+      'py-logging-predict-1',
+      'py-logging-parsons-1',
+      'py-logging-cloze-3',
+    ],
+  },
+  {
+    id: 'py_datetime_paths/1',
+    topicKeys: [Topic.PY_DATETIME_PATHS],
+    step: 1,
+    title: 'Dates, Times & Paths',
+    idea: [
+      lines(
+        "`datetime(2025, 1, 31, 9, 30)` holds a date and time, and `timedelta(days=30)` holds a length of time.",
+        "Adding or subtracting a `timedelta` moves a `datetime`, and subtracting two datetimes gives a `timedelta`.",
+        "`dt.strftime(\"%Y-%m-%d\")` turns one into text, `datetime.strptime(text, fmt)` parses text back, and `fromisoformat` and `.isoformat()` use the ISO layout.",
+      ),
+      lines(
+        "A datetime is naive when it has no time zone and aware when it carries one, such as `tzinfo=timezone.utc`.",
+        "Store and compare times in UTC, and convert to a local zone only when you show them.",
+      ),
+      lines(
+        "`pathlib.Path` treats a file path as an object: `Path(\"data\") / \"a.csv\"` joins parts, and `.name`, `.stem`, `.suffix` and `.parent` take it apart.",
+        "`.exists()`, `.read_text()`, `.write_text()` and `.glob(\"*.csv\")` work on the file system.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+dt = datetime(2025, 1, 31, 9, 30)               # naive
+utc = datetime.now(timezone.utc)                # aware
+dt + timedelta(days=30)                         # a later datetime
+dt.strftime("%d %b %Y")                         # datetime -> text
+datetime.strptime("2025-03-01", "%Y-%m-%d")     # text -> datetime
+utc.isoformat()                                 # '2025-...+00:00'
+
+p = Path("data") / "loans" / "2025.csv"         # join with /
+p.name, p.stem, p.suffix, p.parent              # take it apart
+p.with_suffix(".json")                          # same path, new extension`,
+    },
+    pitfall: lines(
+      "A naive and an aware datetime cannot be compared or subtracted: Python raises `TypeError` rather than guess.",
+      "Make both aware (attach `tzinfo=timezone.utc` or use `datetime.now(timezone.utc)`) before you mix them.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+due = datetime(2025, 1, 31, 9, 30)
+print(due + timedelta(days=30))
+print(due.strftime("%d %b %Y"), datetime.strptime("2025-03-01", "%Y-%m-%d").weekday())
+utc = datetime(2025, 1, 31, 9, 30, tzinfo=timezone.utc)
+try:
+    print(due < utc)
+except TypeError:
+    print("naive vs aware")
+print((utc - timedelta(hours=10)).isoformat())
+p = Path("data") / "loans" / "2025.csv"
+print(p, p.suffix, p.stem, p.parent.name, p.with_suffix(".json"))`,
+      steps: [
+        "Line 5: January has 31 days and February 2025 has 28, so 30 days after 31 January is 2 March, at the same time of day.",
+        "Line 6: `strftime` writes day, short month and year; 1 March 2025 was a Saturday, and `weekday()` counts Monday as 0, so it gives 5.",
+        "Lines 8-11: `due` has no time zone and `utc` has one, so the comparison raises `TypeError` and the `except` prints its message.",
+        "Line 12: subtracting ten hours from the aware time crosses midnight, and `isoformat` shows the `+00:00` offset.",
+        "Lines 13-14: `/` joins the three parts, `.stem` drops the extension, `.parent.name` is the last folder, and `with_suffix` swaps the extension.",
+      ],
+      output: `2025-03-02 09:30:00
+31 Jan 2025 5
+naive vs aware
+2025-01-30T23:30:00+00:00
+data/loans/2025.csv .csv 2025 loans data/loans/2025.json`,
+    },
+    exercises: [
+      'py-datetime-1',
+      'py-datetime-paths-predict-2',
+      'py-datetime-paths-cloze-1',
+      'py-datetime-4',
+      'py-paths-2',
+    ],
+  },
+  {
+    id: 'py_serialization/1',
+    topicKeys: [Topic.PY_SERIALIZATION],
+    step: 1,
+    title: 'JSON & Serialization',
+    idea: [
+      lines(
+        "Serialization turns Python data into text or bytes you can store or send, and deserialization turns it back.",
+        "For JSON, `json.dumps(obj)` returns a string and `json.loads(text)` parses one, while `json.dump(obj, f)` and `json.load(f)` do the same with an open file.",
+      ),
+      lines(
+        "JSON knows only objects, arrays, strings, numbers, `true`, `false` and `null`.",
+        "They map to `dict`, `list`, `str`, `int`/`float`, `True`, `False` and `None`.",
+        "`indent=2` and `sort_keys=True` make the text readable.",
+      ),
+      lines(
+        "Anything else, such as a `date`, a `set` or your own class, raises `TypeError` unless you pass `default=fn` to convert it.",
+        "The round trip is not exact either: a tuple comes back as a list, and a dict key such as `3` comes back as `\"3\"`.",
+        "`pickle` can store almost any Python object, but never unpickle data from a source you do not trust.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import json
+
+text = json.dumps(obj)                  # Python -> JSON string
+text = json.dumps(obj, indent=2, sort_keys=True)   # readable
+data = json.loads(text)                 # JSON string -> Python
+
+with open(path, "w") as f:
+    json.dump(obj, f)                   # straight to a file
+with open(path) as f:
+    data = json.load(f)                 # straight from a file
+
+json.dumps(obj, default=str)            # convert unknown types with str`,
+    },
+    pitfall: lines(
+      "`json.dumps` refuses types JSON has no word for, so a `datetime`, a `set` or a custom object raises `TypeError`.",
+      "Convert them first, or pass `default=` with a function that returns something JSON can hold, such as a string or a list.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import json
+from datetime import date
+
+book = {"id": 7, "tags": ("sf", "classic"), "out": None, "ok": True, 3: "three"}
+text = json.dumps(book)
+print(text)
+back = json.loads(text)
+print(back["tags"], back["3"], back == book)
+print(json.dumps({"due": date(2025, 5, 1)}, default=str))
+try:
+    json.dumps({"s": {1, 2}})
+except TypeError:
+    print("set is not JSON")
+print(json.dumps({"b": 1, "a": [1, 2]}, indent=2, sort_keys=True))`,
+      steps: [
+        "Line 5: the tuple becomes an array, `None` becomes `null`, `True` becomes `true` and the key `3` becomes the string \"3\".",
+        "Lines 7-8: parsing gives a list and a string key, so the result is no longer equal to the original dict.",
+        "Line 9: `date` is not a JSON type, so `default=str` turns it into text.",
+        "Lines 10-13: a `set` has no JSON form, so the `TypeError` is caught and reported.",
+        "Line 14: `sort_keys` orders the keys, and `indent=2` puts each array item on its own line.",
+      ],
+      output: `{"id": 7, "tags": ["sf", "classic"], "out": null, "ok": true, "3": "three"}
+['sf', 'classic'] three False
+{"due": "2025-05-01"}
+set is not JSON
+{
+  "a": [
+    1,
+    2
+  ],
+  "b": 1
+}`,
+    },
+    exercises: [
+      'py-json-1',
+      'py-serialization-predict-1',
+      'py-serialization-parsons-1',
+      'py-json-2',
+    ],
+  },
 ];
