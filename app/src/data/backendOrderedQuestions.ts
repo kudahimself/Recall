@@ -369,7 +369,7 @@ export const backendOrderedQuestions: Question[] = [
   q('py-magic-methods-cloze-8'), q('py-magic-methods-cloze-2'), q('py-magic-str-vs-repr'), q('py-magic-methods-cloze-3'),
   q('py-magic-eq-hash'), q('py-magic-container-protocol'),
   q('py-magic-methods-iternext-cloze-1'), q('py-magic-iter'), q('py-magic-methods-addiadd-cloze-1'), q('py-magic-add-iadd'), q('py-magic-call'), q('py-gap-magic-2'),
-  q('py-adv-magic-3'), q('py-magic-hash-mutable'), q('py-magic-aenter-vs-enter'), q('pcpp-magic-1'),
+  q('py-adv-magic-3'), q('py-magic-hash-mutable'), q('pcpp-magic-1'),
   q('py-magic-methods-predict-1'), q('py-magic-methods-predict-2'), q('py-magic-notimplemented-cloze-1'),
   q('py-magic-methods-predict-3'), q('py-magic-methods-predict-4'),
   q('py-magic-methods-predict-7'), q('py-magic-methods-predict-8'), q('py-magic-methods-predict-9'), q('py-magic-methods-parsons-1'),
@@ -393,12 +393,12 @@ export const backendOrderedQuestions: Question[] = [
   q('py-async-parsons-3'), q('py-async-parsons-6'), q('py-async-httpx-parsons-1'), q('py-async-cloze-2'),
   q('py-async-cloze-3'), q('py-async-cloze-4'), q('py-async-cloze-5'), q('py-async-cloze-6'),
   q('py-async-cloze-8'), q('py-async-cloze-9'), q('py-async-cloze-10'), q('py-async-httpx-cloze-1'),
-  q('py-async-beg-1'), q('py-async-beg-2'), q('py-async-httpx-1'), q('py-async-mcq-taskgroup-vs-gather'),
+  q('py-async-beg-1'), q('py-async-beg-2'), q('py-concurrency-1'), q('py-async-httpx-1'), q('py-async-mcq-taskgroup-vs-gather'),
   q('py-async-mcq-event-loop'), q('py-async-predict-2'), q('py-async-predict-3'), q('py-async-predict-4'),
   q('py-async-parsons-1'), q('py-async-parsons-2'), q('py-async-parsons-4'), q('py-async-parsons-5'),
   q('py-async-parsons-7'), q('py-async-parsons-8'), q('py-async-parsons-10'), q('py-async-parsons-11'),
-  q('py-async-cloze-1'), q('py-async-cloze-11'), q('py-gap-async-3'), q('py-adv-async-bridge-1'),
-  q('py-adv-async-bridge-3'), q('py-async-int-gen-1'), q('py-async-int-asyncwith'), q('py-async-int-waitfor'),
+  q('py-async-cloze-1'), q('py-async-cloze-11'), q('py-gap-async-3'), q('py-concurrency-6'), q('py-adv-async-bridge-1'),
+  q('py-adv-async-bridge-3'), q('py-async-int-gen-1'), q('py-magic-aenter-vs-enter'), q('py-async-int-asyncwith'), q('py-async-int-waitfor'),
   q('py-adv-async-bridge-2'), q('py-async-int-gather-errors'), q('py-async-int-queue-1'), q('py-async-int-semaphore'),
   q('py-async-int-waitfor-gather'), q('py-async-int-asyncgen-queue'), q('py-async-parsons-9'), q('py-async-cloze-7'), q('py-adv-async-3'), q('py-adv-async-4'),
   q('py-adv-async-5'), q('py-async-predict-5'), q('py-async-predict-6'), q('py-async-predict-8'),
@@ -407,7 +407,7 @@ export const backendOrderedQuestions: Question[] = [
   q('py-async-adv-rate-limited-fetcher'),
 
   // ===== Topic.PY_THREADING =====
-  q('py-thread-beg-what'), q('py-thread-beg-gil'), q('py-thread-beg-race'), q('py-concurrency-1'),
+  q('py-thread-beg-what'), q('py-thread-beg-gil'), q('py-thread-beg-race'),
   q('py-concurrency-parsons-1'), q('py-concurrency-cloze-1'), q('py-concurrency-cloze-5'), q('py-concurrency-4'),
   q('py-concurrency-5'), q('py-concurrency-predict-3'), q('py-concurrency-predict-5'), q('py-concurrency-predict-9'),
   q('py-concurrency-parsons-2'), q('py-concurrency-parsons-8'), q('py-concurrency-cloze-2'), q('py-concurrency-predict-10'),
@@ -417,7 +417,7 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.PY_FUTURES =====
   q('py-fut-beg-executor'), q('py-fut-beg-future'), q('py-fut-beg-which'), q('py-concurrency-parsons-3'),
-  q('py-concurrency-cloze-3'), q('py-fut-int-submit-map'), q('py-concurrency-6'), q('py-concurrency-predict-1'),
+  q('py-concurrency-cloze-3'), q('py-fut-int-submit-map'), q('py-concurrency-predict-1'),
   q('py-concurrency-predict-7'), q('py-concurrency-2'), q('py-concurrency-predict-2'), q('py-concurrency-parsons-6'),
   q('py-concurrency-parsons-7'), q('py-concurrency-parsons-10'), q('py-concurrency-cloze-4'), q('py-concurrency-cloze-8'),
   q('py-concurrency-3'),
