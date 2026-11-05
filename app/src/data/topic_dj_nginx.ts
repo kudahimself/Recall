@@ -154,4 +154,27 @@ server {
       tags: ['nginx', 'gunicorn', 'django', 'architecture', 'request-flow'],
       concepts: ['dj-deployment-cicd'],
     },
+  {
+      id: 'dj-nginx-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_NGINX,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'Nginx runs this server block, and `gunicorn_backend` is an upstream pointing at Gunicorn. It receives three requests for shop.example.com, in this order: `/static/css/site.css`, `/media/covers/7.jpg` and `/orders/12/`. For each request, what does Nginx do? The answer is three lines, one per request in order: the full path of the file Nginx reads from disk, or the single word `gunicorn` when it passes the request on.',
+      code: `server {
+    listen 443 ssl;
+    server_name shop.example.com;
+    location /static/ { alias /srv/shop/collected/; }
+    location /media/  { root /srv/shop; }
+    location /        { proxy_pass http://gunicorn_backend; }
+}`,
+      expectedOutput: `/srv/shop/collected/css/site.css
+/srv/shop/media/covers/7.jpg
+gunicorn`,
+      explanation: 'Nginx picks the location with the longest matching prefix. `alias` replaces the matched prefix with its path, so `/static/css/site.css` drops `/static/` and becomes `/srv/shop/collected/css/site.css`. `root` appends the whole request path to its directory, `/media/` included, so `/media/covers/7.jpg` becomes `/srv/shop/media/covers/7.jpg`. `/orders/12/` matches only `location /`, which hands it to Gunicorn and so to Django. Mixing up `alias` and `root` is the usual cause of a 404 on every static file.',
+      hints: ['alias swaps the matched location prefix for its own path.', 'root adds the full request path, prefix included, after its directory.'],
+      tags: ['nginx', 'alias', 'root', 'proxy_pass', 'predict'],
+      concepts: ['dj-deployment-cicd'],
+    },
 ];

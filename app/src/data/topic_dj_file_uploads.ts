@@ -153,4 +153,28 @@ if settings.DEBUG:
       tags: ['storage-backend', 's3', 'django-storages', 'infrastructure'],
       concepts: ['dj-storage-backends'],
     },
+  {
+      id: 'dj-uploads-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FILE_UPLOADS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'The project uses the default file storage with `MEDIA_ROOT = "/srv/app/media"` and `MEDIA_URL = "/media/"`, and the media directory starts empty. These lines run in `python manage.py shell`. What do the three `print` calls output? The answer is three lines.',
+      code: `# models.py: class Document(models.Model): scan = models.FileField(upload_to="scans/")
+from django.core.files.base import ContentFile
+
+doc = Document()
+doc.scan.save("invoice-7.pdf", ContentFile(b"%PDF-1.4"), save=True)
+print(Document.objects.values_list("scan", flat=True).get(pk=doc.pk))
+print(doc.scan.url)
+print(doc.scan.path)`,
+      expectedOutput: `scans/invoice-7.pdf
+/media/scans/invoice-7.pdf
+/srv/app/media/scans/invoice-7.pdf`,
+      explanation: 'A `FileField` stores only the file\'s name relative to the storage, `upload_to` plus the file name, in its database column, so the row holds `scans/invoice-7.pdf`. The file itself is written to disk under `MEDIA_ROOT`, which is where `.path` points, and `.url` puts `MEDIA_URL` in front of the same name to give the address a browser asks for. Moving the files to S3 changes the storage, not the stored names.',
+      hints: ['The database column holds the path relative to MEDIA_ROOT, not the file.', 'MEDIA_ROOT is a directory on disk; MEDIA_URL is the public URL prefix.'],
+      tags: ['django', 'file-uploads', 'FileField', 'MEDIA_ROOT', 'MEDIA_URL', 'predict'],
+      concepts: ['dj-storage-backends'],
+    },
 ];
