@@ -1,8 +1,9 @@
 /**
  * Progress → Topics: every topic of the course with its three steps (lesson,
  * ramp, review), and from each row the topic's rule card and a drill. The
- * selected topic shows its ramp by difficulty and the review schedule of each
- * of its card families (familySchedule).
+ * selected topic shows its ramp by difficulty, its exercise to do in the
+ * learner's own editor (utils/exercises) when it has one, and the review
+ * schedule of each of its card families (familySchedule).
  */
 import React, { useMemo, useState } from 'react';
 import { BookOpen, Dumbbell, Lock } from 'lucide-react';
@@ -11,6 +12,8 @@ import { getPathOrder, getSectionUnits } from '../utils/courseConfig';
 import { SpacedRepetitionSystem } from '../utils/spacedRepetition';
 import { FsrsStore, State } from '../utils/familySchedule';
 import { LessonsDone, TopicSteps, topicSteps } from '../utils/lessons';
+import { ExercisesDone, exerciseForTopics } from '../utils/exercises';
+import { ExerciseCard } from './ExerciseCard';
 import './TopicLessons.css';
 
 interface Props {
@@ -19,8 +22,10 @@ interface Props {
   progress: UserProgress;
   store: FsrsStore;
   lessonsDone: LessonsDone;
+  exercisesDone: ExercisesDone;
   onRuleCard: (lessonId: string) => void;
   onDrill: (topicKeys: string[]) => void;
+  onToggleExercise: (exerciseId: string) => void;
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -53,7 +58,9 @@ interface Row {
   steps: TopicSteps;
 }
 
-export function TopicLessons({ course, questions, progress, store, lessonsDone, onRuleCard, onDrill }: Props) {
+export function TopicLessons({
+  course, questions, progress, store, lessonsDone, exercisesDone, onRuleCard, onDrill, onToggleExercise,
+}: Props) {
   const now = Date.now();
   const rows = useMemo<Row[]>(() => {
     const unlocked = SpacedRepetitionSystem.getUnlockedTopics(questions, progress);
@@ -79,6 +86,7 @@ export function TopicLessons({ course, questions, progress, store, lessonsDone, 
   const s = selected.steps;
   const answered = s.lesson ? s.lesson.exercises.filter(id => progress.questionsAttempted.has(id)) : [];
   const answeredRight = answered.filter(id => progress.correctAnswers.has(id)).length;
+  const exercise = exerciseForTopics(selected.keys);
 
   return (
     <div className="topic-lessons">
@@ -97,6 +105,8 @@ export function TopicLessons({ course, questions, progress, store, lessonsDone, 
                 : !st.lessonMet ? 'lesson not done yet'
                 : st.lessonDoneAt ? `lesson done ${relativeDay(st.lessonDoneAt, now)}`
                 : 'lesson met: its exercises are answered';
+              const rowExercise = exerciseForTopics(r.keys);
+              const exerciseNote = rowExercise && exercisesDone[rowExercise.id] !== undefined ? ' · exercise done' : '';
               return (
                 <div
                   key={r.name}
@@ -106,7 +116,7 @@ export function TopicLessons({ course, questions, progress, store, lessonsDone, 
                   <span className="tl-num">{String(i + 1).padStart(2, '0')}</span>
                   <span className="tl-name">
                     <span className="tl-name-text">{r.name}</span>
-                    <span className="tl-status">{status}</span>
+                    <span className="tl-status">{status}{exerciseNote}</span>
                   </span>
                   <span className="tl-ramp">ramp {st.rampAnswered}/{st.rampTotal}</span>
                   <span className="tl-actions">
@@ -178,6 +188,17 @@ export function TopicLessons({ course, questions, progress, store, lessonsDone, 
             </button>
           )}
         </div>
+        {exercise && (
+          <ExerciseCard
+            exercise={exercise}
+            doneAt={exercisesDone[exercise.id]}
+            rampDone={s.rampAnswered >= s.rampTotal}
+            rampAnswered={s.rampAnswered}
+            rampTotal={s.rampTotal}
+            dayLabel={ms => relativeDay(ms, now)}
+            onToggle={onToggleExercise}
+          />
+        )}
         <h3 className="tl-sub">Review schedule</h3>
         <table className="tl-table">
           <thead>

@@ -1,0 +1,112 @@
+/* A topic's exercise card (components/ExerciseCard.tsx), inside Progress → Topics. */
+
+.ex-card {
+  margin: 14px 0 4px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.ex-card-done { border-left-color: var(--success); }
+
+.ex-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ex-eyebrow {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ex-time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.ex-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 6px;
+  font-size: var(--fs-xl);
+  color: var(--text);
+}
+
+.ex-done-icon { color: var(--success); flex-shrink: 0; }
+
+.ex-task,
+.ex-how {
+  margin: 0 0 10px;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
+
+.ex-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 7px 8px 7px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+
+.ex-path {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  user-select: all;
+}
+
+.ex-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ex-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ex-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.ex-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--success);
+  cursor: pointer;
+}
+
+.ex-card-done .ex-check { color: var(--success); }
+
+.ex-when {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}

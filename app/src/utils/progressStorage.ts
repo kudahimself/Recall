@@ -16,7 +16,7 @@
  */
 import { QuestionAttempt, UserProgress } from '../types';
 import { FEATURE_FLAGS } from './featureFlags';
-import { FSRS_STORE_KEY, LESSONS_KEY, TODAY_REVIEW_SHARE_KEY, TODAY_SESSION_KEY, TODAY_SIZE_KEY } from './spacedRepetition';
+import { EXERCISES_KEY, FSRS_STORE_KEY, LESSONS_KEY, TODAY_REVIEW_SHARE_KEY, TODAY_SESSION_KEY, TODAY_SIZE_KEY } from './spacedRepetition';
 
 export const PROGRESS_KEY = 'recall-progress';
 // One backup per unreadable text: PROGRESS_BACKUP_PREFIX + ISO timestamp.
@@ -53,6 +53,7 @@ export const EXPORT_JSON_KEYS = [
   FSRS_STORE_KEY,
   TODAY_SESSION_KEY,
   LESSONS_KEY,
+  EXERCISES_KEY,
 ] as const;
 // Settings the app reads straight from storage rather than holding in state.
 export const STORED_SETTING_KEYS: readonly string[] = [
