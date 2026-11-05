@@ -1,10 +1,12 @@
 /**
  * Backend (Python) lessons, one per topic, in course order.
  *
- * Section 1, Python Fundamentals: every topic.
+ * Sections 1-3, Python Fundamentals, Python Advanced and Django: every topic.
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on `python3 -I` and compares what it prints with `output`.
+ * A Django example needs a project to run, so it sets `runs: false` and its
+ * output is checked by hand.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -2651,6 +2653,785 @@ True`,
       'py-packaging-6',
       'py-packaging-5',
       'py-packaging-predict-1',
+    ],
+  },
+  // ===== Section 3, Django =====
+  // Django examples need a project to run, so each sets `runs: false`
+  // and its output was checked by hand against Django's behaviour.
+  {
+    id: 'dj_setup/1',
+    topicKeys: [Topic.DJ_SETUP],
+    step: 1,
+    title: 'Setup & Project Structure',
+    idea: [
+      lines(
+        "`django-admin startproject site` creates a project: `manage.py` plus `settings.py`, `urls.py`, `wsgi.py` and `asgi.py`.",
+        "`python manage.py startapp name` then creates an app, one feature of the site, with its own `models.py`, `views.py`, `apps.py` and `migrations/`.",
+      ),
+      lines(
+        "An app does nothing until `INSTALLED_APPS` lists it, best by its config class, `\"name.apps.NameConfig\"`, so its `ready()` hook runs.",
+        "Settings are the module named by `DJANGO_SETTINGS_MODULE`, which `manage.py` only defaults, so a `base.py` / `dev.py` / `prod.py` split can be picked per environment.",
+      ),
+      lines(
+        "A model change reaches the database in two steps: `makemigrations` writes a migration file, and `migrate` applies the pending ones.",
+        "`showmigrations` marks each file `[X]` applied or `[ ]` pending, and `shell` opens Python with the settings loaded.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# $ django-admin startproject site     # manage.py + site/settings.py, urls.py
+# $ python manage.py startapp name      # name/models.py, views.py, apps.py
+
+INSTALLED_APPS = [
+    "django.contrib.auth",              # ... the built-in apps
+    "name.apps.NameConfig",             # the new app, by its config class
+]
+
+# $ python manage.py makemigrations     # models.py change -> a migration file
+# $ python manage.py migrate            # apply the pending files
+# $ python manage.py showmigrations     # [X] applied, [ ] pending
+# $ python manage.py shell              # Python with the settings loaded`,
+    },
+    pitfall: lines(
+      "Editing `models.py` and running only `migrate` changes nothing, because `migrate` applies migration files and only `makemigrations` writes them.",
+      "After every model change run `makemigrations`, then `migrate`, and check the result with `showmigrations`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# $ django-admin startproject bookshop && cd bookshop
+# $ python manage.py startapp inventory
+# bookshop/settings.py: INSTALLED_APPS += ["inventory.apps.InventoryConfig"]
+# after writing the Book model: makemigrations, then migrate
+# after adding a Book.isbn field: makemigrations only
+
+# $ python manage.py shell
+from django.apps import apps
+from django.conf import settings
+from django.core.management import call_command
+
+print(settings.ROOT_URLCONF)
+print(type(apps.get_app_config("inventory")).__name__)
+call_command("showmigrations", "inventory")`,
+      steps: [
+        "Lines 1-2: `startproject` makes the project and its `manage.py`, then `startapp` makes the `inventory` app inside it.",
+        "Line 3: the app is registered by its config class, so Django loads its models and runs its `ready()` hook.",
+        "Lines 4-5: the first model was written to a migration and applied, but the `isbn` change was only written.",
+        "Lines 12-13: `startproject` pointed `ROOT_URLCONF` at the project's `urls.py`, and the registered config is the `InventoryConfig` class from `apps.py`.",
+        "Line 14: `showmigrations` shows `0001_initial` applied and `0002_book_isbn` pending, so the `isbn` column is not in the database until `migrate` runs.",
+      ],
+      output: `bookshop.urls
+InventoryConfig
+inventory
+ [X] 0001_initial
+ [ ] 0002_book_isbn`,
+    },
+    exercises: [
+      'dj-setup-1',
+      'py-dj-setup-parsons-2',
+      'py-dj-setup-cloze-1',
+      'py-dj-setup-settings-structure',
+      'dj-setup-predict-1',
+    ],
+  },
+  {
+    id: 'dj_models/1',
+    topicKeys: [Topic.DJ_MODELS],
+    step: 1,
+    title: 'Models & Migrations',
+    idea: [
+      lines(
+        "A model subclasses `models.Model`: the class is a table, each field is a column, each instance is a row, and Django adds an `id` primary key.",
+        "The field class sets the column type, as in `CharField(max_length=n)`, `TextField`, `BooleanField(default=False)` or `DateTimeField(auto_now_add=True)`.",
+      ),
+      lines(
+        "`ForeignKey(Other, on_delete=...)` goes on the many side of a one-to-many link, and `on_delete` is required: `CASCADE` deletes the children with the parent, `PROTECT` refuses the delete.",
+        "`related_name` names the way back from the parent, and `ManyToManyField` links many to many through a join table.",
+      ),
+      lines(
+        "`__str__` sets how a row prints, and an inner `class Meta` holds options such as `ordering`.",
+        "Every model change needs `makemigrations`, then `migrate`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.db import models
+
+class Parent(models.Model):                     # a table; id is added for you
+    title = models.CharField(max_length=100)    # max_length is required
+    created_at = models.DateTimeField(auto_now_add=True)   # set once, on insert
+
+    def __str__(self):
+        return self.title                       # how a row prints
+
+class Child(models.Model):                      # the "many" side holds the FK
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE,
+                               related_name="children")   # parent.children.all()`,
+    },
+    pitfall: lines(
+      "The `ForeignKey` goes on the many side: a book has one author, so `Book` holds `author = models.ForeignKey(Author, ...)`, never the other way round.",
+      "`on_delete` is required, and `CASCADE` deletes every book when its author is deleted; choose `PROTECT` when that delete should be refused.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# library/models.py
+from django.db import models
+
+class Author(models.Model):
+    full_name = models.CharField(max_length=100)
+    def __str__(self):
+        return self.full_name
+
+class Book(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="books")
+    title = models.CharField(max_length=200)
+
+# after makemigrations + migrate, on an empty database, in python manage.py shell:
+from library.models import Author, Book
+ann = Author.objects.create(full_name="Ann Leckie")
+book = Book.objects.create(author=ann, title="Provenance")
+print(ann, ann.books.count(), book)
+total, per_model = ann.delete()
+print(total, per_model["library.Book"], Book.objects.count())`,
+      steps: [
+        "Lines 4-7: `Author` is a table with the `id` key Django adds and a `full_name` column, and `__str__` decides how a row prints.",
+        "Lines 9-11: the `ForeignKey` sits on the many side, so each book has one author, and `related_name` names the way back from an author to the author's books.",
+        "Lines 15-17: `create` inserts each row; the author prints through `__str__`, `ann.books` finds the one book, and `Book`, which has no `__str__`, prints as `Book object (1)`.",
+        "Lines 18-19: `CASCADE` deletes the book along with its author, so `delete()` reports 2 rows, 1 of them a book, and no books are left.",
+      ],
+      output: `Ann Leckie 1 Book object (1)
+2 1 0`,
+    },
+    exercises: [
+      'dj4e-fk-1',
+      'dj-models-predict-1',
+      'dj-models-parsons-2',
+      'dj-models-cloze-1',
+      'dj-model-1',
+    ],
+  },
+  {
+    id: 'dj_orm/1',
+    topicKeys: [Topic.DJ_ORM],
+    step: 1,
+    title: 'ORM (QuerySets, filtering, relations)',
+    idea: [
+      lines(
+        "Every model gets a manager, `Model.objects`, that builds queries in Python instead of SQL.",
+        "`all()`, `filter(...)`, `exclude(...)` and `order_by(\"-col\")` return a QuerySet, a query you can keep chaining, and a slice such as `[:10]` becomes a LIMIT.",
+      ),
+      lines(
+        "A lookup is `field__op=value`, as in `price__lt=10` or `title__icontains=\"war\"`, and a double underscore also follows a relation: `author__full_name=\"Ann\"`.",
+        "Separate keyword arguments are joined with AND, and `Q(a=1) | Q(b=2)` gives OR.",
+      ),
+      lines(
+        "A QuerySet is lazy: no SQL runs until you loop over it, call `list()` or `len()` on it, or print it.",
+        "`get(...)` returns exactly one object, `first()` an object or `None`, `count()` and `exists()` ask without loading the rows, and `create(...)` inserts a row and returns it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `Model.objects.all()                          # every row, as a lazy QuerySet
+Model.objects.filter(col=v, other__gte=n)    # WHERE col = v AND other >= n
+Model.objects.exclude(flag=True)             # WHERE NOT flag
+Model.objects.filter(rel__col="x")           # follow a ForeignKey with __
+Model.objects.filter(Q(a=1) | Q(b=2))        # OR
+qs.order_by("-col")[:10]                     # ORDER BY col DESC LIMIT 10
+Model.objects.get(pk=1)                      # exactly one row, or an exception
+qs.first(), qs.count(), qs.exists()          # a row or None, a number, a bool
+Model.objects.create(col=v)                  # INSERT and return the row`,
+    },
+    pitfall: lines(
+      "`get()` is for exactly one row: it raises `DoesNotExist` when nothing matches and `MultipleObjectsReturned` when several rows do.",
+      "Use `filter()` for zero or more rows, and `filter(...).first()` when you want one row or `None`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; shop.Book has title, price and author -> Author(full_name)
+# rows: Dune (12, Frank Herbert), Emma (8, Jane Austen), Persuasion (9, Jane Austen)
+from django.db.models import Q
+from shop.models import Book
+
+cheap = Book.objects.filter(price__lt=10).order_by("-price")
+print([b.title for b in cheap])
+print(Book.objects.filter(author__full_name="Jane Austen").count())
+print(Book.objects.filter(Q(price__gt=10) | Q(title__startswith="E")).count())
+print(Book.objects.filter(title__icontains="zz").first())
+try:
+    Book.objects.get(author__full_name="Jane Austen")
+except Book.MultipleObjectsReturned:
+    print("more than one row: use filter()")`,
+      steps: [
+        "Line 6: this only builds the query; nothing runs until line 7 loops over it, and then the two books under 10 come back dearest first.",
+        "Line 8: `author__full_name` follows the foreign key, so this counts Jane Austen's two books in the database.",
+        "Line 9: `Q(...) | Q(...)` matches Dune by price and Emma by its first letter.",
+        "Line 10: nothing matches, so `first()` returns `None` instead of raising.",
+        "Lines 11-14: `get()` finds two rows for that author and raises `MultipleObjectsReturned`.",
+      ],
+      output: `['Persuasion', 'Emma']
+2
+2
+None
+more than one row: use filter()`,
+    },
+    exercises: [
+      'dj-orm-gap-1',
+      'dj-orm-predict-1',
+      'dj-orm-parsons-1',
+      'dj-orm-cloze-5',
+      'dj-orm-1',
+    ],
+  },
+  {
+    id: 'dj_views/1',
+    topicKeys: [Topic.DJ_VIEWS],
+    step: 1,
+    title: 'Views & Request/Response (FBV)',
+    idea: [
+      lines(
+        "A view is a function that takes an `HttpRequest` and returns an `HttpResponse`.",
+        "The URLconf decides which view a path reaches and passes the values it captured, such as `pk`, as extra arguments.",
+      ),
+      lines(
+        "The request carries `request.method`, the query string in `request.GET`, submitted form fields in `request.POST`, and the signed-in `request.user`.",
+        "`request.GET.get(\"q\", \"\")` reads a value with a default, where `request.GET[\"q\"]` raises an error when it is missing.",
+      ),
+      lines(
+        "`render(request, \"page.html\", context)` returns a filled template with status 200, `redirect(\"name\")` a 302, `JsonResponse(dict)` JSON, and `HttpResponse(body, status=201)` any status.",
+        "`get_object_or_404(Model, pk=pk)` raises `Http404` for a missing row, which Django answers with a 404 page.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.shortcuts import get_object_or_404, redirect, render
+
+def view_name(request, pk):                     # pk comes from the URL
+    obj = get_object_or_404(Model, pk=pk)       # missing row -> 404
+    if request.method == "POST":
+        value = request.POST.get("field", "")   # submitted form data
+        ...                                     # save the change
+        return redirect("route-name")           # 302, so a refresh cannot resubmit
+    q = request.GET.get("q", "")                # query string, with a default
+    return render(request, "page.html", {"obj": obj, "q": q})   # 200 + HTML`,
+    },
+    pitfall: lines(
+      "`Model.objects.get(pk=pk)` on a row that does not exist raises `DoesNotExist`, and the visitor gets a 500 server error.",
+      "Use `get_object_or_404(Model, pk=pk)`, which turns the miss into a 404 page.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; shop.Book has one row: pk=1, title "Dune"
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
+from django.test import RequestFactory
+from shop.models import Book
+
+def book_view(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    if request.method == "POST":
+        return HttpResponse(f"saved {request.POST['note']}", status=201)
+    return JsonResponse({"title": book.title, "q": request.GET.get("q", "")})
+
+rf = RequestFactory()
+r = book_view(rf.get("/books/1/", {"q": "sand"}), pk=1)
+print(r.status_code, r.content.decode())
+r = book_view(rf.post("/books/1/", {"note": "signed"}), pk=1)
+print(r.status_code, r.content.decode())
+try:
+    book_view(rf.get("/books/9/"), pk=9)
+except Http404:
+    print("404")`,
+      steps: [
+        "Lines 7-8: the view gets the request and the `pk` captured from the URL, and looks the book up or raises `Http404`.",
+        "Lines 14-15: a GET skips the POST branch and returns JSON with status 200.",
+        "Lines 16-17: a POST reads the submitted `note` from `request.POST` and returns plain text with status 201.",
+        "Lines 18-21: there is no book 9, so `get_object_or_404` raises `Http404`, which Django serves as a 404 page.",
+      ],
+      output: `200 {"title": "Dune", "q": "sand"}
+201 saved signed
+404`,
+    },
+    exercises: [
+      'dj4e-http-4',
+      'dj-views-predict-1',
+      'dj-views-parsons-1',
+      'dj-views-cloze-1',
+      'dj-view-render',
+    ],
+  },
+  {
+    id: 'dj_cbv/1',
+    topicKeys: [Topic.DJ_CBV],
+    step: 1,
+    title: 'Class-Based & Generic Views',
+    idea: [
+      lines(
+        "A class-based view is a class whose `as_view()` returns the view function the URLconf needs.",
+        "Its `dispatch()` sends each request to the method named after the HTTP verb, `get()` or `post()`, and answers 405 when there is none.",
+      ),
+      lines(
+        "Generic views hold the common logic: `ListView` and `DetailView` read rows, and `CreateView`, `UpdateView` and `DeleteView` handle a form.",
+        "You configure them with attributes such as `model`, `template_name`, `context_object_name`, `paginate_by` and `success_url`.",
+        "Left without `template_name`, a `ListView` of `shop.Book` renders `shop/book_list.html` and passes the rows as `object_list` and `book_list`.",
+      ),
+      lines(
+        "Override a hook to change one step: `get_queryset()` for which rows, `get_context_data()` for extra template values, `form_valid()` for what a valid form does.",
+        "Mixins such as `LoginRequiredMixin` go to the left of the base view, because `dispatch()` runs through the classes from left to right.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView
+
+class ThingList(LoginRequiredMixin, ListView):  # mixins first, the base view last
+    model = Thing                               # template: app/thing_list.html
+    context_object_name = "things"              # default: object_list / thing_list
+    paginate_by = 20                            # adds page_obj and paginator
+
+    def get_context_data(self, **kwargs):       # extra template values
+        context = super().get_context_data(**kwargs)
+        context["total"] = Thing.objects.count()
+        return context`,
+    },
+    pitfall: lines(
+      "An override of `get_context_data()` that builds a new dict instead of calling `super().get_context_data(**kwargs)` throws away the context the generic view built, so the template loses its rows and pagination.",
+      "Start from the parent's dict, add your keys, and return it.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; shop.Book rows: Dune (12), Emma (8), Persuasion (9)
+from django.test import RequestFactory
+from django.views.generic import ListView
+from shop.models import Book
+
+class CheapBooks(ListView):
+    model = Book
+    context_object_name = "books"
+    paginate_by = 1
+    def get_queryset(self):
+        return Book.objects.filter(price__lt=10).order_by("title")
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["shop"] = "Hay Books"
+        return context
+
+response = CheapBooks.as_view()(RequestFactory().get("/cheap/", {"page": "2"}))
+ctx = response.context_data
+print(response.status_code, response.template_name)
+print([b.title for b in ctx["books"]], ctx["page_obj"].number, ctx["shop"])`,
+      steps: [
+        "Lines 6-9: the model, the template's name for the rows, and one row per page.",
+        "Lines 10-11: `get_queryset()` narrows the rows to Emma and Persuasion, in title order.",
+        "Lines 12-15: `get_context_data()` keeps the parent's context and adds one value.",
+        "Line 17: `as_view()` turns the class into a view function, and the request asks for page 2.",
+        "Lines 19-20: with no `template_name` the view picks `shop/book_list.html`, and page 2 holds only Persuasion.",
+      ],
+      output: `200 ['shop/book_list.html']
+['Persuasion'] 2 Hay Books`,
+    },
+    exercises: [
+      'dj-cbv-beg-generic',
+      'dj-cbv-listview-parsons-1',
+      'dj-cbv-context-cloze-1',
+      'dj4e-cbv-2',
+      'dj-cbv-adv-4',
+    ],
+  },
+  {
+    id: 'dj_templates/1',
+    topicKeys: [Topic.DJ_TEMPLATES],
+    step: 1,
+    title: 'Templates & Template Tags',
+    idea: [
+      lines(
+        "A template is text with three kinds of markup: `{{ value }}` prints a value, `{% tag %}` runs logic, and `{# ... #}` is a comment.",
+        "A dot reaches into the context, as in `{{ book.title }}`, and a missing value prints as an empty string.",
+      ),
+      lines(
+        "A filter changes a value on the way out: `{{ title|upper }}`, `{{ text|truncatechars:20 }}`, `{{ note|default:\"-\" }}`.",
+        "Printed values are HTML-escaped, so `<b>` comes out as `&lt;b&gt;` unless you mark it `|safe`.",
+      ),
+      lines(
+        "Tags pair up with no colons: `{% if %}`, `{% else %}` and `{% endif %}`, or `{% for x in xs %}`, `{% empty %}` and `{% endfor %}`, where `forloop.counter` counts from 1.",
+        "A child template starts with `{% extends \"base.html\" %}` and fills the blocks its parent defines, `{% include %}` pastes another template in place, and `{% url \"name\" %}` builds a link.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.HTML,
+      code: `{% extends "base.html" %}                   {# the first tag of a child #}
+{% block content %}                         {# replaces base.html's block #}
+  <h1>{{ page_title|upper }}</h1>           {# a value through a filter #}
+  {% for item in items %}
+    <a href="{% url 'route-name' item.pk %}">{{ forloop.counter }}. {{ item.title }}</a>
+  {% empty %}
+    <p>Nothing yet.</p>                       {# when items is empty #}
+  {% endfor %}
+  {% include "_footer.html" %}              {# paste another template #}
+{% endblock %}`,
+    },
+    pitfall: lines(
+      "`{% extends %}` must be the first tag of a child template, and whatever the child writes outside a `{% block %}` is thrown away.",
+      "Put all of a child's content inside the blocks that `base.html` defines.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; two templates held in memory instead of files
+from django.template import Context, Engine
+
+pages = {
+    "layout.html": "[{% block heading %}Shop{% endblock %}] {% block body %}{% endblock %}",
+    "books.html": (
+        '{% extends "layout.html" %}{% block heading %}Books{% endblock %}'
+        "{% block body %}{% for b in books %}{{ forloop.counter }}.{{ b.title|title }} "
+        "{% empty %}none {% endfor %}{{ note|default:'-' }}{% endblock %}lost"
+    ),
+}
+engine = Engine(loaders=[("django.template.loaders.locmem.Loader", pages)])
+t = engine.get_template("books.html")
+print(t.render(Context({"books": [{"title": "dune"}, {"title": "emma"}]})))
+print(t.render(Context({"books": [], "note": "<b>soon</b>"})))`,
+      steps: [
+        "Line 5: the parent layout has a `heading` block with a default and an empty `body` block.",
+        "Lines 7-9: the child extends it, replaces both blocks, and the text `lost` after the last block is outside every block, so it never prints.",
+        "Line 14: the loop numbers each book with `forloop.counter` and capitalises it with `title`, and the missing `note` falls back to `-`.",
+        "Line 15: the empty list renders the `{% empty %}` branch, and the note is HTML-escaped on the way out.",
+      ],
+      output: `[Books] 1.Dune 2.Emma -
+[Books] none &lt;b&gt;soon&lt;/b&gt;`,
+    },
+    exercises: [
+      'dj4e-tmpl-2',
+      'dj-templates-predict-1',
+      'py-dj-tpl-parsons-1',
+      'py-dj-tpl-cloze-2',
+      'dj-tmpl-1',
+    ],
+  },
+  {
+    id: 'dj_urls/1',
+    topicKeys: [Topic.DJ_URLS],
+    step: 1,
+    title: 'URLs & Routing',
+    idea: [
+      lines(
+        "`urlpatterns` in `urls.py` is a list of `path(route, view, name=...)` entries, tried from top to bottom until a route matches.",
+        "Routes have no leading slash and end with one by convention, as in `\"books/\"`.",
+      ),
+      lines(
+        "Angle brackets capture part of the path and pass it to the view as a keyword argument: `<int:pk>` matches digits and gives an `int`.",
+        "The other converters are `str` (the default, anything but a slash), `slug`, `uuid` and `path`, and `re_path` takes a regular expression when none of them fits.",
+      ),
+      lines(
+        "`include(\"app.urls\")` mounts an app's own `urls.py` under a prefix, and `app_name = \"app\"` in that file namespaces its names, as in `\"app:detail\"`.",
+        "`name=` lets code and templates build a URL instead of hardcoding it: `reverse(\"app:detail\", args=[7])` in Python, `{% url \"app:detail\" 7 %}` in a template.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# project/urls.py
+from django.urls import include, path
+urlpatterns = [
+    path("prefix/", include("app.urls")),            # mount the app under /prefix/
+]
+
+# app/urls.py
+app_name = "app"                                     # names become "app:..."
+urlpatterns = [
+    path("", views.index, name="index"),             # /prefix/
+    path("<int:pk>/", views.detail, name="detail"),  # /prefix/7/, pk=7
+]
+# reverse("app:detail", args=[7]) == "/prefix/7/"`,
+    },
+    pitfall: lines(
+      "`path(\"blog/\", \"blog.urls\")` is an error: a route needs a view or an `include()`, never a bare module path.",
+      "Write `path(\"blog/\", include(\"blog.urls\"))`, and import `include` from `django.urls` next to `path`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# shop/urls.py, with path and the two view functions imported
+app_name = "shop"
+urlpatterns = [
+    path("<int:pk>/", book, name="book"),
+    path("<slug:genre>/", shelf, name="shelf"),
+]
+# bookshop/urls.py: urlpatterns = [path("store/", include("shop.urls"))]
+
+# python manage.py shell
+from django.urls import resolve, reverse
+print(reverse("shop:book", args=[7]), reverse("shop:shelf", kwargs={"genre": "sci-fi"}))
+match = resolve("/store/42/")
+print(match.func.__name__, match.kwargs, match.view_name)
+print(resolve("/store/sci-fi/").kwargs)`,
+      steps: [
+        "Lines 2-6: the app sets its namespace, `shop`, and names its two routes.",
+        "Line 7: the project mounts the app under `store/`, so every shop URL starts with `/store/`.",
+        "Line 11: `reverse()` builds each path from its name, filling the converter from `args` or `kwargs`.",
+        "Lines 12-13: `resolve()` goes the other way; `42` matches the first route, so `book` gets `pk` as the `int` 42.",
+        "Line 14: `sci-fi` is not digits, so the `int` route fails and the `slug` route matches.",
+      ],
+      output: `/store/7/ /store/sci-fi/
+book {'pk': 42} shop:book
+{'genre': 'sci-fi'}`,
+    },
+    exercises: [
+      'dj-url-4',
+      'dj-urls-predict-1',
+      'py-dj-urls-parsons-2',
+      'py-dj-urls-cloze-1',
+      'py-dj-urls-path-basic',
+    ],
+  },
+  {
+    id: 'dj_forms/1',
+    topicKeys: [Topic.DJ_FORMS],
+    step: 1,
+    title: 'Forms & Validation',
+    idea: [
+      lines(
+        "A form class lists fields, and each brings its own checks: `CharField(max_length=50)`, `EmailField`, `IntegerField(min_value=1)`, and `required=False` for an optional one.",
+        "A `ModelForm` builds those fields from a model, named with `model` and `fields` in an inner `class Meta`.",
+      ),
+      lines(
+        "A form made with data, `Form(request.POST)`, is bound, and `is_valid()` runs every check.",
+        "Then `cleaned_data` holds the converted values and `errors` maps each failing field to its messages.",
+      ),
+      lines(
+        "Add rules with hooks: `clean_<field>()` checks one field and returns it, and `clean()` checks fields together, reading them with `.get()`.",
+        "Raise `ValidationError` in either; an error from `clean()` is stored under `__all__` and shown by `non_field_errors()`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django import forms
+
+class ThingForm(forms.ModelForm):
+    class Meta:
+        model = Thing
+        fields = ["title", "qty"]               # only these fields
+
+    def clean_title(self):                      # one field
+        value = self.cleaned_data["title"]
+        if len(value) < 3:
+            raise forms.ValidationError("Too short.")
+        return value                            # always return the value
+
+    def clean(self):                            # several fields; .get() each
+        return super().clean()                  # a ValidationError here -> __all__`,
+    },
+    pitfall: lines(
+      "A `clean_<field>()` hook that forgets `return value` sets that field's cleaned value to `None`, so the form saves an empty value without any error.",
+      "End every field hook by returning the value, changed or not.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell
+from django import forms
+
+class OrderForm(forms.Form):
+    title = forms.CharField(max_length=50)
+    copies = forms.IntegerField(min_value=1)
+    gift_wrap = forms.BooleanField(required=False)
+    note = forms.CharField(required=False)
+
+    def clean_title(self):
+        return self.cleaned_data["title"].title()
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("note") and not cleaned.get("gift_wrap"):
+            raise forms.ValidationError("A note needs gift wrap.")
+        return cleaned
+
+ok = OrderForm({"title": "  dune ", "copies": "2"})
+print(ok.is_valid(), ok.cleaned_data)
+bad = OrderForm({"title": "emma", "copies": "0", "note": "hi"})
+print(bad.is_valid(), sorted(bad.errors), bad.non_field_errors()[0])`,
+      steps: [
+        "Lines 4-8: four fields, each with its own checks; `gift_wrap` and `note` may be left out.",
+        "Lines 10-11: the field hook gets the title after `CharField` has stripped its spaces, and returns it capitalised.",
+        "Lines 19-20: every check passes, so `cleaned_data` holds converted values: the number 2, `False` for the missing checkbox and an empty note.",
+        "Lines 21-22: `copies` fails `min_value`, and `clean()` adds a form-wide error under `__all__`.",
+      ],
+      output: `True {'title': 'Dune', 'copies': 2, 'gift_wrap': False, 'note': ''}
+False ['__all__', 'copies'] A note needs gift wrap.`,
+    },
+    exercises: [
+      'dj-forms-gap-1',
+      'dj-forms-predict-3',
+      'dj-forms-cloze-1',
+      'dj-forms-clean-cross-cloze-1',
+      'py-dj-form-clean-field',
+    ],
+  },
+  {
+    id: 'dj_auth/1',
+    topicKeys: [Topic.DJ_AUTH],
+    step: 1,
+    title: 'Authentication & Permissions',
+    idea: [
+      lines(
+        "`django.contrib.auth` gives a `User` model with hashed passwords, groups and permissions, and its middleware puts the visitor on `request.user`.",
+        "That is a `User`, or an `AnonymousUser` whose `is_authenticated` is `False`.",
+      ),
+      lines(
+        "`authenticate(request, username=..., password=...)` checks the credentials and returns the `User`, or `None`.",
+        "`login(request, user)` stores that user in the session, and `logout(request)` clears it.",
+      ),
+      lines(
+        "`@login_required` and `LoginRequiredMixin` send anonymous visitors to `LOGIN_URL`.",
+        "`user.has_perm(\"app.codename\")` checks a permission given to the user or to one of their groups.",
+        "Point foreign keys at `settings.AUTH_USER_MODEL`, so a custom user model can replace the default later.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
+
+owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+user = authenticate(request, username=u, password=p)   # a User or None
+if user is not None:
+    login(request, user)                               # store it in the session
+
+@login_required                                        # else -> LOGIN_URL?next=...
+def dashboard(request): ...
+
+user.set_password("raw")                               # hash it, then user.save()
+user.has_perm("app.change_thing")                      # direct or through a group`,
+    },
+    pitfall: lines(
+      "`authenticate()` alone signs nobody in: it only returns the matching `User`, or `None` for wrong credentials.",
+      "Test the result for `None`, then call `login(request, user)` to store the user in the session.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; the shop app has a Book model, so change_book exists
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.models import AnonymousUser, Permission
+
+User = get_user_model()
+clerk = User.objects.create_user("clerk", password="s3cret-pass")
+print(clerk.password.startswith("pbkdf2_sha256$"), clerk.check_password("s3cret-pass"))
+print(authenticate(username="clerk", password="wrong"))
+user = authenticate(username="clerk", password="s3cret-pass")
+print(user == clerk, user.is_authenticated, AnonymousUser().is_authenticated)
+print(user.has_perm("shop.change_book"))
+user.user_permissions.add(Permission.objects.get(codename="change_book"))
+user = User.objects.get(pk=user.pk)
+print(user.has_perm("shop.change_book"))`,
+      steps: [
+        "Lines 5-7: `create_user` hashes the password, so the stored value is a PBKDF2 hash, and `check_password` compares against it.",
+        "Line 8: a wrong password makes `authenticate` return `None`.",
+        "Lines 9-10: the right one returns the same user, who is authenticated, while an anonymous visitor is not.",
+        "Line 11: the clerk has no `change_book` permission yet.",
+        "Lines 12-14: after the grant, the user is fetched again, because a user object caches its permissions after the first check.",
+      ],
+      output: `True True
+None
+True True False
+False
+True`,
+    },
+    exercises: [
+      'py-dj-auth-user-model',
+      'py-dj-auth-parsons-1',
+      'py-dj-auth-cloze-2',
+      'py-dj-auth-authenticate-login',
+      'py-dj-auth-predict-1',
+    ],
+  },
+  {
+    id: 'dj_rest/1',
+    topicKeys: [Topic.DJ_REST],
+    step: 1,
+    title: 'Django REST Framework',
+    idea: [
+      lines(
+        "Django REST Framework (DRF) builds JSON APIs on Django.",
+        "A serializer converts both ways: a model instance into a dict of plain values for the response, and incoming data into validated values for a save.",
+      ),
+      lines(
+        "A `ModelSerializer` builds its fields from `model` and `fields` in `class Meta`, as a `ModelForm` does.",
+        "`Serializer(obj).data` gives one dict and `Serializer(qs, many=True).data` a list, while `Serializer(data=request.data)` takes input: `is_valid()`, then `save()`, or read `errors`.",
+      ),
+      lines(
+        "A view takes a DRF `Request` and returns a `Response`, rendered as JSON: `@api_view([\"GET\", \"POST\"])` on a function, or an `APIView` class with `get()` and `post()`.",
+        "A method the view does not allow answers 405, and `permission_classes` such as `[IsAuthenticatedOrReadOnly]` decide who may call it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from rest_framework import serializers
+from rest_framework.decorators import api_view
+
+class ThingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Thing
+        fields = ["id", "title"]               # what goes in and out
+
+ThingSerializer(obj).data                      # out: one dict
+ThingSerializer(qs, many=True).data            # out: a list of dicts
+s = ThingSerializer(data=request.data)         # in: always data=
+s.is_valid()                                   # then s.save() or s.errors
+
+@api_view(["GET", "POST"])                     # other methods -> 405
+def endpoint(request): ...                     # return Response(data, status=...)`,
+    },
+    pitfall: lines(
+      "`Serializer(request.data)` passes the input as an instance to serialize, so `is_valid()` refuses to run because no `data=` was given.",
+      "Incoming data always goes in as `data=request.data`, and you read `.data` or call `save()` only after `is_valid()`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.serializers import ModelSerializer
+from rest_framework.test import APIRequestFactory
+from shop.models import Book
+
+class BookSerializer(ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ["title", "price"]
+
+@api_view(["POST"])
+def add_book(request):
+    s = BookSerializer(data=request.data)
+    if not s.is_valid():
+        return Response(s.errors, status=400)
+    s.save()
+    return Response(s.data, status=201)
+
+rf = APIRequestFactory()
+r = add_book(rf.post("/books/", {"title": "Emma"}, format="json"))
+print(r.status_code, r.data["price"][0], add_book(rf.get("/books/")).status_code)
+r = add_book(rf.post("/books/", {"title": "Emma", "price": 8}, format="json"))
+print(r.status_code, r.data)`,
+      steps: [
+        "Lines 7-18: in `python manage.py shell`, the serializer builds two fields from `Book`, and the view validates POSTed data before saving it.",
+        "Lines 21-22: with no `price` the field's error comes back with 400, and a GET, not allowed here, gets 405.",
+        "Lines 23-24: valid data is saved and returned with 201.",
+      ],
+      output: `400 This field is required. 405
+201 {'title': 'Emma', 'price': 8}`,
+    },
+    exercises: [
+      'dj-rest-gap-1',
+      'dj-drf-predict-1',
+      'dj-drf-parsons-1',
+      'dj-drf-permclass-cloze-1',
+      'py-drf-permission-class',
     ],
   },
 ];
