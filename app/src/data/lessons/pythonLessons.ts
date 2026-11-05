@@ -4712,4 +4712,193 @@ sold out: Emma`,
       'dj-custom-managers-queryset-cloze-1',
     ],
   },
+  {
+    id: 'dj_celery/1',
+    topicKeys: [Topic.DJ_CELERY],
+    step: 1,
+    title: 'Celery Tasks & Scheduling',
+    idea: [
+      lines(
+        "Celery runs slow work outside the request, such as sending email or building a report.",
+        "The view calls `task.delay(args)`, which puts a message on a broker such as Redis and returns at once, and a separate worker process started with `celery -A proj worker` takes the message and runs the function.",
+        "So three things must be running: Django, the broker and at least one worker.",
+      ),
+      lines(
+        "A task is a function in an app's `tasks.py` marked `@shared_task`.",
+        "The project's `celery.py` creates the app, reads every `CELERY_*` setting with `config_from_object`, and `autodiscover_tasks()` finds each `tasks.py`.",
+        "`apply_async(args=[...], countdown=60)` is `delay()` with options for timing and routing.",
+      ),
+      lines(
+        "With `bind=True` the task receives itself as `self`, and `raise self.retry(exc=exc, countdown=60)` puts it back on the queue, up to `max_retries` times.",
+        "Celery beat is one extra process that sends tasks on a schedule read from `beat_schedule`.",
+        "`chain`, `group` and `chord` combine signatures, written `task.s(args)`, into sequences, parallel runs and fan-in callbacks.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# proj/celery.py (imported from proj/__init__.py)
+app = Celery("proj")
+app.config_from_object("django.conf:settings", namespace="CELERY")
+app.autodiscover_tasks()                      # every installed app's tasks.py
+
+# someapp/tasks.py
+@shared_task(bind=True, max_retries=n)
+def name(self, obj_id):                       # JSON values in: ids, not objects
+    try:
+        ...                                   # the slow work
+    except SomeError as exc:
+        raise self.retry(exc=exc, countdown=secs)
+
+# a view: enqueue and return at once
+res = name.delay(obj_id)                      # AsyncResult; keep res.id to poll
+name.apply_async(args=[obj_id], countdown=secs, queue="q")
+
+# beat: a schedule of dotted task paths
+app.conf.beat_schedule = {"label": {"task": "someapp.tasks.name", "schedule": secs}}
+
+# composition: signatures, not calls
+chain(a.s(x), b.s())    # group(...) runs in parallel; chord(group, callback)`,
+    },
+    pitfall: lines(
+      "`delay()` does not return the task's result: it returns an `AsyncResult` at once, and `ready()` stays False until a worker has finished.",
+      "Calling `get()` on it inside a view blocks the request until the worker is done, which undoes the point of the queue.",
+      "Return the task id instead and let the client poll, or have the task save its result somewhere the next request can read.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# library/tasks.py, in a project with a broker, a result backend and one worker running
+from celery import shared_task
+from django.core.mail import send_mail
+
+@shared_task(bind=True, max_retries=5)
+def remind_due(self, member_email, title):
+    try:
+        send_mail("Book due", f"{title} is due back tomorrow.", None, [member_email])
+    except OSError as err:
+        raise self.retry(exc=err, countdown=120)
+    return f"reminded {member_email}"
+
+# python manage.py shell
+from library.tasks import remind_due
+
+job = remind_due.delay("ana@example.com", "Dune")
+print(type(job).__name__, job.ready())
+print(job.get(timeout=30))
+print(job.status, job.ready())`,
+      steps: [
+        "Lines 5-6: `@shared_task(bind=True, max_retries=5)` makes the function a task that receives itself as `self`, and its arguments are plain strings that travel through the broker as JSON.",
+        "Lines 7-10: a mail server that cannot be reached raises `OSError`, and `raise self.retry(...)` puts the task back on the queue to run again in 120 seconds, at most 5 times.",
+        "Lines 16-17: `delay()` only sends a message, so it returns an `AsyncResult` before the worker has even picked the task up, and `ready()` is False.",
+        "Line 18: `get()` waits for the worker and returns the task's return value, read from the result backend; the shell can wait, while a view should not.",
+        "Line 19: once the task has finished, its status is `SUCCESS` and `ready()` is True.",
+      ],
+      output: `AsyncResult False
+reminded ana@example.com
+SUCCESS True`,
+    },
+    exercises: [
+      'dj-celery-gap-2',
+      'dj-celery-predict-1',
+      'dj-celery-parsons-1',
+      'dj-celery-cloze-1',
+      'celery-drf-1',
+    ],
+  },
+  {
+    id: 'dj_redis/1',
+    topicKeys: [Topic.DJ_REDIS],
+    step: 1,
+    title: 'Redis (Caching, Queues, Sessions)',
+    idea: [
+      lines(
+        "Redis is a data store that keeps its keys and values in memory, so a read or a write takes well under a millisecond.",
+        "A key can be given a timeout, after which Redis removes it.",
+        "In a Django stack one Redis server usually plays three parts: the cache, the Celery broker and the session store.",
+      ),
+      lines(
+        "As the cache, `CACHES` names the `RedisCache` backend and a `redis://host:6379/1` URL, and code talks to it through `django.core.cache.cache`.",
+        "`set(key, value, timeout=secs)` stores, `get(key, default)` reads, `add()` writes only when the key is missing, `incr()` adds 1 inside Redis itself, and `delete()` removes.",
+        "As the broker, `CELERY_BROKER_URL` points at the same server, and `SESSION_ENGINE = \"django.contrib.sessions.backends.cache\"` keeps sessions there too.",
+      ),
+      lines(
+        "Values are not only strings: lists serve as queues and feeds, sets hold unique members, sorted sets rank members by score for leaderboards, and hashes hold an object's fields.",
+        "Pub/sub passes messages between services as they happen.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# settings.py: one server, a database number per role
+CACHES = {"default": {
+    "BACKEND": "django.core.cache.backends.redis.RedisCache",
+    "LOCATION": "redis://host:6379/1",
+}}
+CELERY_BROKER_URL = "redis://host:6379/0"
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+
+# code: read through the cache
+from django.core.cache import cache
+
+value = cache.get(key)                 # None on a miss or after expiry
+if value is None:
+    value = compute()                  # the database stays the source of truth
+    cache.set(key, value, timeout=secs)
+cache.add(key, value)                  # only if missing; True or False
+cache.incr(key)                        # atomic counter
+cache.delete(key)                      # after the data changes`,
+    },
+    pitfall: lines(
+      "Redis is not the source of truth: a key expires at its timeout, and a full server evicts keys, so `get()` can return `None` for anything at any time.",
+      "Read through the cache, computing the value from the database on a miss and setting it again, and delete the key when the data behind it changes.",
+      "Test for a miss with `is None`, since a cached 0 or empty list is a real value.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# shop/stock.py, with CACHES pointing at an empty Redis
+from django.core.cache import cache
+
+def count_books(genre):
+    print("db query for", genre)
+    return {"scifi": 12, "poetry": 3}[genre]
+
+def genre_count(genre):
+    key = f"genre-count:{genre}"
+    total = cache.get(key)
+    if total is None:
+        total = count_books(genre)
+        cache.set(key, total, timeout=600)
+    return total
+
+# python manage.py shell
+from django.core.cache import cache
+from shop.stock import genre_count
+
+print(genre_count("scifi"))
+print(genre_count("scifi"))
+cache.delete("genre-count:scifi")
+print(genre_count("scifi"), genre_count("poetry"))
+print(cache.incr("genre-count:poetry"))`,
+      steps: [
+        "Lines 4-6: `count_books` stands in for a database count such as `Book.objects.filter(genre=genre).count()` and prints each time it runs.",
+        "Lines 8-14: the helper reads the cache first and goes to the database only on a miss, then stores the answer for 600 seconds.",
+        "Lines 20-21: the first call misses and queries, and the second finds 12 in Redis, so no query line is printed.",
+        "Lines 22-23: deleting the key forces the next scifi call to query again, and both arguments are counted before `print` shows `12 3`.",
+        "Line 24: `incr()` adds 1 to the cached poetry count inside Redis and returns the new value, 4.",
+      ],
+      output: `db query for scifi
+12
+12
+db query for scifi
+db query for poetry
+12 3
+4`,
+    },
+    exercises: [
+      'celery-drf-9',
+      'celery-drf-11',
+      'dj-redis-gap-1',
+      'dj-redis-predict-1',
+    ],
+  },
 ];
