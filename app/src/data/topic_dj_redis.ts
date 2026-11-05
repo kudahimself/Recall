@@ -9,6 +9,7 @@ import {
   Difficulty,
   Topic,
   Course,
+  CodeLanguage,
 } from '../types';
 
 export const dj_redis_questions: Question[] = [
@@ -84,6 +85,32 @@ export const dj_redis_questions: Question[] = [
         'One Redis server often handles caching AND Celery brokering for a Django app',
       ],
       tags: ['redis', 'caching', 'celery', 'in-memory', 'basics'],
+      concepts: ['dj-caching'],
+    },
+  {
+      id: 'dj-redis-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_REDIS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'The default cache in `settings.py` is the Redis backend, and these lines are typed into `python manage.py shell` while Redis is running with an empty database. What do the three `print` calls output? The answer is three lines: a number; then a boolean and a number separated by a space; then two values separated by a space.',
+      code: `# settings.py: CACHES["default"] uses django.core.cache.backends.redis.RedisCache
+# typed into python manage.py shell
+from django.core.cache import cache
+
+cache.set("visits", 0, timeout=300)
+cache.incr("visits")
+cache.incr("visits")
+print(cache.get("visits"))
+print(cache.add("visits", 100), cache.get("visits"))
+print(cache.get("greeting"), cache.get("greeting", "hi"))`,
+      expectedOutput: `2
+False 2
+None hi`,
+      explanation: '`set()` stores 0 under "visits" for 300 seconds, and each `incr()` adds 1 inside Redis itself, so `get()` reads back 2. `add()` writes only when the key is missing; "visits" exists, so it returns False and leaves the value at 2. A key that was never set reads as `None`, unless `get()` is given a default, which comes back in its place. Because a missing key and an expired key look the same, code that reads the cache must always handle the miss.',
+      hints: ['incr() changes the stored number in place.', 'add() never overwrites a key that already exists.'],
+      tags: ['redis', 'django', 'cache', 'incr', 'predict'],
       concepts: ['dj-caching'],
     },
 ];

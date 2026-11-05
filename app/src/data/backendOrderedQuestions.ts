@@ -802,7 +802,7 @@ export const backendOrderedQuestions: Question[] = [
   q('celery-drf-5'), q('dj-celery-composition-cloze-1'), q('celery-drf-8'), q('dj-celery-chord-cloze-1'), q('dj-celery-adv-1'),
 
   // ===== Topic.DJ_REDIS =====
-  q('celery-drf-9'), q('celery-drf-11'), q('dj-redis-gap-1'),
+  q('celery-drf-9'), q('celery-drf-11'), q('dj-redis-gap-1'), q('dj-redis-predict-1'),
 
   // ===== Topic.DJ_CHANNELS =====
   q('be-infra-channels-1'), q('dj-channels-gap-1'), q('dj-channels-cloze-1'), q('be-infra-channels-3'),
