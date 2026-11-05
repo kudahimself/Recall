@@ -1,7 +1,8 @@
 /**
  * Backend (Python) lessons, one per topic, in course order.
  *
- * Sections 1-3, Python Fundamentals, Python Advanced and Django: every topic.
+ * Sections 1-4, Python Fundamentals, Python Advanced, Django and Django Advanced &
+ * Deployment: every topic.
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on `python3 -I` and compares what it prints with `output`.
@@ -3433,6 +3434,961 @@ print(r.status_code, r.data)`,
       'dj-drf-parsons-1',
       'dj-drf-permclass-cloze-1',
       'py-drf-permission-class',
+    ],
+  },
+  {
+    id: 'dj_orm_mastery/1',
+    topicKeys: [Topic.DJ_ORM_MASTERY],
+    step: 1,
+    title: 'ORM Mastery (deep revisit)',
+    idea: [
+      lines(
+        "Mastering the ORM means knowing how many queries a line of code runs.",
+        "Reading a foreign key on every row of a plain queryset runs one more query per row: 1 + N in all, the N+1 problem.",
+        "`select_related(\"fk\")` joins a foreign key or one-to-one into the first query, and `prefetch_related(\"m2m\")` loads a many-to-many or reverse relation in one extra query.",
+      ),
+      lines(
+        "Ask the database only what you need.",
+        "`exists()` stops at the first matching row and `count()` returns a number, while `len(qs)` and `if qs:` load every row.",
+        "`only()` and `defer()` trim columns, but reading a left-out column later costs a query per object.",
+      ),
+      lines(
+        "A `Window` annotation computes across a group of rows and keeps every row: `RowNumber`, `Rank`, `Lag` and running sums, numbered per `partition_by` group in `order_by` order.",
+        "`select_for_update()` locks the rows it reads until the transaction ends, so it only runs inside `transaction.atomic()`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.db import transaction
+from django.db.models import F, Window
+from django.db.models.functions import RowNumber
+
+qs = Thing.objects.select_related("owner")      # FK / one-to-one: JOIN, same query
+qs = qs.prefetch_related("tags")                # M2M / reverse FK: one extra query
+qs.exists()                                     # any row? SELECT 1 ... LIMIT 1
+qs.count()                                      # how many? COUNT(*), no objects built
+
+Thing.objects.annotate(n=Window(                # every row kept, each gets n
+    expression=RowNumber(),                     # or Rank(), Lag("col"), Sum("col")
+    partition_by=[F("group")],                  # numbering restarts per group
+    order_by=F("col").desc(),
+))
+
+with transaction.atomic():                      # the lock lasts until commit
+    t = Thing.objects.select_for_update().get(pk=pk)`,
+    },
+    pitfall: lines(
+      "A loop that reads `row.fk.field` over a plain queryset runs 1 + N queries: fast with 3 rows in development, slow with 3,000 in production.",
+      "Load relations up front with `select_related` for a foreign key or `prefetch_related` for the many side, and count queries with `connection.queries` or the debug toolbar.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell with DEBUG = True; shop.Book has title, author (FK to Author) and sold
+from django.db import connection, reset_queries
+from django.db.models import F, Window
+from django.db.models.functions import Rank
+from shop.models import Author, Book
+
+ann, bo = Author.objects.create(name="Ann"), Author.objects.create(name="Bo")
+for title, author, sold in [("Dune", ann, 9), ("Emma", ann, 4), ("Ulysses", bo, 7)]:
+    Book.objects.create(title=title, author=author, sold=sold)
+
+reset_queries()
+names = [b.author.name for b in Book.objects.all()]
+print(len(connection.queries))
+reset_queries()
+names = [b.author.name for b in Book.objects.select_related("author")]
+print(len(connection.queries))
+print(Book.objects.filter(sold__gt=8).exists(), Book.objects.filter(author=bo).count())
+top = Book.objects.annotate(
+    pos=Window(expression=Rank(), partition_by=[F("author")], order_by=F("sold").desc())
+)
+print([(b.title, b.pos) for b in top.order_by("author__name", "pos")])`,
+      steps: [
+        "Lines 7-9: two authors and three books, two of them by Ann.",
+        "Lines 11-13: the plain queryset loads the books in one query, then each `b.author` runs its own, so 1 + 3 = 4.",
+        "Lines 14-16: `select_related` joins the author into the first query, so the same loop costs 1.",
+        "Line 17: `exists()` asks for one matching row and `count()` for a number, and neither builds a `Book`.",
+        "Lines 18-21: `Rank()` runs over each author's books, best seller first, and keeps all three rows: Dune is Ann's first, Emma her second and Ulysses Bo's first.",
+      ],
+      output: `4
+1
+True 1
+[('Dune', 1), ('Emma', 2), ('Ulysses', 1)]`,
+    },
+    exercises: [
+      'dj-orm-mastery-window-mcq-1',
+      'dj-orm-mastery-lock-mcq-1',
+      'dj-orm-mastery-perf-predict-1',
+      'dj-orm-mastery-window-cloze-1',
+      'dj-orm-mastery-lock-1',
+    ],
+  },
+  {
+    id: 'dj_models_mastery/1',
+    topicKeys: [Topic.DJ_MODELS_MASTERY],
+    step: 1,
+    title: 'Models Mastery (deep revisit)',
+    idea: [
+      lines(
+        "Models inherit in three ways.",
+        "An abstract base (`abstract = True` in `Meta`) has no table: its fields are copied into each child.",
+        "Multi-table inheritance, a subclass of a concrete model, gives the child its own table joined to the parent's by an automatic one-to-one, so reaching child fields from a parent costs a query.",
+        "A proxy (`proxy = True`) uses the parent's table and rows and changes only Python behaviour such as ordering, methods and managers, so it cannot add fields.",
+      ),
+      lines(
+        "Validation lives in `full_clean()`: field validators first, then `clean()` for rules across fields, then unique checks and constraints.",
+        "Forms and serializers call it for you, while `save()`, `create()`, `bulk_create()` and `update()` never do.",
+      ),
+      lines(
+        "`update()`, `bulk_create()` and `bulk_update()` are plain SQL, so an overridden `save()` and the save signals do not run for them.",
+        "A rule that must hold under concurrent requests belongs in the database, as a `UniqueConstraint` or `CheckConstraint` in `Meta.constraints`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class Base(models.Model):                  # abstract: no table, fields copied down
+    created = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        abstract = True
+
+class Thing(Base):
+    a = models.IntegerField(validators=[MinValueValidator(0)])
+    b = models.IntegerField()
+    class Meta:                            # enforced by the database itself
+        constraints = [models.UniqueConstraint(fields=["a", "b"], name="uniq_a_b")]
+
+    def clean(self):                       # cross-field rule, run by full_clean()
+        if self.b < self.a:
+            raise ValidationError("b must not be below a.")
+
+class OrderedThing(Thing):                 # proxy: same table, new behaviour only
+    class Meta:
+        proxy = True
+        ordering = ["-b"]
+
+obj.full_clean()                           # validators + clean(); save() skips both`,
+    },
+    pitfall: lines(
+      "`save()` does not validate: a field's `validators` and the model's `clean()` are skipped by `obj.save()` and `objects.create()`, and the bad value is stored.",
+      "Call `obj.full_clean()` before saving when no form or serializer did, and back a rule that must never break with a database constraint.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# shop/models.py
+class Loan(models.Model):
+    reader = models.CharField(max_length=50)
+    copies = models.IntegerField(validators=[MinValueValidator(1)])
+    lent = models.DateField()
+    due = models.DateField()
+
+    def clean(self):
+        if self.due < self.lent:
+            raise ValidationError("Due date is before the loan date.")
+
+class LateLoan(Loan):
+    class Meta:
+        proxy = True
+        ordering = ["due"]
+
+# python manage.py shell
+from datetime import date
+from django.core.exceptions import ValidationError
+from shop.models import Loan, LateLoan
+
+bad = Loan(reader="Ann", copies=0, lent=date(2026, 3, 9), due=date(2026, 3, 1))
+try:
+    bad.full_clean()
+except ValidationError as e:
+    print(sorted(e.message_dict))
+bad.save()
+late = LateLoan.objects.get(pk=bad.pk)
+print(Loan.objects.count(), late.copies, type(late).__name__)`,
+      steps: [
+        "Lines 2-10: `copies` carries a field validator, and `clean()` holds the rule across two dates.",
+        "Lines 12-15: `LateLoan` is a proxy, so it has no table of its own: the same rows with a different default order.",
+        "Lines 22-26: `full_clean()` runs both checks, so the errors name `copies` and, for the `clean()` rule, `__all__`.",
+        "Line 27: `save()` validates nothing, so the bad loan is stored as it is.",
+        "Lines 28-29: the proxy reads that same row back, as a `LateLoan`.",
+      ],
+      output: `['__all__', 'copies']
+1 0 LateLoan`,
+    },
+    exercises: [
+      'dj-models-mastery-inherit-mcq-1',
+      'dj-models-mastery-integrity-mcq-1',
+      'dj-models-mastery-validate-predict-1',
+      'dj-models-mastery-proxy-cloze-1',
+      'dj-models-mastery-clean-1',
+    ],
+  },
+  {
+    id: 'dj_views_mastery/1',
+    topicKeys: [Topic.DJ_VIEWS_MASTERY],
+    step: 1,
+    title: 'Views Mastery (deep revisit)',
+    idea: [
+      lines(
+        "`as_view()` turns a class-based view into a function.",
+        "For each request it builds a fresh instance, runs `setup()`, which sets `self.request`, `self.args` and `self.kwargs`, then `dispatch()`.",
+        "`dispatch()` checks the verb against `http_method_names` and calls `get()`, `post()` and so on, or answers 405.",
+        "Code that must run for every verb goes in an overridden `dispatch()` around `super().dispatch(...)`.",
+      ),
+      lines(
+        "A function-view decorator such as `login_required` or `cache_page` cannot sit on a class.",
+        "`@method_decorator(deco, name=\"dispatch\")` adapts it to the method every verb passes through.",
+      ),
+      lines(
+        "Raise `Http404` or `PermissionDenied` and Django builds the 404 or 403 for you.",
+        "After a POST that changes data, redirect, so a refresh repeats a GET rather than the POST (Post/Redirect/Get).",
+        "`JsonResponse(data, safe=False)` sends a list, and `StreamingHttpResponse(generator)` sends a large export chunk by chunk, never holding the whole body in memory.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.utils.decorators import method_decorator
+from django.views import View
+
+@method_decorator(some_decorator, name="dispatch")   # a function decorator, every verb
+class ThingView(View):
+    http_method_names = ["get", "post"]              # anything else -> 405
+
+    def dispatch(self, request, *args, **kwargs):    # runs for every verb
+        # before the handler
+        response = super().dispatch(request, *args, **kwargs)
+        # after the handler
+        return response
+
+    def get(self, request, *args, **kwargs): ...     # GET -> get()
+
+    def post(self, request, *args, **kwargs):
+        return redirect("thing-detail", pk=obj.pk)   # redirect after a POST
+
+StreamingHttpResponse(rows(), content_type="text/csv")   # a generator, chunk by chunk`,
+    },
+    pitfall: lines(
+      "`@cache_page` keys the cached page on the URL, not on the user, so on a personal page the first visitor's page is served to everyone until it expires.",
+      "Cache whole views only when every visitor gets the same page, and cache personal data under keys that include the user.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; a class-based view called with fake requests
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.test import RequestFactory
+from django.views import View
+
+class ShelfView(View):
+    http_method_names = ["get", "post"]
+
+    def dispatch(self, request, *args, **kwargs):
+        print("in", request.method)
+        response = super().dispatch(request, *args, **kwargs)
+        print("out", response.status_code)
+        return response
+
+    def get(self, request, shelf):
+        return JsonResponse([shelf, "Dune", "Emma"], safe=False)
+
+    def post(self, request, shelf):
+        return redirect(f"/shelves/{shelf}/")
+
+rf = RequestFactory()
+view = ShelfView.as_view()
+print(view(rf.get("/shelves/sf/"), shelf="sf").content)
+print(view(rf.post("/shelves/sf/"), shelf="sf")["Location"])
+print(view(rf.delete("/shelves/sf/"), shelf="sf")["Allow"])`,
+      steps: [
+        "Lines 10-14: the overridden `dispatch()` wraps every verb: it prints on the way in, lets `super().dispatch()` pick the handler, and prints the status on the way out.",
+        "Line 23: `as_view()` turns the class into a view function that builds a new `ShelfView` for each request.",
+        "Line 24: GET goes to `get()`, and `safe=False` lets `JsonResponse` send a list.",
+        "Line 25: the POST handler answers with a 302 redirect, so a refresh repeats a harmless GET.",
+        "Line 26: DELETE is not in `http_method_names`, so `dispatch()` answers 405 and lists the allowed verbs in `Allow` (Django also logs a warning to stderr).",
+      ],
+      output: `in GET
+out 200
+b'["sf", "Dune", "Emma"]'
+in POST
+out 302
+/shelves/sf/
+in DELETE
+out 405
+GET, POST`,
+    },
+    exercises: [
+      'dj-views-mastery-dispatch-mcq-1',
+      'dj-views-mastery-decorator-mcq-1',
+      'dj-views-mastery-cache-mcq-1',
+      'dj-views-mastery-dispatch-predict-1',
+      'dj-views-mastery-streaming-1',
+    ],
+  },
+  {
+    id: 'dj_forms_mastery/1',
+    topicKeys: [Topic.DJ_FORMS_MASTERY],
+    step: 1,
+    title: 'Forms Mastery (deep revisit)',
+    idea: [
+      lines(
+        "`is_valid()` runs in a fixed order.",
+        "Each field converts its value and runs its validators, then its `clean_<field>()` hook, which is skipped when the field already failed.",
+        "After every field, `clean()` checks rules across fields.",
+        "A failed field is gone from `cleaned_data`, so `clean()` reads with `.get()`, and its errors go to `__all__` unless `self.add_error(\"field\", msg)` pins them to a field.",
+      ),
+      lines(
+        "A `ModelForm` also runs the model's own validation: its `clean()` and its unique checks, so a taken username becomes a form error, not an `IntegrityError` at save.",
+        "List its fields explicitly: `fields = \"__all__\"` exposes every model field, including ones added later, to anyone who can POST.",
+      ),
+      lines(
+        "`save(commit=False)` returns an unsaved object, so you can set server-side fields such as the owner.",
+        "Then `obj.save()` gives it a primary key and `form.save_m2m()` writes its many-to-many rows.",
+        "Uploaded files arrive in `request.FILES`, so bind with `Form(request.POST, request.FILES)`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class ThingForm(forms.ModelForm):
+    class Meta:
+        model = Thing
+        fields = ["title", "tags"]                  # an allow-list, never "__all__"
+
+    def clean(self):                                # after every field's own checks
+        cleaned = super().clean()
+        if cleaned.get("a") and not cleaned.get("b"):   # .get(): a failed field is gone
+            self.add_error("b", "Needed with a.")       # on the field, not __all__
+        return cleaned
+
+form = ThingForm(request.POST, request.FILES)       # files come separately
+if form.is_valid():
+    obj = form.save(commit=False)                   # unsaved, no M2M rows yet
+    obj.owner = request.user                        # a server-set field
+    obj.save()                                      # now it has a pk
+    form.save_m2m()                                 # then the M2M rows`,
+    },
+    pitfall: lines(
+      "After `save(commit=False)`, the many-to-many field is held back: `obj.save()` stores the row and silently drops the tags.",
+      "Call `form.save_m2m()` after `obj.save()`, or use a plain `form.save()` when no server-side field needs setting.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell
+from django import forms
+from django.core.validators import MinValueValidator
+from django.forms import formset_factory
+
+class ReturnForm(forms.Form):
+    copies = forms.IntegerField(validators=[MinValueValidator(1)])
+    damaged = forms.BooleanField(required=False)
+    note = forms.CharField(required=False)
+
+    def clean_copies(self):
+        print("clean_copies runs")
+        return self.cleaned_data["copies"]
+
+    def clean(self):
+        cleaned = super().clean()
+        print("clean sees", sorted(cleaned))
+        if cleaned.get("damaged") and not cleaned.get("note"):
+            self.add_error("note", "Say what is damaged.")
+        return cleaned
+
+form = ReturnForm({"copies": "0", "damaged": "on"})
+print(form.is_valid(), sorted(form.errors))
+ReturnFormSet = formset_factory(ReturnForm, extra=1)
+print(ReturnFormSet(initial=[{"copies": 2}, {"copies": 1}]).total_form_count())`,
+      steps: [
+        "Lines 6-9: `copies` must be at least 1, while `damaged` and `note` may be left out.",
+        "Lines 11-13: a field hook runs only once its field has passed its own checks.",
+        "Lines 15-19: `clean()` reads fields with `.get()`, since a failed field is no longer in `cleaned_data`, and `add_error()` pins its error to `note` instead of `__all__`.",
+        "Lines 22-23: `copies` is 0 and fails its validator, so `clean_copies()` never prints, `clean()` sees only `damaged` and `note`, and two fields end up with errors.",
+        "Lines 24-25: a formset renders one form per `initial` row plus `extra` blank ones, 2 + 1 = 3.",
+      ],
+      output: `clean sees ['damaged', 'note']
+False ['copies', 'note']
+3`,
+    },
+    exercises: [
+      'dj-forms-mastery-lifecycle-mcq-1',
+      'dj-forms-mastery-security-mcq-1',
+      'dj-forms-mastery-lifecycle-predict-1',
+      'dj-forms-mastery-modelform-validate-mcq-1',
+      'dj-forms-mastery-savem2m-1',
+    ],
+  },
+  {
+    id: 'dj_auth_mastery/1',
+    topicKeys: [Topic.DJ_AUTH_MASTERY],
+    step: 1,
+    title: 'Auth Mastery (deep revisit)',
+    idea: [
+      lines(
+        "A password is stored as `algorithm$iterations$salt$hash`, with a fresh salt per user.",
+        "The first entry of `PASSWORD_HASHERS` hashes new passwords, the others still verify old ones, and an old hash is upgraded at the user's next login.",
+        "`check_password()` compares in constant time, and `set_password()` only hashes: `AUTH_PASSWORD_VALIDATORS` run in the auth forms, `createsuperuser` and `validate_password()`.",
+      ),
+      lines(
+        "`authenticate()` tries each backend in `AUTHENTICATION_BACKENDS` in order and stops at the first that returns a user.",
+        "A backend is a class with `authenticate(self, request, **credentials)`, returning a user or `None`, and `get_user(self, user_id)`, which reloads the user from the session on each request.",
+        "`login()` issues a new session key, which defeats session fixation.",
+      ),
+      lines(
+        "An inactive user cannot log in and has no permissions, while an active superuser has them all.",
+        "The default backend ignores the object in `has_perm(perm, obj)`, so row-level rules need your own check.",
+        "The session cookie's flags guard it in the browser: `Secure` (HTTPS only), `HttpOnly` (hidden from JavaScript) and `SameSite` (not sent on cross-site requests).",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class ThingBackend:
+    def authenticate(self, request, key=None, secret=None):
+        user = ...                                  # look the user up; None if absent
+        if user and user.is_active and user.check_password(secret):
+            return user                             # signed in by this backend
+        return None                                 # let the next backend try
+
+    def get_user(self, user_id):                    # reload from the session
+        ...
+
+AUTHENTICATION_BACKENDS = [
+    "app.backends.ThingBackend",                    # tried first
+    "django.contrib.auth.backends.ModelBackend",    # username and password
+]
+SESSION_COOKIE_SECURE = True                        # HTTPS only
+SESSION_COOKIE_HTTPONLY = True                      # hidden from JavaScript
+SESSION_COOKIE_SAMESITE = "Lax"                     # not sent cross-site`,
+    },
+    pitfall: lines(
+      "A custom backend that lets `DoesNotExist` escape, or compares the typed password with `==` against the stored hash, either crashes the login or never matches.",
+      "Catch the miss and return `None` so the next backend can try, and verify with `user.check_password(raw)`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# mysite/settings.py
+AUTHENTICATION_BACKENDS = [
+    "shop.backends.CardBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# shop/backends.py
+from django.contrib.auth import get_user_model
+
+class CardBackend:
+    def authenticate(self, request, card=None, pin=None):
+        readers = get_user_model().objects.filter(username=f"card-{card}", is_active=True)
+        reader = readers.first()
+        if reader is not None and reader.check_password(pin):
+            return reader
+        return None
+
+    def get_user(self, user_id):
+        return get_user_model().objects.filter(pk=user_id).first()
+
+# python manage.py shell
+from django.contrib.auth import authenticate, get_user_model
+
+reader = get_user_model().objects.create_user("card-1042", password="7731")
+print(authenticate(card="1042", pin="7731").backend)
+print(authenticate(username="card-1042", password="7731").backend)
+print(authenticate(card="9999", pin="7731"))
+reader.is_active = False
+reader.save()
+print(authenticate(card="1042", pin="7731"))`,
+      steps: [
+        "Lines 2-5: `authenticate()` tries the card backend first, then the default one.",
+        "Lines 11-16: a library card signs in with its number and PIN, `.first()` gives `None` for an unknown or inactive card instead of raising, and the PIN is checked with `check_password()`.",
+        "Line 24: `create_user()` hashes the PIN but runs no password validators, so a 4-digit PIN is accepted.",
+        "Lines 25-26: card details are matched by the first backend, while a username and password do not fit its arguments, so Django moves on to `ModelBackend`, and `user.backend` records which one signed the user in.",
+        "Lines 27-30: an unknown card and an inactive reader both get `None`.",
+      ],
+      output: `shop.backends.CardBackend
+django.contrib.auth.backends.ModelBackend
+None
+None`,
+    },
+    exercises: [
+      'dj-auth-mastery-cookie-flags-mcq-1',
+      'dj-auth-mastery-inactive-mcq-1',
+      'dj-auth-mastery-hashers-mcq-1',
+      'dj-auth-mastery-perm-cache-predict-1',
+      'dj-auth-mastery-backend-1',
+    ],
+  },
+  {
+    id: 'dj_rest_mastery/1',
+    topicKeys: [Topic.DJ_REST_MASTERY],
+    step: 1,
+    title: 'DRF Mastery (deep revisit)',
+    idea: [
+      lines(
+        "Before the handler, every DRF request passes authentication, then permissions, then throttles, and each can stop it with 401, 403 or 429.",
+        "Session authentication rides on a cookie the browser sends by itself, so DRF enforces CSRF for it, while a token or JWT in the `Authorization` header is never sent automatically and needs none.",
+      ),
+      lines(
+        "Verbs and codes carry meaning: create answers 201, delete 204 and invalid data 400.",
+        "GET, PUT and DELETE are idempotent, so a client may retry them, and POST is not.",
+        "PUT validates a whole new version of the object, PATCH (`partial=True`) only the fields sent, and `serializer.save()` calls `update()` when the serializer holds an instance and `create()` when it does not.",
+      ),
+      lines(
+        "A nested serializer reads its relation row by row, so a list endpoint needs `select_related` or `prefetch_related` in `get_queryset()`.",
+        "For one error shape across the API, a custom `EXCEPTION_HANDLER` calls DRF's own `exception_handler` first and reshapes its response only when it is not `None`.",
+        "`ScopedRateThrottle` with a view's `throttle_scope` gives one endpoint its own rate, and versioning puts `request.version` on each request.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class ThingViewSet(viewsets.ModelViewSet):       # list, create, retrieve, update, destroy
+    serializer_class = ThingSerializer
+    throttle_scope = "things"                       # rate in DEFAULT_THROTTLE_RATES
+
+    def get_queryset(self):                         # nested fields: load them up front
+        return Thing.objects.select_related("owner").prefetch_related("tags")
+
+ThingSerializer(data=data)                          # no instance: save() -> create(), 201
+ThingSerializer(obj, data=data)                     # an instance: save() -> update(), PUT
+ThingSerializer(obj, data=data, partial=True)       # PATCH: only the fields sent
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [...],        # session needs CSRF, tokens do not
+    "EXCEPTION_HANDLER": "app.errors.handler",      # one error shape for every view
+}`,
+    },
+    pitfall: lines(
+      "An update view that builds `Serializer(data=request.data)` without the instance makes `save()` call `create()`, so every edit adds a new row.",
+      "Pass the object first, `Serializer(obj, data=request.data, partial=True)` for a PATCH, and let a viewset's `update()` do it for you where you can.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; here shop.Book has only title (CharField) and price (IntegerField)
+from rest_framework import serializers, viewsets
+from rest_framework.test import APIRequestFactory
+from shop.models import Book
+
+class BookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ["id", "title", "price"]
+
+class BookViewSet(viewsets.ModelViewSet):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+rf = APIRequestFactory()
+detail = BookViewSet.as_view({"put": "update", "patch": "partial_update", "delete": "destroy"})
+book = Book.objects.create(title="Emma", price=8)
+r = detail(rf.put("/books/1/", {"price": 9}, format="json"), pk=book.pk)
+print(r.status_code, r.data["title"][0])
+r = detail(rf.patch("/books/1/", {"price": 9}, format="json"), pk=book.pk)
+print(r.status_code, r.data)
+r = detail(rf.delete("/books/1/"), pk=book.pk)
+print(r.status_code, Book.objects.count())`,
+      steps: [
+        "Lines 11-16: a `ModelViewSet` holds every action, and `as_view()` maps each verb of the detail route to one of them.",
+        "Lines 18-19: PUT replaces the whole book, so leaving `title` out is a 400 with that field's error.",
+        "Lines 20-21: PATCH is a partial update, so only `price` is validated and changed, and the serializer, given the book, calls `update()` rather than `create()`.",
+        "Lines 22-23: DELETE answers 204 with no body, and the row is gone.",
+      ],
+      output: `400 This field is required.
+200 {'id': 1, 'title': 'Emma', 'price': 9}
+204 0`,
+    },
+    exercises: [
+      'dj-rest-mastery-idempotency-mcq-1',
+      'dj-rest-mastery-authclasses-mcq-1',
+      'dj-rest-mastery-save-predict-1',
+      'dj-rest-mastery-nplus1-predict-1',
+      'dj-rest-mastery-exception-1',
+    ],
+  },
+  {
+    id: 'dj_admin/1',
+    topicKeys: [Topic.DJ_ADMIN],
+    step: 1,
+    title: 'Admin Customization',
+    idea: [
+      lines(
+        "The admin gives staff a list page, called the changelist, and an edit page for every registered model.",
+        "In `admin.py`, `@admin.register(Model)` on a `ModelAdmin` subclass registers it with your options.",
+        "With no options each row shows `str(obj)`, so the model's `__str__` names it everywhere in the admin.",
+      ),
+      lines(
+        "The changelist: `list_display` picks the columns (fields, or methods marked `@admin.display`), `list_filter` adds a sidebar, `search_fields` a search box and `ordering` the sort.",
+        "The edit page: `fieldsets` group fields under headings, `readonly_fields` show values as text, and `inlines` edit related rows on the parent's page, as a table with `TabularInline` or stacked forms with `StackedInline`, with `extra` blank rows.",
+      ),
+      lines(
+        "An action is a method taking `(self, request, queryset)`, labelled with `@admin.action(description=...)` and named in `actions`.",
+        "The admin is a tool for trusted staff, not a public site: keep it behind strong logins, or off the public internet.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.contrib import admin
+
+class ChildInline(admin.TabularInline):             # related rows on the parent page
+    model = Child
+    extra = 1                                       # blank rows for new children
+
+@admin.register(Thing)
+class ThingAdmin(admin.ModelAdmin):
+    list_display = ("name", "state", "is_open")     # changelist columns
+    list_filter = ("state",)                        # a 1-tuple needs its comma
+    readonly_fields = ("created",)                  # shown as text
+    inlines = [ChildInline]
+    actions = ["close"]
+
+    @admin.display(boolean=True)                    # a computed column
+    def is_open(self, obj):
+        return obj.state == "open"
+
+    @admin.action(description="Close selected")
+    def close(self, request, queryset):
+        queryset.update(state="closed")             # one UPDATE for every ticked row`,
+    },
+    pitfall: lines(
+      "A `list_display` method that queries per row, such as `obj.review_set.count()`, runs one query for every row of every changelist page.",
+      "Override `get_queryset()` to annotate the value once, with `Count(\"review\")`, and have the method return the annotation.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# shop/admin.py; shop.Book has title and stock, and Review has a book FK and stars
+from django.contrib import admin
+from .models import Book, Review
+
+class ReviewInline(admin.TabularInline):
+    model = Review
+    extra = 0
+
+@admin.register(Book)
+class BookAdmin(admin.ModelAdmin):
+    list_display = ("title", "stock", "in_stock")
+    search_fields = ("title",)
+    inlines = [ReviewInline]
+    actions = ["sell_out"]
+
+    @admin.display(boolean=True, description="In stock")
+    def in_stock(self, obj):
+        return obj.stock > 0
+
+    @admin.action(description="Mark selected as sold out")
+    def sell_out(self, request, queryset):
+        queryset.update(stock=0)
+
+# python manage.py shell
+from django.contrib import admin
+from shop.models import Book
+
+dune = Book.objects.create(title="Dune", stock=3)
+Book.objects.create(title="Emma", stock=0)
+book_admin = admin.site.get_model_admin(Book)
+print(str(dune), book_admin.in_stock(dune))
+book_admin.sell_out(None, Book.objects.filter(stock__gt=0))
+print(list(Book.objects.order_by("title").values_list("title", "stock")))`,
+      steps: [
+        "Lines 5-7: the inline puts each book's reviews in a table on the book's edit page, with no blank rows.",
+        "Lines 11-14: the changelist shows three columns, a search box over `title` and one bulk action.",
+        "Lines 16-18: `in_stock` is a computed column, and `boolean=True` draws it as a tick or a cross.",
+        "Lines 30-31: `get_model_admin()` (Django 5.0+) returns the registered `BookAdmin`, and since `Book` has no `__str__`, its rows would read `Book object (1)`.",
+        "Lines 32-33: an action is just a method given the ticked rows, and here one `update()` sells out every book still in stock.",
+      ],
+      output: `Book object (1) True
+[('Dune', 0), ('Emma', 0)]`,
+    },
+    exercises: [
+      'py-dj-admin-what',
+      'dj-admin-predict-1',
+      'dj-admin-cloze-1',
+      'py-dj-admin-list-display',
+      'py-dj-admin-prod-risk',
+    ],
+  },
+  {
+    id: 'dj_caching/1',
+    topicKeys: [Topic.DJ_CACHING, Topic.DJ_TRANSACTIONS],
+    step: 1,
+    title: 'Caching & Transactions',
+    idea: [
+      lines(
+        "A cache keeps a computed result in fast storage, so repeat requests skip the work.",
+        "From broad to narrow: the per-site middleware, `@cache_page(seconds)` on a view, keyed by URL and so only for pages every visitor shares, `{% cache %}` around a template fragment, and the low-level API.",
+        "That API is `cache.set(key, value, timeout)`, `cache.get(key, default)`, `cache.get_or_set(key, function, timeout)` and `cache.delete(key)`, with timeouts in seconds.",
+      ),
+      lines(
+        "In production use a shared backend such as Redis or Memcached, since `LocMemCache` lives inside each worker process.",
+        "A cached value goes stale when its data changes, so delete the key then, often from a `post_save` receiver.",
+      ),
+      lines(
+        "Django commits each query on its own unless you group them: `transaction.atomic()`, as a decorator or a `with` block, commits the block as one unit, or rolls all of it back when an exception leaves it.",
+        "An `atomic()` nested inside another is a savepoint that can fail alone, `select_for_update()` locks the rows it reads until the commit, and `transaction.on_commit(fn)` runs work such as an email only after the commit.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from django.core.cache import cache
+from django.db import IntegrityError, transaction
+
+value = cache.get(key)                      # None on a miss
+if value is None:                           # not "if not value": 0 and [] are hits
+    value = compute()
+    cache.set(key, value, timeout=300)      # seconds
+cache.get_or_set(key, compute, timeout=300) # the same in one call; pass the function
+cache.delete(key)                           # when the data changes
+
+with transaction.atomic():                  # all or nothing
+    row = Thing.objects.select_for_update().get(pk=pk)   # locked until commit
+    try:
+        with transaction.atomic():          # a savepoint
+            risky_write()
+    except IntegrityError:                  # caught outside the inner block
+        pass
+    transaction.on_commit(send_email)       # runs only once the commit succeeds`,
+    },
+    pitfall: lines(
+      "Catching a database error inside an `atomic()` block hides it from Django, and after an `IntegrityError` every later query in that block raises `TransactionManagementError`.",
+      "Put the risky write in its own inner `atomic()` and catch the error outside that inner block, so only the savepoint rolls back.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; the default LocMemCache, and shop.Tag has a unique name
+from django.core.cache import cache
+from django.db import IntegrityError, transaction
+from shop.models import Tag
+
+def count_tags():
+    print("counting")
+    return Tag.objects.count()
+
+print(cache.get_or_set("tags:n", count_tags, 60))
+with transaction.atomic():
+    Tag.objects.create(name="poetry")
+    try:
+        with transaction.atomic():
+            Tag.objects.create(name="poetry")
+    except IntegrityError:
+        print("duplicate skipped")
+    Tag.objects.create(name="sci-fi")
+print(cache.get_or_set("tags:n", count_tags, 60))
+cache.delete("tags:n")
+print(cache.get_or_set("tags:n", count_tags, 60))`,
+      steps: [
+        "Line 10: the key is missing, so `get_or_set` calls `count_tags` and caches its 0 for 60 seconds.",
+        "Lines 11-12: the outer `atomic()` opens a transaction and adds a tag.",
+        "Lines 13-17: the inner `atomic()` is a savepoint, so when the duplicate name fails there only the savepoint rolls back, and the error is caught outside it.",
+        "Line 18: the outer transaction is still healthy, adds a second tag and commits both when its block ends.",
+        "Lines 19-21: the cache still says 0 until the key is deleted, and then the next call counts again and finds 2.",
+      ],
+      output: `counting
+0
+duplicate skipped
+0
+counting
+2`,
+    },
+    exercises: [
+      'dj-transactions-gap-1',
+      'dj-transactions-parsons-1',
+      'dj-caching-getset-cloze-1',
+      'dj-caching-predict-1',
+      'dj-transactions-predict-1',
+    ],
+  },
+  {
+    id: 'dj_signals_mw/1',
+    topicKeys: [Topic.DJ_SIGNALS_MW],
+    step: 1,
+    title: 'Signals & Middleware',
+    idea: [
+      lines(
+        "Middleware wraps every request.",
+        "A middleware class is built once with `get_response`, the next layer, and then called for each request: code before `self.get_response(request)` runs on the way in, code after it on the way out.",
+        "`MIDDLEWARE` works like an onion: requests go down the list and responses come back up, so a layer that needs another's work sits below it, as authentication sits below sessions.",
+      ),
+      lines(
+        "A signal tells receivers that something happened to a model: `pre_save`, `post_save`, `pre_delete`, `post_delete` and `m2m_changed`.",
+        "`@receiver(post_save, sender=Model)` connects a function taking `(sender, instance, created, **kwargs)`, where `created` is `True` only for an insert.",
+        "Keep receivers in the app's `signals.py` and import it in the app config's `ready()`.",
+      ),
+      lines(
+        "Use middleware for what every request needs, such as headers, timing and request ids.",
+        "Use signals for side effects of model events in code you do not own, and call a function directly when you own both sides.",
+        "Signals do not fire for `update()`, `bulk_create()` or raw SQL.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `class ThingMiddleware:                            # listed in settings.MIDDLEWARE
+    def __init__(self, get_response):             # once, at startup
+        self.get_response = get_response
+
+    def __call__(self, request):                  # every request
+        # on the way in
+        response = self.get_response(request)     # the next layers, then the view
+        # on the way out
+        return response
+
+@receiver(post_save, sender=Thing)                # in app/signals.py
+def on_saved(sender, instance, created, **kwargs):
+    if created: ...                               # True only for an insert
+
+class ThingConfig(AppConfig):                     # in app/apps.py
+    name = "app"
+    def ready(self):
+        from . import signals                     # connects the receivers`,
+    },
+    pitfall: lines(
+      "A receiver in a module nothing imports is never connected, so the model saves, no receiver runs and nothing reports an error.",
+      "Import the `signals` module in the app config's `ready()`, which Django calls once at startup.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# python manage.py shell; shop.Tag has a name, and an app would connect the receiver in ready()
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.http import HttpResponse
+from django.test import RequestFactory
+from shop.models import Tag
+
+class StampMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        print("in", request.path)
+        response = self.get_response(request)
+        response["X-Shop"] = "stamped"
+        print("out", response.status_code)
+        return response
+
+@receiver(post_save, sender=Tag)
+def tag_saved(sender, instance, created, **kwargs):
+    print("saved", instance.name, created)
+
+def add_tag(request):
+    tag = Tag.objects.create(name="poetry")
+    tag.name = "verse"
+    tag.save()
+    return HttpResponse("ok", status=201)
+
+handler = StampMiddleware(add_tag)
+print(handler(RequestFactory().post("/tags/"))["X-Shop"])`,
+      steps: [
+        "Lines 8-10: Django builds each middleware once, handing it the next layer as `get_response`.",
+        "Lines 12-17: for each request, the code before `get_response()` runs on the way in, and the code after it runs on the way out and adds a header.",
+        "Lines 19-21: the receiver hears every saved `Tag`, and in an app it would live in `signals.py`, imported in `ready()`.",
+        "Line 29: this is what `MIDDLEWARE` does with each class in the list, wrapping the view layer by layer.",
+        "Line 30: the request passes through the middleware into the view, whose two saves send `post_save` with `created` first `True`, then `False`.",
+      ],
+      output: `in /tags/
+saved poetry True
+saved verse False
+out 201
+stamped`,
+    },
+    exercises: [
+      'dj-signals-mw-gap-1',
+      'dj-middleware-parsons-1',
+      'dj-signals-cloze-1',
+      'py-dj-mw-order',
+      'dj-signals-predict-1',
+    ],
+  },
+  {
+    id: 'dj_management/1',
+    topicKeys: [Topic.DJ_MANAGEMENT, Topic.DJ_DEPLOYMENT],
+    step: 1,
+    title: 'Management Commands & Deployment',
+    idea: [
+      lines(
+        "A custom command is a class named `Command` that subclasses `BaseCommand`, in `<app>/management/commands/<name>.py`, and the file name is the command's name.",
+        "`add_arguments(self, parser)` declares arguments the argparse way, and `handle(self, *args, **options)` does the work, reading `options[\"name\"]` and writing with `self.stdout.write()`.",
+        "`call_command(\"name\", ..., option=value)` runs a command in the same process, which suits tests and scripts, while a plain script must set `DJANGO_SETTINGS_MODULE` and call `django.setup()` before it imports any model.",
+      ),
+      lines(
+        "In production, `DEBUG = False`, `ALLOWED_HOSTS` names the real hosts, and the secret key and other config come from environment variables, so one build runs everywhere (12-factor config).",
+        "HTTPS settings such as `SECURE_SSL_REDIRECT`, secure cookies and HSTS come next, and `python manage.py check --deploy` reports what is missing.",
+      ),
+      lines(
+        "`runserver` is for development only.",
+        "A WSGI server such as gunicorn runs the app (`gunicorn mysite.wsgi:application --workers 4`), or an ASGI server such as uvicorn for async views and websockets.",
+        "`collectstatic` copies static files into `STATIC_ROOT` for nginx or WhiteNoise to serve, and Docker packages it all.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# app/management/commands/thing.py  ->  python manage.py thing ARG --flag N
+from django.core.management.base import BaseCommand
+
+class Command(BaseCommand):                        # always named Command
+    def add_arguments(self, parser):
+        parser.add_argument("arg")                 # positional
+        parser.add_argument("--flag", type=int, default=1)
+
+    def handle(self, *args, **options):            # options is a dict
+        self.stdout.write(f"{options['arg']} {options['flag']}")
+
+# settings.py in production: config from the environment, as text
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
+SECRET_KEY = os.environ["SECRET_KEY"]              # never in git
+
+# deploy: check --deploy, migrate, collectstatic, then gunicorn mysite.wsgi:application`,
+    },
+    pitfall: lines(
+      "Shipping with `DEBUG = True` turns every error into a page of tracebacks, local variables and settings for whoever caused it.",
+      "Read `DEBUG` from the environment as text and default it to off, and run `check --deploy` before each release.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# shop/management/commands/restock.py; shop.Book has title and stock
+from django.core.management.base import BaseCommand
+from shop.models import Book
+
+class Command(BaseCommand):
+    help = "Top up every book below a stock level."
+
+    def add_arguments(self, parser):
+        parser.add_argument("level", type=int)
+        parser.add_argument("--dry-run", action="store_true")
+
+    def handle(self, *args, **options):
+        low = Book.objects.filter(stock__lt=options["level"])
+        self.stdout.write(f"{low.count()} below {options['level']}")
+        if not options["dry_run"]:
+            low.update(stock=options["level"])
+
+# python manage.py shell
+from django.core.management import call_command
+from shop.models import Book
+
+Book.objects.create(title="Dune", stock=1)
+Book.objects.create(title="Emma", stock=6)
+call_command("restock", 5, dry_run=True)
+call_command("restock", 5)
+print(list(Book.objects.order_by("title").values_list("stock", flat=True)))`,
+      steps: [
+        "Line 1: the file name is the command name, so from a terminal this runs as `python manage.py restock 5 --dry-run`.",
+        "Lines 8-10: `level` is a required number, and the flag `--dry-run` becomes the option `dry_run`.",
+        "Lines 12-16: `handle()` reads both from `options` and writes its report with `self.stdout.write()`.",
+        "Line 24: `call_command` runs the same command in this process, with `dry_run=True` standing for the flag, so it only reports.",
+        "Lines 25-26: the real run raises Dune to 5 and leaves Emma alone.",
+      ],
+      output: `1 below 5
+1 below 5
+[5, 6]`,
+    },
+    exercises: [
+      'dj-management-gap-1',
+      'dj-deploy-predict-1',
+      'dj-management-parsons-1',
+      'py-dj-deploy-gunicorn',
+      'dj-mgmt-predict-1',
     ],
   },
 ];
