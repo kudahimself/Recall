@@ -266,7 +266,7 @@ class BookList(generics.ListAPIView):
     pagination_class = ThreePerPage
 
 view = BookList.as_view()
-data = view(APIRequestFactory().get("/books/", {"page": 2})).data
+data = view(APIRequestFactory(SERVER_NAME="localhost").get("/books/", {"page": 2})).data
 print(data["count"], len(data["results"]))
 print(data["next"])`,
       expectedOutput: `5 2

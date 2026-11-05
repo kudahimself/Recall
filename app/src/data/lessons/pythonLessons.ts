@@ -4447,7 +4447,7 @@ urlpatterns = [
     worked: {
       language: CodeLanguage.PYTHON,
       runs: false,
-      code: `# python manage.py shell; shop.Book has title and stock
+      code: `# python manage.py shell; shop.Book has title and stock; SERVER_NAME="localhost" keeps the host in the default ALLOWED_HOSTS
 from rest_framework import generics, serializers
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.test import APIRequestFactory
@@ -4477,7 +4477,7 @@ for title, stock in [("Dune", 0), ("Emma", 3), ("Ivanhoe", 1), ("Middlemarch", 0
     Book.objects.create(title=title, stock=stock)
 view = BookList.as_view()
 for params in [{}, {"in_stock": "yes", "size": 10}]:
-    data = view(APIRequestFactory().get("/books/", params)).data
+    data = view(APIRequestFactory(SERVER_NAME="localhost").get("/books/", params)).data
     print(data["count"], [b["title"] for b in data["results"]], data["next"])`,
       steps: [
         "Lines 12-15: 2 rows per page by default, and a client may ask for another size with `?size=N`, capped at 3.",
@@ -4486,7 +4486,7 @@ for params in [{}, {"in_stock": "yes", "size": 10}]:
         "Line 32, first call: `count` is all 5 books, page 1 holds Dune and Emma, and `next` is the full link to page 2.",
         "Line 32, second call: 3 books are in stock and the asked size of 10 is cut to 3, so they all fit on one page and `next` is `None`.",
       ],
-      output: `5 ['Dune', 'Emma'] http://testserver/books/?page=2
+      output: `5 ['Dune', 'Emma'] http://localhost/books/?page=2
 3 ['Emma', 'Ivanhoe', 'Persuasion'] None`,
     },
     exercises: [
