@@ -287,4 +287,30 @@ class PostListTest(TestCase):
       tags: ['django', 'factory_boy', 'fixtures', 'testing'],
       concepts: ['py-test-isolation'],
     },
+  {
+      id: 'dj-factoryboy-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_FACTORY_BOY,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: '`PostFactory` gives each post a Faker title and `author = factory.SubFactory(UserFactory)`. These lines run inside a Django `TestCase` test method, starting from an empty test database. What do the three `print` calls output? The answer is three lines, each two values separated by a space.',
+      code: `# PostFactory: title = factory.Faker("sentence"), author = factory.SubFactory(UserFactory)
+posts = PostFactory.create_batch(2)
+print(User.objects.count(), Post.objects.count())
+
+shared = UserFactory()
+PostFactory.create_batch(3, author=shared)
+print(User.objects.count(), Post.objects.count())
+
+draft = PostFactory.build(author=shared)
+print(draft.pk, Post.objects.count())`,
+      expectedOutput: `2 2
+3 5
+None 5`,
+      explanation: 'A `SubFactory` runs the related factory once for every object it builds, so `create_batch(2)` saves two posts and two new users. Passing `author=shared` overrides the SubFactory, so the next three posts reuse one user: one more user (the `UserFactory()` call) and three more posts make 3 users and 5 posts. `build()` makes the instance without saving it, so it has no primary key yet (`None`) and the post count stays at 5.',
+      hints: ['Each post a SubFactory builds gets its own new author, unless an author is passed in.', 'build() does not save to the database.'],
+      tags: ['django', 'factory_boy', 'SubFactory', 'build', 'predict'],
+      concepts: ['dj-test-fixtures'],
+    },
 ];

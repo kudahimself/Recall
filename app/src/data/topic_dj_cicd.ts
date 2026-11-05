@@ -216,4 +216,33 @@ jobs:
       tags: ['django', 'cicd', 'deployment', 'github-actions'],
       concepts: ['dj-deployment-cicd'],
     },
+  {
+      id: 'dj-cicd-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.DJ_CICD,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'This GitHub Actions workflow is started by a push to `main`. The second step of the `test` job stands in for a test run that fails: it prints a line and exits with code 1. What do the `run` steps print, across both jobs? The answer is only the lines the steps print, one per line in the order they run, without the log lines GitHub adds itself.',
+      code: `on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "lint ok"
+      - run: echo "2 tests failed"; exit 1
+      - run: echo "tests ok"
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "deployed"`,
+      expectedOutput: `lint ok
+2 tests failed`,
+      explanation: 'Steps in a job run in order, and a step that exits with a non-zero code fails the job: the steps after it are skipped, so "tests ok" never prints. `needs: test` makes `deploy` wait for `test` and run only if it succeeded, so `deploy` is skipped even though its `if:` condition is true for a push to `main`. This is how a pipeline keeps a failing build away from production: the test runner\'s exit code decides.',
+      hints: ['A step that exits with a non-zero code fails its job, and the later steps are skipped.', 'needs: runs a job only after the jobs it names have succeeded.'],
+      tags: ['django', 'cicd', 'github-actions', 'needs', 'predict'],
+      concepts: ['dj-deployment-cicd'],
+    },
 ];
