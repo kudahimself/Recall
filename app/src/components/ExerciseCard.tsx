@@ -8,6 +8,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Copy, FolderOpen } from 'lucide-react';
 import { TopicExercise } from '../types';
 import { proseText } from '../utils/lessons';
+import { exerciseCommand } from '../utils/exercises';
 import { Inline } from './RuleCard';
 import './ExerciseCard.css';
 
@@ -79,7 +80,7 @@ export function ExerciseCard({ exercise, doneAt, rampDone, rampAnswered, rampTot
             <code className="rc-inline-code">{f}</code>
           </React.Fragment>
         ))}
-        , then run <code className="rc-inline-code">pytest</code> there until <code className="rc-inline-code">{exercise.tests}</code> passes.
+        , then run <code className="rc-inline-code">{exerciseCommand(exercise)}</code> from the repo root until <code className="rc-inline-code">{exercise.tests}</code> passes.
       </p>
       <div className="ex-foot">
         <label className="ex-check">
