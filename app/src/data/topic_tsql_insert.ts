@@ -11,6 +11,7 @@ import {
   Course,
   CodeLanguage,
 } from '../types';
+import { sampleTable } from './tsqlSampleTables';
 
 export const tsql_insert_questions: Question[] = [
   {
@@ -21,12 +22,12 @@ export const tsql_insert_questions: Question[] = [
     course: Course.SQL,
     question: 'In an ELT pipeline, what does `INSERT INTO … SELECT …` let you do that a plain `INSERT … VALUES` cannot?',
     options: [
-      { id: 'a', text: 'Load many rows in one set-based statement by selecting them from another table/query — the core move for moving data between staging and target.', isCorrect: true },
-      { id: 'b', text: 'Insert a single hard-coded row faster than VALUES can.', isCorrect: false },
-      { id: 'c', text: 'Automatically create the target table if it does not exist.', isCorrect: false },
-      { id: 'd', text: 'Skip the transaction log so the insert is never rolled back.', isCorrect: false },
+      { id: 'a', text: 'Load every row a query returns in one set-based statement, such as staging rows moving into a target table.', isCorrect: true },
+      { id: 'b', text: 'Pair source and target columns by name, so the target column list can be left out.', isCorrect: false },
+      { id: 'c', text: 'Create the target table first when it does not exist, then load the rows into it.', isCorrect: false },
+      { id: 'd', text: 'Skip rows the target already holds, so running the same load twice is safe.', isCorrect: false },
     ],
-    explanation: '`INSERT … SELECT` is set-based: it loads the entire result of a query in one statement, which is how you move/transform data from staging into a target. `INSERT … VALUES` only supplies literal rows. (To create-and-fill a new table at once, that is `SELECT … INTO`.)',
+    explanation: '`INSERT … SELECT` is set-based: it loads the entire result of a query in one statement, which is how you move and transform data from staging into a target. `INSERT … VALUES` only supplies literal rows. Columns pair by position, not by name, so list the target columns. The target must already exist (creating and filling a table at once is `SELECT … INTO`), and nothing checks for rows that are already there, so a rerun adds them again.',
     hints: ['Loads rows from a query, set-based', 'The staging → target workhorse'],
     tags: ['tsql', 'insert', 'insert-select'],
   },
@@ -38,12 +39,12 @@ export const tsql_insert_questions: Question[] = [
     course: Course.SQL,
     question: 'How does `SELECT … INTO NewTable` differ from `INSERT INTO ExistingTable … SELECT`?',
     options: [
-      { id: 'a', text: '`SELECT … INTO` creates a brand-new table from the query result; `INSERT … SELECT` loads into a table that must already exist.', isCorrect: true },
-      { id: 'b', text: 'They are identical; INTO is just an optional keyword in any INSERT.', isCorrect: false },
-      { id: 'c', text: '`SELECT … INTO` requires the target to exist, while `INSERT … SELECT` creates it.', isCorrect: false },
-      { id: 'd', text: '`SELECT … INTO` can only copy a single column, while `INSERT … SELECT` copies all columns.', isCorrect: false },
+      { id: 'a', text: '`SELECT … INTO` creates a new table from the query result, while `INSERT … SELECT` loads into a table that must already exist.', isCorrect: true },
+      { id: 'b', text: '`SELECT … INTO` copies the source table\'s keys and constraints to the new table, while `INSERT … SELECT` copies only the rows.', isCorrect: false },
+      { id: 'c', text: '`SELECT … INTO` loads into a table that must already exist, while `INSERT … SELECT` creates the table on the fly.', isCorrect: false },
+      { id: 'd', text: '`SELECT … INTO` adds only the rows the table lacks, while `INSERT … SELECT` overwrites the rows it already has.', isCorrect: false },
     ],
-    explanation: '`SELECT … INTO NewTable FROM …` creates the table on the fly and copies the rows (handy for scratch/staging tables, but it does NOT copy keys/constraints/indexes). `INSERT … SELECT` requires a pre-existing, properly-constrained target — the right choice for loading a real warehouse table.',
+    explanation: '`SELECT … INTO NewTable FROM …` creates the table on the fly and copies the rows, which suits scratch or staging tables, but it does NOT copy keys, constraints or indexes. `INSERT … SELECT` needs a target that already exists with its constraints in place, so it is the right choice for loading a real warehouse table. Neither one skips or overwrites existing rows: `SELECT … INTO` fails if the table exists, and `INSERT … SELECT` simply appends.',
     hints: ['INTO = create new table from the query', 'INSERT…SELECT = target must already exist'],
     tags: ['tsql', 'insert', 'select-into'],
   },
@@ -54,10 +55,16 @@ export const tsql_insert_questions: Question[] = [
     topic: Topic.TSQL_INSERT,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the keywords to copy active customers from staging into the dimension.',
-    template: `-- dbo.DimCustomer(CustomerKey, CustomerId, FullName, Email, City, Country, SignupDate)
--- stg.Customer(CustomerId, FullName, Email, City, UpdatedAt)
-INSERT ___ dbo.DimCustomer (CustomerId, FullName)
+    question: 'Fill in the keywords to copy the active customers from staging into the dimension: the word after INSERT, and the word that starts the query supplying the rows.',
+    tables: [
+      { name: 'dbo.DimCustomer', columns: ['CustomerId', 'FullName'], rows: [['C-002', 'Lars Holm']] },
+      {
+        name: 'stg.Customer',
+        columns: ['CustomerId', 'FullName', 'IsActive'],
+        rows: [['C-001', 'Ingrid Berg', 1], ['C-003', 'Sofia Lind', 0], ['C-004', 'Amara Okafor', 1]],
+      },
+    ],
+    template: `INSERT ___ dbo.DimCustomer (CustomerId, FullName)
 ___ CustomerId, FullName
 FROM stg.Customer
 WHERE IsActive = 1;`,
@@ -66,7 +73,7 @@ WHERE IsActive = 1;`,
 SELECT CustomerId, FullName
 FROM stg.Customer
 WHERE IsActive = 1;`,
-    explanation: '`INSERT INTO target (cols) SELECT … FROM source` loads the query result into an existing table. Always list the target columns explicitly so the load is insulated from column-order changes on either side.',
+    explanation: '`INSERT INTO target (cols) SELECT … FROM source` loads the query result into an existing table: here customers C-001 and C-004 are added next to C-002, and inactive C-003 stays out. Always list the target columns explicitly so the load is insulated from column-order changes on either side.',
     hints: ['INSERT INTO target (cols)', 'Source rows come from a SELECT'],
     tags: ['tsql', 'insert', 'insert-select', 'cloze'],
   },
@@ -77,19 +84,25 @@ WHERE IsActive = 1;`,
     topic: Topic.TSQL_INSERT,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the clause that captures the surrogate keys generated by the insert into a table variable.',
-    template: `-- dbo.DimProduct(ProductKey, ProductCode, ProductName, Category, Price)
--- stg.Product(ProductCode, ProductName, Category, Price)
+    question: 'Fill in the clause that sends the ProductKey the database generates for each new row into the table variable @NewKeys.',
+    tables: [
+      { name: 'dbo.DimProduct', columns: ['ProductKey', 'ProductCode', 'ProductName'], rows: [[101, 'BK-1001-PB', 'The Great Novel']] },
+      { name: 'stg.Product', columns: ['ProductCode', 'ProductName'], rows: [['TY-2001-ST', 'Wooden Train'], ['GD-3001-XL', 'Desk Lamp']] },
+    ],
+    template: `-- ProductKey is an IDENTITY column: the database generates it
+DECLARE @NewKeys TABLE (ProductKey INT);
 INSERT INTO dbo.DimProduct (ProductCode, ProductName)
 ___ inserted.ProductKey INTO @NewKeys (ProductKey)
 SELECT ProductCode, ProductName
 FROM stg.Product;`,
     blanks: ['OUTPUT'],
-    solution: `INSERT INTO dbo.DimProduct (ProductCode, ProductName)
+    solution: `-- ProductKey is an IDENTITY column: the database generates it
+DECLARE @NewKeys TABLE (ProductKey INT);
+INSERT INTO dbo.DimProduct (ProductCode, ProductName)
 OUTPUT inserted.ProductKey INTO @NewKeys (ProductKey)
 SELECT ProductCode, ProductName
 FROM stg.Product;`,
-    explanation: 'The `OUTPUT` clause exposes the `inserted` (and for updates/deletes, `deleted`) pseudo-tables, so you can capture auto-generated values like IDENTITY surrogate keys as part of the same statement — essential when a later load step needs the keys just created.',
+    explanation: 'The `OUTPUT` clause exposes the `inserted` pseudo-table (and `deleted` for updates and deletes), so the statement can hand back the generated surrogate keys as it writes them. Here @NewKeys ends up holding the two new keys, 102 and 103, which a later load step can use. It goes between the column list and the SELECT.',
     hints: ['The clause exposing the inserted pseudo-table', 'OUTPUT inserted.<col> INTO …'],
     tags: ['tsql', 'insert', 'output-clause', 'cloze'],
   },
@@ -100,8 +113,19 @@ FROM stg.Product;`,
     topic: Topic.TSQL_INSERT,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Load `dbo.FactSales (CustomerKey, ProductKey, Amount)` from `stg.Sales (CustomerId, ProductCode, Amount)`, resolving the natural keys to surrogate keys by joining `dbo.DimCustomer (CustomerKey, CustomerId)` and `dbo.DimProduct (ProductKey, ProductCode)`. Use INSERT … SELECT.',
-    starterCode: `-- Load dbo.FactSales by resolving natural keys from stg.Sales to surrogate keys via joins
+    question: 'Load `dbo.FactSales (CustomerKey, ProductKey, Amount)` from `stg.Sales (CustomerId, ProductCode, Amount)`, resolving the natural keys to surrogate keys by joining `dbo.DimCustomer (CustomerKey, CustomerId)` and `dbo.DimProduct (ProductKey, ProductCode)`. Use INSERT … SELECT, with the aliases `s` for staging, `c` for the customer dimension and `p` for the product dimension.',
+    tables: [
+      sampleTable('dbo.FactSales', ['CustomerKey', 'ProductKey', 'Amount']),
+      sampleTable('dbo.DimCustomer', ['CustomerKey', 'CustomerId']),
+      sampleTable('dbo.DimProduct', ['ProductKey', 'ProductCode']),
+      {
+        name: 'stg.Sales',
+        columns: ['CustomerId', 'ProductCode', 'Amount'],
+        rows: [['C-001', 'BK-1001-PB', 24.99], ['C-004', 'TY-2001-ST', 39.5]],
+      },
+    ],
+    starterCode: `-- dbo.FactSales (CustomerKey, ProductKey, Amount)
+-- stg.Sales (CustomerId, ProductCode, Amount)
 `,
     testCases: [
       {
@@ -123,9 +147,9 @@ FROM stg.Sales AS s
 JOIN dbo.DimCustomer AS c ON c.____ = s.____
 JOIN dbo.DimProduct AS p ON p.____ = s.____;`,
     },
-    explanation: 'This is the canonical fact load: the staging rows carry natural keys (`CustomerId`, `ProductCode`), so you join to each dimension to translate them into the warehouse surrogate keys (`CustomerKey`, `ProductKey`) before inserting. The fact stores surrogates, never the source business keys.',
+    explanation: 'This is the canonical fact load: the staging rows carry natural keys (`CustomerId`, `ProductCode`), so you join to each dimension to translate them into the warehouse surrogate keys (`CustomerKey`, `ProductKey`) before inserting. Here C-001 becomes customer key 1 and BK-1001-PB becomes product key 101. The fact stores surrogates, never the source business keys.',
     hints: ['JOIN staging to each dimension on the natural key', 'SELECT the surrogate keys + measure into the fact'],
-    requires: [/INSERT\s+INTO/i],
+    requires: [/INSERT\s+INTO/i, /JOIN/i],
     tags: ['tsql', 'insert', 'insert-select', 'surrogate-keys'],
   },
   {

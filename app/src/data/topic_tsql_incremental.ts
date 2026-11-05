@@ -22,11 +22,11 @@ export const tsql_incremental_questions: Question[] = [
     question: 'What is a "high-watermark" in an incremental load?',
     options: [
       { id: 'a', text: 'The stored value (often a max timestamp or id) marking the newest data already loaded, so the next run pulls only rows beyond it.', isCorrect: true },
-      { id: 'b', text: 'The maximum number of rows a single load is allowed to process before stopping.', isCorrect: false },
-      { id: 'c', text: 'A lock that prevents any new rows from arriving while the load runs.', isCorrect: false },
-      { id: 'd', text: 'The largest table in the warehouse, which sets the schedule for all others.', isCorrect: false },
+      { id: 'b', text: 'The maximum number of rows a single load is allowed to process before it stops and waits for the next run.', isCorrect: false },
+      { id: 'c', text: 'A lock that stops any new rows arriving in the source while the load runs, so the data cannot change under it.', isCorrect: false },
+      { id: 'd', text: 'The oldest row in the source, which every run reloads from so that no row is ever missed.', isCorrect: false },
     ],
-    explanation: 'A high-watermark is the boundary of what you have already loaded — typically `MAX(UpdatedAt)` or `MAX(Id)`. Persisting it (e.g. in a control table) lets each run filter the source to just the new delta (`> watermark`) instead of rescanning everything.',
+    explanation: 'A high-watermark is the boundary of what you have already loaded, typically `MAX(UpdatedAt)` or `MAX(Id)`. Persisting it (for example in a control table) lets each run filter the source to just the new delta (`> watermark`) instead of rescanning everything. It is a position in the data, not a row limit or a lock.',
     hints: ['The marker of the newest already-loaded data', 'Next run loads rows beyond it'],
     tags: ['tsql', 'incremental', 'watermark'],
   },
@@ -38,12 +38,12 @@ export const tsql_incremental_questions: Question[] = [
     course: Course.SQL,
     question: 'A source row is created with `UpdatedAt = 09:00` but does not reach staging until after a load that already advanced the watermark past 09:00. What is this problem, and a common mitigation?',
     options: [
-      { id: 'a', text: 'Late-arriving data; mitigate by re-loading a lookback window (e.g. watermark minus a few hours) and using an idempotent MERGE so reprocessed rows are not duplicated.', isCorrect: true },
-      { id: 'b', text: 'A deadlock; mitigate by raising the isolation level to SERIALIZABLE.', isCorrect: false },
-      { id: 'c', text: 'A primary-key violation; mitigate by dropping the primary key during loads.', isCorrect: false },
-      { id: 'd', text: 'A rounding error; mitigate by storing timestamps as floats.', isCorrect: false },
+      { id: 'a', text: 'Late-arriving data; reload a lookback window (the watermark minus a few hours) with an idempotent MERGE, so reprocessed rows are not duplicated.', isCorrect: true },
+      { id: 'b', text: 'Clock drift between servers; set the new watermark from `GETDATE()` instead of from the newest row loaded.', isCorrect: false },
+      { id: 'c', text: 'A boundary-row bug; compare with `>=` the watermark and keep the plain INSERT, so no row is ever skipped.', isCorrect: false },
+      { id: 'd', text: 'A concurrent-update conflict; lock the control table so the watermark cannot move while a load runs.', isCorrect: false },
     ],
-    explanation: 'A strict `> watermark` filter silently skips rows whose event time precedes the watermark but which arrived afterward (late data). The fix is a lookback overlap (reload from `watermark − Δ`) combined with an idempotent MERGE/upsert, so the overlap reprocesses safely without creating duplicates.',
+    explanation: 'A strict `> watermark` filter silently skips rows whose event time precedes the watermark but which arrived afterward (late data). The fix is a lookback overlap (reload from `watermark − Δ`) combined with an idempotent MERGE or upsert, so the overlap reprocesses safely without creating duplicates. Using `>=` only re-reads the single boundary value, not the 09:00 row, and would duplicate rows with a plain INSERT; a clock-based watermark skips even more data; locking the control table does not help a row that arrives late.',
     hints: ['Late-arriving data slips under a strict > filter', 'Lookback window + idempotent MERGE'],
     tags: ['tsql', 'incremental', 'late-arriving-data'],
   },
@@ -55,15 +55,23 @@ export const tsql_incremental_questions: Question[] = [
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Fill in the function that pulls the watermark back by 4 hours, widening the filter into a lookback window.',
-    template: `-- stg.Sales(OrderId, CustomerId, ProductCode, Amount, UpdatedAt)
+    tables: [
+      {
+        name: 'stg.Sales',
+        columns: ['OrderId', 'Amount', 'UpdatedAt'],
+        rows: [[1, 20, '2026-03-01 05:00'], [2, 35, '2026-03-01 09:30'], [3, 15, '2026-03-01 11:30']],
+      },
+    ],
+    template: `DECLARE @lastLoaded DATETIME2 = '2026-03-01 10:00';
 SELECT OrderId, Amount, UpdatedAt
 FROM stg.Sales
 WHERE UpdatedAt > ___(HOUR, -4, @lastLoaded);`,
     blanks: ['DATEADD'],
-    solution: `SELECT OrderId, Amount, UpdatedAt
+    solution: `DECLARE @lastLoaded DATETIME2 = '2026-03-01 10:00';
+SELECT OrderId, Amount, UpdatedAt
 FROM stg.Sales
 WHERE UpdatedAt > DATEADD(HOUR, -4, @lastLoaded);`,
-    explanation: '`DATEADD(HOUR, -4, @lastLoaded)` shifts the filter boundary 4 hours earlier, re-scanning a lookback window so rows whose event time is before the watermark - but which only staged afterward - are not silently missed. In production this SELECT would feed a MERGE (or a dedup step), not a plain INSERT, since rows already loaded last run reappear in the overlap and would otherwise duplicate.',
+    explanation: '`DATEADD(HOUR, -4, @lastLoaded)` shifts the filter boundary 4 hours earlier, to 06:00, re-scanning a lookback window so rows whose event time is before the watermark but which only staged afterward are not silently missed: orders 2 and 3 come back, where a strict `> @lastLoaded` would return only order 3. In production this SELECT would feed a MERGE (or a dedup step), not a plain INSERT, since rows already loaded last run reappear in the overlap and would otherwise duplicate.',
     hints: ['Widen the boundary, do not just compare against it directly', 'DATEADD(unit, negative-offset, date)'],
     tags: ['tsql', 'incremental', 'late-arriving-data', 'dateadd', 'cloze'],
   },
@@ -74,19 +82,27 @@ WHERE UpdatedAt > DATEADD(HOUR, -4, @lastLoaded);`,
     topic: Topic.TSQL_INCREMENTAL,
     course: Course.SQL,
     language: CodeLanguage.SQL,
-    question: 'Fill in the predicate that selects only the rows newer than the stored watermark.',
-    template: `-- dbo.FactSales(CustomerKey, ProductKey, Amount, OrderDate)
--- stg.Sales(OrderId, CustomerId, ProductCode, Amount, UpdatedAt)
+    question: 'Fill in the comparison operator that selects only the rows newer than the stored watermark.',
+    tables: [
+      { name: 'dbo.FactSales', columns: ['OrderId', 'Amount', 'UpdatedAt'], rows: [[1, 20, '2026-03-01 09:00'], [2, 35, '2026-03-01 10:00']] },
+      {
+        name: 'stg.Sales',
+        columns: ['OrderId', 'Amount', 'UpdatedAt'],
+        rows: [[2, 35, '2026-03-01 10:00'], [3, 15, '2026-03-01 11:30'], [4, 40, '2026-03-01 12:00']],
+      },
+    ],
+    template: `DECLARE @lastLoaded DATETIME2 = '2026-03-01 10:00';
 INSERT INTO dbo.FactSales (OrderId, Amount, UpdatedAt)
 SELECT OrderId, Amount, UpdatedAt
 FROM stg.Sales
 WHERE UpdatedAt ___ @lastLoaded;`,
     blanks: ['>'],
-    solution: `INSERT INTO dbo.FactSales (OrderId, Amount, UpdatedAt)
+    solution: `DECLARE @lastLoaded DATETIME2 = '2026-03-01 10:00';
+INSERT INTO dbo.FactSales (OrderId, Amount, UpdatedAt)
 SELECT OrderId, Amount, UpdatedAt
 FROM stg.Sales
 WHERE UpdatedAt > @lastLoaded;`,
-    explanation: 'The delta filter is `WHERE UpdatedAt > @lastLoaded` — strictly greater so you do not reload the boundary row already captured by the previous run. (When late data is a concern, you widen this to a lookback window and rely on an idempotent MERGE.)',
+    explanation: 'The delta filter is `WHERE UpdatedAt > @lastLoaded`, strictly greater so you do not reload the boundary row already captured by the previous run: order 2, stamped exactly 10:00, is already in the fact table, so only orders 3 and 4 are inserted. (When late data is a concern, you widen this to a lookback window and rely on an idempotent MERGE.)',
     hints: ['Only rows strictly after the watermark', 'Strictly-greater comparison'],
     tags: ['tsql', 'incremental', 'watermark', 'cloze'],
   },
@@ -98,7 +114,10 @@ WHERE UpdatedAt > @lastLoaded;`,
     course: Course.SQL,
     language: CodeLanguage.SQL,
     question: 'Compute the next high-watermark to store. From `dbo.FactSales`, return the maximum `UpdatedAt` aliased as `NewWatermark`; if the table is empty, return a floor of `\'1900-01-01\'` instead of NULL (use ISNULL/COALESCE).',
-    starterCode: `-- SELECT ISNULL(MAX(UpdatedAt), '1900-01-01') AS NewWatermark FROM ...
+    tables: [
+      { name: 'dbo.FactSales', columns: ['OrderId', 'Amount', 'UpdatedAt'], rows: [[1, 20, '2026-03-01 09:00'], [2, 35, '2026-03-01 10:00']] },
+    ],
+    starterCode: `-- dbo.FactSales (OrderId, Amount, UpdatedAt)
 `,
     testCases: [
       {
@@ -117,7 +136,7 @@ FROM dbo.FactSales;`,
       skeleton: `SELECT ____(____(UpdatedAt), ____) AS NewWatermark
 FROM dbo.FactSales;`,
     },
-    explanation: '`MAX(UpdatedAt)` returns NULL on an empty table, which would break a `> NULL` comparison on the next run (everything compares false). Wrapping it in `ISNULL(…, \'1900-01-01\')` (or `COALESCE`) supplies a safe floor so the first incremental run still pulls all rows.',
+    explanation: '`MAX(UpdatedAt)` returns NULL on an empty table, which would break a `> NULL` comparison on the next run (everything compares false). Wrapping it in `ISNULL(…, \'1900-01-01\')` (or `COALESCE`) supplies a safe floor so the first incremental run still pulls all rows. On the shown table the result is 2026-03-01 10:00.',
     hints: ["ISNULL(MAX(UpdatedAt), '1900-01-01')", 'Guards against NULL on an empty table'],
     requires: [/MAX/i, /ISNULL|COALESCE/i],
     tags: ['tsql', 'incremental', 'watermark', 'null-handling'],
