@@ -491,4 +491,31 @@ class TimingMiddleware:
       tags: ['django', 'signals', 'post-save', 'pre-save', 'observer-pattern'],
       concepts: ['dj-signal-vs-override'],
     },
+  {
+      id: 'dj-signals-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.DJ_SIGNALS_MW,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'The `blog` app connects this receiver in `BlogConfig.ready()`, and the lines below are typed into `python manage.py shell`. What is printed? The answer is one line per `print`, in order, the receiver\'s included.',
+      code: `# blog/signals.py
+@receiver(post_save, sender=Article)
+def article_saved(sender, instance, created, **kwargs):
+    print("saved", instance.title, created)
+
+# typed into the shell
+a = Article.objects.create(title="Draft")
+a.title = "Final"
+a.save()
+Article.objects.filter(pk=a.pk).update(title="Gone")
+print(Article.objects.get(pk=a.pk).title)`,
+      expectedOutput: `saved Draft True
+saved Final False
+Gone`,
+      explanation: '`post_save` fires after every `save()` on an `Article`, and `create()` calls `save()`, so the receiver prints twice. `created` is `True` only for the insert and `False` for the later save of the same row. A queryset `update()` is one SQL UPDATE that never calls `save()`, so no signal fires for it, yet the row still changes to "Gone". Code that must react to every change cannot rely on signals alone when bulk writes are used.',
+      hints: ['create() saves, so it sends post_save too.', 'Queryset update() writes straight to the database and sends no signal.'],
+      tags: ['django', 'signals', 'post_save', 'update', 'predict'],
+      concepts: ['dj-signal-vs-override'],
+    },
 ];

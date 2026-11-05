@@ -697,7 +697,7 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-middleware-parsons-1'), q('dj-signals-cloze-1'), q('py-dj-signal-post-save-profile'), q('dj-signals-appconfig-cloze-1'),
   q('py-dj-signal-register-ready'),
   q('py-dj-mw-custom'), q('dj-sigmw-2'), q('py-dj-mw-order'), q('dj-signals-mw-adv-1'),
-  q('dj-models-adv-2'),
+  q('dj-models-adv-2'), q('dj-signals-predict-1'),
 
   // ===== Topic.DJ_CACHING =====
   q('dj-caching-gap-1'), q('py-dj-cache-why'), q('dj-caching-cloze-1'), q('dj-caching-getset-cloze-1'),
@@ -714,7 +714,7 @@ export const backendOrderedQuestions: Question[] = [
   // ===== Topic.DJ_MANAGEMENT =====
   q('dj-management-gap-1'), q('dj-management-parsons-1'), q('dj-mgmt-1'), q('dj-mgmt-2'),
   q('dj-mgmt-runscript-mcq-1'), q('dj-mgmt-call-command-mcq-1'), q('dj-mgmt-check-deploy-mcq-1'), q('dj-mgmt-django-setup-parsons-1'),
-  q('dj-management-cloze-1'), q('dj-mgmt-django-setup-cloze-1'), q('dj-mgmt-call-command-cloze-1'),
+  q('dj-management-cloze-1'), q('dj-mgmt-django-setup-cloze-1'), q('dj-mgmt-call-command-cloze-1'), q('dj-mgmt-predict-1'),
 
   // ===== Topic.DJ_SERVICE_LAYER =====
   q('dj-service-layer-gap-1'), q('be-infra-service-2'), q('dj-service-layer-cloze-1'), q('be-infra-service-1'),
@@ -766,7 +766,7 @@ export const backendOrderedQuestions: Question[] = [
   // ===== Topic.DJ_DEPLOYMENT =====
   q('py-dj-deploy-debug'), q('py-dj-deploy-12factor'), q('be-docker-1'), q('py-dj-deploy-gunicorn'),
   q('py-dj-deploy-allowed-hosts'), q('py-dj-deploy-collectstatic'), q('py-dj-deploy-whitenoise'), q('be-docker-2'),
-  q('dj-deploy-1'), q('dj-deploy-3'), q('dj-deploy-compose-cloze-1'), q('be-docker-3'), q('dj-deploy-2'),
+  q('dj-deploy-1'), q('dj-deploy-3'), q('dj-deploy-compose-cloze-1'), q('be-docker-3'), q('dj-deploy-2'), q('dj-deploy-predict-1'),
 
   // ===== Topic.DJ_FACTORY_BOY =====
   q('py-dj-factory-what'), q('dj-factoryboy-cloze-1'), q('py-dj-factory-userfactory'), q('py-dj-factory-subfactory'),
