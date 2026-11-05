@@ -2665,7 +2665,7 @@ True`,
     title: 'Setup & Project Structure',
     idea: [
       lines(
-        "`django-admin startproject site` creates a project: `manage.py` plus `settings.py`, `urls.py`, `wsgi.py` and `asgi.py`.",
+        "`django-admin startproject mysite` creates a project: `manage.py` plus `settings.py`, `urls.py`, `wsgi.py` and `asgi.py`.",
         "`python manage.py startapp name` then creates an app, one feature of the site, with its own `models.py`, `views.py`, `apps.py` and `migrations/`.",
       ),
       lines(
@@ -2679,7 +2679,7 @@ True`,
     ],
     form: {
       language: CodeLanguage.PYTHON,
-      code: `# $ django-admin startproject site     # manage.py + site/settings.py, urls.py
+      code: `# $ django-admin startproject mysite   # manage.py + mysite/settings.py, urls.py
 # $ python manage.py startapp name      # name/models.py, views.py, apps.py
 
 INSTALLED_APPS = [
@@ -3394,7 +3394,8 @@ def endpoint(request): ...                     # return Response(data, status=..
     worked: {
       language: CodeLanguage.PYTHON,
       runs: false,
-      code: `from rest_framework.decorators import api_view
+      code: `# python manage.py shell; here shop.Book has only title (CharField) and price (IntegerField)
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 from rest_framework.test import APIRequestFactory
@@ -3419,9 +3420,9 @@ print(r.status_code, r.data["price"][0], add_book(rf.get("/books/")).status_code
 r = add_book(rf.post("/books/", {"title": "Emma", "price": 8}, format="json"))
 print(r.status_code, r.data)`,
       steps: [
-        "Lines 7-18: in `python manage.py shell`, the serializer builds two fields from `Book`, and the view validates POSTed data before saving it.",
-        "Lines 21-22: with no `price` the field's error comes back with 400, and a GET, not allowed here, gets 405.",
-        "Lines 23-24: valid data is saved and returned with 201.",
+        "Lines 8-19: in `python manage.py shell`, the serializer builds two fields from `Book`, and the view validates POSTed data before saving it.",
+        "Lines 22-23: with no `price` the field's error comes back with 400, and a GET, not allowed here, gets 405.",
+        "Lines 24-25: valid data is saved and returned with 201.",
       ],
       output: `400 This field is required. 405
 201 {'title': 'Emma', 'price': 8}`,
