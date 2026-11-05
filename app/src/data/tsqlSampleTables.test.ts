@@ -397,3 +397,63 @@ describe('ELT & Transformation questions show the tables they read and write', (
     expect(offenders).toEqual([]);
   });
 });
+
+const PERFORMANCE = new Set<string>([
+  Topic.TSQL_INDEXES, Topic.TSQL_EXECUTION_PLANS, Topic.TSQL_PARTITIONING, Topic.TSQL_COLUMNSTORE, Topic.TSQL_ANTIPATTERNS,
+]);
+
+const performanceSection: Question[] = questions.filter(q => PERFORMANCE.has(q.topic));
+
+// `CREATE INDEX ... ON dbo.T` and `SWITCH TO dbo.T` name a table the statement works on.
+const performanceSql = (q: Question) =>
+  questionSql(q).replace(/\bON\s+(?=dbo\.)/gi, 'FROM ').replace(/\bSWITCH\s+TO\b/gi, 'FROM');
+
+describe('Performance & Optimization questions show the tables they use', () => {
+  it('has the whole section to check', () => {
+    expect(performanceSection.length).toBe(35);
+  });
+
+  it('every table a question reads or works on is one of the tables it shows', () => {
+    // Concept MCQs run against no data.
+    const offenders = performanceSection
+      .filter(q => q.type !== QuestionType.MULTIPLE_CHOICE)
+      .flatMap(q => {
+        const shown = new Set((q.tables ?? []).map(t => t.name.toLowerCase()));
+        return referencedTables(performanceSql(q))
+          .filter(t => !shown.has(t))
+          .map(t => `${q.id} uses ${t} without showing it`);
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('every shown table is one the question uses, with rows that fit its columns', () => {
+    const offenders = performanceSection.flatMap(q => {
+      const refs = new Set(referencedTables(performanceSql(q)));
+      return (q.tables ?? []).flatMap(t => [
+        ...(refs.has(t.name.toLowerCase()) ? [] : [`${q.id} shows ${t.name} but never uses it`]),
+        ...t.rows.filter(r => r.length !== t.columns.length).map(() => `${q.id} ${t.name} has a ragged row`),
+      ]);
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('no question builds sample data inline with a VALUES derived table or a CTE', () => {
+    const offenders = performanceSection
+      .filter(q => /\(\s*VALUES\b/i.test(questionSql(q)) || /\bWITH\s+\w+(\s*\([^)]*\))?\s+AS\s*\(/i.test(questionSql(q)))
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('every predict shows the table its query reads', () => {
+    const offenders = performanceSection
+      .filter(q => q.type === QuestionType.PREDICT_OUTPUT)
+      .filter(q => (q.tables ?? []).length === 0)
+      .map(q => q.id);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no cloze or coding prompt names the word it asks the learner to fill in', () => {
+    const cloze = performanceSection.filter(q => q.id === 'tsql-part-cloze-1') as unknown as { question: string; blanks: string[] }[];
+    cloze.forEach(q => expect(q.question).not.toMatch(/RANGE RIGHT/));
+  });
+});
