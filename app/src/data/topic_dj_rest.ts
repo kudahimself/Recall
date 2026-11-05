@@ -63,7 +63,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Add filtering and ordering to a DRF ViewSet: filter articles by is_published and author, and allow ordering by published_date and title. Use django-filter.',
+      question: 'Write an `ArticleViewSet` (a `ModelViewSet` over all `Article` rows with `ArticleSerializer`) that adds filtering and ordering. Use django-filter\'s backend to allow exact-match filtering on `is_published` and `author`, and DRF\'s ordering backend to allow ordering by `published_date` and `title`, with newest `published_date` first by default.',
       starterCode: `# Define ArticleViewSet(ModelViewSet): set queryset and serializer_class,
 # enable DjangoFilterBackend + OrderingFilter, allow filtering on
 # is_published and author, allow ordering by published_date and title,
@@ -87,7 +87,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a Django REST Framework serializer for an Article model (fields: id, title, body, author, published_date) using ModelSerializer.',
+      question: 'Create a Django REST Framework `ModelSerializer` named `ArticleSerializer` for the `Article` model (import it from `.models`) that exposes the fields `id`, `title`, `body`, `author` and `published_date`.',
       starterCode: `# Define ArticleSerializer for Article model with fields: id, title, body, author, published_date.
 `,
       testCases: [
@@ -137,7 +137,7 @@ class ArticleListView(___):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a DRF APIView that handles GET (return all articles) and POST (create a new article) requests.',
+      question: 'Create a DRF `APIView` named `ArticleListView` that uses the existing `ArticleSerializer`. GET returns every `Article`, serialized. POST creates an article from the request data and returns 201 with the created data, or 400 with the serializer errors when the data is invalid.',
       starterCode: `# Define ArticleListView to handle GET (return all articles) and POST (create article) requests.
 `,
       testCases: [
@@ -186,14 +186,14 @@ class IsOwnerOrReadOnly(permissions.___):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: `Build a DRF ModelViewSet for \`Article\` that combines four production requirements:
-  
-  1. Authenticated users can read all published articles. Anonymous users are blocked.
-  2. Authenticated users can only edit/delete articles they authored.
-  3. Setting \`author\` from the API is forbidden — it must come from \`request.user\` on create.
-  4. The \`@action\` \`publish\` flips an article's status to "published" — only the author may call it.
-  
-  Implement using a custom permission class plus an overridden \`perform_create\` and an action method. Use \`ArticleSerializer\`.`,
+      question: `Build a DRF \`ArticleViewSet\` (a \`ModelViewSet\` using \`ArticleSerializer\`) that combines four production requirements:
+
+1. Authenticated users can read every published article plus their own drafts. Anonymous users are blocked.
+2. Authenticated users can only edit/delete articles they authored.
+3. Setting \`author\` from the API is forbidden: it must come from \`request.user\` on create.
+4. A \`publish\` action on a single article (POST) sets its \`status\` to "published" and returns \`{"status": "published"}\`; only the author may call it.
+
+Implement it with a custom permission class named \`IsOwnerOrReadOnly\`, the request-aware queryset hook, an overridden \`perform_create\` and an action method.`,
       starterCode: `from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -202,12 +202,13 @@ from .serializers import ArticleSerializer
 `,
       testCases: [
         {
-          input: 'GET as anonymous → 401; PATCH as non-author → 403; POST sets author from request.user',
-          expectedOutput: 'IsAuthenticated + IsOwnerOrReadOnly + perform_create override + @action with detail=True',
-          description: 'Auth + ownership + perform_create + custom action — full ViewSet pattern',
+          input: 'GET as anonymous → 401; PATCH as non-author → 403; POST sets author from request.user; author publishes own draft → 200',
+          expectedOutput: 'IsAuthenticated + IsOwnerOrReadOnly + get_queryset + perform_create override + @action with detail=True',
+          description: 'Auth + ownership + perform_create + custom action - full ViewSet pattern',
         },
       ],
-      solution: `from rest_framework import viewsets, permissions, status
+      solution: `from django.db.models import Q
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Article
@@ -226,7 +227,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        return Article.objects.filter(status="published")
+        return Article.objects.filter(Q(status="published") | Q(author=self.request.user))
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -237,17 +238,18 @@ class ArticleViewSet(viewsets.ModelViewSet):
         article.status = "published"
         article.save()
         return Response({"status": article.status})`,
-      explanation: 'Four-primitive combo. `permission_classes` is a list — DRF AND-s them together. Custom `BasePermission` overrides `has_object_permission` to enforce ownership; SAFE_METHODS (GET/HEAD/OPTIONS) bypass the ownership check. `perform_create(serializer)` is the DRF hook for "set fields server-side that the client should not control" — `serializer.save(author=...)` injects the FK without exposing it in the serializer. `@action(detail=True)` adds a per-instance custom endpoint at `/articles/{pk}/publish/`; `self.get_object()` runs `has_object_permission` so the ownership rule auto-applies to the action.',
+      explanation: 'Four-primitive combo. `permission_classes` is a list, and DRF AND-s the classes together. Custom `BasePermission` overrides `has_object_permission` to enforce ownership; SAFE_METHODS (GET/HEAD/OPTIONS) bypass the ownership check. `get_queryset` returns published articles OR the caller\'s own (`Q(...) | Q(...)`): `self.get_object()` only finds rows in that queryset, so with published rows alone an author could never reach, edit or publish a draft (404). `perform_create(serializer)` is the DRF hook for "set fields server-side that the client should not control": `serializer.save(author=...)` injects the FK without exposing it in the serializer. `@action(detail=True)` adds a per-instance custom endpoint at `/articles/{pk}/publish/`; `self.get_object()` runs `has_object_permission`, so the ownership rule auto-applies to the action.',
       hints: [
-        'permission_classes is a list — AND-ed together',
+        'permission_classes is a list - AND-ed together',
         'has_object_permission for per-row checks; has_permission for per-request',
+        'get_queryset must include the caller\'s drafts, or get_object() 404s on them',
         'perform_create(serializer) for server-set fields',
         '@action(detail=True) for /pk/method/; detail=False for /method/',
         'self.get_object() runs object-level permissions',
       ],
       tieredHints: {
         apiSignature: 'BasePermission.has_object_permission(request, view, obj); @action(detail=True)',
-        skeleton: 'from rest_framework import viewsets, permissions, status\nfrom rest_framework.decorators import ____\nfrom rest_framework.response import ____\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass IsOwnerOrReadOnly(permissions.____):\n    def ____(self, request, view, obj):\n        if request.method in permissions.____:\n            return True\n        return obj.____ == request.____\n\n\nclass ArticleViewSet(viewsets.____):\n    ____ = ArticleSerializer\n    ____ = [permissions.____, IsOwnerOrReadOnly]\n\n    def ____(self):\n        return Article.____.____(status="published")\n\n    def ____(self, serializer):\n        serializer.____(author=self.request.____)\n\n    @____(detail=True, methods=["post"])\n    def ____(self, request, pk=None):\n        article = self.____()\n        article.____ = "published"\n        article.____()\n        return ____({"status": article.____})',
+        skeleton: 'from django.db.models import Q\nfrom rest_framework import viewsets, permissions, status\nfrom rest_framework.decorators import ____\nfrom rest_framework.response import ____\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass IsOwnerOrReadOnly(permissions.____):\n    def ____(self, request, view, obj):\n        if request.method in permissions.____:\n            return True\n        return obj.____ == request.____\n\n\nclass ArticleViewSet(viewsets.____):\n    ____ = ArticleSerializer\n    ____ = [permissions.____, IsOwnerOrReadOnly]\n\n    def ____(self):\n        return Article.____.____(____ | ____)\n\n    def ____(self, serializer):\n        serializer.____(author=self.request.____)\n\n    @____(detail=True, methods=["post"])\n    def ____(self, request, pk=None):\n        article = self.____()\n        article.____ = "published"\n        article.____()\n        return ____({"status": article.____})',
       },
       tags: ['django', 'drf', 'ModelViewSet', 'BasePermission', 'perform_create', 'action', 'advanced'],
       concepts: ['dj-view-patterns', 'dj-permission-class'],
@@ -259,16 +261,16 @@ class ArticleViewSet(viewsets.ModelViewSet):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: `Build a DRF serializer that handles a *writeable nested relation*: \`ArticleSerializer\` with a list of \`tags\` (an M2M relation to \`Tag\`). On POST/PATCH, accept a list of tag *names* (strings). Existing tags are reused; new tag names create new \`Tag\` rows. Override \`create\` and \`update\` to handle the M2M assignment cleanly.
-  
-  \`Tag\` has fields: \`name\` (CharField, unique=True). \`Article\` has a ManyToManyField to Tag named \`tags\`. Read should return the list of tag names — not full Tag objects.`,
+      question: `Build a DRF serializer that handles a *writeable nested relation*: \`ArticleSerializer\` with a list of \`tags\` (an M2M relation to \`Tag\`). On POST/PATCH, accept a list of tag *names* (strings). Existing tags are reused; new tag names create new \`Tag\` rows. Override \`create\` and \`update\` to handle the M2M assignment cleanly; on PATCH, a payload without \`tags\` leaves the tags alone.
+
+\`Tag\` has fields: \`name\` (CharField, unique=True). \`Article\` has \`title\`, \`body\` and a ManyToManyField to Tag named \`tags\`. Expose \`id\`, \`title\`, \`body\` and \`tags\`. Read should return the list of tag names, not full Tag objects.`,
       starterCode: `from rest_framework import serializers
 from .models import Article, Tag
 `,
       testCases: [
         {
           input: 'POST {"title": "...", "body": "...", "tags": ["python", "django"]}',
-          expectedOutput: 'StringRelatedField for read + custom field for write + override create/update with get_or_create per name',
+          expectedOutput: 'write-only ListField for input + to_representation for read + override create/update with get_or_create per name',
           description: 'Nested writeable M2M with name-based identification',
         },
       ],
@@ -278,7 +280,7 @@ from .models import Article, Tag
 
 class ArticleSerializer(serializers.ModelSerializer):
     tags = serializers.ListField(
-        child=serializers.CharField(), allow_empty=True, required=False,
+        child=serializers.CharField(), write_only=True, required=False,
     )
 
     class Meta:
@@ -308,17 +310,17 @@ class ArticleSerializer(serializers.ModelSerializer):
     def _set_tags(self, article, names):
         tags = [Tag.objects.get_or_create(name=n)[0] for n in names]
         article.tags.set(tags)`,
-      explanation: 'Three production patterns: (1) Read shape != write shape — `ListField(child=CharField)` accepts a list of strings on input; `to_representation` overrides the read side to project to names. (2) `create`/`update` must `pop("tags")` from `validated_data` because the field isn\'t a real model attribute — pass it through to a private helper. (3) `Tag.objects.get_or_create(name=n)[0]` makes tag creation idempotent; `article.tags.set(tags)` REPLACES the M2M (vs `.add()` which would APPEND duplicates). Treating `tag_names is None` differently from `[]` matters for PATCH — None means "don\'t touch", [] means "clear them".',
+      explanation: 'Three production patterns: (1) Read shape != write shape: `ListField(child=CharField(), write_only=True)` accepts a list of strings on input, and `to_representation` adds the read side as a list of names. The field must be write-only, because otherwise the default read side hands the `ListField` the related manager `instance.tags`, which is not iterable, and reading `.data` raises a TypeError. (2) `create`/`update` must `pop("tags")` from `validated_data` because a many-to-many value cannot be passed to `Article.objects.create()` or set as a plain attribute; pass it to a private helper once the article is saved. (3) `Tag.objects.get_or_create(name=n)[0]` makes tag creation idempotent; `article.tags.set(tags)` REPLACES the M2M, while `.add()` would keep the old tags too. Treating `tag_names is None` differently from `[]` matters for PATCH: None means "don\'t touch", [] means "clear them".',
       hints: [
-        'Different read vs write shape: override to_representation',
+        'Different read vs write shape: write-only ListField in, to_representation out',
         'Pop M2M payload from validated_data before .create()',
-        'get_or_create returns (instance, created) tuple — index [0]',
+        'get_or_create returns (instance, created) tuple - index [0]',
         '.tags.set(...) replaces; .add(...) appends',
         'PATCH semantics: None = leave alone, [] = clear',
       ],
       tieredHints: {
         apiSignature: 'ModelSerializer.to_representation(instance); ModelSerializer.create(validated_data)',
-        skeleton: 'from rest_framework import ____\nfrom .models import ____, ____\n\n\nclass ArticleSerializer(____.____):\n    tags = ____.____(\n        child=____.____(), allow_empty=True, required=False,\n    )\n\n    class Meta:\n        model = ____\n        fields = ["id", "title", "body", "tags"]\n\n    def ____(self, instance):\n        rep = super().____(instance)\n        rep["tags"] = list(instance.____.____("name", flat=True))\n        return rep\n\n    def ____(self, validated_data):\n        tag_names = validated_data.____("tags", [])\n        article = ____.____.____(**validated_data)\n        self.____(article, tag_names)\n        return article\n\n    def ____(self, instance, validated_data):\n        tag_names = validated_data.____("tags", None)\n        for attr, value in validated_data.items():\n            ____(instance, attr, value)\n        instance.____()\n        if tag_names is not None:\n            self.____(instance, tag_names)\n        return instance\n\n    def ____(self, article, names):\n        tags = [____.____.____(name=n)[0] for n in names]\n        article.____.____(tags)',
+        skeleton: 'from rest_framework import ____\nfrom .models import ____, ____\n\n\nclass ArticleSerializer(____.____):\n    tags = ____.____(\n        child=____.____(), ____=True, required=False,\n    )\n\n    class Meta:\n        model = ____\n        fields = ["id", "title", "body", "tags"]\n\n    def ____(self, instance):\n        rep = super().____(instance)\n        rep["tags"] = list(instance.____.____("name", flat=True))\n        return rep\n\n    def ____(self, validated_data):\n        tag_names = validated_data.____("tags", [])\n        article = ____.____.____(**validated_data)\n        self.____(article, tag_names)\n        return article\n\n    def ____(self, instance, validated_data):\n        tag_names = validated_data.____("tags", None)\n        for attr, value in validated_data.items():\n            ____(instance, attr, value)\n        instance.____()\n        if tag_names is not None:\n            self.____(instance, tag_names)\n        return instance\n\n    def ____(self, article, names):\n        tags = [____.____.____(name=n)[0] for n in names]\n        article.____.____(tags)',
       },
       tags: ['django', 'drf', 'serializer', 'nested', 'M2M', 'create', 'update', 'advanced'],
       concepts: ['dj-serializer-validation'],
@@ -338,8 +340,8 @@ class ArticleViewSet(viewsets.___):
     ___ = ArticleSerializer`,
       blanks: ['ModelViewSet', 'serializer_class'],
       solution: 'from rest_framework import viewsets\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer',
-      explanation: '`ModelViewSet` bundles list/retrieve/create/update/partial_update/destroy from just `queryset` + `serializer_class` — no method bodies needed. A router then wires it to URLs.',
-      hints: ['ViewSet subclass that gives the full CRUD surface', 'Attribute name mirrors ModelForm-style Meta.model pairing'],
+      explanation: '`ModelViewSet` bundles list/retrieve/create/update/partial_update/destroy from just `queryset` + `serializer_class`, with no method bodies needed. A router then wires it to URLs.',
+      hints: ['ViewSet subclass that gives the full CRUD surface', 'The attribute is named after what it holds: the serializer class the viewset uses'],
       tags: ['drf', 'ViewSet', 'ModelViewSet', 'cloze'],
       concepts: ['dj-view-patterns'],
     },
@@ -585,18 +587,17 @@ class ArticleSerializer(serializers.ModelSerializer):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the built-in permission class and the view attribute that applies it.',
-      template: `from rest_framework import viewsets
-from rest_framework.permissions import ___
+      question: 'Fill in the view attribute and the built-in permission class so anyone can read articles but only logged-in users can create, edit or delete them.',
+      template: `from rest_framework import viewsets, permissions
 
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
-    ___ = [IsAuthenticatedOrReadOnly]`,
-      blanks: ['IsAuthenticatedOrReadOnly', 'permission_classes'],
-      solution: 'from rest_framework import viewsets\nfrom rest_framework.permissions import IsAuthenticatedOrReadOnly\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n    permission_classes = [IsAuthenticatedOrReadOnly]',
+    ___ = [permissions.___]`,
+      blanks: ['permission_classes', 'IsAuthenticatedOrReadOnly'],
+      solution: 'from rest_framework import viewsets, permissions\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n    permission_classes = [permissions.IsAuthenticatedOrReadOnly]',
       explanation: '`permission_classes` is the view attribute that lists permission checks (DRF ANDs them together). `IsAuthenticatedOrReadOnly` is a built-in: reads are open to anyone, writes require authentication.',
-      hints: ['Built-in class: reads open, writes need auth', 'View attribute holding a list of permission classes'],
+      hints: ['View attribute holding a list of permission classes', 'Built-in class: reads open, writes need auth'],
       tags: ['drf', 'permissions', 'cloze'],
       concepts: ['dj-permission-class'],
     },
@@ -607,10 +608,9 @@ class ArticleViewSet(viewsets.ModelViewSet):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Require authentication for writes, allow reads for anyone. Import `IsAuthenticatedOrReadOnly` from `rest_framework.permissions`. Add `permission_classes = [IsAuthenticatedOrReadOnly]` on an `ArticleViewSet(ModelViewSet)`. Reads (GET, HEAD, OPTIONS) work for anyone; writes (POST, PUT, PATCH, DELETE) require auth.',
-      starterCode: `# On ArticleViewSet(ModelViewSet), set permission_classes to
-# IsAuthenticatedOrReadOnly so reads are open to anyone but writes
-# require authentication.
+      question: 'Write an `ArticleViewSet` (a `ModelViewSet` over all `Article` rows, serialized with `ArticleSerializer`; import them from `.models` and `.serializers`). Anyone may read (GET, HEAD, OPTIONS), but only authenticated users may write (POST, PUT, PATCH, DELETE). Enforce that with DRF\'s built-in permission class for exactly this rule, imported from `rest_framework.permissions`.',
+      starterCode: `# ArticleViewSet over all Article rows with ArticleSerializer:
+# reads open to anyone, writes need an authenticated user.
 `,
       testCases: [
         {
@@ -628,10 +628,10 @@ class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]`,
-      explanation: 'Permissions evaluated in order — ALL must pass. Built-ins: `AllowAny`, `IsAuthenticated`, `IsAdminUser`, `IsAuthenticatedOrReadOnly`, `DjangoModelPermissions` (per-model CRUD perms from Django auth), `DjangoObjectPermissions` (object-level). Write your own: subclass `BasePermission`, override `has_permission(self, request, view)` and/or `has_object_permission(self, request, view, obj)`. Set globally with `REST_FRAMEWORK = {"DEFAULT_PERMISSION_CLASSES": [...]}`.',
+      explanation: 'Permissions are evaluated in order, and ALL must pass. Built-ins: `AllowAny`, `IsAuthenticated`, `IsAdminUser`, `IsAuthenticatedOrReadOnly`, `DjangoModelPermissions` (per-model CRUD perms from Django auth), `DjangoObjectPermissions` (object-level). Write your own: subclass `BasePermission`, override `has_permission(self, request, view)` and/or `has_object_permission(self, request, view, obj)`. Set globally with `REST_FRAMEWORK = {"DEFAULT_PERMISSION_CLASSES": [...]}`.',
       hints: [
         'IsAuthenticatedOrReadOnly = anyone reads, auth writes',
-        'Classes evaluated in order — all must pass',
+        'Classes evaluated in order - all must pass',
         'Custom: subclass BasePermission with has_permission / has_object_permission',
       ],
       tieredHints: {
@@ -753,7 +753,7 @@ class ArticleSerializer(serializers.ModelSerializer):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Nest an author serializer inside an article serializer so GETs return `{"id": 1, "title": "...", "author": {"username": "alice", "id": 7}}`. First build an `AuthorSerializer` as a `ModelSerializer` bound to `User` exposing just `id` and `username`. Then build an `ArticleSerializer` as a `ModelSerializer` bound to `Article` with fields `id`, `title`, and an `author` attribute that embeds the `AuthorSerializer` in read-only mode so the nested form does not need to handle writes.',
+      question: 'Nest an author serializer inside an article serializer so GETs return `{"id": 1, "title": "...", "author": {"id": 7, "username": "alice"}}`. First build an `AuthorSerializer` as a `ModelSerializer` bound to `User` exposing just `id` and `username`. Then build an `ArticleSerializer` as a `ModelSerializer` bound to `Article` with fields `id`, `title`, and an `author` attribute that embeds the `AuthorSerializer` in read-only mode so the nested form does not need to handle writes.',
       starterCode: `# Build AuthorSerializer(ModelSerializer) on User exposing id and
 # username, then ArticleSerializer(ModelSerializer) on Article with
 # fields id, title, and a read-only nested author = AuthorSerializer.
@@ -780,7 +780,7 @@ class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
         fields = ["id", "title", "author"]`,
-      explanation: 'Nested `read_only=True` is the 80% case: reads return nested JSON, writes accept an `author_id` (separately declared) or get it from `request.user` in `perform_create`. For nested WRITES (create article + author in one POST), override `create` / `update` on the serializer to unpack the nested dict. It gets hairy — prefer flat writes + a follow-up call, or use `drf-writable-nested` library.',
+      explanation: 'Nested `read_only=True` is the 80% case: reads return nested JSON, writes accept an `author_id` (separately declared) or get it from `request.user` in `perform_create`. For nested WRITES (create article + author in one POST), override `create` / `update` on the serializer to unpack the nested dict. It gets hairy, so prefer flat writes + a follow-up call, or use `drf-writable-nested` library.',
       hints: [
         'Nested read_only=True = easy case',
         'Nested writes need custom create/update or drf-writable-nested',
@@ -824,17 +824,17 @@ class ArticleSerializer(serializers.___):
       language: CodeLanguage.PYTHON,
       question: 'Add a per-field validator: reject titles shorter than 5 chars. Use DRF\'s naming and exception class.',
       template: `class ArticleSerializer(serializers.ModelSerializer):
-      class Meta:
-          model = Article
-          fields = ["id", "title"]
-  
-      def ___(self, value):
-          if len(value) < 5:
-              raise serializers.___("too short")
-          return value`,
+    class Meta:
+        model = Article
+        fields = ["id", "title"]
+
+    def ___(self, value):
+        if len(value) < 5:
+            raise serializers.___("too short")
+        return value`,
       blanks: ['validate_title', 'ValidationError'],
       solution: 'class ArticleSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Article\n        fields = ["id", "title"]\n\n    def validate_title(self, value):\n        if len(value) < 5:\n            raise serializers.ValidationError("too short")\n        return value',
-      explanation: 'DRF: `validate_<field>(self, value)` — note `value` is a parameter (Django Forms\' `clean_<field>` reads from `self.cleaned_data` instead). Use `serializers.ValidationError`, not Django\'s `core.exceptions.ValidationError`.',
+      explanation: 'DRF: `validate_<field>(self, value)`, where `value` is a parameter (Django Forms\' `clean_<field>` reads from `self.cleaned_data` instead). Use `serializers.ValidationError`, not Django\'s `core.exceptions.ValidationError`.',
       hints: ['DRF method takes (self, value)', 'serializers.ValidationError, not core'],
       tags: ['django', 'drf', 'validate_field', 'ValidationError', 'cloze'],
       concepts: ['dj-serializer-validation'],
@@ -846,16 +846,16 @@ class ArticleSerializer(serializers.___):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a ListCreateAPIView that filters by status and uses ArticleSerializer.',
-      template: `from rest_framework.generics import ListCreateAPIView
+      question: 'Fill in the generic view base class that both lists (GET) and creates (POST) articles, the attribute that names its serializer, and the method that returns only the published articles.',
+      template: `from rest_framework import generics
 
-class ArticleListCreate(___):
+class ArticleListCreate(generics.___):
     ___ = ArticleSerializer
 
     def ___(self):
         return Article.objects.filter(status="published")`,
       blanks: ['ListCreateAPIView', 'serializer_class', 'get_queryset'],
-      solution: 'from rest_framework.generics import ListCreateAPIView\n\nclass ArticleListCreate(ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(status="published")',
+      solution: 'from rest_framework import generics\n\nclass ArticleListCreate(generics.ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(status="published")',
       explanation: 'Generic API views use `serializer_class` (singular, not `serializer`) and either a class-level `queryset` or an overridden `get_queryset()`. Override the method when the queryset depends on the request (e.g. filter by `self.request.user`).',
       hints: ['serializer_class is the attr name', 'get_queryset for request-aware filtering'],
       tags: ['django', 'drf', 'ListCreateAPIView', 'get_queryset', 'cloze'],
@@ -989,7 +989,7 @@ class BookListView(APIView):
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a DRF ListCreateAPIView for Article using ArticleSerializer that returns published articles only. Connect via a URL.',
+      question: 'Build a DRF ListCreateAPIView for Article using ArticleSerializer that returns published articles only. Set the serializer attribute first, then override the method that returns the rows.',
       correctOrder: [
         'from rest_framework.generics import ListCreateAPIView',
         'from .models import Article',
@@ -1002,13 +1002,13 @@ class BookListView(APIView):
         '        return Article.objects.filter(status="published")',
       ],
       distractorLines: [
-        '    queryset = Article.objects.filter(status="published")',
+        '        return Article.objects.get(status="published")',
         '    serializer = ArticleSerializer',
         'class ArticleListCreate(GenericAPIView):',
         '    def queryset(self):',
       ],
       solution: 'from rest_framework.generics import ListCreateAPIView\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\nclass ArticleListCreate(ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(status="published")',
-      explanation: 'Generic API views need `serializer_class` (not `serializer`) and either a class-level `queryset` or an overridden `get_queryset()`. Use `get_queryset` when the queryset depends on the request (filtering by status, user, etc.). `ListCreateAPIView` handles both `GET` (list) and `POST` (create) automatically.',
+      explanation: 'Generic API views need `serializer_class` (not `serializer`) and either a class-level `queryset` or an overridden `get_queryset()`, which must return a queryset: `.filter(...)` gives the many published rows, while `.get(...)` returns one object (or raises when there are several). Overriding `get_queryset` is also what you do when the rows depend on the request, such as the current user. `ListCreateAPIView` handles both `GET` (list) and `POST` (create) automatically.',
       hints: ['serializer_class, not serializer', 'Override get_queryset for dynamic filtering', 'ListCreate handles GET and POST'],
       tags: ['django', 'drf', 'ListCreateAPIView', 'get_queryset', 'parsons'],
       concepts: ['dj-view-patterns'],
@@ -1063,7 +1063,7 @@ article = Article.objects.create(title="Hello")  # pk=1
 serializer = ArticleSerializer(article)
 print(serializer.data)`,
       expectedOutput: `{'id': 1, 'title': 'Hello'}`,
-      explanation: '`serializer.data` is a dict-like (OrderedDict) of the fields declared in `Meta.fields`. For a single instance you pass it directly. For a queryset use `ArticleSerializer(qs, many=True)` and `.data` is then a list of dicts.',
+      explanation: '`serializer.data` is a dict (a `ReturnDict`, a plain `dict` subclass) of the fields declared in `Meta.fields`, so it prints like any dict. For a single instance you pass it directly. For a queryset use `ArticleSerializer(qs, many=True)` and `.data` is then a list of dicts.',
       hints: ['serializer.data → dict for single, list for many=True', 'Only fields in Meta.fields appear'],
       tags: ['django', 'drf', 'serializer.data', 'predict'],
       concepts: ['dj-serializer-validation'],
@@ -1103,7 +1103,7 @@ print(list(s.errors.keys()))`,
       topic: Topic.DJ_REST,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A serializer with a nested SerializerMethodField. What does .data show?',
+      question: 'A serializer with a SerializerMethodField. What does this print?',
       code: `class ArticleSerializer(serializers.ModelSerializer):
     word_count = serializers.SerializerMethodField()
 
@@ -1117,7 +1117,7 @@ print(list(s.errors.keys()))`,
 article = Article.objects.create(title="Hello DRF World")  # pk=7
 print(ArticleSerializer(article).data)`,
       expectedOutput: `{'id': 7, 'title': 'Hello DRF World', 'word_count': 3}`,
-      explanation: '`SerializerMethodField` calls `get_<field_name>(self, obj)` on the serializer. Always read-only — the value is computed at serialization time from the instance, never read from input. Useful for derived/computed values that aren\'t stored on the model.',
+      explanation: '`SerializerMethodField` calls `get_<field_name>(self, obj)` on the serializer. It is always read-only: the value is computed at serialization time from the instance, never read from input. Useful for derived/computed values that aren\'t stored on the model.',
       hints: ['SerializerMethodField → get_<field>(self, obj)', 'Always read-only', 'Returned value lands under the field name'],
       tags: ['django', 'drf', 'SerializerMethodField', 'predict'],
       concepts: ['dj-serializer-validation'],
@@ -1149,17 +1149,17 @@ print(ArticleSerializer(article).data)`,
     topic: Topic.DJ_REST,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Turn a plain function into a DRF endpoint that handles GET and POST.',
+    question: 'Turn a plain function into a DRF endpoint that answers GET with every article serialized.',
     template: `from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-@___(["GET", "POST"])
+@___(["GET"])
 def article_list(request):
     articles = Article.objects.all()
     return ___(ArticleSerializer(articles, many=True).data)`,
     blanks: ['api_view', 'Response'],
-    solution: 'from rest_framework.decorators import api_view\nfrom rest_framework.response import Response\n\n@api_view(["GET", "POST"])\ndef article_list(request):\n    articles = Article.objects.all()\n    return Response(ArticleSerializer(articles, many=True).data)',
-    explanation: '`@api_view(methods)` is the function-based equivalent of subclassing `APIView`: it upgrades the request to a DRF `Request` and lets the function return a DRF `Response`. The allowed methods are listed in the decorator; anything else returns 405 automatically.',
+    solution: 'from rest_framework.decorators import api_view\nfrom rest_framework.response import Response\n\n@api_view(["GET"])\ndef article_list(request):\n    articles = Article.objects.all()\n    return Response(ArticleSerializer(articles, many=True).data)',
+    explanation: '`@api_view(methods)` is the function-based equivalent of subclassing `APIView`: it upgrades the request to a DRF `Request` and lets the function return a DRF `Response`. The allowed methods are listed in the decorator; anything else (here a POST) returns 405 automatically.',
     hints: ['The decorator takes the list of allowed methods', 'Return a DRF Response, not a Django HttpResponse'],
     tags: ['django', 'drf', 'api-view', 'cloze'],
     concepts: ['dj-view-patterns'],
@@ -1171,7 +1171,7 @@ def article_list(request):
     topic: Topic.DJ_REST,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Build a function-based DRF endpoint (not a class) for `Article`. It answers GET with every article serialized, and POST to create one — returning 201 with the created data on success, or the validation errors with 400 on failure. Decorate the function so it receives a DRF request and can return a DRF Response.',
+    question: 'Build a function-based DRF endpoint (not a class) named `article_list` for `Article`, using `ArticleSerializer`. It answers GET with every article serialized, and POST to create one: 201 with the created data on success, or the validation errors with 400 on failure. Decorate the function so it receives a DRF request and can return a DRF Response.',
     starterCode: `from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -1253,7 +1253,7 @@ def article_list(request):
     topic: Topic.DJ_REST,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Build a `RegisterSerializer` (`ModelSerializer` on the `User` model) exposing `username`, `email`, and `password`. The password must be accepted on input but never appear in serialized output, and on create it must be stored hashed rather than as the raw value.',
+    question: 'Build a `RegisterSerializer` (`ModelSerializer` on the `User` model) exposing `id`, `username`, `email`, and `password`. The password must be accepted on input but never appear in serialized output, and on create it must be stored hashed rather than as the raw value.',
     starterCode: `from rest_framework import serializers
 from django.contrib.auth.models import User
 `,
@@ -1287,8 +1287,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)`,
-    explanation: 'Two requirements combine: `extra_kwargs={"password": {"write_only": True}}` keeps the hash out of responses, and overriding `create` ensures the raw password is hashed. `set_password` (or the `create_user` manager, which calls it internally) writes a salted hash — never assign `password=` directly through `objects.create`, which would store the plaintext.',
-    hints: ['write_only via extra_kwargs', 'Override create — the default would store plaintext', 'set_password() or User.objects.create_user() hashes it'],
+    explanation: 'Two requirements combine: `extra_kwargs={"password": {"write_only": True}}` keeps the hash out of responses, and overriding `create` ensures the raw password is hashed. `set_password` (or the `create_user` manager, which calls it internally) writes a salted hash; never assign `password=` directly through `objects.create`, which would store the plaintext.',
+    hints: ['write_only via extra_kwargs', 'Override create - the default would store plaintext', 'set_password() or User.objects.create_user() hashes it'],
     tieredHints: {
       apiSignature: 'extra_kwargs = {\'password\': {\'write_only\': True}}; User.objects.create_user(**validated_data)',
       skeleton: 'from rest_framework import serializers\nfrom django.contrib.auth.models import User\n\n\nclass RegisterSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = User\n        fields = ["id", "username", "email", "password"]\n        ____ = {"password": {"____": True}}\n\n    def ____(self, validated_data):\n        user = User(\n            username=validated_data["username"],\n            email=validated_data["email"],\n        )\n        user.____(validated_data["password"])\n        user.____()\n        return user',
@@ -1501,11 +1501,11 @@ class ArticleViewSet(viewsets.ModelViewSet):
     question: 'What do `AnonRateThrottle` and `UserRateThrottle` do, and where are their limits configured?',
     options: [
       { id: 'a', text: 'They cap request rate per anonymous IP and per authenticated user respectively; the limits come from `DEFAULT_THROTTLE_RATES` (e.g. `{"anon": "100/day", "user": "1000/day"}`)', isCorrect: true },
-      { id: 'b', text: 'They reject requests once the database connection pool is exhausted; the ceiling is read from the `CONN_MAX_AGE` setting in the database config', isCorrect: false },
-      { id: 'c', text: 'They cap the response payload size for anonymous versus authenticated clients; the byte limits are set per serializer via a `max_size` Meta option', isCorrect: false },
+      { id: 'b', text: 'They cap how many requests may be in progress at the same moment for anonymous and for logged-in clients; the limits come from `DEFAULT_THROTTLE_RATES`', isCorrect: false },
+      { id: 'c', text: 'They cap request rate, but both key on the client IP, so logged-in users behind one office address share one limit; the limits are set per view in a `rate` attribute', isCorrect: false },
       { id: 'd', text: 'They transparently retry throttled requests after a backoff delay; the wait between retries is read from the `DEFAULT_THROTTLE_RATES` mapping', isCorrect: false },
     ],
-    explanation: 'Throttles limit request *rate*. `AnonRateThrottle` keys on client IP (for unauthenticated requests); `UserRateThrottle` keys on the user id. Rates live in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` as `"<scope>": "<num>/<period>"` and the counters are stored in the cache. Enable globally with `DEFAULT_THROTTLE_CLASSES` or per-view with `throttle_classes`. Over-limit requests get 429 Too Many Requests — there is no automatic retry.',
+    explanation: 'Throttles limit request *rate*. `AnonRateThrottle` keys on client IP (for unauthenticated requests); `UserRateThrottle` keys on the user id. Rates live in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` as `"<scope>": "<num>/<period>"` and the counters are stored in the cache. A rate like "100/day" counts requests over a time window; it does not limit how many run at once. Enable globally with `DEFAULT_THROTTLE_CLASSES` or per-view with `throttle_classes`; the views do not carry the rates themselves. Over-limit requests get 429 Too Many Requests, and there is no automatic retry.',
     hints: ['Per-IP (anon) vs per-user rate caps', 'Rates in DEFAULT_THROTTLE_RATES as "num/period"', 'Over-limit → 429, counters in the cache'],
     tags: ['django', 'drf', 'throttling'],
     concepts: ['dj-permission-class'],

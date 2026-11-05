@@ -232,10 +232,11 @@ urlpatterns = [
     re_path(r"^year/(?P<year>___)/$", views.year_archive),
 ]`,
       blanks: ['re_path', '\\d{4}'],
+      blankAlternates: [[], ['[0-9]{4}', '\\d\\d\\d\\d']],
       solution:
         'from django.urls import re_path\n\nurlpatterns = [\n    re_path(r"^year/(?P<year>\\d{4})/$", views.year_archive),\n]',
       explanation:
-        '`re_path` is imported from `django.urls`, same place as `path`. `(?P<year>...)` is a named group; `\\d{4}` inside it matches exactly four digits — useful for fixed-length numeric segments that `path`\'s built-in converters can\'t express directly.',
+        '`re_path` is imported from `django.urls`, same place as `path`. `(?P<year>...)` is a named group; `\\d{4}` inside it matches exactly four digits (`[0-9]{4}` or `\\d\\d\\d\\d` work too) - useful for fixed-length numeric segments that `path`\'s built-in converters can\'t express directly.',
       hints: ['Import re_path from django.urls, same place as path', '\\d{4} matches exactly four digits'],
       tags: ['django', 'urls', 're_path', 'regex', 'cloze'],
       concepts: ['py-regex-syntax'],

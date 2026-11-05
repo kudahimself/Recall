@@ -20,7 +20,7 @@ export const dj_templates_questions: Question[] = [
       topic: Topic.DJ_TEMPLATES,
       course: Course.BACKEND,
       language: CodeLanguage.HTML,
-      question: 'Write a Django template that displays the variable "title" in an h1 tag and loops over a list "articles" showing each article\'s title and author.',
+      question: 'Write a Django template that displays the variable `title` in an h1 tag and loops over the list `articles`, showing each article\'s title in an h2 and `By <author>` in a paragraph. When the list is empty, show the paragraph `No articles found.` instead.',
       starterCode: `<!-- Django template -->\n`,
       testCases: [{ input: 'template variables', expectedOutput: '{{ title }}, {% for article in articles %}', description: 'Should use template tags' }],
       solution: `<h1>{{ title }}</h1>\n\n{% for article in articles %}\n  <div>\n    <h2>{{ article.title }}</h2>\n    <p>By {{ article.author }}</p>\n  </div>\n{% empty %}\n  <p>No articles found.</p>\n{% endfor %}`,
@@ -63,13 +63,13 @@ export const dj_templates_questions: Question[] = [
       topic: Topic.DJ_TEMPLATES,
       course: Course.BACKEND,
       language: CodeLanguage.HTML,
-      question: 'Write Django template code that: shows a "Welcome, username" if user is authenticated, otherwise shows a "Login" link. Use {% if %} tag.',
+      question: 'Write Django template code that shows `Welcome, <username>!` in a paragraph if `user` is authenticated, and otherwise shows a `Login` link to the URL named `login`. Use the {% if %} tag.',
       starterCode: `<!-- Conditional -->\n`,
       testCases: [{ input: 'auth check', expectedOutput: '{% if user.is_authenticated %}', description: 'Should use conditional template tag' }],
-      solution: `{% if user.is_authenticated %}\n  <p>Welcome, {{ user.username }}!</p>\n  <a href="{% url 'logout' %}">Logout</a>\n{% else %}\n  <a href="{% url 'login' %}">Login</a>\n{% endif %}`,
+      solution: `{% if user.is_authenticated %}\n  <p>Welcome, {{ user.username }}!</p>\n{% else %}\n  <a href="{% url 'login' %}">Login</a>\n{% endif %}`,
       tieredHints: {
         apiSignature: '{% if user.is_authenticated %}...{% else %}...{% endif %}; {% url "name" %}',
-        skeleton: '{% ____ user.____ %}\n  <p>____ {{ user.____ }}!</p>\n  <a href="{% ____ ____ %}">____</a>\n{% ____ %}\n  <a href="{% ____ ____ %}">____</a>\n{% ____ %}',
+        skeleton: '{% ____ user.____ %}\n  <p>____ {{ user.____ }}!</p>\n{% ____ %}\n  <a href="{% ____ ____ %}">____</a>\n{% ____ %}',
       },
       explanation: '{% if condition %} for conditionals. user is automatically available in templates (from context processors). {% url "name" %} generates URLs from named URL patterns (reverse URL resolution). Always use {% url %} instead of hardcoded paths.',
       hints: ['{% if %}...{% else %}...{% endif %}', 'user.is_authenticated checks login', '{% url "name" %} for reverse URL'],
@@ -103,7 +103,7 @@ export const dj_templates_questions: Question[] = [
       topic: Topic.DJ_TEMPLATES,
       course: Course.BACKEND,
       language: CodeLanguage.HTML,
-      question: 'Use Django template filters to: display a date in "Jan 15, 2024" format, truncate a long text to 100 characters, and convert text to title case.',
+      question: 'Use Django template filters on an `article` to: display `article.published_date` in "Jan 15, 2024" format in a `<p>`, truncate `article.body` to 100 characters in a `<p>`, and show `article.title` in title case in an `<h2>`.',
       starterCode: `<!-- Template filters -->\n`,
       testCases: [{ input: 'filters', expectedOutput: '{{ date|date:"M d, Y" }}, {{ text|truncatechars:100 }}, {{ text|title }}', description: 'Should use template filters' }],
       solution: `<p>{{ article.published_date|date:"M d, Y" }}</p>\n<p>{{ article.body|truncatechars:100 }}</p>\n<h2>{{ article.title|title }}</h2>`,
@@ -123,7 +123,7 @@ export const dj_templates_questions: Question[] = [
       topic: Topic.DJ_TEMPLATES,
       course: Course.BACKEND,
       language: CodeLanguage.HTML,
-      question: 'Write a template that links to two named URLs. Include a `<nav>` with `<a href="{% url \'home\' %}">Home</a>` and `<a href="{% url \'blog:detail\' post.pk %}">{{ post.title }}</a>`. Use the Django template engine\'s `{% url %}` tag.',
+      question: 'Write a `<nav>` with two links whose `href` is built from URL names, never a hardcoded path. The first goes to the URL named `home` with the text `Home`. The second goes to the URL named `detail` in the `blog` namespace, passes `post.pk` as its argument, and shows the post\'s title as its text.',
       starterCode: `<!-- Build a <nav> with two anchors using {% url %} -->
 <!-- 1. Link to "home" -->
 <!-- 2. Link to "blog:detail" with post.pk as argument, text = post.title -->
@@ -146,7 +146,7 @@ export const dj_templates_questions: Question[] = [
   <____ href="{% ____ ____ ____.____ %}">{{ ____.____ }}</____>
 </____>`,
       },
-      explanation: 'Templates should NEVER hardcode paths — use `{% url %}` and rename URLs freely. Multiple args: `{% url "archive" year month %}`. Keyword args: `{% url "archive" year=2024 month=1 %}`. To save the result to a variable for reuse: `{% url "detail" post.pk as detail_url %}` then use `{{ detail_url }}` multiple times.',
+      explanation: 'Templates should NEVER hardcode paths - use `{% url %}` and rename URLs freely. A namespaced name is written `"blog:detail"`, and positional arguments follow the name. Multiple args: `{% url "archive" year month %}`. Keyword args: `{% url "archive" year=2024 month=1 %}`. To save the result to a variable for reuse: `{% url "detail" post.pk as detail_url %}` then use `{{ detail_url }}` multiple times.',
       hints: [
         '{% url "name" positional_args %}',
         'Namespace form: "app:name"',
@@ -162,8 +162,8 @@ export const dj_templates_questions: Question[] = [
       topic: Topic.DJ_TEMPLATES,
       course: Course.BACKEND,
       language: CodeLanguage.HTML,
-      question: 'Set up template inheritance. `base.html` has a `<title>{% block title %}My Site{% endblock %}</title>` and a `<main>{% block content %}{% endblock %}</main>`. Write a child `article.html` that uses `{% extends "base.html" %}` and overrides `{% block title %}{{ article.title }}{% endblock %}` and `{% block content %}<article>{{ article.body }}</article>{% endblock %}`. Use `{{ block.super }}` to append to the parent\'s title instead of replacing, if desired.',
-      starterCode: `<!-- base.html  (for reference — not needed in your answer) -->
+      question: 'Set up template inheritance. `base.html` (shown in the starter) defines a `title` block and a `content` block. Write a child template `article.html` that inherits from `base.html`, replaces the `title` block with the article\'s title (`article.title`), and replaces the `content` block with `article.body` wrapped in an `<article>` element.',
+      starterCode: `<!-- base.html  (for reference - not needed in your answer) -->
 <!-- <title>{% block title %}My Site{% endblock %}</title> -->
 <!-- <main>{% block content %}{% endblock %}</main> -->
 
@@ -193,7 +193,7 @@ export const dj_templates_questions: Question[] = [
   <____>{{ article.____ }}</____>
 {% ____ %}`,
       },
-      explanation: '`{% extends %}` makes the child load the parent, then the `{% block %}` tags in the child override the corresponding blocks in the parent. Unnamed content (outside blocks) in the child is ignored. Use `{{ block.super }}` to insert the parent\'s block content and extend rather than replace. Typical hierarchy: `base.html` → `site_layout.html` → specific page templates. Keeps common chrome (nav, footer, scripts) in one place.',
+      explanation: '`{% extends %}` makes the child load the parent, then the `{% block %}` tags in the child override the corresponding blocks in the parent. Unnamed content (outside blocks) in the child is ignored. Use `{{ block.super }}` to insert the parent\'s block content and extend rather than replace. Typical hierarchy: `base.html`, then `site_layout.html`, then specific page templates. Keeps common chrome (nav, footer, scripts) in one place.',
       hints: [
         '{% extends "base.html" %} at the top',
         '{% block name %}content{% endblock %} to override',
@@ -209,7 +209,7 @@ export const dj_templates_questions: Question[] = [
       topic: Topic.DJ_TEMPLATES,
       course: Course.BACKEND,
       language: CodeLanguage.HTML,
-      question: 'Use `{% include %}` for a partial/component template. Assume `_card.html` renders `<div class="card">{{ item.title }} – {{ item.price }}</div>`. In a parent template, loop a queryset and include the partial per item: `{% for item in items %}{% include "_card.html" with item=item %}{% endfor %}`.',
+      question: 'A partial template `_card.html` renders one card from a variable named `item`: `<div class="card">{{ item.title }} - {{ item.price }}</div>`. In a parent template, loop over `items` and render `_card.html` once per item, passing the loop variable to it as `item` explicitly.',
       starterCode: `<!-- Assume _card.html exists and uses {{ item }} -->
 <!-- Loop items and {% include %} _card.html with item=item -->
 `,
@@ -332,10 +332,10 @@ def currency(value):
       options: [
         { id: 'a', text: '`{{ }}` is for HTML; `{% %}` is for Python code', isCorrect: false },
         { id: 'b', text: '`{{ variable }}` outputs a value; `{% tag %}` performs logic (loops, conditions, blocks)', isCorrect: true },
-        { id: 'c', text: '`{{ }}` is for strings; `{% %}` is for numbers', isCorrect: false },
-        { id: 'd', text: 'They are interchangeable — both can do the same things', isCorrect: false },
+        { id: 'c', text: '`{{ }}` runs a Python expression such as `{{ len(items) }}`; `{% %}` marks blocks', isCorrect: false },
+        { id: 'd', text: '`{{ }}` prints a value HTML-escaped; `{% %}` prints the same value unescaped', isCorrect: false },
       ],
-      explanation: 'Django templates have three syntax elements: `{{ variable }}` outputs a value (variable, attribute, or filter result). `{% tag %}` performs logic — `{% if %}`, `{% for %}`, `{% block %}`, `{% url %}`, `{% csrf_token %}`. `{# comment #}` adds a comment. Unlike Python, Django templates deliberately limit logic to keep business logic in views.',
+      explanation: 'Django templates have three syntax elements: `{{ variable }}` outputs a value (variable, attribute, or filter result). `{% tag %}` performs logic - `{% if %}`, `{% for %}`, `{% block %}`, `{% url %}`, `{% csrf_token %}`. `{# comment #}` adds a comment. Neither form runs Python: `{{ len(items) }}` is a syntax error, and you write `{{ items|length }}` instead. Both are template syntax, not plain HTML, and escaping is not what tells them apart: `{{ }}` escapes its output unless you add `|safe`. Django templates deliberately limit logic to keep business logic in views.',
       hints: [
         '`{{ }}` = output; `{% %}` = logic/control; `{# #}` = comment',
         'Filters modify output: `{{ name|upper }}`, `{{ list|length }}`',

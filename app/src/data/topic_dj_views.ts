@@ -15,9 +15,9 @@ export const dj_views_questions: Question[] = [
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write the simplest possible Django function-based view. Define `hello` taking a `request`, returning a plain-text HTTP response whose body is `"hello world"` and whose status is 200 (the default). Every Django view has the same shape — take `request`, return a response object.',
+      question: 'Write the simplest possible Django function-based view. Define `hello` taking a `request`, returning a plain-text HTTP response whose body is `"hello world"` and whose status is 200 (the default). Every Django view has the same shape: take `request`, return a response object.',
       starterCode: `from django.http import HttpResponse
-  `,
+`,
       testCases: [
         {
           input: 'hello(request) returns HttpResponse',
@@ -33,7 +33,7 @@ def hello(request):
         apiSignature: 'HttpResponse(content, content_type=None, status=200)',
         skeleton: 'from django.http import HttpResponse\n\ndef ____(____):\n    return ____("____")',
       },
-      explanation: 'A Django view is just a callable that takes an `HttpRequest` and returns an `HttpResponse`. This is the whole contract — templates, ORM, and forms are optional layers on top. The `request` argument holds method, headers, GET/POST data, the authenticated user, and more. `HttpResponse` takes a body string (or bytes) and optional `status=` / `content_type=` kwargs.',
+      explanation: 'A Django view is just a callable that takes an `HttpRequest` and returns an `HttpResponse`. This is the whole contract: templates, ORM, and forms are optional layers on top. The `request` argument holds method, headers, GET/POST data, the authenticated user, and more. `HttpResponse` takes a body string (or bytes) and optional `status=` / `content_type=` kwargs.',
       hints: [
         'Import HttpResponse from django.http',
         'View signature: def view(request): return HttpResponse(...)',
@@ -51,7 +51,7 @@ def hello(request):
       language: CodeLanguage.PYTHON,
       question: 'Define a Django view `greet(request)` that loads and renders a template named `"greet.html"`. Pass a context dict containing `name` set to `"Alice"` and `count` set to `3`.',
       starterCode: `from django.shortcuts import render
-  `,
+`,
       testCases: [
         {
           input: 'greet(request) renders greet.html',
@@ -85,7 +85,7 @@ def greet(request):
       language: CodeLanguage.PYTHON,
       question: 'Define a Django view `detail(request, pk)` that returns a plain-text response whose body is `"article "` followed by the `pk` value. Given a URL config entry like `path("articles/<int:pk>/", detail)`, a request to `/articles/42/` should produce the body `"article 42"`. Django automatically passes URL captures as keyword arguments matching the function signature.',
       starterCode: `from django.http import HttpResponse
-  `,
+`,
       testCases: [
         {
           input: 'detail(request, pk=42)',
@@ -101,7 +101,7 @@ def detail(request, pk):
         apiSignature: 'def view(request, *args, **kwargs) -> HttpResponse',
         skeleton: 'from django.http import HttpResponse\n\ndef ____(____, ____):\n    return ____(f"____ {____}")',
       },
-      explanation: 'Django matches the URL pattern, extracts captures, and passes them as kwargs. Path converters (`<int:pk>`, `<slug:name>`, `<uuid:id>`, `<str:name>`, `<path:rest>`) also validate and type-coerce — `<int:pk>` gives you `pk=42`, not `pk="42"`. Use descriptive names: `<int:article_id>` reads better in the view signature than `<int:pk>` when it\'s not actually the primary key.',
+      explanation: 'Django matches the URL pattern, extracts captures, and passes them as kwargs. Path converters (`<int:pk>`, `<slug:name>`, `<uuid:id>`, `<str:name>`, `<path:rest>`) also validate and type-coerce: `<int:pk>` gives you `pk=42`, not `pk="42"`. Use descriptive names: `<int:article_id>` reads better in the view signature than `<int:pk>` when it\'s not actually the primary key.',
       hints: [
         'URL captures → view kwargs by name match',
         'Path converters: int, slug, uuid, str, path',
@@ -154,9 +154,9 @@ def article_detail(request, pk):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define a Django view `submit(request)` that branches on the HTTP verb. When the request is a POST, read the form field `"name"` from the request\'s form-encoded body (default to empty string if missing) and return a plain-text response with body `"saved: "` followed by the name. Otherwise (any other method), return a plain-text response with body `"please POST a name field"`. This is the raw request-method-branch pattern — Django forms build on top of it.',
+      question: 'Define a Django view `submit(request)` that branches on the HTTP verb. When the request is a POST, read the form field `"name"` from the request\'s form-encoded body (default to empty string if missing) and return a plain-text response with body `"saved: "` followed by the name. Otherwise (any other method), return a plain-text response with body `"please POST a name field"`. This is the raw request-method-branch pattern; Django forms build on top of it.',
       starterCode: `from django.http import HttpResponse
-  `,
+`,
       testCases: [
         {
           input: 'POST with name=Alice → "saved: Alice"; GET → "please POST..."',
@@ -175,7 +175,7 @@ def submit(request):
         apiSignature: 'request.method; request.POST.get(key, default)',
         skeleton: 'from django.http import HttpResponse\n\ndef ____(____):\n    if ____.____ == "____":\n        name = ____.____.____("____", "")\n        return ____(f"saved: {name}")\n    return ____("please POST a name field")',
       },
-      explanation: '`request.method` is the HTTP verb as a string. `request.POST` is a QueryDict of form-encoded body data; `request.GET` is the query string. For JSON bodies, use `json.loads(request.body)`. Django forms wrap this pattern with validation — but under the hood it\'s still `if request.method == "POST": form = MyForm(request.POST); if form.is_valid(): ...`. Views with only GET/POST handling don\'t usually need the `else` branch for PUT/DELETE; those arrive rarely except in APIs (where you\'d switch to DRF).',
+      explanation: '`request.method` is the HTTP verb as a string. `request.POST` is a QueryDict of form-encoded body data; `request.GET` is the query string. For JSON bodies, use `json.loads(request.body)`. Django forms wrap this pattern with validation, but under the hood it\'s still `if request.method == "POST": form = MyForm(request.POST); if form.is_valid(): ...`. Views with only GET/POST handling don\'t usually need the `else` branch for PUT/DELETE; those arrive rarely except in APIs (where you\'d switch to DRF).',
       hints: [
         'request.method is the HTTP verb string',
         'request.POST for form-encoded body, request.GET for query string',
@@ -191,7 +191,7 @@ def submit(request):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a Django function-based view "article_list" that queries all published articles and renders them using the template "articles/list.html".',
+      question: 'Write a Django function-based view `article_list(request)` that queries the published articles (`Article` has a boolean field `is_published`) and renders them with the template "articles/list.html", passing them in the context under the key "articles".',
       starterCode: `# Import render from django.shortcuts and Article from .models
 # Define article_list(request) querying published articles and rendering them
 # through "articles/list.html" with {"articles": articles}
@@ -346,12 +346,12 @@ def article_detail(request, pk):
       course: Course.BACKEND,
       question: 'What is the role of `urls.py` in Django\'s request handling?',
       options: [
-        { id: 'a', text: 'It stores the database connection URL', isCorrect: false },
-        { id: 'b', text: 'It maps URL patterns to view functions — the URL router/dispatcher', isCorrect: true },
-        { id: 'c', text: 'It defines the HTML template for each page', isCorrect: false },
-        { id: 'd', text: 'It handles HTTP redirects only', isCorrect: false },
+        { id: 'a', text: 'It holds the database URL that every view connects through', isCorrect: false },
+        { id: 'b', text: 'It maps each URL path to the view that handles the request', isCorrect: true },
+        { id: 'c', text: 'It maps each URL path straight to the template to render', isCorrect: false },
+        { id: 'd', text: 'It only lists redirects from old URLs to their new paths', isCorrect: false },
       ],
-      explanation: '`urls.py` is the URL configuration file — it maps URL patterns (using `path()` or `re_path()`) to view functions or class-based views. Django processes URLs top-to-bottom until one matches. Projects have a root `urls.py` that can `include()` app-level `urls.py` files, keeping each app\'s URLs self-contained.',
+      explanation: '`urls.py` is the URL configuration file: it maps URL patterns (using `path()` or `re_path()`) to view functions or class-based views. Django processes URLs top-to-bottom until one matches. Projects have a root `urls.py` that can `include()` app-level `urls.py` files, keeping each app\'s URLs self-contained. The database location lives in `DATABASES` in settings, not in `urls.py`; a URL never points at a template directly, because a view decides what to render; and redirects are just one kind of response a view can return.',
       hints: [
         'Think of `urls.py` as a switchboard routing requests to the right view',
         '`path("about/", views.about)` maps the `/about/` URL to the `about` view',
@@ -408,7 +408,7 @@ def article_detail(request, pk):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a Django view that uses the session to count how many times a user has visited the page. Display the count in the response. Use `request.session`.',
+      question: 'Write a Django view `visit_counter(request)` that uses `request.session` to count how many times this browser has visited the page. Keep the count under the session key "visit_count" (starting from 0 when it is missing), add 1 on each visit, store it back, and return an `HttpResponse` whose body is `You have visited this page {count} time(s)`.',
       starterCode: `# Write visit_counter(request): keep a per-session visit count in
 # request.session (default 0), increment it on each visit, store it
 # back, and return an HttpResponse stating how many times the page
@@ -545,12 +545,12 @@ def get_theme(request):
       course: Course.BACKEND,
       question: 'How do you pass URL parameters to a view, and how does the view receive them?',
       options: [
-        { id: 'a', text: 'URL parameters go in `request.GET`; no special URL pattern needed', isCorrect: false },
-        { id: 'b', text: 'Capture groups in `path()` (e.g. `<int:pk>`) are passed as keyword arguments to the view function', isCorrect: true },
-        { id: 'c', text: 'URL parameters must always be query strings (`?id=5`)', isCorrect: false },
-        { id: 'd', text: 'The view reads them from `request.resolver_match.kwargs`', isCorrect: false },
+        { id: 'a', text: 'Django copies them into `request.GET`, so no special URL pattern is needed', isCorrect: false },
+        { id: 'b', text: 'Captures in `path()`, such as `<int:pk>`, reach the view as keyword arguments', isCorrect: true },
+        { id: 'c', text: 'They must be query strings like `?id=5`, since `path()` cannot capture values', isCorrect: false },
+        { id: 'd', text: 'Captures in `path()` arrive as one dict, so the view is `def view(request, params)`', isCorrect: false },
       ],
-      explanation: 'URL path converters like `<int:pk>`, `<str:username>`, `<slug:slug>` capture parts of the URL and pass them as **keyword arguments** to the view. `path("articles/<int:pk>/", views.article_detail)` means `article_detail(request, pk=5)` when `/articles/5/` is requested. Available converters: `int`, `str`, `slug`, `uuid`, `path`.',
+      explanation: 'URL path converters like `<int:pk>`, `<str:username>`, `<slug:slug>` capture parts of the URL and pass them as **keyword arguments** to the view. `path("articles/<int:pk>/", views.article_detail)` means `article_detail(request, pk=5)` when `/articles/5/` is requested. Available converters: `int`, `str`, `slug`, `uuid`, `path`. A captured value is not copied into `request.GET`, which holds only the query string, and each capture is its own keyword argument, not one dict of parameters.',
       hints: [
         '`<int:pk>` in the URL captures a number and passes it as `pk` kwarg',
         'View signature: `def my_view(request, pk):` to receive it',
@@ -630,7 +630,7 @@ def get_theme(request):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A view returns this. What status code does the client see?',
+      question: 'A view returns this response. What does the code print? Type the status code as a number.',
       code: `from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 
 def view(request):
@@ -652,7 +652,7 @@ print(response.status_code)`,
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Given the URL conf and view, what does the request to GET /articles/ produce?',
+      question: 'Given the URL conf and view, a GET request to /articles/ runs this code. What does it print?',
       code: `# urls.py: path("articles/", articles)
 def articles(request):
     if request.method == "GET":
@@ -669,7 +669,7 @@ response = articles(request)  # request.method == "GET"
 print(response.content.decode())`,
       expectedOutput: `listing
 list`,
-      explanation: 'Function-based views typically dispatch on `request.method`. Django does not automatically reject methods — the `else` branch would handle PUT/DELETE/etc unless you add `@require_GET` or similar. `HttpResponse.content` is bytes; `.decode()` gives the string body.',
+      explanation: 'Function-based views typically dispatch on `request.method`. Django does not automatically reject methods: the `else` branch would handle PUT/DELETE/etc unless you add `@require_GET` or similar. `HttpResponse.content` is bytes; `.decode()` gives the string body.',
       hints: ['No auto method-restriction without @require_*', 'response.content is bytes'],
       tags: ['django', 'views', 'request.method', 'predict'],
       concepts: ['dj-view-patterns'],
@@ -681,17 +681,17 @@ list`,
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'List Comments 10 per page. Fill in the class that paginates a queryset, and the method that safely returns a page for a possibly out-of-range or non-numeric page number without raising.',
+      question: 'List Comments 10 per page. Fill in the class that paginates a queryset (in the import and where it is built), and the method that safely returns a page for a possibly out-of-range or non-numeric page number without raising.',
       template: `from django.core.paginator import ___
 
 def comment_list(request):
     qs = Comment.objects.order_by("-created_at")
-    paginator = Paginator(qs, 10)
+    paginator = ___(qs, 10)
     page_obj = paginator.___(request.GET.get("page", 1))
     return render(request, "comments.html", {"page_obj": page_obj})`,
-      blanks: ['Paginator', 'get_page'],
+      blanks: ['Paginator', 'Paginator', 'get_page'],
       solution: 'from django.core.paginator import Paginator\n\ndef comment_list(request):\n    qs = Comment.objects.order_by("-created_at")\n    paginator = Paginator(qs, 10)\n    page_obj = paginator.get_page(request.GET.get("page", 1))\n    return render(request, "comments.html", {"page_obj": page_obj})',
-      explanation: '`Paginator(queryset, per_page)` slices a queryset into fixed-size pages. `.get_page(n)` is the forgiving fetch — an out-of-range or non-numeric page number falls back to the first/last valid page instead of raising, so the raw `request.GET` value can be passed straight in. The stricter `.page(n)` raises `PageNotAnInteger` / `EmptyPage`, which you would have to catch yourself.',
+      explanation: '`Paginator(queryset, per_page)` slices a queryset into fixed-size pages. `.get_page(n)` is the forgiving fetch: an out-of-range or non-numeric page number falls back to the first/last valid page instead of raising, so the raw `request.GET` value can be passed straight in. The stricter `.page(n)` raises `PageNotAnInteger` / `EmptyPage`, which you would have to catch yourself.',
       hints: ['Paginator(queryset, per_page) builds the pages', 'get_page is forgiving of bad input; page() raises'],
       tags: ['django', 'views', 'Paginator', 'get_page', 'cloze'],
       concepts: ['dj-view-patterns'],
@@ -703,13 +703,13 @@ def comment_list(request):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: `Build a function-based JSON search endpoint for Article. The view accepts a search term and a page number from the query string (defaulting page to 1). It returns published articles whose title case-insensitively contains the search term, sorted newest-first, paginated 20 per page. Each result is a dict with the article's id, title, and the author's username — and the view must avoid issuing one query per article when reading the author. If the search term is missing or blank, respond 400.
-  
-  The response body has the shape:
-  
-      {"results": [...], "page": N, "total_pages": M}
-  
-  \`Article\` has a ForeignKey \`author\` to the user model, plus \`title\`, \`status\`, \`created_at\` fields.`,
+      question: `Build a function-based JSON search endpoint \`article_search(request)\` for \`Article\`. It reads the search term from the query-string parameter \`q\` and the page number from \`page\` (default 1). It returns articles whose \`status\` is \`"published"\` and whose title case-insensitively contains the search term, sorted newest-first by \`created_at\`, paginated 20 per page. Each result is a dict with the keys \`"id"\`, \`"title"\` and \`"author"\` (the author's username), and the view must avoid issuing one query per article when reading the author. If \`q\` is missing or blank, respond 400.
+
+The response body has the shape:
+
+    {"results": [...], "page": N, "total_pages": M}
+
+\`Article\` has a ForeignKey \`author\` to the user model, plus \`title\`, \`status\`, \`created_at\` fields.`,
       starterCode: `from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponseBadRequest
 from .models import Article
@@ -778,11 +778,11 @@ def ____(request):
         "total_pages": ____,
     })`,
       },
-      explanation: 'Four primitives in one realistic endpoint: input validation (`q` missing → 400), DB query (filter + select_related + order_by), pagination (`Paginator(qs, page_size).get_page(n)` — `get_page` is forgiving of bad page numbers, unlike `.page()`, so the raw query-string value can be passed straight in without an `int()` that would crash on `?page=abc`), and shaping (`JsonResponse` with a list comprehension). `select_related("author")` is critical — without it, the comprehension issues N additional queries (one per article) for `a.author.username`.',
+      explanation: 'Four primitives in one realistic endpoint: input validation (`q` missing → 400), DB query (filter + select_related + order_by), pagination (`Paginator(qs, page_size).get_page(n)`; `get_page` is forgiving of bad page numbers, unlike `.page()`, so the raw query-string value can be passed straight in without an `int()` that would crash on `?page=abc`), and shaping (`JsonResponse` with a list comprehension). `select_related("author")` is critical: without it, the comprehension issues N additional queries (one per article) for `a.author.username`.',
       hints: [
         'Paginator.get_page is forgiving; .page() is strict',
         'select_related("author") for FK access in the loop',
-        'JsonResponse takes a dict — auto-sets content type',
+        'JsonResponse takes a dict and sets the content type',
         'Validate input before hitting the DB',
       ],
       tags: ['django', 'views', 'JsonResponse', 'Paginator', 'select_related', 'advanced'],
@@ -840,7 +840,7 @@ def archive(request, pk):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a function-based view `publish(request, pk)` that fetches a `Post` by `pk` (raising 404 if it is missing), sets its `is_published` field to `True`, saves it, and then sends the browser to that post\'s detail page, whose URL is named `"post-detail"` and takes the post\'s `pk`. Use the fetch-or-404 shortcut and the redirect shortcut — do not render a template.',
+      question: 'Write a function-based view `publish(request, pk)` that fetches a `Post` by `pk` (raising 404 if it is missing), sets its `is_published` field to `True`, saves it, and then sends the browser to that post\'s detail page, whose URL is named `"post-detail"` and takes the post\'s `pk`. Use the fetch-or-404 shortcut and the redirect shortcut; do not render a template.',
       starterCode: `from django.shortcuts import get_object_or_404, redirect
 from .models import Post
 `,
@@ -870,7 +870,7 @@ def ____(request, pk):
     post.____()
     return ____("post-detail", pk=____)`,
       },
-      explanation: '`redirect("post-detail", pk=post.pk)` is shorthand for `HttpResponseRedirect(reverse("post-detail", kwargs={"pk": post.pk}))`. Redirecting after a successful write (instead of rendering) is the Post/Redirect/Get pattern — refreshing the resulting page re-issues a harmless GET rather than re-POSTing.',
+      explanation: '`redirect("post-detail", pk=post.pk)` is shorthand for `HttpResponseRedirect(reverse("post-detail", kwargs={"pk": post.pk}))`. Redirecting after a successful write (instead of rendering) is the Post/Redirect/Get pattern: refreshing the resulting page re-issues a harmless GET rather than re-POSTing.',
       hints: [
         'get_object_or_404(Post, pk=pk) first',
         'Mutate the field, then .save()',
@@ -908,7 +908,7 @@ def ____(request, pk):
       topic: Topic.DJ_VIEWS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A GET request hits this POST-only view. What status code does the client see?',
+      question: 'A GET request hits this POST-only view. What does the code print to standard output? Type the status code as a number.',
       code: `from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 
@@ -920,7 +920,7 @@ def create(request):
 response = create(get_request)   # get_request.method == "GET"
 print(response.status_code)`,
       expectedOutput: `405`,
-      explanation: '`@require_POST` wraps the view so any non-POST verb short-circuits to `HttpResponseNotAllowed(["POST"])` — status **405 Method Not Allowed** — and the view body never runs. The response also carries an `Allow: POST` header so the client knows which verbs are accepted.',
+      explanation: '`@require_POST` wraps the view so any non-POST verb short-circuits to `HttpResponseNotAllowed(["POST"])`, status **405 Method Not Allowed**, and the view body never runs. The response also carries an `Allow: POST` header so the client knows which verbs are accepted. Django also logs a "Method Not Allowed" warning, which goes to standard error, not to the printed output.',
       hints: ['require_POST rejects non-POST before the body runs', 'HttpResponseNotAllowed = 405'],
       tags: ['django', 'views', 'require_POST', 'status-code', 'predict'],
       concepts: ['dj-view-patterns'],
@@ -1111,6 +1111,7 @@ def export_csv(request, body):
     response[___] = 'attachment; filename="report.csv"'
     return response`,
       blanks: ['content_type', '"Content-Disposition"'],
+      blankAlternates: [[], ["'Content-Disposition'"]],
       solution: 'from django.http import HttpResponse\n\ndef export_csv(request, body):\n    response = HttpResponse(body, content_type="text/csv")\n    response["Content-Disposition"] = \'attachment; filename="report.csv"\'\n    return response',
       explanation: 'The `content_type=` constructor kwarg sets the MIME type; assigning `response["Content-Disposition"]` adds the header that tells the browser to download (`attachment`) under the given filename.',
       hints: ['Constructor kwarg for the MIME type', 'Header key is "Content-Disposition"'],

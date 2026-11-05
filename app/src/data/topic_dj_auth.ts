@@ -20,7 +20,7 @@ export const dj_auth_questions: Question[] = [
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a Django view that requires authentication using the @login_required decorator. If the user is not logged in, redirect to "/login/".',
+      question: 'Create a function-based view `dashboard(request)` that requires authentication using the @login_required decorator, sending anonymous users to "/login/". It renders "dashboard.html" with the current user in the context under the key "user". Import what you use.',
       starterCode: `# Import login_required and render; decorate a 'dashboard' view so\n# anonymous users are sent to /login/, and render 'dashboard.html'\n# with the current user in the context.\n`,
       testCases: [
         {
@@ -68,7 +68,7 @@ class ProtectedView(APIView):
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a DRF view that requires JWT authentication using IsAuthenticated permission and JWTAuthentication.',
+      question: 'Write a DRF `APIView` named `ProtectedView` that authenticates requests with `JWTAuthentication` (from `rest_framework_simplejwt.authentication`) and lets only authenticated users in, via the `IsAuthenticated` permission. Its `get` method returns a `Response` of `{"message": f"Hello, {username}!"}` using the requesting user\'s username.',
       starterCode: `# Define ProtectedView(APIView): set its authentication to use
 # JWTAuthentication and its permissions to require an authenticated
 # user; get() returns a Response greeting request.user.username.
@@ -99,11 +99,11 @@ class ProtectedView(APIView):
       question: 'What are CORS, CSRF, and XSS?',
       options: [
         { id: 'a', text: 'CORS controls which origins may call your API; CSRF tricks a logged-in browser into sending unintended requests; XSS injects malicious scripts into pages', isCorrect: true },
-        { id: 'b', text: 'They are three encryption layers in the TLS handshake that browsers negotiate before sending any request to another domain', isCorrect: false },
-        { id: 'c', text: 'CORS blocks SQL injection at the API gateway; CSRF validates TLS certificates; XSS is the header that lets a page run third-party scripts', isCorrect: false },
-        { id: 'd', text: 'They are database-level security features: CORS isolates schemas, CSRF signs transactions, and XSS sanitises stored queries', isCorrect: false },
+        { id: 'b', text: 'CORS stops forged form posts from other sites; CSRF decides which origins may call your API; XSS injects malicious scripts into pages', isCorrect: false },
+        { id: 'c', text: 'CORS controls which origins may call your API; CSRF injects scripts through unescaped form fields; XSS replays the user\'s cookies from another site', isCorrect: false },
+        { id: 'd', text: 'CORS makes your server reject every request from another origin; CSRF tricks a logged-in browser into sending requests; XSS injects scripts', isCorrect: false },
       ],
-      explanation: 'CORS = Cross-Origin Resource Sharing, CSRF = Cross-Site Request Forgery, XSS = Cross-Site Scripting. CORS: browser blocks requests to different origins by default. Your API must send Access-Control-Allow-Origin headers. CSRF: Django includes CSRF tokens in forms to prevent forged requests. XSS: always escape user input in templates (Django auto-escapes). These are the top web security concerns.',
+      explanation: 'CORS = Cross-Origin Resource Sharing, CSRF = Cross-Site Request Forgery, XSS = Cross-Site Scripting. CORS is enforced by the browser, not the server: by default a page\'s script may not read responses from another origin, and your API opts origins in with Access-Control-Allow-Origin headers. The request itself can still reach the server, so CORS is no defence against forged requests. CSRF is a forged request: another site makes a logged-in browser send a request with the user\'s cookies; Django\'s CSRF token in forms stops it. XSS is injected script: user input printed into a page runs as code; Django templates auto-escape output to prevent it. Mixing up which name is which is the common mistake.',
       tags: ['cors', 'csrf', 'xss', 'security', 'web'],
       concepts: ['py-security-primitives'],
     },
@@ -187,13 +187,13 @@ class User(AbstractBaseUser, PermissionsMixin):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: `Add row-level permissions to the project: an \`Article\` belongs to an \`organization\` (FK), and only members of that organization should be able to view/edit it. Build a CBV mixin \`OrgMemberRequiredMixin\` that:
-  
-  1. Reads the article via the URL pk.
-  2. Verifies the request.user is in the article's \`organization.members\` (a M2M field on Organization to the user model).
-  3. Returns 404 (not 403) when the check fails — to avoid leaking which articles exist.
-  4. Uses \`select_related("organization")\` to avoid an extra query when checking membership.
-  
-  Apply it on top of \`LoginRequiredMixin\` to a \`DetailView\` for Article.`,
+
+1. Reads the article via the URL pk.
+2. Verifies the request.user is in the article's \`organization.members\` (a M2M field on Organization to the user model).
+3. Returns 404 (not 403) when the check fails, to avoid leaking which articles exist.
+4. Uses \`select_related("organization")\` to avoid an extra query when checking membership.
+
+Then define \`ArticleDetailView\`, a \`DetailView\` for Article whose bases are \`LoginRequiredMixin\`, then your mixin, then \`DetailView\`.`,
       starterCode: `from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.views.generic import DetailView
@@ -214,8 +214,9 @@ from .models import Article
 
 class OrgMemberRequiredMixin:
     def get_object(self, queryset=None):
-        qs = (queryset or self.get_queryset()).select_related("organization")
-        obj = super().get_object(queryset=qs)
+        if queryset is None:
+            queryset = self.get_queryset()
+        obj = super().get_object(queryset=queryset.select_related("organization"))
         if not obj.organization.members.filter(pk=self.request.user.pk).exists():
             raise Http404
         return obj
@@ -223,16 +224,16 @@ class OrgMemberRequiredMixin:
 
 class ArticleDetailView(LoginRequiredMixin, OrgMemberRequiredMixin, DetailView):
     model = Article`,
-      explanation: 'Mixin order: `LoginRequiredMixin` first (auth), then `OrgMemberRequiredMixin` (membership), then the generic view. Override `get_object` (not `dispatch`) — generic detail-style views call `get_object` to fetch the row, so this is the precise hook. Raise `Http404` instead of `PermissionDenied` to avoid leaking existence ("this article exists, you just can\'t see it" is itself information). `members.filter(pk=...).exists()` is a single COUNT query — much cheaper than `request.user in obj.organization.members.all()` which materialises every member into Python.',
+      explanation: 'Mixin order: `LoginRequiredMixin` first (auth), then `OrgMemberRequiredMixin` (membership), then the generic view. Override `get_object` (not `dispatch`): generic detail-style views call `get_object` to fetch the row, so this is the precise hook. Raise `Http404` instead of `PermissionDenied` to avoid leaking existence ("this article exists, you just can\'t see it" is itself information). Compare `queryset` with `None` rather than writing `queryset or ...`: the truth test would run the query, and an empty queryset would silently fall back to every row. `members.filter(pk=...).exists()` is a single `SELECT ... LIMIT 1` query, much cheaper than `request.user in obj.organization.members.all()` which materialises every member into Python.',
       hints: [
         'Override get_object for DetailView-style row access',
         'Raise Http404 to hide existence; PermissionDenied to acknowledge it',
-        '.filter(pk=...).exists() over `in qs.all()` — orders of magnitude cheaper',
+        '.filter(pk=...).exists() over `in qs.all()`: orders of magnitude cheaper',
         'select_related on the FK we are about to hit',
       ],
       tieredHints: {
         apiSignature: 'QuerySet.select_related(*fields) -> QuerySet; QuerySet.exists() -> bool',
-        skeleton: 'from django.contrib.auth.mixins import ____\nfrom django.http import ____\nfrom django.views.generic import ____\nfrom .models import ____\n\n\nclass OrgMemberRequiredMixin:\n    def get_object(self, queryset=None):\n        qs = (queryset or self.____()).____("organization")\n        obj = ____().____(queryset=qs)\n        if not obj.____.____.____(pk=self.____.____.pk).____():\n            raise ____\n        return obj\n\n\nclass ArticleDetailView(____, OrgMemberRequiredMixin, ____):\n    model = ____',
+        skeleton: 'from django.contrib.auth.mixins import ____\nfrom django.http import ____\nfrom django.views.generic import ____\nfrom .models import ____\n\n\nclass OrgMemberRequiredMixin:\n    def get_object(self, queryset=None):\n        if queryset is None:\n            queryset = self.____()\n        obj = ____().____(queryset=queryset.____("organization"))\n        if not obj.____.____.____(pk=self.____.____.pk).____():\n            raise ____\n        return obj\n\n\nclass ArticleDetailView(____, OrgMemberRequiredMixin, ____):\n    model = ____',
       },
       tags: ['django', 'auth', 'mixin', 'multi-tenancy', 'Http404', 'select_related', 'advanced'],
       concepts: ['dj-auth-token-vs-session', 'dj-select-related-vs-prefetch'],
@@ -244,15 +245,15 @@ class ArticleDetailView(LoginRequiredMixin, OrgMemberRequiredMixin, DetailView):
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: `Implement a password-change endpoint that only authenticated users can hit and that only accepts POST. The view reads JSON \`{old_password, new_password}\` from the request body and must:
-  
-  1. Verify the supplied old password against the stored hash (use the auth backend's constant-time comparison — never compare with ==).
-  2. Reject if the new password is identical to the old.
-  3. Hash the new password and persist the user.
-  4. Keep the user signed in across the change. (Django invalidates the session by default after a password is changed; you have to opt back in.)
-  5. Return JSON \`{"ok": true}\` on success, or \`{"error": "..."}\` with status 400 on failure.
-  
-  This is the standard "change password without forcing re-login" flow.`,
+      question: `Implement a password-change endpoint, a function-based view \`change_password(request)\`, that only authenticated users can hit and that only accepts POST. The view reads JSON \`{old_password, new_password}\` from the request body and must:
+
+1. Verify the supplied old password against the stored hash with the user's own password-checking method (never compare with ==).
+2. Reject if the new password is identical to the old.
+3. Hash the new password and persist the user.
+4. Keep the user signed in across the change. (Changing the password logs the user out of their current session on the next request; you have to opt back in.)
+5. Return JSON \`{"ok": true}\` on success, or \`{"error": "..."}\` with status 400 on failure.
+
+This is the standard "change password without forcing re-login" flow.`,
       starterCode: `from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -289,10 +290,10 @@ def change_password(request):
     request.user.save()
     update_session_auth_hash(request, request.user)
     return JsonResponse({"ok": True})`,
-      explanation: '`check_password(plain)` does a constant-time hash comparison — never compare passwords with `==`. After `set_password()` + `save()`, Django\'s default `SessionAuthenticationMiddleware` would invalidate the current session (because the session-auth hash baked into the cookie no longer matches). `update_session_auth_hash(request, user)` rotates the cookie hash so the user stays logged in — without it the very next request 401s. Decorator order: `@login_required` outermost so anonymous users redirect before the method check; `@require_POST` innermost so the auth check runs for any method, not just POST.',
+      explanation: '`check_password(plain)` hashes the candidate and compares in constant time; never compare passwords with `==`. Each session stores a hash derived from the user\'s password hash, and Django checks it on every request, so after `set_password()` + `save()` the current session no longer matches. `update_session_auth_hash(request, user)` stores the new hash in the session so the user stays logged in; without it the next request finds the session invalid, logs the user out, and `@login_required` redirects them to the login page. Decorator order: `@login_required` outermost so anonymous users redirect before the method check; `@require_POST` innermost so the auth check runs for any method, not just POST.',
       hints: [
         'check_password is constant-time; never use ==',
-        'After set_password + save, sessions invalidate by default',
+        'After set_password + save, the current session no longer matches',
         'update_session_auth_hash rotates the auth hash to keep the session',
         'Decorator order: auth check outermost, method check innermost',
       ],
@@ -436,7 +437,7 @@ print(user.___("new-secret"))`,
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Set and verify a password on a User correctly. Import `User` from `django.contrib.auth.models`, then fetch the user with primary key 1. Use the Django user method that hashes and stores the password `"new-secret"` (NOT a direct attribute assignment on `user.password` — that would store the value as plaintext!), then persist the change. Finally print the result of the matching verification method called with `"new-secret"` — it should return `True`.',
+      question: 'Set and verify a password on a User correctly. Import `User` from `django.contrib.auth.models`, then fetch the user with primary key 1. Use the Django user method that hashes and stores the password `"new-secret"` (NOT a direct attribute assignment on `user.password`, which would store the value as plaintext!), then persist the change. Finally print the result of the matching verification method called with `"new-secret"`; it should return `True`.',
       starterCode: `# Fetch User pk=1; hash-and-store the password "new-secret" with the
 # user's set-password method (NOT user.password = ...), save, then print
 # the verify-password method called with "new-secret" (expect True).
@@ -453,8 +454,16 @@ print(user.___("new-secret"))`,
 user = User.objects.get(pk=1)
 user.set_password("new-secret")
 user.save()
-print(user.check_password("new-secret"))`,
-      explanation: '`set_password` runs the configured password hasher (Argon2 / PBKDF2-SHA256 / bcrypt) and stores `algo$iterations$salt$hash` in `user.password`. `check_password` re-hashes the candidate with the same params and compares. Setting `user.password = "..."` directly stores plaintext — if you ever find that in code, it\'s a severity-1 bug. If you migrate users from an old system with weak hashes, set `PASSWORD_HASHERS` to include a legacy hasher so old hashes still validate until users log in and get upgraded.',
+print(user.check_password("new-secret"))
+# OR
+from django.contrib.auth.models import User
+
+u = User.objects.get(id=1)
+u.set_password("new-secret")
+u.save(update_fields=["password"])
+ok = u.check_password("new-secret")
+print(ok)`,
+      explanation: '`set_password` runs the configured password hasher (Argon2 / PBKDF2-SHA256 / bcrypt) and stores `algo$iterations$salt$hash` in `user.password`. `check_password` re-hashes the candidate with the same params and compares. Setting `user.password = "..."` directly stores plaintext; if you ever find that in code, it\'s a severity-1 bug. If you migrate users from an old system with weak hashes, set `PASSWORD_HASHERS` to include a legacy hasher so old hashes still validate until users log in and get upgraded.',
       hints: [
         'set_password(raw) hashes and stores',
         'check_password(raw) compares candidate',
@@ -474,11 +483,11 @@ print(user.check_password("new-secret"))`,
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Manually log a user in using `authenticate` and `login`. Import both from `django.contrib.auth`, plus `render` and `redirect` from `django.shortcuts`. Define a view `my_login` taking a request. On POST, pull the `"username"` and `"password"` values out of the submitted POST data and call `authenticate` with the request plus those two credentials as keyword args. If it returns a user (not `None`), call `login` with the request and user, then redirect to the URL named `"home"`. Otherwise render `"login.html"` with an `"error"` context value of `"Bad credentials"`.',
+      question: 'Manually log a user in using `authenticate` and `login`. Import both from `django.contrib.auth`, plus `render` and `redirect` from `django.shortcuts`. Define a view `my_login` taking a request. On POST, pull the `"username"` and `"password"` values out of the submitted POST data and call `authenticate` with the request plus those two credentials as keyword args. If it returns a user (not `None`), call `login` with the request and user, then redirect to the URL named `"home"`; if it returns `None`, render `"login.html"` with an `"error"` context value of `"Bad credentials"`. Any other request (a GET) renders `"login.html"` with no context.',
       starterCode: `# Write my_login(request): on POST, read "username"/"password" from
 # request.POST and call authenticate(request, ...); if a user comes back,
-# login(request, user) and redirect to "home"; otherwise render
-# "login.html" with an "error" of "Bad credentials".
+# log them in and redirect to "home"; if not, render "login.html" with
+# an "error" of "Bad credentials". A GET renders "login.html" plainly.
 `,
       testCases: [
         {
@@ -500,8 +509,9 @@ def my_login(request):
         if user is not None:
             login(request, user)
             return redirect("home")
-    return render(request, "login.html", {"error": "Bad credentials"})`,
-      explanation: '`authenticate(**creds)` walks AUTHENTICATION_BACKENDS (default: ModelBackend — matches username+hashed password). Returns the User or None. `login(request, user)` puts the user ID in the session; subsequent requests load `request.user` via AuthenticationMiddleware. Django ships `LoginView` CBV (`django.contrib.auth.views.LoginView`) that handles all of this — only write your own for truly custom flows. For logout: `from django.contrib.auth import logout; logout(request)`.',
+        return render(request, "login.html", {"error": "Bad credentials"})
+    return render(request, "login.html")`,
+      explanation: '`authenticate(**creds)` walks AUTHENTICATION_BACKENDS (default: ModelBackend, which matches username + hashed password). Returns the User or None, so the error is shown only after a failed POST; a GET shows the empty login page. `login(request, user)` puts the user ID in the session; subsequent requests load `request.user` via AuthenticationMiddleware. Django ships `LoginView` CBV (`django.contrib.auth.views.LoginView`) that handles all of this; only write your own for truly custom flows. For logout: `from django.contrib.auth import logout; logout(request)`.',
       hints: [
         'authenticate(): verify creds, returns User or None',
         'login(): attach user to session',
@@ -509,7 +519,7 @@ def my_login(request):
       ],
       tieredHints: {
         apiSignature: 'authenticate(request=None, **credentials); login(request, user, backend=None)',
-        skeleton: 'from django.contrib.auth import ____, ____\nfrom django.shortcuts import ____, ____\n\ndef my_login(request):\n    if ____.____ == ____:\n        user = ____(\n            request,\n            username=____.____[____],\n            password=____.____[____],\n        )\n        if user is not None:\n            ____(request, user)\n            return ____(____)\n    return ____(request, ____, {____: ____})',
+        skeleton: 'from django.contrib.auth import ____, ____\nfrom django.shortcuts import ____, ____\n\ndef my_login(request):\n    if ____.____ == ____:\n        user = ____(\n            request,\n            username=____.____[____],\n            password=____.____[____],\n        )\n        if user is not None:\n            ____(request, user)\n            return ____(____)\n        return ____(request, ____, {____: ____})\n    return ____(request, ____)',
       },
       tags: ['django', 'auth', 'authenticate', 'login'],
       concepts: ['dj-auth-token-vs-session'],
@@ -774,7 +784,7 @@ from django.views.decorators.http import require_POST
 def create_article(request):
     ...`,
       blanks: ['login_required', 'require_POST'],
-      solution: '@login_required\n@require_POST\ndef create_article(request):\n    ...',
+      solution: 'from django.contrib.auth.decorators import login_required\nfrom django.views.decorators.http import require_POST\n\n@login_required\n@require_POST\ndef create_article(request):\n    ...',
       explanation: 'The OUTER decorator runs first. `@login_required` should be outermost so an anonymous request gets redirected before `@require_POST` returns 405. Reversed, you\'d leak the existence of the route via 405 responses to anonymous users.',
       hints: ['Outer decorator runs first', 'Auth check before method check'],
       tags: ['django', 'views', 'login_required', 'require_POST', 'decorator-order', 'cloze'],
@@ -788,12 +798,12 @@ def create_article(request):
       course: Course.BACKEND,
       question: 'What does "owned rows" mean in a Django web application?',
       options: [
-        { id: 'a', text: 'Database rows that are locked and cannot be edited by anyone', isCorrect: false },
-        { id: 'b', text: 'A database-level concept unrelated to Django', isCorrect: false },
-        { id: 'c', text: 'Rows that have a primary key assigned by the owner', isCorrect: false },
-        { id: 'd', text: 'Data rows that belong to a specific user — only that user (or admins) should be able to edit or delete them', isCorrect: true },
+        { id: 'a', text: 'Rows Django locks for the user editing them, so nobody else can save them until that user is done', isCorrect: false },
+        { id: 'b', text: 'Rows with an `owner` field, which Django then hides from every other user\'s queries automatically', isCorrect: false },
+        { id: 'c', text: 'Rows a logged-in user created; Django records the creator on every model without any field', isCorrect: false },
+        { id: 'd', text: 'Rows that belong to one user, so your views must check that user before allowing an edit or delete', isCorrect: true },
       ],
-      explanation: 'Owned rows means tying data to a specific user — e.g. a blog post created by Alice should only be editable by Alice. This is enforced at the model level (`owner = ForeignKey(User, ...)`) and at the view level by checking `obj.owner == request.user` before allowing edits/deletes. Never trust the client — always verify ownership on the server.',
+      explanation: 'Owned rows means tying data to a specific user, e.g. a blog post created by Alice should only be editable by Alice (or an admin). You do both halves yourself: the model stores the owner (`owner = models.ForeignKey(settings.AUTH_USER_MODEL, ...)`, set from `request.user` when the row is created), and each edit/delete view checks `obj.owner == request.user` or filters its queryset by owner. Django adds no owner automatically, does not filter querysets by owner on its own, and ownership has nothing to do with row locks. Never trust the client; always verify ownership on the server.',
       hints: [
         'Store `owner = ForeignKey(settings.AUTH_USER_MODEL, ...)` on the model',
         'Check `obj.owner == request.user` in every edit/delete view',
@@ -808,9 +818,9 @@ def create_article(request):
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define a Django model `Post` with three fields: a title as a CharField with max_length 200, a body as a TextField, and an owner as a ForeignKey to the built-in `User` model (imported from `django.contrib.auth.models`) with cascade delete behaviour. Then write a view `delete_post(request, pk)` that fetches the post using `get_object_or_404`; if the post\'s owner is not the current request user, return an `HttpResponseForbidden` with the message "You do not own this post"; otherwise delete the post and return an `HttpResponse` with the message "Deleted".',
+      question: 'Define a Django model `Post` with three fields: a title as a CharField with max_length 200, a body as a TextField, and an owner as a ForeignKey to the project\'s user model, referenced through `settings.AUTH_USER_MODEL` (from `django.conf`), with cascade delete behaviour. Then write a view `delete_post(request, pk)` that fetches the post using `get_object_or_404`; if the post\'s owner is not the current request user, return an `HttpResponseForbidden` with the message "You do not own this post"; otherwise delete the post and return an `HttpResponse` with the message "Deleted".',
       starterCode: `# Define Post(models.Model): title CharField(max_length=200), body
-# TextField, owner ForeignKey to the built-in User with cascade delete.
+# TextField, owner ForeignKey to settings.AUTH_USER_MODEL with cascade delete.
 # Write delete_post(request, pk): fetch the post with get_object_or_404;
 # if its owner isn't request.user return HttpResponseForbidden("You do
 # not own this post"); otherwise delete it and return HttpResponse("Deleted").
@@ -818,15 +828,15 @@ def create_article(request):
       testCases: [
         { input: '', expectedOutput: 'ownership check enforced', description: 'Only owner can delete' },
       ],
-      solution: `from django.db import models
-from django.contrib.auth.models import User
+      solution: `from django.conf import settings
+from django.db import models
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 
 class Post(models.Model):
     title = models.CharField(max_length=200)
     body = models.TextField()
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 def delete_post(request, pk):
     post = get_object_or_404(Post, pk=pk)
@@ -834,14 +844,14 @@ def delete_post(request, pk):
         return HttpResponseForbidden("You do not own this post")
     post.delete()
     return HttpResponse("Deleted")`,
-      explanation: '`get_object_or_404` raises a 404 if the post doesn\'t exist — no manual check needed. Then `post.owner != request.user` checks ownership. `HttpResponseForbidden` returns a 403 status. Only after passing the ownership check do we call `post.delete()`. Always enforce ownership on the server — never rely on hiding UI elements.',
+      explanation: '`get_object_or_404` raises a 404 if the post doesn\'t exist, so no manual check is needed. The owner foreign key uses `settings.AUTH_USER_MODEL` so it keeps working if the project swaps in a custom user model. Then `post.owner != request.user` checks ownership. `HttpResponseForbidden` returns a 403 status. Only after passing the ownership check do we call `post.delete()`. Always enforce ownership on the server; never rely on hiding UI elements.',
       hints: [
         'Use `get_object_or_404(Post, pk=pk)` to fetch or 404',
         'Compare `post.owner != request.user` and return `HttpResponseForbidden` if not the owner',
       ],
       tieredHints: {
         apiSignature: 'get_object_or_404(klass, *args, **kwargs); HttpResponseForbidden(content="", content_type=None)',
-        skeleton: 'from django.db import models\nfrom django.contrib.auth.models import ____\nfrom django.http import ____, ____\nfrom django.shortcuts import ____\n\nclass Post(models.Model):\n    title = models.____(max_length=200)\n    body = models.____()\n    owner = models.____(____, on_delete=models.____)\n\ndef delete_post(request, pk):\n    post = ____(____, pk=pk)\n    if post.____ != ____.user:\n        return ____(____)\n    post.____()\n    return ____(____)',
+        skeleton: 'from django.conf import ____\nfrom django.db import models\nfrom django.http import ____, ____\nfrom django.shortcuts import ____\n\nclass Post(models.Model):\n    title = models.____(max_length=200)\n    body = models.____()\n    owner = models.____(____, on_delete=models.____)\n\ndef delete_post(request, pk):\n    post = ____(____, pk=pk)\n    if post.____ != ____.user:\n        return ____(____)\n    post.____()\n    return ____(____)',
       },
       tags: ['django', 'owned-rows', 'authorisation', 'views', 'security', 'HttpResponseForbidden'],
       concepts: ['dj-view-patterns', 'py-security-primitives'],
@@ -853,10 +863,9 @@ def delete_post(request, pk):
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write `my_posts(request)` decorated with `@login_required` (from `django.contrib.auth.decorators`). Filter `Post.objects` by `owner=request.user`, build a list of `post.title` strings, and return an `HttpResponse` with them joined by `\\n`.',
-      starterCode: `# Write my_posts(request) decorated with @login_required: filter
-# Post.objects by owner=request.user, collect each post.title, and
-# return an HttpResponse with them joined by newlines.
+      question: 'Write a view `my_posts(request)` that only signed-in users can reach (use the decorator from `django.contrib.auth.decorators`; `Post` is already imported and has an `owner` foreign key to the user). It returns an `HttpResponse` whose body is the titles of the current user\'s own posts, one per line (joined with `"\\n"`).',
+      starterCode: `# my_posts(request): signed-in users only; respond with the titles
+# of the current user's own posts, one per line.
 `,
       testCases: [
         { input: '', expectedOutput: 'filtered by owner', description: 'Should only return current user posts' },
@@ -869,7 +878,7 @@ def my_posts(request):
     posts = Post.objects.filter(owner=request.user)
     titles = [post.title for post in posts]
     return HttpResponse("\\n".join(titles))`,
-      explanation: '`@login_required` redirects unauthenticated users to the login page automatically. `filter(owner=request.user)` is the key pattern — Django translates this to `WHERE owner_id = <user_id>`, so each user only sees their own data. This pattern combined with the edit/delete ownership check is the complete owned rows pattern.',
+      explanation: '`@login_required` redirects unauthenticated users to the login page automatically. `filter(owner=request.user)` is the key pattern: Django translates this to `WHERE owner_id = <user_id>`, so each user only sees their own data. This pattern combined with the edit/delete ownership check is the complete owned rows pattern.',
       hints: [
         '`Post.objects.filter(owner=request.user)` filters to the current user\'s posts',
         '`@login_required` ensures `request.user` is authenticated',
@@ -888,7 +897,7 @@ def my_posts(request):
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a function-based view `create_article(request)` that requires login and only accepts POST. Save a new Article from the posted form data and redirect to the detail page.',
+      question: 'Write a function-based view `create_article(request)` that requires login and only accepts POST. Put the login check on top so it runs before the method check. Save a new Article from the posted `title` and `body` (keyword arguments in that order, then `author` set to the current user) and redirect to the detail page.',
       correctOrder: [
         'from django.contrib.auth.decorators import login_required',
         'from django.views.decorators.http import require_POST',
@@ -911,7 +920,7 @@ def my_posts(request):
         '    article = Article(...).save()',
       ],
       solution: 'from django.contrib.auth.decorators import login_required\nfrom django.views.decorators.http import require_POST\nfrom django.shortcuts import redirect\n\n@login_required\n@require_POST\ndef create_article(request):\n    article = Article.objects.create(\n        title=request.POST["title"],\n        body=request.POST["body"],\n        author=request.user,\n    )\n    return redirect("article_detail", pk=article.pk)',
-      explanation: 'Decorator order matters: closest to the function runs first. `@login_required` must be on top so unauthenticated requests bounce *before* hitting `@require_POST`\'s 405 check. `objects.create()` builds and saves in one call. `redirect("named_url", **kwargs)` reverses the URL by name.',
+      explanation: 'Decorator order matters: the decorator written on top wraps the others, so its check runs first at request time. `@login_required` goes on top so unauthenticated requests are sent to the login page *before* `@require_POST`\'s 405 check. `objects.create()` builds and saves in one call (`Article(...).save()` returns None, so `article` would be None). `redirect("named_url", **kwargs)` reverses the URL by name; `HttpResponseRedirect` needs a URL string and is not imported here.',
       hints: ['@login_required goes outermost (top)', 'objects.create() = build + save', 'redirect by URL name + kwargs'],
       tags: ['django', 'views', 'login_required', 'require_POST', 'redirect', 'parsons'],
       concepts: ['dj-view-patterns'],
@@ -923,7 +932,7 @@ def my_posts(request):
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What\'s logged when an anonymous user requests GET /create/? (assume LOGIN_URL = "/login/")',
+      question: 'An anonymous user requests GET /create/ (assume LOGIN_URL = "/login/"). What does this code print? Type the exact printed lines.',
       code: `@login_required
 @require_POST
 def create(request):
@@ -934,7 +943,7 @@ def create(request):
 response = create(anonymous_request)
 print(response.status_code)`,
       expectedOutput: `302`,
-      explanation: '`@login_required` is the OUTER decorator (closest to the function call site). It runs first, sees an anonymous user, and immediately returns a 302 redirect to LOGIN_URL — never invoking the inner `@require_POST`. So "inside create" never prints. If decorator order were swapped, anonymous GET would get 405 first instead.',
+      explanation: '`@login_required` is the OUTER decorator (written on top), so its wrapper runs first at request time. It sees an anonymous user and immediately returns a 302 redirect to LOGIN_URL, never calling the inner `@require_POST` wrapper or the view. So "inside create" never prints, and only `302` does. If the decorator order were swapped, the anonymous GET would get 405 first instead.',
       hints: ['Outer decorator runs first', '@login_required redirects anonymous users with 302', 'Decorator order matters'],
       tags: ['django', 'views', 'login_required', 'decorator-order', 'predict'],
       concepts: ['dj-view-patterns'],
@@ -969,13 +978,13 @@ print(response.status_code)`,
         'def publish_article(request):',
         '    article.publish()',
       ],
-      solution: '@login_required\n@permission_required("articles.publish_article", raise_exception=True)\n@require_POST\ndef publish_article(request, pk):\n    article = get_object_or_404(Article, pk=pk)\n    article.status = "published"\n    article.save()\n    return redirect("article_detail", pk=pk)',
-      explanation: 'Decorator order is OUTSIDE-IN: the topmost wraps everything below. The right stack for a mutating endpoint is `@login_required` outermost (anonymous users redirect to login *before* anything else), then `@permission_required(..., raise_exception=True)` (logged-in but unauthorised users get 403 — `raise_exception=True` makes it 403 instead of a confusing redirect), then `@require_POST` innermost (rejects GET/PUT/DELETE with 405). Never put `@cache_page` on a mutating endpoint — it would cache the redirect/403 and replay it.',
+      solution: 'from django.contrib.auth.decorators import login_required, permission_required\nfrom django.views.decorators.http import require_POST\nfrom django.shortcuts import get_object_or_404, redirect\nfrom .models import Article\n\n@login_required\n@permission_required("articles.publish_article", raise_exception=True)\n@require_POST\ndef publish_article(request, pk):\n    article = get_object_or_404(Article, pk=pk)\n    article.status = "published"\n    article.save()\n    return redirect("article_detail", pk=pk)',
+      explanation: 'Decorator order is OUTSIDE-IN: the topmost wraps everything below, so its check runs first. The right stack for a mutating endpoint is `@login_required` outermost (anonymous users redirect to login *before* anything else), then `@permission_required(..., raise_exception=True)` (a logged-in user without the permission gets 403; without `raise_exception=True` the decorator would send them to the login page, which is confusing for someone already logged in), then `@require_POST` innermost (rejects GET/PUT/DELETE with 405). `@require_GET` is the opposite of what a mutating view needs, and `@cache_page` is for read-only pages: Django only caches successful GET/HEAD responses, so it has no place on a POST-only view.',
       hints: [
         'Auth check outermost so anonymous users bounce first',
         'raise_exception=True on permission_required gives 403, not a login redirect',
         'Method check innermost (closest to the function)',
-        'Never @cache_page a mutating endpoint',
+        '@cache_page is for read-only GET pages, not a mutating endpoint',
       ],
       tags: ['django', 'views', 'decorators', 'login_required', 'permission_required', 'parsons', 'advanced'],
       concepts: ['dj-view-patterns', 'py-decorator-application'],
@@ -1078,12 +1087,12 @@ def grant_publish(user):
       course: Course.BACKEND,
       question: 'You need to reference the active user model. When do you use `get_user_model()` versus `settings.AUTH_USER_MODEL`?',
       options: [
-        { id: 'a', text: 'Use the string `settings.AUTH_USER_MODEL` in a `ForeignKey`/model definition (resolved lazily at migration time, avoiding import cycles); call `get_user_model()` in runtime code (views, forms, scripts) where you need the actual model class', isCorrect: true },
-        { id: 'b', text: 'They are interchangeable aliases — `get_user_model()` simply returns `settings.AUTH_USER_MODEL` as a string, so either works in both model and runtime code', isCorrect: false },
+        { id: 'a', text: 'Use the string `settings.AUTH_USER_MODEL` in a `ForeignKey` or other model definition (resolved lazily); call `get_user_model()` in runtime code (views, forms, scripts) that needs the class', isCorrect: true },
+        { id: 'b', text: 'They are interchangeable aliases: `get_user_model()` simply returns `settings.AUTH_USER_MODEL` as a string, so either works in both model and runtime code', isCorrect: false },
         { id: 'c', text: 'Use `get_user_model()` inside model field definitions and `settings.AUTH_USER_MODEL` everywhere else; a `ForeignKey` needs the resolved class, not a string', isCorrect: false },
         { id: 'd', text: 'Both should be avoided in favour of importing `User` from `django.contrib.auth.models`, which always resolves to the configured custom model anyway', isCorrect: false },
       ],
-      explanation: 'In a model file, importing the user model directly can cause an import cycle and pins you to whatever model is loaded — so a `ForeignKey` should take the STRING `settings.AUTH_USER_MODEL` (e.g. `"accounts.User"`), which Django resolves lazily. In ordinary runtime code you want the real class (to query, build, or `isinstance`), and `get_user_model()` returns it. Importing `User` directly breaks the moment the project swaps to a custom user model.',
+      explanation: 'In a model file, importing the user model directly can cause an import cycle and pins you to whatever model is loaded, so a `ForeignKey` should take the STRING `settings.AUTH_USER_MODEL` (e.g. `"accounts.User"`), which Django resolves lazily. In ordinary runtime code you want the real class (to query, build, or `isinstance`), and `get_user_model()` returns it. Importing `User` directly breaks the moment the project swaps to a custom user model.',
       hints: [
         'FK / model definition → settings.AUTH_USER_MODEL (string, lazy)',
         'Runtime code → get_user_model() (actual class)',
@@ -1174,16 +1183,16 @@ admins = User.objects.filter(is_staff=True)`,
       course: Course.BACKEND,
       question: 'For class-based views, what do `LoginRequiredMixin`, `PermissionRequiredMixin`, and `UserPassesTestMixin` each enforce?',
       options: [
-        { id: 'a', text: '`LoginRequiredMixin` requires an authenticated user; `PermissionRequiredMixin` requires a named permission via `permission_required`; `UserPassesTestMixin` requires your `test_func()` to return True — and all must precede the generic view in the MRO', isCorrect: true },
-        { id: 'b', text: 'They are identical apart from the status code they emit — 401, 403, and 404 respectively — and may appear in any position among the base classes', isCorrect: false },
+        { id: 'a', text: '`LoginRequiredMixin` requires an authenticated user; `PermissionRequiredMixin` requires a named permission via `permission_required`; `UserPassesTestMixin` requires your `test_func()` to return True; all must precede the generic view in the MRO', isCorrect: true },
+        { id: 'b', text: 'They are identical apart from the status code they emit (401, 403, and 404 respectively) and may appear in any position among the base classes', isCorrect: false },
         { id: 'c', text: '`LoginRequiredMixin` checks a permission, `PermissionRequiredMixin` checks group membership, and `UserPassesTestMixin` checks the session age; their order is irrelevant', isCorrect: false },
         { id: 'd', text: 'They configure DRF permission classes and only work on `APIView` subclasses, not on Django\'s generic class-based views', isCorrect: false },
       ],
-      explanation: 'Three escalating gates for CBVs: `LoginRequiredMixin` (just authenticated), `PermissionRequiredMixin` (holds `permission_required = "app.codename"`), `UserPassesTestMixin` (passes a custom `test_func(self)` returning a bool). Each must come BEFORE the generic view class in the base list so its `dispatch` runs first (MRO). By default a failed check redirects to login; set `raise_exception = True` to return 403 for a logged-in-but-unauthorized user.',
+      explanation: 'Three escalating gates for CBVs: `LoginRequiredMixin` (just authenticated), `PermissionRequiredMixin` (holds `permission_required = "app.codename"`), `UserPassesTestMixin` (passes a custom `test_func(self)` returning a bool). Each must come BEFORE the generic view class in the base list so its `dispatch` runs first (MRO). When a check fails, an anonymous visitor is redirected to the login page, while a logged-in user who fails it gets 403 Forbidden; setting `raise_exception = True` makes anonymous visitors get 403 too. (None of them send 401 or 404, and they are Django mixins, not DRF permission classes.)',
       hints: [
         'Login → authenticated; Permission → named perm; UserPasses → test_func',
         'Mixin goes before the generic view (MRO)',
-        'raise_exception=True ⇒ 403 instead of redirect',
+        'Failing: anonymous -> login redirect; logged in -> 403',
       ],
       tags: ['django', 'auth', 'LoginRequiredMixin', 'PermissionRequiredMixin', 'UserPassesTestMixin'],
       concepts: ['dj-permission-class'],
@@ -1203,7 +1212,7 @@ admins = User.objects.filter(is_staff=True)`,
       solution: `class ArticleUpdateView(PermissionRequiredMixin, UpdateView):
     model = Article
     permission_required = "blog.change_article"`,
-      explanation: '`PermissionRequiredMixin` reads the `permission_required` attribute (a string, or a tuple/list of strings — ALL required) and calls `request.user.has_perm(...)`. The mixin must be listed before `UpdateView` so its `dispatch` runs first. Set `raise_exception = True` to 403 a logged-in user who lacks the permission instead of redirecting them to login.',
+      explanation: '`PermissionRequiredMixin` reads the `permission_required` attribute (a string, or a tuple/list of strings, ALL required) and calls `request.user.has_perm(...)`. The mixin must be listed before `UpdateView` so its `dispatch` runs first. When the check fails, an anonymous visitor is redirected to the login page and a logged-in user without the permission gets 403 Forbidden; `raise_exception = True` makes anonymous visitors get 403 too.',
       hints: ['Attribute name = the mixin\'s prefix + "_required"', 'Value is an "app.codename" string'],
       tags: ['django', 'auth', 'PermissionRequiredMixin'],
       concepts: ['dj-permission-class'],
@@ -1215,7 +1224,7 @@ admins = User.objects.filter(is_staff=True)`,
       topic: Topic.DJ_AUTH,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the method `UserPassesTestMixin` calls — it returns True to allow access (here: staff only).',
+      question: 'Fill in the method `UserPassesTestMixin` calls; it returns True to allow access (here: staff only).',
       template: `class StaffDashboard(UserPassesTestMixin, TemplateView):
     template_name = "staff.html"
 
@@ -1227,7 +1236,7 @@ admins = User.objects.filter(is_staff=True)`,
 
     def test_func(self):
         return self.request.user.is_staff`,
-      explanation: '`UserPassesTestMixin` calls `test_func(self)`; return True to allow, False to deny (default: redirect to login, or 403 with `raise_exception = True`). It is the catch-all for access rules that aren\'t a single named permission — staff-only, owner-only, within-quota, etc. Access `self.request` for the user and `self.kwargs` for URL captures.',
+      explanation: '`UserPassesTestMixin` calls `test_func(self)`; return True to allow, False to deny. On a denial an anonymous visitor is redirected to the login page and a logged-in user gets 403 Forbidden (`raise_exception = True` makes it 403 for everyone). It is the catch-all for access rules that aren\'t a single named permission: staff-only, owner-only, within-quota, etc. Access `self.request` for the user and `self.kwargs` for URL captures.',
       hints: ['Method returning a bool that gates the view', 'Reads self.request.user'],
       tags: ['django', 'auth', 'UserPassesTestMixin', 'user-passes-test', 'test_func'],
       concepts: ['dj-permission-class'],
@@ -1241,14 +1250,14 @@ admins = User.objects.filter(is_staff=True)`,
       language: CodeLanguage.PYTHON,
       question: `A reporting dashboard should be reachable ONLY by staff members. Anyone not logged in should be sent to login, but a logged-in NON-staff user should get a 403 (not a confusing login redirect).
 
-  Build a class-based \`TemplateView\` for \`"reports/dashboard.html"\` that layers the login requirement and a staff-only test using the appropriate access mixins, and make the failed-test case raise (403) rather than redirect.`,
+Build a class-based \`TemplateView\` named \`ReportDashboard\` for \`"reports/dashboard.html"\` that layers the login requirement and a staff-only test using the appropriate access mixins.`,
       starterCode: `from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import TemplateView
 `,
       testCases: [
         {
           input: 'anonymous → login redirect; non-staff → 403; staff → 200',
-          expectedOutput: 'LoginRequiredMixin + UserPassesTestMixin + test_func(is_staff) + raise_exception',
+          expectedOutput: 'LoginRequiredMixin + UserPassesTestMixin + test_func(is_staff)',
           description: 'Staff-only CBV with 403 (not redirect) for logged-in non-staff',
         },
       ],
@@ -1258,19 +1267,18 @@ from django.views.generic import TemplateView
 
 class ReportDashboard(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = "reports/dashboard.html"
-    raise_exception = True
 
     def test_func(self):
         return self.request.user.is_staff`,
-      explanation: '`LoginRequiredMixin` first (anonymous users bounce to login), then `UserPassesTestMixin` whose `test_func` allows only staff. `raise_exception = True` makes the failed test a 403 — appropriate for an authenticated-but-unauthorized user, since a login redirect would loop them (they\'re already logged in). Mixin order before `TemplateView` matters: their `dispatch` overrides must run before the view renders.',
+      explanation: '`LoginRequiredMixin` first (anonymous users bounce to login), then `UserPassesTestMixin` whose `test_func` allows only staff. The defaults already give the split the prompt asks for: when a check fails, an anonymous visitor is redirected to login and a logged-in user gets 403 Forbidden. Do not set `raise_exception = True`: both mixins read that one class attribute, so anonymous visitors would get 403 too instead of the login redirect. Mixin order before `TemplateView` matters: their `dispatch` overrides must run before the view renders.',
       hints: [
         'LoginRequiredMixin then UserPassesTestMixin then TemplateView',
         'test_func returns request.user.is_staff',
-        'raise_exception = True ⇒ 403 not redirect',
+        'Failed test: anonymous -> login redirect, logged-in -> 403 by default',
       ],
       tieredHints: {
-        apiSignature: 'UserPassesTestMixin.test_func(self) -> bool; raise_exception: bool = False',
-        skeleton: 'from django.contrib.auth.mixins import ____, ____\nfrom django.views.generic import ____\n\n\nclass ReportDashboard(____, ____, ____):\n    template_name = "reports/dashboard.html"\n    raise_exception = ____\n\n    def ____(self):\n        return self.request.user.____',
+        apiSignature: 'UserPassesTestMixin.test_func(self) -> bool',
+        skeleton: 'from django.contrib.auth.mixins import ____, ____\nfrom django.views.generic import ____\n\n\nclass ReportDashboard(____, ____, ____):\n    template_name = "reports/dashboard.html"\n\n    def ____(self):\n        return self.request.user.____',
       },
       tags: ['django', 'auth', 'UserPassesTestMixin', 'user-passes-test', 'mixin', 'advanced'],
       concepts: ['dj-permission-class'],
