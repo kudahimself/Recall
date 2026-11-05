@@ -6,7 +6,7 @@ Time: about 20 minutes.
 ## Task
 
 This time the code is written and you write the tests.
-`fees.py` holds `late_fee(days_late, per_day=20, cap=500)`; read it, but do not change it.
+`late_fees.py` holds `late_fee(days_late, per_day=20, cap=500)`; read it, but do not change it.
 In `test_late_fees.py`, write pytest tests that pin down its rules:
 
 - A book returned on time (0 days late) costs nothing.
@@ -19,8 +19,8 @@ Arrange, act and assert in each test, one behaviour per test.
 
 ## How it is graded
 
-`test_grader.py` copies your test file into a temporary folder and runs it twice over:
-on the real `fees.py`, where every one of your tests must pass, and on copies of `fees.py` with one bug planted, where at least one must fail.
+`test_late_fees_grader.py` copies your test file into a temporary folder and runs it twice over:
+on the real `late_fees.py`, where every one of your tests must pass, and on copies of `late_fees.py` with one bug planted, where at least one must fail.
 The planted bugs charge a day too few, forget the cap, ignore `per_day`, and stop raising for negative days.
 
 ## Examples

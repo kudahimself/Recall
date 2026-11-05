@@ -2,7 +2,7 @@
 
 CatalogueClient talks to the library's catalogue API through a session, such as
 requests.Session(); the tests hand it a FakeSession from fakes.py instead.
-Fill in each method so the tests in test_catalogue.py pass.
+Fill in each method so the tests in test_catalogue_client.py pass.
 Run them from this folder with: pytest
 """
 

@@ -6,7 +6,7 @@ Time: about 20 minutes.
 ## Task
 
 Swap the library's prints for log messages.
-Fill in `loans.py`:
+Fill in `loan_logging.py`:
 
 - `log` is the module's logger, named `"library.loans"`, so it is a child of the `"library"` logger.
 - `configure()` sets the `"library"` logger's level to INFO, so INFO messages from `library.loans` and every other `library.*` logger are shown.

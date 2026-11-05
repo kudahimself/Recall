@@ -1,6 +1,6 @@
 """JSON & Serialization: practise json.dumps, json.loads, default= and the round trip.
 
-Fill in each function so the tests in test_catalogue.py pass.
+Fill in each function so the tests in test_catalogue_json.py pass.
 Run them from this folder with: pytest
 """
 import datetime

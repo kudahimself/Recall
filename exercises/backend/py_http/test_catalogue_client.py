@@ -1,6 +1,6 @@
 import pytest
 
-from catalogue import CatalogueClient
+from catalogue_client import CatalogueClient
 from fakes import FakeResponse, FakeSession, HTTPError
 
 BASE = "https://library.example/api"

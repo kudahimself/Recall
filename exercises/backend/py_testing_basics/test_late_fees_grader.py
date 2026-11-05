@@ -1,8 +1,8 @@
 """Grades your tests in test_late_fees.py. Do not change this file.
 
 Each check copies your test file into a fresh temporary folder next to a version
-of fees.py and runs pytest there.
-On the real fees.py your tests must pass; on a copy with one bug planted they must fail.
+of late_fees.py and runs pytest there.
+On the real late_fees.py your tests must pass; on a copy with one bug planted they must fail.
 """
 import os
 import shutil
@@ -13,9 +13,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 YOUR_TESTS = HERE / "test_late_fees.py"
-REAL = (HERE / "fees.py").read_text()
+REAL = (HERE / "late_fees.py").read_text()
 
-# Each bug: (text in the real fees.py, what replaces it, what the bug does).
+# Each bug: (text in the real late_fees.py, what replaces it, what the bug does).
 BUGS = {
     "one_day_short": (
         "min(days_late * per_day, cap)", "min(max(days_late - 1, 0) * per_day, cap)",
@@ -34,7 +34,7 @@ _runs = {}
 
 def with_bug(bug):
     old, new, _ = BUGS[bug]
-    assert old in REAL, "fees.py has changed; restore it with: git checkout -- fees.py"
+    assert old in REAL, "late_fees.py has changed; restore it with: git checkout -- late_fees.py"
     return REAL.replace(old, new, 1)
 
 
@@ -43,7 +43,7 @@ def run_your_tests(fees_source, *extra):
     key = (fees_source, extra, YOUR_TESTS.read_text())
     if key not in _runs:
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "fees.py").write_text(fees_source)
+            (Path(tmp) / "late_fees.py").write_text(fees_source)
             shutil.copy(YOUR_TESTS, Path(tmp) / "test_late_fees.py")
             result = subprocess.run(
                 [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--color=no", *extra],
@@ -57,7 +57,7 @@ def run_your_tests(fees_source, *extra):
 def assert_pass_on_real_code():
     code, out = run_your_tests(REAL)
     assert code != 5, "pytest found no tests in test_late_fees.py: is each name test_...?"
-    assert code == 0, "your tests must pass on the real fees.py:\n" + out
+    assert code == 0, "your tests must pass on the real late_fees.py:\n" + out
 
 
 def assert_catches(bug):

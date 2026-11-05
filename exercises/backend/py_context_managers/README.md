@@ -5,7 +5,7 @@ Time: about 25 minutes.
 
 ## Task
 
-Make the library's resources clean up after themselves in `desk.py`:
+Make the library's resources clean up after themselves in `desk_session.py`:
 
 - `Desk(log)` is a class-based context manager: `__enter__` logs `"open"` and returns the desk, and `__exit__` logs `"close"` whatever happened.
 - `Desk.__exit__` swallows a `KeyError` from the block (an unknown member card) and logs `"unknown card"`, while any other exception carries on.

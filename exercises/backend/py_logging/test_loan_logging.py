@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-import loans
+import loan_logging as loans
 
 
 @pytest.fixture(autouse=True)

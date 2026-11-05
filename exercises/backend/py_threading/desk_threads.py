@@ -1,6 +1,6 @@
 """Threading: practise starting and joining threads, locks, queues and events.
 
-Fill in each part so the tests in test_desk.py pass.
+Fill in each part so the tests in test_desk_threads.py pass.
 Run them from this folder with: pytest
 """
 import threading

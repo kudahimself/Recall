@@ -5,7 +5,7 @@ Time: about 20 minutes.
 
 ## Task
 
-The tests in `test_shelf.py` are written already, and they ask for fixtures that do not exist yet.
+The tests in `test_store_fixtures.py` are written already, and they ask for fixtures that do not exist yet.
 Write those fixtures in `conftest.py`, using the helpers in `store.py`; change neither of those two files.
 
 - `shelf` gives every test a fresh shelf from `store.open_shelf()`, and closes it with `store.close_shelf(...)` once the test is over: use `yield`.

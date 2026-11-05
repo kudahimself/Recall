@@ -1,6 +1,6 @@
 """Context managers: practise __enter__/__exit__, @contextmanager with try/finally, and ExitStack.
 
-Fill in each part so the tests in test_desk.py pass.
+Fill in each part so the tests in test_desk_session.py pass.
 Run them from this folder with: pytest
 """
 from contextlib import ExitStack, contextmanager

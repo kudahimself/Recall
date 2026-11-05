@@ -1,7 +1,7 @@
 """Mocking & Patching: practise Mock, return_value, side_effect and patch, testing reminders.py.
 
 Write your tests in this file; README.md lists what they must pin down.
-test_grader.py then runs them on the real reminders.py, where they must pass,
+test_reminders_grader.py then runs them on the real reminders.py, where they must pass,
 and on copies of reminders.py with a bug planted, where they must fail.
 Run everything from this folder with: pytest
 """

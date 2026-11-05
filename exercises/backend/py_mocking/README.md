@@ -19,7 +19,7 @@ Use a `Mock()` catalogue with `lookup.return_value` or `lookup.side_effect`, `pa
 
 ## How it is graded
 
-`test_grader.py` copies your test file into a temporary folder and runs it twice over:
+`test_reminders_grader.py` copies your test file into a temporary folder and runs it twice over:
 on the real `reminders.py`, where every one of your tests must pass, and on copies with one bug planted, where at least one must fail.
 The planted bugs email the wrong address, skip the due-date check, give up after one timeout, and count one day too many.
 

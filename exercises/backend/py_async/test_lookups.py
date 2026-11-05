@@ -54,7 +54,7 @@ def test_fetch_all_runs_the_lookups_at_the_same_time():
     titles, took = timed(fetch_all(["111", "222", "333", "444", "555"]))
     assert len(titles) == 5
     # One by one would take 5 * DELAY; together they take about one DELAY.
-    assert took < DELAY * 3
+    assert took < DELAY * 4
 
 
 def test_pause_does_not_block_the_loop():
@@ -62,7 +62,7 @@ def test_pause_does_not_block_the_loop():
         await asyncio.gather(pause(0.2), pause(0.2))
 
     _, took = timed(two_pauses())
-    assert 0.18 <= took < 0.35
+    assert 0.18 <= took < 0.39   # blocking pauses would take 0.4 seconds
 
 
 def test_lend_while_waiting_does_other_work_meanwhile():

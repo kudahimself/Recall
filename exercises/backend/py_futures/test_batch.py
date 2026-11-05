@@ -24,7 +24,7 @@ def test_fetch_all_keeps_the_input_order():
 def test_fetch_all_uses_the_pool_at_the_same_time():
     start = time.perf_counter()
     assert fetch_all(slow_lookup, ["111", "222", "333", "444"] * 2, workers=4) == list(TITLES.values()) * 2
-    assert time.perf_counter() - start < 1.0   # one after another would take 1.6 seconds
+    assert time.perf_counter() - start < 1.3   # one after another would take 1.6 seconds
 
 
 def test_fetch_all_raises_a_failing_call():

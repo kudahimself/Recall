@@ -2,7 +2,7 @@ import builtins
 
 import pytest
 
-from desk import Desk, borrowed, first_lines
+from desk_session import Desk, borrowed, first_lines
 
 
 def test_desk_opens_and_closes():

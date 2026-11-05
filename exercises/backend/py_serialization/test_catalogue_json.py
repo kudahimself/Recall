@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from catalogue import encode_extra, export, from_json, load_catalogue, restore_shelves, save_catalogue, to_json
+from catalogue_json import encode_extra, export, from_json, load_catalogue, restore_shelves, save_catalogue, to_json
 
 
 def test_to_json_is_indented_with_sorted_keys():

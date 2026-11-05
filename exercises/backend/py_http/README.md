@@ -5,7 +5,7 @@ Time: about 25 minutes.
 
 ## Task
 
-`CatalogueClient` in `catalogue.py` talks to the library's catalogue API through a session object.
+`CatalogueClient` in `catalogue_client.py` talks to the library's catalogue API through a session object.
 In real code that is a `requests.Session()`, which reuses the connection for every call.
 The tests hand it a `FakeSession` from `fakes.py` instead, with the same `get` and `post` shape, so nothing touches the network.
 Fill in the four methods:

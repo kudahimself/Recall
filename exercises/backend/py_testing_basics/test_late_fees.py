@@ -1,13 +1,13 @@
-"""Testing Basics: practise writing pytest tests, for late_fee in fees.py.
+"""Testing Basics: practise writing pytest tests, for late_fee in late_fees.py.
 
 Write your tests in this file; README.md lists what they must pin down.
-test_grader.py then runs them on the real fees.py, where they must pass,
-and on copies of fees.py with a bug planted, where they must fail.
+test_late_fees_grader.py then runs them on the real late_fees.py, where they must pass,
+and on copies of late_fees.py with a bug planted, where they must fail.
 Run everything from this folder with: pytest
 """
 import pytest
 
-from fees import late_fee
+from late_fees import late_fee
 
 # TODO: a test that a book returned on time costs nothing.
 

@@ -1,7 +1,7 @@
 """Pytest Fixtures: practise writing fixtures, yield cleanup and fixture scope.
 
 pytest loads conftest.py by itself and hands its fixtures to every test in this folder.
-Write the fixtures below so the tests in test_shelf.py pass; do not change test_shelf.py.
+Write the fixtures below so the tests in test_store_fixtures.py pass; do not change test_store_fixtures.py.
 Run them from this folder with: pytest
 """
 import pytest

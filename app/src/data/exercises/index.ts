@@ -124,8 +124,8 @@ export const EXERCISES: TopicExercise[] = [
     topicKeys: [Topic.PY_TYPE_HINTS, Topic.PY_DATACLASSES],
     title: 'Loan records',
     folder: 'exercises/backend/py_type_hints',
-    starter: ['loans.py'],
-    tests: 'test_loans.py',
+    starter: ['typed_loans.py'],
+    tests: 'test_typed_loans.py',
     minutes: 20,
     task: lines(
       'Turn loans into typed records with dataclasses and type hints.',
@@ -189,8 +189,8 @@ export const EXERCISES: TopicExercise[] = [
     topicKeys: [Topic.PY_CONTEXT_MANAGERS],
     title: 'Lending desk',
     folder: 'exercises/backend/py_context_managers',
-    starter: ['desk.py'],
-    tests: 'test_desk.py',
+    starter: ['desk_session.py'],
+    tests: 'test_desk_session.py',
     minutes: 25,
     task: lines(
       'Make the library\'s resources clean up after themselves.',
@@ -254,8 +254,8 @@ export const EXERCISES: TopicExercise[] = [
     topicKeys: [Topic.PY_LOGGING],
     title: 'Logged loans',
     folder: 'exercises/backend/py_logging',
-    starter: ['loans.py'],
-    tests: 'test_loans.py',
+    starter: ['loan_logging.py'],
+    tests: 'test_loan_logging.py',
     minutes: 20,
     task: lines(
       'Swap the library\'s prints for log messages.',
@@ -280,8 +280,8 @@ export const EXERCISES: TopicExercise[] = [
     topicKeys: [Topic.PY_SERIALIZATION],
     title: 'Catalogue export',
     folder: 'exercises/backend/py_serialization',
-    starter: ['catalogue.py'],
-    tests: 'test_catalogue.py',
+    starter: ['catalogue_json.py'],
+    tests: 'test_catalogue_json.py',
     minutes: 20,
     task: lines(
       'Share the catalogue as JSON, both ways.',
@@ -294,7 +294,7 @@ export const EXERCISES: TopicExercise[] = [
     title: 'Fee tests',
     folder: 'exercises/backend/py_testing_basics',
     starter: ['test_late_fees.py'],
-    tests: 'test_grader.py',
+    tests: 'test_late_fees_grader.py',
     minutes: 20,
     task: lines(
       'This time the code is written and you write the pytest tests for `late_fee`.',
@@ -307,7 +307,7 @@ export const EXERCISES: TopicExercise[] = [
     title: 'Shelf fixtures',
     folder: 'exercises/backend/py_fixtures',
     starter: ['conftest.py'],
-    tests: 'test_shelf.py',
+    tests: 'test_store_fixtures.py',
     minutes: 20,
     task: lines(
       'The tests are written already, and they ask for fixtures you write in `conftest.py`.',
@@ -320,7 +320,7 @@ export const EXERCISES: TopicExercise[] = [
     title: 'Reminder mocks',
     folder: 'exercises/backend/py_mocking',
     starter: ['test_reminders.py'],
-    tests: 'test_grader.py',
+    tests: 'test_reminders_grader.py',
     minutes: 25,
     task: lines(
       'Test the overdue reminders without a mail server or a real clock.',
@@ -346,8 +346,8 @@ export const EXERCISES: TopicExercise[] = [
     topicKeys: [Topic.PY_HTTP],
     title: 'Catalogue client',
     folder: 'exercises/backend/py_http',
-    starter: ['catalogue.py'],
-    tests: 'test_catalogue.py',
+    starter: ['catalogue_client.py'],
+    tests: 'test_catalogue_client.py',
     minutes: 25,
     task: lines(
       'Write a client for the catalogue API that works with a `requests.Session`, tested offline against a fake session.',
@@ -372,8 +372,8 @@ export const EXERCISES: TopicExercise[] = [
     topicKeys: [Topic.PY_THREADING],
     title: 'Busy desk',
     folder: 'exercises/backend/py_threading',
-    starter: ['desk.py'],
-    tests: 'test_desk.py',
+    starter: ['desk_threads.py'],
+    tests: 'test_desk_threads.py',
     minutes: 25,
     task: lines(
       'Let the loans desk do several things at once with threads.',

@@ -3,7 +3,7 @@ import typing
 
 import pytest
 
-from loans import Loan, ShelfMark, find, loan_from_form, to_rows, total_days
+from typed_loans import Loan, ShelfMark, find, loan_from_form, to_rows, total_days
 
 
 def test_loan_is_a_dataclass_with_defaults():

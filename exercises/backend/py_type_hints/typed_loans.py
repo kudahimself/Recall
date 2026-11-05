@@ -1,6 +1,6 @@
 """Type hints and dataclasses: practise hints, @dataclass, field(default_factory=...), frozen and asdict.
 
-Fill in each part so the tests in test_loans.py pass.
+Fill in each part so the tests in test_typed_loans.py pass.
 Run them from this folder with: pytest
 """
 from dataclasses import asdict, dataclass, field

@@ -6,7 +6,7 @@ Time: about 20 minutes.
 ## Task
 
 The library shares its catalogue with other systems as JSON.
-Fill in the functions in `catalogue.py`:
+Fill in the functions in `catalogue_json.py`:
 
 - `to_json(book)` turns a dict into readable JSON text, indented by 2 with the keys sorted.
 - `from_json(text)` parses JSON text back into Python data.

@@ -1,6 +1,6 @@
 """Logging: practise loggers, levels, lazy arguments and log.exception.
 
-Fill in each part so the tests in test_loans.py pass.
+Fill in each part so the tests in test_loan_logging.py pass.
 Run them from this folder with: pytest
 """
 import logging

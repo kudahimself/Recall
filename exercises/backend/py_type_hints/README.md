@@ -5,7 +5,7 @@ Time: about 20 minutes.
 
 ## Task
 
-Turn loans into typed records in `loans.py`:
+Turn loans into typed records in `typed_loans.py`:
 
 - Make `Loan` a dataclass with the hinted fields `title`, `member`, `days` (14 by default) and `renewals`, a fresh empty list for every loan.
 - Make `ShelfMark` a frozen dataclass with `aisle` and `shelf`, so a mark cannot change and can sit in a set.

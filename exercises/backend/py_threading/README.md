@@ -6,7 +6,7 @@ Time: about 25 minutes.
 ## Task
 
 The loans desk does several things at once.
-Fill in `desk.py` with the `threading` module and `queue.Queue`:
+Fill in `desk_threads.py` with the `threading` module and `queue.Queue`:
 
 - `LoanCounter` keeps a `count` and a `threading.Lock()` called `lock`, and `add(n=1)` changes the count only inside `with self.lock:`.
 - `run_all(fn, items)` runs `fn(item)` for every item, each in its own thread, and returns the results in item order: start every thread, then `join()` them all.
