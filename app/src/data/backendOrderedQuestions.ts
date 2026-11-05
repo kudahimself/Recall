@@ -166,7 +166,7 @@ export const backendOrderedQuestions: Question[] = [
   q('pe1-m3-2'), q('pe1-m3-3'), q('pe1-m3-5'), q('pe1-m3-6'),
   q('pe1-m3-8'), q('pe1-m3-10'), q('pe1-m3-11'), q('pe1-m3-12'),
   q('pe1-builtins-1'), q('pe1-builtins-2'), q('pe1-builtins-4'), q('pe1-format-1'),
-  q('pe1-idioms-1'), q('pe1-idioms-2'), q('py-basic-1'), q('be-sql-4'),
+  q('pe1-idioms-1'), q('pe1-idioms-2'), q('py-basic-1'),
   q('py-basics-misc-mcq-1'), q('py-basics-misc-mcq-2'), q('py-basics-misc-mcq-3'), q('py-basics-misc-mcq-4'),
   q('py-basics-misc-mcq-5'), q('py-basics-misc-mcq-6'), q('py-basics-misc-mcq-7'), q('py-basics-misc-mcq-8'),
   q('py-basics-misc-mcq-9'), q('py-basics-misc-mcq-10'), q('py-basics-predict-1'), q('py-basics-predict-10'),
@@ -181,8 +181,7 @@ export const backendOrderedQuestions: Question[] = [
   q('pe1-m2-16'), q('pe1-m3-4'), q('pe1-m3-7'), q('pe1-m3-9'),
   q('pe1-m3-13'), q('pe1-m3-14'), q('pe1-builtins-3'), q('pe1-builtins-5'),
   q('pe1-format-2'), q('pe1-idioms-3'), q('pe1-idioms-4'), q('py-basic-2'),
-  q('py-basic-3'), q('py-basic-4'), q('be-sql-1'), q('be-sql-3'),
-  q('be-sql-2'),
+  q('py-basic-3'), q('py-basic-4'),
 
   // ===== Topic.PY_DATA_STRUCTURES =====
   q('pe1-m3-15'), q('pe1-m3-16'), q('pe1-m3-17'), q('pe1-m3-19'),
@@ -204,13 +203,13 @@ export const backendOrderedQuestions: Question[] = [
   q('pe1-closure-1'), q('py-gap-functions-1'), q('py-functions-predict-3'), q('py-functions-predict-8'),
   q('py-functions-parsons-1'), q('py-functions-parsons-2'), q('py-functions-parsons-4'), q('py-functions-parsons-6'),
   q('py-functions-cloze-1'), q('py-functions-cloze-3'), q('py-functions-cloze-4'), q('py-functions-cloze-5'),
-  q('py-functions-cloze-6'), q('py-functions-cloze-7'), q('py-functions-cloze-8'), q('pe1-m4-4'),
+  q('pe1-m4-4'),
   q('pe1-closure-2'), q('py-gap-functions-2'), q('pcpp-args-1'), q('pcpp-args-3'),
   q('py-functions-predict-1'), q('py-functions-predict-10'), q('py-functions-predict-4'), q('py-functions-predict-6'),
-  q('py-functions-predict-7'), q('py-functions-predict-9'), q('py-functions-parsons-10'), q('py-functions-parsons-8'),
+  q('py-functions-predict-9'),
   q('py-functions-cloze-2'), q('py-fn-1'), q('py-fn-2'), q('py-fn-3'),
-  q('pcpp-args-2'), q('py-functions-predict-2'), q('py-functions-predict-5'), q('py-functions-parsons-3'),
-  q('py-functions-parsons-5'), q('py-functions-parsons-7'), q('py-functions-parsons-9'), q('py-functions-cloze-10'),
+  q('pcpp-args-2'), q('py-functions-predict-2'), q('py-functions-parsons-3'),
+  q('py-functions-parsons-5'), q('py-functions-parsons-9'), q('py-functions-cloze-10'),
   q('py-functions-cloze-9'),
 
   // ===== Topic.PY_MODULES =====
@@ -218,10 +217,10 @@ export const backendOrderedQuestions: Question[] = [
   q('py-modules-predict-6'), q('py-modules-predict-9'), q('py-modules-parsons-1'), q('py-modules-parsons-2'),
   q('py-modules-parsons-3'), q('py-modules-parsons-7'), q('py-modules-parsons-9'), q('py-modules-cloze-10'),
   q('py-modules-cloze-2'), q('py-modules-cloze-3'), q('py-modules-cloze-7'), q('py-modules-cloze-8'),
-  q('py-modules-cloze-9'), q('pe1-modules-2'), q('pe1-modules-3'), q('pcpp-pickle-1'),
-  q('pcpp-pickle-3'), q('pcpp-shelve-1'), q('py-modules-predict-1'), q('py-modules-predict-5'),
+  q('py-modules-cloze-9'), q('pe1-modules-2'), q('pe1-modules-3'),
+  q('py-modules-predict-1'), q('py-modules-predict-5'),
   q('py-modules-predict-7'), q('py-modules-parsons-6'), q('py-modules-parsons-8'), q('py-modules-cloze-1'),
-  q('py-modules-cloze-6'), q('pcpp-pickle-2'), q('pcpp-shelve-2'), q('py-modules-predict-4'),
+  q('py-modules-cloze-6'), q('py-modules-predict-4'),
   q('py-modules-predict-8'), q('py-modules-parsons-10'), q('py-modules-parsons-4'), q('py-modules-parsons-5'),
   q('py-modules-cloze-4'), q('py-modules-cloze-5'),
 
@@ -308,8 +307,8 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.PY_GENERATORS =====
   q('pe1-gen-1'), q('py-gen-memory-mcq'), q('py-gen-predict-lazy'), q('py-gen-predict-stopiteration'),
-  q('py-gen-parsons-1'), q('py-gen-cloze-1'), q('pe1-gen-2'), q('py-gen-predict-state'),
-  q('py-gen-predict-exhaust'), q('py-gen-predict-return'), q('py-gen-pipeline'), q('py-gen-infinite-islice'),
+  q('py-gen-parsons-1'), q('py-gen-cloze-1'), q('py-functions-cloze-6'), q('pe1-gen-2'), q('py-gen-predict-state'),
+  q('py-gen-predict-exhaust'), q('py-gen-predict-return'), q('py-functions-predict-5'), q('py-functions-parsons-7'), q('py-gen-pipeline'), q('py-gen-infinite-islice'),
   q('py-gen-yield-from-predict'), q('py-gen-send-predict'), q('py-gen-yield-from'), q('py-gen-send-coroutine'),
 
   // ===== Topic.PY_COLLECTIONS =====
@@ -342,10 +341,10 @@ export const backendOrderedQuestions: Question[] = [
   q('py-functools-1'), q('py-functools-predict-1'), q('py-functools-predict-10'), q('py-functools-predict-8'),
   q('py-functools-predict-6'), q('py-functools-parsons-3'), q('py-functools-parsons-8'), q('py-functools-parsons-6'),
   q('py-functools-cloze-1'), q('py-functools-cloze-2'), q('py-functools-cloze-3'), q('py-functools-cloze-4'),
-  q('py-functools-cloze-5'), q('py-functools-cloze-9'), q('py-functools-cloze-7'), q('py-functools-2'),
+  q('py-functools-cloze-5'), q('py-functools-cloze-9'), q('py-functools-cloze-7'), q('py-functions-cloze-7'), q('py-functions-cloze-8'), q('py-functools-2'),
   q('py-functools-3'), q('py-functools-4'), q('py-functools-5'), q('py-functools-6'),
   q('py-functools-predict-2'), q('py-functools-predict-3'), q('py-functools-predict-4'), q('py-functools-predict-7'),
-  q('py-functools-parsons-1'), q('py-functools-parsons-2'), q('py-functools-parsons-4'), q('py-functools-parsons-9'),
+  q('py-functools-parsons-1'), q('py-functools-parsons-2'), q('py-functools-parsons-4'), q('py-functools-parsons-9'), q('py-functions-predict-7'), q('py-functions-parsons-8'), q('py-functions-parsons-10'),
   q('py-functools-predict-5'), q('py-functools-predict-9'), q('py-functools-parsons-10'), q('py-functools-parsons-5'),
   q('py-functools-parsons-7'), q('py-functools-cloze-10'), q('py-functools-cloze-6'), q('py-functools-cloze-8'),
 
@@ -464,7 +463,7 @@ export const backendOrderedQuestions: Question[] = [
   q('py-serialization-parsons-3'), q('py-serialization-cloze-1'), q('py-serialization-cloze-2'), q('py-serialization-cloze-4'),
   q('py-serialization-cloze-5'), q('py-serialization-cloze-8'), q('py-serialization-cloze-7'), q('py-json-2'),
   q('py-ser-json-dump-file'), q('py-json-3'), q('py-serialization-objecthook-cloze-1'), q('py-ser-object-hook'), q('py-ser-pickle'),
-  q('py-ser-pickle-vs-json-mcq'), q('py-serialization-predict-2'), q('py-serialization-predict-3'), q('py-serialization-cloze-3'),
+  q('py-ser-pickle-vs-json-mcq'), q('pcpp-pickle-1'), q('pcpp-pickle-3'), q('pcpp-shelve-1'), q('pcpp-pickle-2'), q('pcpp-shelve-2'), q('py-serialization-predict-2'), q('py-serialization-predict-3'), q('py-serialization-cloze-3'),
   q('py-serialization-jsonencoder-cloze-1'), q('py-json-4'), q('py-ser-dataclass-json'), q('py-serialization-predict-6'), q('py-serialization-cloze-6'),
 
   // ===== Topic.PY_PYDANTIC =====
@@ -642,7 +641,7 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-orm-gap-1'), q('dj-orm-predict-1'), q('dj-orm-parsons-1'), q('dj-orm-parsons-4'),
   q('dj-orm-parsons-5'), q('dj-orm-cloze-1'), q('dj-orm-cloze-4'), q('dj-orm-cloze-5'),
   q('dj-orm-cloze-6'), q('dj-orm-exists-cloze-1'), q('dj-orm-values-cloze-1'), q('dj-orm-1'),
-  q('dj-orm-2'), q('dj-orm-gap-2'), q('dj-orm-6'), q('py-dj-orm-select-vs-prefetch'),
+  q('dj-orm-2'), q('dj-orm-gap-2'), q('dj-orm-6'), q('py-dj-orm-select-vs-prefetch'), q('be-sql-4'),
   q('dj-orm-only-mcq-1'), q('dj-orm-bulk-mcq-1'), q('dj-orm-values-mcq-1'), q('dj-orm-subquery-mcq-1'),
   q('dj-orm-prefetch-obj-mcq-1'), q('dj-orm-predict-2'), q('dj-orm-predict-3'), q('dj-orm-exists-predict-1'),
   q('dj-orm-values-predict-1'), q('dj-orm-parsons-2'), q('dj-orm-parsons-3'), q('dj-orm-case-parsons-1'),
@@ -790,7 +789,7 @@ export const backendOrderedQuestions: Question[] = [
   q('be-infra-postgres-2'), q('dj-postgres-gap-1'), q('dj-postgres-gap-2'), q('be-infra-dbperf-4'),
   q('dj-postgres-predict-1'), q('dj-postgres-cloze-1'), q('dj-postgres-keytexttransform-cloze-1'), q('be-infra-postgres-1'),
   q('be-infra-postgres-4'), q('be-infra-dbperf-3'), q('dj-postgres-fts-cloze-1'), q('be-infra-postgres-3'),
-  q('be-infra-dbperf-1'), q('be-infra-dbperf-2'),
+  q('be-infra-dbperf-1'), q('be-infra-dbperf-2'), q('be-sql-1'), q('be-sql-3'), q('be-sql-2'),
   q('dj-postgres-adv-1'), q('dj-postgres-adv-2'),
 
   // ===== Topic.DJ_API_DOCS =====

@@ -194,75 +194,6 @@ export const py_functions_questions: Question[] = [
       concepts: ['py-args-kwargs'],
     },
   {
-      id: 'py-functions-cloze-6',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question:
-        'Fill in the keyword that turns a function into a generator.',
-      template: `def squares(n):
-    for i in range(n):
-        ___ i * i`,
-      blanks: ['yield'],
-      solution: 'def squares(n):\n    for i in range(n):\n        yield i * i',
-      explanation:
-        'yield turns a function into a generator. Calling the function returns a generator object that produces values lazily. return ends iteration; yield suspends and resumes.',
-      hints: ['Five letters; same word as the verb meaning "produce".'],
-      tags: ['functions', 'generator', 'yield'],
-      concepts: ['py-generator-yield'],
-    },
-  {
-      id: 'py-functions-cloze-7',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question:
-        'Fill in the functools tool that pre-fills arguments to a function.',
-      template: `from functools import ___
-
-def power(base, exp):
-    return base ** exp
-
-square = ___(power, exp=2)`,
-      blanks: ['partial', 'partial'],
-      solution:
-        'from functools import partial\n\ndef power(base, exp):\n    return base ** exp\n\nsquare = partial(power, exp=2)',
-      explanation:
-        'functools.partial returns a new callable with some arguments pre-bound. Pass the function (uncalled) plus the args/kwargs to fix.',
-      hints: ['Seven letters; same as the adjective for "incomplete".'],
-      tags: ['functions', 'partial'],
-      concepts: ['py-functools-cache-partial'],
-    },
-  {
-      id: 'py-functions-cloze-8',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question:
-        'Fill in the functools decorator that memoizes a function.',
-      template: `from functools import ___
-
-@___(maxsize=None)
-def fib(n):
-    if n < 2:
-        return n
-    return fib(n - 1) + fib(n - 2)`,
-      blanks: ['lru_cache', 'lru_cache'],
-      solution:
-        'from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)',
-      explanation:
-        'lru_cache memoizes calls keyed by argument tuples. maxsize=None means unbounded. functools.cache (3.9+) is shorthand for lru_cache(maxsize=None).',
-      hints: ['Three letters + underscore + word: "lru" + "_cache".'],
-      tags: ['functions', 'lru_cache', 'memoization'],
-      concepts: ['py-functools-cache-partial'],
-    },
-  {
       id: 'py-functions-cloze-9',
       type: QuestionType.CLOZE_CODE,
       difficulty: Difficulty.ADVANCED,
@@ -476,66 +407,6 @@ def fib(n):
       concepts: ['py-function-as-value'],
     },
   {
-      id: 'py-functions-parsons-7',
-      type: QuestionType.PARSONS,
-      difficulty: Difficulty.ADVANCED,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question:
-        'Build a generator function `squares(n)` that lazily yields `i * i` for each `i` in `0..n-1` using `yield` (no list built internally). Then drive it: loop over `squares(4)` and print each value on its own line.',
-      correctOrder: [
-        'def squares(n):',
-        '    for i in range(n):',
-        '        yield i * i',
-        '',
-        'for s in squares(4):',
-        '    print(s)',
-      ],
-      distractorLines: [
-        '    return i * i',
-        'def squares(n):',
-        '    return [i * i for i in range(n)]',
-      ],
-      solution:
-        'def squares(n):\n    for i in range(n):\n        yield i * i\n\nfor s in squares(4):\n    print(s)',
-      explanation:
-        'A function with yield is a GENERATOR — calling it returns a generator object that lazily produces values. return inside a generator stops iteration (StopIteration); using return INSTEAD of yield makes it a regular function.',
-      hints: ['yield makes it a generator; return ends iteration.'],
-      tags: ['functions', 'generator', 'yield'],
-      concepts: ['py-generator-yield'],
-    },
-  {
-      id: 'py-functions-parsons-8',
-      type: QuestionType.PARSONS,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question:
-        'Use functools.partial to fix the exp argument of power at 2, making a square function, then print square(5).',
-      correctOrder: [
-        'from functools import partial',
-        '',
-        'def power(base, exp):',
-        '    return base ** exp',
-        '',
-        'square = partial(power, exp=2)',
-        'print(square(5))',
-      ],
-      distractorLines: [
-        'square = partial(power(exp=2))',
-        'square = power.partial(exp=2)',
-      ],
-      solution:
-        'from functools import partial\n\ndef power(base, exp):\n    return base ** exp\n\nsquare = partial(power, exp=2)\nprint(square(5))',
-      explanation:
-        'functools.partial pre-fills some arguments and returns a new callable. Pass the function FIRST (uncalled), then the args to fix. partial(power(exp=2)) would call power with no `base`, raising TypeError immediately.',
-      hints: ['Pass the function uncalled, then the args to bind.'],
-      tags: ['functions', 'partial', 'functools'],
-      concepts: ['py-functools-cache-partial'],
-    },
-  {
       id: 'py-functions-parsons-9',
       type: QuestionType.PARSONS,
       difficulty: Difficulty.ADVANCED,
@@ -560,38 +431,6 @@ def fib(n):
       hints: ['Default args are bound at definition time — use that to freeze loop vars.'],
       tags: ['functions', 'closure', 'late-binding'],
       concepts: ['py-closure-capture'],
-    },
-  {
-      id: 'py-functions-parsons-10',
-      type: QuestionType.PARSONS,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question:
-        'Use functools.lru_cache to memoize a recursive Fibonacci function.',
-      correctOrder: [
-        'from functools import lru_cache',
-        '',
-        '@lru_cache(maxsize=None)',
-        'def fib(n):',
-        '    if n < 2:',
-        '        return n',
-        '    return fib(n - 1) + fib(n - 2)',
-        '',
-        'print(fib(20))',
-      ],
-      distractorLines: [
-        'lru_cache(maxsize=None)',
-        '    return fib(n - 1) + fib(n - 1)',
-      ],
-      solution:
-        'from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(20))',
-      explanation:
-        'lru_cache memoizes calls keyed by their arguments, so each fib(n) is computed once. It must be applied with @ directly above the def: a bare `lru_cache(maxsize=None)` line just builds a decorator and throws it away, leaving fib uncached. The recursive case adds fib(n - 1) and fib(n - 2), not fib(n - 1) twice. functools.cache (3.9+) is shorthand for lru_cache(maxsize=None).',
-      hints: ['Apply with parens for the explicit form: @lru_cache(maxsize=None).'],
-      tags: ['functions', 'lru_cache', 'memoization'],
-      concepts: ['py-functools-cache-partial'],
     },
   {
       id: 'py-functions-predict-1',
@@ -685,36 +524,6 @@ print(a(), a(), b())`,
       concepts: ['py-closure-capture'],
     },
   {
-      id: 'py-functions-predict-5',
-      type: QuestionType.PREDICT_OUTPUT,
-      difficulty: Difficulty.ADVANCED,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
-      code: `def gen():
-    print("start")
-    yield 1
-    print("middle")
-    yield 2
-    print("end")
-
-g = gen()
-print("before")
-print(next(g))
-print(next(g))`,
-      expectedOutput: `before
-start
-1
-middle
-2`,
-      explanation:
-        'Generator functions don\'t run their body when called — they return a generator object. Each next() runs UP TO the next yield. So "before" prints first, then next() runs from start through the first yield (printing "start", then 1). Second next() resumes after the yield, prints "middle", yields 2.',
-      hints: ['Generators run lazily; next() advances to the next yield.'],
-      tags: ['functions', 'generator', 'yield'],
-      concepts: ['py-generator-yield'],
-    },
-  {
       id: 'py-functions-predict-6',
       type: QuestionType.PREDICT_OUTPUT,
       difficulty: Difficulty.INTERMEDIATE,
@@ -736,30 +545,6 @@ print(f(c=5, a=1, b=2))`,
       hints: ['Default args fill gaps; keyword args bind by name.'],
       tags: ['functions', 'defaults', 'keyword-args'],
       concepts: ['py-default-arg-evaluation', 'py-args-kwargs'],
-    },
-  {
-      id: 'py-functions-predict-7',
-      type: QuestionType.PREDICT_OUTPUT,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PY_FUNCTIONS,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
-      code: `from functools import partial
-
-def greet(greeting, name):
-    return f"{greeting}, {name}!"
-
-hi = partial(greet, "Hi")
-print(hi("Alice"))
-print(hi("Bob"))`,
-      expectedOutput: `Hi, Alice!
-Hi, Bob!`,
-      explanation:
-        'partial pre-binds "Hi" as the first arg. Calling hi(name) is equivalent to greet("Hi", name). The resulting callable can be called multiple times with different remaining args.',
-      hints: ['partial pre-fills leading args; remaining args go on the call site.'],
-      tags: ['functions', 'partial'],
-      concepts: ['py-functools-cache-partial'],
     },
   {
       id: 'py-functions-predict-8',

@@ -1075,4 +1075,139 @@ print(____(c.____, 2))`,
       tags: ['functools', 'cached_property', 'lazy', 'classes'],
       concepts: ['py-functools-cache-partial', 'py-class-instance-distinction'],
     },
+  {
+      id: 'py-functions-cloze-7',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_FUNCTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the functools tool that pre-fills arguments to a function.',
+      template: `from functools import ___
+
+def power(base, exp):
+    return base ** exp
+
+square = ___(power, exp=2)`,
+      blanks: ['partial', 'partial'],
+      solution:
+        'from functools import partial\n\ndef power(base, exp):\n    return base ** exp\n\nsquare = partial(power, exp=2)',
+      explanation:
+        'functools.partial returns a new callable with some arguments pre-bound. Pass the function (uncalled) plus the args/kwargs to fix.',
+      hints: ['Seven letters; same as the adjective for "incomplete".'],
+      tags: ['functions', 'partial'],
+      concepts: ['py-functools-cache-partial'],
+    },
+  {
+      id: 'py-functions-cloze-8',
+      type: QuestionType.CLOZE_CODE,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_FUNCTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Fill in the functools decorator that memoizes a function.',
+      template: `from functools import ___
+
+@___(maxsize=None)
+def fib(n):
+    if n < 2:
+        return n
+    return fib(n - 1) + fib(n - 2)`,
+      blanks: ['lru_cache', 'lru_cache'],
+      solution:
+        'from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)',
+      explanation:
+        'lru_cache memoizes calls keyed by argument tuples. maxsize=None means unbounded. functools.cache (3.9+) is shorthand for lru_cache(maxsize=None).',
+      hints: ['Three letters + underscore + word: "lru" + "_cache".'],
+      tags: ['functions', 'lru_cache', 'memoization'],
+      concepts: ['py-functools-cache-partial'],
+    },
+  {
+      id: 'py-functions-predict-7',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_FUNCTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'What does this code print?',
+      code: `from functools import partial
+
+def greet(greeting, name):
+    return f"{greeting}, {name}!"
+
+hi = partial(greet, "Hi")
+print(hi("Alice"))
+print(hi("Bob"))`,
+      expectedOutput: `Hi, Alice!
+Hi, Bob!`,
+      explanation:
+        'partial pre-binds "Hi" as the first arg. Calling hi(name) is equivalent to greet("Hi", name). The resulting callable can be called multiple times with different remaining args.',
+      hints: ['partial pre-fills leading args; remaining args go on the call site.'],
+      tags: ['functions', 'partial'],
+      concepts: ['py-functools-cache-partial'],
+    },
+  {
+      id: 'py-functions-parsons-8',
+      type: QuestionType.PARSONS,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_FUNCTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Use functools.partial to fix the exp argument of power at 2, making a square function, then print square(5).',
+      correctOrder: [
+        'from functools import partial',
+        '',
+        'def power(base, exp):',
+        '    return base ** exp',
+        '',
+        'square = partial(power, exp=2)',
+        'print(square(5))',
+      ],
+      distractorLines: [
+        'square = partial(power(exp=2))',
+        'square = power.partial(exp=2)',
+      ],
+      solution:
+        'from functools import partial\n\ndef power(base, exp):\n    return base ** exp\n\nsquare = partial(power, exp=2)\nprint(square(5))',
+      explanation:
+        'functools.partial pre-fills some arguments and returns a new callable. Pass the function FIRST (uncalled), then the args to fix. partial(power(exp=2)) would call power with no `base`, raising TypeError immediately.',
+      hints: ['Pass the function uncalled, then the args to bind.'],
+      tags: ['functions', 'partial', 'functools'],
+      concepts: ['py-functools-cache-partial'],
+    },
+  {
+      id: 'py-functions-parsons-10',
+      type: QuestionType.PARSONS,
+      difficulty: Difficulty.INTERMEDIATE,
+      topic: Topic.PY_FUNCTOOLS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question:
+        'Use functools.lru_cache to memoize a recursive Fibonacci function.',
+      correctOrder: [
+        'from functools import lru_cache',
+        '',
+        '@lru_cache(maxsize=None)',
+        'def fib(n):',
+        '    if n < 2:',
+        '        return n',
+        '    return fib(n - 1) + fib(n - 2)',
+        '',
+        'print(fib(20))',
+      ],
+      distractorLines: [
+        'lru_cache(maxsize=None)',
+        '    return fib(n - 1) + fib(n - 1)',
+      ],
+      solution:
+        'from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(20))',
+      explanation:
+        'lru_cache memoizes calls keyed by their arguments, so each fib(n) is computed once. It must be applied with @ directly above the def: a bare `lru_cache(maxsize=None)` line just builds a decorator and throws it away, leaving fib uncached. The recursive case adds fib(n - 1) and fib(n - 2), not fib(n - 1) twice. functools.cache (3.9+) is shorthand for lru_cache(maxsize=None).',
+      hints: ['Apply with parens for the explicit form: @lru_cache(maxsize=None).'],
+      tags: ['functions', 'lru_cache', 'memoization'],
+      concepts: ['py-functools-cache-partial'],
+    },
 ];
