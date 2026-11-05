@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import * as monaco from 'monaco-editor';
 import { loader } from '@monaco-editor/react';
 // Self-hosted fonts — keep the app running fully offline.
 import '@fontsource/inter/400.css';
@@ -15,9 +14,10 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-// Use the bundled monaco-editor instead of the default jsdelivr CDN, so the
-// editor works with no network access (and starts faster after the first build).
-loader.config({ monaco });
+// Serve monaco-editor's prebuilt bundle from the app (public/monaco/vs, copied by scripts/copy-monaco.js)
+// instead of the default jsdelivr CDN, so the editor works with no network access.
+// Importing 'monaco-editor' here instead pulled ~2,200 modules through webpack and ran the build out of memory.
+loader.config({ paths: { vs: `${process.env.PUBLIC_URL}/monaco/vs` } });
 
 // Suppress Monaco Editor hit-test errors (known bug with text selection/copy)
 const originalError = window.onerror;

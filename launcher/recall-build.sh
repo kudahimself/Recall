@@ -37,7 +37,12 @@ touch "$stamp"
 
 fail() { echo "$(date -Is) build failed: $1" >>"$LOG"; rm -rf "$APP/build.tmp"; echo failed > "$STATE/build.status"; exit 1; }
 
-[ -d "$APP/node_modules" ] || (cd "$APP" && npm install >>"$LOG" 2>&1) || fail "npm install"
+# Reinstall whenever the lockfile changed since the last install (npm writes node_modules/.package-lock.json on install),
+# so a pulled dependency change does not break the build with "Module not found".
+if [ ! -d "$APP/node_modules" ] || [ "$APP/package-lock.json" -nt "$APP/node_modules/.package-lock.json" ]; then
+  echo "$(date -Is) dependencies changed: npm ci" >>"$LOG"
+  (cd "$APP" && npm ci >>"$LOG" 2>&1) || fail "npm ci"
+fi
 (cd "$APP" && CI=false BUILD_PATH=build.tmp nice -n 10 npm run build >>"$LOG" 2>&1) || fail "npm run build"
 [ -f "$APP/build.tmp/index.html" ] || fail "no index.html produced"
 

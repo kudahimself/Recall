@@ -16,16 +16,21 @@ setup() { # fresh tree; fake npm writes $BUILD_PATH/index.html unless FAKE_NPM_F
   echo src > "$T/tree/app/src/a.ts"; echo '{}' > "$T/tree/app/package.json"
   cat > "$T/bin/npm" <<'NPM'
 #!/usr/bin/env bash
+if [ "$1" = ci ]; then # fake `npm ci`: logged separately; marks the install like npm does, unless FAKE_NPM_CI_FAIL=1
+  echo ci >> "$FAKE_NPM_CI_LOG"; [ "${FAKE_NPM_CI_FAIL:-0}" = 1 ] && exit 1
+  touch node_modules/.package-lock.json; exit 0
+fi
 echo run >> "$FAKE_NPM_LOG"
 sleep "${FAKE_NPM_SLEEP:-0}"
 [ "${FAKE_NPM_FAIL:-0}" = 1 ] && { rm -rf "$BUILD_PATH"; exit 1; }
 mkdir -p "$BUILD_PATH"; echo "<html>$FAKE_NPM_TAG</html>" > "$BUILD_PATH/index.html"
 NPM
-  chmod +x "$T/bin/npm"; : > "$T/npm.log"
-  export PATH="$T/bin:$PATH" XDG_STATE_HOME="$T/state" FAKE_NPM_LOG="$T/npm.log" FAKE_NPM_TAG=new FAKE_NPM_FAIL=0 FAKE_NPM_SLEEP=0
+  chmod +x "$T/bin/npm"; : > "$T/npm.log"; : > "$T/npm-ci.log"
+  export PATH="$T/bin:$PATH" XDG_STATE_HOME="$T/state" FAKE_NPM_LOG="$T/npm.log" FAKE_NPM_CI_LOG="$T/npm-ci.log" FAKE_NPM_TAG=new FAKE_NPM_FAIL=0 FAKE_NPM_SLEEP=0 FAKE_NPM_CI_FAIL=0
 }
 build() { bash "$T/tree/launcher/recall-build.sh"; }
 runs() { wc -l < "$T/npm.log" | tr -d ' '; }
+cis() { wc -l < "$T/npm-ci.log" | tr -d ' '; }
 status() { cat "$T/state/recall/build.status" 2>/dev/null; }
 good() { mkdir -p "$T/tree/app/build"; echo "<html>old</html>" > "$T/tree/app/build/index.html"; touch -d '1 hour ago' "$T/tree/app/build/index.html"; }
 
@@ -48,6 +53,19 @@ build; check "failed rebuild: not retried for 30 min while a good build exists" 
 setup; FAKE_NPM_FAIL=1 build
 check "failed first build: no build, status failed" "$([ -e "$T/tree/app/build" ] && echo present || echo absent)$(status)" "absentfailed"
 build; check "failed first build: retried" "$(runs)" "2"
+
+setup; echo '{}' > "$T/tree/app/package-lock.json"; touch -d '1 hour ago' "$T/tree/app/node_modules/.package-lock.json"; build
+check "lockfile newer than install: npm ci, then build" "$(cis)$(runs)$(status)" "11ok"
+check "lockfile newer than install: logged" "$(grep -c 'dependencies changed: npm ci' "$T/state/recall/server.log")" "1"
+touch "$T/tree/app/src/a.ts"; build
+check "lockfile older than install: no npm ci" "$(cis)$(runs)" "12"
+
+setup; echo '{}' > "$T/tree/app/package-lock.json"; touch -d '2 hours ago' "$T/tree/app/node_modules/.package-lock.json"; good; touch "$T/tree/app/src/a.ts"; FAKE_NPM_CI_FAIL=1 build
+check "failed npm ci: no build, last good build kept" "$(runs)$(cat "$T/tree/app/build/index.html")$(status)" "0<html>old</html>failed"
+check "failed npm ci: logged" "$(grep -c 'build failed: npm ci' "$T/state/recall/server.log")" "1"
+
+setup; rm -rf "$T/tree/app/node_modules"; build
+check "no node_modules: npm ci" "$(cis)" "1"
 
 setup; mkdir -p "$T/tree/app/build.old"; echo "<html>old</html>" > "$T/tree/app/build.old/index.html"; touch -d '2 hours ago' "$T/tree/app/src/a.ts" "$T/tree/app/package.json"; build
 check "interrupted swap: build.old restored" "$(cat "$T/tree/app/build/index.html")$(runs)" "<html>old</html>0"

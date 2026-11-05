@@ -13,6 +13,9 @@ app/build/
 app/build.tmp/
 app/build.old/
 
+# monaco-editor's prebuilt bundle, copied from node_modules by app/scripts/copy-monaco.js
+app/public/monaco/
+
 # misc
 .DS_Store
 Thumbs.db
