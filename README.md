@@ -79,6 +79,7 @@ A double-click "Recall" icon on the Windows Desktop that starts a production bui
   If nothing answers on the port it starts the server hidden and opens a normal Firefox window (default profile).
   The server answers immediately and never waits for a build: it serves the last good `app/build`, or a "Recall is building" page that refreshes itself into the app when no build exists yet (a few minutes, first time only).
   When the sources are newer than `app/build`, `launcher/recall-build.sh` rebuilds in the background into `app/build.tmp` and swaps it in only if the build succeeds, so the last good build is never deleted and the new one shows on the next load.
+  Before building it runs `npm ci` when `app/package-lock.json` is newer than the last install, so pulled dependency changes install themselves.
   Only one build runs at a time.
   Launching again while it runs just opens Firefox.
   Tests: `launcher/test/run.sh`.
