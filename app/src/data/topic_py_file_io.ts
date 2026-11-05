@@ -66,7 +66,7 @@ export const py_file_io_questions: Question[] = [
       starterCode: `import csv\n\n`,
       testCases: [{ input: 'CSV file', expectedOutput: 'csv.DictReader with context manager', description: 'Should read CSV as dicts' }],
       solution: `import csv\n\nwith open("employees.csv", "r") as f:\n    reader = csv.DictReader(f)\n    for row in reader:\n        print(row)`,
-      explanation: 'csv.DictReader uses the first row as headers and returns each row as an OrderedDict. row["name"] accesses fields by column name. csv.reader returns lists instead. csv.DictWriter writes dicts to CSV.',
+      explanation: 'csv.DictReader uses the first row as headers and returns each row as a dict (an OrderedDict before Python 3.8). row["name"] accesses fields by column name. csv.reader returns lists instead. csv.DictWriter writes dicts to CSV.',
       hints: ['DictReader uses header row as keys', 'Iterate over reader for rows', 'Each row is a dictionary'],
       tieredHints: {
         apiSignature: 'csv.DictReader(f, fieldnames=None, restkey=None, restval=None)',
@@ -118,7 +118,7 @@ with open("config.json", "____") as f:
       question: 'Use pathlib to: create a Path to "data/reports", check if it exists, create it if not (including parents), and list all .csv files in it.',
       starterCode: `from pathlib import Path\n\n`,
       testCases: [{ input: 'pathlib operations', expectedOutput: 'Path(), exists(), mkdir(parents=True), glob("*.csv")', description: 'Should use pathlib' }],
-      solution: `from pathlib import Path\n\nreports_dir = Path("data/reports")\n\nif not reports_dir.exists():\n    reports_dir.mkdir(parents=True, exist_ok=True)\n\ncsv_files = list(reports_dir.glob("*.csv"))`,
+      solution: `from pathlib import Path\n\nreports_dir = Path("data/reports")\n\nif not reports_dir.exists():\n    reports_dir.mkdir(parents=True, exist_ok=True)\n\ncsv_files = list(reports_dir.glob("*.csv"))\n# OR\nfrom pathlib import Path\n\nreports_dir = Path("data/reports")\n\nif not reports_dir.exists():\n    reports_dir.mkdir(parents=True)\n\ncsv_files = list(reports_dir.glob("*.csv"))`,
       explanation: 'pathlib is the modern way to handle file paths (replaces os.path). Path objects support / operator: Path("data") / "file.txt". mkdir(parents=True) creates parent dirs. glob() finds files matching a pattern. exist_ok=True prevents errors if dir exists.',
       hints: ['Path() creates path objects', 'mkdir(parents=True) creates parent dirs', 'glob("*.csv") finds matching files'],
       tieredHints: {
@@ -145,7 +145,7 @@ csv_files = list(reports_dir.____("*.csv"))`,
       question: 'Read a file "log.txt" line by line and print only lines that contain the word "ERROR".',
       starterCode: `# Filter lines\n`,
       testCases: [{ input: 'log file', expectedOutput: 'iterate over file, check "ERROR" in line', description: 'Should filter lines' }],
-      solution: `with open("log.txt", "r") as f:\n    for line in f:\n        if "ERROR" in line:\n            print(line.strip())`,
+      solution: `with open("log.txt", "r") as f:\n    for line in f:\n        if "ERROR" in line:\n            print(line.strip())\n# OR\nwith open("log.txt", "r") as f:\n    for line in f:\n        if "ERROR" in line:\n            print(line.rstrip())\n# OR\nwith open("log.txt", "r") as f:\n    for line in f:\n        if "ERROR" in line:\n            print(line, end="")`,
       explanation: 'Iterating over a file object reads one line at a time — memory efficient for large files (unlike f.read() which loads everything). strip() removes trailing newline. "in" checks for substring presence.',
       hints: ['for line in file iterates line by line', 'Memory efficient for large files', 'strip() removes trailing whitespace/newlines'],
       tieredHints: {
@@ -168,7 +168,7 @@ csv_files = list(reports_dir.____("*.csv"))`,
       question:
         'Assume "data.txt" contains "line1\\nline2\\nline3". What does this code print?',
       code: `with open("data.txt") as f:
-      print(f.read())`,
+    print(f.read())`,
       expectedOutput: `line1
 line2
 line3`,
@@ -188,9 +188,9 @@ line3`,
       question:
         'Assume "data.txt" contains "line1\\nline2\\n". What does this code print?',
       code: `with open("data.txt") as f:
-      print(repr(f.readline()))
-      print(repr(f.readline()))
-      print(repr(f.readline()))`,
+    print(repr(f.readline()))
+    print(repr(f.readline()))
+    print(repr(f.readline()))`,
       expectedOutput: `'line1\\n'
 'line2\\n'
 ''`,
@@ -210,7 +210,7 @@ line3`,
       question:
         'Assume "data.txt" contains "a\\nb\\nc\\n". What does this code print?',
       code: `with open("data.txt") as f:
-      print(f.readlines())`,
+    print(f.readlines())`,
       expectedOutput: `['a\\n', 'b\\n', 'c\\n']`,
       explanation:
         'readlines() returns a LIST of strings, each ending in \\n (the trailing newline is preserved). For large files, iterating the file directly (`for line in f`) is more memory-efficient.',
@@ -226,7 +226,7 @@ line3`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Assume "data.txt" contains "AAA". What does the FILE contain after this code runs?',
+        'Assume "data.txt" contains "AAA". What does this code print?',
       code: `with open("data.txt", "w") as f:
     f.write("BBB")
 with open("data.txt") as f:
@@ -246,7 +246,7 @@ with open("data.txt") as f:
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Assume "data.txt" contains "AAA". What does the FILE contain after this code runs?',
+        'Assume "data.txt" contains "AAA". What does this code print?',
       code: `with open("data.txt", "a") as f:
     f.write("BBB")
 with open("data.txt") as f:
@@ -367,6 +367,14 @@ print(repr(rest))`,
 
 with open("notes.txt", "w") as f:
     f.writelines(lines)
+
+with open("notes.txt", "r") as f:
+    print(f.read())
+# OR
+with open("notes.txt", "w") as f:
+    f.write("Line one\\n")
+    f.write("Line two\\n")
+    f.write("Line three\\n")
 
 with open("notes.txt", "r") as f:
     print(f.read())`,

@@ -25,7 +25,7 @@ export const py_error_handling_questions: Question[] = [
 # __init__(self, amount, balance): expose both as attributes, and make str(err) match the spec
 `,
       testCases: [{ input: 'custom exception', expectedOutput: 'class InsufficientFundsError(Exception)', description: 'Should create custom exception' }],
-      solution: `class InsufficientFundsError(Exception):\n    def __init__(self, amount, balance):\n        self.amount = amount\n        self.balance = balance\n        super().__init__(f"Cannot withdraw {amount}: only {balance} available")`,
+      solution: `class InsufficientFundsError(Exception):\n    def __init__(self, amount, balance):\n        self.amount = amount\n        self.balance = balance\n        super().__init__(f"Cannot withdraw {amount}: only {balance} available")\n# OR\nclass InsufficientFundsError(Exception):\n    def __init__(self, amount, balance):\n        self.amount = amount\n        self.balance = balance\n\n    def __str__(self):\n        return f"Cannot withdraw {self.amount}: only {self.balance} available"`,
       explanation: 'Custom exceptions inherit from Exception. Call super().__init__(message) to set the error message. Store extra context as attributes (amount, balance) for programmatic access in the except block.',
       hints: ['Inherit from Exception', 'super().__init__(message) for error text', 'Store context as attributes'],
       tieredHints: {
@@ -77,12 +77,12 @@ export const py_error_handling_questions: Question[] = [
       course: Course.BACKEND,
       question: 'Why should you avoid bare "except:" without specifying an exception type?',
       options: [
-        { id: 'a', text: 'It catches EVERYTHING including KeyboardInterrupt and SystemExit, making it impossible to stop the program. Always catch specific exceptions.', isCorrect: true },
-        { id: 'b', text: 'It is slower', isCorrect: false },
-        { id: 'c', text: 'It is deprecated', isCorrect: false },
-        { id: 'd', text: 'It causes memory leaks', isCorrect: false },
+        { id: 'a', text: 'It also catches KeyboardInterrupt and SystemExit, so Ctrl+C and sys.exit() can be swallowed', isCorrect: true },
+        { id: 'b', text: 'It only catches errors raised directly in the try block, not ones from functions it calls', isCorrect: false },
+        { id: 'c', text: 'It is a SyntaxError in Python 3: an except clause must name at least one type', isCorrect: false },
+        { id: 'd', text: 'It catches only built-in exceptions, so your own exception classes slip past it', isCorrect: false },
       ],
-      explanation: 'bare except: catches KeyboardInterrupt (Ctrl+C), SystemExit, GeneratorExit — things you should not catch. Use except Exception: to catch all "normal" errors. Better: catch specific exceptions like except ValueError, TypeError:',
+      explanation: 'A bare `except:` is valid syntax and catches every exception, from the try block and from anything it calls, built-in or custom. That includes KeyboardInterrupt (Ctrl+C) and SystemExit, which you almost never want to swallow. Use `except Exception:` to catch all "normal" errors, or better, name the specific ones: `except (ValueError, TypeError):`.',
       tags: ['exception', 'best-practice', 'bare-except', 'python'],
       concepts: ['py-exception-hierarchy'],
     },
@@ -93,31 +93,24 @@ export const py_error_handling_questions: Question[] = [
       topic: Topic.PY_ERROR_HANDLING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a function "retry" that takes a function and max_attempts (default 3). It calls the function, and if it raises an exception, retries up to max_attempts times before re-raising.',
-      starterCode: `import time
-
-
-def retry(func, max_attempts=3):
+      question: 'Write a function "retry" that takes a function and max_attempts (default 3). It calls the function (with no arguments) and returns its result. If the call raises an exception, it tries again, making at most max_attempts calls in total; if the last attempt also fails, it re-raises that exception.',
+      starterCode: `def retry(func, max_attempts=3):
     # Retry func up to max_attempts times before re-raising
     pass
 `,
       testCases: [{ input: 'failing function', expectedOutput: 'loop with try/except and re-raise', description: 'Should retry on failure' }],
-      solution: `import time\n\ndef retry(func, max_attempts=3):\n    for attempt in range(1, max_attempts + 1):\n        try:\n            return func()\n        except Exception as e:\n            if attempt == max_attempts:\n                raise\n            print(f"Attempt {attempt} failed: {e}. Retrying...")\n            time.sleep(1)`,
-      explanation: '"raise" without arguments re-raises the current exception. This retry pattern is used for network calls, database connections, etc. In production, use exponential backoff (time.sleep(2 ** attempt)) and the tenacity library.',
+      solution: `def retry(func, max_attempts=3):\n    for attempt in range(1, max_attempts + 1):\n        try:\n            return func()\n        except Exception:\n            if attempt == max_attempts:\n                raise\n# OR\ndef retry(func, max_attempts=3):\n    for attempt in range(max_attempts):\n        try:\n            return func()\n        except Exception:\n            if attempt == max_attempts - 1:\n                raise`,
+      explanation: '"raise" without arguments re-raises the current exception, keeping its traceback. A successful call returns straight out of the loop; a failed one loops again unless it was the last attempt. This retry pattern is used for network calls and database connections; in production you would also wait between attempts (for example time.sleep(2 ** attempt)) or use a library such as tenacity.',
       hints: ['Loop over attempts', '"raise" re-raises the current exception', 'Only retry if not the last attempt'],
       tieredHints: {
         apiSignature: 'range(start, stop, step=1) -> range',
-        skeleton: `import time
-
-def retry(func, max_attempts=3):
+        skeleton: `def retry(func, max_attempts=3):
     for attempt in ____(1, max_attempts + 1):
         try:
             return ____()
-        except Exception as e:
+        except Exception:
             if attempt == ____:
-                ____
-            print(f"Attempt {attempt} failed: {e}. Retrying...")
-            time.sleep(1)`,
+                ____`,
       },
       tags: ['retry', 'exception', 'pattern', 'python'],
       concepts: ['py-exception-hierarchy'],
@@ -130,8 +123,8 @@ def retry(func, max_attempts=3):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Write a function "safe_divide" that takes two numbers and returns their division. Handle ZeroDivisionError by returning None, and TypeError (non-numeric input) by returning None.',
-      starterCode: `# Define safe_divide(a, b) — return a / b inside a try, catch (ZeroDivisionError, TypeError) and return None
-  `,
+      starterCode: `# Define safe_divide(a, b)
+`,
       testCases: [
         {
           input: '10, 0',
@@ -139,7 +132,7 @@ def retry(func, max_attempts=3):
           description: 'Should handle division errors',
         },
       ],
-      solution: `def safe_divide(a, b):\n    try:\n        return a / b\n    except (ZeroDivisionError, TypeError):\n        return None`,
+      solution: `def safe_divide(a, b):\n    try:\n        return a / b\n    except (ZeroDivisionError, TypeError):\n        return None\n# OR\ndef safe_divide(a, b):\n    try:\n        return a / b\n    except ZeroDivisionError:\n        return None\n    except TypeError:\n        return None`,
       explanation: 'try/except catches specific exceptions. You can catch multiple exceptions with a tuple: except (Error1, Error2). Always catch specific exceptions — bare except: catches everything including KeyboardInterrupt, which is bad practice.',
       hints: ['Use try/except', 'Catch specific exceptions, not bare except', 'Tuple for multiple exception types'],
       tieredHints: {
@@ -359,7 +352,7 @@ ___:
       question:
         'Fill in the keyword that throws an exception.',
       template: `if not config:
-      ___ ValueError("missing config")`,
+    ___ ValueError("missing config")`,
       blanks: ['raise'],
       solution: 'if not config:\n    raise ValueError("missing config")',
       explanation:
@@ -384,7 +377,7 @@ except Exception ___ e:
       blanks: ['as'],
       solution: 'try:\n    risky()\nexcept Exception as e:\n    print(e)',
       explanation:
-        'as binds the exception instance to a local name (only valid inside the except block — auto-deleted at the end). The Python 2 form `except Exception, e` is a SyntaxError in Python 3.',
+        'as binds the exception instance to a local name (only valid inside the except block — auto-deleted at the end). The Python 2 form `except Exception, e` never binds e in Python 3: it is a SyntaxError before 3.14, and from 3.14 it means "catch Exception or e".',
       hints: ['Two letters; same word used in imports.'],
       tags: ['error-handling', 'as'],
       concepts: ['py-exception-hierarchy'],
@@ -421,7 +414,7 @@ except ValueError as e:
       question:
         'Fill in the base class so MyError inherits the exception protocol.',
       template: `class MyError(___):
-      pass`,
+    pass`,
       blanks: ['Exception'],
       solution: 'class MyError(Exception):\n    pass',
       explanation:
@@ -662,7 +655,7 @@ except Exception:
       solution:
         'try:\n    risky()\nexcept (ValueError, TypeError) as e:\n    print(f"input error: {e}")',
       explanation:
-        'A TUPLE of exception types catches any of them. The Python 2 syntax `except A, B` is invalid in Python 3 (it would mean "catch A as B"). List form is also wrong — must be a tuple.',
+        'A TUPLE of exception types catches any of them. Without the parentheses, `except ValueError, TypeError as e:` is a SyntaxError (the `as` form needs a parenthesized tuple). A list is also wrong: it fails with a TypeError when Python tries to match the exception.',
       hints: ['Tuple in parens; not commas without parens or square brackets.'],
       tags: ['error-handling', 'except-tuple'],
       concepts: ['py-exception-hierarchy'],
@@ -717,7 +710,7 @@ except Exception:
       solution:
         'try:\n    risky()\nexcept Exception as e:\n    print(type(e).__name__, str(e))',
       explanation:
-        'except <Type> as <name> binds the exception instance. The Python 2 form `except Exception, e` is invalid in Python 3. The instance is automatically deleted at the end of the except block (to avoid reference-cycle leaks).',
+        'except <Type> as <name> binds the exception instance. The Python 2 form `except Exception, e` never binds e in Python 3 (it is a SyntaxError before 3.14, and from 3.14 it means "catch Exception or e"). The instance is automatically deleted at the end of the except block (to avoid reference-cycle leaks).',
       hints: ['as binds the exception instance; the comma form is Python 2.'],
       tags: ['error-handling', 'as'],
       concepts: ['py-exception-hierarchy'],
@@ -884,7 +877,7 @@ except ValueError:
       topic: Topic.PY_ERROR_HANDLING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What does this code print?',
+      question: 'What does this code print to standard output? (Leave out the traceback, which goes to standard error.)',
       code: `try:
     raise ValueError("first")
 except ValueError as e:
@@ -1109,12 +1102,12 @@ except ____ as e:
       course: Course.BACKEND,
       question: 'What named attributes does an exception object have for accessing error details?',
       options: [
-        { id: 'a', text: 'Only `message` and `code`', isCorrect: false },
-        { id: 'b', text: '`args` (tuple of arguments), `__cause__`, `__context__`, and `__traceback__`', isCorrect: true },
-        { id: 'c', text: 'Only `__str__` and `__repr__`', isCorrect: false },
-        { id: 'd', text: '`text`, `line`, and `file`', isCorrect: false },
+        { id: 'a', text: '`message` (the error text), `code` (an error number) and `line` (where it was raised)', isCorrect: false },
+        { id: 'b', text: '`args` (the constructor arguments), `__cause__`, `__context__` and `__traceback__`', isCorrect: true },
+        { id: 'c', text: '`text`, `filename` and `lineno` on every exception, not only on SyntaxError', isCorrect: false },
+        { id: 'd', text: '`errno` and `strerror` on every exception, not only on OSError', isCorrect: false },
       ],
-      explanation: 'Exception objects have: `args` (tuple of all arguments passed to the constructor), `__cause__` (explicit chain from `raise X from Y`), `__context__` (implicit chain from exception raised in except block), `__traceback__` (the traceback object). For `ValueError("bad input")`, `e.args` would be `("bad input",)`.',
+      explanation: 'Exception objects have: `args` (tuple of all arguments passed to the constructor), `__cause__` (explicit chain from `raise X from Y`), `__context__` (implicit chain from exception raised in except block), `__traceback__` (the traceback object). For `ValueError("bad input")`, `e.args` would be `("bad input",)`. Python 3 exceptions have no `.message`; `filename` and `lineno` belong to SyntaxError, and `errno` and `strerror` to OSError.',
       hints: [
         '`e.args` gives you the arguments passed to the exception constructor',
         '`e.__traceback__` is a traceback object — pass it to `traceback` module',

@@ -20,7 +20,7 @@ export const py_functions_questions: Question[] = [
       topic: Topic.PY_FUNCTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a function "apply_discount" that takes a price and an optional discount percentage (default 10%). Return the discounted price.',
+      question: 'Write a function "apply_discount" that takes a price and an optional discount percentage (default 10, meaning 10%). Return the discounted price, so apply_discount(100) returns 90.0 and apply_discount(100, 20) returns 80.0.',
       starterCode: `def apply_discount(price, discount=`,
       testCases: [
         {
@@ -29,7 +29,7 @@ export const py_functions_questions: Question[] = [
           description: 'Should apply discount with default',
         },
       ],
-      solution: `def apply_discount(price, discount=10):\n    return price * (1 - discount / 100)`,
+      solution: `def apply_discount(price, discount=10):\n    return price * (1 - discount / 100)\n# OR\ndef apply_discount(price, discount=10):\n    return price - price * discount / 100`,
       explanation: 'Default parameter values make arguments optional. apply_discount(100) uses 10%, apply_discount(100, 20) uses 20%. IMPORTANT: never use mutable defaults (like def f(items=[]) — use None instead).',
       hints: ['Use = for default values in parameters', 'Never use mutable objects as defaults'],
       tieredHints: {
@@ -103,12 +103,12 @@ export const py_functions_questions: Question[] = [
       question:
         'Fill in the keyword that lets an inner function rebind a variable from the enclosing function scope.',
       template: `def make_counter():
-      count = 0
-      def inc():
-          ___ count
-          count += 1
-          return count
-      return inc`,
+    count = 0
+    def inc():
+        ___ count
+        count += 1
+        return count
+    return inc`,
       blanks: ['nonlocal'],
       solution:
         'def make_counter():\n    count = 0\n    def inc():\n        nonlocal count\n        count += 1\n        return count\n    return inc',
@@ -128,7 +128,7 @@ export const py_functions_questions: Question[] = [
       question:
         'Fill in the * and ** prefixes to accept variable positional and keyword args.',
       template: `def forward(___args, ___kwargs):
-      print(args, kwargs)`,
+    print(args, kwargs)`,
       blanks: ['*', '**'],
       solution: 'def forward(*args, **kwargs):\n    print(args, kwargs)',
       explanation:
@@ -165,7 +165,7 @@ export const py_functions_questions: Question[] = [
       question:
         'Fill in the separator that marks the following parameters as keyword-only.',
       template: `def connect(host, ___, port=5432, ssl=True):
-      pass`,
+    pass`,
       blanks: ['*'],
       solution: 'def connect(host, *, port=5432, ssl=True):\n    pass',
       explanation:
@@ -184,7 +184,7 @@ export const py_functions_questions: Question[] = [
       question:
         'Fill in the separator (Python 3.8+) that marks preceding params as positional-only.',
       template: `def divide(a, b, ___):
-      return a / b`,
+    return a / b`,
       blanks: ['/'],
       solution: 'def divide(a, b, /):\n    return a / b',
       explanation:
@@ -203,8 +203,8 @@ export const py_functions_questions: Question[] = [
       question:
         'Fill in the keyword that turns a function into a generator.',
       template: `def squares(n):
-      for i in range(n):
-          ___ i * i`,
+    for i in range(n):
+        ___ i * i`,
       blanks: ['yield'],
       solution: 'def squares(n):\n    for i in range(n):\n        yield i * i',
       explanation:
@@ -270,12 +270,12 @@ def fib(n):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the safe sentinel pattern: avoid mutable default args by using ___ and creating the list inside.',
+        'Fill in the sentinel default (used twice) that avoids the mutable-default trap; the list is then created inside the function.',
       template: `def add_item(item, items=___):
-      if items is ___:
-          items = []
-      items.append(item)
-      return items`,
+    if items is ___:
+        items = []
+    items.append(item)
+    return items`,
       blanks: ['None', 'None'],
       solution:
         'def add_item(item, items=None):\n    if items is None:\n        items = []\n    items.append(item)\n    return items',
@@ -513,7 +513,7 @@ def fib(n):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Use functools.partial to bind the first argument of a 2-arg function.',
+        'Use functools.partial to fix the exp argument of power at 2, making a square function, then print square(5).',
       correctOrder: [
         'from functools import partial',
         '',
@@ -582,13 +582,13 @@ def fib(n):
         'print(fib(20))',
       ],
       distractorLines: [
-        '@lru_cache',
+        'lru_cache(maxsize=None)',
         '    return fib(n - 1) + fib(n - 1)',
       ],
       solution:
         'from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(20))',
       explanation:
-        'lru_cache memoizes calls keyed by argument tuples. Decorator must be CALLED — @lru_cache without parens is a Python 3.8+ shortcut, but @lru_cache(maxsize=None) is the explicit canonical form. functools.cache (3.9+) is a sugar for lru_cache(maxsize=None).',
+        'lru_cache memoizes calls keyed by their arguments, so each fib(n) is computed once. It must be applied with @ directly above the def: a bare `lru_cache(maxsize=None)` line just builds a decorator and throws it away, leaving fib uncached. The recursive case adds fib(n - 1) and fib(n - 2), not fib(n - 1) twice. functools.cache (3.9+) is shorthand for lru_cache(maxsize=None).',
       hints: ['Apply with parens for the explicit form: @lru_cache(maxsize=None).'],
       tags: ['functions', 'lru_cache', 'memoization'],
       concepts: ['py-functools-cache-partial'],

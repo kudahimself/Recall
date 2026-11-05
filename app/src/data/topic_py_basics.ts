@@ -128,11 +128,11 @@ CREATE INDEX ____ ON orders(____, ____);`,
       question: 'What is the difference between a mutable and immutable type in Python?',
       options: [
         { id: 'a', text: 'Mutable types (list, dict, set) can be changed after creation. Immutable types (str, int, tuple, frozenset) cannot.', isCorrect: true },
-        { id: 'b', text: 'Mutable means faster', isCorrect: false },
-        { id: 'c', text: 'Immutable types use less memory', isCorrect: false },
-        { id: 'd', text: 'There is no difference', isCorrect: false },
+        { id: 'b', text: 'Mutable types (str, int, tuple) can be changed after creation. Immutable types (list, dict, set) cannot.', isCorrect: false },
+        { id: 'c', text: 'Mutable types can be reassigned to a new value; immutable types are constants that can never be reassigned.', isCorrect: false },
+        { id: 'd', text: 'Mutable types are copied when assigned to a new name; immutable types are shared between names.', isCorrect: false },
       ],
-      explanation: 'Lists, dicts, and sets can be modified in place (append, update, add). Strings, ints, tuples are immutable — operations create new objects. This matters for default arguments, dict keys (must be immutable), and thread safety.',
+      explanation: 'Lists, dicts, and sets can be modified in place (append, update, add). Strings, ints, tuples are immutable - operations create new objects. Any name can be reassigned (`s = s + "!"` just points s at a new string), so mutability is about changing the object itself, not the name. Assignment never copies either kind: `b = a` makes both names refer to the same object. This matters for default arguments, dict keys (must be immutable), and shared references.',
       tags: ['mutable', 'immutable', 'types', 'python'],
       concepts: ['py-mutable-vs-immutable'],
     },
@@ -152,7 +152,7 @@ CREATE INDEX ____ ON orders(____, ____);`,
           description: 'Should check palindrome case-insensitively',
         },
       ],
-      solution: `def is_palindrome(s):\n    s = s.lower()\n    return s == s[::-1]`,
+      solution: `def is_palindrome(s):\n    s = s.lower()\n    return s == s[::-1]\n# OR\ndef is_palindrome(s):\n    return s.lower() == s.lower()[::-1]`,
       tieredHints: {
         apiSignature: 's[start:stop:step] -> str',
         skeleton: `def ____(s):
@@ -278,7 +278,7 @@ ___ score ___ 70:
       question:
         'Fill in the loop construct and the function that yields the integers 0 through 4.',
       template: `___ i in ___(5):
-      print(i)`,
+    print(i)`,
       blanks: ['for', 'range'],
       solution: 'for i in range(5):\n    print(i)',
       explanation:
@@ -354,7 +354,7 @@ print(letters[___:___])`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the dict literal punctuation: the brace pair that creates the dict, and the separator between key and value.',
+        'Fill in the brace pair that creates this dict literal.',
       template: `person = ___"name": "Alice", "age": 30___
 print(person["name"])`,
       blanks: ['{', '}'],
@@ -373,7 +373,7 @@ print(person["name"])`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the comprehension keyword and the iteration source so squares contains [1, 4, 9, 16, 25].',
+        'Fill in the two keywords of the list comprehension so squares contains [1, 4, 9, 16, 25].',
       template: `squares = [n * n ___ n ___ range(1, 6)]
 print(squares)`,
       blanks: ['for', 'in'],
@@ -525,10 +525,10 @@ print(name.___())`,
         { id: 'a', text: 'print(f"Hello, {name}!")', isCorrect: true },
         { id: 'b', text: 'print("Hello, {name}!")', isCorrect: false, misconceptionTag: 'py-fstring-missing-prefix' },
         { id: 'c', text: 'print(f"Hello, {{name}}!")', isCorrect: false },
-        { id: 'd', text: 'print("Hello, " + name + "!")', isCorrect: false },
+        { id: 'd', text: 'print("Hello,", name, "!")', isCorrect: false },
       ],
       explanation:
-        'The f prefix turns a string into an f-string, enabling {name} to interpolate. Without the f, the literal text "Hello, {name}!" is printed. Doubled braces {{name}} produce literal braces around the word "name". Option D works too but uses concatenation, not interpolation — read the question carefully.',
+        'The f prefix turns a string into an f-string, enabling {name} to interpolate. Without the f, the literal text "Hello, {name}!" is printed. Doubled braces {{name}} produce literal braces around the word "name". Passing three separate arguments to print puts a space between each one, so that line prints "Hello, Alice !" with a space before the "!".',
       tags: ['fstring', 'interpolation'],
       concepts: ['py-string-formatting'],
     },
@@ -850,7 +850,7 @@ print(x / y)`,
       language: CodeLanguage.PYTHON,
       question: 'What does this code print?',
       code: `for i in range(3):
-      print(i)`,
+    print(i)`,
       expectedOutput: `0
 1
 2`,
@@ -1230,7 +1230,7 @@ print(len(person))`,
       topic: Topic.PY_BASICS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create three variables: `name` (a string), `age` (an integer), and `height` (a float). Then print them all on one line using an f-string in the format: `Name: Alice, Age: 30, Height: 1.75`',
+      question: 'Create three variables: `name` (a string), `age` (an integer), and `height` (a float). Give them the values Alice, 30 and 1.75, then print them all on one line using an f-string, exactly: `Name: Alice, Age: 30, Height: 1.75`',
       starterCode: `# Create three variables
 name =
 age =
@@ -1273,7 +1273,7 @@ print(____"Name: {____}, Age: {____}, Height: {____}")`,
       topic: Topic.PY_BASICS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Ask the user for their name using `input()`, then greet them. Since we can\'t use interactive input in tests, instead: set `name = "Bob"` directly, then print `Hello, Bob!`',
+      question: 'In a real program the name would come from `input()`. Here it is already set for you: `name = "Bob"`. Print a greeting that uses the `name` variable, so the output is `Hello, Bob!`',
       starterCode: `# Set name directly (simulating user input)
 name = "Bob"
 
@@ -1287,7 +1287,10 @@ name = "Bob"
         },
       ],
       solution: `name = "Bob"
-print(f"Hello, {name}!")`,
+print(f"Hello, {name}!")
+# OR
+name = "Bob"
+print("Hello, " + name + "!")`,
       tieredHints: {
         apiSignature: 'f"...{expr}..." -> str',
         skeleton: `name = "____"
@@ -1689,14 +1692,14 @@ print(____(0))`,
       difficulty: Difficulty.BEGINNER,
       topic: Topic.PY_BASICS,
       course: Course.BACKEND,
-      question: 'Which values are considered "falsy" in Python? (Select the best answer)',
+      question: 'Which list contains only values that are "falsy" in Python?',
       options: [
-        { id: 'a', text: 'Only `False` and `0`', isCorrect: false },
+        { id: 'a', text: '`False`, `0`, `None`, `"0"` (the string zero), `[0]` (a list holding 0)', isCorrect: false },
         { id: 'b', text: '`False`, `0`, `""` (empty string), `[]` (empty list), `None`', isCorrect: true },
-        { id: 'c', text: 'Only `False` and `None`', isCorrect: false },
-        { id: 'd', text: 'Any negative number', isCorrect: false },
+        { id: 'c', text: '`False`, `None`, `""`, `" "` (a single space), `-1`', isCorrect: false },
+        { id: 'd', text: '`False`, `0`, `[]`, `"False"` (the string), `None`', isCorrect: false },
       ],
-      explanation: 'In Python, these values are "falsy" (evaluate to False in boolean context): `False`, `0`, `0.0`, `""` (empty string), `[]` (empty list), `()` (empty tuple), `{}` (empty dict), `set()` (empty set), and `None`. Everything else is truthy. This lets you write `if my_list:` instead of `if len(my_list) > 0:`.',
+      explanation: 'In Python, these values are "falsy" (evaluate to False in boolean context): `False`, `0`, `0.0`, `""` (empty string), `[]` (empty list), `()` (empty tuple), `{}` (empty dict), `set()` (empty set), and `None`. Everything else is truthy, including `"0"`, `" "`, `"False"`, `[0]` and `-1`: a non-empty string or list is truthy whatever it holds, and any non-zero number is truthy. This lets you write `if my_list:` instead of `if len(my_list) > 0:`.',
       hints: [
         'Empty containers and zero values are falsy',
         '`None` is also falsy',
@@ -1820,7 +1823,17 @@ count = 1
       solution: `count = 1
 while count <= 5:
     print(count)
-    count += 1`,
+    count += 1
+# OR
+count = 1
+while count < 6:
+    print(count)
+    count += 1
+# OR
+count = 1
+while count <= 5:
+    print(count)
+    count = count + 1`,
       tieredHints: {
         apiSignature: 'while condition: ...',
         skeleton: `count = ____
@@ -1865,10 +1878,10 @@ while count ____ ____:
       course: Course.BACKEND,
       question: 'What does `continue` do inside a loop?',
       options: [
-        { id: 'a', text: 'Exits the loop immediately', isCorrect: false },
-        { id: 'b', text: 'Skips the rest of the current iteration and jumps to the next one', isCorrect: true },
-        { id: 'c', text: 'Restarts the loop from the beginning', isCorrect: false },
-        { id: 'd', text: 'Continues to the code after the loop', isCorrect: false },
+        { id: 'a', text: 'Ends the loop at once and runs the code after it, the same as `break`', isCorrect: false },
+        { id: 'b', text: 'Skips the rest of the current iteration and moves on to the next one', isCorrect: true },
+        { id: 'c', text: 'Goes back to the first item and starts the whole loop over again', isCorrect: false },
+        { id: 'd', text: 'Does nothing at all - it is a placeholder statement, like `pass`', isCorrect: false },
       ],
       explanation: '`continue` skips the remaining code in the current loop iteration and jumps directly to the next iteration. For example, to print only odd numbers: `if n % 2 == 0: continue` skips even numbers. The loop itself continues running — only the current iteration is interrupted.',
       hints: [
@@ -1917,11 +1930,11 @@ while count ____ ____:
         },
       ],
       solution: `for i in range(1, 11):
-      print(f"3 x {i} = {3 * i}")`,
+    print(f"3 x {i} = {3 * i}")`,
       tieredHints: {
         apiSignature: 'range(start, stop, step=1) -> range',
         skeleton: `for i in ____(1, ____):
-      ____(____"3 x {i} = {____ * i}")`,
+    ____(____"3 x {i} = {____ * i}")`,
       },
       explanation: '`range(1, 11)` generates numbers 1 through 10. Inside the loop, `i` takes each value in turn. The f-string `f"3 x {i} = {3 * i}"` formats the output. Note: `range(1, 11)` not `range(1, 10)` because the stop value is exclusive.',
       hints: [
@@ -1949,11 +1962,11 @@ while count ____ ____:
         },
       ],
       solution: `for n in range(2, 21, 2):
-      print(n)`,
+    print(n)`,
       tieredHints: {
         apiSignature: 'range(start, stop, step=1) -> range',
         skeleton: `for n in ____(____, ____, ____):
-      ____(n)`,
+    ____(n)`,
       },
       explanation: '`range(start, stop, step)` takes three arguments. `range(2, 21, 2)` starts at 2, goes up to (not including) 21, in steps of 2 — giving 2, 4, 6, ..., 20. Using a step in `range()` is more Pythonic than checking `if n % 2 == 0` inside the loop.',
       hints: [
@@ -2146,7 +2159,11 @@ quantity = 3
       solution: `price = 19.9
 quantity = 3
 total = price * quantity
-print(f"Total: €{total:.2f}")`,
+print(f"Total: €{total:.2f}")
+# OR
+price = 19.9
+quantity = 3
+print(f"Total: €{price * quantity:.2f}")`,
       tieredHints: {
         apiSignature: 'f"{value:.2f}" -> str',
         skeleton: `price = ____
@@ -2240,6 +2257,13 @@ print(____"Total: €{total:____}")`,
 
 print(is_palindrome("racecar"))
 print(is_palindrome("hello"))
+print(is_palindrome("Madam"))
+# OR
+def is_palindrome(word):
+    return word.lower() == word.lower()[::-1]
+
+print(is_palindrome("racecar"))
+print(is_palindrome("hello"))
 print(is_palindrome("Madam"))`,
       tieredHints: {
         apiSignature: 's[start:stop:step] -> str',
@@ -2287,6 +2311,12 @@ print(____("Madam"))`,
     for sublist in nested:
         result.extend(sublist)
     return result
+
+print(flatten([[1, 2], [3, 4], [5]]))
+print(flatten([[10, 20], [], [30]]))
+# OR
+def flatten(nested):
+    return [item for sublist in nested for item in sublist]
 
 print(flatten([[1, 2], [3, 4], [5]]))
 print(flatten([[10, 20], [], [30]]))`,

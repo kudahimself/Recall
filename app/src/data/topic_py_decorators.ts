@@ -40,7 +40,7 @@ export const py_decorators_questions: Question[] = [
       topic: Topic.PY_DECORATORS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a decorator "validate_types" that takes expected types as arguments and validates function arguments at runtime. Usage: @validate_types(int, int) on an add function.',
+      question: 'Write a decorator factory "validate_types" that takes the expected types as arguments and checks each positional argument at call time. If an argument is not an instance of its type, raise TypeError with the message `Expected <type name>, got <actual type name>` (e.g. `Expected int, got str`); otherwise call the function. Apply it as @validate_types(int, int) to an add(a, b) function.',
       starterCode: `def validate_types(*types):\n`,
       testCases: [{ input: 'type validation', expectedOutput: 'decorator factory with *types and isinstance checks', description: 'Should validate argument types' }],
       solution: `def validate_types(*types):\n    def decorator(func):\n        def wrapper(*args):\n            for arg, expected in zip(args, types):\n                if not isinstance(arg, expected):\n                    raise TypeError(f"Expected {expected.__name__}, got {type(arg).__name__}")\n            return func(*args)\n        return wrapper\n    return decorator\n\n@validate_types(int, int)\ndef add(a, b):\n    return a + b`,
@@ -60,7 +60,7 @@ export const py_decorators_questions: Question[] = [
       topic: Topic.PY_DECORATORS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a decorator "timer" that prints how long a function takes to execute. Use time.time() to measure elapsed time.',
+      question: 'Write a decorator "timer" that prints how long a function takes to execute and still returns the function\'s result. Use time.time() to measure elapsed time, and print it as `<function name> took <seconds>s` with 4 decimal places, e.g. `add took 0.0001s`.',
       starterCode: `import time\n\ndef timer(func):\n`,
       testCases: [
         {
@@ -87,10 +87,10 @@ export const py_decorators_questions: Question[] = [
       course: Course.BACKEND,
       question: 'What does the `@decorator_name` syntax above a function definition do?',
       options: [
-        { id: 'a', text: 'It wraps the function — Python rewrites `@decorator_name\\ndef foo(): ...` into `foo = decorator_name(foo)`.', isCorrect: true },
-        { id: 'b', text: 'It comments the function out so it does not run.', isCorrect: false },
-        { id: 'c', text: 'It marks the function as private to its module.', isCorrect: false },
-        { id: 'd', text: 'It is a type-hint annotation.', isCorrect: false },
+        { id: 'a', text: 'It replaces `foo` with `decorator_name(foo)` right after `def foo` runs.', isCorrect: true },
+        { id: 'b', text: 'It calls `decorator_name()` each time `foo` runs, but leaves the name `foo` bound to the original.', isCorrect: false },
+        { id: 'c', text: 'It marks `foo` as private to its module, so other files cannot import it.', isCorrect: false },
+        { id: 'd', text: 'It is a type annotation: tools read it, but Python ignores it at runtime.', isCorrect: false },
       ],
       explanation: '`@decorator_name` is syntactic sugar. Writing `@log` before `def foo(): ...` is exactly equivalent to writing `def foo(): ...` and then `foo = log(foo)`. The decorator is a function that takes a function and returns a (usually wrapped) function.',
       tags: ['decorator', 'syntax-sugar', 'beginner', 'python'],
@@ -121,7 +121,7 @@ export const py_decorators_questions: Question[] = [
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Fill in the symbol that applies a decorator and the keyword that returns the wrapper from log.',
+        'Fill in the keyword that returns the wrapper from log, and the symbol that applies log as a decorator.',
       template: `def log(fn):
     def wrapper(*args, **kwargs):
         return fn(*args, **kwargs)
@@ -174,9 +174,9 @@ def log(fn):
       question:
         'Fill in the wrapper signature so the decorator accepts any positional and keyword arguments.',
       template: `def log(fn):
-      def wrapper(___, ___):
-          return fn(*args, **kwargs)
-      return wrapper`,
+    def wrapper(___, ___):
+        return fn(*args, **kwargs)
+    return wrapper`,
       blanks: ['*args', '**kwargs'],
       solution:
         'def log(fn):\n    def wrapper(*args, **kwargs):\n        return fn(*args, **kwargs)\n    return wrapper',
@@ -196,12 +196,12 @@ def log(fn):
       question:
         'Fill in the missing layer of a parameterized decorator. repeat(n) takes the parameter; the missing function takes the wrapped function.',
       template: `def repeat(n):
-      def ___(fn):
-          def wrapper(*args, **kwargs):
-              for _ in range(n):
-                  fn(*args, **kwargs)
-          return wrapper
-      return decorator`,
+    def ___(fn):
+        def wrapper(*args, **kwargs):
+            for _ in range(n):
+                fn(*args, **kwargs)
+        return wrapper
+    return decorator`,
       blanks: ['decorator'],
       solution:
         'def repeat(n):\n    def decorator(fn):\n        def wrapper(*args, **kwargs):\n            for _ in range(n):\n                fn(*args, **kwargs)\n        return wrapper\n    return decorator',
@@ -221,12 +221,12 @@ def log(fn):
       question:
         'Fill in the dunder method that makes Counter instances callable when used as decorators.',
       template: `class Counter:
-      def __init__(self, fn):
-          self.fn = fn
-          self.count = 0
-      def ___(self, *args, **kwargs):
-          self.count += 1
-          return self.fn(*args, **kwargs)`,
+    def __init__(self, fn):
+        self.fn = fn
+        self.count = 0
+    def ___(self, *args, **kwargs):
+        self.count += 1
+        return self.fn(*args, **kwargs)`,
       blanks: ['__call__'],
       solution:
         'class Counter:\n    def __init__(self, fn):\n        self.fn = fn\n        self.count = 0\n    def __call__(self, *args, **kwargs):\n        self.count += 1\n        return self.fn(*args, **kwargs)',
@@ -257,6 +257,7 @@ ___
 def go():
     print("hi")`,
       blanks: ['@repeat(3)'],
+      blankAlternates: [['@repeat(n=3)']],
       solution:
         'def repeat(n):\n    def decorator(fn):\n        def wrapper(*args, **kwargs):\n            for _ in range(n):\n                fn(*args, **kwargs)\n        return wrapper\n    return decorator\n\n@repeat(3)\ndef go():\n    print("hi")',
       explanation:
@@ -275,10 +276,10 @@ def go():
       question:
         'Fill in the call inside wrapper so the decorator forwards both positional and keyword arguments AND returns the result.',
       template: `def log(fn):
-      def wrapper(*args, **kwargs):
-          print("calling")
-          ___ fn(*args, **kwargs)
-      return wrapper`,
+    def wrapper(*args, **kwargs):
+        print("calling")
+        ___ fn(*args, **kwargs)
+    return wrapper`,
       blanks: ['return'],
       solution:
         'def log(fn):\n    def wrapper(*args, **kwargs):\n        print("calling")\n        return fn(*args, **kwargs)\n    return wrapper',
@@ -298,12 +299,12 @@ def go():
       question:
         'Fill in the cache lookup so memo only computes when the key is missing.',
       template: `def memo(fn):
-      cache = {}
-      def wrapper(*args):
-          if args ___ cache:
-              cache[args] = fn(*args)
-          return cache[args]
-      return wrapper`,
+    cache = {}
+    def wrapper(*args):
+        if args ___ cache:
+            cache[args] = fn(*args)
+        return cache[args]
+    return wrapper`,
       blanks: ['not in'],
       solution:
         'def memo(fn):\n    cache = {}\n    def wrapper(*args):\n        if args not in cache:\n            cache[args] = fn(*args)\n        return cache[args]\n    return wrapper',
@@ -344,9 +345,9 @@ def go():
       question:
         'Fill in the unpacking syntax so wrapper forwards args and kwargs to fn.',
       template: `def trace(fn):
-      def wrapper(*args, **kwargs):
-          return fn(___args, ___kwargs)
-      return wrapper`,
+    def wrapper(*args, **kwargs):
+        return fn(___args, ___kwargs)
+    return wrapper`,
       blanks: ['*', '**'],
       solution:
         'def trace(fn):\n    def wrapper(*args, **kwargs):\n        return fn(*args, **kwargs)\n    return wrapper',
@@ -494,7 +495,7 @@ def go():
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Stack two decorators on greet — @log first, then @timer below it. Order matters: timer wraps log wraps greet.',
+        'Stack two decorators on greet so that timer wraps log, which wraps greet.',
       correctOrder: [
         '@timer',
         '@log',
@@ -552,7 +553,7 @@ def go():
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question:
-        'Build a memoization decorator that caches results in a dict keyed by the args tuple. Call fib(10).',
+        'Build a memoization decorator that caches results in a dict keyed by the args tuple.',
       correctOrder: [
         'def memo(fn):',
         '    cache = {}',
@@ -1051,6 +1052,34 @@ def flaky_function():
     return "Success"
 
 print(flaky_function())
+print(attempt)
+# OR
+import functools
+
+def retry(times):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt_number in range(times):
+                try:
+                    return func(*args, **kwargs)
+                except Exception:
+                    if attempt_number == times - 1:
+                        raise
+        return wrapper
+    return decorator
+
+attempt = 0
+
+@retry(3)
+def flaky_function():
+    global attempt
+    attempt += 1
+    if attempt < 3:
+        raise ValueError("Not ready yet")
+    return "Success"
+
+print(flaky_function())
 print(attempt)`,
       tieredHints: {
         apiSignature: 'range(start, stop, step=1) -> range',
@@ -1123,10 +1152,10 @@ print(fibonacci(30))`,
       course: Course.BACKEND,
       question: 'What is a decorator in Python?',
       options: [
-        { id: 'a', text: 'A special comment that documents what a function does', isCorrect: false },
-        { id: 'b', text: 'A way to convert a function into a class method', isCorrect: false },
-        { id: 'c', text: 'A function that wraps another function to add behavior without modifying it, applied with `@decorator_name` above a function definition', isCorrect: true },
-        { id: 'd', text: 'A keyword used to make variables private inside a class', isCorrect: false },
+        { id: 'a', text: 'A special comment, written with `@` above a function, that documents what it does', isCorrect: false },
+        { id: 'b', text: 'A tool that rewrites a function\'s source code in place when the module is imported', isCorrect: false },
+        { id: 'c', text: 'A function that takes a function and returns a wrapped version, applied with `@name` above a `def`', isCorrect: true },
+        { id: 'd', text: 'A keyword, written with `@`, that makes a function private to the module it is in', isCorrect: false },
       ],
       explanation: 'A decorator is a function that takes another function as input, adds some behavior, and returns a new function — all without modifying the original function\'s code. The `@decorator_name` syntax is shorthand for `func = decorator_name(func)`. Decorators are widely used in Python frameworks (e.g., `@app.route` in Flask, `@property` in classes).',
       hints: [
@@ -1169,7 +1198,18 @@ print(fibonacci(30))`,
 def greet():
     return "hello"
 
-print(greet())  # HELLO`,
+print(greet())  # HELLO
+# OR
+def uppercase(func):
+    def wrapper():
+        return func().upper()
+    return wrapper
+
+@uppercase
+def greet():
+    return "hello"
+
+print(greet())`,
       tieredHints: {
         apiSignature: 'str.upper() -> str',
         skeleton: `def uppercase(____):\n    def ____():\n        result = ____()\n        return result.____()\n    return ____\n\n@____\ndef ____():\n    return "____"\n\n____(greet())`,
