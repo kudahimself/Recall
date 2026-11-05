@@ -433,7 +433,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | ID | Difficulty | Topic | Source File | Status | Notes |
 |---|---|---|---|---|---|
 | `be-auth-2` | BEGINNER | `DJ_AUTH` | `topic_dj_auth.ts` | 🟢 Completed | |
-| `be-auth-3` | INTERMEDIATE | `DJ_AUTH` | `topic_dj_auth.ts` | 🟢 Completed | |
 | `dj-auth-adv-1` | ADVANCED | `DJ_AUTH` | `topic_dj_auth.ts` | 🟢 Completed | |
 | `dj-auth-adv-2` | ADVANCED | `DJ_AUTH` | `topic_dj_auth.ts` | 🟢 Completed | |
 | `dj-auth-adv-3` | ADVANCED | `DJ_AUTH` | `topic_dj_auth.ts` | 🟢 Completed | |
@@ -506,6 +505,7 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 |---|---|---|---|---|---|
 | `celery-drf-22` | BEGINNER | `DJ_CUSTOM_MANAGERS` | `topic_dj_custom_managers.ts` | 🟢 Completed | |
 | `celery-drf-23` | ADVANCED | `DJ_CUSTOM_MANAGERS` | `topic_dj_custom_managers.ts` | 🟢 Completed | |
+| `dj-orm-adv-3` | ADVANCED | `DJ_CUSTOM_MANAGERS` | `topic_dj_custom_managers.ts` | 🟢 Completed | |
 
 
 ### DEPLOYMENT (`topic_dj_deployment.ts`)
@@ -618,9 +618,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `dj-orm-2` | BEGINNER | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `dj-orm-adv-1` | ADVANCED | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `dj-orm-adv-2` | ADVANCED | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
-| `dj-orm-adv-3` | ADVANCED | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
-| `py-dj-orm-select-related` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
-| `py-dj-orm-prefetch` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `py-dj-orm-f` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `py-dj-orm-q` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `py-dj-orm-aggregate-annotate` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
@@ -629,7 +626,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `dj-orm-subquery-adv-1` | ADVANCED | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `dj-orm-exists-1` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 | `dj-orm-bulk-1` | INTERMEDIATE | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
-| `dj-orm-prefetch-obj-adv-1` | ADVANCED | `DJ_ORM` | `topic_dj_orm.ts` | 🟢 Completed | |
 
 
 ### ORM_MASTERY (`topic_dj_orm_mastery.ts`)
@@ -639,6 +635,9 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `dj-orm-mastery-window-1` | ADVANCED | `DJ_ORM_MASTERY` | `topic_dj_orm_mastery.ts` | 🟢 Completed | |
 | `dj-orm-mastery-lock-1` | ADVANCED | `DJ_ORM_MASTERY` | `topic_dj_orm_mastery.ts` | 🟢 Completed | |
 | `dj-orm-mastery-nplus1-1` | ADVANCED | `DJ_ORM_MASTERY` | `topic_dj_orm_mastery.ts` | 🟢 Completed | |
+| `py-dj-orm-select-related` | INTERMEDIATE | `DJ_ORM_MASTERY` | `topic_dj_orm_mastery.ts` | 🟢 Completed | |
+| `py-dj-orm-prefetch` | INTERMEDIATE | `DJ_ORM_MASTERY` | `topic_dj_orm_mastery.ts` | 🟢 Completed | |
+| `dj-orm-prefetch-obj-adv-1` | ADVANCED | `DJ_ORM_MASTERY` | `topic_dj_orm_mastery.ts` | 🟢 Completed | |
 
 
 ### PAGINATION_GENERICS (`topic_dj_pagination_generics.ts`)
@@ -647,6 +646,7 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 |---|---|---|---|---|---|
 | `celery-drf-13` | BEGINNER | `DJ_PAGINATION_GENERICS` | `topic_dj_pagination_generics.ts` | 🟢 Completed | |
 | `celery-drf-16` | INTERMEDIATE | `DJ_PAGINATION_GENERICS` | `topic_dj_pagination_generics.ts` | 🟢 Completed | |
+| `py-drf-pagination` | BEGINNER | `DJ_PAGINATION_GENERICS` | `topic_dj_pagination_generics.ts` | 🟢 Completed | |
 
 
 ### POSTGRES (`topic_dj_postgres.ts`)
@@ -679,13 +679,13 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `py-drf-serializer-validator` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `py-drf-method-field` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `py-drf-permission-class` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
-| `py-drf-pagination` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `py-drf-nested-serializer` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `dj-rest-gap-2` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `dj-drf-apiview-fbv-1` | BEGINNER | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `dj-drf-writeonly-1` | INTERMEDIATE | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `dj-drf-validate-1` | INTERMEDIATE | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 | `dj-drf-getserializer-1` | ADVANCED | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
+| `be-auth-3` | INTERMEDIATE | `DJ_REST` | `topic_dj_rest.ts` | 🟢 Completed | |
 
 
 ### REST_MASTERY (`topic_dj_rest_mastery.ts`)
