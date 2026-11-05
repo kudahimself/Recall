@@ -56,6 +56,14 @@ import {
   rampAfterLessonNote,
   topicSteps,
 } from './utils/lessons';
+import {
+  EXERCISES_KEY,
+  ExercisesDone,
+  exerciseForTopics,
+  getExercise,
+  parseExercisesDone,
+  toggleExerciseDone,
+} from './utils/exercises';
 import { SessionSettings } from './utils/reviewSession';
 import { applyReview, ConceptProgress, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
 import {
@@ -198,6 +206,7 @@ const STORAGE_KEYS = {
   fsrs: FSRS_STORE_KEY,
   todaySession: TODAY_SESSION_KEY,
   lessons: LESSONS_KEY,
+  exercises: EXERCISES_KEY,
 };
 
 // Bump when concept tags are added to existing questions, so previously-
@@ -396,6 +405,15 @@ function loadLessonsDone(): LessonsDone {
   }
 }
 
+/** Exercises ticked done (`recall-exercises`); unreadable text gives none. */
+function loadExercisesDone(): ExercisesDone {
+  try {
+    return parseExercisesDone(localStorage.getItem(STORAGE_KEYS.exercises));
+  } catch {
+    return {};
+  }
+}
+
 /** A lesson in progress: its rule card on screen, or its exercises being served in order. */
 interface LessonFlow {
   lessonId: string;
@@ -481,6 +499,9 @@ function App() {
   const [lessonFlow, setLessonFlow] = useState<LessonFlow | null>(null);
   const [ruleCardOpen, setRuleCardOpen] = useState<string | null>(null);
   const [rulePanelHidden, setRulePanelHidden] = useState(false);
+  // Exercises (utils/exercises): the ones the learner ticked done.
+  const [initialExercisesDone] = useState<ExercisesDone>(loadExercisesDone);
+  const [exercisesDone, setExercisesDone] = useState<ExercisesDone>(initialExercisesDone);
   // The card on screen already had its first failed coding submit recorded as
   // a miss (decision 7); its terminal answer is then a `retry` attempt.
   const firstMissRecordedRef = useRef<string | null>(null);
@@ -553,6 +574,7 @@ function App() {
       STORAGE_KEYS.misconceptions,
       STORAGE_KEYS.fsrs,
       STORAGE_KEYS.lessons,
+      STORAGE_KEYS.exercises,
     ]);
     const onStorage = (e: StorageEvent) => {
       // key === null means another tab cleared storage.
@@ -739,6 +761,16 @@ function App() {
     persist(STORAGE_KEYS.lessons, JSON.stringify(lessonsDone), 'study');
   }, [lessonsDone, initialLessonsDone, persist]);
 
+  // Save ticked exercises; likewise not for the state just read.
+  useEffect(() => {
+    if (exercisesDone === initialExercisesDone) return;
+    persist(STORAGE_KEYS.exercises, JSON.stringify(exercisesDone), 'study');
+  }, [exercisesDone, initialExercisesDone, persist]);
+
+  const toggleExercise = useCallback((id: string) => {
+    setExercisesDone(prev => toggleExerciseDone(prev, id));
+  }, []);
+
   useEffect(() => {
     persist(TODAY_SIZE_KEY, String(sessionSettings.size), 'ui');
     persist(TODAY_REVIEW_SHARE_KEY, String(sessionSettings.reviewShare), 'ui');
@@ -788,6 +820,9 @@ function App() {
       [STORAGE_KEYS.lessons]: lessonsDone === initialLessonsDone
         ? localStorage.getItem(STORAGE_KEYS.lessons)
         : JSON.stringify(lessonsDone),
+      [STORAGE_KEYS.exercises]: exercisesDone === initialExercisesDone
+        ? localStorage.getItem(STORAGE_KEYS.exercises)
+        : JSON.stringify(exercisesDone),
       [STORAGE_KEYS.conceptMigrationVersion]: CONCEPT_MIGRATION_VERSION,
       ...Object.fromEntries(STORED_SETTING_KEYS.map(k => [k, localStorage.getItem(k)])),
       ...Object.fromEntries(listBackupKeys(localStorage).filter(isBackupKey).map(k => [k, localStorage.getItem(k)])),
@@ -1365,6 +1400,11 @@ function App() {
       setLessonsDone(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => {
         const lesson = getLesson(id);
         return !lesson || !lesson.topicKeys.some(t => courseTopics.has(t));
+      })));
+      // And its ticked exercises.
+      setExercisesDone(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => {
+        const exercise = getExercise(id);
+        return !exercise || !exercise.topicKeys.some(t => courseTopics.has(t));
       })));
       setLessonFlow(null);
       setSessionStats({ answered: 0, correct: 0 });
@@ -2071,8 +2111,10 @@ function App() {
                                         const due = st.families.filter(f => f.due).length;
                                         const met = st.families.filter(f => f.state && f.state.reps > 0).length;
                                         const missed = st.families.some(f => f.state && f.state.reps > 0 && !f.state.lastCorrect);
+                                        const exercise = exerciseForTopics(u.topicKeys);
+                                        const exerciseDone = !!exercise && exercisesDone[exercise.id] !== undefined;
                                         return (
-                                          <span className="path-steps" aria-label={`${u.displayName}: lesson, ramp and review`}>
+                                          <span className="path-steps" aria-label={`${u.displayName}: lesson, ramp${exercise ? ', review and exercise' : ' and review'}`}>
                                             <span
                                               className={`path-step path-step-${st.lessonMet ? 'done' : isNext ? 'next' : 'todo'}`}
                                               title="Lesson: the rule card and its worked example, then a few exercises"
@@ -2091,6 +2133,14 @@ function App() {
                                             >
                                               {due > 0 ? `Review ${due} due` : missed ? 'Review: missed' : 'Review'}
                                             </span>
+                                            {exercise && (
+                                              <span
+                                                className={`path-step path-step-${exerciseDone ? 'done' : st.rampAnswered >= st.rampTotal ? 'next' : 'todo'}`}
+                                                title={`Exercise in your own editor: ${exercise.title}, in ${exercise.folder}. Tick it done under Progress, Topics.`}
+                                              >
+                                                Exercise
+                                              </span>
+                                            )}
                                             {st.lessonMet
                                               ? <button className="path-step-btn" onClick={() => setRuleCardOpen(st.lesson!.id)}>Rule card</button>
                                               : isNext && u.unlocked
@@ -2338,8 +2388,10 @@ function App() {
                       progress={progress}
                       store={fsrsStore}
                       lessonsDone={lessonsDone}
+                      exercisesDone={exercisesDone}
                       onRuleCard={setRuleCardOpen}
                       onDrill={handleReviewWeakTopic}
+                      onToggleExercise={toggleExercise}
                     />
                   </div>
                 )}

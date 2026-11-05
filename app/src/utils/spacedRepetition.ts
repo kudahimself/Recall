@@ -224,6 +224,8 @@ export const FSRS_STORE_KEY = 'recall-fsrs';
 export const FSRS_STORE_VERSION = 1;
 // Storage key of lesson progress (utils/lessons): { [lessonId]: completedAt }.
 export const LESSONS_KEY = 'recall-lessons';
+// Storage key of exercise progress (utils/exercises): { [exerciseId]: doneAt }.
+export const EXERCISES_KEY = 'recall-exercises';
 
 // A topic's ramp (topicRamp): the cards that introduce it, combine and apply
 // it. Every family's first card plus up to RAMP_CARDS_PER_STEP cards of each

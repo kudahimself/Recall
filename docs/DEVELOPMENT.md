@@ -19,6 +19,7 @@ Comprehensive architecture, implementation details, and development patterns for
 
 Project root is `Recall/`.
 The React app lives in `Recall/app/` - all `npm` commands run from there.
+`Recall/exercises/` holds the coding exercises learners do in their own editor (plain Python and pytest, see `exercises/README.md`).
 
 Top-level mastery/planning docs sit at `Recall/` root and drive what gets added next:
 - `DATABRICKS_LAKEHOUSE_DESIGN_ANALYSIS.md` - active Databricks lakehouse design plan
@@ -239,6 +240,13 @@ Beside every card of a topic with a lesson, the rule card stays in a side panel,
 The learning path on Home shows each topic's lesson, ramp and review steps with "Start lesson" or "Rule card", and Progress -> Topics lists every topic with "Rule card" and "Drill" and the review schedule of its card families.
 `scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, procedural T-SQL through `scripts/tsql-batch.js`, Python on python3) and prints its `output`, except a Django / DRF example marked `worked.runs: false`, whose output is checked by hand; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
 
+**Exercises (`utils/exercises.ts`, `data/exercises/`, repo `exercises/`):**
+After a topic's lesson and ramp comes one small coding exercise the learner does in their own editor, sized for 10-30 minutes and answerable from that topic and earlier ones.
+Nothing runs in the browser: the files live in `exercises/<course>/<topic>/` (a `README.md` with the task and examples, a starter module with signatures and `TODO`s, and `test_*.py` pytest tests), and the reference solution sits apart in `exercises/solutions/<course>/<topic>/`, laid over the starter files.
+`TopicExercise` data in `data/exercises/index.ts` is what the app shows: Progress -> Topics renders the selected topic's exercise card (the task in brief, the folder path with a Copy button, the files and how to run `pytest`) with a done tick the learner sets, and the learning path adds an Exercise step after Review.
+Exercises are written one section per PR, like lessons: Backend Python Fundamentals so far.
+`exercises/check_exercises.py`, run by `npm test` (`data/exercises/exercises.test.ts`, which also keeps the list in step with the folders), runs each exercise's tests on a copy of its starter, where every test must fail, and on a copy with the reference solution laid over it, where every test must pass; it skips the starter check for a starter the learner has edited.
+
 **Drain queue definition:**
 `countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
 It is not the number the learner sees: the breadcrumb and Home show "reviews left today" (above).
@@ -387,6 +395,7 @@ Layouts target desktop viewport without scrolling.
 - `recall-today-size`, `recall-today-review-share` - Today's session settings, read straight from storage
 - `recall-today-session` - today's session per course, dropped at the day boundary
 - `recall-lessons` - completed lessons, `{ [lessonId]: completedAt }` (`utils/lessons.ts`); written only when a lesson is completed, cleared for a course when its progress is reset
+- `recall-exercises` - exercises the learner ticked done, `{ [exerciseId]: doneAt }` (`utils/exercises.ts`); written only when a tick changes, cleared for a course when its progress is reset
 - `recall-concept-srs-enabled` (feature flag, `featureFlags.ts`) - a setting read straight from storage
 - `recall-dev-unlock-all` - developer unlock switch, not exported
 

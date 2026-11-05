@@ -615,3 +615,28 @@ export interface TopicLesson {
   /** The card family this lesson opens for review, when it is not the exercises' own. */
   family?: string;
 }
+
+// ── Exercises (Stage 3: practise in your own editor) ──
+// One small coding exercise per topic, done after its lesson and ramp. The
+// files live in the repo's exercises/ folder (task README, starter, pytest
+// tests, a reference solution under exercises/solutions/); the app only shows
+// the task and the folder, and the learner ticks it done. Nothing runs here.
+
+export interface TopicExercise {
+  /** The topic key of its folder, e.g. 'py_basics'. */
+  id: string;
+  /** The courseConfig unit's topic keys. */
+  topicKeys: Topic[];
+  /** The README's title, e.g. 'Shelf labels'. */
+  title: string;
+  /** From the repo root, e.g. 'exercises/backend/py_basics'. */
+  folder: string;
+  /** The starter file(s) to fill in, relative to the folder. */
+  starter: string[];
+  /** The pytest file, relative to the folder. */
+  tests: string;
+  /** Rough time to finish, in minutes. */
+  minutes: number;
+  /** The task in a few sentences, one per line. `code` spans render as code. */
+  task: string;
+}
