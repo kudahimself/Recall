@@ -177,17 +177,14 @@ export const SAMPLE_QUESTIONS = [
 
 /**
  * The sample a `?sample=<id>` query names, outside production builds only
- * (App.tsx shows it in the quiz view without recording the answer). Besides
- * the samples above, any question of the bank can be opened by its id, so a
- * screenshot can show one question of each type without seeding progress.
+ * (App.tsx shows it in the quiz view without recording the answer).
  */
 export function sampleFromSearch(
   search: string,
   env: string | undefined = process.env.NODE_ENV,
-  bank?: ReadonlyMap<string, Question>,
 ): Question | null {
   if (env === 'production') return null;
   const id = new URLSearchParams(search).get('sample');
   if (!id) return null;
-  return SAMPLE_QUESTIONS.find(q => q.id === id) ?? bank?.get(id) ?? null;
+  return SAMPLE_QUESTIONS.find(q => q.id === id) ?? null;
 }

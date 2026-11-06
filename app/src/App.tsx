@@ -501,7 +501,7 @@ function App() {
 
   // Development only: `?sample=<id>` shows one of src/dev/sampleQuestions.ts
   // in the quiz view, for screenshots and trying a question type by hand.
-  const [devSample] = useState(() => sampleFromSearch(window.location.search, process.env.NODE_ENV, QUESTIONS_BY_ID));
+  const [devSample] = useState(() => sampleFromSearch(window.location.search));
 
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [sessionStartTime] = useState(Date.now());
