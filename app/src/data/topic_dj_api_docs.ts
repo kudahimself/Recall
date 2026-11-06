@@ -21,7 +21,7 @@ export const dj_api_docs_questions: Question[] = [
       topic: Topic.DJ_API_DOCS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Set up drf-spectacular for automatic OpenAPI/Swagger docs. Show the INSTALLED_APPS addition, DEFAULT_SCHEMA_CLASS configuration in REST_FRAMEWORK settings, and URL patterns for the schema endpoint and Swagger UI.',
+      question: 'Set up drf-spectacular. In settings.py, add it to `INSTALLED_APPS` and make its `AutoSchema` the `DEFAULT_SCHEMA_CLASS` in `REST_FRAMEWORK`. In urls.py, serve the raw OpenAPI schema at `api/schema/` with the URL name `schema`, the Swagger UI page at `api/docs/` (named `swagger-ui`) and the Redoc page at `api/redoc/` (named `redoc`), both pages reading that schema.',
       starterCode: `# settings.py additions\n\n\n# urls.py\n`,
       testCases: [
         {
@@ -30,8 +30,8 @@ export const dj_api_docs_questions: Question[] = [
           description: 'Should configure drf-spectacular with schema and Swagger UI endpoints',
         },
       ],
-      solution: `# settings.py\nINSTALLED_APPS = [\n    # ... other apps\n    "drf_spectacular",\n]\n\nREST_FRAMEWORK = {\n    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",\n}\n\nSPECTACULAR_SETTINGS = {\n    "TITLE": "My Project API",\n    "DESCRIPTION": "API documentation for My Project",\n    "VERSION": "1.0.0",\n}\n\n\n# urls.py\nfrom django.urls import path\nfrom drf_spectacular.views import (\n    SpectacularAPIView,\n    SpectacularSwaggerView,\n    SpectacularRedocView,\n)\n\nurlpatterns = [\n    # Schema endpoint (raw OpenAPI JSON/YAML)\n    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),\n    # Swagger UI (interactive)\n    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),\n    # Redoc (read-only, clean)\n    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),\n]`,
-      explanation: 'drf-spectacular auto-generates an OpenAPI 3.0 schema by inspecting your serializers, views, and URL patterns. DEFAULT_SCHEMA_CLASS tells DRF to use drf-spectacular instead of the built-in schema generator. SpectacularAPIView serves the raw schema (used by tools and client generators). SpectacularSwaggerView renders an interactive UI where you can try API calls. SpectacularRedocView renders clean, read-only documentation. The schema updates automatically as you change your code -- no manual docs to maintain.',
+      solution: `# settings.py\nINSTALLED_APPS = [\n    # ... other apps\n    "drf_spectacular",\n]\n\nREST_FRAMEWORK = {\n    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",\n}\n\n\n# urls.py\nfrom django.urls import path\nfrom drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView\n\nurlpatterns = [\n    # Schema endpoint (raw OpenAPI JSON/YAML)\n    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),\n    # Swagger UI (interactive)\n    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),\n    # Redoc (read-only, clean)\n    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),\n]`,
+      explanation: 'drf-spectacular auto-generates an OpenAPI 3.0 schema by inspecting your serializers, views, and URL patterns. DEFAULT_SCHEMA_CLASS tells DRF to use drf-spectacular instead of the built-in schema generator. SpectacularAPIView serves the raw schema (used by tools and client generators). SpectacularSwaggerView renders an interactive UI where you can try API calls. SpectacularRedocView renders clean, read-only documentation. Both pages take url_name="schema", the name of the schema route, so they know where to fetch the schema. The schema updates automatically as you change your code -- no manual docs to maintain. An optional SPECTACULAR_SETTINGS dict sets the title, description and version shown at the top of the docs.',
       hints: [
         'Add drf_spectacular to INSTALLED_APPS',
         'Set DEFAULT_SCHEMA_CLASS to use drf-spectacular AutoSchema',
@@ -49,20 +49,10 @@ REST_FRAMEWORK = {
     "____": "drf_spectacular.openapi.AutoSchema",
 }
 
-SPECTACULAR_SETTINGS = {
-    "TITLE": "My Project API",
-    "DESCRIPTION": "API documentation for My Project",
-    "VERSION": "1.0.0",
-}
-
 
 # urls.py
 from django.urls import path
-from drf_spectacular.views import (
-    ____,
-    ____,
-    ____,
-)
+from drf_spectacular.views import ____, ____, ____
 
 urlpatterns = [
     path("api/schema/", ____.as_view(), name="schema"),
@@ -98,10 +88,8 @@ urlpatterns = [
       topic: Topic.DJ_API_DOCS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the decorator that customizes an endpoint\'s generated docs, and its kwarg that maps a status code to the response serializer.',
-      template: `from drf_spectacular.utils import extend_schema
-
-@___(
+      question: 'Fill in the drf-spectacular decorator that customizes this action\'s generated docs, and its keyword argument that maps a status code to the response serializer (the decorator\'s import from `drf_spectacular.utils` is left out so it does not give the answer away).',
+      template: `@___(
     description="Publish an article.",
     ___={200: ArticleSerializer},
 )
@@ -109,9 +97,9 @@ urlpatterns = [
 def publish(self, request, pk=None):
     ...`,
       blanks: ['extend_schema', 'responses'],
-      solution: 'from drf_spectacular.utils import extend_schema\n\n@extend_schema(\n    description="Publish an article.",\n    responses={200: ArticleSerializer},\n)\n@action(detail=True, methods=["post"])\ndef publish(self, request, pk=None):\n    ...',
-      explanation: '`@extend_schema(...)` overrides what drf-spectacular infers for one endpoint. `description` overrides the docstring; `responses={status_code: Serializer}` documents the response shape per status code — essential for `@action` methods, where auto-detection often cannot infer the schema on its own.',
-      hints: ['Decorator from drf_spectacular.utils', 'Kwarg mapping status code -> serializer'],
+      solution: '@extend_schema(\n    description="Publish an article.",\n    responses={200: ArticleSerializer},\n)\n@action(detail=True, methods=["post"])\ndef publish(self, request, pk=None):\n    ...',
+      explanation: '`@extend_schema(...)` overrides what drf-spectacular infers for one endpoint. `description` overrides the docstring; `responses={status_code: Serializer}` documents the response shape per status code - essential for `@action` methods, which are otherwise documented with the viewset\'s own serializer even when they return something else. It is imported with `from drf_spectacular.utils import extend_schema`.',
+      hints: ['It extends the schema drf-spectacular generates', 'The plural of the thing an endpoint sends back'],
       tags: ['drf-spectacular', 'extend_schema', 'cloze'],
       concepts: ['dj-api-docs'],
     },
@@ -123,8 +111,8 @@ def publish(self, request, pk=None):
       topic: Topic.DJ_API_DOCS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use the @extend_schema decorator from drf-spectacular to customize endpoint documentation. Add a description, specify request/response types, provide examples, and add tags. Show it on a ViewSet action method.',
-      starterCode: `# views.py\nfrom rest_framework import viewsets, status\nfrom rest_framework.decorators import action\nfrom rest_framework.response import Response\n\n# Add @extend_schema to customize docs\n`,
+      question: '`Article` has a `status` field, and `ArticleSerializer` in `.serializers` is its `ModelSerializer`. Write `ArticleViewSet`, a `ModelViewSet` over every article, with a `publish` action: a POST to `/articles/<pk>/publish/` sets that article\'s `status` to "published", saves it and returns the serialized article. Document `publish` with drf-spectacular\'s `@extend_schema`: the description "Publish a draft article.", no request body, a 200 response shaped by `ArticleSerializer`, one response-only example named "Published article" whose value is `{"id": 1, "status": "published"}`, and the tag "articles".',
+      starterCode: `# views.py\nfrom rest_framework import viewsets\nfrom rest_framework.decorators import action\nfrom rest_framework.response import Response\n\n# Add @extend_schema to customize docs\n`,
       testCases: [
         {
           input: '@extend_schema decorator on a ViewSet action',
@@ -132,8 +120,9 @@ def publish(self, request, pk=None):
           description: 'Should customize API documentation with extend_schema',
         },
       ],
-      solution: `# views.py\nfrom rest_framework import viewsets, status\nfrom rest_framework.decorators import action\nfrom rest_framework.response import Response\nfrom drf_spectacular.utils import extend_schema, OpenApiExample\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n    @extend_schema(\n        description="Publish an article. Changes status from 'draft' to 'published' and sets publish_date.",\n        request=None,  # No request body needed\n        responses={200: ArticleSerializer},\n        examples=[\n            OpenApiExample(\n                "Published article",\n                value={"id": 1, "title": "My Post", "status": "published"},\n                response_only=True,\n            ),\n        ],\n        tags=["articles"],\n    )\n    @action(detail=True, methods=["post"])\n    def publish(self, request, pk=None):\n        """Publish a draft article."""\n        article = self.get_object()\n        article.status = "published"\n        article.save()\n        return Response(ArticleSerializer(article).data)`,
-      explanation: '@extend_schema gives you fine-grained control over how an endpoint appears in the generated docs. description overrides the docstring. request=None tells the schema this endpoint has no request body. responses={200: Serializer} documents the response shape. OpenApiExample provides concrete examples that show up in Swagger UI. tags group endpoints into sections. This is essential for custom actions because drf-spectacular cannot always infer the correct schema from @action methods -- the decorator fills in the gaps.',
+      solution: `# views.py\nfrom rest_framework import viewsets\nfrom rest_framework.decorators import action\nfrom rest_framework.response import Response\nfrom drf_spectacular.utils import extend_schema, OpenApiExample\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n    @extend_schema(\n        description="Publish a draft article.",\n        request=None,\n        responses={200: ArticleSerializer},\n        examples=[\n            OpenApiExample(\n                "Published article",\n                value={"id": 1, "status": "published"},\n                response_only=True,\n            ),\n        ],\n        tags=["articles"],\n    )\n    @action(detail=True, methods=["post"])\n    def publish(self, request, pk=None):\n        article = self.get_object()\n        article.status = "published"\n        article.save()\n        return Response(ArticleSerializer(article).data)\n# OR\n# views.py\nfrom rest_framework import viewsets\nfrom rest_framework.decorators import action\nfrom rest_framework.response import Response\nfrom drf_spectacular.utils import extend_schema, OpenApiExample\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleViewSet(viewsets.ModelViewSet):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n    @extend_schema(\n        description="Publish a draft article.",\n        request=None,\n        responses={200: ArticleSerializer},\n        examples=[\n            OpenApiExample(\n                "Published article",\n                value={"id": 1, "status": "published"},\n                response_only=True,\n            ),\n        ],\n        tags=["articles"],\n    )\n    @action(detail=True, methods=["post"])\n    def publish(self, request, pk=None):\n        article = self.get_object()\n        article.status = "published"\n        article.save()\n        return Response(self.get_serializer(article).data)`,
+      requires: [/@extend_schema/],
+      explanation: '@extend_schema gives you fine-grained control over how an endpoint appears in the generated docs. It goes above @action, so it decorates the finished action. description overrides the docstring. request=None tells the schema this endpoint has no request body. responses={200: Serializer} documents the response shape. OpenApiExample provides concrete examples that show up in Swagger UI. tags group endpoints into sections. This is essential for custom actions because drf-spectacular cannot always infer the correct schema from @action methods -- the decorator fills in the gaps.',
       hints: [
         'Import extend_schema and OpenApiExample from drf_spectacular.utils',
         'request=None means no request body is expected',
@@ -142,7 +131,7 @@ def publish(self, request, pk=None):
       tieredHints: {
         apiSignature: '@extend_schema(operation_id=None, request=None, responses=None, examples=None, tags=None)',
         skeleton: `# views.py
-from rest_framework import viewsets, status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import ____, ____
@@ -155,13 +144,13 @@ class ArticleViewSet(viewsets.ModelViewSet):
     serializer_class = ArticleSerializer
 
     @____(
-        description="Publish an article. Changes status from 'draft' to 'published' and sets publish_date.",
+        description="Publish a draft article.",
         request=____,
         responses={200: ArticleSerializer},
         examples=[
             ____(
                 "Published article",
-                value={"id": 1, "title": "My Post", "status": "published"},
+                value={"id": 1, "status": "published"},
                 response_only=True,
             ),
         ],
@@ -235,18 +224,17 @@ REST_FRAMEWORK = {
     topic: Topic.DJ_API_DOCS,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Fill in the views that serve the raw OpenAPI schema and the interactive Swagger UI.',
+    question: 'Fill in the drf-spectacular views that serve the raw OpenAPI schema and the interactive Swagger UI page (their import from `drf_spectacular.views` is left out so it does not give the answer away).',
     template: `from django.urls import path
-from drf_spectacular.views import ___, ___
 
 urlpatterns = [
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/schema/", ___.as_view(), name="schema"),
+    path("api/docs/", ___.as_view(url_name="schema"), name="swagger-ui"),
 ]`,
     blanks: ['SpectacularAPIView', 'SpectacularSwaggerView'],
-    solution: `from django.urls import path\nfrom drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView\n\nurlpatterns = [\n    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),\n    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),\n]`,
-    explanation: '`SpectacularAPIView` serves the raw OpenAPI schema (JSON/YAML) used by tooling and client generators. `SpectacularSwaggerView` renders it as an interactive page -- it needs `url_name="schema"` to know where to fetch the schema from.',
-    hints: ['View that serves the raw schema JSON/YAML', 'View that renders the interactive Swagger page'],
+    solution: `from django.urls import path\n\nurlpatterns = [\n    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),\n    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),\n]`,
+    explanation: '`SpectacularAPIView` serves the raw OpenAPI schema (JSON/YAML) used by tooling and client generators. `SpectacularSwaggerView` renders it as an interactive page -- it needs `url_name="schema"`, the name of the schema route, to know where to fetch the schema from. Both come from `from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView`.',
+    hints: ['Spectacular + the kind of view that serves raw data, as in APIView', 'Spectacular + the name of the interactive UI + View'],
     tags: ['drf-spectacular', 'SpectacularAPIView', 'SpectacularSwaggerView', 'urls', 'cloze'],
     concepts: ['dj-api-docs'],
   },

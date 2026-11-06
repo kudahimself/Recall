@@ -21,7 +21,7 @@ export const dj_custom_managers_questions: Question[] = [
       topic: Topic.DJ_CUSTOM_MANAGERS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a custom model manager for Article. Article.objects.published() should return only articles with status="published", ordered by -publish_date. Show the Manager class with get_queryset() and the custom method, and attach it to the model.',
+      question: 'In models.py, write `ArticleManager`, a `models.Manager` subclass with a `published()` method that returns only the articles whose `status` is "published", newest `publish_date` first. Then write the `Article` model with `title` (CharField, max 200), `status` (CharField, max 20, default "draft") and `publish_date` (a nullable DateTimeField), and make `ArticleManager` its `objects` manager, so `Article.objects.published()` works and `Article.objects.all()` still returns every article.',
       starterCode: `# models.py\nfrom django.db import models\n\n# Create a custom manager and model\n`,
       testCases: [
         {
@@ -30,11 +30,12 @@ export const dj_custom_managers_questions: Question[] = [
           description: 'Should create a custom manager with published() filter',
         },
       ],
-      solution: `# models.py\nfrom django.db import models\n\n\nclass ArticleManager(models.Manager):\n    def published(self):\n        """Return only published articles, newest first."""\n        return self.get_queryset().filter(\n            status="published"\n        ).order_by("-publish_date")\n\n    def drafts(self):\n        """Return only draft articles."""\n        return self.get_queryset().filter(status="draft")\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    status = models.CharField(\n        max_length=20,\n        choices=[("draft", "Draft"), ("published", "Published")],\n        default="draft",\n    )\n    publish_date = models.DateTimeField(null=True, blank=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ArticleManager()  # Replace default manager\n\n    def __str__(self):\n        return self.title\n\n\n# Usage:\n# Article.objects.published()      # Only published articles\n# Article.objects.drafts()          # Only drafts\n# Article.objects.all()             # Still works -- all articles`,
-      explanation: 'Custom managers encapsulate common query patterns so you write Article.objects.published() instead of repeating Article.objects.filter(status="published").order_by("-publish_date") everywhere. This follows DRY and makes the API expressive. The manager methods call self.get_queryset() to start from the base queryset, then add filters. Setting objects = ArticleManager() replaces the default manager while keeping .all(), .filter(), etc. working because ArticleManager inherits from models.Manager.',
+      solution: `# models.py\nfrom django.db import models\n\n\nclass ArticleManager(models.Manager):\n    def published(self):\n        return self.get_queryset().filter(status="published").order_by("-publish_date")\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True)\n\n    objects = ArticleManager()\n# OR\n# models.py\nfrom django.db import models\n\n\nclass ArticleManager(models.Manager):\n    def published(self):\n        return self.filter(status="published").order_by("-publish_date")\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True)\n\n    objects = ArticleManager()`,
+      requires: [/def\s+published/],
+      explanation: 'Custom managers encapsulate common query patterns so you write Article.objects.published() instead of repeating Article.objects.filter(status="published").order_by("-publish_date") everywhere. This follows DRY and makes the API expressive. The manager method calls self.get_queryset() to start from the base queryset, then adds the filter and the ordering; self.filter(...) does the same, because a Manager passes filter() on to that queryset. There is no need to override get_queryset() here, since published() should narrow the rows only when it is called, not on every query. Setting objects = ArticleManager() replaces the default manager while keeping .all(), .filter(), etc. working because ArticleManager inherits from models.Manager.',
       tieredHints: {
         apiSignature: 'self.get_queryset().filter(*args, **kwargs)',
-        skeleton: '# models.py\nfrom django.db import models\n\n\nclass ArticleManager(models.Manager):\n    def published(self):\n        """Return only published articles, newest first."""\n        return self.____().____(\n            status="published"\n        ).order_by("-publish_date")\n\n    def drafts(self):\n        """Return only draft articles."""\n        return self.get_queryset().filter(status="draft")\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    status = models.CharField(\n        max_length=20,\n        choices=[("draft", "Draft"), ("published", "Published")],\n        default="draft",\n    )\n    publish_date = models.DateTimeField(null=True, blank=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ____()  # Replace default manager\n\n    def __str__(self):\n        return self.title\n\n\n# Usage:\n# Article.objects.published()      # Only published articles\n# Article.objects.drafts()          # Only drafts\n# Article.objects.all()             # Still works -- all articles',
+        skeleton: '# models.py\nfrom django.db import models\n\n\nclass ArticleManager(models.____):\n    def published(self):\n        return self.____().____(status="published").____("-publish_date")\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True)\n\n    objects = ____()',
       },
       hints: [
         'Inherit from models.Manager',
@@ -77,7 +78,7 @@ class Article(models.Model):
       topic: Topic.DJ_CUSTOM_MANAGERS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a chainable custom QuerySet for Article with .published(), .by_author(user), and .recent() methods that all return QuerySets so they can be chained. Attach it to the model using as_manager().',
+      question: 'Write `ArticleQuerySet` with three filters that chain in any order: `published()` keeps the articles whose `status` is "published", `by_author()` takes a user and keeps that user\'s articles, and `recent()` takes an optional `days` argument, 7 by default, and keeps the articles whose `publish_date` falls within the last `days` days. Make it the `objects` manager of an `Article` model with `title` (CharField, max 200), `status` (CharField, max 20, default "draft"), `publish_date` (a nullable DateTimeField) and `author` (a foreign key to `auth.User`, deleted with the user), so that a chain such as published, then by_author, then recent runs as one query.',
       starterCode: `# models.py\nfrom django.db import models\nfrom django.utils import timezone\n\n# Create a custom QuerySet with chainable methods\n`,
       testCases: [
         {
@@ -86,11 +87,12 @@ class Article(models.Model):
           description: 'Should create chainable QuerySet methods',
         },
       ],
-      solution: `# models.py\nfrom django.db import models\nfrom django.utils import timezone\nfrom datetime import timedelta\n\n\nclass ArticleQuerySet(models.QuerySet):\n    def published(self):\n        """Filter to published articles only."""\n        return self.filter(status="published")\n\n    def by_author(self, user):\n        """Filter to articles by a specific author."""\n        return self.filter(author=user)\n\n    def recent(self, days=7):\n        """Filter to articles from the last N days."""\n        cutoff = timezone.now() - timedelta(days=days)\n        return self.filter(publish_date__gte=cutoff)\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True, blank=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ArticleQuerySet.as_manager()\n\n    def __str__(self):\n        return self.title\n\n\n# Chainable usage:\n# Article.objects.published().by_author(user).recent()\n# Article.objects.published().recent(days=30).order_by("-publish_date")\n# Article.objects.by_author(user).count()`,
-      explanation: 'Custom QuerySet methods are chainable because each method returns a QuerySet. This is more powerful than Manager methods because you can compose filters: Article.objects.published().by_author(user).recent() builds a single SQL query with all three WHERE conditions. as_manager() converts the QuerySet into a Manager, so you still use Article.objects.published(). The key difference from a custom Manager: QuerySet methods MUST return QuerySets (enabling chaining), while Manager methods can return anything. Use QuerySet when you need composability.',
+      solution: `# models.py\nfrom datetime import timedelta\nfrom django.db import models\nfrom django.utils import timezone\n\n\nclass ArticleQuerySet(models.QuerySet):\n    def published(self):\n        return self.filter(status="published")\n\n    def by_author(self, user):\n        return self.filter(author=user)\n\n    def recent(self, days=7):\n        cutoff = timezone.now() - timedelta(days=days)\n        return self.filter(publish_date__gte=cutoff)\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ArticleQuerySet.as_manager()\n# OR\n# models.py\nfrom datetime import timedelta\nfrom django.db import models\nfrom django.utils import timezone\n\n\nclass ArticleQuerySet(models.QuerySet):\n    def published(self):\n        return self.filter(status="published")\n\n    def by_author(self, user):\n        return self.filter(author=user)\n\n    def recent(self, days=7):\n        return self.filter(publish_date__gte=timezone.now() - timedelta(days=days))\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ArticleQuerySet.as_manager()`,
+      requires: [/as_manager|from_queryset/],
+      explanation: 'Custom QuerySet methods are chainable because each method returns a QuerySet. This is more powerful than Manager methods because you can compose filters: Article.objects.published().by_author(user).recent() builds a single SQL query with all three WHERE conditions. as_manager() converts the QuerySet into a Manager, so you still use Article.objects.published(). The same methods on a Manager subclass would break the chain: Article.objects.published() returns a plain QuerySet, which has no by_author(). The key difference: QuerySet methods return QuerySets (self.filter(...)) so they chain, while Manager methods can return anything. Use timezone.now(), not datetime.now(), so the cutoff is timezone-aware. Use QuerySet when you need composability.',
       tieredHints: {
         apiSignature: 'models.QuerySet.as_manager()',
-        skeleton: '# models.py\nfrom django.db import models\nfrom django.utils import timezone\nfrom datetime import timedelta\n\n\nclass ArticleQuerySet(models.____):\n    def published(self):\n        """Filter to published articles only."""\n        return self.____(status="published")\n\n    def by_author(self, user):\n        """Filter to articles by a specific author."""\n        return self.filter(author=user)\n\n    def recent(self, days=7):\n        """Filter to articles from the last N days."""\n        cutoff = timezone.now() - timedelta(days=days)\n        return self.filter(publish_date__gte=cutoff)\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    body = models.TextField()\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True, blank=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ArticleQuerySet.____()\n\n    def __str__(self):\n        return self.title\n\n\n# Chainable usage:\n# Article.objects.published().by_author(user).recent()\n# Article.objects.published().recent(days=30).order_by("-publish_date")\n# Article.objects.by_author(user).count()',
+        skeleton: '# models.py\nfrom datetime import timedelta\nfrom django.db import models\nfrom django.utils import timezone\n\n\nclass ArticleQuerySet(models.____):\n    def published(self):\n        return self.____(status="published")\n\n    def by_author(self, user):\n        return self.filter(____=user)\n\n    def recent(self, days=7):\n        cutoff = timezone.now() - ____(days=days)\n        return self.filter(publish_date____=cutoff)\n\n\nclass Article(models.Model):\n    title = models.CharField(max_length=200)\n    status = models.CharField(max_length=20, default="draft")\n    publish_date = models.DateTimeField(null=True)\n    author = models.ForeignKey("auth.User", on_delete=models.CASCADE)\n\n    objects = ArticleQuerySet.____()',
       },
       hints: [
         'Inherit from models.QuerySet, not models.Manager',
@@ -109,12 +111,12 @@ class Article(models.Model):
       course: Course.BACKEND,
       question: 'What is the difference between a custom Manager and a custom QuerySet in Django?',
       options: [
-        { id: 'a', text: 'Manager methods can return anything (counts, booleans, etc.); QuerySet methods must return QuerySets so they chain -- as_manager() gives both', isCorrect: true },
+        { id: 'a', text: 'Manager methods can return anything, like a count or a dict; QuerySet methods return QuerySets so they chain, and as_manager() puts them on objects', isCorrect: true },
         { id: 'b', text: 'Managers handle read operations while QuerySets handle writes -- Django routes each query type to the matching class automatically', isCorrect: false },
         { id: 'c', text: 'They are the same class under different names -- Django aliases Manager to QuerySet so older import paths continue to work', isCorrect: false },
         { id: 'd', text: 'Custom QuerySets are deprecated -- since Django 4.0 all reusable query logic is supposed to live in Manager subclasses instead', isCorrect: false },
       ],
-      explanation: 'A Manager is the interface for database operations (Article.objects). A QuerySet is a lazy, chainable collection of database queries. Manager methods like objects.get_stats() can return dictionaries, integers, or anything. QuerySet methods like .published().recent() must return QuerySets so they chain into a single SQL query. The pattern objects = ArticleQuerySet.as_manager() gives you chainable filter methods available directly on objects. Use a separate Manager when you need methods that return non-QuerySet values (e.g., aggregate stats).',
+      explanation: 'A Manager is the interface for database operations (Article.objects). A QuerySet is a lazy, chainable collection of database queries. Manager methods like objects.get_stats() can return dictionaries, integers, or anything. QuerySet methods like .published().recent() return QuerySets (self.filter(...)) so they chain into a single SQL query. The pattern objects = ArticleQuerySet.as_manager() builds a Manager that carries those methods, so the chain can start directly on objects. Use a separate Manager when you need methods that return non-QuerySet values (e.g., aggregate stats).',
       tags: ['django', 'manager', 'queryset', 'orm', 'design-patterns'],
       concepts: ['dj-model-manager-vs-queryset', 'dj-orm-query-construction'],
     },
@@ -132,7 +134,7 @@ class Article(models.Model):
         { id: 'c', text: 'Add an is_deleted flag + deleted_at timestamp, filter them out in the default manager, and keep an all_objects manager -- never actually DELETE', isCorrect: true },
         { id: 'd', text: 'Install database-level triggers that reject DELETE statements, forcing all removals to go through a stored procedure instead', isCorrect: false },
       ],
-      explanation: 'Soft delete keeps data recoverable and maintains referential integrity. Implementation: (1) Add is_deleted=BooleanField(default=False) and deleted_at=DateTimeField(null=True). (2) Override delete() on the model to set these fields instead of actually deleting. (3) Set the default manager to filter(is_deleted=False) so soft-deleted records are invisible by default. (4) Add all_objects=models.Manager() for admin views that need to see everything. (5) Optionally, add a restore() method. This is critical for compliance (GDPR audit trails), undo functionality, and debugging production issues where you need to see what was "deleted".',
+      explanation: 'Soft delete keeps data recoverable and maintains referential integrity. Implementation: (1) Add is_deleted=BooleanField(default=False) and deleted_at=DateTimeField(null=True). (2) Override delete() on the model to set these fields instead of actually deleting. (3) Set the default manager to filter(is_deleted=False) so soft-deleted records are invisible by default. (4) Add all_objects=models.Manager() for admin views that need to see everything. (5) Optionally, add a restore() method. It helps with audit trails, undo, and debugging production issues where you need to see what was "deleted". Two catches: a bulk Article.objects.filter(...).delete() never calls the model\'s delete(), so it still removes rows unless the QuerySet\'s delete() is overridden too, and a law that demands real erasure (such as a GDPR erasure request) is not met by a flag.',
       tags: ['django', 'soft-delete', 'manager', 'design-patterns', 'data-integrity'],
       concepts: ['dj-model-manager-vs-queryset'],
     },
@@ -180,17 +182,17 @@ class Article(models.Model):
     topic: Topic.DJ_CUSTOM_MANAGERS,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Complete the definition of a custom manager that filters QuerySet results to only return objects with `active=True`.',
+    question: 'Complete this custom manager so every query through it returns only the rows with `active=True`, and attach it to `Account` under the name Django gives the default manager.',
     template: `from django.db import models
 
 class ActiveManager(models.Manager):
     def get_queryset(self):
-        return super().___(active=True)
+        return super().___().filter(active=True)
 
 class Account(models.Model):
     active = models.BooleanField(default=True)
     ___ = ActiveManager()`,
-    blanks: ['get_queryset().filter', 'objects'],
+    blanks: ['get_queryset', 'objects'],
     solution: `from django.db import models
 
 class ActiveManager(models.Manager):
@@ -200,10 +202,10 @@ class ActiveManager(models.Manager):
 class Account(models.Model):
     active = models.BooleanField(default=True)
     objects = ActiveManager()`,
-    explanation: 'To filter the base query results of a custom manager, you override `get_queryset` and call `super().get_queryset().filter(...)`. Then, you assign the manager class instance to the model attribute `objects` to replace the default manager.',
+    explanation: 'To filter the base query results of a custom manager, you override `get_queryset` and call `super().get_queryset().filter(...)`. Then, you assign the manager class instance to the model attribute `objects` to replace the default manager, so `Account.objects.all()` returns only active accounts. Keep a plain `all_objects = models.Manager()` as well for code that must still reach the inactive rows.',
     hints: [
-      'Override get_queryset and call super() to obtain the base QuerySet, then chain filter()',
-      'Assign the manager instance to objects on the model class to override the default manager',
+      'The parent method that builds the starting QuerySet, the one this method overrides',
+      'The attribute you use in Account.____.all()',
     ],
     tags: ['django', 'managers', 'custom-manager', 'orm', 'cloze'],
     concepts: ['dj-model-manager-vs-queryset'],
