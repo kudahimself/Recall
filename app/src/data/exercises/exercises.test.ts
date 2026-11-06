@@ -1,9 +1,11 @@
 /**
  * Exercises (src/data/exercises/) against the repo's exercises/ folder: every
  * entry points at a real folder whose README title, starter and tests match,
- * every folder has an entry, each Python Fundamentals topic has one, and
- * exercises/check_exercises.py passes (each exercise's tests fail on its
- * starter and pass on its reference solution), so an exercise cannot rot.
+ * every folder has an entry, each Python Fundamentals and Python Advanced topic
+ * has one, test files and modules have names unique across exercises so pytest
+ * can collect them all from the repo root, and exercises/check_exercises.py
+ * passes (each exercise's tests fail on its starter and pass on its reference
+ * solution), so an exercise cannot rot.
  */
 import fs from 'fs';
 import path from 'path';
@@ -51,12 +53,34 @@ describe('exercise list', () => {
     expect(folders.sort()).toEqual(Array.from(listed).sort());
   });
 
-  it('has an exercise for every Python Fundamentals topic, in path order', () => {
-    expect(BACKEND_SECTIONS['Python Fundamentals']).toBeDefined();
-    const units = getSectionUnits('Python Fundamentals').map(([, keys]) => keys);
-    const fundamentals = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
-    expect(fundamentals.map(e => e.topicKeys)).toEqual(units);
+  it('gives every test file and top-level module a name no other exercise uses', () => {
+    const owners = new Map<string, string[]>();
+    for (const e of EXERCISES) {
+      const dir = path.join(REPO, e.folder);
+      const names = fs.readdirSync(dir, { withFileTypes: true })
+        .filter(d => d.name !== 'conftest.py' && (
+          (d.isFile() && d.name.endsWith('.py'))
+          || (d.isDirectory() && fs.existsSync(path.join(dir, d.name, '__init__.py')))))
+        .map(d => d.name.replace(/\.py$/, ''));
+      for (const n of names) owners.set(n, [...(owners.get(n) ?? []), e.id]);
+    }
+    const shared = Array.from(owners).filter(([, ids]) => ids.length > 1);
+    expect(shared).toEqual([]);
   });
+
+  it.each(['Python Fundamentals', 'Python Advanced'])('has an exercise for every %s topic, in path order', section => {
+    expect(BACKEND_SECTIONS[section]).toBeDefined();
+    const units = getSectionUnits(section).map(([, keys]) => keys);
+    const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
+    expect(inSection.map(e => e.topicKeys)).toEqual(units);
+  });
+});
+
+test('pytest collects every exercise together from the repo root without errors', () => {
+  const r = spawnSync('python3', ['-m', 'pytest', '--collect-only', '-q', '-p', 'no:cacheprovider', '--ignore=exercises/solutions', 'exercises'], {
+    cwd: REPO, encoding: 'utf8', timeout: 300000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+  });
+  if (r.status !== 0) throw new Error(`pytest --collect-only exercises failed:\n${r.stdout}\n${r.stderr}`);
 });
 
 test('every exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {

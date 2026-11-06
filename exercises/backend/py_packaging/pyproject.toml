@@ -1,0 +1,8 @@
+# The loan-tool project: describe it here (see README.md for the values).
+# Keep this file valid TOML: lines starting with # are comments.
+
+# TODO: the [project] table: name, version, requires-python, dependencies
+
+# TODO: the [project.scripts] table: the `loans` command
+
+# TODO: the [tool.loan_tool] table: default_days
