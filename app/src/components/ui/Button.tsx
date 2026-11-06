@@ -3,7 +3,7 @@ import { KeyCombo } from './Kbd';
 import styles from './Button.module.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -16,7 +16,10 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   block?: boolean;
 }
 
-/** The one button: primary (brand fill), secondary, ghost or danger, in three sizes. */
+/**
+ * The one button: primary (brand fill), secondary, ghost or danger, in four
+ * sizes. With `aria-pressed` it is a toggle and shows when it is on.
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = 'secondary', size = 'md', icon, shortcut, block, className, children, type = 'button', ...rest },
   ref,

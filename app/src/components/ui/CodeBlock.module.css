@@ -78,3 +78,21 @@
 .compact .line {
   white-space: pre-wrap;
 }
+
+/* Fills its container (a side panel beside the editor); the code scrolls inside. */
+.fill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.fill .pre {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* A line holding answer fields keeps them on the code's baseline. */
+.slotLine {
+  align-items: baseline;
+}

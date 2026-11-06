@@ -1,0 +1,202 @@
+/* Parsons: the two lists (lines and your solution), the preview beside them
+   for HTML and CSS. Buttons, code blocks, the banner and the preview come
+   from components/ui; only the lists and their lines live here. */
+
+.board {
+  min-height: 0;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  min-height: 0;
+}
+
+.heading {
+  flex: none;
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* A list scrolls inside itself when it is longer than the room left. */
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--border-w) dashed var(--border-strong);
+  border-radius: var(--radius-m);
+  background: var(--sunken);
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.list:focus {
+  outline: none;
+}
+
+.list:focus-visible {
+  border-style: solid;
+  border-color: var(--focus);
+}
+
+.list[aria-disabled="true"] {
+  border-style: solid;
+  border-color: var(--border);
+}
+
+.over {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.empty {
+  margin: auto;
+  padding: var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* ---- A line ---- */
+.line {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--raised);
+  color: var(--text);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.line:hover {
+  border-color: var(--text-3);
+}
+
+.code {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* A line too long for its list wraps with a hanging indent, so it still reads as one line. */
+  padding-left: 4ch;
+  text-indent: -4ch;
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: var(--lh-code);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment {
+  color: var(--code-com);
+  font-style: italic;
+}
+
+.gutter {
+  flex: none;
+  display: inline-flex;
+  justify-content: flex-end;
+  min-width: 2ch;
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+
+.gutter svg {
+  align-self: center;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  stroke-width: 2.5;
+}
+
+/* The line the keys act on, while its list has focus. */
+.list:focus .active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 var(--border-w) var(--accent);
+}
+
+.dragging {
+  opacity: 0.4;
+}
+
+.overlay {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2);
+  cursor: grabbing;
+}
+
+/* Mouse controls on a line of the solution; the keys do the same. */
+.controls {
+  flex: none;
+  display: inline-flex;
+  align-self: center;
+  margin: calc(-1 * var(--sp-1)) calc(-1 * var(--sp-2)) calc(-1 * var(--sp-1)) 0;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.line:hover .controls,
+.list:focus .active .controls {
+  opacity: 1;
+}
+
+/* ---- After checking ---- */
+.right,
+.wrong,
+.extra {
+  cursor: default;
+}
+
+.right {
+  border-color: var(--success-line);
+  background: var(--success-soft);
+}
+
+.right .gutter {
+  color: var(--success);
+}
+
+.wrong,
+.extra {
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+}
+
+.wrong .gutter,
+.extra .gutter,
+.tag {
+  color: var(--danger);
+}
+
+.extra .code {
+  text-decoration: line-through;
+  text-decoration-color: var(--danger-line);
+}
+
+.tag {
+  flex: none;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.list[aria-disabled="true"] .line:not(.right):not(.wrong):not(.extra) {
+  cursor: default;
+  color: var(--text-2);
+}

@@ -69,6 +69,10 @@
   --feedback-max-h: 46vh;
   --job-min-w: 18rem;
   --table-max-h: 11.5rem;
+  --table-min-h: 4.5rem;    /* a grid short of room keeps its header and two rows */
+  --region-min-h: 7.5rem;   /* a list or editor never shrinks below about four lines */
+  --editor-min-h: 7rem;    /* three lines and the editor's key bar */
+  --preview-min-h: 11rem;
 
   /* ---- Motion: two durations, one easing; all off under reduced motion ---- */
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -120,6 +124,7 @@
   --warning-line: rgba(251, 191, 36, 0.4);
 
   --focus: #c4b5fd;
+  --preview-page: #ffffff; /* the live preview's page, white as in a browser */
   --selection: rgba(124, 58, 237, 0.45);
 
   /* ---- Shape and depth ---- */

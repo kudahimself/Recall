@@ -382,15 +382,17 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 **Shared UI components** (`src/components/ui/`, each styled by its own CSS Module on the design tokens):
 - `Button`, `Kbd` / `KeyCombo`, `Badge`, `Card` / `Panel` / `Eyebrow`, `Dialog`
 - `InlineText` / `Prose` - the one prose renderer, in every course: `code`, **bold** and fenced code blocks
-- `CodeBlock` - read-only code with line numbers and comments; `TextAnswer` / `AnswerCompare` - typed answers
-- `QuestionShell` - the frame of a question: prompt, answer area, hint, the verdict (`FeedbackBanner`) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus.
+- `CodeBlock` - read-only code with line numbers and comments, and with `slots` the fields of a cloze; `TextAnswer` / `AnswerCompare` / `Blank` - typed answers, before and after grading
+- `QuestionShell` - the frame of a question: prompt, answer area, hints (`H`, one at a time), the banner (`FeedbackBanner`, with `ResultList` for a coding question's checks) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus. `QuestionRegion` and `AnswerColumns` lay out the answer area: a region gives up height and scrolls inside itself before the card would, and `fill` lets the code editor take the height left.
 - `OptionList` - options (multiple choice, choose and justify), code lines (spot the flaw) or checkboxes (explain's key points), with 1-9 keys and word-and-icon marks after grading
-- Multiple choice, predict output and the four decision and design types render on `QuestionShell`; cloze, Parsons and coding still use their own markup, with `StyledButton`, `StyledBadge` and `InlineCode.tsx` (a thin wrapper over `InlineText`).
+- Every question type renders on `QuestionShell`: cloze is a `CodeBlock` with a `Blank` in each slot; Parsons is two listboxes (the lines and your solution) over dnd-kit pointer drag; coding puts Monaco in a `fill` shell, with spent hints, the solution or the live preview beside it.
 - `Logo` - the header's elephant tile (`public/icon.svg`) and "Recall" wordmark
+- `visual/LivePreview.tsx` - the live preview of HTML and CSS answers (cloze, Parsons, coding), with preview widths, `@media` rules and a layout overlay
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
 
 **Keyboard:** `src/keyboard/shortcuts.ts` is the one shortcut registry; `useShortcut` binds a key from it, and the `?` overlay (`ShortcutHelp.tsx`) is generated from it.
-Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from inside a text box; an open `Dialog` takes the keys.
+Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from inside a text box, a blank or the code editor; an open `Dialog` takes the keys.
+In a cloze, Enter goes to the next blank and checks on the last; in Parsons, up and down walk a list, Space adds or takes back a line, Alt+up and Alt+down move it, left and right switch lists; in Monaco, Tab indents and Esc leaves the editor unless a suggestion, find or snippet widget is open.
 
 **UI theme:**
 Direction A "Night": dark purple, one brand fill for primary buttons in every course (a course's hue is only a marker).
@@ -400,10 +402,11 @@ The logo is the yellow elephant tile (`--brand` / `--on-brand` in `tokens.css`, 
 Layouts target a desktop or laptop viewport without page scrolling.
 
 **Monaco Editor config:**
-- Theme: `vs-dark`
-- No minimap
+- Theme: `recall-night`, `vs-dark` with its colours read from the design tokens
+- No minimap; the code font and size of every code block (`--font-mono`, `--fs-code`)
 - Line numbers on
 - Read-only after correct answer
+- No Ctrl/Cmd+R binding (it reloads the page everywhere else); Reset is a button under the editor
 
 ### Persistence
 

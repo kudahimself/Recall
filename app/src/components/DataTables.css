@@ -1,21 +1,20 @@
 .data-tables {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--sp-3);
   min-width: 0;
-}
-
-/* The types not yet on the shared question shell inset their tables. */
-.cloze-code-question .data-tables,
-.parsons-question .data-tables,
-.coding-question .data-tables {
-  margin: var(--sp-3) var(--sp-6);
+  min-height: 0;
 }
 
 .data-table {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   min-width: 0;
   max-width: 100%;
+  /* In a question that is short of room the grid shrinks and its rows scroll. */
+  max-height: 100%;
   background: var(--sunken);
   border: var(--border-w) solid var(--border);
   border-radius: var(--radius-m);
@@ -33,6 +32,8 @@
 
 /* About six rows tall; longer tables scroll inside the grid. */
 .data-table-scroll {
+  flex: 0 1 auto;
+  min-height: var(--table-min-h);
   max-height: var(--table-max-h);
   overflow: auto;
 }

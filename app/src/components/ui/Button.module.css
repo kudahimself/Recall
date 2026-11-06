@@ -83,6 +83,26 @@
   background: var(--danger-soft);
 }
 
+.xs {
+  height: var(--badge-h);
+  padding: 0 var(--sp-2);
+  gap: var(--sp-1);
+  font-size: var(--fs-meta);
+  border-radius: var(--radius-s);
+}
+
+.xs .icon svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+/* A toggle that is on (a preview width, an overlay). */
+.button[aria-pressed="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
 .sm {
   height: var(--control-sm);
   padding: 0 var(--sp-3);

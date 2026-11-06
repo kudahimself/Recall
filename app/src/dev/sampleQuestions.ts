@@ -179,8 +179,12 @@ export const SAMPLE_QUESTIONS = [
  * The sample a `?sample=<id>` query names, outside production builds only
  * (App.tsx shows it in the quiz view without recording the answer).
  */
-export function sampleFromSearch(search: string, env: string | undefined = process.env.NODE_ENV): Question | null {
+export function sampleFromSearch(
+  search: string,
+  env: string | undefined = process.env.NODE_ENV,
+): Question | null {
   if (env === 'production') return null;
   const id = new URLSearchParams(search).get('sample');
+  if (!id) return null;
   return SAMPLE_QUESTIONS.find(q => q.id === id) ?? null;
 }

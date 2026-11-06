@@ -4,7 +4,7 @@ import { readMediaRules, detectLayoutContainers, MediaRuleStatus } from '../../u
 import { renderLayoutOverlay, clearLayoutOverlay } from '../../utils/layoutOverlay';
 import { ResponsiveDeviceToolbar, DevicePreset } from './ResponsiveDeviceToolbar';
 import { MediaRuleChips } from './MediaRuleChips';
-import './LivePreview.css';
+import styles from './LivePreview.module.css';
 
 interface Props {
   // Markup rendered in the frame. For CSS questions this is the question's
@@ -100,14 +100,23 @@ export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
     measure();
     const pane = paneRef.current;
     if (!pane || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
+    // Measure on the next frame, never inside the observer's callback, so the
+    // state it sets cannot resize the pane again in the same frame.
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    });
     observer.observe(pane);
     if (frameRef.current) observer.observe(frameRef.current);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [preset, inspectFrame]);
 
   return (
-    <div className="live-preview">
+    <div className={styles.preview}>
       <ResponsiveDeviceToolbar
         active={preset}
         onChange={setPreset}
@@ -118,15 +127,15 @@ export const LivePreview: React.FC<Props> = ({ html, css, tailwind }) => {
       />
       {mediaRules.length > 0 && <MediaRuleChips rules={mediaRules} />}
       {docTitle && (
-        <div className="live-preview-tab" title="The document's <title> - what the browser tab would show">
-          <span className="live-preview-tab-dot" />
-          <span className="live-preview-tab-text">{docTitle}</span>
+        <div className={styles.tab} title="The document's <title> - what the browser tab would show">
+          <span className={styles.tabDot} />
+          <span className={styles.tabText}>{docTitle}</span>
         </div>
       )}
-      <div className="live-preview-pane" ref={paneRef}>
+      <div className={styles.pane} ref={paneRef}>
         <iframe
           ref={frameRef}
-          className="live-preview-frame"
+          className={styles.frame}
           title="Live preview of your code"
           sandbox={debounced.tailwind ? 'allow-same-origin allow-scripts' : 'allow-same-origin'}
           srcDoc={srcDoc}
