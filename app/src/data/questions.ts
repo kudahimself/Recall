@@ -905,6 +905,26 @@ HAVING ____ > 10`,
     tags: ['auto-loader', 'streaming', 'incremental'],
     concepts: ['stream-autoloader', 'stream-readstream-writestream'],
   },
+  {
+    id: 'dbx-basics-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DATABRICKS_BASICS,
+    language: CodeLanguage.PYTHON,
+    question: 'In a Databricks notebook the `spark` session is already created and attached to the cluster. What does this cell print? The answer is two lines: the list printed by the first `print`, then the number printed by the second.',
+    code: `nums = spark.range(1, 6)
+evens = nums.filter("id % 2 = 0")
+print(nums.columns)
+print(evens.count())`,
+    expectedOutput: `['id']
+2`,
+    acceptableOutputs: [`["id"]
+2`],
+    explanation: '`spark.range(1, 6)` builds a one-column DataFrame whose column is named `id`, holding 1 to 5: as with Python `range`, the end is excluded. `filter` keeps the even ids, 2 and 4. `count()` is an action, so the workers run the job and the driver gets back the number 2. Nothing had to be set up first, because a Databricks notebook gives you `spark` ready to use.',
+    hints: ['The end of spark.range is excluded, as in Python range.', 'spark.range names its one column id.'],
+    tags: ['fundamentals', 'spark-session', 'notebook', 'predict'],
+    concepts: ['dbx-architecture'],
+  },
 
   // ===== ADDITIONAL PRACTICE QUESTIONS =====
   {
