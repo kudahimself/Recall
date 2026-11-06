@@ -573,7 +573,7 @@ Lower cognitive load than cold writing; ideal as middle step of "worked → fade
 
 Requires explicit disposal to avoid "Canceled" promise errors when navigating away mid-edit.
 
-**Pattern in `CodingQuestion.tsx` (lines 143-147):**
+**Pattern in `CodingQuestion.tsx` (the unmount-cleanup `useEffect`, simplified):**
 
 ```typescript
 useEffect(() => () => {

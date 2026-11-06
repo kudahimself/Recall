@@ -77,6 +77,11 @@ export const CodingQuestion: React.FC<Props> = ({
   // mount) reads the live phase instead of the stale mount-time value.
   const phaseRef = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+  // Same for the handlers: the commands call through these refs, which are
+  // reassigned every render, so Cmd/Ctrl+Enter grades the code in the editor
+  // now rather than the mount-time code (the starter).
+  const submitRef = useRef<() => void>(() => {});
+  const resetRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const mq = window.matchMedia('(max-height: 860px)');
@@ -170,14 +175,15 @@ export const CodingQuestion: React.FC<Props> = ({
     // Add keyboard shortcut for submit (Cmd/Ctrl + Enter)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       if (phaseRef.current === 'editing') {
-        handleSubmit();
+        submitRef.current();
       }
     });
 
-    // Add keyboard shortcut for reset (Cmd/Ctrl + R)
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyR, (e: any) => {
-      e?.preventDefault();
-      handleReset();
+    // Add keyboard shortcut for reset (Cmd/Ctrl + R).
+    // Monaco passes a ServicesAccessor, not a DOM event; the binding itself
+    // already consumes the keystroke, so the browser does not reload.
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyR, () => {
+      resetRef.current();
     });
 
     // Focus the editor after a short delay to ensure it's ready for input
@@ -310,6 +316,9 @@ export const CodingQuestion: React.FC<Props> = ({
     setPhase('editing');
     startTime.current = Date.now();
   };
+
+  submitRef.current = handleSubmit;
+  resetRef.current = handleReset;
 
   const handleNextHint = () => {
     if (question.hints && hintIndex < question.hints.length - 1) {

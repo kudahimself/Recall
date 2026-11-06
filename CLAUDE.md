@@ -37,7 +37,7 @@ Question construction workflow and question writing quality standards live in sk
   The validator normalizes and token-matches; order-independent.
 - **Monaco editor disposal pattern required** - without explicit disposal, navigating away
   mid-edit throws "Canceled" promise errors.
-  Pattern in `CodingQuestion.tsx` lines 143-147.
+  Pattern: the unmount-cleanup `useEffect` in `CodingQuestion.tsx`.
 - **localStorage keys use the `recall-*` prefix** - `recall-progress`, `recall-profile`, and the rest of
   `STORAGE_KEYS` in `App.tsx`; legacy `databricks-*` keys are copied over once and left in place.
 - **Never write progress except through `safeSetItem` / `serializeProgress`** (`src/utils/progressStorage.ts`).
