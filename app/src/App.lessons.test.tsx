@@ -40,16 +40,16 @@ test('a new learner gets the rule card first, then the exercises in order, and R
   expect(screen.getByRole('heading', { name: 'SELECT, WHERE, ORDER BY, TOP' })).toBeInTheDocument();
   expect(screen.getByText(/This example is run by check-lessons.js/)).toBeInTheDocument();
   // The rule card is the gate: no question is on screen yet.
-  expect(screen.queryByText(/Submit Answer/)).toBeNull();
+  expect(screen.queryByText(/Check answer/)).toBeNull();
 
   fireEvent.click(tryIt);
   expect(await screen.findByText(/Which query returns the 5 most expensive products/)).toBeInTheDocument();
-  expect(screen.getByText('Lesson · SELECT, WHERE, ORDER BY, TOP')).toBeInTheDocument();
+  expect(screen.getByRole('list', { name: 'Lesson · SELECT, WHERE, ORDER BY, TOP' })).toBeInTheDocument();
   expect(screen.getByText(/exercise 1 of 5/)).toBeInTheDocument();
   expect(screen.getByRole('complementary', { name: /Rule card: SELECT/ })).toBeInTheDocument();
 
   fireEvent.click(screen.getByText('SELECT TOP (5) ProductName, Price FROM dbo.DimProduct ORDER BY Price DESC;'));
-  fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Check answer/ }));
   fireEvent.click(await screen.findByRole('button', { name: /Next exercise/ }));
   expect(await screen.findByText(/SELECT DISTINCT Country FROM dbo.DimCustomer/)).toBeInTheDocument();
   expect(screen.getByText(/exercise 2 of 5/)).toBeInTheDocument();
@@ -69,7 +69,7 @@ test('a learner who already answered one of the exercises is not asked for the l
   localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: START }));
-  expect(await screen.findByText(/Submit Answer/, {}, { timeout: 3000 })).toBeInTheDocument();
+  expect(await screen.findByText(/Check answer/, {}, { timeout: 3000 })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Try the exercises/ })).toBeNull();
   // The rule card is still there to reopen.
   expect(screen.getByRole('button', { name: /Rule card/ })).toBeInTheDocument();

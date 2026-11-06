@@ -9,7 +9,7 @@ import { CheckCircle2, Copy, FolderOpen } from 'lucide-react';
 import { TopicExercise } from '../types';
 import { proseText } from '../utils/lessons';
 import { exerciseCommand } from '../utils/exercises';
-import { Inline } from './RuleCard';
+import { InlineText } from './ui/InlineText';
 import './ExerciseCard.css';
 
 interface Props {
@@ -59,7 +59,7 @@ export function ExerciseCard({ exercise, doneAt, rampDone, rampAnswered, rampTot
         {done && <CheckCircle2 size={18} className="ex-done-icon" aria-hidden="true" />}
         {exercise.title}
       </h3>
-      <p className="ex-task"><Inline text={proseText(exercise.task)} /></p>
+      <p className="ex-task"><InlineText text={proseText(exercise.task)} /></p>
       <div className="ex-folder">
         <FolderOpen size={14} aria-hidden="true" />
         <code className="ex-path">{exercise.folder}</code>

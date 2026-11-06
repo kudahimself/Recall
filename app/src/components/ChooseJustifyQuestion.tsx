@@ -2,8 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { AnswerMeta, ChoiceOption, ChooseJustifyQuestion as ChooseJustifyQ } from '../types';
 import { chooseJustifyCredit } from '../utils/answerCredit';
 import { isPassingCredit } from '../utils/spacedRepetition';
-import { renderInlineCode } from './InlineCode';
-import { ExplanationBlock, HintToggle, LETTERS, QuestionHead, ResultBanner, seededOrder } from './ReasoningParts';
+import { Eyebrow } from './ui/Card';
+import { InlineText, Prose } from './ui/InlineText';
+import { OptionList, OptionItem } from './ui/OptionList';
+import { QuestionShell, seededOrder } from './ui/QuestionShell';
+import styles from './ReasoningQuestion.module.css';
 
 interface Props {
   question: ChooseJustifyQ;
@@ -12,6 +15,9 @@ interface Props {
 }
 
 type Stage = 'decide' | 'justify' | 'graded';
+
+const items = (options: ChoiceOption[]): OptionItem[] =>
+  options.map(o => ({ id: o.id, text: o.text, isCorrect: o.isCorrect, content: <InlineText text={o.text} /> }));
 
 /**
  * Choose and justify: the decision first, then (once it is locked in) the
@@ -26,49 +32,15 @@ export const ChooseJustifyQuestion: React.FC<Props> = ({ question, onAnswer, sho
   const [decision, setDecision] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
 
-  const credit = stage === 'graded' && decision && reason ? chooseJustifyCredit(question, decision, reason) : 0;
+  const graded = stage === 'graded';
+  const credit = graded && decision && reason ? chooseJustifyCredit(question, decision, reason) : 0;
 
-  const submit = () => {
-    if (!decision || !reason) return;
+  const check = () => {
+    if (!decision || !reason || graded) return;
     const c = chooseJustifyCredit(question, decision, reason);
     setStage('graded');
     onAnswer(isPassingCredit(c), { hintTierUsed: 0, attempts: 1, credit: c });
   };
-
-  const optionList = (
-    name: string,
-    options: ChoiceOption[],
-    picked: string | null,
-    pick: (id: string) => void,
-    locked: boolean,
-  ) => (
-    <div className="rq-options" role="radiogroup" aria-label={name}>
-      {options.map((o, i) => {
-        const graded = stage === 'graded';
-        const cls = [
-          'rq-option',
-          picked === o.id ? 'picked' : '',
-          graded && o.isCorrect ? 'right' : '',
-          graded && picked === o.id && !o.isCorrect ? 'wrong' : '',
-        ].filter(Boolean).join(' ');
-        return (
-          <label key={o.id} className={cls}>
-            <input
-              type="radio"
-              name={`${question.id}-${name}`}
-              value={o.id}
-              checked={picked === o.id}
-              onChange={() => !locked && pick(o.id)}
-              disabled={locked}
-            />
-            <b>{LETTERS[i]}</b>
-            <span>{renderInlineCode(o.text, question.topic)}</span>
-            {graded && picked === o.id && <em className="rq-pick-tag">your pick</em>}
-          </label>
-        );
-      })}
-    </div>
-  );
 
   const verdict = credit >= 1 ? 'right' : credit > 0 ? 'partial' : 'wrong';
   const banner = credit >= 1
@@ -77,45 +49,56 @@ export const ChooseJustifyQuestion: React.FC<Props> = ({ question, onAnswer, sho
     ? { title: `Half credit · ${credit}`, detail: 'The decision was right; the reason was not the rule' }
     : { title: 'Not quite · credit 0', detail: 'Another decision fits this situation' };
 
-  return (
-    <div className="reasoning-question choose-justify-question">
-      <QuestionHead question={question} format="Choose & justify" />
-      <div className="rq-body">
-        <div className="rq-two">
-          <div>
-            <div className="rq-step">1 · Your decision</div>
-            {optionList('decision', decisions, decision, setDecision, stage !== 'decide')}
-          </div>
-          <div>
-            <div className="rq-step">2 · The reason it is right</div>
-            {stage === 'decide' ? (
-              <p className="rq-muted">The reasons appear once your decision is in.</p>
-            ) : (
-              optionList('reason', reasons, reason, setReason, stage === 'graded')
-            )}
-          </div>
-        </div>
-      </div>
+  const action = stage === 'decide'
+    ? { label: 'Lock in decision', onAction: () => decision && setStage('justify'), disabled: !decision }
+    : { label: 'Check answer', onAction: check, disabled: !reason };
 
-      {stage === 'decide' && (
-        <>
-          <HintToggle question={question} show={showHints} />
-          <button className="submit-button rq-submit" onClick={() => setStage('justify')} disabled={!decision}>
-            Lock in decision
-          </button>
-        </>
-      )}
-      {stage === 'justify' && (
-        <button className="submit-button rq-submit" onClick={submit} disabled={!reason}>
-          Submit answer
-        </button>
-      )}
-      {stage === 'graded' && (
-        <>
-          <ResultBanner verdict={verdict} title={banner.title} detail={banner.detail} />
-          <ExplanationBlock question={question} />
-        </>
-      )}
-    </div>
+  return (
+    <QuestionShell
+      dense
+      className="choose-justify-question"
+      question={question}
+      format="Choose & justify"
+      graded={graded}
+      stage={stage}
+      action={action}
+      hint={showHints && stage === 'decide' ? question.hints?.[0] : null}
+      pickCount={stage === 'decide' ? decisions.length : stage === 'justify' ? reasons.length : undefined}
+      feedback={graded ? { verdict, title: banner.title, detail: banner.detail, body: <Prose text={question.explanation} /> } : null}
+    >
+      <div className={styles.decideJustify}>
+        <section className={styles.step} aria-label="Your decision">
+          <Eyebrow className={styles.stepLabel}>1 · Your decision</Eyebrow>
+          <OptionList
+            name={`${question.id}-decision`}
+            label="Your decision"
+            options={items(decisions)}
+            value={decision}
+            onChange={setDecision}
+            locked={stage === 'justify'}
+            graded={graded}
+            keys={stage === 'decide'}
+            layout="list"
+          />
+        </section>
+        <section className={styles.step} aria-label="The reason it is right">
+          <Eyebrow className={styles.stepLabel}>2 · The reason it is right</Eyebrow>
+          {stage === 'decide' ? (
+            <p className={styles.muted}>The reasons appear once your decision is in.</p>
+          ) : (
+            <OptionList
+              name={`${question.id}-reason`}
+              label="The reason it is right"
+              options={items(reasons)}
+              value={reason}
+              onChange={setReason}
+              graded={graded}
+              keys={stage === 'justify'}
+              layout="list"
+            />
+          )}
+        </section>
+      </div>
+    </QuestionShell>
   );
 };

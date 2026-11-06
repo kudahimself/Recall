@@ -1,0 +1,111 @@
+.banner {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--raised);
+  animation: banner-in var(--dur-slow) var(--ease) both;
+}
+
+.banner:focus {
+  outline: none;
+}
+
+.banner:focus-visible {
+  outline: var(--focus-w) solid var(--verdict, var(--focus));
+  outline-offset: calc(-1 * var(--focus-w));
+}
+
+.icon {
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: var(--kbd-h);
+  height: var(--kbd-h);
+  border-radius: var(--radius-pill);
+  border: var(--border-w) solid currentColor;
+  animation: icon-in var(--dur-slow) var(--ease) both;
+}
+
+.icon svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.head {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--sp-2);
+  line-height: var(--lh-body);
+}
+
+.verdict {
+  font-size: var(--fs-body);
+  font-weight: var(--weight-bold);
+}
+
+.detail {
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.body {
+  margin-top: var(--sp-1);
+  font-family: var(--font-reading);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+
+.right {
+  --verdict: var(--success);
+  border-color: var(--success-line);
+  background: var(--success-soft);
+}
+
+.right .icon,
+.right .verdict {
+  color: var(--success);
+}
+
+.partial {
+  --verdict: var(--warning);
+  border-color: var(--warning-line);
+  background: var(--warning-soft);
+}
+
+.partial .icon,
+.partial .verdict {
+  color: var(--warning);
+}
+
+.wrong {
+  --verdict: var(--danger);
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+}
+
+.wrong .icon,
+.wrong .verdict {
+  color: var(--danger);
+}
+
+@keyframes banner-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes icon-in {
+  from { transform: scale(0.6); }
+  60% { transform: scale(1.08); }
+  to { transform: scale(1); }
+}

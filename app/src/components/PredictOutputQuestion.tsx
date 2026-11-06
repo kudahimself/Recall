@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { PredictOutputQuestion as PredictQ } from '../types';
 import { outputInstruction, outputMatches } from '../utils/predictOutput';
 import { DataTables } from './DataTables';
-import { renderInlineCode } from './InlineCode';
-import './PredictOutputQuestion.css';
+import { CodeBlock, languageLabel } from './ui/CodeBlock';
+import { Prose } from './ui/InlineText';
+import { QuestionShell } from './ui/QuestionShell';
+import { AnswerCompare, TextAnswer } from './ui/TextAnswer';
+import styles from './PredictOutputQuestion.module.css';
 
 interface Props {
   question: PredictQ;
@@ -14,102 +17,66 @@ interface Props {
 // Answer matching (and the SQL result-set convention) lives in
 // utils/predictOutput.ts so it can be unit-tested without rendering.
 
-export const PredictOutputQuestion: React.FC<Props> = ({
-  question,
-  onAnswer,
-  showHints,
-}) => {
-  const [userOutput, setUserOutput] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showHint, setShowHint] = useState(false);
+/** Code this narrow sits beside the answer box instead of above it. */
+const SIDE_BY_SIDE_MAX_COLUMNS = 46;
+const SIDE_BY_SIDE_MAX_LINES = 14;
 
-  useEffect(() => {
-    setUserOutput('');
-    setIsSubmitted(false);
-    setShowHint(false);
-  }, [question.id]);
+export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, showHints }) => {
+  const [typed, setTyped] = useState('');
+  const [graded, setGraded] = useState(false);
 
-  const evaluate = (): boolean =>
-    outputMatches(
-      userOutput,
-      [question.expectedOutput, ...(question.acceptableOutputs || [])],
-      question.language,
-    );
+  const right = graded && outputMatches(typed, [question.expectedOutput, ...(question.acceptableOutputs || [])], question.language);
 
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-    onAnswer(evaluate());
+  const check = () => {
+    if (graded || typed.trim().length === 0) return;
+    setGraded(true);
+    onAnswer(outputMatches(typed, [question.expectedOutput, ...(question.acceptableOutputs || [])], question.language));
   };
 
-  const wasCorrect = isSubmitted && evaluate();
+  const lines = question.code.split(/\r?\n/);
+  const sideBySide = lines.length <= SIDE_BY_SIDE_MAX_LINES && Math.max(...lines.map(l => l.length)) <= SIDE_BY_SIDE_MAX_COLUMNS;
 
   return (
-    <div className="predict-output-question">
-      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
-
-      <div className="badges-row">
-        <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
-        <div className="topic-badge">
-          {question.topic.replace(/_/g, ' ').toUpperCase()}
-        </div>
-        <div className="format-badge">PREDICT OUTPUT</div>
-      </div>
-
-      <div className="predict-instructions">
-        {outputInstruction(question.code, question.language)}
-      </div>
-
+    <QuestionShell
+      className="predict-output-question"
+      question={question}
+      format="Predict output"
+      task={outputInstruction(question.code, question.language)}
+      graded={graded}
+      typed
+      action={{ label: 'Check answer', onAction: check, disabled: typed.trim().length === 0 }}
+      hint={showHints ? question.hints?.[0] : null}
+      feedback={graded ? {
+        verdict: right ? 'right' : 'wrong',
+        title: right ? 'Correct' : 'Not quite',
+        body: <Prose text={question.explanation} />,
+      } : null}
+    >
       <DataTables tables={question.tables} />
-
-      <div className="code-block-wrapper">
-        <div className="code-block-header">{question.language.toUpperCase()}</div>
-        <pre className="code-block">{question.code}</pre>
+      <div className={[styles.work, sideBySide ? styles.split : ''].filter(Boolean).join(' ')}>
+        <CodeBlock code={question.code} language={question.language} label={languageLabel(question.language)} numbered />
+        {!graded ? (
+          <TextAnswer
+            id={`predict-${question.id}`}
+            label="Your predicted output"
+            value={typed}
+            onChange={setTyped}
+            multiline
+            grow={sideBySide}
+            rows={3}
+            mono
+            placeholder="Type the output you expect..."
+          />
+        ) : (
+          <AnswerCompare
+            columns={sideBySide ? 1 : 2}
+            items={[
+              { label: 'Your output', value: typed.replace(/\s+$/, ''), tone: right ? 'right' : 'wrong', mono: true },
+              ...(right ? [] : [{ label: 'Expected output', value: question.expectedOutput, tone: 'right' as const, mono: true }]),
+            ]}
+          />
+        )}
       </div>
-
-      <div className="output-input-wrapper">
-        <label className="output-label" htmlFor="predict-output-input">Your predicted output</label>
-        <textarea
-          id="predict-output-input"
-          className="output-input"
-          value={userOutput}
-          onChange={e => setUserOutput(e.target.value)}
-          disabled={isSubmitted}
-          placeholder="Type the output you expect..."
-          rows={4}
-          spellCheck={false}
-        />
-      </div>
-
-      {!isSubmitted && showHints && question.hints && question.hints.length > 0 && (
-        <div className="hints-section">
-          <button className="hint-button" onClick={() => setShowHint(!showHint)}>
-            {showHint ? 'Hide Hint' : 'Show Hint'}
-          </button>
-          {showHint && <div className="hint">{question.hints[0]}</div>}
-        </div>
-      )}
-
-      {!isSubmitted ? (
-        <button
-          className="submit-button"
-          onClick={handleSubmit}
-          disabled={userOutput.trim().length === 0}
-        >
-          Submit Prediction
-        </button>
-      ) : (
-        <div className="explanation">
-          <h4>{wasCorrect ? 'Correct.' : 'Not quite.'}</h4>
-          {!wasCorrect && (
-            <div className="actual-output">
-              <div className="actual-label">Expected output:</div>
-              <pre className="actual-code">{question.expectedOutput}</pre>
-            </div>
-          )}
-          <p>{renderInlineCode(question.explanation, question.topic)}</p>
-        </div>
-      )}
-
-    </div>
+    </QuestionShell>
   );
 };

@@ -71,8 +71,8 @@
   border-color: rgba(245, 158, 11, 0.3);
 }
 .parsons-question .topic-badge {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--highlight);
+  background: var(--highlight-soft);
   border-color: rgba(6, 182, 212, 0.3);
 }
 .parsons-question .format-badge {
@@ -381,7 +381,7 @@
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--highlight);
   border-radius: var(--radius-sm);
 }
 

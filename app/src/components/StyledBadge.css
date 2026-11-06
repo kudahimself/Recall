@@ -23,8 +23,8 @@
 }
 
 .styled-badge-topic {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--highlight);
+  background: var(--highlight-soft);
   border-color: rgba(6, 182, 212, 0.3);
 }
 

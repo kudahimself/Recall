@@ -1,0 +1,96 @@
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  min-height: var(--control-sm);
+  min-width: 0;
+}
+
+.crumb {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.section {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  flex: none;
+  width: var(--icon-s);
+  height: var(--icon-s);
+  align-self: center;
+  color: var(--text-3);
+}
+
+.topic {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+
+.meta {
+  flex: none;
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer {
+  flex: 1 1 0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+
+.again {
+  color: var(--warning);
+  font-weight: var(--weight-semibold);
+}
+
+/* Below a wide desktop the topic name keeps the room; the section is one Back away. */
+@media (max-width: 1599px) {
+  .section,
+  .section + .chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .meta {
+    display: none;
+  }
+}
+
+/* Below 1100px the side panel never shows, so its toggle goes too. */
+@media (max-width: 1099px) {
+  .panelToggle {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .bar {
+    flex-wrap: wrap;
+  }
+
+  .spacer {
+    display: none;
+  }
+}

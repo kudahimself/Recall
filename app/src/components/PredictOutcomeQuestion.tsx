@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { PredictOutcomeQuestion as PredictOutcomeQ } from '../types';
 import { outcomeMatches, temptingMatch } from '../utils/answerCredit';
 import { DataTables } from './DataTables';
-import { renderInlineCode } from './InlineCode';
-import { ExplanationBlock, HintToggle, QuestionHead, ResultBanner } from './ReasoningParts';
+import { CodeBlock, languageLabel } from './ui/CodeBlock';
+import { InlineText, Prose } from './ui/InlineText';
+import { QuestionShell } from './ui/QuestionShell';
+import { TextAnswer } from './ui/TextAnswer';
+import styles from './ReasoningQuestion.module.css';
 
 interface Props {
   question: PredictOutcomeQ;
@@ -18,92 +21,82 @@ interface Props {
  */
 export const PredictOutcomeQuestion: React.FC<Props> = ({ question, onAnswer, showHints }) => {
   const [typed, setTyped] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [graded, setGraded] = useState(false);
 
-  const correct = submitted && outcomeMatches(question, typed);
-  const trap = submitted && !correct ? temptingMatch(question, typed) : undefined;
+  const right = graded && outcomeMatches(question, typed);
+  const trap = graded && !right ? temptingMatch(question, typed) : undefined;
   const withUnit = (v: string) => (question.unit ? `${v.trim()} ${question.unit}` : v.trim());
   // The learner's value with the unit added, unless they already typed words.
   const shown = (v: string) => (/[a-z]/i.test(v) ? v.trim() : withUnit(v));
 
-  const submit = () => {
-    if (submitted || typed.trim().length === 0) return;
-    setSubmitted(true);
+  const check = () => {
+    if (graded || typed.trim().length === 0) return;
+    setGraded(true);
     onAnswer(outcomeMatches(question, typed));
   };
 
+  const others = (question.tempting ?? []).filter(t => t !== trap);
+  const tempting = (t: { answer: string; why: string }, label: string) => (
+    <p key={t.answer} className={styles.tempting}>
+      <span className={styles.temptingLabel}>{label}</span>
+      <InlineText text={t.why} />
+    </p>
+  );
+
   return (
-    <div className="reasoning-question predict-outcome-question">
-      <QuestionHead question={question} format="Predict the outcome" />
-      <div className="rq-body">
-        <DataTables tables={question.tables} />
-        {question.code && (
-          <div className="rq-code">
-            <div className="rq-code-header">{question.language ? question.language.toUpperCase() : 'JOB'}</div>
-            <pre className="rq-code-block">{question.code}</pre>
-          </div>
-        )}
-
-        {!submitted ? (
-          <div className="rq-answer-row">
-            <label className="rq-label" htmlFor="predict-outcome-input">Your answer</label>
-            <div className="rq-answer-input">
-              <input
-                id="predict-outcome-input"
-                type="text"
-                autoComplete="off"
-                spellCheck={false}
-                value={typed}
-                onChange={e => setTyped(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-                placeholder="Type a value"
-                autoFocus
-              />
-              {question.unit && <span className="rq-unit">{question.unit}</span>}
+    <QuestionShell
+      dense
+      className="predict-outcome-question"
+      question={question}
+      format="Predict the outcome"
+      graded={graded}
+      action={{ label: 'Check answer', onAction: check, disabled: typed.trim().length === 0 }}
+      hint={showHints ? question.hints?.[0] : null}
+      feedback={graded ? {
+        verdict: right ? 'right' : 'wrong',
+        title: right ? 'Correct' : 'Not quite',
+        detail: right ? `You answered ${shown(typed)}` : `You answered ${shown(typed)}; the answer is ${withUnit(question.answer)}`,
+        body: (
+          <div className={styles.withTables}>
+            <div className={styles.explanation}>
+              <Prose text={question.explanation} />
+              {trap && tempting(trap, `Your ${withUnit(trap.answer)}: `)}
+              {others.length > 0 && (
+                <details className={styles.more}>
+                  <summary>Why {others.map(t => withUnit(t.answer)).join(' or ')} {others.length === 1 ? 'is' : 'are'} tempting</summary>
+                  {others.map(t => tempting(t, `${withUnit(t.answer)}: `))}
+                </details>
+              )}
             </div>
-          </div>
-        ) : (
-          <div className="rq-answer-compare">
-            <div className={`rq-answer-box ${correct ? 'good' : 'bad'}`}>
-              <small>You answered</small>
-              <span>{shown(typed)}</span>
-            </div>
-            {!correct && (
-              <div className="rq-answer-box good">
-                <small>Correct</small>
-                <span>{withUnit(question.answer)}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {!submitted ? (
-        <>
-          <HintToggle question={question} show={showHints} />
-          <button className="submit-button rq-submit" onClick={submit} disabled={typed.trim().length === 0}>
-            Submit answer
-          </button>
-        </>
-      ) : (
-        <>
-          <ResultBanner
-            verdict={correct ? 'right' : 'wrong'}
-            title={correct ? 'Correct' : 'Not quite'}
-          />
-          <ExplanationBlock question={question}>
-            {(question.tempting ?? []).map(t => (
-              <p key={t.answer} className={`rq-tempting${t === trap ? ' mine' : ''}`}>
-                <span className="rq-tempting-label">
-                  {t === trap ? `Your ${withUnit(t.answer)}: ` : `Why ${withUnit(t.answer)} is tempting: `}
-                </span>
-                {renderInlineCode(t.why, question.topic)}
-              </p>
-            ))}
             <DataTables tables={question.resultTables} />
-          </ExplanationBlock>
-        </>
-      )}
-    </div>
+          </div>
+        ),
+      } : null}
+    >
+      {/* The tables, then the job with the answer box: beside the tables when
+          the card is wide enough, else below them with the box beside the job. */}
+      <div className={styles.flow}>
+        <DataTables tables={question.tables} />
+        <div className={styles.job}>
+          <div className={styles.jobRow}>
+            {question.code && (
+              <CodeBlock code={question.code} language={question.language} label={languageLabel(question.language) ?? 'Job'} />
+            )}
+            <div className={styles.answerRow}>
+              <TextAnswer
+                id={`outcome-${question.id}`}
+                label="Your answer"
+                value={typed}
+                onChange={setTyped}
+                onEnter={check}
+                unit={question.unit}
+                placeholder="Type a value"
+                status={graded ? (right ? 'right' : 'wrong') : undefined}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </QuestionShell>
   );
 };

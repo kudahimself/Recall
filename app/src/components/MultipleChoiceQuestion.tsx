@@ -1,191 +1,67 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MultipleChoiceQuestion as MCQuestion } from '../types';
 import { DataTables } from './DataTables';
-import { renderInlineCode } from './InlineCode';
-import './MultipleChoiceQuestion.css';
+import { InlineText, Prose } from './ui/InlineText';
+import { OptionList } from './ui/OptionList';
+import { QuestionShell, seededOrder } from './ui/QuestionShell';
 
 interface Props {
   question: MCQuestion;
   onAnswer: (isCorrect: boolean) => void;
   // Fired when the user selects an INCORRECT option that has a misconceptionTag.
   // The handler in App records the event for telemetry and surfacing in
-  // ProgressTracker. Optional — components without telemetry just don't pass it.
+  // ProgressTracker. Optional: components without telemetry just don't pass it.
   onMisconception?: (tag: string, questionId: string) => void;
   showHints: boolean;
 }
 
 /**
- * Shuffle options at render time so the correct answer appears in a random position.
- * Uses Fisher-Yates shuffle seeded by question ID for consistency within a session.
+ * Multiple choice on the shared shell: the options in a stable shuffled order
+ * (seeded by the question id, so the right one is not always first), 1-9 to
+ * pick, Enter to check, then the verdict with the explanation.
  */
-function shuffleOptions(options: MCQuestion['options'], questionId: string): MCQuestion['options'] {
-  // Simple hash from question ID for deterministic-per-question shuffle
-  let seed = 0;
-  for (let i = 0; i < questionId.length; i++) {
-    seed = ((seed << 5) - seed + questionId.charCodeAt(i)) | 0;
-  }
+export const MultipleChoiceQuestion: React.FC<Props> = ({ question, onAnswer, onMisconception, showHints }) => {
+  const options = useMemo(() => seededOrder(question.options, question.id), [question.options, question.id]);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [graded, setGraded] = useState(false);
 
-  const shuffled = [...options];
-  // Fisher-Yates with seeded pseudo-random
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    seed = (seed * 1664525 + 1013904223) | 0;
-    const j = ((seed >>> 0) % (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
+  const picked = options.find(o => o.id === chosen);
+  const right = !!picked?.isCorrect;
 
-  // Reassign IDs a, b, c, d based on new positions
-  const ids = ['a', 'b', 'c', 'd'];
-  return shuffled.map((opt, idx) => ({
-    ...opt,
-    id: ids[idx] || opt.id,
-  }));
-}
-
-export const MultipleChoiceQuestion: React.FC<Props> = ({
-  question,
-  onAnswer,
-  onMisconception,
-  showHints,
-}) => {
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-
-  // Shuffle options once per question (deterministic by question ID)
-  const shuffledOptions = useMemo(
-    () => shuffleOptions(question.options, question.id),
-    [question.id, question.options]
-  );
-
-  // Reset state when question changes
-  useEffect(() => {
-    setSelectedOption(null);
-    setIsSubmitted(false);
-    setShowHint(false);
-  }, [question.id]);
-
-  const handleSubmit = () => {
-    if (!selectedOption) return;
-
-    const opt = shuffledOptions.find(o => o.id === selectedOption);
-    const correct = opt?.isCorrect || false;
-
-    // If they picked a tagged distractor, record it for telemetry.
-    if (!correct && opt?.misconceptionTag && onMisconception) {
-      onMisconception(opt.misconceptionTag, question.id);
+  const check = () => {
+    if (graded || !picked) return;
+    // A tagged distractor is recorded for the misconception telemetry.
+    if (!picked.isCorrect && picked.misconceptionTag && onMisconception) {
+      onMisconception(picked.misconceptionTag, question.id);
     }
-
-    setIsSubmitted(true);
-    onAnswer(correct);
-  };
-
-  const getOptionClass = (optionId: string): string => {
-    if (!isSubmitted) return 'option';
-
-    const option = shuffledOptions.find(opt => opt.id === optionId);
-    if (option?.isCorrect) return 'option correct';
-    if (optionId === selectedOption && !option?.isCorrect)
-      return 'option incorrect';
-
-    return 'option';
+    setGraded(true);
+    onAnswer(picked.isCorrect);
   };
 
   return (
-    <div className="multiple-choice-question">
-      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
-
-      <div className="badges-row">
-        <div className="difficulty-badge">
-          {question.difficulty.toUpperCase()}
-        </div>
-
-        <div className="topic-badge">
-          {question.topic.replace(/_/g, ' ').toUpperCase()}
-        </div>
-      </div>
-
+    <QuestionShell
+      className="multiple-choice-question"
+      question={question}
+      format="Multiple choice"
+      graded={graded}
+      action={{ label: 'Check answer', onAction: check, disabled: !chosen }}
+      hint={showHints ? question.hints?.[0] : null}
+      pickCount={options.length}
+      feedback={graded ? {
+        verdict: right ? 'right' : 'wrong',
+        title: right ? 'Correct' : 'Not quite',
+        body: <Prose text={question.explanation} />,
+      } : null}
+    >
       <DataTables tables={question.tables} />
-
-      <div className="options">
-        {shuffledOptions.map(option => (
-          <label
-            key={option.id}
-            className={`flipdisc-item-label ${getOptionClass(option.id)}`}
-          >
-            <input
-              className="hidden-checkbox-input"
-              type="radio"
-              name="answer"
-              value={option.id}
-              checked={selectedOption === option.id}
-              onChange={() => !isSubmitted && setSelectedOption(option.id)}
-              disabled={isSubmitted}
-            />
-            <div className="visual-flipdisc-container">
-              <div className="flipdisc-flipper">
-                <div className="flipdisc-front">
-                  <svg
-                    className="front-icon"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                    />
-                  </svg>
-                </div>
-                <div className="flipdisc-back">
-                  <svg
-                    className="back-icon"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M4.5 12.75l6 6 9-13.5"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <span className="flipdisc-text-content">{renderInlineCode(option.text, question.topic)}</span>
-          </label>
-        ))}
-      </div>
-
-      {!isSubmitted && showHints && question.hints && question.hints.length > 0 && (
-        <div className="hints-section">
-          <button className="hint-button" onClick={() => setShowHint(!showHint)}>
-            {showHint ? 'Hide Hint' : 'Show Hint'}
-          </button>
-          {showHint && (
-            <div className="hint">{question.hints[0]}</div>
-          )}
-        </div>
-      )}
-
-      {!isSubmitted ? (
-        <button
-          className="submit-button"
-          onClick={handleSubmit}
-          disabled={!selectedOption}
-        >
-          Submit Answer
-        </button>
-      ) : (
-        <div className="explanation">
-          <h4>Explanation:</h4>
-          <p>{renderInlineCode(question.explanation, question.topic)}</p>
-        </div>
-      )}
-
-    </div>
+      <OptionList
+        name={`mcq-${question.id}`}
+        label="Answer options"
+        options={options.map(o => ({ id: o.id, text: o.text, isCorrect: o.isCorrect, content: <InlineText text={o.text} /> }))}
+        value={chosen}
+        onChange={setChosen}
+        graded={graded}
+      />
+    </QuestionShell>
   );
 };

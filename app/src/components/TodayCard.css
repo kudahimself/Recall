@@ -69,7 +69,7 @@
 }
 
 .today-reviews-left {
-  color: var(--backend-hover);
+  color: var(--accent-text);
 }
 
 .today-stat-of {
@@ -175,12 +175,4 @@
   .today-stats {
     grid-template-columns: 1fr;
   }
-}
-
-.mode-pill-drill {
-  color: var(--text-muted);
-}
-
-.mode-pill-today {
-  color: var(--text-dim);
 }

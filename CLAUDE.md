@@ -52,8 +52,8 @@ Question construction workflow and question writing quality standards live in sk
 - **Write `solution` first, then `starterCode`** - solution is the reference implementation,
   starter is comment-only or minimal scaffolding.
   Heavy scaffolding leaks the answer.
-- **UI targets desktop viewport without scrolling** - dark-purple theme with radial-gradient
-  mouse-tracked card effects.
+- **UI targets desktop viewport without scrolling** - dark-purple theme on the design tokens in
+  `app/src/styles/tokens.css`.
   Monaco Editor: `vs-dark`, no minimap, line numbers on, read-only after correct answer.
 
 ## Agent conduct

@@ -1,0 +1,48 @@
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  font-weight: var(--weight-medium);
+  padding: 0.05em 0.35em;
+  border-radius: var(--radius-s);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.bold {
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+
+/* A fenced block inside a heading or a sentence: code shown as written. */
+.fence,
+.fenceBlock {
+  display: block;
+  margin: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--code-bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  font-weight: var(--weight-regular);
+  line-height: var(--lh-code);
+  white-space: pre;
+  overflow-x: auto;
+  tab-size: 4;
+}
+
+.fenceBlock code {
+  font: inherit;
+}
+
+.paragraph {
+  margin: 0;
+}
+
+.paragraph + .paragraph {
+  margin-top: var(--sp-1);
+}

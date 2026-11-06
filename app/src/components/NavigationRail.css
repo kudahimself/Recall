@@ -55,50 +55,32 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  color: var(--text-dim);
+  color: var(--text-2);
   cursor: pointer;
-  transition: all 200ms ease;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
   font-family: var(--font-ui);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-meta);
   font-weight: 500;
   text-align: center;
   line-height: 1.2;
 }
 
 .nav-item:hover {
-  background: var(--bg-elevated);
+  background: var(--raised);
   color: var(--text);
-  transform: scale(1.05);
-}
-
-.nav-item:active {
-  transform: scale(0.98);
 }
 
 /* Active view state */
 .nav-item.active {
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
 /* Active course state with glow */
 .nav-item.nav-course.active {
-  background: var(--primary-soft);
-  color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary-ring);
-  animation: courseGlow 600ms ease-out;
-}
-
-@keyframes courseGlow {
-  0% {
-    box-shadow: 0 0 0 0 var(--primary-glow), 0 0 0 2px var(--primary-ring);
-  }
-  50% {
-    box-shadow: 0 0 0 12px transparent, 0 0 0 2px var(--primary-ring);
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent, 0 0 0 2px var(--primary-ring);
-  }
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  box-shadow: inset 0 0 0 var(--border-w) var(--accent-line);
 }
 
 /* Nav labels */
@@ -108,17 +90,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.9;
-}
-
-.nav-item:hover .nav-label {
-  opacity: 1;
 }
 
 /* Focus visible state */
 .nav-item:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  outline: var(--focus-w) solid var(--focus);
+  outline-offset: calc(-1 * var(--focus-w));
 }
 
 /* Responsive: Large Monitor */
@@ -141,15 +118,11 @@
 /* Responsive: Laptop size */
 @media (min-width: 768px) and (max-width: 1600px) {
   .navigation-rail {
-    width: 60px;
+    width: var(--rail-w);
   }
 
   .nav-item {
     padding: var(--space-sm) var(--space-xs);
-  }
-
-  .nav-label {
-    font-size: 9px;
   }
 }
 
@@ -180,26 +153,5 @@
 
   .nav-label {
     font-size: var(--fs-sm);
-  }
-}
-
-/* Mobile backdrop */
-@media (max-width: 767px) {
-  .nav-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 200ms ease;
-  }
-
-  .nav-backdrop.visible {
-    opacity: 1;
-    pointer-events: auto;
   }
 }

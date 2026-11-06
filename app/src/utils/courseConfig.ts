@@ -804,6 +804,21 @@ export function getGroupsForTopic(
 }
 
 /**
+ * Where a topic sits for display: its section ("Python Fundamentals") and its
+ * unit's display name ("Variables, Types & Strings"). Null for a topic not in
+ * any section.
+ */
+export function getTopicPlace(topic: string): { section: string; unit: string } | null {
+  const course = getCourseForTopic(topic);
+  for (const sectionName of getPathOrder(course)) {
+    for (const [unit, topicKeys] of getSectionUnits(sectionName)) {
+      if (topicKeys.includes(topic)) return { section: sectionName, unit };
+    }
+  }
+  return null;
+}
+
+/**
  * Get the progressive topic order for a course.
  * Returns a flat array of topic keys in the order they should be learned.
  * Used to sort questions so newQuestions[0] is always the right next step.

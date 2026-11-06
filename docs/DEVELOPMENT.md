@@ -379,15 +379,23 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 - `ProgressTracker.tsx` - hierarchical course → section → topic progress view
 - `QuestionFilter.tsx` - topic / difficulty / type filters, persisted to `localStorage`
 
-**Shared UI primitives:**
-- `StyledButton.tsx` - variants: primary/secondary/warning/danger. Use for all buttons.
-- `StyledBadge.tsx` - pills/badges
+**Shared UI components** (`src/components/ui/`, each styled by its own CSS Module on the design tokens):
+- `Button`, `Kbd` / `KeyCombo`, `Badge`, `Card` / `Panel` / `Eyebrow`, `Dialog`
+- `InlineText` / `Prose` - the one prose renderer, in every course: `code`, **bold** and fenced code blocks
+- `CodeBlock` - read-only code with line numbers and comments; `TextAnswer` / `AnswerCompare` - typed answers
+- `QuestionShell` - the frame of a question: prompt, answer area, hint, the verdict (`FeedbackBanner`) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus.
+- `OptionList` - options (multiple choice, choose and justify), code lines (spot the flaw) or checkboxes (explain's key points), with 1-9 keys and word-and-icon marks after grading
+- Multiple choice, predict output and the four decision and design types render on `QuestionShell`; cloze, Parsons and coding still use their own markup, with `StyledButton`, `StyledBadge` and `InlineCode.tsx` (a thin wrapper over `InlineText`).
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
-- `InlineCode.tsx` - `renderInlineCode` for backticked prose (SQL course only)
+
+**Keyboard:** `src/keyboard/shortcuts.ts` is the one shortcut registry; `useShortcut` binds a key from it, and the `?` overlay (`ShortcutHelp.tsx`) is generated from it.
+Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from inside a text box; an open `Dialog` takes the keys.
 
 **UI theme:**
-Dark-purple themed with radial-gradient mouse-tracked card effects.
-Layouts target desktop viewport without scrolling.
+Direction A "Night": dark purple, one brand fill for primary buttons in every course (a course's hue is only a marker).
+Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css`; component CSS uses tokens only (`app/scripts/check-css-tokens.js`), and old variable names are aliased there for the screens not yet moved.
+Fonts are IBM Plex Sans and Mono, self-hosted through `@fontsource`.
+Layouts target a desktop or laptop viewport without page scrolling.
 
 **Monaco Editor config:**
 - Theme: `vs-dark`
@@ -446,7 +454,7 @@ ELT & Transformation Patterns questions do too, for every staging source and loa
 Performance & Optimization questions do too, including the table a `CREATE INDEX ... ON` builds on and the target of a partition `SWITCH TO`.
 Cloud Warehouse SQL questions do too, including the source of a Synapse CTAS; a question that creates its own table (the distribution cloze) shows nothing for it, and only the QUALIFY predict keeps a CTE, because the CTE is what it contrasts with QUALIFY.
 `tsqlSampleTables.test.ts` fails if a question in any of these sections queries an existing table it does not show, or builds data inline.
-In SQL-course questions, backticks in the text, multiple-choice options and explanation render as inline code (`InlineCode.tsx`); other courses show backticks as written.
+In every course, backticks in question text, options and explanations render as inline code, `**bold**` as bold and a fenced block as code (`components/ui/InlineText.tsx`); `InlineText.test.tsx` scans the bank so no prose uses a backtick or `**` as a literal character.
 
 ### 1. Multiple Choice (`QuestionType.MULTIPLE_CHOICE`)
 
@@ -545,7 +553,7 @@ Lower cognitive load than cold writing; ideal as middle step of "worked → fade
 
 Four types where the learner produces an answer instead of picking a sentence: a value, a decision with its reason, a line, or an explanation.
 They were added for the Data Engineering rewrite but are tool-agnostic: tables, SQL or a few lines of pseudo-config are the notation.
-Grading lives in `src/utils/answerCredit.ts` (unit-tested in `answerCredit.test.ts`); the components are `PredictOutcomeQuestion.tsx`, `ChooseJustifyQuestion.tsx`, `SpotFlawQuestion.tsx` and `ExplainQuestion.tsx`, sharing `ReasoningParts.tsx` and `ReasoningQuestions.css`.
+Grading lives in `src/utils/answerCredit.ts` (unit-tested in `answerCredit.test.ts`); the components are `PredictOutcomeQuestion.tsx`, `ChooseJustifyQuestion.tsx`, `SpotFlawQuestion.tsx` and `ExplainQuestion.tsx`, built on the shared `QuestionShell` and `OptionList` (`components/ui/`), with their layout in `ReasoningQuestion.module.css`.
 `shapeErrors` is run over the whole bank by `questionBankIntegrity.test.ts`.
 One sample of each lives in `src/dev/sampleQuestions.ts`: the tests use them as fixtures, and the dev server shows one in the real quiz view at `http://localhost:3000/?sample=<id>` (`dev-sample-predict-outcome`, `dev-sample-choose-justify`, `dev-sample-spot-flaw`, `dev-sample-explain`), recording nothing.
 They are not in the bank.

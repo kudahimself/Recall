@@ -5,60 +5,23 @@
  * Content comes from TopicLesson (src/data/lessons/); nothing here stores data.
  */
 import React from 'react';
-import { ArrowRight, BookOpen, CheckCircle2, X } from 'lucide-react';
-import { CodeLanguage, LessonTable, Question, TopicLesson } from '../types';
+import { ArrowRight, BookOpen, Check, CheckCircle2, X } from 'lucide-react';
+import { LessonTable, Question, TopicLesson } from '../types';
 import { LessonContext, QUESTION_TYPE_LABEL, proseText } from '../utils/lessons';
 import { nonRunnableKind } from '../utils/workedKinds';
+import { useShortcut } from '../keyboard/shortcuts';
+import { Button } from './ui/Button';
+import { Card, Eyebrow } from './ui/Card';
+import { CodeBlock } from './ui/CodeBlock';
+import { Dialog } from './ui/Dialog';
+import { InlineText } from './ui/InlineText';
+import { KeyCombo } from './ui/Kbd';
 import './RuleCard.css';
+import styles from './RulePanel.module.css';
 
-/** Text with `code` spans. */
-export function Inline({ text }: { text: string }) {
-  const parts = text.split('`');
-  return (
-    <>
-      {parts.map((p, i) => (i % 2 === 1
-        ? <code key={i} className="rc-inline-code">{p}</code>
-        : <React.Fragment key={i}>{p}</React.Fragment>))}
-    </>
-  );
-}
-
-/** Split a code line into its code and its trailing comment, ignoring markers inside quotes. */
-function splitComment(line: string, language: CodeLanguage): [string, string] {
-  const marker = language === CodeLanguage.PYTHON ? '#' : '--';
-  let quote: string | null = null;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (quote) {
-      if (c === quote) quote = null;
-      continue;
-    }
-    if (c === "'" || c === '"') { quote = c; continue; }
-    if (line.startsWith(marker, i)) return [line.slice(0, i), line.slice(i)];
-  }
-  return [line, ''];
-}
-
-export function CodeBlock({ code, language, numbered = false }: { code: string; language: CodeLanguage; numbered?: boolean }) {
-  return (
-    <pre className={`rc-codeblock${numbered ? ' rc-codeblock-numbered' : ''}`}>
-      <code>
-        {code.split(/\r?\n/).map((line, i) => {
-          const [body, comment] = splitComment(line, language);
-          return (
-            <span className="rc-line" key={i}>
-              {numbered && <span className="rc-ln" aria-hidden="true">{i + 1}</span>}
-              <span className="rc-line-text">
-                {body}
-                {comment && <span className="rc-comment">{comment}</span>}
-                {!body && !comment ? ' ' : null}
-              </span>
-            </span>
-          );
-        })}
-      </code>
-    </pre>
-  );
+/** Text with `code` spans: the shared renderer. */
+function Inline({ text }: { text: string }) {
+  return <InlineText text={text} />;
 }
 
 function DataTable({ table }: { table: LessonTable }) {
@@ -111,9 +74,7 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
           Lesson → {plan.length} exercises → ramp{context ? ` (${context.rampSize} questions)` : ''} → review
         </span>
         {mode === 'reopen' && onClose && (
-          <button className="rc-close" onClick={onClose} aria-label="Close the rule card" title="Close (Esc)">
-            <X size={16} />
-          </button>
+          <Button variant="ghost" size="sm" className="rc-close" onClick={onClose} aria-label="Close the rule card" title="Close (Esc)" icon={<X />} />
         )}
       </div>
 
@@ -157,30 +118,35 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
       <div className="rc-footer">
         <span className="rc-plan">
           Exercises next: {plan.map((q, i) => `${i + 1} ${QUESTION_TYPE_LABEL[q.type]}`).join(' → ')}.
-          {' '}Press <kbd>R</kbd> at any time to reopen this card.
+          {' '}Press <KeyCombo combo="R" /> at any time to reopen this card.
         </span>
         {mode === 'lesson' && onStart && (
-          <button className="start-button rc-start" onClick={onStart} autoFocus>
-            Try the exercises <kbd>Enter</kbd>
-            <ArrowRight className="start-button-icon" size={18} />
-          </button>
+          <Button variant="primary" size="lg" className="rc-start" onClick={onStart} autoFocus shortcut="Enter">
+            Try the exercises
+            <ArrowRight aria-hidden="true" size={18} />
+          </Button>
         )}
         {mode === 'reopen' && onClose && (
-          <button className="hero-link-btn rc-back" onClick={onClose}>
-            Back <kbd>Esc</kbd>
-          </button>
+          <Button className="rc-back" onClick={onClose} shortcut="Esc">Back</Button>
         )}
       </div>
     </div>
   );
 }
 
-/** The rule card reopened over whatever is on screen (R). */
+/** R again closes the reopened card (bound inside the dialog's key layer). */
+function CloseOnR({ onClose }: { onClose: () => void }) {
+  useShortcut('ruleCard', () => onClose());
+  return null;
+}
+
+/** The rule card reopened over whatever is on screen (R): a dialog that holds focus and gives it back. */
 export function RuleCardOverlay(props: Omit<RuleCardViewProps, 'mode'> & { onClose: () => void }) {
   return (
-    <div className="rc-overlay" role="dialog" aria-modal="true" onClick={e => { if (e.target === e.currentTarget) props.onClose(); }}>
+    <Dialog title={`Rule card: ${props.lesson.title}`} hideTitle size="wide" onClose={props.onClose} bodyClassName="rc-dialog-body">
+      <CloseOnR onClose={props.onClose} />
       <RuleCardView {...props} mode="reopen" />
-    </div>
+    </Dialog>
   );
 }
 
@@ -190,32 +156,34 @@ interface RuleCardPanelProps {
   rampNote: string | null;
   onOpen: () => void;
   onHide: () => void;
+  className?: string;
 }
 
-/** The compact rule card beside an exercise or a review of the topic. */
-export function RuleCardPanel({ lesson, rampNote, onOpen, onHide }: RuleCardPanelProps) {
+/** The compact rule card beside an exercise or a review of the topic. Scrolls inside itself when long. */
+export function RuleCardPanel({ lesson, rampNote, onOpen, onHide, className }: RuleCardPanelProps) {
   return (
-    <aside className="rule-panel" aria-label={`Rule card: ${lesson.title}`}>
-      <div className="rp-head">
-        <span className="rp-title"><BookOpen size={13} /> Rule card · {lesson.title}</span>
-        <button className="rp-hide" onClick={onHide} title="Hide the rule card" aria-label="Hide the rule card"><X size={14} /></button>
+    <Card as="aside" className={[styles.panel, className].filter(Boolean).join(' ')} aria-label={`Rule card: ${lesson.title}`} padded={false}>
+      <div className={styles.head}>
+        <Eyebrow className={styles.eyebrow}><BookOpen aria-hidden="true" className={styles.headIcon} />Rule card</Eyebrow>
+        <Button variant="ghost" size="sm" onClick={onHide} title="Hide the rule card" aria-label="Hide the rule card">Hide</Button>
       </div>
-      <div className="rc-label">The idea</div>
-      {lesson.idea.slice(0, 2).map((p, i) => <p key={i} className="rp-text"><Inline text={proseText(p)} /></p>)}
-      <div className="rc-label">The form</div>
-      <CodeBlock code={lesson.form.code} language={lesson.form.language} />
-      <div className="rc-label">Watch out</div>
-      <p className="rp-text"><Inline text={proseText(lesson.pitfall)} /></p>
-      {rampNote && (
-        <>
-          <div className="rc-label">This topic</div>
-          <p className="rp-text rp-muted">{rampNote}</p>
-        </>
-      )}
-      <button className="hero-link-btn rp-open" onClick={onOpen}>
-        Open the full rule card <kbd>R</kbd>
-      </button>
-    </aside>
+      <div className={styles.body}>
+        <h3 className={styles.title}>{lesson.title}</h3>
+        {lesson.idea.slice(0, 2).map((p, i) => <p key={i} className={styles.text}><Inline text={proseText(p)} /></p>)}
+        <CodeBlock code={lesson.form.code} language={lesson.form.language} compact hideComments />
+        <Eyebrow>Watch out</Eyebrow>
+        <p className={styles.text}><Inline text={proseText(lesson.pitfall)} /></p>
+        {rampNote && (
+          <>
+            <Eyebrow>This topic</Eyebrow>
+            <p className={`${styles.text} ${styles.muted}`}>{rampNote}</p>
+          </>
+        )}
+      </div>
+      <div className={styles.foot}>
+        <Button size="sm" block onClick={onOpen} shortcut="R">Open the full rule card</Button>
+      </div>
+    </Card>
   );
 }
 
@@ -227,29 +195,24 @@ interface LessonStepsProps {
   currentId: string | null;
 }
 
-/** "Lesson · Joins, exercise 2 of 5" and one box per exercise. */
+/** One box per lesson exercise: done right, missed, current or still to come. */
 export function LessonSteps({ lesson, byId, latest, currentId }: LessonStepsProps) {
-  const idx = currentId ? lesson.exercises.indexOf(currentId) : -1;
-  const current = idx >= 0 ? byId.get(lesson.exercises[idx]) : undefined;
   return (
-    <div className="lesson-steps" aria-label="Lesson exercises">
-      <div className="ls-head">
-        <span className="ls-title">Lesson · {lesson.title}</span>
-        {current && (
-          <span className="ls-sub">exercise {idx + 1} of {lesson.exercises.length} · {QUESTION_TYPE_LABEL[current.type]}</span>
-        )}
-      </div>
-      <ol className="ls-strip">
-        {lesson.exercises.map((id, i) => {
-          const q = byId.get(id);
-          const state = id === currentId ? 'current' : latest.has(id) ? (latest.get(id) ? 'right' : 'wrong') : 'todo';
-          return (
-            <li key={id} className={`ls-step ls-step-${state}`}>
-              {i + 1} · {q ? QUESTION_TYPE_LABEL[q.type] : id}
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+    <ol className={styles.steps} aria-label={`Lesson · ${lesson.title}`} style={{ '--steps': lesson.exercises.length } as React.CSSProperties}>
+      {lesson.exercises.map((id, i) => {
+        const q = byId.get(id);
+        const state = id === currentId ? 'current' : latest.has(id) ? (latest.get(id) ? 'right' : 'wrong') : 'todo';
+        const type = q ? QUESTION_TYPE_LABEL[q.type] : id;
+        const label = type.charAt(0).toUpperCase() + type.slice(1);
+        return (
+          <li key={id} className={[styles.step, styles[state]].filter(Boolean).join(' ')} aria-current={state === 'current' ? 'step' : undefined}>
+            {state === 'right' && <Check className={styles.stepIcon} aria-label="right" />}
+            {state === 'wrong' && <X className={styles.stepIcon} aria-label="missed" />}
+            <span className={styles.stepNo}>{i + 1}</span>
+            <span className={styles.stepLabel}>{label}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

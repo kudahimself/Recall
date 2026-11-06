@@ -17,9 +17,9 @@ import {
   SAMPLE_SPOT_FLAW,
 } from '../dev/sampleQuestions';
 
-/** Exactly these tables are on screen, in this order (each figure holds its name). */
+/** Exactly these tables are on screen, in this order (each table's figure holds its name; code blocks are figures too). */
 const expectTables = (names: string[]) => {
-  const figures = screen.queryAllByRole('figure');
+  const figures = screen.queryAllByRole('figure').filter(f => within(f).queryByRole('table'));
   expect(figures).toHaveLength(names.length);
   names.forEach((name, i) => expect(within(figures[i]).getByText(name)).toBeInTheDocument());
 };
@@ -34,14 +34,14 @@ describe('PredictOutcomeQuestion', () => {
     expect(screen.getByText(/INSERT INTO daily_sales/)).toBeInTheDocument();
     expect(screen.getByLabelText('Your answer')).toHaveValue('');
     expect(screen.getByText('rows')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit answer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Check answer' })).toBeDisabled();
   });
 
   it('grades a right value, with or without the unit', () => {
     const onAnswer = jest.fn();
     renderIt(onAnswer);
     fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: '8 rows' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
     expect(onAnswer).toHaveBeenCalledWith(true);
     expect(screen.getByRole('status')).toHaveTextContent('Correct');
   });
@@ -54,12 +54,12 @@ describe('PredictOutcomeQuestion', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onAnswer).toHaveBeenCalledWith(false);
     expect(screen.getByRole('status')).toHaveTextContent('Not quite');
-    expect(screen.getByText('You answered')).toBeInTheDocument();
-    expect(screen.getByText('10 rows')).toBeInTheDocument();
-    expect(screen.getByText('8 rows')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('You answered 10 rows; the answer is 8 rows');
     expect(screen.getByText('Your 10 rows:')).toBeInTheDocument();
     expect(screen.getByText(/10 is the whole table/)).toBeInTheDocument();
-    expect(screen.getByText('Why 4 rows is tempting:')).toBeInTheDocument();
+    // The other tempting answer is one click away, under its summary.
+    expect(screen.getByText('Why 4 rows is tempting')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Your answer/)).toBeDisabled();
     expect(screen.queryByRole('button', { name: /next/i })).toBeNull();
   });
 });
@@ -72,13 +72,13 @@ describe('ChooseJustifyQuestion', () => {
 
   it('shows the decisions first and the reasons only once the decision is in', () => {
     renderIt();
-    expect(within(screen.getByRole('radiogroup', { name: 'decision' })).getAllByRole('radio')).toHaveLength(4);
-    expect(screen.queryByRole('radiogroup', { name: 'reason' })).toBeNull();
+    expect(within(screen.getByRole('radiogroup', { name: 'Your decision' })).getAllByRole('radio')).toHaveLength(4);
+    expect(screen.queryByRole('radiogroup', { name: 'The reason it is right' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Lock in decision' })).toBeDisabled();
-    pick('decision', /MERGE on order_id/);
+    pick('Your decision', /MERGE on order_id/);
     fireEvent.click(screen.getByRole('button', { name: 'Lock in decision' }));
-    expect(within(screen.getByRole('radiogroup', { name: 'reason' })).getAllByRole('radio')).toHaveLength(4);
-    within(screen.getByRole('radiogroup', { name: 'decision' })).getAllByRole('radio')
+    expect(within(screen.getByRole('radiogroup', { name: 'The reason it is right' })).getAllByRole('radio')).toHaveLength(4);
+    within(screen.getByRole('radiogroup', { name: 'Your decision' })).getAllByRole('radio')
       .forEach(r => expect(r).toBeDisabled());
   });
 
@@ -89,18 +89,19 @@ describe('ChooseJustifyQuestion', () => {
   ])('grades %s with %s', (decision, reason, isCorrect, credit, banner) => {
     const onAnswer = jest.fn();
     renderIt(onAnswer);
-    pick('decision', decision);
+    pick('Your decision', decision);
     fireEvent.click(screen.getByRole('button', { name: 'Lock in decision' }));
-    pick('reason', reason);
-    fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }));
+    pick('The reason it is right', reason);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
     expect(onAnswer).toHaveBeenCalledWith(isCorrect, { hintTierUsed: 0, attempts: 1, credit });
     expect(screen.getByRole('status')).toHaveTextContent(banner);
-    expect(screen.getAllByText('your pick')).toHaveLength(2);
+    // Each list marks the learner's pick with a word, not colour alone.
+    expect(screen.getAllByText('Your answer')).toHaveLength(2);
   });
 
   it('does not show the options in authored order', () => {
     renderIt();
-    const shown = within(screen.getByRole('radiogroup', { name: 'decision' })).getAllByRole('radio').map(r => (r as HTMLInputElement).value);
+    const shown = within(screen.getByRole('radiogroup', { name: 'Your decision' })).getAllByRole('radio').map(r => (r as HTMLInputElement).value);
     expect(shown).not.toEqual(SAMPLE_CHOOSE_JUSTIFY.decisions.map(d => d.id));
     expect([...shown].sort()).toEqual(SAMPLE_CHOOSE_JUSTIFY.decisions.map(d => d.id).sort());
   });
@@ -109,41 +110,43 @@ describe('ChooseJustifyQuestion', () => {
 describe('SpotFlawQuestion', () => {
   const renderIt = (onAnswer = jest.fn()) =>
     render(<SpotFlawQuestion question={SAMPLE_SPOT_FLAW} onAnswer={onAnswer} showHints />);
-  const line = (n: number) => screen.getAllByRole('option')[n - 1];
+  const radio = (n: number) => screen.getAllByRole('radio')[n - 1];
+  // eslint-disable-next-line testing-library/no-node-access
+  const line = (n: number) => radio(n).closest('label') as HTMLElement;
 
   it('shows numbered clickable lines, the note and the input table', () => {
     renderIt();
-    expect(screen.getAllByRole('option')).toHaveLength(SAMPLE_SPOT_FLAW.lines.length);
+    expect(screen.getAllByRole('radio')).toHaveLength(SAMPLE_SPOT_FLAW.lines.length);
     expect(line(5)).toHaveTextContent('5INSERT INTO fact_orders SELECT * FROM staging_orders;');
     expect(screen.getByText(/late order from the day before/)).toBeInTheDocument();
     expectTables(['staging_orders']);
-    expect(screen.getByRole('button', { name: 'Click a line' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Pick a line' })).toBeDisabled();
   });
 
   it('grades the flaw line as right and shows the result table', () => {
     const onAnswer = jest.fn();
     renderIt(onAnswer);
-    fireEvent.click(line(5));
-    expect(line(5)).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(radio(5));
+    expect(radio(5)).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Check line 5' }));
     expect(onAnswer).toHaveBeenCalledWith(true);
     expect(screen.getByRole('status')).toHaveTextContent('Correct');
-    expect(line(5)).toHaveTextContent('your pick · the flaw');
+    expect(line(5)).toHaveTextContent('Your pick');
     expectTables(['staging_orders', 'fact_orders, rows per day']);
   });
 
   it('grades another line as wrong and points at the flaw', () => {
     const onAnswer = jest.fn();
     renderIt(onAnswer);
-    fireEvent.click(line(4));
+    fireEvent.click(radio(4));
     fireEvent.click(screen.getByRole('button', { name: 'Check line 4' }));
     expect(onAnswer).toHaveBeenCalledWith(false);
     expect(screen.getByRole('status')).toHaveTextContent('Not quite');
     expect(screen.getByRole('status')).toHaveTextContent('The flaw is line 5');
-    expect(line(4)).toHaveTextContent('your pick');
-    expect(line(5)).toHaveTextContent('the flaw');
-    fireEvent.click(line(3));
-    expect(line(3)).toHaveAttribute('aria-selected', 'false');
+    expect(line(4)).toHaveTextContent('Your pick');
+    expect(line(5)).toHaveTextContent('The flaw');
+    fireEvent.click(radio(3));
+    expect(radio(3)).not.toBeChecked();
   });
 });
 

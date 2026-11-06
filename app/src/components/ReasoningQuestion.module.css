@@ -1,0 +1,171 @@
+/* Layout shared by the decision and design types (predict the outcome,
+   choose and justify, spot the flaw, explain). Every surface, option and
+   banner comes from components/ui; only the arrangement lives here. */
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* Spot the flaw: the code keeps most of the width; the note and tables sit beside it. */
+.flawGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* An explanation with result tables: the tables sit beside the text when there is room. */
+.withTables {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-2) var(--sp-5);
+}
+
+.explanation {
+  flex: 1 1 var(--measure);
+  min-width: 0;
+}
+
+.withTables > :global(.data-tables) {
+  flex: 0 1 auto;
+}
+
+/* Choose and justify: reasons run longer than decisions, so they get more width. */
+.decideJustify {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.work {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.stepLabel {
+  margin: 0;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.note {
+  font-size: var(--fs-body);
+  color: var(--text-2);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-regular);
+  color: var(--text-3);
+}
+
+.tally {
+  font-weight: var(--weight-semibold);
+  color: var(--text-2);
+}
+
+.answerRow {
+  max-width: var(--answer-short-w);
+  min-width: 0;
+}
+
+/* Predict the outcome: tables and the job flow side by side while they fit. */
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-3) var(--sp-4);
+}
+
+.flow > :global(.data-tables) {
+  flex: 0 1 auto;
+}
+
+.job {
+  flex: 1 1 var(--job-min-w);
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.jobRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-3);
+}
+
+/* With room to spare (the job's code plus the box), the box sits at the foot of the job, beside it. */
+@container (min-width: 40rem) {
+  .jobRow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--answer-short-w));
+    align-items: end;
+  }
+}
+
+.more {
+  margin-top: var(--sp-2);
+  color: var(--text-2);
+}
+
+.more summary {
+  cursor: pointer;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  color: var(--text-2);
+  width: fit-content;
+}
+
+.more summary:hover {
+  color: var(--text);
+}
+
+.typed {
+  margin: var(--sp-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.model {
+  margin-top: var(--sp-1);
+  color: var(--text);
+}
+
+.tempting {
+  margin: var(--sp-2) 0 0;
+  color: var(--text-2);
+}
+
+.temptingMine {
+  color: var(--text);
+}
+
+.temptingLabel {
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+
+@media (max-width: 767px) {
+  .two,
+  .flawGrid,
+  .decideJustify {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
