@@ -592,7 +592,7 @@ export const CodingQuestion: React.FC<Props> = ({
               {reference && (
                 <section className={[styles.panel, styles.fillPanel].join(' ')} aria-label={done ? 'Solution' : 'Reference solution'}>
                   <h3 className={styles.panelHead}>{done ? 'Solution' : 'Reference solution'}</h3>
-                  <CodeBlock code={question.solution} language={question.language} label={languageLabel(question.language)} numbered fill />
+                  <CodeBlock code={question.solution} language={question.language} numbered fill />
                 </section>
               )}
               {previewActive && !reference && (

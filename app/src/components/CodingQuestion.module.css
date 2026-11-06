@@ -47,7 +47,6 @@
   flex: none;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--sp-1) var(--sp-4);
   min-height: var(--control-sm);
   padding: var(--sp-0) var(--sp-2) var(--sp-0) var(--sp-3);
@@ -56,6 +55,7 @@
 }
 
 .barHint {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
@@ -67,7 +67,12 @@
   flex: 1 1 auto;
 }
 
+/* The bar stays on one line: beside a hint or the solution the language gives way first. */
 .barLang {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   color: var(--text-3);
