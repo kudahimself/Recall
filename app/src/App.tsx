@@ -121,6 +121,8 @@ import { SpotFlawQuestion } from './components/SpotFlawQuestion';
 import { ExplainQuestion } from './components/ExplainQuestion';
 import { sampleFromSearch } from './dev/sampleQuestions';
 import { ProgressTracker } from './components/ProgressTracker';
+import { activityByDay, HeatmapCalendar } from './components/HeatmapCalendar';
+import { allFilters, filterQuestions, FilterOptions } from './utils/questionFilters';
 import { QuestionFilter } from './components/QuestionFilter';
 import { NavigationRail } from './components/NavigationRail';
 import {
@@ -192,12 +194,6 @@ const COURSE_META: Record<Course, { label: string; Icon: LucideIcon; tagline: st
 };
 
 type ViewMode = 'quiz' | 'progress' | 'home' | 'filter';
-
-interface FilterOptions {
-  topics: Topic[];
-  difficulties: Difficulty[];
-  questionTypes: QuestionType[];
-}
 
 const STORAGE_KEYS = {
   progress: PROGRESS_KEY,
@@ -301,26 +297,9 @@ function loadActiveCourse(): Course {
   return Course.DATABRICKS;
 }
 
-function loadFilters(): FilterOptions {
-  const defaults: FilterOptions = {
-    topics: Object.values(Topic),
-    difficulties: Object.values(Difficulty),
-    questionTypes: Object.values(QuestionType),
-  };
-  const saved = localStorage.getItem(STORAGE_KEYS.filters);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      return {
-        topics: parsed.topics || defaults.topics,
-        difficulties: parsed.difficulties || defaults.difficulties,
-        questionTypes: parsed.questionTypes || defaults.questionTypes,
-      };
-    } catch {
-      // Corrupted store; use defaults.
-    }
-  }
-  return defaults;
+/** Below 768 px the rail is an overlay drawer (NavigationRail.css), closed until asked for. */
+function isNarrowScreen(): boolean {
+  return !!window.matchMedia?.('(max-width: 767px)').matches;
 }
 
 function loadProgress(): ProgressLoad {
@@ -487,7 +466,10 @@ function App() {
   const orphansRef = useRef(initialLoad.orphans);
   const [progress, setProgress] = useState<UserProgress>(initialLoad.progress);
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
-  const [filters, setFilters] = useState<FilterOptions>(loadFilters);
+  // Filters start from "everything" on each load rather than from the saved
+  // copy: a saved list predates topics and question types added since, and
+  // would hide them without saying so.
+  const [filters, setFilters] = useState<FilterOptions>(allFilters);
   const [misconceptions, setMisconceptions] = useState<MisconceptionStore>(loadMisconceptions);
   const [conceptProgress, setConceptProgress] = useState<ConceptProgress>(
     () => loadConceptProgress(initialLoad.progress, !studyWritesBlocked(initialLoad)),
@@ -528,7 +510,7 @@ function App() {
   // True after a miss put the card back in today's list, until the next card.
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState<'slide-left' | 'slide-right' | 'fade'>('fade');
   const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'topics' | 'heatmap'>('overview');
@@ -918,14 +900,10 @@ function App() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const getFilteredQuestions = useCallback((): Question[] => {
-    return courseQuestions.filter(q => {
-      const topicMatch = filters.topics.length === 0 || filters.topics.includes(q.topic);
-      const difficultyMatch = filters.difficulties.length === 0 || filters.difficulties.includes(q.difficulty);
-      const typeMatch = filters.questionTypes.length === 0 || filters.questionTypes.includes(q.type);
-      return topicMatch && difficultyMatch && typeMatch;
-    });
-  }, [filters, courseQuestions]);
+  const getFilteredQuestions = useCallback(
+    (): Question[] => filterQuestions(courseQuestions, filters),
+    [filters, courseQuestions],
+  );
 
   // Bumped every time we ask for a new question. Used as a render key on the
   // question component so even when the SRS picks the SAME question reference
@@ -947,12 +925,7 @@ function App() {
 
   const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
     setFilters(newFilters);
-    const filtered = courseQuestions.filter(q => {
-      const topicMatch = newFilters.topics.length === 0 || newFilters.topics.includes(q.topic);
-      const difficultyMatch = newFilters.difficulties.length === 0 || newFilters.difficulties.includes(q.difficulty);
-      const typeMatch = newFilters.questionTypes.length === 0 || newFilters.questionTypes.includes(q.type);
-      return topicMatch && difficultyMatch && typeMatch;
-    });
+    const filtered = filterQuestions(courseQuestions, newFilters);
     const session = reviewSessionFor(activeCourse);
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
@@ -967,21 +940,13 @@ function App() {
   };
 
   const resetFilters = () => {
-    applyFiltersAndLoadQuestion({
-      topics: Object.values(Topic),
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
+    applyFiltersAndLoadQuestion(allFilters());
   };
 
   // From the progress dashboard: filter down to one weak category's topics
   // and drop straight into question mode.
   const handleReviewWeakTopic = useCallback((topicKeys: string[]) => {
-    applyFiltersAndLoadQuestion({
-      topics: topicKeys as Topic[],
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
+    applyFiltersAndLoadQuestion({ ...allFilters(), topics: topicKeys as Topic[] });
     changeView('quiz');
   }, [applyFiltersAndLoadQuestion, changeView]);
 
@@ -1171,25 +1136,26 @@ function App() {
     setFsrsStore(prev => recordAttempt(prev, missed, attempt, attemptHistory));
   };
 
+  // Filters belong to one course: switching course starts the new one unfiltered.
+  const switchCourse = (course: Course) => {
+    if (course !== activeCourse) setFilters(allFilters());
+    setActiveCourse(course);
+  };
+
   const startQuiz = (course?: Course, keepGoing = false) => {
     const targetCourse = course || activeCourse;
-    if (course) {
-      setActiveCourse(course);
-    }
-    // Reset filters when switching courses so topic filters don't block
-    setFilters({
-      topics: Object.values(Topic),
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
+    const switching = targetCourse !== activeCourse;
+    switchCourse(targetCourse);
     // Compute questions for the target course directly (state hasn't flushed yet).
+    // The same course keeps the learner's filters; a new course starts unfiltered.
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
+    const servePool = switching ? pool : filterQuestions(pool, filters);
     const built = reviewSessionFor(targetCourse);
     const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
     if (session !== reviewSessions[targetCourse]) {
       setReviewSessions(prev => ({ ...prev, [targetCourse]: session }));
     }
-    const next = selectSessionQuestion(session, pool, pool, progress, fsrsStore, cardDifficulty, conceptCtx);
+    const next = selectSessionQuestion(session, servePool, pool, progress, fsrsStore, cardDifficulty, conceptCtx);
     serveWithLessons(next, targetCourse, lessonFlow);
     changeView('quiz');
     setSessionStats({ answered: 0, correct: 0 });
@@ -1201,11 +1167,6 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    setFilters({
-      topics: Object.values(Topic),
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
     serveWithLessons(null, activeCourse, { lessonId, course: activeCourse, stage: 'card' });
     changeView('quiz');
   };
@@ -1271,7 +1232,6 @@ function App() {
           question={currentQuestion}
           onAnswer={handleAnswer}
           onMisconception={handleMisconception}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1281,7 +1241,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1291,7 +1250,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1301,7 +1259,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1311,7 +1268,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1321,7 +1277,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1331,7 +1286,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1341,7 +1295,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1352,7 +1305,6 @@ function App() {
           question={currentQuestion}
           onAnswer={handleAnswer}
           onFirstMiss={handleFirstMiss}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
           hintCreditSchedule={SpacedRepetitionSystem.getHintCreditSchedule(
             currentQuestion.id,
@@ -1809,7 +1761,7 @@ function App() {
                 : 'Save all your progress to a file'}
           >
             <Download size={14} />
-            <span>Export</span>
+            <span className="header-action-label">Export</span>
           </button>
           <button
             className="header-action"
@@ -1817,7 +1769,7 @@ function App() {
             title="Replace progress in this browser with an exported file"
           >
             <Upload size={14} />
-            <span>Import</span>
+            <span className="header-action-label">Import</span>
           </button>
           <input
             ref={importInputRef}
@@ -1920,6 +1872,7 @@ function App() {
           activeView={viewMode}
           activeCourse={activeCourse}
           onViewChange={(view) => {
+            if (isNarrowScreen()) setRailCollapsed(true);
             if (view === 'quiz') {
               startQuiz(activeCourse);
             } else {
@@ -1927,12 +1880,13 @@ function App() {
             }
           }}
           onCourseChange={(course) => {
+            if (isNarrowScreen()) setRailCollapsed(true);
             if (viewMode === 'quiz') {
               // Mid-question course switch: swap the whole quiz context, not
               // just the theme — otherwise the old course's question lingers.
               startQuiz(course);
             } else {
-              setActiveCourse(course);
+              switchCourse(course);
             }
           }}
           collapsed={railCollapsed}
@@ -1953,13 +1907,13 @@ function App() {
                 const courseTotal = stats.total;
                 const courseRecent = stats.recentTotal > 0 ? `${stats.recentPct}%` : 'New';
 
-                // Get last active topic for "Continue Learning" CTA
-                const lastAttempt = progress.attemptHistory.length > 0
-                  ? progress.attemptHistory[progress.attemptHistory.length - 1]
-                  : null;
-                const lastTopic = lastAttempt
-                  ? questions.find(q => q.id === lastAttempt.questionId)?.topic
-                  : null;
+                // Last topic answered in the active course, for the "Continue Learning" CTA
+                // (Resume starts this course, so the card must not name another course's topic).
+                let lastTopic: string | undefined;
+                for (let i = progress.attemptHistory.length - 1; i >= 0 && !lastTopic; i--) {
+                  const q = QUESTIONS_BY_ID.get(progress.attemptHistory[i].questionId);
+                  if (q && getCourseForTopic(q.topic) === activeCourse) lastTopic = q.topic;
+                }
                 const lastTopicName = lastTopic?.replace(/_/g, ' ') || 'your journey';
 
                 return (
@@ -2097,7 +2051,7 @@ function App() {
                               key={course}
                               className={`course-tile ${isActive ? 'active' : ''}`}
                               style={{ ['--course-accent' as string]: m.accent }}
-                              onClick={() => setActiveCourse(course)}
+                              onClick={() => switchCourse(course)}
                             >
                               <div className="course-tile-head">
                                 <span className="course-tile-icon">
@@ -2462,13 +2416,10 @@ function App() {
                 {activeProgressTab === 'heatmap' && (
                   <div className="tab-panel">
                     <h3 style={{ marginBottom: 'var(--space-lg)', color: 'var(--text)' }}>Learning Activity</h3>
-                    {/* Heatmap is already inside ProgressTracker, we'll show just that section */}
-                    <ProgressTracker
-                      progress={progress}
-                      questions={courseQuestions}
-                      course={activeCourse}
-                      misconceptions={misconceptions}
-                    />
+                    {/* Activity only; the Overview tab has the rest of the dashboard. */}
+                    <div className="heatmap-card">
+                      <HeatmapCalendar data={activityByDay(progress.attemptHistory, courseQuestions)} weeks={26} />
+                    </div>
                   </div>
                 )}
               </div>
