@@ -1224,7 +1224,8 @@ body::after {
 .quiz-view > .coding-question,
 .quiz-view > .parsons-question,
 .quiz-view > .predict-output-question,
-.quiz-view > .cloze-code-question {
+.quiz-view > .cloze-code-question,
+.quiz-view > .reasoning-question {
   flex: 1 1 auto;
   min-height: 0;
 }

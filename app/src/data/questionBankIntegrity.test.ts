@@ -1,5 +1,6 @@
 import { questions } from './questions';
 import { QuestionType, CodeLanguage } from '../types';
+import { shapeErrors } from '../utils/answerCredit';
 
 // Data-integrity guard over the whole compiled question bank. It catches the
 // three "unanswerable question" faults found in the bug hunt (report bugs #2
@@ -85,6 +86,15 @@ describe('question bank integrity', () => {
         }
       }
     }
+
+    expect(offenders).toEqual([]);
+  });
+
+  test('every decision and design card (predict the outcome, choose and justify, spot the flaw, explain) is well formed', () => {
+    const offenders = bank
+      .map(q => ({ id: q.id, errors: shapeErrors(q) }))
+      .filter(x => x.errors.length > 0)
+      .map(x => `${x.id} (${x.errors.join('; ')})`);
 
     expect(offenders).toEqual([]);
   });

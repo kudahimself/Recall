@@ -118,6 +118,10 @@ export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
   [QuestionType.PARSONS]: 'parsons',
   [QuestionType.CLOZE_CODE]: 'cloze',
   [QuestionType.CODING]: 'cold write',
+  [QuestionType.PREDICT_OUTCOME]: 'predict the outcome',
+  [QuestionType.CHOOSE_JUSTIFY]: 'choose & justify',
+  [QuestionType.SPOT_FLAW]: 'spot the flaw',
+  [QuestionType.EXPLAIN]: 'explain',
 };
 
 /** "multiple choice -> predict output -> cloze", for the rule card's footer. */

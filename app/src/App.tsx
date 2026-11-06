@@ -25,7 +25,7 @@ import {
   UNLOCK_ACCURACY_PCT,
   LESSONS_KEY,
 } from './utils/spacedRepetition';
-import { FsrsStore, loadOrRebuild, recordAttempt, replayHistory } from './utils/familySchedule';
+import { attemptGrade, FsrsStore, loadOrRebuild, recordAttempt, replayHistory } from './utils/familySchedule';
 import { seedMasteredTopics } from './utils/masteryMigration';
 import {
   ReviewSession,
@@ -65,7 +65,7 @@ import {
   toggleExerciseDone,
 } from './utils/exercises';
 import { SessionSettings } from './utils/reviewSession';
-import { applyReview, ConceptProgress, gradeFromResponseTime, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
+import { applyReview, ConceptProgress, fsrsInitDifficulty, fsrsNextDifficulty } from './utils/conceptSRS';
 import {
   migrateProgressToConcepts,
   rebackfillConceptProgress,
@@ -115,6 +115,11 @@ import { CodingQuestion } from './components/CodingQuestion';
 import { ParsonsQuestion } from './components/ParsonsQuestion';
 import { PredictOutputQuestion } from './components/PredictOutputQuestion';
 import { ClozeCodeQuestion } from './components/ClozeCodeQuestion';
+import { PredictOutcomeQuestion } from './components/PredictOutcomeQuestion';
+import { ChooseJustifyQuestion } from './components/ChooseJustifyQuestion';
+import { SpotFlawQuestion } from './components/SpotFlawQuestion';
+import { ExplainQuestion } from './components/ExplainQuestion';
+import { sampleFromSearch } from './dev/sampleQuestions';
 import { ProgressTracker } from './components/ProgressTracker';
 import { QuestionFilter } from './components/QuestionFilter';
 import { NavigationRail } from './components/NavigationRail';
@@ -506,6 +511,10 @@ function App() {
   // a miss (decision 7); its terminal answer is then a `retry` attempt.
   const firstMissRecordedRef = useRef<string | null>(null);
 
+  // Development only: `?sample=<id>` shows one of src/dev/sampleQuestions.ts
+  // in the quiz view, for screenshots and trying a question type by hand.
+  const [devSample] = useState(() => sampleFromSearch(window.location.search));
+
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [sessionStartTime] = useState(Date.now());
   const [showNextButton, setShowNextButton] = useState(false);
@@ -673,6 +682,14 @@ function App() {
     setLessonFlow(null);
     serveQuestion(pick);
   }, [serveQuestion, progress.questionsAttempted, lessonsDone]);
+
+  // A dev sample (?sample=<id>) opens straight on the quiz view.
+  useEffect(() => {
+    if (!devSample) return;
+    setActiveCourse(getCourseForTopic(devSample.topic));
+    serveQuestion({ question: devSample, kind: 'practice' });
+    setViewMode('quiz');
+  }, [devSample, serveQuestion]);
 
   // Count only seen questions that still exist (excludes deleted variation IDs from localStorage)
   const validSeenCount = useMemo(() => {
@@ -970,12 +987,18 @@ function App() {
 
   const handleAnswer = (isCorrect: boolean, meta?: AnswerMeta) => {
     if (!currentQuestion) return;
+    // A dev sample (?sample=<id>) is shown, never recorded.
+    if (devSample && currentQuestion.id === devSample.id) {
+      setShowNextButton(true);
+      return;
+    }
 
     const timeSpent = Date.now() - questionStartTime;
 
-    // Tiered-hint partial credit (coding only). Credit is the single source of
-    // truth for mastery math; the boolean stays for legacy scoring/session stats.
-    // No meta (other 4 question types, or an untiered coding pass) => tier 0 =>
+    // Partial credit. Credit is the single source of truth for mastery math;
+    // the boolean stays for legacy scoring/session stats. A component that
+    // grades its own credit (choose and justify, explain) passes it in meta;
+    // otherwise it comes from the hint tier (coding only): no meta => tier 0 =>
     // credit is exactly `isCorrect ? 1 : 0`, preserving prior behavior.
     const hintTierUsed = meta?.hintTierUsed ?? 0;
     const attemptCount = meta?.attempts ?? 1;
@@ -984,7 +1007,7 @@ function App() {
       currentQuestion.topic,
       progress,
     );
-    const credit = isCorrect ? creditSchedule[hintTierUsed] : 0;
+    const credit = meta?.credit ?? (isCorrect ? creditSchedule[hintTierUsed] : 0);
 
     // Create truly new references so React detects the change
     const newQuestionsAttempted = new Set(progress.questionsAttempted);
@@ -1081,10 +1104,10 @@ function App() {
     });
 
     // Auto-grade from response time + correctness (a 4-second MCQ pass weighs more
-    // than a 30-second one; envelopes are per-question-type in conceptSRS).
-    const rawGrade = gradeFromResponseTime(currentQuestion.type, timeSpent, isCorrect);
-    // A hint-assisted pass can never earn a full-confidence interval bump.
-    const cardGrade = SpacedRepetitionSystem.capGradeForHints(rawGrade, hintTierUsed);
+    // than a 30-second one; envelopes are per-question-type in conceptSRS). A
+    // hint-assisted pass, or a pass under the credit bar, can never earn a
+    // full-confidence interval bump. The same grade the family scheduler uses.
+    const cardGrade = attemptGrade(currentQuestion, attempt);
 
     // Per-card FSRS difficulty for EVERY answered card (concept-tagged or not) —
     // the single source of truth, so the difficulty-scaled drain interval applies
@@ -1275,6 +1298,46 @@ function App() {
     } else if (currentQuestion.type === QuestionType.CLOZE_CODE) {
       return (
         <ClozeCodeQuestion
+          key={renderKey}
+          question={currentQuestion}
+          onAnswer={handleAnswer}
+          onNext={showNextButton ? loadNextQuestion : undefined}
+          showHints={true}
+        />
+      );
+    } else if (currentQuestion.type === QuestionType.PREDICT_OUTCOME) {
+      return (
+        <PredictOutcomeQuestion
+          key={renderKey}
+          question={currentQuestion}
+          onAnswer={handleAnswer}
+          onNext={showNextButton ? loadNextQuestion : undefined}
+          showHints={true}
+        />
+      );
+    } else if (currentQuestion.type === QuestionType.CHOOSE_JUSTIFY) {
+      return (
+        <ChooseJustifyQuestion
+          key={renderKey}
+          question={currentQuestion}
+          onAnswer={handleAnswer}
+          onNext={showNextButton ? loadNextQuestion : undefined}
+          showHints={true}
+        />
+      );
+    } else if (currentQuestion.type === QuestionType.SPOT_FLAW) {
+      return (
+        <SpotFlawQuestion
+          key={renderKey}
+          question={currentQuestion}
+          onAnswer={handleAnswer}
+          onNext={showNextButton ? loadNextQuestion : undefined}
+          showHints={true}
+        />
+      );
+    } else if (currentQuestion.type === QuestionType.EXPLAIN) {
+      return (
+        <ExplainQuestion
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}

@@ -123,6 +123,30 @@ export const HINT_MATURITY_STREAK = 2;                       // streak at/above 
 export const CREDIT_CORRECT_THRESHOLD = 0.75;
 export const HINT_GRADE_CAP = [4, 2, 1] as const;            // FSRS grade ceiling by hint tier (tier 2 = lapse)
 
+// Self-graded partial credit (choose and justify, explain). The component
+// grades the credit; these constants turn it into the answer's outcome:
+//   credit >= CREDIT_CORRECT_THRESHOLD           -> a full pass (streak continues)
+//   PARTIAL_PASS_CREDIT <= credit < the threshold -> a pass under the bar, like a
+//       hinted pass: the card leaves the drain and today's list, but its streak
+//       resets and its FSRS grade is capped at PARTIAL_CREDIT_GRADE_CAP (Hard),
+//       so the family comes back sooner
+//   credit < PARTIAL_PASS_CREDIT                  -> a miss (re-asked, graded Again);
+//       the fraction still counts toward the topic's unlock bar
+export const PARTIAL_PASS_CREDIT = 0.5;
+export const PARTIAL_CREDIT_GRADE_CAP = 2;
+// Choose and justify: the right decision with the wrong reason.
+export const CHOOSE_JUSTIFY_DECISION_CREDIT = 0.5;
+
+/** Whether an answer with this credit counts as a pass (isCorrect); see PARTIAL_PASS_CREDIT. */
+export function isPassingCredit(credit: number): boolean {
+  return credit >= PARTIAL_PASS_CREDIT;
+}
+
+// Question types served only in review: never a new card, a ramp card, a lesson
+// exercise or an unseen drill. They join a family's review rotation once the
+// topic's ramp is fully answered (pickFamilyCard).
+export const REVIEW_ONLY_TYPES: readonly QuestionType[] = [QuestionType.EXPLAIN];
+
 // Mastered-resurface model (Anki-style, due-driven). Without this, mastered
 // questions effectively retire — they only resurface when their spacing
 // interval (1, 3, 7, 14, 30, 60, 120 days) is due, and for concept-aware
@@ -376,13 +400,26 @@ export function familyOf(q: Pick<Question, 'topic' | 'concepts'>): string {
 
 /** Ramp order inside a topic: difficulty first, then type (recognition -> cold write). */
 export const RAMP_DIFFICULTY_ORDER: readonly Difficulty[] = [Difficulty.BEGINNER, Difficulty.INTERMEDIATE, Difficulty.ADVANCED];
+// The decision and design types sit by cognitive load: predict the outcome
+// beside predict output (introduce), choose and justify before Parsons
+// (combine), spot the flaw after it (apply). EXPLAIN is review-only and never
+// in a ramp; it is listed last so it still has a rank.
 export const RAMP_TYPE_ORDER: readonly QuestionType[] = [
   QuestionType.MULTIPLE_CHOICE,
   QuestionType.PREDICT_OUTPUT,
+  QuestionType.PREDICT_OUTCOME,
+  QuestionType.CHOOSE_JUSTIFY,
   QuestionType.PARSONS,
+  QuestionType.SPOT_FLAW,
   QuestionType.CLOZE_CODE,
   QuestionType.CODING,
+  QuestionType.EXPLAIN,
 ];
+
+/** A card served only in review (REVIEW_ONLY_TYPES). */
+export function isReviewOnly(q: Pick<Question, 'type'>): boolean {
+  return REVIEW_ONLY_TYPES.includes(q.type);
+}
 
 /** Sort key for ramp order; equal keys keep the bank's order (stable sort). */
 export function rampRank(q: Question): number {
@@ -404,6 +441,7 @@ export function topicRamp(topicQuestions: Question[]): Question[] {
   const cached = rampCache.get(key);
   if (cached) return cached;
   const ordered = topicQuestions.map((q, i) => ({ q, i }))
+    .filter(({ q }) => !isReviewOnly(q))
     .sort((a, b) => rampRank(a.q) - rampRank(b.q) || a.i - b.i)
     .map(x => x.q);
   const chosen = new Set<string>();
@@ -1113,6 +1151,17 @@ export class SpacedRepetitionSystem {
   }
 
   /**
+   * Cap an FSRS response grade by the answer's credit: a pass under
+   * CREDIT_CORRECT_THRESHOLD (half credit, 2 of 4 key points) is at most Hard.
+   * A hinted coding pass under the bar is already capped this low by its hint
+   * tier, so replaying old history gives the same grades.
+   */
+  static capGradeForCredit(grade: ReviewGrade, credit: number | undefined): ReviewGrade {
+    if (credit === undefined || credit >= CREDIT_CORRECT_THRESHOLD) return grade;
+    return Math.min(grade, PARTIAL_CREDIT_GRADE_CAP) as ReviewGrade;
+  }
+
+  /**
    * Get target interval in days based on correct streak
    * Implements spaced repetition: 1, 3, 7, 14, 30 days
    */
@@ -1371,11 +1420,12 @@ export class SpacedRepetitionSystem {
   ): Question | null {
     if (questions.length === 0) return null;
 
-    // Apply path gating — filter to only unlocked section topics
+    // Apply path gating: filter to only unlocked section topics. A review-only
+    // card (isReviewOnly) is never served unseen here: it waits for a family review.
     const unlockedTopics = this.getUnlockedTopics(questions, progress);
-    const availableQuestions = unlockedTopics
-      ? questions.filter(q => unlockedTopics.has(q.topic))
-      : questions;
+    const availableQuestions = questions.filter(q =>
+      (!unlockedTopics || unlockedTopics.has(q.topic))
+      && (!isReviewOnly(q) || progress.questionsAttempted.has(q.id)));
 
     // No unlocked questions — return null instead of a wrong-course leak. The
     // old `return questions[0]` could surface a question from another course
@@ -1403,9 +1453,13 @@ export class SpacedRepetitionSystem {
     const typeIndex: Record<string, number> = {
       [QuestionType.MULTIPLE_CHOICE]: 0,
       [QuestionType.PREDICT_OUTPUT]: 1,
+      [QuestionType.PREDICT_OUTCOME]: 1,
+      [QuestionType.CHOOSE_JUSTIFY]: 2,
       [QuestionType.PARSONS]: 2,
+      [QuestionType.SPOT_FLAW]: 3,
       [QuestionType.CLOZE_CODE]: 3,
       [QuestionType.CODING]: 4,
+      [QuestionType.EXPLAIN]: 5,
     };
 
     const sortedAvailable = [...availableQuestions].sort((a, b) => {

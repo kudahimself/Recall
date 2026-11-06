@@ -26,7 +26,9 @@ import {
   easeFactor,
   familyOf,
   isRampDifficultyOpen,
+  isReviewOnly,
   rampRank,
+  topicRamp,
   FAMILY_EASE_EXPONENT,
   FSRS_MAX_INTERVAL_DAYS,
   FSRS_REQUEST_RETENTION,
@@ -163,10 +165,12 @@ function fromCard(c: Card, last: Pick<FamilyState, 'lastCard' | 'lastType' | 'la
 
 /**
  * The FSRS grade of one answer: the same auto-grade the App gives card
- * difficulty (correctness and response time, capped by the hint tier used).
+ * difficulty (correctness and response time, capped by the hint tier used
+ * and by partial credit, SRS.capGradeForCredit).
  */
-export function attemptGrade(q: Question, a: Pick<QuestionAttempt, 'isCorrect' | 'timeSpent' | 'hintTierUsed'>): ReviewGrade {
-  return SRS.capGradeForHints(gradeFromResponseTime(q.type, a.timeSpent, a.isCorrect), a.hintTierUsed ?? 0);
+export function attemptGrade(q: Question, a: Pick<QuestionAttempt, 'isCorrect' | 'timeSpent' | 'hintTierUsed' | 'credit'>): ReviewGrade {
+  const graded = SRS.capGradeForHints(gradeFromResponseTime(q.type, a.timeSpent, a.isCorrect), a.hintTierUsed ?? 0);
+  return SRS.capGradeForCredit(graded, a.credit);
 }
 
 /** A card's FSRS difficulty after an answer of `grade` (what recall-card-difficulty stores). */
@@ -347,21 +351,32 @@ export interface CardPickContext {
 }
 
 /**
+ * A review-only card (an explain card) joins its family's review rotation once
+ * its topic's ramp is fully answered, so it is never part of the first pass.
+ */
+export function isReviewOnlyReady(q: Question, ctx: Pick<CardPickContext, 'latest' | 'byTopic'>): boolean {
+  return topicRamp(ctx.byTopic.get(q.topic) ?? []).every(r => ctx.latest.has(r.id));
+}
+
+/**
  * The card a family review serves: the card the family missed last time
  * (relearn it), otherwise a seen card of a type not used last time, a missed
- * one first, then the one seen longest ago. Resting well-known cards are
- * skipped; when only those are left, an unseen card of the family at a
- * difficulty the topic has opened is served instead, else nothing.
+ * one first, then the one seen longest ago. An unseen review-only card whose
+ * topic's ramp is done counts as seen longest ago, so the next review whose
+ * type rotation allows it serves it. Resting well-known cards are skipped;
+ * when only those are left, an unseen card of the family at a difficulty the
+ * topic has opened is served instead, else nothing.
  */
 export function pickFamilyCard(members: Question[], s: FamilyState | undefined, ctx: CardPickContext): Question | null {
   const usable = members.filter(q =>
-    !ctx.served.has(q.id) && !ctx.resting.has(q.id) && (!ctx.unlocked || ctx.unlocked.has(q.topic)));
+    !ctx.served.has(q.id) && !ctx.resting.has(q.id) && (!ctx.unlocked || ctx.unlocked.has(q.topic))
+    && (!isReviewOnly(q) || ctx.latest.has(q.id) || isReviewOnlyReady(q, ctx)));
   if (usable.length === 0) return null;
   if (s && !s.lastCorrect) {
     const missed = usable.find(q => q.id === s.lastCard && ctx.latest.get(q.id) === false);
     if (missed) return missed;
   }
-  const seen = usable.filter(q => ctx.latest.has(q.id));
+  const seen = usable.filter(q => ctx.latest.has(q.id) || isReviewOnly(q));
   if (seen.length > 0) {
     const fresh = seen.filter(q => q.type !== s?.lastType);
     const from = fresh.length > 0 ? fresh : seen;
@@ -372,5 +387,5 @@ export function pickFamilyCard(members: Question[], s: FamilyState | undefined, 
       return (ctx.progress.lastAttempt.get(a.id) ?? 0) - (ctx.progress.lastAttempt.get(b.id) ?? 0);
     })[0];
   }
-  return usable.find(q => isRampDifficultyOpen(ctx.byTopic.get(q.topic) ?? [q], ctx.latest, q.difficulty)) ?? null;
+  return usable.find(q => !isReviewOnly(q) && isRampDifficultyOpen(ctx.byTopic.get(q.topic) ?? [q], ctx.latest, q.difficulty)) ?? null;
 }
