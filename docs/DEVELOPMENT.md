@@ -244,7 +244,7 @@ The learning path on Home shows each topic's lesson, ramp and review steps with 
 After a topic's lesson and ramp comes one small coding exercise the learner does in their own editor, sized for 10-30 minutes and answerable from that topic and earlier ones.
 Nothing runs in the browser: the files live in `exercises/<course>/<topic>/` (a `README.md` with the task and examples, a starter module with signatures and `TODO`s, and `test_*.py` pytest tests), and the reference solution sits apart in `exercises/solutions/<course>/<topic>/`, laid over the starter files.
 `TopicExercise` data in `data/exercises/index.ts` is what the app shows: Progress -> Topics renders the selected topic's exercise card (the task in brief, the folder path with a Copy button, the files and how to run `pytest`) with a done tick the learner sets, and the learning path adds an Exercise step after Review.
-Exercises are written one section per PR, like lessons: Backend Python Fundamentals, Python Advanced and Django so far.
+Exercises are written one section per PR, like lessons: Backend Python Fundamentals, Python Advanced, Django and Django Advanced & Deployment so far.
 Each Django exercise folder holds one app (a package with an `apps.py`) and a `conftest.py` that loads the shared settings, `exercises/backend/exercise_settings.py`: SQLite in memory, so the tests need no server, database service or network.
 Those settings install only the app of the exercise folder pytest runs from, or every exercise's app when run from anywhere else, so app labels and model table names must be unique across exercises as well.
 The Django exercises need Django, pytest-django and Django REST Framework, pinned in `exercises/requirements.txt`, installed in the `python3` that `npm test` runs.

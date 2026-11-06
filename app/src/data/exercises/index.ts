@@ -3,7 +3,7 @@
  * editor after the topic's lesson and ramp. The files live in the repo's
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
  * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
- * Python Advanced and Django so far.
+ * Python Advanced, Django and Django Advanced & Deployment so far.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -576,6 +576,139 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Serve the books as a JSON API with Django REST Framework.',
       'A `ModelSerializer`, an `@api_view` list that reads with `many=True` and validates input passed as `data=`, and an `APIView` for one book whose `permission_classes` let anyone read but only signed-in users change it.',
+    ),
+  },
+  // ===== Section 4, Django Advanced & Deployment =====
+  // The mastery exercises go deeper than the Django ones: query counts, inheritance and
+  // constraints, dispatch(), the form lifecycle, auth backends and DRF viewsets.
+  {
+    id: 'dj_orm_mastery',
+    topicKeys: [Topic.DJ_ORM_MASTERY],
+    title: 'Branch reports',
+    folder: 'exercises/backend/dj_orm_mastery',
+    starter: ['branchstats/reports.py'],
+    tests: 'test_branch_reports.py',
+    minutes: 25,
+    task: lines(
+      'Write six reports on the branches where the number of queries counts as much as the result.',
+      'Join foreign keys with `select_related`, load tags and a reverse relation with `prefetch_related` and an ordered `Prefetch`, leave a column out with `only()`, rank books per branch with a `Window` and `Rank()`, and lend a copy under `select_for_update()` inside `transaction.atomic()`.',
+    ),
+  },
+  {
+    id: 'dj_models_mastery',
+    topicKeys: [Topic.DJ_MODELS_MASTERY],
+    title: 'Loan ledger',
+    folder: 'exercises/backend/dj_models_mastery',
+    starter: ['ledger/models.py'],
+    tests: 'test_ledger_models.py',
+    minutes: 25,
+    task: lines(
+      'Write the ledger\'s five models with each kind of inheritance and each rule where it belongs.',
+      'An abstract `Stamped` base, an `Item` with field validators, a `Periodical` with its own table, a `Loan` whose `clean()` limits its length and whose `CheckConstraint` and conditional `UniqueConstraint` the database enforces, and an `OverdueLoan` proxy.',
+    ),
+  },
+  {
+    id: 'dj_views_mastery',
+    topicKeys: [Topic.DJ_VIEWS_MASTERY],
+    title: 'Shelf views',
+    folder: 'exercises/backend/dj_views_mastery',
+    starter: ['shelving/views.py'],
+    tests: 'test_shelving_views.py',
+    minutes: 25,
+    task: lines(
+      'Write four views that use what sits under a class-based view.',
+      'Override `dispatch()` to find the shelf and stamp a header for every verb, limit verbs with `http_method_names`, raise `PermissionDenied`, redirect after a POST, put `cache_page` and `login_required` on classes with `method_decorator`, and stream a CSV export with `StreamingHttpResponse`.',
+    ),
+  },
+  {
+    id: 'dj_forms_mastery',
+    topicKeys: [Topic.DJ_FORMS_MASTERY],
+    title: 'Book suggestions',
+    folder: 'exercises/backend/dj_forms_mastery',
+    starter: ['suggestions/forms.py', 'suggestions/views.py'],
+    tests: 'test_suggestion_forms.py',
+    minutes: 25,
+    task: lines(
+      'Take readers\' book suggestions through a `ModelForm` and a view.',
+      'List the fields explicitly, widen a form field so its hook sees the raw ISBN, pin a cross-field error with `add_error()`, let the model\'s unique check report a duplicate, bind `request.FILES`, and save with `commit=False`, the reader and `save_m2m()`.',
+    ),
+  },
+  {
+    id: 'dj_auth_mastery',
+    topicKeys: [Topic.DJ_AUTH_MASTERY],
+    title: 'Card sign-in',
+    folder: 'exercises/backend/dj_auth_mastery',
+    starter: ['cards/backends.py', 'cards/auth_settings.py', 'cards/views.py'],
+    tests: 'test_card_auth.py',
+    minutes: 30,
+    task: lines(
+      'Let readers sign in with a library card and a PIN.',
+      'Write an authentication backend tried before `ModelBackend`, keep an old MD5 hasher so legacy hashes upgrade at sign-in, run `validate_password()` yourself, set the session cookie\'s flags, `login()` into a fresh session and check a loan\'s owner yourself where `has_perm()` cannot.',
+    ),
+  },
+  {
+    id: 'dj_rest_mastery',
+    topicKeys: [Topic.DJ_REST_MASTERY],
+    title: 'Loan API',
+    folder: 'exercises/backend/dj_rest_mastery',
+    starter: ['loan_api/serializers.py', 'loan_api/errors.py', 'loan_api/views.py'],
+    tests: 'test_loan_api.py',
+    minutes: 30,
+    task: lines(
+      'Serve the books through one `ModelViewSet`.',
+      'Nest the author for reading and take `author_id` for writing, load relations in `get_queryset()` so a list takes two queries, see PUT and PATCH differ, add a `lend` action, wrap every error in one shape with a custom exception handler and rate-limit with `ScopedRateThrottle`.',
+    ),
+  },
+  {
+    id: 'dj_admin',
+    topicKeys: [Topic.DJ_ADMIN],
+    title: 'Stock admin',
+    folder: 'exercises/backend/dj_admin',
+    starter: ['backoffice/admin.py'],
+    tests: 'test_backoffice_admin.py',
+    minutes: 25,
+    task: lines(
+      'Give the staff an admin for books and their reviews.',
+      'Register a `ModelAdmin` with `list_display`, `list_filter`, `search_fields` and `fieldsets`, a boolean column, a review count annotated in `get_queryset()` instead of a query per row, a `TabularInline` and a bulk action.',
+    ),
+  },
+  {
+    id: 'dj_caching',
+    topicKeys: [Topic.DJ_CACHING, Topic.DJ_TRANSACTIONS],
+    title: 'Stockroom',
+    folder: 'exercises/backend/dj_caching',
+    starter: ['stockroom/services.py'],
+    tests: 'test_stockroom.py',
+    minutes: 25,
+    task: lines(
+      'Cache two answers and group the stockroom\'s writes into transactions.',
+      'Cache with `get_or_set` and with `get` and `set` where a cached 0 is a hit, import a batch all or nothing with `atomic()`, skip duplicates in savepoints, and clear the cache and send a notice only after the commit with `on_commit`.',
+    ),
+  },
+  {
+    id: 'dj_signals_mw',
+    topicKeys: [Topic.DJ_SIGNALS_MW],
+    title: 'Gatehouse',
+    folder: 'exercises/backend/dj_signals_mw',
+    starter: ['gatehouse/middleware.py', 'gatehouse/stack.py', 'gatehouse/signals.py', 'gatehouse/apps.py'],
+    tests: 'test_gatehouse.py',
+    minutes: 25,
+    task: lines(
+      'Write the middleware every request passes and the receivers that count loans.',
+      'A request id on the way in and out, a maintenance page that short-circuits, a reader name that needs `request.user`, all placed in the right order in `MIDDLEWARE`, then `post_save` and `post_delete` receivers connected in the app config\'s `ready()`.',
+    ),
+  },
+  {
+    id: 'dj_management',
+    topicKeys: [Topic.DJ_MANAGEMENT, Topic.DJ_DEPLOYMENT],
+    title: 'Upkeep',
+    folder: 'exercises/backend/dj_management',
+    starter: ['upkeep/management/commands/overdue.py', 'upkeep/production.py'],
+    tests: 'test_upkeep.py',
+    minutes: 30,
+    task: lines(
+      'Write a management command and the production settings.',
+      'An `overdue` command with a positional date, `--grace` and a `--flag` switch, run with `call_command`, then settings that read `DEBUG`, the secret key and the hosts from the environment, force HTTPS with secure cookies and HSTS, and pass the `check --deploy` security checks.',
     ),
   },
 ];
