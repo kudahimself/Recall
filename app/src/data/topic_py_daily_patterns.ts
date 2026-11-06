@@ -20,53 +20,44 @@ export const py_daily_patterns_questions: Question[] = [
       topic: Topic.PY_DAILY_PATTERNS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use enumerate, zip, any, and all in realistic scenarios. Write a function process_rows(rows) that takes a list of dicts (CSV-like data). Use enumerate for row numbers in error messages, any() to check if any row has an "error" key, all() to verify all rows have the required fields ["name", "email"]. Return a summary dict.',
+      question: 'Write `process_rows(rows)`. `rows` is a list of dicts read from a CSV file, and every row should have the keys `"name"` and `"email"`. Return a dict with four keys: `"has_errors"`, True if any row has an `"error"` key (use `any`); `"all_fields_present"`, True if every row has both required keys (use `all`); `"error_rows"`, one message for each row that lacks a required key, numbered from 1 with `enumerate`, such as `"Row 2: missing email"` or `"Row 3: missing name, email"`; and `"field_summary"`, a dict built with `zip` that maps `"name"` and `"email"` to the number of rows with a non-empty value for that key.',
       starterCode: `def process_rows(rows):
-      """Process CSV-like rows using enumerate, zip, any, all."""
-      required_fields = ["name", "email"]
-      # Implement using enumerate, any, all
-      pass
-  `,
+    required_fields = ["name", "email"]
+    # Build and return the summary dict
+    pass
+`,
       testCases: [
         {
-          input: 'List of row dicts',
-          expectedOutput: 'Dict with has_errors, all_valid, error_rows using enumerate/any/all',
-          description: 'Should use enumerate, any, all for row processing',
+          input: '[{"name": "Ada", "email": "a@x.io"}, {"name": "Bo", "error": "bad date"}, {}]',
+          expectedOutput: "{'has_errors': True, 'all_fields_present': False, 'error_rows': ['Row 2: missing email', 'Row 3: missing name, email'], 'field_summary': {'name': 2, 'email': 1}}",
+          description: 'Flags the error row, the two rows with missing keys and counts the non-empty values',
         },
       ],
       solution: `def process_rows(rows):
-      """Process CSV-like rows using enumerate, zip, any, all."""
-      required_fields = ["name", "email"]
-  
-      # any() — check if ANY row has an error flag
-      has_errors = any(row.get("error") for row in rows)
-  
-      # all() — check if ALL rows have every required field
-      all_fields_present = all(
-          all(field in row for field in required_fields)
-          for row in rows
-      )
-  
-      # enumerate() — track row numbers for error reporting
-      error_rows = []
-      for row_num, row in enumerate(rows, start=1):
-          missing = [f for f in required_fields if f not in row]
-          if missing:
-              error_rows.append(f"Row {row_num}: missing {', '.join(missing)}")
-  
-      # zip() — pair field names with counts of non-empty values
-      field_names = required_fields
-      field_counts = [
-          sum(1 for row in rows if row.get(field)) for field in field_names
-      ]
-      field_summary = dict(zip(field_names, field_counts))
-  
-      return {
-          "has_errors": has_errors,
-          "all_fields_present": all_fields_present,
-          "error_rows": error_rows,
-          "field_summary": field_summary,
-      }`,
+    required_fields = ["name", "email"]
+
+    has_errors = any("error" in row for row in rows)
+
+    all_fields_present = all(
+        all(field in row for field in required_fields) for row in rows
+    )
+
+    error_rows = []
+    for row_num, row in enumerate(rows, start=1):
+        missing = [field for field in required_fields if field not in row]
+        if missing:
+            error_rows.append(f"Row {row_num}: missing {', '.join(missing)}")
+
+    counts = [sum(1 for row in rows if row.get(field)) for field in required_fields]
+    field_summary = dict(zip(required_fields, counts))
+
+    return {
+        "has_errors": has_errors,
+        "all_fields_present": all_fields_present,
+        "error_rows": error_rows,
+        "field_summary": field_summary,
+    }`,
+      requires: ['any(', 'all(', 'enumerate(', 'zip('],
       tieredHints: {
         apiSignature: 'enumerate(iterable, start=0) -> enumerate',
         skeleton: `def process_rows(rows):
@@ -82,23 +73,17 @@ export const py_daily_patterns_questions: Question[] = [
         if missing:
             error_rows.append(____)
 
-    field_names = required_fields
-    field_counts = ____
+    counts = ____
     field_summary = ____
 
-    return {
-        "has_errors": has_errors,
-        "all_fields_present": all_fields_present,
-        "error_rows": error_rows,
-        "field_summary": field_summary,
-    }`,
+    return {____}`,
       },
-      explanation: 'These four builtins appear in almost every Python codebase. enumerate() adds an index to any iterable — use it instead of range(len(...)). any() short-circuits on the first truthy value, making it efficient for "does at least one item match?" checks. all() short-circuits on the first falsy value for "do all items match?" checks. zip() pairs elements from multiple iterables — perfect for creating dicts from parallel lists. Together they eliminate most manual loop index tracking and boolean flag patterns.',
+      explanation: 'These four builtins replace most hand-written loop bookkeeping. `any(...)` stops at the first true test, so `any("error" in row for row in rows)` is True as soon as one row has the key. `all(...)` stops at the first false test, and nesting it checks every field of every row. `enumerate(rows, start=1)` hands out a row number with each row, so there is no `range(len(rows))` and no counter to update. `zip(required_fields, counts)` pairs each field name with its count, and `dict()` turns the pairs into the summary. Note that `all()` of an empty list is True, so an empty file reports every field present.',
       hints: [
-        'enumerate(rows, start=1) gives 1-based row numbers',
-        'any(gen_expr) stops at the first True — efficient for large lists',
-        'all() with nested all() checks all fields in all rows',
-        'zip(names, values) creates pairs for dict()',
+        '`enumerate(rows, start=1)` numbers the rows from 1',
+        '`any(test for row in rows)` stops at the first True',
+        'An `all()` inside another `all()` checks every field of every row',
+        '`dict(zip(names, values))` pairs two lists into a dict',
       ],
       tags: ['enumerate', 'zip', 'any', 'all', 'python-builtins'],
       concepts: ['py-control-flow'],
@@ -110,80 +95,25 @@ export const py_daily_patterns_questions: Question[] = [
       topic: Topic.PY_DAILY_PATTERNS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a function clean_user_input(text) that demonstrates string method mastery: .strip() whitespace, .lower() for case-insensitive comparison, .split() and .join() to normalize multiple spaces, .replace() for character substitution, and .startswith()/.endswith() for validation. Return a dict with each transformation.',
+      question: 'Write `clean_user_input(text)`, which cleans a line a user typed and returns a dict with six keys: `"stripped"`, the text without leading or trailing whitespace; `"lowered"`, the stripped text in lowercase; `"normalized"`, the stripped text with every run of whitespace turned into one space (use `split` and `join`); `"slug"`, the normalized text in lowercase with each space replaced by `-` and every `!` removed; `"is_greeting"`, True if the lowered text starts with `"hello"` (use `startswith`); and `"is_exclamation"`, True if the stripped text ends with `"!"` (use `endswith`). For example, `"  Hello   World!  "` gives `"Hello World!"` as `"normalized"` and `"hello-world"` as `"slug"`.',
       starterCode: `def clean_user_input(text):
-      """Demonstrate all major string methods."""
-      # Implement string cleaning pipeline
-      pass
-  `,
+    # Build and return the dict of cleaned forms
+    pass
+`,
       testCases: [
         {
           input: '"  Hello   World!  "',
-          expectedOutput: 'Dict with stripped, lowered, normalized, replaced, validation results',
-          description: 'Should demonstrate strip, lower, split, join, replace, startswith, endswith',
+          expectedOutput: "{'stripped': 'Hello   World!', 'lowered': 'hello   world!', 'normalized': 'Hello World!', 'slug': 'hello-world', 'is_greeting': True, 'is_exclamation': True}",
+          description: 'Strips, lowercases, collapses spaces, builds the slug and runs both checks',
         },
       ],
       solution: `def clean_user_input(text):
-      """Demonstrate all major string methods."""
-  
-      # .strip() removes leading/trailing whitespace
-      stripped = text.strip()
-  
-      # .lower() for case-insensitive comparison
-      lowered = stripped.lower()
-  
-      # .split() + .join() normalizes multiple spaces to single
-      normalized = " ".join(stripped.split())
-  
-      # .replace() for character substitution
-      slug = normalized.lower().replace(" ", "-").replace("!", "")
-  
-      # .startswith() / .endswith() for validation
-      is_greeting = lowered.startswith("hello")
-      is_exclamation = stripped.endswith("!")
-  
-      # Chain methods for a full cleaning pipeline
-      cleaned = (
-          text
-          .strip()
-          .lower()
-          .replace("\\t", " ")
-          .replace("\\n", " ")
-      )
-      cleaned = " ".join(cleaned.split())  # normalize whitespace
-  
-      return {
-          "stripped": stripped,
-          "lowered": lowered,
-          "normalized": normalized,
-          "slug": slug,
-          "is_greeting": is_greeting,
-          "is_exclamation": is_exclamation,
-          "cleaned": cleaned,
-      }`,
-      tieredHints: {
-        apiSignature: 'str.split(sep=None, maxsplit=-1) -> list[str]',
-        skeleton: `def clean_user_input(text):
     stripped = text.strip()
-
     lowered = stripped.lower()
-
-    normalized = ____
-
-    slug = ____
-
-    is_greeting = ____
-    is_exclamation = ____
-
-    cleaned = (
-        text
-        .strip()
-        .lower()
-        .replace("\\t", " ")
-        .replace("\\n", " ")
-    )
-    cleaned = ____
-
+    normalized = " ".join(stripped.split())
+    slug = normalized.lower().replace(" ", "-").replace("!", "")
+    is_greeting = lowered.startswith("hello")
+    is_exclamation = stripped.endswith("!")
     return {
         "stripped": stripped,
         "lowered": lowered,
@@ -191,15 +121,25 @@ export const py_daily_patterns_questions: Question[] = [
         "slug": slug,
         "is_greeting": is_greeting,
         "is_exclamation": is_exclamation,
-        "cleaned": cleaned,
     }`,
+      requires: ['.split(', '.join(', 'startswith(', 'endswith('],
+      tieredHints: {
+        apiSignature: 'str.split(sep=None, maxsplit=-1) -> list[str]',
+        skeleton: `def clean_user_input(text):
+    stripped = ____
+    lowered = ____
+    normalized = ____
+    slug = ____
+    is_greeting = ____
+    is_exclamation = ____
+    return {____}`,
       },
-      explanation: 'String methods are non-mutating — each returns a new string, so they chain naturally. .strip() is essential for user input that may have leading/trailing whitespace or newlines. The .split() without arguments splits on any whitespace and removes empty strings, so "  hello   world  ".split() gives ["hello", "world"]. Joining with " ".join() normalizes any amount of whitespace to a single space. .startswith() and .endswith() accept tuples for checking multiple prefixes/suffixes: name.endswith((".jpg", ".png")).',
+      explanation: 'String methods never change the string; each returns a new one, so they chain: `normalized.lower().replace(" ", "-")` lowercases first and then swaps the spaces. `.strip()` drops leading and trailing whitespace, newlines included. `.split()` with no argument splits on any run of whitespace and drops the empty pieces, so `"  hello   world  ".split()` is `["hello", "world"]`, and `" ".join(...)` puts exactly one space between the words. `.startswith()` and `.endswith()` return booleans and also accept a tuple of options, as in `name.endswith((".jpg", ".png"))`.',
       hints: [
-        '.split() with no args splits on any whitespace and removes empties',
-        '" ".join(text.split()) is the standard whitespace normalizer',
-        '.startswith(("http", "https")) accepts a tuple of prefixes',
-        'String methods never modify the original — always return new strings',
+        '`.split()` with no argument splits on any whitespace and drops the empty pieces',
+        '`" ".join(words)` puts one space between the words',
+        'Each `.replace()` call returns a new string, so two calls chain',
+        'String methods never change the original string',
       ],
       tags: ['strings', 'strip', 'split', 'join', 'python-builtins'],
       concepts: ['py-string-formatting', 'dj-orm-query-construction'],
@@ -210,14 +150,14 @@ export const py_daily_patterns_questions: Question[] = [
       difficulty: Difficulty.BEGINNER,
       topic: Topic.PY_DAILY_PATTERNS,
       course: Course.BACKEND,
-      question: 'What does any([]) return vs all([])?',
+      question: 'What do `any([])` and `all([])` return?',
       options: [
-        { id: 'a', text: 'Both return True for empty lists', isCorrect: false },
-        { id: 'b', text: 'Both return False for empty lists', isCorrect: false },
-        { id: 'c', text: 'any([]) returns False (no truthy elements exist). all([]) returns True (no falsy elements exist — vacuous truth). This is a common gotcha in validation logic.', isCorrect: true },
-        { id: 'd', text: 'Both raise a ValueError for empty iterables', isCorrect: false },
+        { id: 'a', text: 'Both return True: with no elements, nothing can make either check fail', isCorrect: false },
+        { id: 'b', text: 'Both return False: with no elements, neither check has anything to pass', isCorrect: false },
+        { id: 'c', text: '`any([])` is False (no element is truthy) and `all([])` is True (no element is falsy)', isCorrect: true },
+        { id: 'd', text: 'Both raise ValueError, the same way `max([])` does on an empty list', isCorrect: false },
       ],
-      explanation: 'any() asks "is at least one element truthy?" — with zero elements, the answer is False because there are no truthy elements. all() asks "are all elements truthy?" — with zero elements, the answer is True because there are no falsy elements to violate the condition (vacuous truth from formal logic). This matters in validation: all(field in row for field in required_fields) returns True when required_fields is empty, which might not be what you expect. Always check for empty inputs separately when using all().',
+      explanation: '`any()` asks "is at least one element truthy?"; with no elements the answer is False, because there is nothing to find. `all()` asks "is no element falsy?"; with no elements the answer is True, because nothing breaks the rule (vacuous truth). Neither raises, unlike `max([])`. This matters in validation: `all(field in row for field in required_fields)` is True when `required_fields` is empty, so when an empty input should not count as valid, check for it separately.',
       tags: ['any', 'all', 'python-builtins', 'gotchas'],
       concepts: ['py-iterator-protocol'],
     },
@@ -227,14 +167,14 @@ export const py_daily_patterns_questions: Question[] = [
       difficulty: Difficulty.BEGINNER,
       topic: Topic.PY_DAILY_PATTERNS,
       course: Course.BACKEND,
-      question: 'What is the difference between sorted(data, key=...) and data.sort(key=...)?',
+      question: 'What is the difference between `sorted(data, key=...)` and `data.sort(key=...)`?',
       options: [
-        { id: 'a', text: 'They are identical — sorted() is just an alias for .sort()', isCorrect: false },
-        { id: 'b', text: 'sorted() only works with numbers, .sort() works with any type', isCorrect: false },
-        { id: 'c', text: '.sort() is faster because it creates a copy first', isCorrect: false },
-        { id: 'd', text: 'sorted() returns a new list and works on any iterable. .sort() mutates the list in-place and only works on list objects. Use sorted() for functional style; .sort() when you do not need the original order.', isCorrect: true },
+        { id: 'a', text: 'None: both return a new sorted list and leave `data` in its original order', isCorrect: false },
+        { id: 'b', text: '`sorted()` reorders `data` in place, while `.sort()` returns a sorted copy and leaves `data` alone', isCorrect: false },
+        { id: 'c', text: '`sorted()` works only on lists, while `.sort()` is available on any iterable, tuples included', isCorrect: false },
+        { id: 'd', text: '`sorted()` takes any iterable and returns a new list; `.sort()` reorders a list in place and returns `None`', isCorrect: true },
       ],
-      explanation: 'sorted() is a built-in function that accepts any iterable (list, tuple, generator, dict) and always returns a new list. .sort() is a list method that modifies the list in-place and returns None. This means you cannot chain .sort(): data.sort().filter() fails because .sort() returns None. sorted() enables chaining: sorted(data, key=...)[:5]. Use .sort() when working with a list you own and want to save memory by avoiding a copy. Use sorted() everywhere else.',
+      explanation: '`sorted()` is a built-in function: it accepts any iterable (a list, tuple, string, generator, or a dict, whose keys it sorts) and always returns a new list. `.sort()` is a list method: it reorders that list in place and returns `None`, so `top = data.sort()` sets `top` to `None` and `data.sort()[0]` raises a TypeError, while `sorted(data)[:5]` works. Use `.sort()` as a statement on a list you own when you do not need the old order; use `sorted()` whenever you want the result as a value.',
       tags: ['sorted', 'sort', 'python-builtins', 'functional'],
       concepts: ['py-iterator-protocol'],
     },
@@ -245,122 +185,42 @@ export const py_daily_patterns_questions: Question[] = [
       topic: Topic.PY_DAILY_PATTERNS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use operator.itemgetter and operator.attrgetter for sorting. Sort a list of dicts by multiple keys (primary: department, secondary: salary descending). Sort a list of objects by attribute. Show both operator approaches and compare them to lambda equivalents.',
-      starterCode: `# Import itemgetter and attrgetter from operator
-# Build the employees list of dicts from the prompt
-# Sort by department then salary (descending) using itemgetter;
-# also demonstrate attrgetter on a list of namedtuple/object equivalents
-# and a lambda version for comparison
+      question: '`employees` is a list of dicts with the keys `"name"`, `"department"` and `"salary"`, and `team` is a list of `Employee` objects with the attributes `name`, `department` and `salary`; both already exist. Import what you need from `operator` and build three new sorted lists, leaving the originals unchanged: `by_dept_salary`, the employees sorted by department and then by salary, both ascending, using an `itemgetter` key; `by_dept_top_paid`, the employees sorted by department ascending and then by salary from highest to lowest, using a lambda that returns a tuple; and `team_by_name`, the `Employee` objects sorted by name, using an `attrgetter` key.',
+      starterCode: `# employees (a list of dicts) and team (a list of Employee objects) already exist
 `,
       testCases: [
         {
-          input: 'List of employee dicts',
-          expectedOutput: 'Sorted by department then salary using itemgetter and attrgetter',
-          description: 'Should demonstrate itemgetter and attrgetter for sorting',
+          input: 'Alice (Engineering, 95000), Bob (Marketing, 72000), Charlie (Engineering, 110000), Diana (Marketing, 85000)',
+          expectedOutput: 'by_dept_salary: Alice, Charlie, Bob, Diana; by_dept_top_paid: Charlie, Alice, Diana, Bob; team_by_name: Alice, Bob, Charlie, Diana',
+          description: 'Sorts by two keys with itemgetter, mixes descending and ascending with a tuple key, and sorts objects with attrgetter',
         },
       ],
       solution: `from operator import itemgetter, attrgetter
 
-
-employees = [
-    {"name": "Alice", "department": "Engineering", "salary": 95000},
-    {"name": "Bob", "department": "Marketing", "salary": 72000},
-    {"name": "Charlie", "department": "Engineering", "salary": 110000},
-    {"name": "Diana", "department": "Marketing", "salary": 85000},
-]
-
-# --- itemgetter for dicts ---
-
-# Sort by single key
-by_salary = sorted(employees, key=itemgetter("salary"))
-
-# Sort by department (asc), then by salary (asc)
 by_dept_salary = sorted(employees, key=itemgetter("department", "salary"))
+by_dept_top_paid = sorted(employees, key=lambda e: (e["department"], -e["salary"]))
+team_by_name = sorted(team, key=attrgetter("name"))
+# OR
+import operator
 
-# Lambda equivalent (less readable for multiple keys)
-by_dept_salary_lambda = sorted(employees, key=lambda e: (e["department"], e["salary"]))
-
-
-# --- attrgetter for objects ---
-
-class Employee:
-    def __init__(self, name, department, salary):
-        self.name = name
-        self.department = department
-        self.salary = salary
-
-    def __repr__(self):
-        return f"Employee({self.name}, {self.department}, {self.salary})"
-
-
-team = [
-    Employee("Alice", "Engineering", 95000),
-    Employee("Bob", "Marketing", 72000),
-    Employee("Charlie", "Engineering", 110000),
-    Employee("Diana", "Marketing", 85000),
-]
-
-# Sort by attribute
-by_name = sorted(team, key=attrgetter("name"))
-
-# Sort by department, then salary
-by_dept = sorted(team, key=attrgetter("department", "salary"))
-
-# Lambda equivalent
-by_dept_lambda = sorted(team, key=lambda e: (e.department, e.salary))
-
-# For descending on one key: use reverse or negate numeric values
-highest_paid = sorted(employees, key=itemgetter("salary"), reverse=True)`,
+by_dept_salary = sorted(employees, key=operator.itemgetter("department", "salary"))
+by_dept_top_paid = sorted(employees, key=lambda e: (e["department"], -e["salary"]))
+team_by_name = sorted(team, key=operator.attrgetter("name"))`,
+      requires: ['itemgetter(', 'attrgetter(', 'lambda'],
       tieredHints: {
         apiSignature: 'operator.itemgetter(*items)',
-        skeleton: `from operator import itemgetter, attrgetter
-
-
-employees = [
-    {"name": "Alice", "department": "Engineering", "salary": 95000},
-    {"name": "Bob", "department": "Marketing", "salary": 72000},
-    {"name": "Charlie", "department": "Engineering", "salary": 110000},
-    {"name": "Diana", "department": "Marketing", "salary": 85000},
-]
-
-by_salary = sorted(employees, key=____("salary"))
+        skeleton: `from operator import ____, ____
 
 by_dept_salary = sorted(employees, key=____)
-
-by_dept_salary_lambda = ____
-
-
-class Employee:
-    def __init__(self, name, department, salary):
-        self.name = name
-        self.department = department
-        self.salary = salary
-
-    def __repr__(self):
-        return ____
-
-
-team = [
-    Employee("Alice", "Engineering", 95000),
-    Employee("Bob", "Marketing", 72000),
-    Employee("Charlie", "Engineering", 110000),
-    Employee("Diana", "Marketing", 85000),
-]
-
-by_name = sorted(team, key=____("name"))
-
-by_dept = sorted(team, key=____)
-
-by_dept_lambda = ____
-
-highest_paid = sorted(employees, key=itemgetter("salary"), ____=True)`,
+by_dept_top_paid = sorted(employees, key=lambda e: (____, ____))
+team_by_name = sorted(team, key=____)`,
       },
-      explanation: 'operator.itemgetter and operator.attrgetter are faster than lambdas because they are implemented in C and avoid Python function call overhead. itemgetter("salary") creates a callable equivalent to lambda x: x["salary"]. With multiple arguments, itemgetter("department", "salary") returns a tuple, enabling multi-key sorting. attrgetter does the same for object attributes. The performance difference is small for short lists but significant when sorting thousands of items. They also improve readability — the intent "sort by these fields" is clearer than a lambda.',
+      explanation: '`itemgetter("department", "salary")` builds a key function that returns the tuple `(row["department"], row["salary"])`, and tuples compare field by field, so rows sort by department and break ties by salary. `attrgetter("name")` does the same for an attribute, like `lambda e: e.name`. Neither can sort one field down and another up, so the mixed order needs a lambda that negates the number: `(e["department"], -e["salary"])` keeps departments A to Z and puts the highest salary first inside each. `reverse=True` would flip both fields. The operator helpers run in C, so they are a little faster than the matching lambda, and they read as "sort by these fields".',
       hints: [
-        'itemgetter("a", "b") returns a tuple (x["a"], x["b"])',
-        'attrgetter("department") is equivalent to lambda x: x.department',
-        'Multiple keys in itemgetter sort by first key, then second on ties',
-        'Use reverse=True for descending — works with both approaches',
+        '`itemgetter("a", "b")` returns the tuple `(x["a"], x["b"])` for each row',
+        '`attrgetter("name")` works like `lambda e: e.name`',
+        'Negating a number in a tuple key sorts that field from highest to lowest',
+        '`sorted()` returns a new list and leaves the original alone',
       ],
       tags: ['itemgetter', 'attrgetter', 'sorting', 'operator', 'python'],
       concepts: ['py-itertools-combinators', 'py-iterator-protocol'],
