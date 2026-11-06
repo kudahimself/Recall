@@ -1,0 +1,11 @@
+# Everything the exercises need, pinned so every learner gets the same results.
+# Install once from the repository root: pip install -r exercises/requirements.txt
+#
+# pytest runs every exercise's tests.
+# Django, pytest-django and Django REST Framework are for the Django exercises
+# (exercises/backend/dj_*), which run offline on an in-memory SQLite database.
+# Django 5.2 is the long-term-support release and runs on Python 3.10 to 3.14.
+pytest==9.1.1
+Django==5.2.19
+pytest-django==4.14.0
+djangorestframework==3.18.3

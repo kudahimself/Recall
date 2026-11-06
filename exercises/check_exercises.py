@@ -7,12 +7,15 @@ For each exercise folder, exercises/<course>/<topic>/, this script:
 2. copies it again, lays the reference solution from exercises/solutions/<course>/<topic>/
    over the starter files, and runs the tests, where every test must pass.
 
+Each copy keeps the <course>/<topic> layout and takes the course folder's shared
+modules along (such as exercises/backend/exercise_settings.py, the Django settings).
+
 Working on copies means the learner's own edits are never changed.
 A starter the learner has already edited (it differs from git's committed copy)
 skips step 1 for that exercise, since a solved starter is meant to pass.
 
 Usage, from anywhere: python exercises/check_exercises.py
-Needs Python 3 and pytest, nothing else.
+Needs Python 3 and the packages in exercises/requirements.txt.
 Exits 0 when every exercise checks out, 1 otherwise.
 """
 import os
@@ -75,11 +78,18 @@ def check(folder):
         return ["no test_*.py file"]
     solution_files = [p for p in solution.rglob("*.py") if "__pycache__" not in p.parts]
     for path in solution_files:
+        # A solution may add Django migrations, which the learner makes with makemigrations.
+        if "migrations" in path.parts:
+            continue
         if not (folder / path.relative_to(solution)).exists():
             problems.append(f"solution file {path.relative_to(solution)} has no starter file to replace")
 
     with tempfile.TemporaryDirectory() as tmp:
-        work = Path(tmp) / folder.name
+        course = Path(tmp) / folder.parent.name
+        course.mkdir()
+        for shared in folder.parent.glob("*.py"):
+            shutil.copy2(shared, course)
+        work = course / folder.name
         if edited_locally(folder):
             print(f"  {rel}: starter edited locally, skipping the starter check")
         else:
@@ -101,7 +111,7 @@ def main():
     try:
         import pytest  # noqa: F401
     except ImportError:
-        print("pytest is not installed for this Python: pip install pytest")
+        print("pytest is not installed for this Python: pip install -r exercises/requirements.txt")
         return 1
     folders = exercise_dirs()
     failures = 0

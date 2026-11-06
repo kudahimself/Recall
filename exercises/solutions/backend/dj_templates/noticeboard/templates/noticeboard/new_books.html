@@ -1,0 +1,20 @@
+{% extends "noticeboard/base.html" %}
+
+{% block title %}New books{% endblock %}
+
+{% block content %}
+  <h1>{{ branch|upper }}</h1>
+  <ul>
+  {% for book in books %}
+    <li>
+      <a href="{% url 'book' book.pk %}">{{ forloop.counter }}. {{ book.title }}</a>
+      - {{ book.blurb|truncatechars:20 }}
+      - {% if book.on_loan %}on loan{% else %}on the shelf{% endif %}
+      - {{ book.note|default:"no note" }}
+    </li>
+  {% empty %}
+    <li>Nothing new this week.</li>
+  {% endfor %}
+  </ul>
+  {% include "noticeboard/_hours.html" %}
+{% endblock %}
