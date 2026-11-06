@@ -49,6 +49,18 @@ async function answerShownMcq() {
   return shown;
 }
 
+/** Answers the drill card on screen (a multiple-choice or predict-output card) and moves on. */
+async function answerDrillCard() {
+  await screen.findByRole('button', { name: /Submit (Answer|Prediction)/ }, { timeout: 3000 });
+  if (screen.queryAllByRole('radio').length > 0) return answerShownMcq();
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x' } });
+  fireEvent.click(screen.getByRole('button', { name: /Submit Prediction/ }));
+  fireEvent.click(await screen.findByRole('button', { name: NEXT }));
+  return null;
+}
+
+const sessionStored = () => JSON.parse(localStorage.getItem(TODAY_SESSION_KEY)!)[Course.SQL];
+
 const topicBadge = (topic: Topic) => topic.replace(/_/g, ' ').toUpperCase();
 
 /** Drill on Progress > Topics for the row holding `topic` (every row unlocked). */
@@ -299,7 +311,7 @@ describe('F7: filters', () => {
     expect(session.queue.length).toBeGreaterThan(0);
   }, 30_000);
 
-  test('Drill after Done for today starts practice on that topic straight away', async () => {
+  test('Drill after Done for today starts practice on that topic straight away, and Start still ends at the size', async () => {
     localStorage.setItem('recall-active-course', 'sql');
     localStorage.setItem('recall-dev-unlock-all', '1');
     localStorage.setItem(TODAY_SIZE_KEY, '10');
@@ -314,13 +326,27 @@ describe('F7: filters', () => {
       served.push((await answerShownMcq()).topic);
     }
     expect(screen.getByText('Done for today')).toBeInTheDocument();
+    const before = sessionStored();
 
-    await drillTopic(Course.SQL, served[0]);
-    expect(await screen.findByText(topicBadge(served[0]), {}, { timeout: 3000 })).toBeInTheDocument();
+    await drillTopic(Course.SQL, Topic.TSQL_NORMALIZATION);
+    expect(await screen.findByText(topicBadge(Topic.TSQL_NORMALIZATION), {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.queryByText(/Done for today|Nothing left today|No questions match/)).toBeNull();
+    let drilled = 0;
+    while (drilled < 3 && !screen.queryByText(/Done for today|Nothing left today|No questions match/)) {
+      await answerDrillCard();
+      drilled += 1;
+    }
+    expect(drilled).toBeGreaterThanOrEqual(2);
+    expect(sessionStored()).toMatchObject({ keepGoing: false, freshLeft: before.freshLeft, queue: before.queue });
+
+    fireEvent.click(nav('Home'));
+    await screen.findByRole('heading', { name: 'Switch course' }, { timeout: 3000 });
+    fireEvent.click(nav('Learn'));
+    expect(await screen.findByText('Done for today', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(sessionStored().keepGoing).toBe(false);
   }, 30_000);
 
-  test('Drill mid-session, with reviews still queued elsewhere, starts practice on that topic straight away', async () => {
+  test('Drill mid-session, with reviews still queued elsewhere, starts practice straight away and leaves the session bounded', async () => {
     const sql = questions.filter(q => getCourseForTopic(q.topic) === Course.SQL);
     const select = sql.filter(q => q.topic === Topic.TSQL_SELECT);
     const others = Array.from(new Set(sql.map(q => q.topic))).filter(t => t !== Topic.TSQL_SELECT);
@@ -339,10 +365,23 @@ describe('F7: filters', () => {
       served.push((await answerShownMcq()).topic);
     }
     expect(screen.getByText(/Nothing left today for these filters/)).toBeInTheDocument();
+    const before = sessionStored();
 
-    await drillTopic(Course.SQL, served[0]);
-    expect(await screen.findByText(topicBadge(served[0]), {}, { timeout: 3000 })).toBeInTheDocument();
+    await drillTopic(Course.SQL, Topic.TSQL_NORMALIZATION);
+    expect(await screen.findByText(topicBadge(Topic.TSQL_NORMALIZATION), {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.queryByText(/Done for today|Nothing left today|No questions match/)).toBeNull();
+    let drilled = 0;
+    while (drilled < 3 && !screen.queryByText(/Done for today|Nothing left today|No questions match/)) {
+      await answerDrillCard();
+      drilled += 1;
+    }
+    expect(drilled).toBeGreaterThanOrEqual(2);
+    expect(sessionStored()).toMatchObject({ keepGoing: false, freshLeft: 0, queue: before.queue });
+
+    fireEvent.click(nav('Home'));
+    fireEvent.click(await screen.findByRole('button', { name: /today's session/ }, { timeout: 3000 }));
+    expect(await screen.findByText(/Nothing left today for these filters/, {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(sessionStored()).toMatchObject({ keepGoing: false, freshLeft: 0 });
   }, 30_000);
 
   test('a filtered session with nothing servable even unfiltered ends on the summary', async () => {

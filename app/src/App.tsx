@@ -911,29 +911,37 @@ function App() {
   // persists and the UI looks frozen ("Next button doesn't work").
   const [questionLoadCount, setQuestionLoadCount] = useState(0);
 
+  // Drill mode (Drill / Review weak topic on Progress): practice on the chosen
+  // topics past today's bound. Held here only; today's session is never changed.
+  const [drilling, setDrilling] = useState(false);
+  const selectFor = useCallback((session: ReviewSession, servePool: Question[], coursePool: Question[], drill: boolean) => {
+    const pick = selectSessionQuestion(drill ? continueSession(session) : session, servePool, coursePool, progress, fsrsStore, cardDifficulty, conceptCtx);
+    return pick && drill && !session.queue.some(e => e.id === pick.question.id) ? { ...pick, kind: 'practice' as const } : pick;
+  }, [progress, fsrsStore, cardDifficulty, conceptCtx]);
+
   const loadNextQuestion = useCallback(() => {
     const filteredQuestions = getFilteredQuestions();
     const session = reviewSessionFor(activeCourse);
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filteredQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
+    const next = selectFor(session, filteredQuestions, courseQuestions, drilling);
     serveWithLessons(next, activeCourse, lessonFlow);
     setQuestionLoadCount(c => c + 1);
-  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons, lessonFlow]);
+  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, selectFor, drilling, serveWithLessons, lessonFlow]);
 
-  const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions, keepGoing = false) => {
+  const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions, drill = false) => {
     setFilters(newFilters);
+    setDrilling(drill);
     const filtered = filterQuestions(courseQuestions, newFilters);
-    const built = reviewSessionFor(activeCourse);
-    const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
+    const session = reviewSessionFor(activeCourse);
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filtered, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
+    const next = selectFor(session, filtered, courseQuestions, drill);
     // New filters end a lesson in progress; the gate still applies to what they serve.
     serveWithLessons(next, activeCourse, null);
-  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons]);
+  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, selectFor, serveWithLessons]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     applyFiltersAndLoadQuestion(newFilters);
@@ -944,7 +952,7 @@ function App() {
   };
 
   // From the progress dashboard: filter down to one weak category's topics
-  // and drop straight into practice on them, as after Keep going.
+  // and drop straight into practice on them (drill mode).
   const handleReviewWeakTopic = useCallback((topicKeys: string[]) => {
     applyFiltersAndLoadQuestion({ ...allFilters(), topics: topicKeys as Topic[] }, true);
     changeView('quiz');
@@ -1053,7 +1061,9 @@ function App() {
     const answeredCourse = getCourseForTopic(currentQuestion.topic);
     const session = reviewSessions[answeredCourse];
     if (session) {
-      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect, servedKind, familyOf(currentQuestion));
+      const listed = session.queue.some(e => e.id === currentQuestion.id);
+      const kind = drilling && !listed ? 'practice' : servedKind;
+      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect, kind, familyOf(currentQuestion));
       setReviewSessions(prev => ({ ...prev, [answeredCourse]: result.session }));
       setReaskShown(result.requeued);
     }
@@ -1140,7 +1150,10 @@ function App() {
   // and keeps the difficulty and question-type filters.
   const switchCourse = (course: Course): FilterOptions => {
     const next = course === activeCourse ? filters : { ...filters, topics: allFilters().topics };
-    if (next !== filters) setFilters(next);
+    if (next !== filters) {
+      setFilters(next);
+      setDrilling(false);
+    }
     setActiveCourse(course);
     return next;
   };
@@ -1148,6 +1161,7 @@ function App() {
   const startQuiz = (course?: Course, keepGoing = false) => {
     const targetCourse = course || activeCourse;
     const targetFilters = switchCourse(targetCourse);
+    setDrilling(false);
     // Compute questions for the target course directly (state hasn't flushed yet).
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
     const servePool = filterQuestions(pool, targetFilters);
