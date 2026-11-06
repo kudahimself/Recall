@@ -20,7 +20,7 @@ export const dj_service_layer_questions: Question[] = [
       topic: Topic.DJ_SERVICE_LAYER,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Implement a service layer for order creation. Write the function `create_order(user, items)` (with `items` as a list of dicts like `{"product_id": int, "quantity": int}`). It should validate stock availability for each product and raise `InsufficientStockError` if stock is too low. If validation passes, create the `Order` and associated `OrderItem` objects atomically inside a transaction (use `select_for_update()` to lock product rows). Finally, trigger an async confirmation email by calling `send_order_confirmation_email.delay(order.id)` and return the created `Order`. Also define the `InsufficientStockError` custom exception.',
+      question: 'Write the service function `create_order(user, items)`, where `items` is a list of dicts like `{"product_id": 3, "quantity": 2}`, and define the `InsufficientStockError` exception it raises. Inside one transaction, create the user\'s `Order` with status "pending". For each item, lock its `Product` row as you read it; if the product\'s stock is below the quantity, raise `InsufficientStockError` with the product\'s name, which undoes the whole order. Otherwise add an `OrderItem` holding the order, the product, the quantity and the product\'s current price, and take the quantity off the product\'s stock. Once the transaction has committed, queue the confirmation email by passing the order\'s id to `send_order_confirmation_email.delay`, and return the order.',
       starterCode: `from django.db import transaction
 from myapp.models import Order, OrderItem, Product
 from myapp.tasks import send_order_confirmation_email
@@ -40,32 +40,16 @@ from myapp.tasks import send_order_confirmation_email
 
 
 class InsufficientStockError(Exception):
-    def __init__(self, product_name, requested, available):
-        self.product_name = product_name
-        self.requested = requested
-        self.available = available
-        super().__init__(f"Not enough stock for {product_name}")
+    pass
 
 
 def create_order(user, items):
-    """
-    Create an order for the given user.
-    items: list of {"product_id": int, "quantity": int}
-    Returns the created Order.
-    Raises InsufficientStockError if stock is insufficient.
-    """
-    # 1. Validate stock
-    for item in items:
-        product = Product.objects.get(id=item["product_id"])
-        if product.stock < item["quantity"]:
-            raise InsufficientStockError(product.name, item["quantity"], product.stock)
-
-    # 2. Create order and items atomically
     with transaction.atomic():
         order = Order.objects.create(user=user, status="pending")
-
         for item in items:
             product = Product.objects.select_for_update().get(id=item["product_id"])
+            if product.stock < item["quantity"]:
+                raise InsufficientStockError(product.name)
             OrderItem.objects.create(
                 order=order,
                 product=product,
@@ -74,20 +58,39 @@ def create_order(user, items):
             )
             product.stock -= item["quantity"]
             product.save()
-
-    # 3. Send confirmation email asynchronously
     send_order_confirmation_email.delay(order.id)
+    return order
+# OR
+from django.db import transaction
+from myapp.models import Order, OrderItem, Product
+from myapp.tasks import send_order_confirmation_email
 
+
+class InsufficientStockError(Exception):
+    pass
+
+
+def create_order(user, items):
+    with transaction.atomic():
+        order = Order.objects.create(user=user, status="pending")
+        for item in items:
+            product = Product.objects.select_for_update().get(id=item["product_id"])
+            if product.stock < item["quantity"]:
+                raise InsufficientStockError(product.name)
+            OrderItem.objects.create(order=order, product=product, quantity=item["quantity"], price=product.price)
+            product.stock -= item["quantity"]
+            product.save()
+    send_order_confirmation_email.delay(order.id)
     return order`,
-      explanation: 'The service layer separates what happens (business logic) from how it is triggered (HTTP). All validation, database operations, and side effects live in the service. This makes the business logic testable without HTTP (just call create_order directly). The transaction.atomic() ensures that if any step fails, all database changes are rolled back. select_for_update() prevents race conditions where two orders claim the same stock.',
+      explanation: 'The service layer separates what happens (business logic) from how it is triggered (HTTP). All validation, database operations, and side effects live in the service. This makes the business logic testable without HTTP (just call create_order directly), and a view only has to catch InsufficientStockError and turn it into a 400 response. The transaction.atomic() ensures that if any step fails, all database changes are rolled back, including the Order row created first. The stock check reads the row after select_for_update() has locked it, so a second order for the same product waits until this transaction ends and then sees the reduced stock; checking before taking the lock would let two orders both pass the check and oversell. The email is queued after the with block, once the order is committed. The .delay() call itself, which hands a function to a Celery worker, is taught in the Celery topic.',
       hints: [
         'transaction.atomic() rolls back everything if an exception occurs',
-        'select_for_update() locks the row to prevent race conditions',
+        'Check the stock on the row select_for_update() returned, so nobody can change it between the check and the save',
         'Celery task is called after the transaction commits',
       ],
       tieredHints: {
         apiSignature: 'transaction.atomic(); select_for_update(); task.delay(*args)',
-        skeleton: 'from django.db import ____\nfrom myapp.models import ____, ____, ____\nfrom myapp.tasks import ____\n\n\nclass InsufficientStockError(____):\n    def ____(self, product_name, requested, available):\n        self.____ = ____\n        self.____ = ____\n        self.____ = ____\n        super().____(f"Not enough stock for {product_name}")\n\n\ndef create_order(user, items):\n    for ____ in items:\n        product = ____.____.____(id=____["____"])\n        if product.____ < ____["____"]:\n            raise ____(product.____, ____["____"], product.____)\n\n    with ____.____():\n        order = ____.____.____(user=____, status="____")\n\n        for ____ in items:\n            product = ____.____.____().____(id=____["____"])\n            ____.____.____(\n                order=____,\n                product=____,\n                quantity=____["____"],\n                price=____.____,\n            )\n            product.____ -= ____["____"]\n            product.____()\n\n    ____.____(____.id)\n\n    return ____',
+        skeleton: 'from django.db import transaction\nfrom myapp.models import Order, OrderItem, Product\nfrom myapp.tasks import send_order_confirmation_email\n\n\nclass InsufficientStockError(____):\n    pass\n\n\ndef create_order(user, items):\n    with ____:\n        order = ____\n        for item in items:\n            product = ____\n            if ____:\n                raise ____\n            ____\n            product.stock -= ____\n            product.____()\n    ____\n    return order',
       },
       tags: ['service-layer', 'architecture', 'transactions', 'celery'],
       concepts: ['dj-transaction-atomic', 'ce-task-idempotency'],
@@ -170,36 +173,42 @@ def create_order(user, items):
     topic: Topic.DJ_SERVICE_LAYER,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Complete this service layer function to register a new user and trigger a notification, keeping the business logic out of the view.',
+    question: 'Complete this service function, which a view, a command or a test can all call to register a user. It must refuse a taken username with a domain error the caller can catch, and send the welcome email only once the new user is really committed.',
     template: `from django.contrib.auth.models import User
-from .tasks import send_welcome_email
+from django.db import transaction
+from .emails import send_welcome_email
+
+class UsernameTaken(Exception):
+    pass
 
 def register_user(username, email, password):
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password
-    )
-    send_welcome_email.___(___)
+    if User.objects.filter(username=username).exists():
+        ___ UsernameTaken(username)
+    with transaction.atomic():
+        user = User.objects.create_user(username=username, email=email, password=password)
+        transaction.___(lambda: send_welcome_email(user))
     return user`,
-    blanks: ['delay', 'user.id'],
+    blanks: ['raise', 'on_commit'],
     solution: `from django.contrib.auth.models import User
-from .tasks import send_welcome_email
+from django.db import transaction
+from .emails import send_welcome_email
+
+class UsernameTaken(Exception):
+    pass
 
 def register_user(username, email, password):
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password
-    )
-    send_welcome_email.delay(user.id)
+    if User.objects.filter(username=username).exists():
+        raise UsernameTaken(username)
+    with transaction.atomic():
+        user = User.objects.create_user(username=username, email=email, password=password)
+        transaction.on_commit(lambda: send_welcome_email(user))
     return user`,
-    explanation: 'In a service function, we implement the business logic (creating the user model and dispatching background tasks via Celery `.delay()`) separate from the HTTP view layer.',
+    explanation: 'The service holds the rules of registering, with no request in sight. A taken username is refused by raising `UsernameTaken`, a domain error: the view catches it and answers with an HTTP error, while a command or a test catches the same exception its own way. `transaction.on_commit(fn)` runs `fn` only after the surrounding transaction commits, so if anything rolls the registration back, no welcome email goes out for a user who does not exist. The view itself is left with only the HTTP work: read the form or request body, call `register_user`, and turn the result or the error into a response.',
     hints: [
-      'Trigger the Celery task asynchronously using .delay()',
-      'Pass the user ID to the Celery task so the worker can fetch the user',
+      'A domain error leaves the function the way any exception does',
+      'The transaction hook that runs a function only after a successful commit',
     ],
-    tags: ['django', 'service-layer', 'celery', 'cloze'],
+    tags: ['django', 'service-layer', 'transactions', 'cloze'],
     concepts: ['dj-service-layer'],
   },
   {

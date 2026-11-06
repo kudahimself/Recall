@@ -22,7 +22,7 @@ export const dj_pagination_generics_questions: Question[] = [
       topic: Topic.DJ_PAGINATION_GENERICS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use ListCreateAPIView and RetrieveUpdateDestroyAPIView instead of ModelViewSet. Show both views with queryset and serializer_class, and the URL patterns that map them. Explain when you would choose these over ModelViewSet.',
+      question: 'Build the article endpoints with two DRF generic views instead of a `ModelViewSet`. In views.py, `ArticleListCreateView` lists articles (GET) and creates one (POST), and `ArticleDetailView` reads, updates (PUT and PATCH) and deletes one article. Both work on every `Article` row with `ArticleSerializer` (import them from `.models` and `.serializers`). In urls.py, map `articles/` to the first view with the name `article-list`, and `articles/<int:pk>/` to the second with the name `article-detail`.',
       starterCode: `# views.py\nfrom rest_framework import generics\n\n# Define two generic views for Article\n\n\n# urls.py\n`,
       testCases: [
         {
@@ -31,8 +31,8 @@ export const dj_pagination_generics_questions: Question[] = [
           description: 'Should define generic views and map them to URLs',
         },
       ],
-      solution: `# views.py\nfrom rest_framework import generics\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleListCreateView(generics.ListCreateAPIView):\n    """GET /articles/ (list) and POST /articles/ (create)."""\n    queryset = Article.objects.all().order_by("-created_at")\n    serializer_class = ArticleSerializer\n\n\nclass ArticleDetailView(generics.RetrieveUpdateDestroyAPIView):\n    """GET/PUT/PATCH/DELETE /articles/<pk>/."""\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n\n# urls.py\nfrom django.urls import path\nfrom . import views\n\nurlpatterns = [\n    path("articles/", views.ArticleListCreateView.as_view(), name="article-list"),\n    path("articles/<int:pk>/", views.ArticleDetailView.as_view(), name="article-detail"),\n]`,
-      explanation: 'Generic views are more explicit than ModelViewSet -- each class handles specific HTTP methods, making the code easier to reason about. ListCreateAPIView = GET (list) + POST (create). RetrieveUpdateDestroyAPIView = GET (detail) + PUT/PATCH (update) + DELETE. Use generics when: (1) You need different permissions/serializers for list vs detail. (2) You want explicit URL patterns instead of router magic. (3) You only need partial CRUD (e.g., read-only list + create, no update/delete). Use ModelViewSet when you need full CRUD with minimal code.',
+      solution: `# views.py\nfrom rest_framework import generics\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleListCreateView(generics.ListCreateAPIView):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n\nclass ArticleDetailView(generics.RetrieveUpdateDestroyAPIView):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n\n# urls.py\nfrom django.urls import path\nfrom . import views\n\nurlpatterns = [\n    path("articles/", views.ArticleListCreateView.as_view(), name="article-list"),\n    path("articles/<int:pk>/", views.ArticleDetailView.as_view(), name="article-detail"),\n]\n# OR\n# views.py\nfrom rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleListCreateView(ListCreateAPIView):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n\nclass ArticleDetailView(RetrieveUpdateDestroyAPIView):\n    queryset = Article.objects.all()\n    serializer_class = ArticleSerializer\n\n\n# urls.py\nfrom django.urls import path\nfrom .views import ArticleListCreateView, ArticleDetailView\n\nurlpatterns = [\n    path("articles/", ArticleListCreateView.as_view(), name="article-list"),\n    path("articles/<int:pk>/", ArticleDetailView.as_view(), name="article-detail"),\n]`,
+      explanation: 'Generic views are more explicit than ModelViewSet -- each class handles specific HTTP methods, making the code easier to reason about. ListCreateAPIView = GET (list) + POST (create). RetrieveUpdateDestroyAPIView = GET (detail) + PUT/PATCH (update) + DELETE, finding the row by the `pk` the URL captures. Each class is wired with `path(..., View.as_view())` instead of a router. Use generics when: (1) You need different permissions/serializers for list vs detail. (2) You want explicit URL patterns instead of router magic. (3) You only need partial CRUD (e.g., read-only list + create, no update/delete). Use ModelViewSet when you need full CRUD with minimal code.',
       hints: [
         'ListCreateAPIView = list + create (collection endpoint)',
         'RetrieveUpdateDestroyAPIView = get + update + delete (detail endpoint)',
@@ -40,7 +40,7 @@ export const dj_pagination_generics_questions: Question[] = [
       ],
       tieredHints: {
         apiSignature: 'generics.ListCreateAPIView; generics.RetrieveUpdateDestroyAPIView; GenericView.as_view()',
-        skeleton: '# views.py\nfrom rest_framework import generics\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleListCreateView(generics.____):\n    queryset = Article.objects.all().____("-created_at")\n    serializer_class = ____\n\n\nclass ArticleDetailView(generics.____):\n    queryset = Article.objects.all()\n    serializer_class = ____\n\n\n# urls.py\nfrom django.urls import path\nfrom . import views\n\nurlpatterns = [\n    path("articles/", views.ArticleListCreateView.____(), name="article-list"),\n    path("articles/<int:pk>/", views.ArticleDetailView.____(), name="article-detail"),\n]',
+        skeleton: '# views.py\nfrom rest_framework import generics\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\n\nclass ArticleListCreateView(generics.____):\n    queryset = Article.objects.____()\n    serializer_class = ____\n\n\nclass ArticleDetailView(generics.____):\n    queryset = Article.objects.all()\n    serializer_class = ____\n\n\n# urls.py\nfrom django.urls import path\nfrom . import views\n\nurlpatterns = [\n    path("articles/", views.ArticleListCreateView.____(), name="article-list"),\n    path("articles/<int:pk>/", views.ArticleDetailView.____(), name="article-detail"),\n]',
       },
       tags: ['drf', 'generic-views', 'urls', 'rest-framework', 'api-design'],
       concepts: ['dj-view-patterns'],
@@ -55,11 +55,11 @@ export const dj_pagination_generics_questions: Question[] = [
       question: 'What is the difference between PageNumberPagination and CursorPagination in DRF?',
       options: [
         { id: 'a', text: 'PageNumberPagination only works on SQL databases, while CursorPagination was designed for NoSQL stores without OFFSET support', isCorrect: false },
-        { id: 'b', text: 'Page numbers use SQL OFFSET -- simple but slow for deep pages; cursors use an opaque token with O(1) seeks but cannot jump to an arbitrary page', isCorrect: true },
+        { id: 'b', text: 'Page numbers use SQL OFFSET -- simple but slow for deep pages; cursors seek past an opaque position, fast at any depth but unable to jump to page N', isCorrect: true },
         { id: 'c', text: 'CursorPagination is always faster, so DRF uses it by default and PageNumberPagination exists only for backwards compatibility', isCorrect: false },
         { id: 'd', text: 'They generate identical SQL queries -- the only difference is the JSON shape of the next and previous links in the response body', isCorrect: false },
       ],
-      explanation: 'PageNumberPagination uses SQL OFFSET which means the database must scan and discard all previous rows -- page 1000 with PAGE_SIZE=20 scans 20,000 rows. CursorPagination uses WHERE id > last_seen_id LIMIT 20 which is O(1) regardless of position because it uses an index seek. The trade-off: cursor pagination only supports next/previous navigation (no random page access), and it requires a stable, unique ordering field. Use page numbers for admin interfaces where dataset is small. Use cursors for public APIs with large datasets (social feeds, logs).',
+      explanation: 'PageNumberPagination uses SQL OFFSET which means the database must scan and discard all previous rows -- page 1000 with PAGE_SIZE=20 scans 20,000 rows. CursorPagination encodes the position of the last row it sent into the cursor and asks for the next rows past it on the ordering field (by default `created`, newest first), something like WHERE created < last_seen LIMIT 20. With an index on that field the database seeks straight to the position, so page 1000 costs about the same as page 1. The trade-off: cursor pagination only supports next/previous navigation (no random page access), and it requires a stable, unique ordering field. Use page numbers for admin interfaces where dataset is small. Use cursors for public APIs with large datasets (social feeds, logs).',
       tags: ['drf', 'pagination', 'cursor', 'performance', 'offset'],
       concepts: ['dj-pagination-strategy'],
     },
@@ -72,11 +72,11 @@ export const dj_pagination_generics_questions: Question[] = [
       topic: Topic.DJ_PAGINATION_GENERICS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the base class and the hook overridden to reshape the paginated response.',
-      template: `from rest_framework.pagination import PageNumberPagination
+      question: 'Fill in the DRF pagination class that reads `?page=N`, which this class extends, and the hook it overrides to reshape the paginated response.',
+      template: `from rest_framework import pagination
 from rest_framework.response import Response
 
-class CustomPagination(___):
+class CustomPagination(pagination.___):
     page_size = 20
 
     def ___(self, data):
@@ -86,9 +86,9 @@ class CustomPagination(___):
             "results": data,
         })`,
       blanks: ['PageNumberPagination', 'get_paginated_response'],
-      solution: 'from rest_framework.pagination import PageNumberPagination\nfrom rest_framework.response import Response\n\nclass CustomPagination(PageNumberPagination):\n    page_size = 20\n\n    def get_paginated_response(self, data):\n        return Response({\n            "count": self.page.paginator.count,\n            "has_next": self.page.has_next(),\n            "results": data,\n        })',
-      explanation: 'Subclass `PageNumberPagination` and override `get_paginated_response(self, data)` to control the exact shape of the paginated JSON. `self.page` is the underlying Django `Page` object — `.paginator.count` is the total row count, `.has_next()`/`.has_previous()` are booleans. Attach the class to a view via `pagination_class = CustomPagination`.',
-      hints: ['Base class every DRF pagination style subclasses', 'Method that shapes the final response dict'],
+      solution: 'from rest_framework import pagination\nfrom rest_framework.response import Response\n\nclass CustomPagination(pagination.PageNumberPagination):\n    page_size = 20\n\n    def get_paginated_response(self, data):\n        return Response({\n            "count": self.page.paginator.count,\n            "has_next": self.page.has_next(),\n            "results": data,\n        })',
+      explanation: 'Subclass `PageNumberPagination`, the style that reads `?page=N`, and override `get_paginated_response(self, data)` to control the exact shape of the paginated JSON. `data` is the serialized rows of the current page. `self.page` is the underlying Django `Page` object - `.paginator.count` is the total row count, `.has_next()`/`.has_previous()` are booleans. Attach the class to a view via `pagination_class = CustomPagination`.',
+      hints: ['The page-number style, as opposed to LimitOffsetPagination or CursorPagination', 'Method that builds the final Response from the page of serialized rows'],
       tags: ['drf', 'pagination', 'PageNumberPagination', 'cloze'],
       concepts: ['dj-pagination-strategy'],
     },
@@ -99,7 +99,7 @@ class CustomPagination(___):
       topic: Topic.DJ_PAGINATION_GENERICS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a custom pagination class that returns total_pages and has_next/has_previous in the response. Extend PageNumberPagination and override get_paginated_response to include these fields.',
+      question: 'In pagination.py, write `CustomPagination`, a `PageNumberPagination` subclass that sends 20 rows per page and lets the client pick another size with `?page_size=N`, up to 100. Override `get_paginated_response` so the JSON has exactly these keys: `count` (all rows), `total_pages`, `current_page` (the page number), `has_next`, `has_previous`, `next` and `previous` (the two links), and `results`.',
       starterCode: `# pagination.py\nfrom rest_framework.pagination import PageNumberPagination\nfrom rest_framework.response import Response\n\n# Create a custom pagination class\n`,
       testCases: [
         {
@@ -108,16 +108,16 @@ class CustomPagination(___):
           description: 'Should create custom pagination with extra metadata',
         },
       ],
-      solution: `# pagination.py\nimport math\nfrom rest_framework.pagination import PageNumberPagination\nfrom rest_framework.response import Response\n\n\nclass CustomPagination(PageNumberPagination):\n    page_size = 20\n    page_size_query_param = "page_size"  # Allow client to set ?page_size=50\n    max_page_size = 100\n\n    def get_paginated_response(self, data):\n        total_pages = math.ceil(self.page.paginator.count / self.get_page_size(self.request))\n        return Response({\n            "count": self.page.paginator.count,\n            "total_pages": total_pages,\n            "current_page": self.page.number,\n            "has_next": self.page.has_next(),\n            "has_previous": self.page.has_previous(),\n            "next": self.get_next_link(),\n            "previous": self.get_previous_link(),\n            "results": data,\n        })\n\n\n# Usage in a view:\n# class ArticleViewSet(viewsets.ModelViewSet):\n#     pagination_class = CustomPagination`,
-      explanation: 'Extending PageNumberPagination lets you customize the response format while keeping all the pagination logic. self.page is a Django Page object with .paginator.count (total items), .number (current page), .has_next()/.has_previous(). page_size_query_param lets clients request different page sizes (?page_size=50), and max_page_size prevents abuse. This is useful because frontend pagination components typically need total_pages to render page numbers, and has_next/has_previous for enabling/disabling navigation buttons.',
+      solution: `# pagination.py\nfrom rest_framework.pagination import PageNumberPagination\nfrom rest_framework.response import Response\n\n\nclass CustomPagination(PageNumberPagination):\n    page_size = 20\n    page_size_query_param = "page_size"\n    max_page_size = 100\n\n    def get_paginated_response(self, data):\n        return Response({\n            "count": self.page.paginator.count,\n            "total_pages": self.page.paginator.num_pages,\n            "current_page": self.page.number,\n            "has_next": self.page.has_next(),\n            "has_previous": self.page.has_previous(),\n            "next": self.get_next_link(),\n            "previous": self.get_previous_link(),\n            "results": data,\n        })\n# OR\n# pagination.py\nimport math\nfrom rest_framework.pagination import PageNumberPagination\nfrom rest_framework.response import Response\n\n\nclass CustomPagination(PageNumberPagination):\n    page_size = 20\n    page_size_query_param = "page_size"\n    max_page_size = 100\n\n    def get_paginated_response(self, data):\n        total_pages = math.ceil(self.page.paginator.count / self.get_page_size(self.request))\n        return Response({\n            "count": self.page.paginator.count,\n            "total_pages": total_pages,\n            "current_page": self.page.number,\n            "has_next": self.page.has_next(),\n            "has_previous": self.page.has_previous(),\n            "next": self.get_next_link(),\n            "previous": self.get_previous_link(),\n            "results": data,\n        })`,
+      explanation: 'Extending PageNumberPagination lets you customize the response format while keeping all the pagination logic. self.page is a Django Page object with .paginator.count (total items), .paginator.num_pages (total pages), .number (current page), .has_next()/.has_previous(). get_next_link()/get_previous_link() build the full links, or None at either end. page_size_query_param lets clients request different page sizes (?page_size=50), and max_page_size caps what they can ask for. Working out math.ceil(count / page size) yourself gives the same total_pages, except for an empty list, where num_pages still reports the one empty page 1. Frontend pagination components typically need total_pages to render page numbers, and has_next/has_previous for enabling/disabling navigation buttons. Attach the class to a view with pagination_class = CustomPagination.',
       hints: [
         'self.page.paginator.count gives total number of items',
         'self.page.has_next() and self.page.has_previous() are boolean methods',
-        'math.ceil(total / page_size) calculates total pages',
+        'The Page object\'s paginator also knows how many pages there are',
       ],
       tieredHints: {
         apiSignature: 'PageNumberPagination.get_paginated_response(data: list) -> Response',
-        skeleton: '# pagination.py\nimport math\nfrom rest_framework.pagination import ____\nfrom rest_framework.response import ____\n\n\nclass CustomPagination(____):\n    page_size = 20\n    page_size_query_param = "page_size"\n    max_page_size = 100\n\n    def ____(self, data):\n        total_pages = math.ceil(self.page.paginator.count / self.____(self.request))\n        return ____({\n            "count": self.page.paginator.count,\n            "total_pages": total_pages,\n            "current_page": self.page.number,\n            "has_next": self.page.____(),\n            "has_previous": self.page.____(),\n            "next": self.____(),\n            "previous": self.____(),\n            "results": data,\n        })',
+        skeleton: '# pagination.py\nfrom rest_framework.pagination import ____\nfrom rest_framework.response import ____\n\n\nclass CustomPagination(____):\n    page_size = 20\n    ____ = "page_size"\n    ____ = 100\n\n    def ____(self, data):\n        return ____({\n            "count": self.page.paginator.count,\n            "total_pages": self.page.paginator.____,\n            "current_page": self.page.____,\n            "has_next": self.page.____(),\n            "has_previous": self.page.____(),\n            "next": self.____(),\n            "previous": self.____(),\n            "results": data,\n        })',
       },
       tags: ['drf', 'pagination', 'custom-pagination', 'rest-framework'],
       concepts: ['dj-pagination-strategy'],
@@ -134,9 +134,9 @@ class CustomPagination(___):
         { id: 'a', text: 'They are interchangeable -- get_queryset() simply returns the queryset attribute, so overriding either one has the same effect', isCorrect: false },
         { id: 'b', text: 'The queryset attribute is used for read operations while get_queryset() is only called for create, update, and delete requests', isCorrect: false },
         { id: 'c', text: 'Only ModelViewSet reads the queryset attribute -- generic views like ListAPIView require you to override get_queryset() instead', isCorrect: false },
-        { id: 'd', text: 'queryset is static, evaluated once at class load; get_queryset() runs per request -- use it for dynamic filtering like self.request.user', isCorrect: true },
+        { id: 'd', text: 'queryset is built once, when the class is defined and no request exists; get_queryset() runs per request -- use it to filter by self.request.user', isCorrect: true },
       ],
-      explanation: 'queryset = Article.objects.all() is evaluated when the class is loaded (server start). This is fine for static querysets. But if you need to filter by the current user (self.request.user.articles.all()), URL parameters (self.kwargs["category_id"]), or query params (self.request.query_params["status"]), you must override get_queryset() because self.request is only available per-request. Common pattern: def get_queryset(self): return Article.objects.filter(author=self.request.user) -- this ensures each user only sees their own articles.',
+      explanation: 'queryset = Article.objects.all() is built once, when Python runs the class body at import, and there is no request at that moment. It is not evaluated or cached there: the default get_queryset() returns a fresh copy of it (queryset.all()) on every request, so new rows still show up. That is fine when every caller sees the same rows. But if you need to filter by the current user (self.request.user.articles.all()), URL parameters (self.kwargs["category_id"]), or query params (self.request.query_params["status"]), you must override get_queryset() because self.request is only available per-request. Common pattern: def get_queryset(self): return Article.objects.filter(author=self.request.user) -- this ensures each user only sees their own articles.',
       tags: ['drf', 'queryset', 'get_queryset', 'dynamic-filtering', 'generic-views'],
       concepts: ['dj-orm-query-construction'],
     },
@@ -206,7 +206,7 @@ class CustomPagination(___):
           isCorrect: false,
         },
       ],
-      explanation: 'DRF generic views are pre-built classes that handle common API patterns. For example, ListAPIView only needs queryset and serializer_class — it handles GET requests, serialization, pagination, and filtering automatically. CreateAPIView handles POST with validation. You can combine them: ListCreateAPIView handles both GET (list) and POST (create). This reduces a 20-line APIView to 3-4 lines while keeping the same functionality.',
+      explanation: 'DRF generic views are pre-built classes that handle common API patterns. For example, ListAPIView only needs queryset and serializer_class - it handles GET requests and serialization, and applies whatever pagination and filter backends are configured. CreateAPIView handles POST with validation. You can combine them: ListCreateAPIView handles both GET (list) and POST (create). This reduces a 20-line APIView to 3-4 lines while keeping the same functionality.',
       hints: [
         'Generic views need just queryset and serializer_class to work',
         'ListCreateAPIView = ListAPIView + CreateAPIView in one class',
@@ -221,15 +221,15 @@ class CustomPagination(___):
     topic: Topic.DJ_PAGINATION_GENERICS,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Complete this generic API view to list all articles, ordered by created_at, using DRF generic views.',
+    question: 'Complete this read-only endpoint that lists all articles, newest first. Fill in the DRF generic view that answers GET with a list, and the attribute that holds the rows it lists.',
     template: `from rest_framework import generics
 from .models import Article
 from .serializers import ArticleSerializer
 
 class ArticleListView(generics.___):
-    queryset = Article.objects.all().order_by("-created_at")
-    serializer_class = ___`,
-    blanks: ['ListAPIView', 'ArticleSerializer'],
+    ___ = Article.objects.all().order_by("-created_at")
+    serializer_class = ArticleSerializer`,
+    blanks: ['ListAPIView', 'queryset'],
     solution: `from rest_framework import generics
 from .models import Article
 from .serializers import ArticleSerializer
@@ -237,10 +237,10 @@ from .serializers import ArticleSerializer
 class ArticleListView(generics.ListAPIView):
     queryset = Article.objects.all().order_by("-created_at")
     serializer_class = ArticleSerializer`,
-    explanation: '`generics.ListAPIView` is the standard generic view for a read-only list endpoint. You only need to define `queryset` and `serializer_class` attributes.',
+    explanation: '`generics.ListAPIView` is the standard generic view for a read-only list endpoint. You only need to define the `queryset` attribute (the rows, here newest first) and `serializer_class`. Its default `get_queryset()` returns that `queryset` for each request.',
     hints: [
-      'Use ListAPIView for listing models',
-      'Assign the serializer class to serializer_class',
+      'The generic view named after the action it performs on a collection',
+      'The class attribute the default get_queryset() returns',
     ],
     tags: ['drf', 'generic-views', 'queryset', 'cloze'],
     concepts: ['dj-view-patterns'],
@@ -320,9 +320,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
 }`,
-      explanation: 'Options: `PageNumberPagination` (?page=N — simplest), `LimitOffsetPagination` (?limit=N&offset=N — SQL-style), `CursorPagination` (opaque cursor — stable under inserts, required for real-time feeds). Per-view override via `pagination_class = MyPagination`. Disable for a view by setting `pagination_class = None`. Always paginate list endpoints on collections that could grow unbounded — otherwise you ship a DoS vector.',
+      explanation: 'Options: `PageNumberPagination` (?page=N - simplest), `LimitOffsetPagination` (?limit=N&offset=N - SQL-style), `CursorPagination` (opaque cursor - stable under inserts and fast deep into a big table, so it suits feeds and logs). `PAGE_SIZE` is the number of rows per page; the class alone does not paginate without it. Per-view override via `pagination_class = MyPagination`. Disable for a view by setting `pagination_class = None`. Always paginate list endpoints on collections that could grow unbounded - otherwise one request can make the server load and serialize every row.',
       hints: [
-        'Page / Limit-Offset / Cursor — pick by the API shape',
+        'Page / Limit-Offset / Cursor - pick by the API shape',
         'Per-view override: pagination_class on the view',
         'Always paginate unbounded lists',
       ],
@@ -340,7 +340,7 @@ REST_FRAMEWORK = {
       topic: Topic.DJ_PAGINATION_GENERICS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Build a DRF ListCreateAPIView for Article using ArticleSerializer that returns published articles only. Set the serializer attribute first, then override the method that returns the rows.',
+      question: '`Article` has an `author` foreign key to the user. Build a DRF `ListCreateAPIView` named `ArticleListCreate`, using `ArticleSerializer`, that lists only the articles written by the user making the request. Set the serializer attribute first, then the code that picks the rows.',
       correctOrder: [
         'from rest_framework.generics import ListCreateAPIView',
         'from .models import Article',
@@ -350,17 +350,17 @@ REST_FRAMEWORK = {
         '    serializer_class = ArticleSerializer',
         '',
         '    def get_queryset(self):',
-        '        return Article.objects.filter(status="published")',
+        '        return Article.objects.filter(author=self.request.user)',
       ],
       distractorLines: [
-        '        return Article.objects.get(status="published")',
+        '        return Article.objects.get(author=self.request.user)',
         '    serializer = ArticleSerializer',
         'class ArticleListCreate(GenericAPIView):',
-        '    def queryset(self):',
+        '    queryset = Article.objects.filter(author=self.request.user)',
       ],
-      solution: 'from rest_framework.generics import ListCreateAPIView\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\nclass ArticleListCreate(ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(status="published")',
-      explanation: 'Generic API views need `serializer_class` (not `serializer`) and either a class-level `queryset` or an overridden `get_queryset()`, which must return a queryset: `.filter(...)` gives the many published rows, while `.get(...)` returns one object (or raises when there are several). Overriding `get_queryset` is also what you do when the rows depend on the request, such as the current user. `ListCreateAPIView` handles both `GET` (list) and `POST` (create) automatically.',
-      hints: ['serializer_class, not serializer', 'Override get_queryset for dynamic filtering', 'ListCreate handles GET and POST'],
+      solution: 'from rest_framework.generics import ListCreateAPIView\nfrom .models import Article\nfrom .serializers import ArticleSerializer\n\nclass ArticleListCreate(ListCreateAPIView):\n    serializer_class = ArticleSerializer\n\n    def get_queryset(self):\n        return Article.objects.filter(author=self.request.user)',
+      explanation: 'Generic API views need `serializer_class` (not `serializer`) and the rows, from a class-level `queryset` or an overridden `get_queryset()`. Here the rows depend on who is asking, so they must come from `get_queryset()`: DRF calls it for each request with `self.request` set. A class attribute `queryset = ...filter(author=self.request.user)` runs once when the class is defined, where there is no `self` and no request, so it cannot work. `get_queryset()` must return a queryset: `.filter(...)` gives all of the user\'s articles, while `.get(...)` returns one object (or raises when there are several). `ListCreateAPIView` handles both `GET` (list) and `POST` (create); `GenericAPIView` alone has no handlers.',
+      hints: ['serializer_class, not serializer', 'The class body runs once, before any request exists', 'ListCreate handles GET and POST'],
       tags: ['django', 'drf', 'ListCreateAPIView', 'get_queryset', 'parsons'],
       concepts: ['dj-view-patterns'],
     },
