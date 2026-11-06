@@ -1367,33 +1367,24 @@ result = ____.____("____", ____(df.____, ____).over(____))`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LAKE_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to read an ACID-compliant Delta Lake table from storage path "/data/sales_delta" into DataFrame "df".
-
-Source Table Schema:
-\`\`\`text
-+-------------+-----------+----------+
-| col_name    | data_type | comment  |
-+-------------+-----------+----------+
-| order_id    | string    | primary  |
-| amount      | double    | usd      |
-| txn_date    | date      | partition|
-+-------------+-----------+----------+
-\`\`\``,
-    starterCode: `# Read Delta table from path\ndf = `,
+    question: `The variable \`path\` holds the cloud storage path of a Delta table that is not registered in the catalog, for example "abfss://lake@acme.dfs.core.windows.net/sales". The path lies inside a Unity Catalog external location you may read. Write one PySpark statement that reads the table at \`path\` into a DataFrame named \`df\`.`,
+    starterCode: `# Read the Delta table stored at path\ndf = `,
     testCases: [
       {
-        input: 'Delta table at /data/sales_delta',
-        expectedOutput: 'spark.read.format("delta").load("/data/sales_delta")',
+        input: 'Delta table at path',
+        expectedOutput: 'spark.read.format("delta").load(path)',
         description: 'Should read Delta table',
       },
     ],
-    solution: `df = spark.read.format("delta").load("/data/sales_delta")
+    solution: `df = spark.read.format("delta").load(path)
 # OR
-df = spark.read.load("/data/sales_delta", format="delta")`,
-    explanation: 'Delta Lake tables are read using format("delta") with load(path). Delta Lake stores data in Parquet files alongside a JSON transaction log (_delta_log/), providing ACID transactions, time travel, and schema enforcement.',
+df = spark.read.load(path, format="delta")
+# OR
+df = spark.read.load(path)`,
+    explanation: 'A table kept at a path is read with `spark.read.format("delta").load(path)`. The reader looks in the folder\'s `_delta_log` for the Parquet files of the latest commit and reads only those. On Databricks Delta is also the default format, so `spark.read.load(path)` reads the same table. A table registered in Unity Catalog is read by name instead, with `spark.table("catalog.schema.table")`; a path is only for files in an external location you may read.',
     tieredHints: {
       apiSignature: 'DataFrameReader.format(source: str).load(path: str = None) -> DataFrame',
-      skeleton: `df = spark.____.format("____").____("/data/sales_delta")`,
+      skeleton: `df = spark.____.format("____").____(path)`,
     },
     hints: ['Use format("delta")', 'Use load() with the storage path'],
     tags: ['delta', 'read', 'delta-lake'],
@@ -1406,22 +1397,25 @@ df = spark.read.load("/data/sales_delta", format="delta")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LAKE_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to write DataFrame "df" to a Delta Lake table at storage path "/data/customers_delta", overwriting any existing table contents.`,
+    question: `The variable \`path\` holds a cloud storage path inside a Unity Catalog external location you may write to. Write one PySpark statement that saves DataFrame \`df\` as a Delta table at \`path\`, replacing whatever the table there holds now.`,
     starterCode: `# Write DataFrame as Delta table with overwrite\n`,
     testCases: [
       {
         input: 'df to write as Delta',
-        expectedOutput: 'df.write.format("delta").mode("overwrite").save("/data/customers_delta")',
+        expectedOutput: 'df.write.format("delta").mode("overwrite").save(path)',
         description: 'Should write Delta table with overwrite mode',
       },
     ],
-    solution: `df.write.format("delta").mode("overwrite").save("/data/customers_delta")
+    requires: [/overwrite/],
+    solution: `df.write.format("delta").mode("overwrite").save(path)
 # OR
-df.write.mode("overwrite").format("delta").save("/data/customers_delta")`,
-    explanation: 'Delta tables are written using format("delta"). Specifying mode("overwrite") atomically replaces the existing table data and logs a new commit version in the Delta transaction log without requiring manual file deletion.',
+df.write.mode("overwrite").format("delta").save(path)
+# OR
+df.write.mode("overwrite").save(path)`,
+    explanation: '`df.write.format("delta").mode("overwrite").save(path)` writes the rows as Parquet files and commits one new version that replaces the whole table, so readers see either the old rows or the new ones, never a mix. The replaced files are only marked removed, so the older version can still be read with time travel until VACUUM deletes them. Delta is the default format on Databricks, so `format("delta")` may be left out. `mode("append")` would add the rows instead of replacing them.',
     tieredHints: {
       apiSignature: 'DataFrameWriter.format(source: str).mode(saveMode: str).save(path: str = None)',
-      skeleton: `df.____.format("____").mode("____").save("/data/customers_delta")`,
+      skeleton: `df.____.format("____").mode("____").save(path)`,
     },
     hints: ['Use format("delta")', 'Use mode("overwrite")', 'Use save() with the target path'],
     tags: ['delta', 'write', 'delta-lake'],
@@ -1434,24 +1428,25 @@ df.write.mode("overwrite").format("delta").save("/data/customers_delta")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
-    question: `Write a SQL statement to modify rows in Delta table "employees", setting the "price" column to 100 for all records where "department" is 'Sales'.`,
-    starterCode: `-- Update price for Sales department\n`,
+    question: `Write a SQL statement that sets the "price" column to 100 in every row of the Delta table "products" whose "category" is 'Books'.`,
+    starterCode: `-- Set the price of Books to 100\n`,
+    requires: [/UPDATE/i, /\bWHERE\b/i],
     testCases: [
       {
-        input: 'employees Delta table',
-        expectedOutput: 'UPDATE employees SET price = 100 WHERE department = "Sales"',
-        description: 'Should update price for Sales department',
+        input: 'products Delta table',
+        expectedOutput: "UPDATE products SET price = 100 WHERE category = 'Books'",
+        description: 'Should update price for the Books category',
       },
     ],
-    solution: `UPDATE employees SET price = 100 WHERE department = 'Sales'
+    solution: `UPDATE products SET price = 100 WHERE category = 'Books'
 -- OR
-UPDATE employees SET price = 100 WHERE department = "Sales"`,
-    explanation: 'Delta Lake natively supports UPDATE operations with WHERE predicates. Behind the scenes, Delta performs copy-on-write or merge-on-read, generating new Parquet files containing updated values and updating the transaction log atomically.',
+UPDATE products SET price = 100 WHERE category = "Books"`,
+    explanation: 'Delta tables take SQL UPDATE with a WHERE clause, and the whole change is one commit. Delta writes new Parquet files holding the changed rows (or, with deletion vectors, marks the old rows deleted) and only marks the replaced files removed, so the version before the UPDATE stays readable with time travel until VACUUM. Leaving out the WHERE clause would set the price of every product.',
     tieredHints: {
       apiSignature: 'UPDATE table_name SET col = val WHERE condition',
-      skeleton: `____ employees ____ price = 100 ____ department = 'Sales'`,
+      skeleton: `____ products ____ price = 100 ____ category = 'Books'`,
     },
-    hints: ['Use UPDATE table_name SET column = value', 'Include WHERE department = \'Sales\''],
+    hints: ['Use UPDATE table_name SET column = value', 'Add a WHERE clause on category'],
     tags: ['delta', 'update', 'delta-lake', 'sql'],
     concepts: ['delta-acid', 'delta-merge'],
   },
@@ -1488,18 +1483,8 @@ UPDATE employees SET price = 100 WHERE department = "Sales"`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
-    requires: [/MERGE\s+INTO/i],
-    question: `Write a SQL MERGE statement to upsert records from source table "updates" into target Delta table "customers" matching on "id" (both tables have columns: id, name, email, city). Update all columns when matched, and insert all columns when unmatched.
-
-Table Schemas & Operational Flow:
-\`\`\`text
-Target: customers (id, name, email, city)
-Source: updates   (id, name, email, city)
-
-Match condition: customers.id = updates.id
-Action when matched:   UPDATE SET *
-Action when unmatched: INSERT *
-\`\`\``,
+    requires: [/MERGE\s+INTO/i, /WHEN\s+MATCHED/i, /WHEN\s+NOT\s+MATCHED/i],
+    question: `The Delta table "customers" and the source table "updates" both have the columns id, name, email and city. Finish the MERGE that upserts "updates" into "customers" on id: a customer found in both tables takes every column from "updates", and a row of "updates" with no match in "customers" is inserted with every column.`,
     starterCode: `-- MERGE updates into customers\nMERGE INTO customers\nUSING updates\nON customers.id = updates.id\n`,
     testCases: [
       {
@@ -1518,8 +1503,14 @@ MERGE INTO customers AS c
 USING updates AS u
 ON c.id = u.id
 WHEN MATCHED THEN UPDATE SET *
-WHEN NOT MATCHED THEN INSERT *`,
-    explanation: 'MERGE INTO performs atomic UPSERT operations. WHEN MATCHED THEN UPDATE SET * updates all matching columns, while WHEN NOT MATCHED THEN INSERT * inserts new rows, ensuring no duplicate keys are created.',
+WHEN NOT MATCHED THEN INSERT *
+-- OR
+MERGE INTO customers
+USING updates
+ON customers.id = updates.id
+WHEN MATCHED THEN UPDATE SET name = updates.name, email = updates.email, city = updates.city
+WHEN NOT MATCHED THEN INSERT (id, name, email, city) VALUES (updates.id, updates.name, updates.email, updates.city)`,
+    explanation: 'MERGE INTO is the upsert, and it lands as one commit. WHEN MATCHED THEN UPDATE SET * copies every column of the source row onto the matched target row, by name, and WHEN NOT MATCHED THEN INSERT * adds each source row the target lacks. Listing the columns does the same thing. Customers missing from "updates" are left alone; removing them would take WHEN NOT MATCHED BY SOURCE THEN DELETE. If "updates" held two rows for one id, the MERGE would fail, so deduplicate the source first.',
     tieredHints: {
       apiSignature: 'MERGE INTO target USING source ON predicate WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *',
       skeleton: `MERGE INTO ____
@@ -1528,7 +1519,7 @@ ON customers.id = updates.id
 WHEN ____ THEN UPDATE SET *
 WHEN ____ THEN INSERT *`,
     },
-    hints: ['Use WHEN MATCHED THEN UPDATE SET *', 'Use WHEN NOT MATCHED THEN INSERT *'],
+    hints: ['A row found in both tables is MATCHED; a source row with no target row is NOT MATCHED.', 'UPDATE SET * and INSERT * copy every column by name.'],
     tags: ['delta', 'merge', 'upsert', 'delta-lake', 'sql'],
     concepts: ['delta-acid', 'delta-merge'],
   },
@@ -1539,7 +1530,7 @@ WHEN ____ THEN INSERT *`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_TIME_TRAVEL,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement using time travel to read version 5 of the Delta table located at "/data/sales_delta" into DataFrame "df".`,
+    question: `The variable \`path\` holds the cloud storage path of a Delta table, inside a Unity Catalog external location you may read. Write one PySpark statement that uses time travel to read version 5 of that table into a DataFrame named \`df\`.`,
     starterCode: `# Read version 5 of Delta table\ndf = `,
     testCases: [
       {
@@ -1548,13 +1539,16 @@ WHEN ____ THEN INSERT *`,
         description: 'Should read version 5',
       },
     ],
-    solution: `df = spark.read.format("delta").option("versionAsOf", 5).load("/data/sales_delta")
+    requires: [/versionAsOf/],
+    solution: `df = spark.read.format("delta").option("versionAsOf", 5).load(path)
 # OR
-df = spark.read.option("versionAsOf", 5).format("delta").load("/data/sales_delta")`,
-    explanation: 'Delta Lake time travel enables querying specific commit versions using option("versionAsOf", version_int) or timestamps using option("timestampAsOf", timestamp_str).',
+df = spark.read.option("versionAsOf", 5).format("delta").load(path)
+# OR
+df = spark.read.option("versionAsOf", 5).load(path)`,
+    explanation: 'The reader option `versionAsOf` picks a version by number, so `spark.read.format("delta").option("versionAsOf", 5).load(path)` reads the files that version 5 listed in the transaction log. `timestampAsOf` picks the version that was current at a time instead. For a table registered in Unity Catalog the same option works with `.table("catalog.schema.table")`. Old versions can only be read while their files exist, so VACUUM limits how far back time travel reaches.',
     tieredHints: {
       apiSignature: 'DataFrameReader.option(key: str, value: Any).load(path: str = None) -> DataFrame',
-      skeleton: `df = spark.read.____("delta").____("versionAsOf", ____).____("/data/sales_delta")`,
+      skeleton: `df = spark.read.____("delta").____("versionAsOf", ____).____(path)`,
     },
     hints: ['Use format("delta")', 'Use option("versionAsOf", 5)'],
     tags: ['delta', 'time-travel', 'delta-lake', 'versioning'],
@@ -1567,8 +1561,9 @@ df = spark.read.option("versionAsOf", 5).format("delta").load("/data/sales_delta
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_TIME_TRAVEL,
     language: CodeLanguage.SQL,
-    question: `Write a SQL query to select all records from Delta table "customers" as it existed at commit version 10.`,
+    question: `Write a SQL query that returns every row and column of the Delta table "customers" as it was at version 10.`,
     starterCode: `-- Time travel query for version 10\n`,
+    requires: [/VERSION\s+AS\s+OF|@v10/i],
     testCases: [
       {
         input: 'customers Delta table',
@@ -1579,7 +1574,7 @@ df = spark.read.option("versionAsOf", 5).format("delta").load("/data/sales_delta
     solution: `SELECT * FROM customers VERSION AS OF 10
 -- OR
 SELECT * FROM customers@v10`,
-    explanation: 'In Databricks SQL, you can time travel to previous table states using "VERSION AS OF version_number" or table@v<version_number> syntax.',
+    explanation: '`SELECT * FROM customers VERSION AS OF 10` reads the files that version 10 listed in the transaction log; `customers@v10` is the short form. `TIMESTAMP AS OF` picks a version by time instead, so `TIMESTAMP AS OF 10` is not the same query. `DESCRIBE HISTORY customers` lists the version numbers you can use.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM table VERSION AS OF version',
       skeleton: `SELECT * FROM ____ VERSION ____ ____ 10`,
@@ -1622,20 +1617,20 @@ SELECT * FROM customers@v10`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPTIMIZATION,
     language: CodeLanguage.SQL,
-    requires: [/ZORDER\s+BY/i],
-    question: `Write a SQL command to optimize Delta table "events" and apply multi-dimensional clustering on columns "user_id" and "timestamp" to maximize file skipping efficiency during filtering queries.`,
-    starterCode: `-- Optimize table with multi-dimensional clustering\n`,
+    requires: [/ZORDER\s+BY/i, /user_id/i, /event_time/i],
+    question: `Write a SQL command that compacts the Delta table "events" and Z-orders it by the columns "user_id" and "event_time", so that queries filtering on those columns can skip most files.`,
+    starterCode: `-- Compact and Z-order events\n`,
     testCases: [
       {
         input: 'events Delta table',
-        expectedOutput: 'OPTIMIZE events ZORDER BY (user_id, timestamp)',
+        expectedOutput: 'OPTIMIZE events ZORDER BY (user_id, event_time)',
         description: 'Should optimize with ZORDER',
       },
     ],
-    solution: `OPTIMIZE events ZORDER BY (user_id, timestamp)
+    solution: `OPTIMIZE events ZORDER BY (user_id, event_time)
 -- OR
-OPTIMIZE events ZORDER BY user_id, timestamp`,
-    explanation: 'ZORDER BY co-locates related data along specified columns within the same files. When combined with file statistics, it enables Spark to skip entire files based on min/max stats for user_id and timestamp filters.',
+OPTIMIZE events ZORDER BY user_id, event_time`,
+    explanation: 'OPTIMIZE compacts small files, and ZORDER BY also sorts the rows so that close values of user_id and event_time end up in the same files. Delta keeps each file\'s minimum and maximum per column, so a filter on either column can then skip the files whose range cannot match. For a new table Databricks recommends liquid clustering (CLUSTER BY) instead, which a plain OPTIMIZE keeps up.',
     tieredHints: {
       apiSignature: 'OPTIMIZE table_name ZORDER BY (col1, col2, ...)',
       skeleton: `____ events ____ ____ (user_id, ____)`,
@@ -2312,8 +2307,8 @@ CREATE CATALOG IF NOT EXISTS analytics`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
-    requires: [/CREATE\s+SCHEMA/i],
-    question: 'Write a SQL query to create a schema named "sales" inside the existing "analytics" catalog.',
+    requires: [/CREATE\s+(SCHEMA|DATABASE)/i, /analytics\.sales/i],
+    question: 'Write a SQL statement that creates a schema named "sales" inside the existing catalog "analytics".',
     starterCode: `-- Create schema inside analytics catalog\n`,
     testCases: [
       {
@@ -2324,8 +2319,10 @@ CREATE CATALOG IF NOT EXISTS analytics`,
     ],
     solution: `CREATE SCHEMA analytics.sales
 -- OR
-CREATE SCHEMA IF NOT EXISTS analytics.sales`,
-    explanation: 'Schemas are created within catalogs using the catalog.schema notation.',
+CREATE SCHEMA IF NOT EXISTS analytics.sales
+-- OR
+CREATE DATABASE analytics.sales`,
+    explanation: 'A schema lives inside a catalog, so its full name has two parts, catalog.schema, and CREATE SCHEMA analytics.sales works whatever the current catalog is. CREATE DATABASE is an older synonym for CREATE SCHEMA. Tables, views and volumes are then created inside it as analytics.sales.<name>.',
     tieredHints: {
       apiSignature: 'CREATE SCHEMA [IF NOT EXISTS] catalog.schema_name',
       skeleton: `-- ____ schema\n____ ____ analytics.____`,
@@ -2341,8 +2338,9 @@ CREATE SCHEMA IF NOT EXISTS analytics.sales`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
-    question: 'Write a SQL query to retrieve all columns from table "customers" in schema "sales" of catalog "analytics" using the fully qualified 3-level namespace.',
+    question: 'Write a SQL query that returns every row and column of the table "customers" in schema "sales" of catalog "analytics", naming the table by its full three-part name.',
     starterCode: `-- Retrieve records using 3-level namespace\n`,
+    requires: [/analytics\.sales\.customers/i],
     testCases: [
       {
         input: 'analytics.sales.customers table',
@@ -2351,7 +2349,7 @@ CREATE SCHEMA IF NOT EXISTS analytics.sales`,
       },
     ],
     solution: `SELECT * FROM analytics.sales.customers`,
-    explanation: 'Use the full three-level namespace (catalog.schema.table) to reference tables in Unity Catalog.',
+    explanation: 'The full name catalog.schema.table, here analytics.sales.customers, finds the table whatever the session\'s current catalog and schema are. A shorter name such as sales.customers is resolved against the current catalog, so it only works after USE CATALOG analytics, which is why jobs and shared notebooks name tables in full.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM catalog.schema.table',
       skeleton: `-- ____ 3-level namespace\nSELECT * ____ analytics.____.____`,
@@ -2367,23 +2365,23 @@ CREATE SCHEMA IF NOT EXISTS analytics.sales`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
-    requires: [/GRANT/i],
-    question: 'Write a SQL statement to grant read access on the "sales" schema to user principal group "analysts".',
+    requires: [/GRANT\s+SELECT/i, /ON\s+SCHEMA/i],
+    question: 'Write a SQL statement that lets the group "analysts" read (SELECT) every table in the schema analytics.sales, granted once on the schema. The group already holds USE CATALOG on analytics and USE SCHEMA on analytics.sales.',
     starterCode: `-- Grant read access on schema\n`,
     testCases: [
       {
-        input: 'sales schema and analysts group',
-        expectedOutput: 'GRANT SELECT ON SCHEMA sales TO analysts',
+        input: 'analytics.sales schema and analysts group',
+        expectedOutput: 'GRANT SELECT ON SCHEMA analytics.sales TO `analysts`',
         description: 'Should grant SELECT privilege',
       },
     ],
-    solution: `GRANT SELECT ON SCHEMA sales TO analysts
+    solution: `GRANT SELECT ON SCHEMA analytics.sales TO \`analysts\`
 -- OR
 GRANT SELECT ON SCHEMA analytics.sales TO analysts`,
-    explanation: 'Unity Catalog uses GRANT statements to manage permissions. Privileges can be granted on catalogs, schemas, tables, or views.',
+    explanation: 'GRANT privilege ON object TO principal gives access in Unity Catalog. SELECT granted on a schema covers every table and view in it, including ones created later. A group name is usually written in backticks, which a name with spaces or dashes needs. Reading a table also needs USE CATALOG on its catalog and USE SCHEMA on its schema, which is why the question says the group already has them.',
     tieredHints: {
-      apiSignature: 'GRANT privilege ON SCHEMA schema_name TO principal',
-      skeleton: `____ SELECT ____ SCHEMA sales ____ analysts`,
+      apiSignature: 'GRANT privilege ON SCHEMA catalog.schema TO principal',
+      skeleton: `____ SELECT ____ SCHEMA analytics.sales ____ \`analysts\``,
     },
     hints: ['Use GRANT privilege ON object TO principal'],
     tags: ['unity-catalog', 'grant', 'permissions'],
@@ -2396,8 +2394,9 @@ GRANT SELECT ON SCHEMA analytics.sales TO analysts`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
-    question: 'Write a SQL statement to set the active catalog context for subsequent session queries to "analytics".',
+    question: 'Write a SQL statement that makes "analytics" the current catalog for the rest of the session.',
     starterCode: `-- Set active catalog context\n`,
+    requires: [/USE\s+CATALOG/i],
     testCases: [
       {
         input: '',
@@ -2406,7 +2405,7 @@ GRANT SELECT ON SCHEMA analytics.sales TO analysts`,
       },
     ],
     solution: `USE CATALOG analytics`,
-    explanation: 'USE CATALOG sets the default catalog for the session. After this, you can reference tables with schema.table instead of catalog.schema.table.',
+    explanation: 'USE CATALOG analytics sets the session\'s current catalog and resets its current schema to default. After it, schema.table resolves to analytics.schema.table, and a one-part name to analytics.default.table until USE SCHEMA picks another schema. USE SCHEMA analytics would instead look for a schema named analytics in the current catalog.',
     tieredHints: {
       apiSignature: 'USE CATALOG catalog_name',
       skeleton: `-- ____ active catalog\n____ ____ analytics`,
@@ -2581,18 +2580,18 @@ result = df.dropna(how="all")`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to list all files in directory "/mnt/data".',
+    question: 'Write a Python statement using Databricks filesystem utilities to list all files in directory "/Volumes/main/raw/landing".',
     starterCode: `# List directory files\nfiles = `,
     testCases: [
       {
         input: '/mnt/data directory',
-        expectedOutput: 'dbutils.fs.ls("/mnt/data")',
+        expectedOutput: 'dbutils.fs.ls("/Volumes/main/raw/landing")',
         description: 'Should list files in directory',
       },
     ],
-    solution: `files = dbutils.fs.ls("/mnt/data")
+    solution: `files = dbutils.fs.ls("/Volumes/main/raw/landing")
 # OR
-files = dbutils.fs.ls(dir="/mnt/data")`,
+files = dbutils.fs.ls(dir="/Volumes/main/raw/landing")`,
     explanation: 'dbutils.fs.ls() lists files and directories at the specified path. Returns a list of FileInfo objects.',
     tieredHints: {
       apiSignature: 'dbutils.fs.ls(dir: str) -> List[FileInfo]',
@@ -2609,22 +2608,22 @@ files = dbutils.fs.ls(dir="/mnt/data")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to copy file "/data/source.csv" to "/data/backup/source.csv".',
+    question: 'Write a Python statement using Databricks filesystem utilities to copy file "/Volumes/main/raw/landing/source.csv" to "/Volumes/main/raw/backup/source.csv".',
     starterCode: `# Copy file\n`,
     testCases: [
       {
         input: 'source and destination paths',
-        expectedOutput: 'dbutils.fs.cp("/data/source.csv", "/data/backup/source.csv")',
+        expectedOutput: 'dbutils.fs.cp("/Volumes/main/raw/landing/source.csv", "/Volumes/main/raw/backup/source.csv")',
         description: 'Should copy file',
       },
     ],
-    solution: `dbutils.fs.cp("/data/source.csv", "/data/backup/source.csv")
+    solution: `dbutils.fs.cp("/Volumes/main/raw/landing/source.csv", "/Volumes/main/raw/backup/source.csv")
 # OR
-dbutils.fs.cp(from_path="/data/source.csv", to_path="/data/backup/source.csv")`,
+dbutils.fs.cp(from_path="/Volumes/main/raw/landing/source.csv", to_path="/Volumes/main/raw/backup/source.csv")`,
     explanation: 'dbutils.fs.cp() copies files from source to destination. Use recurse=True for directories.',
     tieredHints: {
       apiSignature: 'dbutils.fs.cp(from: str, to: str, recurse: bool = False) -> bool',
-      skeleton: `____.fs.____("/data/source.csv", "____")`,
+      skeleton: `____.fs.____("/Volumes/main/raw/landing/source.csv", "____")`,
     },
     hints: ['Use dbutils.fs.cp(source, destination)'],
     tags: ['dbutils', 'fs', 'copy'],
@@ -2637,22 +2636,22 @@ dbutils.fs.cp(from_path="/data/source.csv", to_path="/data/backup/source.csv")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to move file "/temp/data.csv" to "/archive/data.csv".',
+    question: 'Write a Python statement using Databricks filesystem utilities to move file "/Volumes/main/raw/landing/data.csv" to "/Volumes/main/raw/archive/data.csv".',
     starterCode: `# Move file\n`,
     testCases: [
       {
         input: 'source and destination paths',
-        expectedOutput: 'dbutils.fs.mv("/temp/data.csv", "/archive/data.csv")',
+        expectedOutput: 'dbutils.fs.mv("/Volumes/main/raw/landing/data.csv", "/Volumes/main/raw/archive/data.csv")',
         description: 'Should move file',
       },
     ],
-    solution: `dbutils.fs.mv("/temp/data.csv", "/archive/data.csv")
+    solution: `dbutils.fs.mv("/Volumes/main/raw/landing/data.csv", "/Volumes/main/raw/archive/data.csv")
 # OR
-dbutils.fs.mv(from_path="/temp/data.csv", to_path="/archive/data.csv")`,
+dbutils.fs.mv(from_path="/Volumes/main/raw/landing/data.csv", to_path="/Volumes/main/raw/archive/data.csv")`,
     explanation: 'dbutils.fs.mv() moves (renames) files from source to destination.',
     tieredHints: {
       apiSignature: 'dbutils.fs.mv(from: str, to: str, recurse: bool = False) -> bool',
-      skeleton: `____.fs.____("/temp/data.csv", "____")`,
+      skeleton: `____.fs.____("/Volumes/main/raw/landing/data.csv", "____")`,
     },
     hints: ['Use dbutils.fs.mv(source, destination)'],
     tags: ['dbutils', 'fs', 'move'],
@@ -2665,18 +2664,18 @@ dbutils.fs.mv(from_path="/temp/data.csv", to_path="/archive/data.csv")`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to delete file "/temp/old_data.csv".',
+    question: 'Write a Python statement using Databricks filesystem utilities to delete file "/Volumes/main/raw/landing/old_data.csv".',
     starterCode: `# Remove file\n`,
     testCases: [
       {
         input: 'file path',
-        expectedOutput: 'dbutils.fs.rm("/temp/old_data.csv")',
+        expectedOutput: 'dbutils.fs.rm("/Volumes/main/raw/landing/old_data.csv")',
         description: 'Should delete file',
       },
     ],
-    solution: `dbutils.fs.rm("/temp/old_data.csv")
+    solution: `dbutils.fs.rm("/Volumes/main/raw/landing/old_data.csv")
 # OR
-dbutils.fs.rm("/temp/old_data.csv", recurse=False)`,
+dbutils.fs.rm("/Volumes/main/raw/landing/old_data.csv", recurse=False)`,
     explanation: 'dbutils.fs.rm() removes files. Use recurse=True to delete directories and their contents.',
     tieredHints: {
       apiSignature: 'dbutils.fs.rm(dir: str, recurse: bool = False) -> bool',
@@ -2693,16 +2692,16 @@ dbutils.fs.rm("/temp/old_data.csv", recurse=False)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to create directory "/data/new_folder" along with any necessary parent directories.',
+    question: 'Write a Python statement using Databricks filesystem utilities to create directory "/Volumes/main/raw/landing/2026/11" along with any necessary parent directories.',
     starterCode: `# Create directory and parents\n`,
     testCases: [
       {
         input: 'directory path',
-        expectedOutput: 'dbutils.fs.mkdirs("/data/new_folder")',
+        expectedOutput: 'dbutils.fs.mkdirs("/Volumes/main/raw/landing/2026/11")',
         description: 'Should create directory',
       },
     ],
-    solution: `dbutils.fs.mkdirs("/data/new_folder")`,
+    solution: `dbutils.fs.mkdirs("/Volumes/main/raw/landing/2026/11")`,
     explanation: 'dbutils.fs.mkdirs() creates a directory and any necessary parent directories (like mkdir -p).',
     tieredHints: {
       apiSignature: 'dbutils.fs.mkdirs(dir: str) -> bool',
@@ -2719,22 +2718,22 @@ dbutils.fs.rm("/temp/old_data.csv", recurse=False)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to read the first 1,000,000 bytes of "/config/settings.txt" as a string into variable "content".',
+    question: 'Write a Python statement using Databricks filesystem utilities to read the first 1,000,000 bytes of "/Volumes/main/ops/config/settings.txt" as a string into variable "content".',
     starterCode: `# Read up to 1,000,000 bytes\ncontent = `,
     testCases: [
       {
         input: 'file path',
-        expectedOutput: 'dbutils.fs.head("/config/settings.txt", 1000000)',
+        expectedOutput: 'dbutils.fs.head("/Volumes/main/ops/config/settings.txt", 1000000)',
         description: 'Should read file contents',
       },
     ],
-    solution: `content = dbutils.fs.head("/config/settings.txt", 1000000)
+    solution: `content = dbutils.fs.head("/Volumes/main/ops/config/settings.txt", 1000000)
 # OR
-content = dbutils.fs.head("/config/settings.txt", maxBytes=1000000)`,
+content = dbutils.fs.head("/Volumes/main/ops/config/settings.txt", maxBytes=1000000)`,
     explanation: 'dbutils.fs.head(path, maxBytes) reads up to maxBytes from a file as a string. The default is 65536 bytes (64 KB), so for larger files you should specify a higher limit.',
     tieredHints: {
       apiSignature: 'dbutils.fs.head(file: str, maxBytes: int = 65536) -> str',
-      skeleton: `content = ____.fs.____("/config/settings.txt", ____)`,
+      skeleton: `content = ____.fs.____("/Volumes/main/ops/config/settings.txt", ____)`,
     },
     hints: ['Use dbutils.fs.head(path, maxBytes)', 'Specify 1000000 as the second argument for the byte limit'],
     tags: ['dbutils', 'fs', 'read'],
@@ -2747,22 +2746,23 @@ content = dbutils.fs.head("/config/settings.txt", maxBytes=1000000)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to write string "Hello, Databricks!" to "/output/message.txt", overwriting if it exists.',
+    question: 'Write a Python statement using Databricks filesystem utilities to write string "Hello, Databricks!" to "/Volumes/main/ops/output/message.txt", overwriting if it exists.',
     starterCode: `# Write text to file\n`,
     testCases: [
       {
         input: 'path and content',
-        expectedOutput: 'dbutils.fs.put("/output/message.txt", "Hello, Databricks!", True)',
+        expectedOutput: 'dbutils.fs.put("/Volumes/main/ops/output/message.txt", "Hello, Databricks!", True)',
         description: 'Should write to file',
       },
     ],
-    solution: `dbutils.fs.put("/output/message.txt", "Hello, Databricks!", True)
+    solution: `dbutils.fs.put("/Volumes/main/ops/output/message.txt", "Hello, Databricks!", True)
 # OR
-dbutils.fs.put("/output/message.txt", "Hello, Databricks!", overwrite=True)`,
-    explanation: 'dbutils.fs.put() writes a string to a file. The third parameter controls overwriting — True overwrites, False (default) raises an error if the file exists.',
+dbutils.fs.put("/Volumes/main/ops/output/message.txt", "Hello, Databricks!", overwrite=True)`,
+    requires: [/True/],
+    explanation: 'dbutils.fs.put(file, contents, overwrite) writes a string to a file. The third parameter controls overwriting: True replaces an existing file, and False, the default, raises an error if the file already exists.',
     tieredHints: {
       apiSignature: 'dbutils.fs.put(file: str, contents: str, overwrite: bool = False) -> bool',
-      skeleton: `____.fs.____("/output/message.txt", "Hello, Databricks!", ____)`,
+      skeleton: `____.fs.____("/Volumes/main/ops/output/message.txt", "Hello, Databricks!", ____)`,
     },
     hints: ['Use dbutils.fs.put(path, content, overwrite)', 'Pass True as the third argument to allow overwriting'],
     tags: ['dbutils', 'fs', 'write'],
@@ -2775,7 +2775,7 @@ dbutils.fs.put("/output/message.txt", "Hello, Databricks!", overwrite=True)`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Mount Azure Blob Storage "wasbs://container@account.blob.core.windows.net" to "/mnt/data" using Databricks filesystem utilities, configuring credentials key "fs.azure.account.key.account.blob.core.windows.net" to variable "storage_key".',
+    question: 'Legacy, pre-Unity Catalog pattern: finish this dbutils.fs.mount call, which mounts the Azure Blob Storage container at "/mnt/data". Pass extra_configs a dictionary that sets the key "fs.azure.account.key.account.blob.core.windows.net" to the variable storage_key, which holds the account key.',
     starterCode: `# Mount Azure Blob storage\ndbutils.fs.mount(\n  source = "wasbs://container@account.blob.core.windows.net",\n  mount_point = "/mnt/data",\n  extra_configs = `,
     testCases: [
       {
@@ -2785,7 +2785,7 @@ dbutils.fs.put("/output/message.txt", "Hello, Databricks!", overwrite=True)`,
       },
     ],
     solution: `dbutils.fs.mount(\n  source = "wasbs://container@account.blob.core.windows.net",\n  mount_point = "/mnt/data",\n  extra_configs = {"fs.azure.account.key.account.blob.core.windows.net": storage_key}\n)`,
-    explanation: 'dbutils.fs.mount() mounts cloud storage (Azure Blob, S3, ADLS) to DBFS. Requires source URL, mount point, and credentials in extra_configs.',
+    explanation: 'dbutils.fs.mount(source, mount_point, extra_configs) makes cloud storage appear under /mnt in DBFS, signed in with the settings in extra_configs, here the storage account key. This is legacy twice over: mounts give every user of the workspace the same access, which Unity Catalog cannot limit per user, and wasbs is the older Blob driver (ADLS Gen2 uses abfss). New work uses a storage credential, an external location and a volume, and a key, if one is needed at all, comes from a secret scope rather than the notebook.',
     tieredHints: {
       apiSignature: 'dbutils.fs.mount(source: str, mount_point: str, extra_configs: dict = None) -> bool',
       skeleton: `____.fs.____(
@@ -2842,7 +2842,12 @@ result = dbutils.notebook.run("/Shared/ETL/ETL_Process", timeout_seconds=60)`,
         description: 'Should pass parameters',
       },
     ],
-    solution: `result = dbutils.notebook.run(\n  "/Shared/ETL/Process",\n  60,\n  {"env": "prod", "date": "2024-01-01"}\n)`,
+    requires: [/["']env["']/, /["']date["']/],
+    solution: `result = dbutils.notebook.run(\n  "/Shared/ETL/Process",\n  60,\n  {"env": "prod", "date": "2024-01-01"}\n)
+# OR
+result = dbutils.notebook.run("/Shared/ETL/Process", 60, {"env": "prod", "date": "2024-01-01"})
+# OR
+result = dbutils.notebook.run("/Shared/ETL/Process", timeout_seconds=60, arguments={"env": "prod", "date": "2024-01-01"})`,
     explanation: 'The third parameter passes arguments as a dictionary of strings. The called notebook accesses these values using dbutils.widgets.get("env"), dbutils.widgets.get("date"), etc.',
     tieredHints: {
       apiSignature: 'dbutils.notebook.run(path: str, timeout_seconds: int, arguments: dict = None) -> str',
@@ -2926,8 +2931,11 @@ dbutils.widgets.text(name="environment", defaultValue="dev")`,
         description: 'Should create dropdown widget',
       },
     ],
-    solution: `dbutils.widgets.dropdown("region", "US", ["US", "EU", "APAC"])`,
-    explanation: 'dbutils.widgets.dropdown() creates a dropdown widget with predefined choices.',
+    requires: [/widgets\.dropdown/],
+    solution: `dbutils.widgets.dropdown("region", "US", ["US", "EU", "APAC"])
+# OR
+dbutils.widgets.dropdown(name="region", defaultValue="US", choices=["US", "EU", "APAC"])`,
+    explanation: 'dbutils.widgets.dropdown(name, defaultValue, choices) creates a widget that offers only the listed choices, and the default must be one of them. dbutils.widgets.get("region") then returns the chosen value as a string.',
     tieredHints: {
       apiSignature: 'dbutils.widgets.dropdown(name: str, defaultValue: str, choices: list, label: str = None)',
       skeleton: `____.widgets.____("region", "US", ["____", "EU", "APAC"])`,
@@ -3029,11 +3037,11 @@ api_key = dbutils.secrets.get("prod", "api-key")`,
     question: 'What happens if you try to print a secret retrieved with dbutils.secrets.get()?',
     options: [
       { id: 'a', text: 'The unencrypted secret key string is printed directly to notebook cell output.', isCorrect: false },
-      { id: 'b', text: 'The interpreter raises an unhandled SecurityException and halts cell execution.', isCorrect: false },
-      { id: 'c', text: 'Databricks automatically replaces the secret output with [REDACTED] in logs.', isCorrect: true },
-      { id: 'd', text: 'The workspace notebook locks execution and revokes user cluster privileges.', isCorrect: false },
+      { id: 'b', text: 'The call fails, because a secret value can only be passed to Spark options and connectors.', isCorrect: false },
+      { id: 'c', text: 'Databricks shows [REDACTED] in the cell output in place of the secret value.', isCorrect: true },
+      { id: 'd', text: 'The value prints in full, and is masked only when the notebook is exported.', isCorrect: false },
     ],
-    explanation: 'Databricks automatically redacts secret values when displayed or logged, showing [REDACTED] instead.',
+    explanation: 'Databricks replaces a secret\'s exact value with [REDACTED] wherever it would appear in cell output, while the variable still holds the real value for your code. Because the match is on the exact string, a changed copy of the value would print, so redaction prevents accidents rather than enforcing security; the scope\'s permissions decide who can read the secret at all.',
     hints: ['Think about automatic output redaction in notebook logs.'],
     tags: ['dbutils', 'secrets', 'security'],
     concepts: ['dbx-utilities', 'dbx-secrets'],
@@ -3212,18 +3220,8 @@ CREATE OR REPLACE TABLE test_users SHALLOW CLONE prod_users`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
-    requires: [/MERGE\s+INTO/i],
-    question: `Write a SQL MERGE statement to upsert data from table "updates" (alias u) into Delta table "customers" (alias c) matching on "customer_id". On match, update "name" and "email"; on no match, insert all columns.
-
-Table Schemas & Operation Summary:
-\`\`\`text
-Target: customers c (customer_id, name, email, region)
-Source: updates u   (customer_id, name, email, region)
-
-Match predicate: c.customer_id = u.customer_id
-WHEN MATCHED:    UPDATE SET c.name = u.name, c.email = u.email
-WHEN NOT MATCHED: INSERT *
-\`\`\``,
+    requires: [/MERGE\s+INTO/i, /\bname\s*=\s*u\.name/i, /\bemail\s*=\s*u\.email/i, /WHEN\s+NOT\s+MATCHED/i],
+    question: `The Delta table "customers" (alias c) and the source table "updates" (alias u) both have the columns customer_id, name, email and region. Finish the MERGE on customer_id: a customer found in both tables takes only the new name and email from "updates" (its region stays as it is), and a row of "updates" with no match is inserted with every column.`,
     starterCode: `-- MERGE INTO statement\nMERGE INTO customers c\nUSING updates u\nON c.customer_id = u.customer_id\n`,
     testCases: [
       {
@@ -3244,8 +3242,14 @@ MERGE INTO customers c
 USING updates u
 ON c.customer_id = u.customer_id
 WHEN MATCHED THEN UPDATE SET c.name = u.name, c.email = u.email
+WHEN NOT MATCHED THEN INSERT *
+-- OR
+MERGE INTO customers c
+USING updates u
+ON c.customer_id = u.customer_id
+WHEN MATCHED THEN UPDATE SET name = u.name, email = u.email
 WHEN NOT MATCHED THEN INSERT *`,
-    explanation: 'MERGE INTO specifies target and source tables with aliases, a join predicate ON c.customer_id = u.customer_id, followed by conditional WHEN MATCHED THEN UPDATE and WHEN NOT MATCHED THEN INSERT clauses.',
+    explanation: 'The WHEN MATCHED clause names only the columns to change, `UPDATE SET c.name = u.name, c.email = u.email`, so a matched customer keeps its region; `UPDATE SET *` would copy the region too. The WHEN NOT MATCHED clause uses `INSERT *`, which takes every column of the new source row by name. The target columns may be written with or without the alias, and the whole MERGE is one commit.',
     tieredHints: {
       apiSignature: 'MERGE INTO target USING source ON predicate WHEN MATCHED THEN UPDATE SET ... WHEN NOT MATCHED THEN INSERT *',
       skeleton: `MERGE INTO customers c
@@ -3256,7 +3260,7 @@ WHEN ____ THEN
 WHEN ____ ____ THEN
   INSERT *`,
     },
-    hints: ['Use WHEN MATCHED THEN UPDATE SET c.name = u.name, c.email = u.email', 'Use WHEN NOT MATCHED THEN INSERT *'],
+    hints: ['The matched clause lists only the two columns that change.', 'A source row with no match is NOT MATCHED, and INSERT * takes all its columns.'],
     tags: ['delta', 'merge', 'upsert', 'update', 'insert'],
     concepts: ['delta-acid', 'delta-merge', 'ps-write-modes'],
   },
@@ -3508,7 +3512,7 @@ print(d.numFiles, spark.table(t).count())`,
       },
     ],
     solution: `VACUUM orders`,
-    explanation: 'VACUUM orders removes unreferenced files older than spark.databricks.delta.vacuum.parallelDelete.enabled default retention of 7 days.',
+    explanation: 'VACUUM orders deletes the data files that the current version of the table no longer uses and that were marked removed more than the retention period ago, 7 days (168 hours) by default. It changes no rows and frees storage, but versions that needed those files can no longer be read with time travel.',
     tieredHints: {
       apiSignature: 'VACUUM table_name [RETAIN num HOURS]',
       skeleton: `-- ____ orders\n____ ____`,
@@ -3524,8 +3528,8 @@ print(d.numFiles, spark.table(t).count())`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
-    requires: [/VACUUM/i],
-    question: 'Write a SQL statement to run VACUUM on Delta table "transactions" with a custom retention period of 168 hours.',
+    requires: [/VACUUM/i, /RETAIN/i],
+    question: 'Write a SQL statement that runs VACUUM on the Delta table "transactions", stating the retention period explicitly as 168 hours.',
     starterCode: `-- Vacuum transactions with retention\n`,
     testCases: [
       {
@@ -3535,7 +3539,7 @@ print(d.numFiles, spark.table(t).count())`,
       },
     ],
     solution: `VACUUM transactions RETAIN 168 HOURS`,
-    explanation: 'VACUUM table_name RETAIN n HOURS specifies a custom retention window in hours. Files committed earlier than 168 hours ago (7 days) will be deleted.',
+    explanation: 'VACUUM table_name RETAIN n HOURS sets the retention period in hours. VACUUM then deletes the files the current version no longer uses that were marked removed more than 168 hours (7 days) ago; files still in use are never deleted, however old they are. 168 hours is also the default, and Delta refuses a shorter retention unless a safety check is turned off, because it would break time travel and readers still using older versions.',
     tieredHints: {
       apiSignature: 'VACUUM table_name RETAIN num HOURS',
       skeleton: `____ transactions ____ 168 ____`,
@@ -3555,7 +3559,7 @@ print(d.numFiles, spark.table(t).count())`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to list all currently mounted storage locations into variable "mounts".',
+    question: 'Legacy DBFS mounts: write a Python statement using Databricks filesystem utilities that stores the list of all current mount points in the variable "mounts".',
     starterCode: `# List mounts\nmounts = `,
     testCases: [
       {
@@ -3565,7 +3569,7 @@ print(d.numFiles, spark.table(t).count())`,
       },
     ],
     solution: `mounts = dbutils.fs.mounts()`,
-    explanation: 'dbutils.fs.mounts() returns a list of all mount points and their source locations.',
+    explanation: 'dbutils.fs.mounts() returns one MountInfo per mount point, with its /mnt path and the storage source behind it. Mounts are legacy, and listing them is the usual first step when moving a workspace to Unity Catalog volumes and external locations.',
     tieredHints: {
       apiSignature: 'dbutils.fs.mounts() -> List[MountInfo]',
       skeleton: `____ = dbutils.____.____()`,
@@ -3581,7 +3585,7 @@ print(d.numFiles, spark.table(t).count())`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_UTILITIES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks filesystem utilities to unmount storage path "/mnt/data".',
+    question: 'Legacy DBFS mounts: write a Python statement using Databricks filesystem utilities that removes the mount at "/mnt/data".',
     starterCode: `# Unmount storage path\n`,
     testCases: [
       {
@@ -3593,7 +3597,7 @@ print(d.numFiles, spark.table(t).count())`,
     solution: `dbutils.fs.unmount("/mnt/data")
 # OR
 dbutils.fs.unmount(mount_point="/mnt/data")`,
-    explanation: 'dbutils.fs.unmount() removes the mount point, making the storage no longer accessible at that path.',
+    explanation: 'dbutils.fs.unmount(mount_point) removes the mount, so the storage is no longer reachable at that /mnt path; the files themselves stay in cloud storage. Clusters that are already running may need dbutils.fs.refreshMounts() to see the change. Removing mounts is the last step of moving to Unity Catalog volumes.',
     tieredHints: {
       apiSignature: 'dbutils.fs.unmount(mount_point: str) -> bool',
       skeleton: `____.fs.____("____")`,
