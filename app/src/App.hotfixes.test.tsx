@@ -236,4 +236,37 @@ describe('F7: filters', () => {
     expect(screen.queryByText(/Nothing left today for these filters/)).toBeNull();
     expect(screen.queryByText(/No questions match your current filters/)).toBeNull();
   });
+
+  test('a filtered session with nothing servable even unfiltered ends on the summary', async () => {
+    localStorage.setItem('recall-active-course', 'sql');
+    localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
+    localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.TSQL_SELECT] }));
+    const sqlIds = questions.filter(q => getCourseForTopic(q.topic) === Course.SQL).map(q => q.id);
+    const exhausted: ReviewSession = {
+      day: localDayKey(), size: 20, queue: [], total: 0, overflow: 0, freshLeft: 5, answered: 15, reasks: 0,
+      served: sqlIds, keepGoing: false,
+      tally: { review: 0, new: 15, drill: 0, practice: 0, again: 0, correct: 15 },
+    };
+    localStorage.setItem(TODAY_SESSION_KEY, serializeSessions({ [Course.SQL]: exhausted }));
+    render(<App />);
+    fireEvent.click(nav('Learn'));
+
+    expect(await screen.findByText('Done for today', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left today for these filters/)).toBeNull();
+  });
+
+  test('switching course selects every topic again and keeps the type and difficulty filters', () => {
+    localStorage.setItem('recall-active-course', 'sql');
+    localStorage.setItem('recall-filters', JSON.stringify({
+      topics: [Topic.TSQL_SELECT], difficulties: ['beginner'], questionTypes: ['parsons'],
+    }));
+    render(<App />);
+    const tiles = screen.getByRole('heading', { name: 'Switch course' }).closest('section')!;
+    fireEvent.click(within(tiles).getByRole('button', { name: /Backend Engineering/ }));
+
+    const saved = JSON.parse(localStorage.getItem('recall-filters')!);
+    expect(saved.topics).toEqual(expect.arrayContaining([Topic.PY_DATACLASSES, Topic.TSQL_SELECT]));
+    expect(saved.difficulties).toEqual(['beginner']);
+    expect(saved.questionTypes).toEqual(['parsons']);
+  });
 });

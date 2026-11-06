@@ -1135,20 +1135,21 @@ function App() {
     setFsrsStore(prev => recordAttempt(prev, missed, attempt, attemptHistory));
   };
 
-  // Filters belong to one course: switching course starts the new one unfiltered.
-  const switchCourse = (course: Course) => {
-    if (course !== activeCourse) setFilters(allFilters());
+  // Topics belong to one course: switching course selects every topic again,
+  // and keeps the difficulty and question-type filters.
+  const switchCourse = (course: Course): FilterOptions => {
+    const next = course === activeCourse ? filters : { ...filters, topics: allFilters().topics };
+    if (next !== filters) setFilters(next);
     setActiveCourse(course);
+    return next;
   };
 
   const startQuiz = (course?: Course, keepGoing = false) => {
     const targetCourse = course || activeCourse;
-    const switching = targetCourse !== activeCourse;
-    switchCourse(targetCourse);
+    const targetFilters = switchCourse(targetCourse);
     // Compute questions for the target course directly (state hasn't flushed yet).
-    // The same course keeps the learner's filters; a new course starts unfiltered.
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
-    const servePool = switching ? pool : filterQuestions(pool, filters);
+    const servePool = filterQuestions(pool, targetFilters);
     const built = reviewSessionFor(targetCourse);
     const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
     if (session !== reviewSessions[targetCourse]) {
@@ -1195,9 +1196,12 @@ function App() {
     const todaySession = reviewSessions[activeCourse];
     const matching = currentQuestion ? 0 : getFilteredQuestions().length;
     const unfiltered = matching === courseQuestions.length;
-    // 1. The session is really over: unfiltered, nothing is servable at all;
-    //    filtered, the bounded session is done.
-    if (!currentQuestion && todaySession && matching > 0 && (unfiltered || isSessionDone(todaySession))) {
+    // 1. The session is really over: it is done, or nothing is servable even
+    //    from the unfiltered pool.
+    const sessionOver = !!todaySession && !currentQuestion && matching > 0 && (unfiltered
+      || isSessionDone(todaySession)
+      || !selectSessionQuestion(todaySession, courseQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx));
+    if (!currentQuestion && todaySession && sessionOver) {
       return (
         <SessionSummary
           session={todaySession}
