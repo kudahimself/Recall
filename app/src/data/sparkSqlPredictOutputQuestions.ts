@@ -256,4 +256,74 @@ SELECT s FROM scores LIMIT 3;`,
     tags: ['limit', 'order-by'],
     concepts: ['ps-orderby-sort'],
   },
+  {
+    id: 'sql-predict-11',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.SQL_SUBQUERIES,
+    course: Course.DATABRICKS,
+    language: CodeLanguage.SQL,
+    question: 'What does this query return? The answer is one whole number.',
+    code: `WITH members AS (
+  SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3
+), loans AS (
+  SELECT 10 AS loan_id, 1 AS member_id UNION ALL
+  SELECT 11, NULL
+)
+SELECT COUNT(*) FROM members
+WHERE id NOT IN (SELECT member_id FROM loans);`,
+    expectedOutput: `0`,
+    explanation:
+      'Members 2 and 3 have no loans, yet the count is 0. `id NOT IN (1, NULL)` means `id <> 1 AND id <> NULL`, and `id <> NULL` is NULL, so the condition is never true for any member. One NULL in the subquery empties a NOT IN. `NOT EXISTS (SELECT 1 FROM loans l WHERE l.member_id = m.id)` returns 2 here, as does adding `WHERE member_id IS NOT NULL` inside the subquery.',
+    hints: ['Write NOT IN out as a chain of <> comparisons joined by AND.', 'What is 2 <> NULL?'],
+    tags: ['subquery', 'not-in', 'null', 'predict'],
+    concepts: ['sql-subqueries', 'ps-null-handling'],
+  },
+  {
+    id: 'sql-predict-12',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.SQL_SET_OPERATIONS,
+    course: Course.DATABRICKS,
+    language: CodeLanguage.SQL,
+    question: 'What does this query return? The answer is one row: two whole numbers separated by a comma.',
+    code: `WITH a AS (SELECT 1 AS id UNION ALL SELECT 1 UNION ALL SELECT 2),
+b AS (SELECT 2 AS id UNION ALL SELECT 3)
+SELECT
+  (SELECT COUNT(*) FROM (SELECT id FROM a UNION ALL SELECT id FROM b)),
+  (SELECT COUNT(*) FROM (SELECT id FROM a UNION SELECT id FROM b));`,
+    expectedOutput: `5, 3`,
+    explanation:
+      'UNION ALL stacks every row of both inputs: 3 + 2 = 5. UNION removes duplicates from the whole combined result, including the two 1s that both come from `a`, which leaves the distinct ids 1, 2 and 3. UNION does not only drop rows that appear in both inputs.',
+    hints: ['UNION ALL keeps every row.', 'Does UNION also remove a duplicate that sits inside one input?'],
+    tags: ['union', 'union-all', 'set-operations', 'predict'],
+    concepts: ['sql-set-operations'],
+  },
+  {
+    id: 'sql-predict-13',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.SPARK_SQL,
+    course: Course.DATABRICKS,
+    language: CodeLanguage.SQL,
+    question: 'What does this query return? The answer is its rows, one per line: the id, a comma, then the flag.',
+    code: `WITH loans AS (
+  SELECT 1 AS id, 45 AS days_out UNION ALL
+  SELECT 2, 10 UNION ALL
+  SELECT 3, 20
+)
+SELECT id,
+  CASE WHEN days_out > 14 THEN 'late'
+       WHEN days_out > 30 THEN 'very late'
+       ELSE 'ok' END AS flag
+FROM loans ORDER BY id;`,
+    expectedOutput: `1, late
+2, ok
+3, late`,
+    explanation:
+      'CASE tries its WHEN branches top to bottom and returns the first one that is true. 45 is greater than 14, so loan 1 is "late" and the `> 30` branch is never reached: as written it can never fire. Put the narrower condition first (`> 30`, then `> 14`) to get "very late" for loan 1.',
+    hints: ['CASE stops at the first true WHEN.', 'Is 45 > 14?'],
+    tags: ['case-when', 'spark-sql', 'predict'],
+    concepts: ['sql-case-expr'],
+  },
 ];
