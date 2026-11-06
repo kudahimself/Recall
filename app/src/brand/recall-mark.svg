@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="currentColor">
+  <!-- Recall logo mark, the single source of the brand: a whole elephant side-on, facing right, trunk curled up at the tip. Ear and eye are cut out of the head so the mark stays one colour (currentColor). Every icon in public/ is generated from this file by scripts/build-icons.js. -->
+  <defs>
+    <mask id="el-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+      <rect width="64" height="64" fill="#fff"/>
+      <path d="M41 16.5 C33 17.5 32 31 39.5 33.5" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="48" cy="21.5" r="2" fill="#000"/>
+    </mask>
+  </defs>
+  <g mask="url(#el-cut)">
+    <path d="M7 31 C7 22 14 18 24 18 H42 V36 C42 40 40 43 37 44 V51 Q37 53 35 53 H30 Q28 53 28 51 V45 H21 V51 Q21 53 19 53 H14 Q12 53 12 51 V42 C9 39.5 7 36 7 31 Z"/>
+    <circle cx="44" cy="25" r="11.5"/>
+    <path d="M51.5 29 C54 36 54.5 42 53 47 C52 50.5 55 52.5 58 50" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 27 L4.5 33" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>

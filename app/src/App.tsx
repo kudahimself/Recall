@@ -48,6 +48,7 @@ import { useMediaQuery } from './utils/useMediaQuery';
 import { QuizBar } from './components/QuizBar';
 import { Button } from './components/ui/Button';
 import { QuestionNav, QuestionNavContext } from './components/ui/QuestionShell';
+import { Logo } from './components/ui/Logo';
 import { ShortcutHelp } from './keyboard/ShortcutHelp';
 import { useShortcut } from './keyboard/shortcuts';
 import { TopicLessons } from './components/TopicLessons';
@@ -1730,16 +1731,7 @@ function App() {
           >
             <ListChecks size={20} />
           </button>
-          <div className="app-brand">
-            <svg className="app-brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 3a9 9 0 1 0 9 9" />
-              <path d="M12 7a5 5 0 1 0 5 5" />
-              <circle cx="12" cy="12" r="1.6" fill="currentColor" />
-              <path d="M21 3l-5 5" />
-              <path d="M16 3h5v5" />
-            </svg>
-            <span className="app-brand-name">Recall</span>
-          </div>
+          <Logo collapse />
         </div>
         <div className="header-right">
           <span className="header-stat" title="Current streak">

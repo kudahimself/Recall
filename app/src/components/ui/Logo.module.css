@@ -1,0 +1,34 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tile {
+  display: block;
+  width: var(--logo-tile);
+  height: var(--logo-tile);
+}
+
+/* Never a course colour: the brand stays the same in every course. */
+.name {
+  font-family: var(--font-ui);
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .collapse {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
