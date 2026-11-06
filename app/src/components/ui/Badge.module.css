@@ -1,0 +1,60 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  height: var(--badge-h);
+  padding: 0 var(--sp-2);
+  border: var(--border-w) solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.icon svg {
+  width: var(--fs-meta);
+  height: var(--fs-meta);
+}
+
+.count {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.accent {
+  color: var(--accent-text);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.success {
+  color: var(--success);
+  border-color: var(--success-line);
+  background: var(--success-soft);
+}
+
+.warning {
+  color: var(--warning);
+  border-color: var(--warning-line);
+  background: var(--warning-soft);
+}
+
+.danger {
+  color: var(--danger);
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+}
+
+.accent .count,
+.success .count,
+.warning .count,
+.danger .count {
+  color: inherit;
+}

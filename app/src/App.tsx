@@ -44,6 +44,12 @@ import {
 } from './utils/reviewSession';
 import { loadSessionSettings, SessionSummary, TodayCard } from './components/TodayCard';
 import { LessonSteps, RuleCardOverlay, RuleCardPanel, RuleCardView } from './components/RuleCard';
+import { useMediaQuery } from './utils/useMediaQuery';
+import { QuizBar } from './components/QuizBar';
+import { Button } from './components/ui/Button';
+import { QuestionNav, QuestionNavContext } from './components/ui/QuestionShell';
+import { ShortcutHelp } from './keyboard/ShortcutHelp';
+import { useShortcut } from './keyboard/shortcuts';
 import { TopicLessons } from './components/TopicLessons';
 import {
   LessonsDone,
@@ -110,6 +116,7 @@ import {
   DATA_ENG_SECTIONS,
   SQL_SECTIONS,
   getSectionUnits,
+  getTopicPlace,
 } from './utils/courseConfig';
 import { MultipleChoiceQuestion } from './components/MultipleChoiceQuestion';
 import { CodingQuestion } from './components/CodingQuestion';
@@ -133,7 +140,6 @@ import {
   Network,
   Table2,
   Activity,
-  Filter,
   ListChecks,
   Flame,
   Target,
@@ -354,6 +360,16 @@ function loadConceptProgress(progress: UserProgress, canWrite: boolean): Concept
 
 const QUESTIONS_BY_ID = new Map(questions.map(q => [q.id, q]));
 
+/** Question types drawn by the shared QuestionShell, which owns their Next button. */
+const SHELL_TYPES: ReadonlySet<QuestionType> = new Set([
+  QuestionType.MULTIPLE_CHOICE,
+  QuestionType.PREDICT_OUTPUT,
+  QuestionType.PREDICT_OUTCOME,
+  QuestionType.CHOOSE_JUSTIFY,
+  QuestionType.SPOT_FLAW,
+  QuestionType.EXPLAIN,
+]);
+
 /**
  * The card-family schedule (`recall-fsrs`). Rebuilt from attemptHistory when
  * the key is missing, unreadable, an older schema, or built from a different
@@ -442,14 +458,12 @@ class QuestionErrorBoundary extends React.Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="question-error-fallback" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="quiz-message">
           <h3>This question hit a snag.</h3>
-          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
-            We couldn't render it. Skip to the next one — your progress is safe.
-          </p>
-          <button className="next-button" onClick={() => { this.setState({ error: null }); this.props.onSkip(); }}>
+          <p>We couldn't render it. Skip to the next one: your progress is safe.</p>
+          <Button variant="primary" onClick={() => { this.setState({ error: null }); this.props.onSkip(); }}>
             Skip question
-          </button>
+          </Button>
         </div>
       );
     }
@@ -483,7 +497,10 @@ function App() {
   const [lessonsDone, setLessonsDone] = useState<LessonsDone>(initialLessonsDone);
   const [lessonFlow, setLessonFlow] = useState<LessonFlow | null>(null);
   const [ruleCardOpen, setRuleCardOpen] = useState<string | null>(null);
-  const [rulePanelHidden, setRulePanelHidden] = useState(false);
+  // The rule card beside a question: 'auto' shows it on a wide screen and
+  // leaves a laptop's width to the question; Hide and Show pin it either way.
+  const [rulePanelPref, setRulePanelPref] = useState<'auto' | 'shown' | 'hidden'>('auto');
+  const wideScreen = useMediaQuery('(min-width: 1400px)', true);
   // Exercises (utils/exercises): the ones the learner ticked done.
   const [initialExercisesDone] = useState<ExercisesDone>(loadExercisesDone);
   const [exercisesDone, setExercisesDone] = useState<ExercisesDone>(initialExercisesDone);
@@ -509,8 +526,6 @@ function App() {
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionDirection, setTransitionDirection] = useState<'slide-left' | 'slide-right' | 'fade'>('fade');
   const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'topics' | 'heatmap'>('overview');
 
   // ── Persistence guards ──
@@ -575,32 +590,10 @@ function App() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // Get transition direction based on view hierarchy
-  const getTransitionDirection = useCallback((from: ViewMode, to: ViewMode): 'slide-left' | 'slide-right' | 'fade' => {
-    // Filter out 'filter' mode from transition logic
-    if (from === 'filter' || to === 'filter') return 'fade';
-
-    const hierarchy = ['home', 'quiz', 'progress'];
-    const fromIdx = hierarchy.indexOf(from);
-    const toIdx = hierarchy.indexOf(to);
-
-    if (toIdx > fromIdx) return 'slide-left';   // Deeper into app
-    if (toIdx < fromIdx) return 'slide-right';  // Back to shallower view
-    return 'fade';  // Same level
-  }, []);
-
-  // Change view with transition
+  // Change view at once: no exit animation to wait for.
   const changeView = useCallback((newView: ViewMode) => {
-    if (newView === viewMode) return;
-
-    setTransitionDirection(getTransitionDirection(viewMode, newView));
-    setIsTransitioning(true);
-
-    setTimeout(() => {
-      setViewMode(newView);
-      setTimeout(() => setIsTransitioning(false), 50);
-    }, 300); // Match exit animation duration
-  }, [viewMode, getTransitionDirection]);
+    setViewMode(newView);
+  }, []);
 
   // Filter questions by active course
   const courseQuestions = useMemo(() => {
@@ -886,18 +879,6 @@ function App() {
     window.addEventListener('beforeunload', saveSessionTime);
     return () => window.removeEventListener('beforeunload', saveSessionTime);
   }, [sessionStartTime]);
-
-  // Mouse spotlight effect
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const spotlight = document.documentElement;
-      spotlight.style.setProperty('--mouse-x', `${e.clientX}px`);
-      spotlight.style.setProperty('--mouse-y', `${e.clientY}px`);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
 
   const getFilteredQuestions = useCallback(
     (): Question[] => filterQuestions(courseQuestions, filters),
@@ -1228,30 +1209,26 @@ function App() {
     // 2. The session is not over, but the filters have nothing left today.
     if (!currentQuestion && matching > 0 && !unfiltered) {
       return (
-        <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="quiz-message empty-pool-message">
           <h3>Nothing left today for these filters.</h3>
-          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
+          <p>
             Today's session still has questions outside your current filters.
             Reset filters to carry on with them.
           </p>
-          <button className="next-button" onClick={resetFilters}>
-            Reset filters
-          </button>
+          <Button variant="primary" onClick={resetFilters}>Reset filters</Button>
         </div>
       );
     }
     // 3. The filters match no question in this course at all.
     if (!currentQuestion) {
       return (
-        <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="quiz-message empty-pool-message">
           <h3>You're all caught up.</h3>
-          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
+          <p>
             No questions match your current filters in this course's unlocked sections.
             Try resetting filters or switching courses.
           </p>
-          <button className="next-button" onClick={resetFilters}>
-            Reset filters
-          </button>
+          <Button variant="primary" onClick={resetFilters}>Reset filters</Button>
         </div>
       );
     }
@@ -1515,35 +1492,24 @@ function App() {
   const inLessonExercise = !!flowLesson && lessonFlow?.stage === 'exercise'
     && !!currentQuestion && flowLesson.exercises.includes(currentQuestion.id);
   const screenLesson = inLessonExercise ? flowLesson : currentQuestion ? lessonsForTopic(currentQuestion.topic)[0] : undefined;
-  const showRulePanel = viewMode === 'quiz' && !!currentQuestion && !!screenLesson && !rulePanelHidden;
+  const showRulePanel = viewMode === 'quiz' && !!currentQuestion && !!screenLesson
+    && (rulePanelPref === 'shown' || (rulePanelPref === 'auto' && wideScreen));
   const latestAnswers = useMemo(() => SpacedRepetitionSystem.latestCorrectness(progress), [progress]);
 
-  // R reopens the rule card in full (not while typing an answer), Esc closes
-  // it, and Enter on a lesson's first rule card starts its exercises.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === 'Escape' && ruleCardOpen) {
-        setRuleCardOpen(null);
-        return;
-      }
-      const t = e.target instanceof HTMLElement ? e.target : null;
-      const typing = !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || !!t.closest('.monaco-editor'));
-      if (typing) return;
-      if (e.key === 'r' || e.key === 'R') {
-        if (ruleCardOpen) setRuleCardOpen(null);
-        else if (viewMode === 'quiz' && (screenLesson || flowLesson)) setRuleCardOpen((screenLesson ?? flowLesson)!.id);
-        return;
-      }
-      if (e.key === 'Enter' && !ruleCardOpen && viewMode === 'quiz' && lessonFlow?.stage === 'card' && !currentQuestion
-        && t?.tagName !== 'BUTTON') {
-        e.preventDefault();
-        startLessonExercises();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [ruleCardOpen, viewMode, screenLesson, flowLesson, lessonFlow, currentQuestion, startLessonExercises]);
+  // Keys from the shortcut registry (keyboard/shortcuts.ts): R opens the rule
+  // card in full (the overlay closes itself on R or Esc), and Enter on a
+  // lesson's first rule card starts its exercises. Neither fires while typing.
+  const ruleCardLesson = viewMode === 'quiz' ? (screenLesson ?? flowLesson) : undefined;
+  useShortcut('ruleCard', () => {
+    if (!ruleCardLesson) return false;
+    setRuleCardOpen(ruleCardLesson.id);
+    return true;
+  }, !!ruleCardLesson && !ruleCardOpen);
+  useShortcut('startExercises', e => {
+    if (e.target instanceof HTMLElement && e.target.closest('button, a[href], input, textarea, select')) return false;
+    startLessonExercises();
+    return true;
+  }, viewMode === 'quiz' && lessonFlow?.stage === 'card' && !currentQuestion && !ruleCardOpen);
 
   // Per-topic measured difficulty (avg auto-graded FSRS difficulty of its drain
   // cards) → easy/medium/hard label for the current topic. Null until graded.
@@ -1765,9 +1731,13 @@ function App() {
             <ListChecks size={20} />
           </button>
           <div className="app-brand">
-            <span className="app-brand-mark" role="img" aria-label="Recall logo">
-              🐘
-            </span>
+            <svg className="app-brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3a9 9 0 1 0 9 9" />
+              <path d="M12 7a5 5 0 1 0 5 5" />
+              <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              <path d="M21 3l-5 5" />
+              <path d="M16 3h5v5" />
+            </svg>
             <span className="app-brand-name">Recall</span>
           </div>
         </div>
@@ -1931,7 +1901,7 @@ function App() {
 
         {/* Content Area */}
         <main className="content">
-          <div className={`view-container ${transitionDirection} ${isTransitioning ? 'exiting' : 'entering'}`}>
+          <div className="view-container" key={viewMode}>
           {viewMode === 'home' && (
             <div className="home-view">
               {(() => {
@@ -2228,105 +2198,52 @@ function App() {
             </div>
           )}
 
-          {viewMode === 'quiz' && (
-            <div className={`quiz-view${showRulePanel || (lessonFlow?.stage === 'card' && !currentQuestion) ? ' quiz-view-with-panel' : ''}`}>
-              {/* Breadcrumb bar */}
+          {viewMode === 'quiz' && (() => {
+            const place = currentQuestion ? getTopicPlace(currentQuestion.topic) : null;
+            const exerciseIdx = inLessonExercise && flowLesson && currentQuestion ? flowLesson.exercises.indexOf(currentQuestion.id) : -1;
+            const lastExercise = inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, QUESTIONS_BY_ID);
+            const nav: QuestionNav = {
+              label: lastExercise ? 'Finish the lesson' : inLessonExercise ? 'Next exercise' : 'Next question',
+              onNext: loadNextQuestion,
+              missNote: reaskShown ? 'It comes back once more, a few cards later.' : undefined,
+            };
+            // The types on the shared QuestionShell show Next in their own footer;
+            // the others (cloze, Parsons, coding) still get it below the card.
+            const shellOwnsNext = !!currentQuestion && SHELL_TYPES.has(currentQuestion.type);
+            const kind = inLessonExercise
+              ? { label: `Lesson exercise ${exerciseIdx + 1} of ${flowLesson!.exercises.length}`, tone: 'accent' as const, title: 'A lesson exercise: an existing question of the topic, right after its rule card.' }
+              : servedKind === 'review'
+              ? { label: 'Review', tone: 'accent' as const, title: 'A review from today\'s list.' }
+              : servedKind === 'new'
+              ? { label: 'New question', tone: 'accent' as const, title: 'First time seeing this question: the next step of the topic\'s ramp.' }
+              : servedKind === 'drill'
+              ? { label: 'Practice', tone: 'neutral' as const, title: 'Practice on something you have already met. It is not in today\'s review list, so the count does not change.' }
+              : { label: 'Practice', tone: 'neutral' as const, title: 'Extra practice under your filters. It is not in today\'s review list, so the count does not change.' };
+            const panelSide = !!currentQuestion && !!screenLesson;
+            return (
+            <div className={`quiz-view${lessonFlow?.stage === 'card' && !currentQuestion ? ' quiz-view-card' : ''}`}>
               {currentQuestion && (
-                <div className="quiz-breadcrumb">
-                  <button className="breadcrumb-back" onClick={() => changeView('home')}>
-                    <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} />
-                    Back
-                  </button>
-                  <div className="breadcrumb-info">
-                    <span className="breadcrumb-topic">
-                      {currentQuestion.topic.replace(/_/g, ' ')}
-                    </span>
-                    <span className="breadcrumb-meta">
-                      {topicAccuracy.coverage} · {topicAccuracy.pct === 'New' ? 'new topic' : `${topicAccuracy.pct}% recent`}
-                    </span>
-                  </div>
-                  <span
-                    className={`mode-pill mode-pill-${inLessonExercise ? 'lesson' : servedKind}`}
-                    title={
-                      inLessonExercise
-                        ? 'A lesson exercise: an existing question of the topic, right after its rule card.'
-                        : servedKind === 'review'
-                        ? 'A review from today\'s list.'
-                        : servedKind === 'new'
-                        ? 'First time seeing this question: the next step of the topic\'s ramp.'
-                        : servedKind === 'drill'
-                        ? 'Practice on something you have already met. It is not in today\'s review list, so the count does not change.'
-                        : 'Extra practice under your filters. It is not in today\'s review list, so the count does not change.'
-                    }
-                  >
-                    {inLessonExercise ? 'Lesson' : servedKind === 'review' ? 'Review' : servedKind === 'new' ? 'New' : 'Practice'}
-                  </span>
-                  <span
-                    className="mode-pill mode-pill-today"
-                    title={reviewSessionNow.keepGoing
-                      ? 'Past today\'s session: keep going for as long as you like.'
-                      : `Today's session: ${reviewSessionNow.answered} of ${reviewSessionNow.size} answered. A missed card asked again adds one.`}
-                  >
-                    {reviewSessionNow.keepGoing ? 'Keep going' : 'Today'}
-                    <span className="mode-pill-count">{reviewSessionNow.answered}{reviewSessionNow.keepGoing ? '' : `/${reviewSessionNow.size}`}</span>
-                  </span>
-                  <span
-                    className={`review-count-pill${reviewsLeftToday === 0 ? ' review-count-pill-done' : ''}`}
-                    title={
-                      reviewsLeftToday === 0
-                        ? 'Today\'s reviews are done. Cards that come due later wait for tomorrow.'
-                        : `${reviewsLeftToday} review${reviewsLeftToday === 1 ? '' : 's'} left today. Each answered review takes one off; a missed one comes back once, a few cards later.`
-                    }
-                  >
-                    Reviews left
-                    <span className="mode-pill-count">{reviewsLeftToday}</span>
-                    {reaskShown && <span className="review-count-again">+1 again</span>}
-                    {reviewsLeftToday === 0 && (
-                      <span className="review-count-done-label">
-                        <CheckCircle2 size={12} /> done for today
-                      </span>
-                    )}
-                  </span>
-                  {topicDifficulty && (
-                    <span
-                      className={`topic-diff-pill topic-diff-${topicDifficulty.label}`}
-                      title={`Measured topic difficulty: ${topicDifficulty.label} (avg FSRS difficulty ${topicDifficulty.avg.toFixed(1)}/10). Harder topics come due for review sooner.`}
-                    >
-                      {topicDifficulty.label}
-                    </span>
-                  )}
-                  {screenLesson && (
-                    <button
-                      className="breadcrumb-rulecard"
-                      onClick={() => setRuleCardOpen(screenLesson.id)}
-                      title="Reopen this topic's rule card"
-                    >
-                      Rule card <kbd>R</kbd>
-                    </button>
-                  )}
-                  <button
-                    className="breadcrumb-filter"
-                    onClick={() => setShowFilters(!showFilters)}
-                    title={showFilters ? 'Hide filters' : 'Show filters'}
-                  >
-                    <Filter size={16} />
-                  </button>
-                </div>
-              )}
-
-              {/* Topic progress bar */}
-              {currentQuestion && topicAccuracy.coverage !== 'New' && (
-                <div className="topic-progress-bar">
-                  <div
-                    className="topic-progress-fill"
-                    style={{
-                      width: `${topicAccuracy.coveragePct ?? 0}%`,
-                      background: topicAccuracy.pct !== 'New' && parseInt(topicAccuracy.pct) >= 80
-                        ? 'var(--success)'
-                        : 'var(--primary)'
-                    }}
-                  />
-                </div>
+                <QuizBar
+                  onBack={() => changeView('home')}
+                  section={place?.section}
+                  topic={place?.unit ?? currentQuestion.topic.replace(/_/g, ' ')}
+                  meta={`${topicAccuracy.coverage} seen · ${topicAccuracy.pct === 'New' ? 'new topic' : `${topicAccuracy.pct}% recent`}${topicDifficulty ? ` · ${topicDifficulty.label}` : ''}`}
+                  kind={kind}
+                  today={reviewSessionNow.keepGoing
+                    ? { label: 'Keep going', count: String(reviewSessionNow.answered), title: 'Past today\'s session: keep going for as long as you like.' }
+                    : { label: 'Today', count: `${reviewSessionNow.answered}/${reviewSessionNow.size}`, title: `Today's session: ${reviewSessionNow.answered} of ${reviewSessionNow.size} answered. A missed card asked again adds one.` }}
+                  reviews={{
+                    left: reviewsLeftToday,
+                    again: reaskShown,
+                    title: reviewsLeftToday === 0
+                      ? 'Today\'s reviews are done. Cards that come due later wait for tomorrow.'
+                      : `${reviewsLeftToday} review${reviewsLeftToday === 1 ? '' : 's'} left today. Each answered review takes one off; a missed one comes back once, a few cards later.`,
+                  }}
+                  onRuleCard={screenLesson ? () => setRuleCardOpen(screenLesson.id) : undefined}
+                  panel={panelSide ? { shown: showRulePanel, onToggle: () => setRulePanelPref(showRulePanel ? 'hidden' : 'shown') } : undefined}
+                  filtersOpen={showFilters}
+                  onToggleFilters={() => setShowFilters(!showFilters)}
+                />
               )}
 
               {inLessonExercise && flowLesson && (
@@ -2347,49 +2264,36 @@ function App() {
                 />
               )}
 
-              {(() => {
-                const body = (
-                  <>
+              <div className={`quiz-stage${showRulePanel ? ' quiz-stage-panel' : ''}`}>
+                <div className="quiz-main">
+                  <QuestionNavContext.Provider value={nav}>
                     <QuestionErrorBoundary onSkip={loadNextQuestion}>
                       {renderQuestion()}
                     </QuestionErrorBoundary>
+                  </QuestionNavContext.Provider>
 
-                    {showNextButton && (
-                      <div className="next-button-container">
-                        <button className="next-button" onClick={loadNextQuestion}>
-                          {inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, QUESTIONS_BY_ID)
-                            ? 'Finish the lesson'
-                            : inLessonExercise ? 'Next exercise' : 'Next question'}
-                          <ArrowRight className="next-button-icon" size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                );
-                // Beside a card whose topic has a lesson: the rule card, or a tab to bring it back.
-                if (!currentQuestion || !screenLesson) return body;
-                return (
-                  <div className="quiz-stage">
-                    <div className="quiz-main">{body}</div>
-                    {showRulePanel
-                      ? (
-                        <RuleCardPanel
-                          lesson={screenLesson}
-                          rampNote={rampAfterLessonNote(screenLesson, courseQuestions, progress.questionsAttempted)}
-                          onOpen={() => setRuleCardOpen(screenLesson.id)}
-                          onHide={() => setRulePanelHidden(true)}
-                        />
-                      )
-                      : (
-                        <button className="rule-panel-tab" onClick={() => setRulePanelHidden(false)} title="Show the rule card beside the question">
-                          Rule card
-                        </button>
-                      )}
-                  </div>
-                );
-              })()}
+                  {showNextButton && !shellOwnsNext && (
+                    <div className="next-button-container">
+                      <Button variant="primary" size="lg" onClick={loadNextQuestion}>
+                        {nav.label}
+                        <ArrowRight aria-hidden="true" size={16} />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {showRulePanel && screenLesson && (
+                  <RuleCardPanel
+                    className="quiz-side-panel"
+                    lesson={screenLesson}
+                    rampNote={rampAfterLessonNote(screenLesson, courseQuestions, progress.questionsAttempted)}
+                    onOpen={() => setRuleCardOpen(screenLesson.id)}
+                    onHide={() => setRulePanelPref('hidden')}
+                  />
+                )}
+              </div>
             </div>
-          )}
+            );
+          })()}
 
           {viewMode === 'progress' && (
             <div className="progress-view">
@@ -2471,6 +2375,8 @@ function App() {
           </div>
         </main>
       </div>
+
+      <ShortcutHelp />
 
       {ruleCardOpen && (() => {
         const lesson = getLesson(ruleCardOpen);

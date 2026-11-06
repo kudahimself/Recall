@@ -28,10 +28,4 @@
 }
 
 /* Size variants for different use cases */
-.circular-progress-sm .progress-percentage {
-  font-size: var(--fs-base);
-}
 
-.circular-progress-lg .progress-percentage {
-  font-size: var(--fs-3xl);
-}

@@ -1,56 +1,64 @@
 .data-tables {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin: 12px 24px;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+/* The types not yet on the shared question shell inset their tables. */
+.cloze-code-question .data-tables,
+.parsons-question .data-tables,
+.coding-question .data-tables {
+  margin: var(--sp-3) var(--sp-6);
 }
 
 .data-table {
   margin: 0;
   min-width: 0;
   max-width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: var(--sunken);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
   overflow: hidden;
 }
 
 .data-table-name {
-  padding: 6px 10px;
+  padding: var(--sp-1) var(--sp-3);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--accent);
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-meta);
+  color: var(--warning);
+  background: var(--raised);
+  border-bottom: var(--border-w) solid var(--border);
 }
 
 /* About six rows tall; longer tables scroll inside the grid. */
 .data-table-scroll {
-  max-height: 11.5rem;
+  max-height: var(--table-max-h);
   overflow: auto;
 }
 
 .data-table table {
   border-collapse: collapse;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--fs-small);
+  line-height: var(--lh-tight);
   color: var(--text);
 }
 
 .data-table th,
 .data-table td {
-  padding: 4px 10px;
+  padding: var(--sp-1) var(--sp-3);
   text-align: left;
   white-space: nowrap;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--border-w) solid var(--border);
 }
 
 .data-table th {
   position: sticky;
   top: 0;
-  background: var(--bg-surface);
-  color: var(--text-dim);
-  font-weight: 600;
+  background: var(--surface);
+  color: var(--text-2);
+  font-weight: var(--weight-semibold);
 }
 
 .data-table tbody tr:last-child td {
@@ -63,17 +71,6 @@
 
 .data-table .data-table-null,
 .data-table .data-table-empty {
-  color: var(--text-muted);
+  color: var(--text-3);
   font-style: italic;
-}
-
-/* Backticked spans in question text and explanations (see InlineCode.tsx). */
-.inline-code {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--text);
 }

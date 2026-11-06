@@ -1,0 +1,346 @@
+.list {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 1), minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.caption {
+  grid-column: 1 / -1;
+}
+
+/* The radio stays focusable and readable by a screen reader; the row shows it. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--raised);
+  color: var(--text);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.option:hover {
+  border-color: var(--border-strong);
+}
+
+.option:has(.input:focus-visible) {
+  outline: var(--focus-w) solid var(--focus);
+  outline-offset: var(--focus-w);
+}
+
+.key {
+  flex: none;
+  display: inline-flex;
+}
+
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Sentence-long options wrap; a little less leading keeps them compact. */
+.long .text {
+  line-height: var(--lh-option);
+}
+
+.checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.checked .key kbd {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent-hover);
+}
+
+/* ---- After grading ---- */
+.graded .option {
+  cursor: default;
+}
+
+.graded .option:not(.checked):not([data-mark]):hover,
+.graded .other:hover {
+  border-color: var(--border);
+}
+
+.tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-left: auto;
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  animation: tag-in var(--dur-slow) var(--ease) both;
+}
+
+.tagIcon {
+  display: inline-flex;
+}
+
+.tagIcon svg {
+  width: var(--icon-m);
+  height: var(--icon-m);
+  stroke-width: 2.5;
+}
+
+.chosen-right,
+.graded .chosen-right:hover,
+.correct,
+.graded .correct:hover {
+  border-color: var(--success-line);
+  background: var(--success-soft);
+}
+
+.chosen-right .tag,
+.correct .tag {
+  color: var(--success);
+}
+
+.chosen-wrong,
+.graded .chosen-wrong:hover {
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+}
+
+.chosen-wrong .tag {
+  color: var(--danger);
+}
+
+.chosen-right {
+  animation: settle var(--dur-slow) var(--ease) both;
+}
+
+.chosen-wrong {
+  animation: nudge var(--dur-slow) var(--ease) both;
+}
+
+.other {
+  background: transparent;
+  color: var(--text-2);
+}
+
+/* Sentence-long rows: the same, slightly tighter padding before and after
+   grading, so nothing moves when the verdict lands. */
+.long .option {
+  padding-top: var(--sp-1);
+  padding-bottom: var(--sp-1);
+}
+
+/* Ticked key points once recorded: a compact checklist. */
+.graded.multi .option {
+  padding: var(--sp-0) var(--sp-3);
+  border-color: transparent;
+  background: transparent;
+}
+
+.multi .tick {
+  display: inline-flex;
+  color: var(--text-3);
+}
+
+.multi .tick svg {
+  width: var(--icon-m);
+  height: var(--icon-m);
+  stroke-width: 2.5;
+}
+
+.multi .checked .tick {
+  color: var(--success);
+}
+
+.graded .key kbd,
+.graded .checked .key kbd {
+  color: var(--kbd-text);
+  background: var(--kbd-bg);
+  border-color: var(--kbd-border);
+}
+
+.graded [data-mark] .key kbd {
+  color: inherit;
+  background: transparent;
+  border-color: currentColor;
+}
+
+.chosen-right .key,
+.correct .key {
+  color: var(--success);
+}
+
+.chosen-wrong .key {
+  color: var(--danger);
+}
+
+/* ---- Lines: a block of numbered code lines (Spot the flaw) ---- */
+.lines {
+  gap: 0;
+  padding: var(--sp-1) 0;
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--code-bg);
+}
+
+.lines {
+  position: relative;
+}
+
+/* The language sits in the corner, as on every code block. */
+.lines .caption {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  padding: var(--sp-0) var(--sp-2);
+  border-left: var(--border-w) solid var(--border);
+  border-bottom: var(--border-w) solid var(--border);
+  border-bottom-left-radius: var(--radius-s);
+  background: var(--sunken);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-body);
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.lines .option {
+  gap: var(--sp-3);
+  padding: var(--sp-0) var(--sp-3);
+  border: 0;
+  border-left: var(--focus-w) solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: var(--lh-tight);
+  min-height: calc(var(--fs-code) * var(--lh-code));
+}
+
+.lines .option:hover {
+  background: var(--raised);
+}
+
+.lines .option:has(.input:focus-visible) {
+  outline-offset: calc(-1 * var(--focus-w));
+}
+
+.lines .text {
+  white-space: pre-wrap;
+}
+
+.lineNo {
+  flex: none;
+  width: 2ch;
+  display: inline-flex;
+  justify-content: flex-end;
+  text-align: right;
+  color: var(--text-3);
+  user-select: none;
+}
+
+.lines .checked {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.lines .chosen-right,
+.lines .correct {
+  border-left-color: var(--success);
+  background: var(--success-soft);
+}
+
+.lines .chosen-wrong {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Keep the first line clear of the corner label. */
+.lines .caption + .option {
+  padding-right: 8ch;
+}
+
+/* On a code line the mark is an icon in the gutter; the words stay for screen readers. */
+.lines .tag {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.lines .lineNo .tagIcon svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+  vertical-align: -0.1em;
+}
+
+.lines .chosen-right .lineNo,
+.lines .correct .lineNo {
+  color: var(--success);
+}
+
+.lines .chosen-wrong .lineNo {
+  color: var(--danger);
+}
+
+/* ---- Long options (one per row): the mark sits on the top border, so the text keeps the full width ---- */
+/* ---- Long options (one per row): the mark follows the text, so it never covers a word ---- */
+.long .tag {
+  display: inline-flex;
+  vertical-align: baseline;
+  margin-left: var(--sp-2);
+  white-space: nowrap;
+}
+
+.long .tagIcon {
+  align-self: center;
+}
+
+.lines .other {
+  background: transparent;
+}
+
+@keyframes tag-in {
+  from { opacity: 0; transform: translateX(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes settle {
+  from { transform: scale(0.99); }
+  50% { transform: scale(1.006); }
+  to { transform: scale(1); }
+}
+
+@keyframes nudge {
+  0%, 100% { transform: none; }
+  30% { transform: translateX(-3px); }
+  60% { transform: translateX(2px); }
+}
+
+@media (max-width: 600px) {
+  .list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

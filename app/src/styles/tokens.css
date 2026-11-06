@@ -1,0 +1,252 @@
+/* Recall design tokens, direction A "Night".
+   Every component stylesheet reads these variables and nothing else: no raw
+   colours, sizes or spacing in component CSS. The legacy names at the end keep
+   the screens that have not moved to the shared components yet working. */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- Fonts (self-hosted IBM Plex, imported in index.tsx) ---- */
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-reading: var(--font-ui);
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Type scale: a 16px root that never shrinks with the viewport ---- */
+  --fs-meta: 0.75rem;     /* 12px, the smallest text allowed anywhere */
+  --fs-small: 0.875rem;   /* 14px, labels, badges, secondary text */
+  --fs-body: 1rem;        /* 16px, options, answers, explanations */
+  --fs-code: 0.9375rem;   /* 15px, code blocks (Plex Mono reads larger) */
+  --fs-lead: 1.125rem;    /* 18px, the question prompt */
+  --fs-h3: 1.25rem;       /* 20px */
+  --fs-h2: 1.375rem;      /* 22px */
+  --fs-h1: 1.75rem;       /* 28px */
+  --lh-tight: 1.3;
+  --lh-body: 1.55;
+  --lh-prompt: 1.4;
+  --lh-option: 1.45;
+  --lh-code: 1.6;
+  --tracking-eyebrow: 0.08em;
+
+  /* ---- Spacing: 4px grid ---- */
+  --sp-0: 2px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* ---- Control sizes ---- */
+  --control-sm: 30px;
+  --control-md: 38px;
+  --control-lg: 44px;
+  --badge-h: 24px;
+  --kbd-h: 20px;
+  --icon-s: 14px;
+  --icon-m: 16px;
+  --icon-l: 20px;
+  --border-w: 1px;
+  --focus-w: 2px;
+
+  /* ---- Layout ---- */
+  --header-h: 48px;
+  --rail-w: 76px;
+  --content-max: 1240px;
+  --side-panel-w: 300px;
+  --action-min-w: 9.5rem;
+  --dialog-w: 760px;
+  --dialog-w-wide: 1180px;
+  --key-col-w: 9.5rem;
+  --answer-short-w: 18rem;
+  --measure: 36rem;
+  --feedback-max-h: 46vh;
+  --job-min-w: 18rem;
+  --table-max-h: 11.5rem;
+
+  /* ---- Motion: two durations, one easing; all off under reduced motion ---- */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+
+  /* ---- Surfaces ---- */
+  --bg: #0c0c14;
+  --surface: #14141f;
+  --raised: #1c1c2a;
+  --sunken: #0f0f18;
+  --code-bg: #10101a;
+  --input-bg: #10101a;
+  --border: #282838;
+  --border-strong: #3a3a50;
+  --scrim: rgba(5, 5, 10, 0.66);
+
+  /* ---- Text ---- */
+  --text: #f1f1f7;        /* 16.2:1 on surface */
+  --text-2: #b9b9cc;      /*  9.5:1 */
+  --text-3: #9494aa;      /*  6.2:1, the dimmest text allowed */
+
+  /* ---- Brand: one fill for every primary button, in every course ---- */
+  --accent: #7c3aed;      /* brand fill */
+  --on-accent: #ffffff;   /* 5.7:1 on accent */
+  --accent-hover: #8b5cf6;
+  --accent-text: #b197fc; /* 7.6:1 on surface */
+  --accent-soft: rgba(124, 58, 237, 0.16);
+  --accent-line: rgba(177, 151, 252, 0.45);
+  --on-accent-soft: rgba(12, 12, 20, 0.24);
+  --on-accent-line: rgba(255, 255, 255, 0.28);
+
+  /* ---- Feedback ---- */
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.1);
+  --success-line: rgba(74, 222, 128, 0.45);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.1);
+  --danger-line: rgba(248, 113, 113, 0.45);
+  --danger-fill: #dc2626;
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.1);
+  --warning-line: rgba(251, 191, 36, 0.4);
+
+  --focus: #c4b5fd;
+  --selection: rgba(124, 58, 237, 0.45);
+
+  /* ---- Shape and depth ---- */
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --radius-pill: 999px;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --card-glow: radial-gradient(640px 200px at 0% 0%, rgba(124, 58, 237, 0.08), transparent 70%);
+
+  /* ---- Keys and code ---- */
+  --kbd-bg: #23233a;
+  --kbd-border: #3a3a55;
+  --kbd-text: #d6d6e6;
+  --code-kw: #c4a7ff;
+  --code-str: #86efac;
+  --code-num: #fcd34d;
+  --code-com: #9a9ab3;
+  --code-fn: #93c5fd;
+
+  /* ---- Course hues: a marker colour (dot, tint), never a button fill ---- */
+  --course-databricks: #f87171;
+  --course-webdev: #60a5fa;
+  --course-backend: #a78bfa;
+  --course-dataeng: #34d399;
+  --course-sql: #38bdf8;
+  --course: var(--accent-text);
+
+  /* =====================================================================
+     Legacy names, aliased to the tokens above. Screens not yet on the
+     shared components read these; new CSS must not.
+     ===================================================================== */
+  --bg-base: var(--bg);
+  --bg-surface: var(--surface);
+  --bg-elevated: var(--raised);
+  --bg-input: var(--kbd-bg);
+  --text-dim: var(--text-2);
+  --text-muted: var(--text-3);
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
+  --primary-soft: var(--accent-soft);
+  --primary-ring: var(--accent-line);
+  --primary-glow: var(--selection);
+  --error: var(--danger);
+  --error-soft: var(--danger-soft);
+  /* The old amber "secondary accent" is the warning hue now. */
+  --highlight: var(--warning);
+  --highlight-soft: var(--warning-soft);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --shadow-float: var(--shadow-2);
+  --shadow-glow: var(--shadow-1);
+  --space-xs: var(--sp-1);
+  --space-sm: var(--sp-2);
+  --space-md: var(--sp-3);
+  --space-lg: var(--sp-4);
+  --space-xl: var(--sp-6);
+  --space-2xl: var(--sp-8);
+  --space-3xl: var(--sp-12);
+  --radius-sm: var(--radius-s);
+  --radius-md: var(--radius-m);
+  --radius-lg: var(--radius-l);
+  --radius-xl: var(--radius-l);
+  --font-display: var(--font-ui);
+  /* Old type scale, floored at 12px. */
+  --fs-2xs: var(--fs-meta);
+  --fs-xs: var(--fs-meta);
+  --fs-sm: 0.8125rem;
+  --fs-base: var(--fs-small);
+  --fs-md: 0.9375rem;
+  --fs-lg: var(--fs-body);
+  --fs-xl: var(--fs-lead);
+  --fs-2xl: var(--fs-h3);
+  --fs-3xl: 1.5rem;
+  --fs-4xl: var(--fs-h1);
+  /* Old per-course palettes: markers only. */
+  --databricks-solid: var(--course-databricks);
+  --databricks-soft: rgba(248, 113, 113, 0.12);
+  --webdev-solid: var(--course-webdev);
+  --webdev-soft: rgba(96, 165, 250, 0.12);
+  --backend-solid: var(--course-backend);
+  --backend-soft: rgba(167, 139, 250, 0.12);
+  --dataeng-solid: var(--course-dataeng);
+  --dataeng-soft: rgba(52, 211, 153, 0.12);
+  --sql-solid: var(--course-sql);
+  --sql-soft: rgba(56, 189, 248, 0.12);
+}
+
+/* Short laptop screens give the header a little less height. */
+@media (max-height: 800px) {
+  :root { --header-h: 44px; }
+}
+
+/* A course only tints its markers; buttons keep the brand fill (AA in every course). */
+.theme-databricks { --course: var(--course-databricks); }
+.theme-webdev { --course: var(--course-webdev); }
+.theme-backend { --course: var(--course-backend); }
+.theme-dataeng { --course: var(--course-dataeng); }
+.theme-sql { --course: var(--course-sql); }
+
+/* ---- Base ---- */
+html { font-size: 16px; }
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, pre, kbd, samp { font-family: var(--font-mono); }
+
+::selection { background: var(--selection); color: var(--text); }
+
+/* One visible focus ring for every control; never removed. */
+:focus-visible {
+  outline: var(--focus-w) solid var(--focus);
+  outline-offset: var(--focus-w);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

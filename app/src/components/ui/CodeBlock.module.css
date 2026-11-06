@@ -1,0 +1,80 @@
+.block {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+/* The language sits in the corner, not in a row of its own. */
+.label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: var(--sp-0) var(--sp-2);
+  border-left: var(--border-w) solid var(--border);
+  border-bottom: var(--border-w) solid var(--border);
+  border-bottom-left-radius: var(--radius-s);
+  background: var(--sunken);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-body);
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.pre {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: var(--lh-code);
+  color: var(--text);
+  tab-size: 4;
+}
+
+.pre code {
+  display: block;
+  font: inherit;
+}
+
+.line {
+  display: flex;
+  white-space: pre;
+}
+
+/* Keep the first line clear of the corner label. */
+.label + .pre .line:first-child {
+  padding-right: 8ch;
+}
+
+.ln {
+  flex: none;
+  width: 2ch;
+  margin-right: var(--sp-3);
+  text-align: right;
+  color: var(--text-3);
+  user-select: none;
+}
+
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment {
+  color: var(--code-com);
+  font-style: italic;
+}
+
+.compact .pre {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-small);
+}
+
+.compact .line {
+  white-space: pre-wrap;
+}

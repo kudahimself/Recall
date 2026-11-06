@@ -1,0 +1,224 @@
+/* The question card fills at most its column: head and footer keep their
+   size, and only the body scrolls when a question is very long, so the
+   page itself never has to. */
+.card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  background-color: var(--surface);
+  background-image: var(--card-glow);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.card:focus {
+  outline: none;
+}
+
+.card:focus-visible {
+  outline: var(--focus-w) solid var(--focus);
+  outline-offset: var(--focus-w);
+}
+
+.head {
+  flex: none;
+  padding: var(--sp-3) var(--sp-6);
+  border-bottom: var(--border-w) solid var(--border);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1);
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.dot {
+  color: var(--border-strong);
+}
+
+.prompt {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-prompt);
+  color: var(--text);
+  text-wrap: pretty;
+}
+
+.task {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-3) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.body > * {
+  flex-shrink: 0;
+}
+
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--border-w) dashed var(--warning-line);
+  border-radius: var(--radius-m);
+  background: var(--warning-soft);
+  color: var(--text);
+  font-size: var(--fs-body);
+  animation: hint-in var(--dur) var(--ease) both;
+}
+
+.hintIcon {
+  flex: none;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  margin-top: var(--sp-1);
+  color: var(--warning);
+}
+
+/* The verdict opens by growing from nothing, so the footer glides down
+   instead of jumping, and nothing above it moves. It never scrolls away
+   with the body: a long explanation scrolls inside it instead. */
+.live {
+  flex: none;
+  display: grid;
+  grid-template-rows: 0fr;
+  padding: 0 var(--sp-6);
+  transition:
+    grid-template-rows var(--dur-slow) var(--ease),
+    padding var(--dur-slow) var(--ease);
+}
+
+.liveOpen {
+  grid-template-rows: 1fr;
+  padding-bottom: var(--sp-3);
+}
+
+.liveInner {
+  min-height: 0;
+  max-height: var(--feedback-max-h);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.solution {
+  margin-top: var(--sp-3);
+}
+
+.actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-6);
+  border-top: var(--border-w) solid var(--border);
+  background: var(--raised);
+}
+
+.primary {
+  min-width: var(--action-min-w);
+}
+
+.arrow {
+  width: var(--icon-m);
+  height: var(--icon-m);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.keyHints {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-4);
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+}
+
+.keyHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.footMeta {
+  display: none;
+  align-items: baseline;
+  gap: var(--sp-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* A content-heavy type on a short laptop screen: the same type sizes, a little less air. */
+@media (max-height: 760px) {
+  .dense .meta {
+    display: none;
+  }
+
+  .dense .footMeta {
+    display: inline-flex;
+  }
+
+  .dense .head {
+    padding-top: var(--sp-2);
+    padding-bottom: var(--sp-2);
+  }
+
+  .dense .body {
+    padding-top: var(--sp-2);
+    padding-bottom: var(--sp-2);
+  }
+
+  .dense .liveOpen {
+    padding-bottom: var(--sp-2);
+  }
+}
+
+@keyframes hint-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 767px) {
+  .head,
+  .body,
+  .live {
+    padding-left: var(--sp-4);
+    padding-right: var(--sp-4);
+  }
+
+  .actions {
+    padding: var(--sp-3) var(--sp-4);
+  }
+
+  .keyHints {
+    display: none;
+  }
+}

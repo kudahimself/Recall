@@ -13,7 +13,7 @@ import { questions } from './data/questions';
 import { Course, Difficulty, MultipleChoiceQuestion, QuestionType, Topic } from './types';
 import { LESSONS } from './data/lessons';
 import { LESSONS_KEY } from './utils/spacedRepetition';
-import { getCourseForTopic, getPathOrder, getSectionUnits } from './utils/courseConfig';
+import { getCourseForTopic, getPathOrder, getSectionUnits, getTopicPlace } from './utils/courseConfig';
 import { localDayKey, ReviewSession, serializeSessions } from './utils/reviewSession';
 import { TODAY_SESSION_KEY, TODAY_SIZE_KEY } from './utils/spacedRepetition';
 
@@ -34,34 +34,38 @@ function progressWith(answered: string[], ago = 60_000) {
 }
 
 const plain = (text: string) => text.replace(/`/g, '');
+/** The question's prompt heading (jsdom spaces out inline code in accessible names, so compare without spaces). */
+const squash = (text: string) => plain(text).replace(/\s+/g, '');
+const promptHeading = (question: string) => screen.findByRole('heading', { name: name => squash(name) === squash(question) });
 
 /** Answers the multiple-choice card on screen correctly and moves on. */
 async function answerShownMcq() {
-  await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+  await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
   const radios = screen.getAllByRole('radio');
   const labels = radios.map(r => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
   const shown = questions.find(q => q.type === QuestionType.MULTIPLE_CHOICE
     && q.options.every(o => labels.some(l => l.includes(plain(o.text))))) as MultipleChoiceQuestion;
   const right = shown.options.find(o => o.isCorrect)!;
   fireEvent.click(radios[labels.findIndex(l => l.includes(plain(right.text)))]);
-  fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Check answer/ }));
   fireEvent.click(await screen.findByRole('button', { name: NEXT }));
   return shown;
 }
 
 /** Answers the drill card on screen (a multiple-choice or predict-output card) and moves on. */
 async function answerDrillCard() {
-  await screen.findByRole('button', { name: /Submit (Answer|Prediction)/ }, { timeout: 3000 });
+  await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
   if (screen.queryAllByRole('radio').length > 0) return answerShownMcq();
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x' } });
-  fireEvent.click(screen.getByRole('button', { name: /Submit Prediction/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Check answer/ }));
   fireEvent.click(await screen.findByRole('button', { name: NEXT }));
   return null;
 }
 
 const sessionStored = () => JSON.parse(localStorage.getItem(TODAY_SESSION_KEY)!)[Course.SQL];
 
-const topicBadge = (topic: Topic) => topic.replace(/_/g, ' ').toUpperCase();
+/** The topic's display name, as the quiz breadcrumb shows it. */
+const topicBadge = (topic: Topic) => getTopicPlace(topic)!.unit;
 
 /** Drill on Progress > Topics for the row holding `topic` (every row unlocked). */
 async function drillTopic(course: Course, topic: Topic) {
@@ -126,7 +130,7 @@ describe('F3: one Next per answer', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
 
-    const submit = await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+    const submit = await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
     fireEvent.click(screen.getAllByRole('radio')[0]);
     fireEvent.click(submit);
 
@@ -176,7 +180,7 @@ describe('F7: filters', () => {
     localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
-    await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+    await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
     const topics = screen.getAllByRole('button', { name: 'Deselect All' })[0];
@@ -184,13 +188,13 @@ describe('F7: filters', () => {
     expect(await screen.findByText(/You're all caught up/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
     expect(screen.queryByText('Done for today')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Submit Answer/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Check answer/ })).toBeNull();
 
     fireEvent.click(nav('Home'));
     await screen.findByRole('button', { name: /today's session/ }, { timeout: 3000 });
     fireEvent.click(nav('Learn'));
     expect(await screen.findByText(/You're all caught up/, {}, { timeout: 3000 })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Submit Answer/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Check answer/ })).toBeNull();
   });
 
   test('a reload keeps the filters the learner set', async () => {
@@ -198,7 +202,7 @@ describe('F7: filters', () => {
     localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
     const { unmount } = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
-    await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+    await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
     fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
     expect(screen.getByRole('button', { name: 'Advanced' })).not.toHaveClass('active');
@@ -206,7 +210,7 @@ describe('F7: filters', () => {
 
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
-    await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+    await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
     expect(screen.getByRole('button', { name: 'Advanced' })).not.toHaveClass('active');
     expect(screen.getByRole('button', { name: 'Beginner' })).toHaveClass('active');
@@ -221,11 +225,11 @@ describe('F7: filters', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Try the exercises/ }, { timeout: 3000 }));
 
     const typeHintsExercise = questions.find(q => q.id === 'py-types-union-1')!;
-    expect(await screen.findByText(typeHintsExercise.question)).toBeInTheDocument();
+    expect(await promptHeading(typeHintsExercise.question)).toBeInTheDocument();
     expect(screen.getByText(/exercise 1 of 5/)).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('radio')[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Check answer/ }));
     expect(await screen.findByRole('button', { name: NEXT })).toHaveTextContent(/Next exercise/);
     expect(localStorage.getItem(LESSONS_KEY)).toBeNull();
   });
@@ -242,7 +246,7 @@ describe('F7: filters', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Try the exercises/ }, { timeout: 3000 }));
 
     const firstExercise = questions.find(q => q.id === 'py-types-union-1')!;
-    expect(await screen.findByText(firstExercise.question)).toBeInTheDocument();
+    expect(await promptHeading(firstExercise.question)).toBeInTheDocument();
   });
 
   test('a filtered session that is not over, with nothing left in the filters, says so and offers Reset filters', async () => {
@@ -278,7 +282,7 @@ describe('F7: filters', () => {
     expect(screen.getByText('Done for today')).toBeInTheDocument();
     expect(answered).toBe(10);
     fireEvent.click(screen.getByRole('button', { name: /Keep going/ }));
-    expect(await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 })).toBeInTheDocument();
   }, 30_000);
 
   test('with reviews due in a topic outside the filter, fresh slots used up inside it end on Nothing left today', async () => {
@@ -329,7 +333,7 @@ describe('F7: filters', () => {
     const before = sessionStored();
 
     await drillTopic(Course.SQL, Topic.TSQL_NORMALIZATION);
-    expect(await screen.findByText(topicBadge(Topic.TSQL_NORMALIZATION), {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(within(await screen.findByRole('navigation', { name: 'Where you are' }, { timeout: 3000 })).getByText(topicBadge(Topic.TSQL_NORMALIZATION))).toBeInTheDocument();
     expect(screen.queryByText(/Done for today|Nothing left today|No questions match/)).toBeNull();
     let drilled = 0;
     while (drilled < 3 && !screen.queryByText(/Done for today|Nothing left today|No questions match/)) {
@@ -368,7 +372,7 @@ describe('F7: filters', () => {
     const before = sessionStored();
 
     await drillTopic(Course.SQL, Topic.TSQL_NORMALIZATION);
-    expect(await screen.findByText(topicBadge(Topic.TSQL_NORMALIZATION), {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(within(await screen.findByRole('navigation', { name: 'Where you are' }, { timeout: 3000 })).getByText(topicBadge(Topic.TSQL_NORMALIZATION))).toBeInTheDocument();
     expect(screen.queryByText(/Done for today|Nothing left today|No questions match/)).toBeNull();
     let drilled = 0;
     while (drilled < 3 && !screen.queryByText(/Done for today|Nothing left today|No questions match/)) {

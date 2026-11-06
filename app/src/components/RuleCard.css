@@ -120,31 +120,6 @@
   padding: 0 4px;
 }
 
-.rc-codeblock {
-  margin: 0;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-  color: var(--text);
-  overflow-x: auto;
-}
-
-.rc-codeblock code { display: block; }
-
-.rc-line { display: flex; white-space: pre; }
-
-.rc-ln {
-  flex: 0 0 26px;
-  color: var(--text-muted);
-  user-select: none;
-}
-
-.rc-comment { color: var(--text-muted); }
-
 .rc-tables {
   display: flex;
   flex-wrap: wrap;
@@ -230,220 +205,16 @@
   font-size: var(--fs-sm);
 }
 
-.rule-card kbd,
-.rule-panel kbd,
-.quiz-breadcrumb kbd {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  border: 1px solid currentColor;
-  border-radius: 3px;
-  padding: 0 4px;
-  margin: 0 2px;
-  opacity: 0.8;
-}
-
 .rc-start { flex: 0 0 auto; }
 
 /* Reopened over the page (R) */
-.rc-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(5, 5, 10, 0.82);
-  backdrop-filter: blur(4px);
-  display: flex;
-  padding: 32px 40px;
-}
-
-.rc-overlay .rule-card {
-  max-width: 1400px;
-  margin: 0 auto;
-  background: var(--bg-base);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl);
-  padding: 18px 20px;
-  box-shadow: var(--shadow-lg);
-}
 
 /* Beside an exercise or a review */
-.quiz-view.quiz-view-with-panel { max-width: 1480px; }
-
-.quiz-stage {
-  display: flex;
-  gap: 18px;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.quiz-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.quiz-main > .multiple-choice-question,
-.quiz-main > .coding-question,
-.quiz-main > .parsons-question,
-.quiz-main > .predict-output-question,
-.quiz-main > .cloze-code-question,
-.quiz-main > .reasoning-question {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.rule-panel {
-  flex: 0 0 330px;
-  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(29, 29, 43, 0.6) 100%);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.rp-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.rp-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--primary-hover);
-  font-weight: 600;
-}
-
-.rp-hide {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px;
-}
-
-.rp-hide:hover { color: var(--text); }
-
-.rule-panel .rc-label { margin: 12px 0 4px; }
-
-.rp-text {
-  margin: 0 0 8px;
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-}
-
-.rp-muted { color: var(--text-muted); }
-
-.rule-panel .rc-codeblock { font-size: var(--fs-xs); padding: 8px 10px; }
-
-.rp-open {
-  margin-top: 12px;
-  width: 100%;
-  justify-content: center;
-}
-
-.rule-panel-tab {
-  flex: 0 0 auto;
-  writing-mode: vertical-rl;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 12px 6px;
-  cursor: pointer;
-}
-
-.rule-panel-tab:hover { color: var(--text); border-color: var(--border-strong); }
 
 /* Lesson exercise strip */
-.lesson-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.ls-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.ls-title {
-  font-weight: 600;
-  color: var(--text);
-  font-size: var(--fs-md);
-}
-
-.ls-sub {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
-.ls-strip {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  gap: 6px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.ls-step {
-  text-align: center;
-  font-size: var(--fs-xs);
-  padding: 5px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ls-step-right { border-color: rgba(34, 197, 94, 0.45); background: var(--success-soft); color: #86efac; }
-.ls-step-wrong { border-color: rgba(239, 68, 68, 0.45); background: var(--error-soft); color: #fca5a5; }
-.ls-step-current { border-color: var(--primary); background: var(--primary-soft); color: var(--text); }
-
-.mode-pill.mode-pill-lesson {
-  background: var(--primary-soft);
-  border-color: var(--primary-ring);
-  color: var(--primary-hover);
-}
-
-.breadcrumb-rulecard {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: var(--space-xs) var(--space-sm);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-  cursor: pointer;
-}
-
-.breadcrumb-rulecard:hover { color: var(--text); border-color: var(--border-strong); }
 
 @media (max-width: 1100px) {
   .rc-columns { grid-template-columns: minmax(0, 1fr); }
-  .rule-panel { display: none; }
 }
 
 /* Learning path on Home: lesson, ramp and review per topic */
@@ -494,6 +265,4 @@
 .path-step-btn-primary { border-color: var(--primary); color: var(--primary-hover); }
 
 /* The panel is narrow: the form's comments are on the full card (R). */
-.rule-panel .rc-comment { display: none; }
-.rule-panel .rc-line { white-space: pre-wrap; }
-.rc-overlay .rule-card { height: fit-content; max-height: 100%; }
+

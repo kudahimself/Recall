@@ -176,11 +176,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-.mode-pill-drill {
-  color: var(--text-muted);
-}
-
-.mode-pill-today {
-  color: var(--text-dim);
-}

@@ -280,50 +280,11 @@
 }
 
 /* Category Stats */
-.category-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.category-group {
-  background: none;
-  border-radius: 0;
-  overflow: hidden;
-  border: none;
-  border-bottom: 1px solid var(--border);
-}
-
-.category-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 6px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 150ms ease;
-}
-
-.category-header:hover {
-  background: var(--bg-elevated);
-}
-
-.category-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
 .category-icon {
   color: var(--text-dim);
   font-size: var(--fs-sm);
   transition: transform 0.2s ease;
-}
-
-.category-name {
-  font-weight: 600;
-  color: var(--text);
-  font-size: var(--fs-base);
 }
 
 .category-stats-summary {
@@ -358,14 +319,6 @@
   font-family: var(--font-mono);
   min-width: 120px;
   text-align: right;
-}
-
-.category-topics {
-  padding: 0 0 8px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  background: none;
 }
 
 /* Topic Stats */
@@ -421,13 +374,6 @@
   min-width: 120px;
   text-align: right;
   font-weight: 400;
-}
-
-.topic-attempts {
-  color: var(--text-muted);
-  font-weight: 400;
-  font-size: var(--fs-xs);
-  margin-left: 4px;
 }
 
 /* Difficulty Stats */
@@ -588,54 +534,6 @@
 }
 
 /* Strong Areas */
-.strong-areas-section {
-  background: var(--success-soft);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-left: 3px solid var(--success);
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  margin: 12px 0;
-}
-
-.strong-areas-section h3 {
-  color: var(--success);
-  margin-bottom: 8px;
-  font-size: var(--fs-md);
-  font-weight: 600;
-}
-
-.strong-areas-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.strong-area-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 8px;
-  background: none;
-  border-radius: var(--radius-sm);
-  border-left: none;
-}
-
-.strong-area-item:hover {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.strong-area-name {
-  font-size: var(--fs-base);
-  font-weight: 400;
-  color: var(--text);
-}
-
-.strong-area-stat {
-  color: var(--success);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  font-family: var(--font-mono);
-}
 
 /* Misconceptions panel */
 .misconceptions-section {
@@ -793,15 +691,6 @@
 }
 
 /* Struggle Badge */
-.struggle-badge {
-  background: none;
-  color: var(--error);
-  padding: 0 4px;
-  border-radius: 0;
-  font-size: var(--fs-xs);
-  font-weight: 400;
-  border: none;
-}
 
 .topic-struggle {
   color: var(--error);
@@ -810,8 +699,7 @@
 }
 
 /* Trend Arrow */
-.category-trend,
-.topic-trend {
+.category-trend {
   font-size: var(--fs-sm);
   font-weight: 400;
   min-width: 16px;
@@ -819,72 +707,6 @@
 }
 
 /* Recent Activity */
-.recent-activity {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: var(--fs-base);
-  transition: background 150ms ease;
-  border-left: 2px solid transparent;
-}
-
-.activity-item.correct {
-  background: none;
-  border-left-color: var(--success);
-}
-
-.activity-item.incorrect {
-  background: none;
-  border-left-color: var(--error);
-}
-
-.activity-item:hover {
-  background: var(--bg-elevated);
-  transform: none;
-}
-
-.activity-icon {
-  font-size: var(--fs-sm);
-  font-weight: 400;
-  text-align: center;
-  min-width: 16px;
-}
-
-.activity-item.correct .activity-icon {
-  color: var(--success);
-}
-
-.activity-item.incorrect .activity-icon {
-  color: var(--error);
-}
-
-.activity-date {
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-  font-weight: 400;
-}
-
-.activity-time-label {
-  color: var(--text-dim);
-  font-weight: 400;
-  font-size: var(--fs-sm);
-}
-
-.activity-time {
-  color: var(--accent);
-  font-size: var(--fs-sm);
-  font-weight: 400;
-  font-family: var(--font-mono);
-  text-align: right;
-}
 
 /* Scrollbar */
 .progress-tracker::-webkit-scrollbar {
@@ -973,9 +795,5 @@
 
   .category-score {
     min-width: 80px;
-  }
-
-  .activity-time-label {
-    display: none;
   }
 }

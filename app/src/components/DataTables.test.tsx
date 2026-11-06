@@ -23,7 +23,7 @@ const table = (name: string) => {
   return match;
 };
 const codesIn = (el: HTMLElement) => within(el).queryAllByText((_, node) => node?.tagName === 'CODE');
-const questionHeading = () => screen.getByRole('heading', { level: 3 });
+const questionHeading = () => screen.getByRole('heading', { level: 2 });
 
 describe('DataTables', () => {
   it('renders nothing when a question has no tables', () => {
@@ -69,7 +69,7 @@ describe('DataTables', () => {
   });
 });
 
-describe('renderInlineCode', () => {
+describe('renderInlineCode (the shared InlineText, in every course)', () => {
   it('turns backticked spans into inline code and leaves the rest as text', () => {
     render(<p data-testid="text">{renderInlineCode('Use `IS NULL`, not `= NULL`.', Topic.TSQL_FILTERING)}</p>);
     const text = screen.getByTestId('text');
@@ -84,22 +84,22 @@ describe('renderInlineCode', () => {
     expect(text.textContent).toBe('a b c ` d');
   });
 
-  it('leaves a non-SQL question with a JS template literal exactly as written', () => {
+  it('keeps a fenced JS snippet, template literal and all, as one block of code', () => {
     const q = byId<MCQ>('js-misc-mcq-4');
     render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
     const heading = questionHeading();
-    expect(codesIn(heading)).toHaveLength(0);
-    expect(heading.textContent).toBe(q.question);
+    const codes = codesIn(heading);
+    expect(codes).toHaveLength(1);
     // eslint-disable-next-line no-template-curly-in-string
-    expect(heading.textContent).toContain('`Hi, ${this.name}`');
+    expect(codes[0].textContent).toContain('greet() { return `Hi, ${this.name}`; }');
+    expect(heading.textContent).not.toContain('```');
   });
 
-  it('still renders inline code in a SQL question', () => {
+  it('renders inline code in a SQL question', () => {
     const q = questions.find(x => getCourseForTopic(x.topic) === Course.SQL && /`[^`]+`/.test(x.question) && x.type === QuestionType.MULTIPLE_CHOICE) as unknown as MCQ;
     render(<MultipleChoiceQuestion question={q} onAnswer={() => {}} showHints={false} />);
     const heading = questionHeading();
     expect(codesIn(heading).length).toBeGreaterThan(0);
-    codesIn(heading).forEach(c => expect(c).toHaveClass('inline-code'));
     expect(heading.textContent).not.toContain('`');
   });
 
@@ -115,20 +115,14 @@ describe('renderInlineCode', () => {
       { id: 'b', text: 'Plain option', isCorrect: false },
     ],
   });
-  const optionLabel = (text: string) =>
-    screen.getAllByText((_, node) => node?.classList.contains('flipdisc-text-content') === true && node.textContent === text)[0];
+  // eslint-disable-next-line testing-library/no-node-access
+  const optionLabel = (value: string) => screen.getAllByRole('radio').find(r => (r as HTMLInputElement).value === value)!.closest('label') as HTMLElement;
 
-  it('renders inline code in a SQL multiple-choice option', () => {
-    render(<MultipleChoiceQuestion question={optionQuestion(Topic.TSQL_FILTERING)} onAnswer={() => {}} showHints={false} />);
-    const option = optionLabel('Use NVARCHAR here');
+  it.each([Topic.TSQL_FILTERING, Topic.JS_FUNCTIONS, Topic.PY_BASICS])('renders inline code in a multiple-choice option (%s)', topic => {
+    render(<MultipleChoiceQuestion question={optionQuestion(topic)} onAnswer={() => {}} showHints={false} />);
+    const option = optionLabel('a');
     expect(codesIn(option).map(c => c.textContent)).toEqual(['NVARCHAR']);
-    expect(codesIn(option)[0]).toHaveClass('inline-code');
-  });
-
-  it('leaves backticks in a non-SQL multiple-choice option unchanged', () => {
-    render(<MultipleChoiceQuestion question={optionQuestion(Topic.JS_FUNCTIONS)} onAnswer={() => {}} showHints={false} />);
-    const option = optionLabel('Use `NVARCHAR` here');
-    expect(codesIn(option)).toHaveLength(0);
+    expect(option.textContent).not.toContain('`');
   });
 });
 

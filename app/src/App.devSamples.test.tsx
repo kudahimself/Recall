@@ -20,7 +20,7 @@ test('?sample=<id> opens a spot-the-flaw sample in the quiz view, grades it, and
   window.history.replaceState(null, '', '/?sample=dev-sample-spot-flaw');
   render(<App />);
 
-  const lines = await screen.findAllByRole('option', {}, { timeout: 3000 });
+  const lines = await screen.findAllByRole('radio', {}, { timeout: 3000 });
   expect(screen.getByText(/Click the line that causes it/)).toBeInTheDocument();
   fireEvent.click(lines[4]);
   fireEvent.click(screen.getByRole('button', { name: 'Check line 5' }));

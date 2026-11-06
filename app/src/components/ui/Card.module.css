@@ -1,0 +1,26 @@
+.card {
+  background-color: var(--surface);
+  background-image: var(--card-glow);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+}
+
+.padded {
+  padding: var(--sp-5);
+}
+
+.panel {
+  background: var(--sunken);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.eyebrow {
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
