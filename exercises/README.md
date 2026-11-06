@@ -14,7 +14,7 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r exercises/requirements.txt
 ```
 
-`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy and Faker, which only the Django exercises (`exercises/backend/dj_*`) need.
+`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need.
 Python 3.10 or newer runs them all.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
 
@@ -24,6 +24,7 @@ Each Django exercise folder holds one Django app and a `conftest.py` that sets D
 The exceptions are `dj_cicd`, which holds a GitHub Actions workflow instead of an app, and `dj_nginx`, which holds an Nginx config: their tests read the file as YAML or as text and need no Django.
 `dj_settings` holds a settings package rather than an app, which its tests import under environment variables they set.
 The tests run on an SQLite database that lives in memory for the test run, so there is no server or database to start, and Django's test client sends the requests.
+`dj_channels` opens its WebSockets with Channels' `WebsocketCommunicator` on the in-memory channel layer, in the test process, so there is no ASGI server or Redis to start either.
 Run from inside an exercise folder, only that folder's app is installed, so a half-finished exercise elsewhere cannot break the one you are on.
 
 ## Doing an exercise

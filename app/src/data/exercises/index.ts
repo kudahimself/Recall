@@ -4,7 +4,8 @@
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
  * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
  * Python Advanced, Django, Django Advanced & Deployment, DRF Production Patterns,
- * Celery & Background Tasks, Testing & CI/CD and Production Infrastructure so far.
+ * Celery & Background Tasks, Testing & CI/CD, Production Infrastructure, Python
+ * Mastery & Advanced and Real-time & Monitoring: every Backend section.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -853,6 +854,58 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Fix the `Edition` model and query the details it keeps in a `JSONField`.',
       'Give `kind` its own column, make `details` default to a new dict, add a composite index for the newest editions of a kind, and filter on a key, a nested key and `has_key`, and sort on a key pulled out with `KeyTextTransform`.',
+    ),
+  },
+  {
+    id: 'py_daily_patterns',
+    topicKeys: [Topic.PY_DAILY_PATTERNS],
+    title: 'Desk report',
+    folder: 'exercises/backend/py_daily_patterns',
+    starter: ['desk_report.py'],
+    tests: 'test_desk_report.py',
+    minutes: 20,
+    task: lines(
+      'Rewrite the loan desk\'s evening report without index bookkeeping.',
+      'Number titles with `enumerate`, pair titles and shelves with `zip`, answer overdue and all-back with `any` and `all` that stop early, sort by branch and title with `itemgetter` and longest first with a tuple key, sort a list in place, and tidy text with string methods.',
+    ),
+  },
+  {
+    id: 'py_modern',
+    topicKeys: [Topic.PY_MODERN],
+    title: 'Returns router',
+    folder: 'exercises/backend/py_modern',
+    starter: ['returns_router.py'],
+    tests: 'test_returns_router.py',
+    minutes: 25,
+    task: lines(
+      'Sort out returned items and desk commands with Python 3.10 features (needs Python 3.10 or newer).',
+      'Route items and commands with `match` (class, mapping, sequence and or-patterns, guards, dotted constants), price orders once each with the walrus operator, merge settings with `|`, and annotate with `dict[str, str]` and `str | None`.',
+    ),
+  },
+  {
+    id: 'dj_channels',
+    topicKeys: [Topic.DJ_CHANNELS],
+    title: 'Hold alerts',
+    folder: 'exercises/backend/dj_channels',
+    starter: ['hold_alerts/layers.py', 'hold_alerts/consumers.py', 'hold_alerts/routing.py', 'hold_alerts/asgi.py'],
+    tests: 'test_hold_alerts.py',
+    minutes: 30,
+    task: lines(
+      'Show a ready hold on every hold-desk screen at a branch the moment one librarian marks it.',
+      'Pick the in-memory or Redis channel layer, write a JSON consumer that refuses unknown branches, joins and leaves its branch\'s group and relays events with `group_send` to a `hold_ready` handler, and route it in `routing.py` and `asgi.py`.',
+    ),
+  },
+  {
+    id: 'dj_monitoring',
+    topicKeys: [Topic.DJ_MONITORING],
+    title: 'Desk monitor',
+    folder: 'exercises/backend/dj_monitoring',
+    starter: ['desk_monitor/log_format.py', 'desk_monitor/views.py', 'desk_monitor/middleware.py'],
+    tests: 'test_desk_monitor.py',
+    minutes: 30,
+    task: lines(
+      'Give the loan desk structured logs, error capture and a health check.',
+      'Write a JSON formatter and the `LOGGING` dict, log each checkout step with `extra=` at the right level and `log.exception` for faults, capture unhandled errors in a middleware, and answer a database health check with 200 or 503.',
     ),
   },
 ];
