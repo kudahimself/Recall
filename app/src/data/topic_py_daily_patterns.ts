@@ -365,4 +365,25 @@ highest_paid = sorted(employees, key=itemgetter("salary"), ____=True)`,
       tags: ['itemgetter', 'attrgetter', 'sorting', 'operator', 'python'],
       concepts: ['py-itertools-combinators', 'py-iterator-protocol'],
     },
+  {
+      id: 'py-patterns-predict-1',
+      type: QuestionType.PREDICT_OUTPUT,
+      difficulty: Difficulty.BEGINNER,
+      topic: Topic.PY_DAILY_PATTERNS,
+      course: Course.BACKEND,
+      language: CodeLanguage.PYTHON,
+      question: 'What does this code print? Type the three printed lines, exactly as Python prints them.',
+      code: `scores = [70, 95, 82]
+ranked = scores.sort(reverse=True)
+print(ranked)
+print(scores)
+print(sorted("cab"))`,
+      expectedOutput: `None
+[95, 82, 70]
+['a', 'b', 'c']`,
+      explanation: '`.sort()` sorts the list in place and returns `None`, so `ranked` is `None` while `scores` itself is now in descending order. `sorted()` takes any iterable, a string included, and always returns a new list, here of its characters. Writing `ranked = scores.sort()` and then using `ranked` is the usual bug: keep the list you sorted, or call `sorted()` when you want the result.',
+      hints: ['`.sort()` changes the list and returns nothing.', '`sorted()` accepts any iterable and returns a new list.'],
+      tags: ['sorted', 'sort', 'python-builtins', 'predict'],
+      concepts: ['py-iterator-protocol'],
+    },
 ];

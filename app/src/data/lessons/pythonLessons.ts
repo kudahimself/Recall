@@ -1,8 +1,8 @@
 /**
  * Backend (Python) lessons, one per topic, in course order.
  *
- * Sections 1-5, Python Fundamentals, Python Advanced, Django, Django Advanced &
- * Deployment and DRF Production Patterns: every topic.
+ * Sections 1-9, Python Fundamentals through Python Mastery & Advanced: every
+ * topic.
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
  * each worked example on `python3 -I` and compares what it prints with `output`.
@@ -5513,6 +5513,185 @@ print([b.title for b in found.order_by("-score")])`,
       'dj-postgres-cloze-1',
       'dj-postgres-keytexttransform-cloze-1',
       'dj-postgres-fts-cloze-1',
+    ],
+  },
+  {
+    id: 'py_daily_patterns/1',
+    topicKeys: [Topic.PY_DAILY_PATTERNS],
+    step: 1,
+    title: 'Daily Python Patterns',
+    idea: [
+      lines(
+        "A handful of builtins replace most hand-written loop bookkeeping.",
+        "`enumerate(xs, start=1)` hands you a counter with each item, so there is no `range(len(xs))`, and `zip(a, b)` walks two iterables side by side and stops at the shorter one.",
+        "`any(test for x in xs)` stops at the first true test, `all(...)` at the first false one, and on an empty input `any` gives `False` while `all` gives `True`.",
+      ),
+      lines(
+        "`sorted(xs, key=f)` takes any iterable and returns a new list, while `xs.sort(key=f)` reorders a list in place.",
+        "`operator.itemgetter(\"a\", \"b\")` and `attrgetter(\"a\")` are ready-made keys that sort by several fields at once, and a key returning a tuple such as `(-n, name)` mixes descending and ascending.",
+      ),
+      lines(
+        "String methods never change the string; each returns a new one, so they chain.",
+        "`\" \".join(s.split())` collapses any run of whitespace, and `startswith` and `endswith` accept a tuple of options.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from operator import itemgetter, attrgetter
+
+for i, x in enumerate(xs, start=1): ...      # i counts from 1
+dict(zip(keys, values))                      # pairs; stops at the shorter
+any(test(x) for x in xs)                     # stops at the first True
+all(test(x) for x in xs)                     # stops at the first False
+
+out = sorted(xs, key=itemgetter("a", "b"))   # any iterable -> new list
+xs.sort(key=attrgetter("a"), reverse=True)   # in place, returns None
+sorted(xs, key=lambda x: (-x["n"], x["a"]))  # n down, then a up
+
+" ".join(s.split())                          # one space between words
+s.strip().lower()                            # each call returns a new str
+s.startswith(("http://", "https://"))        # a tuple tests several`,
+    },
+    pitfall: lines(
+      "`xs.sort()` returns `None`, so `top = xs.sort()` sets `top` to `None` and `xs.sort()[0]` raises a `TypeError`.",
+      "Use `sorted(xs)` whenever you want the result as a value, and `.sort()` only as a statement on a list you own.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from operator import itemgetter
+loans = [
+    {"title": "Emma", "branch": "north", "days": 12},
+    {"title": "Dune", "branch": "south", "days": 30},
+    {"title": "Ubik", "branch": "north", "days": 30},
+]
+for n, loan in enumerate(loans, start=1):
+    print(n, loan["title"])
+late = [loan["days"] > 21 for loan in loans]
+print(any(late), all(late), all([]))
+by_branch = sorted(loans, key=itemgetter("branch", "title"))
+print([loan["title"] for loan in by_branch])
+longest = sorted(loans, key=lambda loan: (-loan["days"], loan["title"]))
+print([loan["title"] for loan in longest])
+print(dict(zip(["Emma", "Dune", "Ubik"], ["A1", "B2"])))
+print(", ".join("  late   fee \\n".split()))`,
+      steps: [
+        "Lines 7-8: `enumerate(..., start=1)` numbers the loans from 1 as it hands each one out.",
+        "Lines 9-10: two loans run past 21 days, so `any` is `True` and `all` is `False`, while `all([])` is `True` with nothing to check.",
+        "Lines 11-12: `itemgetter(\"branch\", \"title\")` sorts by branch, then by title inside a branch, so Emma comes before Ubik in north.",
+        "Lines 13-14: negating `days` sorts it descending while the title still sorts ascending, so the tie between Dune and Ubik goes to Dune.",
+        "Lines 15-16: `zip` stops after two pairs, so Ubik gets no shelf, and `split()` with no argument drops every space and the newline.",
+      ],
+      output: `1 Emma
+2 Dune
+3 Ubik
+True False True
+['Emma', 'Ubik', 'Dune']
+['Dune', 'Ubik', 'Emma']
+{'Emma': 'A1', 'Dune': 'B2'}
+late, fee`,
+    },
+    exercises: [
+      'be-infra-patterns-3',
+      'be-infra-patterns-4',
+      'py-patterns-predict-1',
+      'be-infra-patterns-1',
+    ],
+  },
+  {
+    id: 'py_modern/1',
+    topicKeys: [Topic.PY_MODERN],
+    step: 1,
+    title: 'Modern Python (3.10+)',
+    idea: [
+      lines(
+        "`match value:` (3.10+) compares a value against `case` patterns top to bottom, and the first that fits runs; there is no fall-through and no `default` keyword.",
+        "A literal (`case 0:`) compares, a bare name (`case x:`) captures anything, and `_` matches anything without binding.",
+        "`case int() | float():` accepts either pattern, `case [first, *rest]:` unpacks a sequence by length, `case {\"k\": v}:` matches a dict holding that key and ignores the rest, and `case Point(x=0, y=y):` checks attributes.",
+        "`case p if p > 0:` adds a guard that must also pass.",
+      ),
+      lines(
+        "The walrus `name := expr` (3.8+) assigns inside an expression, such as an `if` or a comprehension filter, and the name stays visible afterwards.",
+        "Wrap it in parentheses when it sits in a bigger expression: `(n := len(xs)) > 3`.",
+      ),
+      lines(
+        "The `|` operator also merges dicts into a new one, the right side winning on a shared key, and writes union types: `str | None` replaces `Optional[str]`.",
+        "Built-in containers take type arguments directly, `list[int]` and `dict[str, int]`, with no `typing` import.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `match subject:
+    case 0 | 1:                   # literals; | means either
+        ...
+    case [first, *rest]:          # a sequence of 1 or more
+        ...
+    case {"kind": kind}:          # a dict with that key
+        ...
+    case Thing(attr=0, other=v):  # attributes; v is captured
+        ...
+    case x if x > 10:             # capture, then a guard
+        ...
+    case _:                       # anything else
+        ...
+
+if (n := len(xs)) > 3: ...        # assign and test at once
+merged = base | overrides         # new dict; right side wins
+def f(xs: list[int]) -> str | None: ...`,
+    },
+    pitfall: lines(
+      "Cases are tried in order and the first fit wins, so a broad pattern above a narrow one hides it.",
+      "A bare name such as `case limit:` is not a comparison: it captures every value, like `_`, and Python refuses any case after it.",
+      "Compare with a dotted constant such as `case Size.LARGE:` or a guard such as `case n if n == limit:`, and keep `_` last.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `from dataclasses import dataclass
+
+@dataclass
+class Book:
+    title: str
+    pages: int
+
+def shelve(item: Book | dict | list[str]) -> str:
+    match item:
+        case Book(title=t, pages=p) if p > 500:
+            return f"{t}: big shelf"
+        case Book(title=t):
+            return f"{t}: main shelf"
+        case {"isbn": code}:
+            return f"order {code}"
+        case [first, *rest]:
+            return f"{first} + {len(rest)} more"
+        case _:
+            return "returns desk"
+
+arrivals = [Book("Dune", 612), Book("Emma", 474),
+            {"isbn": "978-0", "qty": 2}, ["Ubik", "Kim", "Emma"], []]
+for item in arrivals:
+    print(shelve(item))
+prices = {"Dune": 9, "Emma": 7} | {"Emma": 5}
+if (total := sum(prices.values())) > 10:
+    print(total, prices)`,
+      steps: [
+        "Lines 10-13: both books match the class pattern, but only Dune passes the `p > 500` guard, so Emma falls to the next `Book` case.",
+        "Lines 14-15: the dict has an `isbn` key, so it matches and `qty` is ignored.",
+        "Lines 16-17: the three-title list fits `[first, *rest]` with two left in `rest`, but the empty list has no first item and falls through to `_`.",
+        "Line 25: `|` builds a new dict, and Emma's price comes from the right side.",
+        "Lines 26-27: the walrus stores the sum, 14, and the comparison uses it, so the body can print it.",
+      ],
+      output: `Dune: big shelf
+Emma: main shelf
+order 978-0
+Ubik + 2 more
+returns desk
+14 {'Dune': 9, 'Emma': 5}`,
+    },
+    exercises: [
+      'be-infra-modern-1',
+      'py-modern-predict-2',
+      'py-modern-parsons-10',
+      'py-modern-predict-1',
+      'be-infra-modern-2',
     ],
   },
 ];
