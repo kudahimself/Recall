@@ -4,7 +4,7 @@
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
  * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
  * Python Advanced, Django, Django Advanced & Deployment, DRF Production Patterns,
- * Celery & Background Tasks and Testing & CI/CD so far.
+ * Celery & Background Tasks, Testing & CI/CD and Production Infrastructure so far.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -801,6 +801,58 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Fix the library\'s GitHub Actions workflow so it tests every change and deploys only what passed.',
       'Run on pull requests and pushes to `main`, order the test steps, cache pip, run a Python version `matrix`, make `deploy` wait with `needs:` and an `if:` for a push to `main`, use the `production` environment and take the token from `secrets`.',
+    ),
+  },
+  {
+    id: 'dj_nginx',
+    topicKeys: [Topic.DJ_NGINX],
+    title: 'Bookshop proxy',
+    folder: 'exercises/backend/dj_nginx',
+    starter: ['bookshop.conf'],
+    tests: 'test_bookshop_proxy.py',
+    minutes: 20,
+    task: lines(
+      'Fix the bookshop\'s Nginx site so it serves HTTPS, reads files from disk and passes everything else to Gunicorn.',
+      'Name Gunicorn in an `upstream`, redirect port 80 to `https://` with a 301, give the 443 server its certificate, serve `/static/` with `alias` and `/media/` from the uploads folder, and pass `Host`, `X-Forwarded-For` and `X-Forwarded-Proto` on to Django.',
+    ),
+  },
+  {
+    id: 'dj_settings',
+    topicKeys: [Topic.DJ_SETTINGS],
+    title: 'Settings from the environment',
+    folder: 'exercises/backend/dj_settings',
+    starter: ['bookshop_config/env.py', 'bookshop_config/settings/base.py', 'bookshop_config/settings/production.py'],
+    tests: 'test_bookshop_settings.py',
+    minutes: 30,
+    task: lines(
+      'Move the bookshop\'s secret key, `DEBUG`, hosts and database out of the committed settings and into the environment.',
+      'Write a small `Env` like django-environ\'s, with bool and list casts, a database URL parser and a `.env` loader, read the settings with it in `base.py`, and give `production.py` `DEBUG` off and the security settings that `check --deploy` asks for.',
+    ),
+  },
+  {
+    id: 'dj_file_uploads',
+    topicKeys: [Topic.DJ_FILE_UPLOADS],
+    title: 'Book samples',
+    folder: 'exercises/backend/dj_file_uploads',
+    starter: ['book_samples/models.py', 'book_samples/serializers.py', 'book_samples/views.py'],
+    tests: 'test_book_samples.py',
+    minutes: 25,
+    task: lines(
+      'Store each book\'s sample chapter and cover, and take samples in through the API.',
+      'Give `Book` two `FileField`s, one with an `upload_to` function and one with date codes, refuse a sample over 2 MB or not a PDF in `validate_sample`, and accept multipart uploads only, answering the stored name and URL.',
+    ),
+  },
+  {
+    id: 'dj_postgres',
+    topicKeys: [Topic.DJ_POSTGRES],
+    title: 'Edition details',
+    folder: 'exercises/backend/dj_postgres',
+    starter: ['editions/models.py', 'editions/queries.py'],
+    tests: 'test_editions.py',
+    minutes: 20,
+    task: lines(
+      'Fix the `Edition` model and query the details it keeps in a `JSONField`.',
+      'Give `kind` its own column, make `details` default to a new dict, add a composite index for the newest editions of a kind, and filter on a key, a nested key and `has_key`, and sort on a key pulled out with `KeyTextTransform`.',
     ),
   },
 ];
