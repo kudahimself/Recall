@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PredictOutputQuestion as PredictQ } from '../types';
 import { outputInstruction, outputMatches } from '../utils/predictOutput';
-import { StyledButton } from './StyledButton';
 import { DataTables } from './DataTables';
 import { renderInlineCode } from './InlineCode';
 import './PredictOutputQuestion.css';

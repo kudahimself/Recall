@@ -34,6 +34,7 @@ import {
   continueSession,
   familyOf,
   isSessionCurrent,
+  isSessionDone,
   parseStoredSessions,
   recordReviewAnswer,
   reviewsLeft,
@@ -1189,9 +1190,14 @@ function App() {
         />
       );
     }
+    // Nothing to serve ends in one of three states. Every path (Start, Keep
+    // going, Learn, Resume, a filter change, a lesson ending) arrives here.
     const todaySession = reviewSessions[activeCourse];
-    if (!currentQuestion && todaySession && getFilteredQuestions().length > 0) {
-      // The bounded session is over (or nothing in it is left to serve).
+    const matching = currentQuestion ? 0 : getFilteredQuestions().length;
+    const unfiltered = matching === courseQuestions.length;
+    // 1. The session is really over: unfiltered, nothing is servable at all;
+    //    filtered, the bounded session is done.
+    if (!currentQuestion && todaySession && matching > 0 && (unfiltered || isSessionDone(todaySession))) {
       return (
         <SessionSummary
           session={todaySession}
@@ -1200,9 +1206,23 @@ function App() {
         />
       );
     }
+    // 2. The session is not over, but the filters have nothing left today.
+    if (!currentQuestion && matching > 0 && !unfiltered) {
+      return (
+        <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>
+          <h3>Nothing left today for these filters.</h3>
+          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
+            Today's session still has questions outside your current filters.
+            Reset filters to carry on with them.
+          </p>
+          <button className="next-button" onClick={resetFilters}>
+            Reset filters
+          </button>
+        </div>
+      );
+    }
+    // 3. The filters match no question in this course at all.
     if (!currentQuestion) {
-      // selectSessionQuestion returned null — the unlocked pool is empty under
-      // current filters. Tell the user clearly and offer a way out.
       return (
         <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>
           <h3>You're all caught up.</h3>

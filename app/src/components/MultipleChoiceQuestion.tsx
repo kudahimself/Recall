@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MultipleChoiceQuestion as MCQuestion } from '../types';
-import { StyledButton } from './StyledButton';
 import { DataTables } from './DataTables';
 import { renderInlineCode } from './InlineCode';
 import './MultipleChoiceQuestion.css';

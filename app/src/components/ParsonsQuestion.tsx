@@ -26,7 +26,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ParsonsQuestion as ParsonsQ, CodeLanguage, Topic } from '../types';
-import { StyledButton } from './StyledButton';
 import { DataTables } from './DataTables';
 import { renderInlineCode } from './InlineCode';
 import { LivePreview } from './visual/LivePreview';

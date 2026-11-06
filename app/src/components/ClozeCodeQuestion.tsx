@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic } from '../types';
-import { StyledButton } from './StyledButton';
 import { DataTables } from './DataTables';
 import { renderInlineCode } from './InlineCode';
 import { LivePreview } from './visual/LivePreview';

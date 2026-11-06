@@ -10,10 +10,12 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import App from './App';
 import { PROGRESS_KEY } from './utils/progressStorage';
 import { questions } from './data/questions';
-import { Topic } from './types';
+import { Course, Topic } from './types';
 import { LESSONS } from './data/lessons';
 import { LESSONS_KEY } from './utils/spacedRepetition';
 import { getCourseForTopic } from './utils/courseConfig';
+import { localDayKey, ReviewSession, serializeSessions } from './utils/reviewSession';
+import { TODAY_SESSION_KEY } from './utils/spacedRepetition';
 
 const NEXT = /next (question|exercise)|finish the lesson/i;
 
@@ -203,15 +205,35 @@ describe('F7: filters', () => {
     expect(await screen.findByText(firstExercise.question)).toBeInTheDocument();
   });
 
-  test('a filtered session with nothing left to serve ends on the summary, with Keep going', async () => {
+  test('a filtered session that is not over, with nothing left in the filters, says so and offers Reset filters', async () => {
     localStorage.setItem('recall-active-course', 'sql');
     localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
     localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.TSQL_JOINS] }));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
 
+    expect(await screen.findByText(/Nothing left today for these filters/, {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+    expect(screen.queryByText('Done for today')).toBeNull();
+    expect(screen.queryByText(/No questions match your current filters/)).toBeNull();
+  });
+
+  test('a filtered session that is over ends on the summary, with Keep going', async () => {
+    localStorage.setItem('recall-active-course', 'sql');
+    localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
+    localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.TSQL_SELECT] }));
+    const finished: ReviewSession = {
+      day: localDayKey(), size: 20, queue: [], total: 0, overflow: 0, freshLeft: 0, answered: 20, reasks: 0,
+      served: ['tsql-select-mcq-1'], keepGoing: false,
+      tally: { review: 0, new: 20, drill: 0, practice: 0, again: 0, correct: 20 },
+    };
+    localStorage.setItem(TODAY_SESSION_KEY, serializeSessions({ [Course.SQL]: finished }));
+    render(<App />);
+    fireEvent.click(nav('Learn'));
+
     expect(await screen.findByText('Done for today', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Keep going/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing left today for these filters/)).toBeNull();
     expect(screen.queryByText(/No questions match your current filters/)).toBeNull();
   });
 });
