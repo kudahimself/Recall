@@ -538,7 +538,7 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.PY_DAILY_PATTERNS =====
   q('be-infra-patterns-3'), q('be-infra-patterns-4'), q('be-infra-patterns-1'), q('be-infra-patterns-2'),
-  q('be-infra-patterns-5'),
+  q('be-infra-patterns-5'), q('py-patterns-predict-1'),
 
   // ===== Topic.PY_MODERN =====
   q('be-infra-modern-1'), q('be-infra-modern-3'), q('py-modern-predict-2'), q('py-modern-predict-3'),
