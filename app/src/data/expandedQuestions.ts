@@ -3434,6 +3434,94 @@ print([r.running for r in out.orderBy("day_no", "loans").collect()])`,
     concepts: ['sql-window-frame'],
   },
 
+  // ===== INCREMENTAL LESSON QUESTIONS (one predict per Incremental Data Processing topic, none had one) =====
+
+  {
+    id: 'streaming-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.STRUCTURED_STREAMING,
+    language: CodeLanguage.PYTHON,
+    question: 'The Delta table `main.lib.loans` (id INT, title STRING) holds 3 rows, and `main.lib.loans_copy` does not exist yet. Nothing else writes to either table or to the checkpoint folder. What does the cell print? The answer is one whole number.',
+    code: `def copy_new_loans():
+    (spark.readStream.table("main.lib.loans")
+        .writeStream.option("checkpointLocation", "/Volumes/main/lib/chk/loans_copy")
+        .trigger(availableNow=True).toTable("main.lib.loans_copy")
+        .awaitTermination())
+copy_new_loans()
+spark.sql("INSERT INTO main.lib.loans VALUES (4, 'Dune')")
+copy_new_loans()
+print(spark.table("main.lib.loans_copy").count())`,
+    expectedOutput: `4`,
+    explanation: 'The first run reads the 3 rows, appends them to loans_copy and records in the checkpoint which table version it has read up to. availableNow processes what is there and then stops. The second run uses the same checkpoint, so it starts after that version and reads only the new row: 3 + 1 = 4, not 3 + 4 = 7. The checkpoint is what makes a stream incremental, and it belongs to one query: give every stream its own checkpoint folder, and never copy or share one between queries.',
+    hints: ['Both runs use the same checkpointLocation.', 'What does the second run find in the checkpoint?'],
+    tags: ['streaming', 'checkpoint', 'available-now', 'predict'],
+    concepts: ['stream-readstream-writestream', 'stream-checkpoint'],
+  },
+  {
+    id: 'autoloader-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.AUTO_LOADER,
+    language: CodeLanguage.PYTHON,
+    question: 'The volume folder `/Volumes/main/shop/landing/orders` holds one file, orders.json, with one line: {"id": 7, "qty": 2}. The schema location is empty and no other option is set. What does the cell print? The answer is one line per column: the column name, a space, then its type as simpleString() prints it (such as int or string).',
+    code: `df = (spark.readStream.format("cloudFiles")
+      .option("cloudFiles.format", "json")
+      .option("cloudFiles.schemaLocation", "/Volumes/main/shop/chk/orders")
+      .load("/Volumes/main/shop/landing/orders"))
+for f in df.schema.fields:
+    print(f.name, f.dataType.simpleString())`,
+    expectedOutput: `id string
+qty string
+_rescued_data string`,
+    explanation: 'For formats that do not store types, such as JSON and CSV, Auto Loader infers every column as a string by default, so a later file holding "7a" cannot break the stream. It also adds the `_rescued_data` column, which collects values that do not fit the schema, such as a type mismatch or an unexpected column. Set `cloudFiles.inferColumnTypes` to "true" to get id and qty as bigint, or give `cloudFiles.schemaHints`, such as "qty INT", for the columns you are sure of.',
+    hints: ['JSON stores no column types.', 'Auto Loader adds one column of its own.'],
+    tags: ['auto-loader', 'schema-inference', 'rescued-data', 'predict'],
+    concepts: ['stream-autoloader', 'stream-schema-evolution'],
+  },
+  {
+    id: 'medallion-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.MEDALLION_ARCHITECTURE,
+    language: CodeLanguage.SQL,
+    question: 'The CTEs stand in for a Bronze and a Silver table. Order 101 arrived twice, in batches 1 and 2, and one record has no order_id. What does the query return? The answer is one row: two whole numbers separated by a comma.',
+    code: `WITH bronze AS (
+  SELECT * FROM VALUES (101, 30, 1), (101, 30, 2), (102, 20, 1), (NULL, 50, 1)
+    AS t(order_id, amount, batch)
+), silver AS (
+  SELECT * FROM (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY batch DESC) AS rn
+    FROM bronze WHERE order_id IS NOT NULL
+  ) WHERE rn = 1
+)
+SELECT (SELECT SUM(amount) FROM bronze), (SELECT SUM(amount) FROM silver);`,
+    expectedOutput: `130, 50`,
+    explanation: 'Bronze keeps every record as it arrived: the replayed order 101 and the record with no order_id are both there, so its total is 30 + 30 + 20 + 50 = 130. Silver drops the record with no key and keeps one row per order_id, the one from the latest batch, so its total is 30 + 20 = 50. A Gold revenue table must read Silver: built from Bronze, it would report 130, counting the replay and a sale no order can be traced to.',
+    hints: ['Which rows does the WHERE remove before ROW_NUMBER runs?', 'How many rows per order_id have rn = 1?'],
+    tags: ['medallion', 'bronze', 'silver', 'deduplication', 'predict'],
+    concepts: ['medallion-architecture', 'ps-distinct-drop-dup'],
+  },
+  {
+    id: 'cdc-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.CHANGE_DATA_CAPTURE,
+    language: CodeLanguage.SQL,
+    question: 'The Delta table `members` does not exist before these statements, which run in order. What does the last query return? The answer is one whole number.',
+    code: `CREATE OR REPLACE TABLE members (id INT, tier STRING)
+  TBLPROPERTIES (delta.enableChangeDataFeed = true);
+INSERT INTO members VALUES (1, 'basic'), (2, 'basic');
+UPDATE members SET tier = 'gold' WHERE id = 1;
+DELETE FROM members WHERE id = 2;
+SELECT COUNT(*) FROM table_changes('members', 1);`,
+    expectedOutput: `5`,
+    explanation: 'The CREATE is version 0, the INSERT version 1, the UPDATE version 2 and the DELETE version 3, and `table_changes(\'members\', 1)` returns the change rows from version 1 on. The INSERT adds 2 rows with `_change_type` insert and the DELETE adds 1 delete row. The UPDATE adds 2 rows for its one changed row: an update_preimage with the old values and an update_postimage with the new ones. That makes 2 + 2 + 1 = 5. A consumer that applies changes downstream must drop the update_preimage rows first, or it applies the old values too.',
+    hints: ['Versions are numbered from 0, starting with the CREATE.', 'How many change rows does one updated row produce?'],
+    tags: ['cdc', 'change-data-feed', 'table-changes', 'predict'],
+    concepts: ['delta-cdf'],
+  },
+
   // ===== DELTA LAKE VACUUM (4 questions) =====
 
   {
