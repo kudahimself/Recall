@@ -73,9 +73,11 @@ This file maps every `Topic` to its `Course` and defines:
   
   New questions for these courses get appended in the right slot in the ordered bank, not just dropped into topic file.
 
-- **Data Engineering course** skips the ordered-bank pattern (MCQ-only, no within-topic ramp) and ships per-section files:
+- **Data Engineering course** skips the ordered-bank pattern and ships per-section files.
+  It is being rewritten section by section as decisions and designs (a lesson per topic, then predict the outcome, choose and justify, Parsons, spot the flaw, and explain cards in review); the older sections are MCQ-only.
   - `dataEngineeringFoundationsQuestions.ts`
   - `dataEngineeringArchitectureQuestions.ts`
+  - `dataEngineeringMovingDataQuestions.ts` (the first rewritten section; its predict-the-outcome checks are in `dataEngineeringMovingDataChecks.ts`)
   - `dataEngineeringModelingQuestions.ts`
   - `dataEngineeringStreamingQuestions.ts`
   - `dataEngineeringDistributedQuestions.ts`
@@ -231,7 +233,7 @@ Inside the ramp, intermediate opens when the beginner ramp cards are answered at
 
 **Lessons (`utils/lessons.ts`, `data/lessons/`):**
 A lesson teaches one topic before its ramp: a rule card (the idea, the form, the one pitfall, and a worked example whose output is shown) and 3-5 of the topic's existing questions as exercises, in ramp order.
-Lessons are `TopicLesson` data beside the bank, one per topic for now, written one section per PR from each course's first topic, in course order (SQL for Data Engineering, then Backend, then Databricks); `/write-lesson` drafts one.
+Lessons are `TopicLesson` data beside the bank, one per topic for now, written one section per PR from each course's first topic, in course order (SQL for Data Engineering, then Backend, then Databricks; Data Engineering lessons arrive with each rewritten section); `/write-lesson` drafts one.
 A lesson is met when it was completed, or when any of its exercises was already attempted, so existing progress is credited and never forced through a lesson.
 The gate lives in the App, not the selector: when the session serves an unseen card whose topic's lesson is not met (`lessonGateFor`), the App shows the rule card instead; "Try the exercises" (or Enter) then serves the exercises in order as new cards through the normal `handleAnswer`, so they count for coverage, the session's slots and the schedule exactly as other cards do, and a miss is asked again like any other.
 After the lesson the session goes on with the rest of the topic's ramp.
@@ -572,6 +574,9 @@ Nothing to eliminate.
 - `resultTables?: SqlTable[]` - tables shown with the explanation, e.g. the target after both runs
 
 **Grading:** exact after trimming, case-folding, collapsing spaces, dropping a final full stop and the unit (`outcomeMatches`); `8` is not `8.0`.
+
+**Checked by running it:** every predict-the-outcome card needs an entry in a checks registry (`dataEngineeringMovingDataChecks.ts`): SQLite run on the card's `tables` (each named by the first word of its title), or Python.
+`scripts/check-outcomes.js`, run by `npm test` (`data/outcomeChecks.test.ts`), fails a card with no check or whose check gives something other than its `answer`.
 
 #### 7. Choose and Justify (`QuestionType.CHOOSE_JUSTIFY`)
 

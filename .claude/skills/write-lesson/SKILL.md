@@ -20,6 +20,7 @@ No question and no ordered bank changes.
 
 - One lesson per topic for now; large topics are split into steps (`step` 2..n) later.
 - Courses in this order, each from its first topic: SQL for Data Engineering, then Backend (Python), then Databricks.
+  Data Engineering lessons arrive with each section of its rewrite (Moving Data first).
 - One section per PR: the owner reviews a section at a time.
   Finish the section in path order before the next.
 

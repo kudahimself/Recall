@@ -169,38 +169,6 @@ export const dataEngineeringFoundationsQuestions: Question[] = [
     explanation: 'The production database is busy serving real users. Big analytical scans can compete for resources and slow the app down (or even take it offline). That is a key reason analytics data is usually copied into a separate system.',
     tags: ['oltp', 'separation'],
   },
-  {
-    id: 'de-whatis-10',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_WHAT_IS,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why do mature pipelines often keep a copy of the raw data even after it has been cleaned?',
-    options: [
-      { id: 'a', text: 'Raw data always compresses far better than cleaned data ever will', isCorrect: false },
-      { id: 'b', text: 'So they can re-process it if the cleaning logic changes later', isCorrect: true },
-      { id: 'c', text: 'Because cleaned data cannot legally be stored long-term', isCorrect: false },
-      { id: 'd', text: 'Because raw data must be deleted within 24 hours by law', isCorrect: false },
-    ],
-    explanation: 'Keeping the raw data means you can rebuild the cleaned output if you find a bug, change a rule, or need a new field you did not originally extract. Throwing away the raw input makes mistakes permanent.',
-    tags: ['raw-zone', 'reprocessing'],
-  },
-  {
-    id: 'de-whatis-11',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_WHAT_IS,
-    course: Course.DATA_ENGINEERING,
-    question: 'What does it mean for a pipeline to be "idempotent"?',
-    options: [
-      { id: 'a', text: 'It runs measurably faster each additional time you execute it', isCorrect: false },
-      { id: 'b', text: 'It may only ever be executed one single time, then it locks', isCorrect: false },
-      { id: 'c', text: 'Re-running it gives the same result as running it once', isCorrect: true },
-      { id: 'd', text: 'It encrypts every record that passes through the pipeline', isCorrect: false },
-    ],
-    explanation: 'An idempotent pipeline can be run again safely: running it twice produces the same result as running it once, with no duplicates or double-counting. This matters because pipelines fail and get retried all the time.',
-    tags: ['idempotency', 'reliability'],
-  },
 
   // ===================================================================
   // de_batch_vs_streaming — Batch vs Streaming

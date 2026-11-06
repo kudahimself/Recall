@@ -127,7 +127,8 @@ describe('content', () => {
       const types = l.exercises.map(id => q(id).type);
       expect(types[0]).not.toBe(QuestionType.CODING);
       expect(types).toContain(QuestionType.MULTIPLE_CHOICE);
-      expect(types).toContain(QuestionType.PREDICT_OUTPUT);
+      // A predict: predict the output of code, or predict the outcome over tables.
+      expect(types.some(t => t === QuestionType.PREDICT_OUTPUT || t === QuestionType.PREDICT_OUTCOME)).toBe(true);
     }
   });
 });

@@ -35,7 +35,7 @@ import {
 
 const DAY = 86_400_000;
 const T0 = Date.UTC(2026, 10, 1, 9);
-const TOPIC = Topic.DE_RETRIES_IDEMPOTENCY;
+const TOPIC = Topic.DE_IDEMPOTENT_LOADS;
 
 const MCQ: Question = {
   id: 'fx-mcq',

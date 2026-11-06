@@ -51,7 +51,7 @@ function emptyProgress(): UserProgress {
 describe('section wiring', () => {
   it('is registered as the LAST step of the DE path', () => {
     expect(DATA_ENG_PATH_ORDER[DATA_ENG_PATH_ORDER.length - 1]).toBe(SECTION);
-    expect(DATA_ENG_SECTIONS[SECTION].weight).toBe('Step 7');
+    expect(DATA_ENG_SECTIONS[SECTION].weight).toBe(`Step ${DATA_ENG_PATH_ORDER.length}`);
   });
 
   it('maps all 8 topics to the Data Engineering course', () => {
@@ -135,14 +135,17 @@ describe('placement leaves existing progress alone', () => {
     return progress;
   }
 
-  it('keeps steps 1-6 unlocked for a learner who had finished step 6', () => {
-    const unlocked = SpacedRepetitionSystem.getUnlockedSections(dePool, masteredThrough(6));
+  // Every step before Systems mastered (Moving Data, Step 3, included).
+  const BEFORE = DATA_ENG_PATH_ORDER.length - 1;
+
+  it('keeps every earlier step unlocked for a learner who had finished the one before Systems', () => {
+    const unlocked = SpacedRepetitionSystem.getUnlockedSections(dePool, masteredThrough(BEFORE));
     expect(unlocked).not.toBeNull();
     DATA_ENG_PATH_ORDER.forEach(name => expect(unlocked!.sections).toContain(name));
   });
 
-  it('unlocks the new section only once step 6 is mastered', () => {
-    const before = SpacedRepetitionSystem.getUnlockedSections(dePool, masteredThrough(5));
+  it('unlocks the new section only once the step before it is mastered', () => {
+    const before = SpacedRepetitionSystem.getUnlockedSections(dePool, masteredThrough(BEFORE - 1));
     expect(before!.sections).toContain('Operations, Quality & Modern DE');
     expect(before!.sections).not.toContain(SECTION);
   });
