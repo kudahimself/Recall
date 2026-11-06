@@ -136,14 +136,64 @@ def test_gunicorn_has_a_named_upstream(config):
     assert servers == [GUNICORN], f"the upstream should hold `server {GUNICORN};`"
 
 
+# The ways of writing the port 80 redirect that send the same host and path on to HTTPS.
+REDIRECT_HOSTS = ("$host", "$server_name", "$http_host", HOST)
+REDIRECT_PATHS = ("$request_uri", "$uri$is_args$args")
+
+
+def is_https_redirect(directive):
+    """True when the directive answers with a permanent redirect to the same host and path on https://.
+
+    `return 301 <url>;` or `return 308 <url>;`, where the url is https:// plus the host
+    ($host, $server_name, $http_host or the name itself) and the path with its query
+    ($request_uri, or $uri$is_args$args), or the rewrite spelling,
+    `rewrite ^ <url>? permanent;` or `rewrite ^(.*)$ https://<host>$1 permanent;`.
+    """
+    targets = {f"https://{h}{p}" for h in REDIRECT_HOSTS for p in REDIRECT_PATHS}
+    if directive.name == "return":
+        return len(directive.args) == 2 and directive.args[0] in ("301", "308") and directive.args[1] in targets
+    if directive.name == "rewrite" and len(directive.args) == 3 and directive.args[2] == "permanent":
+        pattern, url = directive.args[:2]
+        if pattern == "^":
+            return url in {t + "?" for t in targets}
+        if pattern in ("^(.*)$", "^(.*)", "^/(.*)$"):
+            path = "$1" if pattern != "^/(.*)$" else "/$1"
+            return url in {f"https://{h}{path}" for h in REDIRECT_HOSTS}
+    return False
+
+
+def redirects(server):
+    """The redirect directives of a server that only redirects: its own, or those of a lone `location /`."""
+    own = [d for d in server.children if d.name in ("return", "rewrite")]
+    locations = server.all("location")
+    if not locations:
+        return own
+    if own or len(locations) != 1 or locations[0].args != ["/"]:
+        return None
+    inside = locations[0].children
+    if not inside or any(d.name not in ("return", "rewrite") for d in inside):
+        return None
+    return inside
+
+
 def test_plain_http_redirects_to_https(config):
+    # The check accepts the common spellings and still rejects a wrong redirect.
+    wrong = [
+        Directive("return", ["302", "https://$host$request_uri"]),       # temporary, not permanent
+        Directive("return", ["301", "http://$host$request_uri"]),        # back to plain HTTP
+        Directive("return", ["301", "https://$host"]),                   # drops the path
+        Directive("return", ["301", "https://$host$uri"]),               # drops the query string
+        Directive("rewrite", ["^", "https://$host$request_uri?", "redirect"]),  # 302
+    ]
+    assert not any(is_https_redirect(d) for d in wrong)
+
     http = server_for(config, 80)
-    redirect = http.first("return")
-    assert redirect, "the port 80 server should answer every request with a return"
-    assert redirect.args == ["301", "https://$host$request_uri"], (
-        "send the same host and path on to https:// with a permanent 301"
+    found = redirects(http)
+    assert found is not None, "the port 80 server only redirects; serve the site from the HTTPS one"
+    assert found and all(is_https_redirect(d) for d in found), (
+        "answer every request with a permanent redirect (301) to the same host and path on https://, "
+        "such as `return 301 https://$host$request_uri;`"
     )
-    assert not http.all("location"), "the port 80 server only redirects; serve the site from the HTTPS one"
 
 
 def test_https_server_has_its_certificate(config):
@@ -177,8 +227,27 @@ def test_everything_else_goes_to_gunicorn_through_the_upstream(config, path):
     )
 
 
+# The values that pass Django the original host, the client's address and the scheme.
+# Header names are compared without regard to case, as HTTP does.
+HEADER_VALUES = {
+    "host": ("$host", "$http_host"),
+    "x-forwarded-for": ("$proxy_add_x_forwarded_for", "$remote_addr"),
+    "x-forwarded-proto": ("$scheme", "https"),
+}
+
+
+def missing_headers(headers):
+    """The header names in HEADER_VALUES that the headers do not set to an accepted value."""
+    return [name for name, values in HEADER_VALUES.items() if headers.get(name) not in values]
+
+
 def test_django_learns_the_host_client_and_scheme(config):
+    # The check accepts the common spellings and still rejects wrong values.
+    assert missing_headers({"host": "$http_host", "x-forwarded-for": "$remote_addr", "x-forwarded-proto": "https"}) == []
+    assert missing_headers({"host": "$server_addr", "x-forwarded-for": "$proxy_add_x_forwarded_for",
+                            "x-forwarded-proto": "http"}) == ["host", "x-forwarded-proto"]
+
     headers = proxy_headers(https_server(config), "/cart/")
-    assert headers.get("host") == "$host"
-    assert headers.get("x-forwarded-for") == "$proxy_add_x_forwarded_for"
-    assert headers.get("x-forwarded-proto") == "$scheme"
+    assert missing_headers(headers) == [], (
+        "pass on Host ($host), X-Forwarded-For ($proxy_add_x_forwarded_for) and X-Forwarded-Proto ($scheme)"
+    )

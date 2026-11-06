@@ -12,6 +12,9 @@
 # factory_boy and Faker are for the test-data exercise (exercises/backend/dj_factory_boy).
 # The CI/CD exercise (exercises/backend/dj_cicd) reads its workflow with PyYAML,
 # which drf-spectacular installs.
+# Channels is for the WebSockets exercise (exercises/backend/dj_channels): its tests open
+# sockets with WebsocketCommunicator on the in-memory channel layer, in the test process.
+# Its testing module imports Daphne, the ASGI server, so the daphne extra comes too.
 # Django 5.2 is the long-term-support release and runs on Python 3.10 to 3.14.
 pytest==9.1.1
 Django==5.2.19
@@ -23,3 +26,5 @@ redis==8.1.0
 fakeredis==2.40.0
 factory_boy==3.3.3
 Faker==40.44.0
+channels[daphne]==4.3.2
+daphne==4.2.3
