@@ -8,7 +8,7 @@
  *
  * Writes:
  *   public/icon.svg               rounded tile, vector (manifest)
- *   public/favicon.ico            16, 32, 48 (browser tab; 16 and 32 hand-tuned)
+ *   public/favicon.ico            16, 32, 48 (browser tab)
  *   public/apple-touch-icon.png   180, full-bleed square (iOS rounds it)
  *   public/icon-192.png           192, rounded tile (manifest, desktop shortcut)
  *   public/icon-512.png           512, rounded tile (manifest)
@@ -31,16 +31,10 @@ const PUBLIC = path.join(APP, 'public');
 // Mark scale inside a 64 tile, as a share of the 64 box. The tile keeps a
 // margin round the ink; the maskable icon shrinks it to 80% of that so the
 // whole mark stays inside the circle Android crops to.
-// The 16 and 32 px favicon frames (TINY, SMALL) are deliberately simplified
-// versions of the chosen option C mark, for legibility at small sizes.
-// At 16 and 32 px the tile margin and corner radius would cost the mark most
-// of its pixels, so the favicon frames use a tighter tile. At 16 px the ear
-// and eye cut-outs blur into grey, so that frame drops them (a solid
-// silhouette) and nudges the mark, in 64-box units, so the back, belly, legs
-// and feet land on whole pixels.
+// Every size, the 16, 32 and 48 px favicon frames included, renders this one
+// TILE with the ear and eye cut-outs, so the browser tab shows the same
+// elephant as the header and the home-screen icons.
 const TILE = { scale: 0.78, radius: 14 };
-const SMALL = { scale: 0.92, radius: 10 };
-const TINY = { ...SMALL, solid: true, nudge: [-1.2, -1.4] };
 const MASKABLE = { scale: TILE.scale * 0.8, radius: 0 };
 const FULL_BLEED = { scale: TILE.scale, radius: 0 };
 
@@ -69,12 +63,7 @@ if (!ink) throw new Error('build-icons: recall-mark.svg draws nothing');
 const cx = +(ink.x + ink.width / 2).toFixed(2);
 const cy = +(ink.y + ink.height / 2).toFixed(2);
 
-// The mark without its cut-outs: drop the <defs> holding the mask and the
-// mask reference.
-const solidInner = inner.replace(/<defs>[\s\S]*?<\/defs>/, '').replace(/\smask="[^"]*"/, '');
-if (/mask/.test(solidInner)) throw new Error('build-icons: could not strip the mask from recall-mark.svg');
-
-function tileSvg({ scale, radius, solid = false, nudge = [0, 0] }) {
+function tileSvg({ scale, radius }) {
   const tile = radius
     ? `<rect width="64" height="64" rx="${radius}" fill="${BRAND}"/>`
     : `<rect width="64" height="64" fill="${BRAND}"/>`;
@@ -82,8 +71,8 @@ function tileSvg({ scale, radius, solid = false, nudge = [0, 0] }) {
   return (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
     tile +
-    `<g color="${ON_BRAND}" fill="currentColor" transform="translate(${32 + nudge[0]} ${32 + nudge[1]}) scale(${s}) translate(${-cx} ${-cy})">` +
-    (solid ? solidInner : inner) +
+    `<g color="${ON_BRAND}" fill="currentColor" transform="translate(32 32) scale(${s}) translate(${-cx} ${-cy})">` +
+    inner +
     '</g></svg>\n'
   );
 }
@@ -119,8 +108,8 @@ const tile = tileSvg(TILE);
 const outputs = {
   'icon.svg': tile,
   'favicon.ico': ico([
-    { size: 16, data: png(tileSvg(TINY), 16) },
-    { size: 32, data: png(tileSvg(SMALL), 32) },
+    { size: 16, data: png(tile, 16) },
+    { size: 32, data: png(tile, 32) },
     { size: 48, data: png(tile, 48) },
   ]),
   'apple-touch-icon.png': png(tileSvg(FULL_BLEED), 180),
