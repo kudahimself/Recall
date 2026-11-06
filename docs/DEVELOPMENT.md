@@ -215,6 +215,7 @@ Families due beyond the cap stay due and lead the next days' lists; "Keep going"
 Under topic, difficulty or type filters the plan serves what it can inside them, and the session still ends at its size with "Done for today".
 When the filters have nothing left of the plan while cards outside them are still waiting, the quiz says "Nothing left today for these filters" and offers Reset filters.
 Only after "Keep going" does "Practice" come from the same list and families (due families beyond the cap, then a drill of a family already met, then an unseen card), without using a slot.
+"Drill" and "Review weak topic" on Progress start that practice on their topics straight away; the drill mode is held in the App only, never on the session, so today's bound is unchanged, and Reset filters, Start and a course switch end it.
 The older selector below is not used by the session.
 The session is stored under `recall-today-session`, so a reload the same day resumes it (count, slots left, cards served, and "Done for today"); a new day starts a new one.
 
@@ -399,7 +400,7 @@ Layouts target desktop viewport without scrolling.
 **localStorage keys** (defined in `App.tsx`):
 - `recall-progress` - `UserProgress` (Set→Array serialized)
 - `recall-profile` - streaks, sessions, time spent
-- `recall-filters` - topic/difficulty/type filter state
+- `recall-filters` - topic/difficulty/type filter state, restored on load (`parseFilters` in `utils/questionFilters.ts`); a course switch resets only the topic list
 - `recall-active-course` - currently selected `Course`
 - `recall-misconceptions`, `recall-concept-progress`, `recall-card-difficulty`, `recall-concept-migration-version`
 - `recall-fsrs` - the card-family FSRS schedule (`familySchedule.ts`), derived data: it is rebuilt by replaying `attemptHistory` when missing, unreadable, an older `FSRS_STORE_VERSION`, built from a different history (its `basis`), or built against a different card-to-family mapping, as after a concept re-tag (its `bank`), and replayed from the remaining history when a course is reset; `recall-progress`, `recall-card-difficulty` and `recall-concept-progress` are kept and still updated, so the change can be rolled back
