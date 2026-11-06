@@ -922,10 +922,11 @@ function App() {
     setQuestionLoadCount(c => c + 1);
   }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons, lessonFlow]);
 
-  const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
+  const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions, keepGoing = false) => {
     setFilters(newFilters);
     const filtered = filterQuestions(courseQuestions, newFilters);
-    const session = reviewSessionFor(activeCourse);
+    const built = reviewSessionFor(activeCourse);
+    const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
@@ -943,9 +944,9 @@ function App() {
   };
 
   // From the progress dashboard: filter down to one weak category's topics
-  // and drop straight into question mode.
+  // and drop straight into practice on them, as after Keep going.
   const handleReviewWeakTopic = useCallback((topicKeys: string[]) => {
-    applyFiltersAndLoadQuestion({ ...allFilters(), topics: topicKeys as Topic[] });
+    applyFiltersAndLoadQuestion({ ...allFilters(), topics: topicKeys as Topic[] }, true);
     changeView('quiz');
   }, [applyFiltersAndLoadQuestion, changeView]);
 
