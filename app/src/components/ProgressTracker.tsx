@@ -16,7 +16,7 @@ import {
   recentAttempts,
 } from '../utils/spacedRepetition';
 import { CircularProgress } from './CircularProgress';
-import { HeatmapCalendar } from './HeatmapCalendar';
+import { activityByDay, HeatmapCalendar } from './HeatmapCalendar';
 import './ProgressTracker.css';
 
 interface Props {
@@ -429,26 +429,10 @@ export const ProgressTracker: React.FC<Props> = ({ progress, questions, course, 
   }, [strongAreas, unlockedSections, pathOrder, examSections, topicAnalysis]);
 
   // Generate heatmap data from attempt history
-  const heatmapData = useMemo(() => {
-    const dailyCounts = new Map<string, number>();
-    const courseQuestionIds = new Set(questions.map(q => q.id));
-
-    progress.attemptHistory
-      .filter(a => courseQuestionIds.has(a.questionId))
-      .forEach(attempt => {
-        const date = new Date(attempt.timestamp).toISOString().split('T')[0];
-        dailyCounts.set(date, (dailyCounts.get(date) || 0) + 1);
-      });
-
-    // Find max count for normalization
-    const maxCount = Math.max(...Array.from(dailyCounts.values()), 1);
-
-    return Array.from(dailyCounts.entries()).map(([date, count]) => ({
-      date,
-      count,
-      intensity: Math.min(count / Math.max(maxCount * 0.5, 1), 1), // Normalize to 0-1
-    }));
-  }, [progress.attemptHistory, questions]);
+  const heatmapData = useMemo(
+    () => activityByDay(progress.attemptHistory, questions),
+    [progress.attemptHistory, questions],
+  );
 
   const getDifficultyStats = () => {
     // Build maps for the current course

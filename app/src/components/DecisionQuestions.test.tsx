@@ -25,8 +25,8 @@ const expectTables = (names: string[]) => {
 };
 
 describe('PredictOutcomeQuestion', () => {
-  const renderIt = (onAnswer = jest.fn(), onNext?: () => void) =>
-    render(<PredictOutcomeQuestion question={SAMPLE_PREDICT_OUTCOME} onAnswer={onAnswer} onNext={onNext} showHints />);
+  const renderIt = (onAnswer = jest.fn()) =>
+    render(<PredictOutcomeQuestion question={SAMPLE_PREDICT_OUTCOME} onAnswer={onAnswer} showHints />);
 
   it('shows the input tables, the job and a typed answer with its unit', () => {
     renderIt();
@@ -48,8 +48,7 @@ describe('PredictOutcomeQuestion', () => {
 
   it('names the tempting wrong answer and shows the right one', () => {
     const onAnswer = jest.fn();
-    const onNext = jest.fn();
-    renderIt(onAnswer, onNext);
+    renderIt(onAnswer);
     const input = screen.getByLabelText('Your answer');
     fireEvent.change(input, { target: { value: '10' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -61,8 +60,7 @@ describe('PredictOutcomeQuestion', () => {
     expect(screen.getByText('Your 10 rows:')).toBeInTheDocument();
     expect(screen.getByText(/10 is the whole table/)).toBeInTheDocument();
     expect(screen.getByText('Why 4 rows is tempting:')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Next Question/ }));
-    expect(onNext).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /next/i })).toBeNull();
   });
 });
 

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import './HeatmapCalendar.css';
 
-interface HeatmapDay {
+export interface HeatmapDay {
   date: string;
   count: number;
   intensity: number; // 0-1 scale
@@ -13,43 +13,66 @@ interface HeatmapCalendarProps {
   className?: string;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Answers per day (UTC date keys, as the rest of the app stores days) for
+ * the attempts whose question is in `questions`.
+ */
+export function activityByDay(
+  attemptHistory: { questionId: string; timestamp: number }[],
+  questions: { id: string }[],
+): HeatmapDay[] {
+  const dailyCounts = new Map<string, number>();
+  const ids = new Set(questions.map(q => q.id));
+  for (const attempt of attemptHistory) {
+    if (!ids.has(attempt.questionId)) continue;
+    const date = new Date(attempt.timestamp).toISOString().split('T')[0];
+    dailyCounts.set(date, (dailyCounts.get(date) || 0) + 1);
+  }
+  const maxCount = Math.max(...Array.from(dailyCounts.values()), 1);
+  return Array.from(dailyCounts.entries()).map(([date, count]) => ({
+    date,
+    count,
+    intensity: Math.min(count / Math.max(maxCount * 0.5, 1), 1), // Normalize to 0-1
+  }));
+}
+
+/**
+ * The calendar's columns: `weeks` weeks ending with the week that holds
+ * `today`, each running Sunday to Saturday, so every row is one weekday.
+ * The last column stops at today; no future days are drawn.
+ */
+export function buildHeatmapGrid(data: HeatmapDay[], weeks: number, today: Date = new Date()): HeatmapDay[][] {
+  const todayMs = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const startMs = todayMs - (today.getUTCDay() + (weeks - 1) * 7) * DAY_MS;
+  const dataMap = new Map(data.map(d => [d.date, d]));
+
+  const grid: HeatmapDay[][] = [];
+  for (let week = 0; week < weeks; week++) {
+    const weekData: HeatmapDay[] = [];
+    for (let day = 0; day < 7; day++) {
+      const ms = startMs + (week * 7 + day) * DAY_MS;
+      if (ms > todayMs) break;
+      const dateStr = new Date(ms).toISOString().split('T')[0];
+      const dayData = dataMap.get(dateStr);
+      weekData.push({
+        date: dateStr,
+        count: dayData?.count || 0,
+        intensity: dayData?.intensity || 0,
+      });
+    }
+    grid.push(weekData);
+  }
+  return grid;
+}
+
 export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
   data,
   weeks = 52,
   className = '',
 }) => {
-  const heatmapGrid = useMemo(() => {
-    // Generate last N weeks of data
-    const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - weeks * 7);
-
-    const grid: HeatmapDay[][] = [];
-    const dataMap = new Map(data.map(d => [d.date, d]));
-
-    // Build 7 rows (days of week) × N columns (weeks)
-    for (let week = 0; week < weeks; week++) {
-      const weekData: HeatmapDay[] = [];
-
-      for (let day = 0; day < 7; day++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + week * 7 + day);
-
-        const dateStr = date.toISOString().split('T')[0];
-        const dayData = dataMap.get(dateStr);
-
-        weekData.push({
-          date: dateStr,
-          count: dayData?.count || 0,
-          intensity: dayData?.intensity || 0,
-        });
-      }
-
-      grid.push(weekData);
-    }
-
-    return grid;
-  }, [data, weeks]);
+  const heatmapGrid = useMemo(() => buildHeatmapGrid(data, weeks), [data, weeks]);
 
   const getIntensityClass = (intensity: number): string => {
     if (intensity === 0) return 'intensity-0';
@@ -64,7 +87,8 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'UTC',
     });
   };
 

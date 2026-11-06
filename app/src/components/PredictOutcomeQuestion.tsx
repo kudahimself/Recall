@@ -8,7 +8,6 @@ import { ExplanationBlock, HintToggle, QuestionHead, ResultBanner } from './Reas
 interface Props {
   question: PredictOutcomeQ;
   onAnswer: (isCorrect: boolean) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -17,7 +16,7 @@ interface Props {
  * Graded exactly by utils/answerCredit (outcomeMatches); a typed answer the
  * question names as tempting shows why it is tempting.
  */
-export const PredictOutcomeQuestion: React.FC<Props> = ({ question, onAnswer, onNext, showHints }) => {
+export const PredictOutcomeQuestion: React.FC<Props> = ({ question, onAnswer, showHints }) => {
   const [typed, setTyped] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -92,7 +91,7 @@ export const PredictOutcomeQuestion: React.FC<Props> = ({ question, onAnswer, on
             verdict={correct ? 'right' : 'wrong'}
             title={correct ? 'Correct' : 'Not quite'}
           />
-          <ExplanationBlock question={question} onNext={onNext}>
+          <ExplanationBlock question={question}>
             {(question.tempting ?? []).map(t => (
               <p key={t.answer} className={`rq-tempting${t === trap ? ' mine' : ''}`}>
                 <span className="rq-tempting-label">

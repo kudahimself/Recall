@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PredictOutputQuestion as PredictQ } from '../types';
 import { outputInstruction, outputMatches } from '../utils/predictOutput';
-import { StyledButton } from './StyledButton';
 import { DataTables } from './DataTables';
 import { renderInlineCode } from './InlineCode';
 import './PredictOutputQuestion.css';
@@ -9,7 +8,6 @@ import './PredictOutputQuestion.css';
 interface Props {
   question: PredictQ;
   onAnswer: (isCorrect: boolean) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -19,7 +17,6 @@ interface Props {
 export const PredictOutputQuestion: React.FC<Props> = ({
   question,
   onAnswer,
-  onNext,
   showHints,
 }) => {
   const [userOutput, setUserOutput] = useState('');
@@ -110,11 +107,6 @@ export const PredictOutputQuestion: React.FC<Props> = ({
             </div>
           )}
           <p>{renderInlineCode(question.explanation, question.topic)}</p>
-          {onNext && (
-            <StyledButton variant="primary" onClick={onNext}>
-              Next Question →
-            </StyledButton>
-          )}
         </div>
       )}
 

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Question } from '../types';
 import { renderInlineCode } from './InlineCode';
-import { StyledButton } from './StyledButton';
 import './ReasoningQuestions.css';
 
 /**
@@ -44,23 +43,17 @@ export const ResultBanner: React.FC<{ verdict: Verdict; title: string; detail?: 
   </div>
 );
 
-/** Explanation paragraphs (one per line of the text), extra content, and Next. */
+/** Explanation paragraphs (one per line of the text) and extra content. */
 export const ExplanationBlock: React.FC<{
   question: Question;
-  onNext?: () => void;
   children?: React.ReactNode;
-}> = ({ question, onNext, children }) => (
+}> = ({ question, children }) => (
   <div className="explanation rq-explanation">
     <h4>Explanation</h4>
     {question.explanation.split('\n').filter(p => p.trim().length > 0).map((p, i) => (
       <p key={i}>{renderInlineCode(p, question.topic)}</p>
     ))}
     {children}
-    {onNext && (
-      <StyledButton variant="primary" onClick={onNext}>
-        Next Question →
-      </StyledButton>
-    )}
   </div>
 );
 

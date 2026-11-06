@@ -34,6 +34,7 @@ import {
   continueSession,
   familyOf,
   isSessionCurrent,
+  isSessionDone,
   parseStoredSessions,
   recordReviewAnswer,
   reviewsLeft,
@@ -121,6 +122,8 @@ import { SpotFlawQuestion } from './components/SpotFlawQuestion';
 import { ExplainQuestion } from './components/ExplainQuestion';
 import { sampleFromSearch } from './dev/sampleQuestions';
 import { ProgressTracker } from './components/ProgressTracker';
+import { activityByDay, HeatmapCalendar } from './components/HeatmapCalendar';
+import { allFilters, filterQuestions, FilterOptions, parseFilters, serializeFilters } from './utils/questionFilters';
 import { QuestionFilter } from './components/QuestionFilter';
 import { NavigationRail } from './components/NavigationRail';
 import {
@@ -192,12 +195,6 @@ const COURSE_META: Record<Course, { label: string; Icon: LucideIcon; tagline: st
 };
 
 type ViewMode = 'quiz' | 'progress' | 'home' | 'filter';
-
-interface FilterOptions {
-  topics: Topic[];
-  difficulties: Difficulty[];
-  questionTypes: QuestionType[];
-}
 
 const STORAGE_KEYS = {
   progress: PROGRESS_KEY,
@@ -301,26 +298,9 @@ function loadActiveCourse(): Course {
   return Course.DATABRICKS;
 }
 
-function loadFilters(): FilterOptions {
-  const defaults: FilterOptions = {
-    topics: Object.values(Topic),
-    difficulties: Object.values(Difficulty),
-    questionTypes: Object.values(QuestionType),
-  };
-  const saved = localStorage.getItem(STORAGE_KEYS.filters);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      return {
-        topics: parsed.topics || defaults.topics,
-        difficulties: parsed.difficulties || defaults.difficulties,
-        questionTypes: parsed.questionTypes || defaults.questionTypes,
-      };
-    } catch {
-      // Corrupted store; use defaults.
-    }
-  }
-  return defaults;
+/** Below 768 px the rail is an overlay drawer (NavigationRail.css), closed until asked for. */
+function isNarrowScreen(): boolean {
+  return !!window.matchMedia?.('(max-width: 767px)').matches;
 }
 
 function loadProgress(): ProgressLoad {
@@ -487,7 +467,7 @@ function App() {
   const orphansRef = useRef(initialLoad.orphans);
   const [progress, setProgress] = useState<UserProgress>(initialLoad.progress);
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
-  const [filters, setFilters] = useState<FilterOptions>(loadFilters);
+  const [filters, setFilters] = useState<FilterOptions>(() => parseFilters(localStorage.getItem(STORAGE_KEYS.filters)));
   const [misconceptions, setMisconceptions] = useState<MisconceptionStore>(loadMisconceptions);
   const [conceptProgress, setConceptProgress] = useState<ConceptProgress>(
     () => loadConceptProgress(initialLoad.progress, !studyWritesBlocked(initialLoad)),
@@ -528,7 +508,7 @@ function App() {
   // True after a miss put the card back in today's list, until the next card.
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState<'slide-left' | 'slide-right' | 'fade'>('fade');
   const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'topics' | 'heatmap'>('overview');
@@ -658,6 +638,7 @@ function App() {
   // unseen card whose topic's lesson is not met opens that lesson's rule card
   // instead; the card itself is left for the session to serve again after the
   // lesson. Exercises are answered through handleAnswer like any new card.
+  // Filters only decide which cards trigger a lesson; an open lesson serves its full exercise list.
   const serveWithLessons = useCallback((pick: SessionPick | null, course: Course, flow: LessonFlow | null) => {
     const lesson = flow && flow.course === course ? getLesson(flow.lessonId) : undefined;
     if (flow && lesson) {
@@ -745,7 +726,7 @@ function App() {
 
   // Save filters
   useEffect(() => {
-    persist(STORAGE_KEYS.filters, JSON.stringify(filters), 'ui');
+    persist(STORAGE_KEYS.filters, serializeFilters(filters), 'ui');
   }, [filters, persist]);
 
   // Save misconception telemetry
@@ -826,7 +807,7 @@ function App() {
     const text = buildExport({
       [STORAGE_KEYS.progress]: serializeProgress(progress, orphansRef.current),
       [STORAGE_KEYS.profile]: JSON.stringify(profile),
-      [STORAGE_KEYS.filters]: JSON.stringify(filters),
+      [STORAGE_KEYS.filters]: serializeFilters(filters),
       [STORAGE_KEYS.activeCourse]: activeCourse,
       [STORAGE_KEYS.misconceptions]: JSON.stringify(misconceptions),
       [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
@@ -918,14 +899,10 @@ function App() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const getFilteredQuestions = useCallback((): Question[] => {
-    return courseQuestions.filter(q => {
-      const topicMatch = filters.topics.length === 0 || filters.topics.includes(q.topic);
-      const difficultyMatch = filters.difficulties.length === 0 || filters.difficulties.includes(q.difficulty);
-      const typeMatch = filters.questionTypes.length === 0 || filters.questionTypes.includes(q.type);
-      return topicMatch && difficultyMatch && typeMatch;
-    });
-  }, [filters, courseQuestions]);
+  const getFilteredQuestions = useCallback(
+    (): Question[] => filterQuestions(courseQuestions, filters),
+    [filters, courseQuestions],
+  );
 
   // Bumped every time we ask for a new question. Used as a render key on the
   // question component so even when the SRS picks the SAME question reference
@@ -934,54 +911,50 @@ function App() {
   // persists and the UI looks frozen ("Next button doesn't work").
   const [questionLoadCount, setQuestionLoadCount] = useState(0);
 
+  // Drill mode (Drill / Review weak topic on Progress): practice on the chosen
+  // topics past today's bound. Held here only; today's session is never changed.
+  const [drilling, setDrilling] = useState(false);
+  const selectFor = useCallback((session: ReviewSession, servePool: Question[], coursePool: Question[], drill: boolean) => {
+    const pick = selectSessionQuestion(drill ? continueSession(session) : session, servePool, coursePool, progress, fsrsStore, cardDifficulty, conceptCtx);
+    return pick && drill && !session.queue.some(e => e.id === pick.question.id) ? { ...pick, kind: 'practice' as const } : pick;
+  }, [progress, fsrsStore, cardDifficulty, conceptCtx]);
+
   const loadNextQuestion = useCallback(() => {
     const filteredQuestions = getFilteredQuestions();
     const session = reviewSessionFor(activeCourse);
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filteredQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
+    const next = selectFor(session, filteredQuestions, courseQuestions, drilling);
     serveWithLessons(next, activeCourse, lessonFlow);
     setQuestionLoadCount(c => c + 1);
-  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons, lessonFlow]);
+  }, [getFilteredQuestions, reviewSessionFor, reviewSessions, activeCourse, courseQuestions, selectFor, drilling, serveWithLessons, lessonFlow]);
 
-  const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions) => {
+  const applyFiltersAndLoadQuestion = useCallback((newFilters: FilterOptions, drill = false) => {
     setFilters(newFilters);
-    const filtered = courseQuestions.filter(q => {
-      const topicMatch = newFilters.topics.length === 0 || newFilters.topics.includes(q.topic);
-      const difficultyMatch = newFilters.difficulties.length === 0 || newFilters.difficulties.includes(q.difficulty);
-      const typeMatch = newFilters.questionTypes.length === 0 || newFilters.questionTypes.includes(q.type);
-      return topicMatch && difficultyMatch && typeMatch;
-    });
+    setDrilling(drill);
+    const filtered = filterQuestions(courseQuestions, newFilters);
     const session = reviewSessionFor(activeCourse);
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    const next = selectSessionQuestion(session, filtered, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx);
+    const next = selectFor(session, filtered, courseQuestions, drill);
     // New filters end a lesson in progress; the gate still applies to what they serve.
     serveWithLessons(next, activeCourse, null);
-  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, progress, fsrsStore, conceptCtx, cardDifficulty, serveWithLessons]);
+  }, [courseQuestions, reviewSessionFor, reviewSessions, activeCourse, selectFor, serveWithLessons]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     applyFiltersAndLoadQuestion(newFilters);
   };
 
   const resetFilters = () => {
-    applyFiltersAndLoadQuestion({
-      topics: Object.values(Topic),
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
+    applyFiltersAndLoadQuestion(allFilters());
   };
 
   // From the progress dashboard: filter down to one weak category's topics
-  // and drop straight into question mode.
+  // and drop straight into practice on them (drill mode).
   const handleReviewWeakTopic = useCallback((topicKeys: string[]) => {
-    applyFiltersAndLoadQuestion({
-      topics: topicKeys as Topic[],
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
+    applyFiltersAndLoadQuestion({ ...allFilters(), topics: topicKeys as Topic[] }, true);
     changeView('quiz');
   }, [applyFiltersAndLoadQuestion, changeView]);
 
@@ -1088,7 +1061,9 @@ function App() {
     const answeredCourse = getCourseForTopic(currentQuestion.topic);
     const session = reviewSessions[answeredCourse];
     if (session) {
-      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect, servedKind, familyOf(currentQuestion));
+      const listed = session.queue.some(e => e.id === currentQuestion.id);
+      const kind = drilling && !listed ? 'practice' : servedKind;
+      const result = recordReviewAnswer(session, currentQuestion.id, isCorrect, kind, familyOf(currentQuestion));
       setReviewSessions(prev => ({ ...prev, [answeredCourse]: result.session }));
       setReaskShown(result.requeued);
     }
@@ -1171,25 +1146,31 @@ function App() {
     setFsrsStore(prev => recordAttempt(prev, missed, attempt, attemptHistory));
   };
 
+  // Topics belong to one course: switching course selects every topic again,
+  // and keeps the difficulty and question-type filters.
+  const switchCourse = (course: Course): FilterOptions => {
+    const next = course === activeCourse ? filters : { ...filters, topics: allFilters().topics };
+    if (next !== filters) {
+      setFilters(next);
+      setDrilling(false);
+    }
+    setActiveCourse(course);
+    return next;
+  };
+
   const startQuiz = (course?: Course, keepGoing = false) => {
     const targetCourse = course || activeCourse;
-    if (course) {
-      setActiveCourse(course);
-    }
-    // Reset filters when switching courses so topic filters don't block
-    setFilters({
-      topics: Object.values(Topic),
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
+    const targetFilters = switchCourse(targetCourse);
+    setDrilling(false);
     // Compute questions for the target course directly (state hasn't flushed yet).
     const pool = questions.filter(q => getCourseForTopic(q.topic) === targetCourse);
+    const servePool = filterQuestions(pool, targetFilters);
     const built = reviewSessionFor(targetCourse);
     const session = keepGoing && !built.keepGoing ? continueSession(built) : built;
     if (session !== reviewSessions[targetCourse]) {
       setReviewSessions(prev => ({ ...prev, [targetCourse]: session }));
     }
-    const next = selectSessionQuestion(session, pool, pool, progress, fsrsStore, cardDifficulty, conceptCtx);
+    const next = selectSessionQuestion(session, servePool, pool, progress, fsrsStore, cardDifficulty, conceptCtx);
     serveWithLessons(next, targetCourse, lessonFlow);
     changeView('quiz');
     setSessionStats({ answered: 0, correct: 0 });
@@ -1201,11 +1182,6 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    setFilters({
-      topics: Object.values(Topic),
-      difficulties: Object.values(Difficulty),
-      questionTypes: Object.values(QuestionType),
-    });
     serveWithLessons(null, activeCourse, { lessonId, course: activeCourse, stage: 'card' });
     changeView('quiz');
   };
@@ -1230,9 +1206,17 @@ function App() {
         />
       );
     }
+    // Nothing to serve ends in one of three states. Every path (Start, Keep
+    // going, Learn, Resume, a filter change, a lesson ending) arrives here.
     const todaySession = reviewSessions[activeCourse];
-    if (!currentQuestion && todaySession && getFilteredQuestions().length === courseQuestions.length) {
-      // The bounded session is over (or nothing in it is left to serve).
+    const matching = currentQuestion ? 0 : getFilteredQuestions().length;
+    const unfiltered = matching === courseQuestions.length;
+    // 1. The session is really over: it is done, or nothing is servable even
+    //    from the unfiltered pool.
+    const sessionOver = !!todaySession && !currentQuestion && matching > 0 && (unfiltered
+      || isSessionDone(todaySession)
+      || !selectSessionQuestion(todaySession, courseQuestions, courseQuestions, progress, fsrsStore, cardDifficulty, conceptCtx));
+    if (!currentQuestion && todaySession && sessionOver) {
       return (
         <SessionSummary
           session={todaySession}
@@ -1241,9 +1225,23 @@ function App() {
         />
       );
     }
+    // 2. The session is not over, but the filters have nothing left today.
+    if (!currentQuestion && matching > 0 && !unfiltered) {
+      return (
+        <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>
+          <h3>Nothing left today for these filters.</h3>
+          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
+            Today's session still has questions outside your current filters.
+            Reset filters to carry on with them.
+          </p>
+          <button className="next-button" onClick={resetFilters}>
+            Reset filters
+          </button>
+        </div>
+      );
+    }
+    // 3. The filters match no question in this course at all.
     if (!currentQuestion) {
-      // selectSessionQuestion returned null — the unlocked pool is empty under
-      // current filters. Tell the user clearly and offer a way out.
       return (
         <div className="empty-pool-message" style={{ padding: '2rem', textAlign: 'center' }}>
           <h3>You're all caught up.</h3>
@@ -1271,7 +1269,6 @@ function App() {
           question={currentQuestion}
           onAnswer={handleAnswer}
           onMisconception={handleMisconception}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1281,7 +1278,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1291,7 +1287,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1301,7 +1296,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1311,7 +1305,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1321,7 +1314,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1331,7 +1323,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1341,7 +1332,6 @@ function App() {
           key={renderKey}
           question={currentQuestion}
           onAnswer={handleAnswer}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
         />
       );
@@ -1352,7 +1342,6 @@ function App() {
           question={currentQuestion}
           onAnswer={handleAnswer}
           onFirstMiss={handleFirstMiss}
-          onNext={showNextButton ? loadNextQuestion : undefined}
           showHints={true}
           hintCreditSchedule={SpacedRepetitionSystem.getHintCreditSchedule(
             currentQuestion.id,
@@ -1809,7 +1798,7 @@ function App() {
                 : 'Save all your progress to a file'}
           >
             <Download size={14} />
-            <span>Export</span>
+            <span className="header-action-label">Export</span>
           </button>
           <button
             className="header-action"
@@ -1817,7 +1806,7 @@ function App() {
             title="Replace progress in this browser with an exported file"
           >
             <Upload size={14} />
-            <span>Import</span>
+            <span className="header-action-label">Import</span>
           </button>
           <input
             ref={importInputRef}
@@ -1920,6 +1909,7 @@ function App() {
           activeView={viewMode}
           activeCourse={activeCourse}
           onViewChange={(view) => {
+            if (isNarrowScreen()) setRailCollapsed(true);
             if (view === 'quiz') {
               startQuiz(activeCourse);
             } else {
@@ -1927,12 +1917,13 @@ function App() {
             }
           }}
           onCourseChange={(course) => {
+            if (isNarrowScreen()) setRailCollapsed(true);
             if (viewMode === 'quiz') {
               // Mid-question course switch: swap the whole quiz context, not
               // just the theme — otherwise the old course's question lingers.
               startQuiz(course);
             } else {
-              setActiveCourse(course);
+              switchCourse(course);
             }
           }}
           collapsed={railCollapsed}
@@ -1953,13 +1944,13 @@ function App() {
                 const courseTotal = stats.total;
                 const courseRecent = stats.recentTotal > 0 ? `${stats.recentPct}%` : 'New';
 
-                // Get last active topic for "Continue Learning" CTA
-                const lastAttempt = progress.attemptHistory.length > 0
-                  ? progress.attemptHistory[progress.attemptHistory.length - 1]
-                  : null;
-                const lastTopic = lastAttempt
-                  ? questions.find(q => q.id === lastAttempt.questionId)?.topic
-                  : null;
+                // Last topic answered in the active course, for the "Continue Learning" CTA
+                // (Resume starts this course, so the card must not name another course's topic).
+                let lastTopic: string | undefined;
+                for (let i = progress.attemptHistory.length - 1; i >= 0 && !lastTopic; i--) {
+                  const q = QUESTIONS_BY_ID.get(progress.attemptHistory[i].questionId);
+                  if (q && getCourseForTopic(q.topic) === activeCourse) lastTopic = q.topic;
+                }
                 const lastTopicName = lastTopic?.replace(/_/g, ' ') || 'your journey';
 
                 return (
@@ -2097,7 +2088,7 @@ function App() {
                               key={course}
                               className={`course-tile ${isActive ? 'active' : ''}`}
                               style={{ ['--course-accent' as string]: m.accent }}
-                              onClick={() => setActiveCourse(course)}
+                              onClick={() => switchCourse(course)}
                             >
                               <div className="course-tile-head">
                                 <span className="course-tile-icon">
@@ -2462,13 +2453,10 @@ function App() {
                 {activeProgressTab === 'heatmap' && (
                   <div className="tab-panel">
                     <h3 style={{ marginBottom: 'var(--space-lg)', color: 'var(--text)' }}>Learning Activity</h3>
-                    {/* Heatmap is already inside ProgressTracker, we'll show just that section */}
-                    <ProgressTracker
-                      progress={progress}
-                      questions={courseQuestions}
-                      course={activeCourse}
-                      misconceptions={misconceptions}
-                    />
+                    {/* Activity only; the Overview tab has the rest of the dashboard. */}
+                    <div className="heatmap-card">
+                      <HeatmapCalendar data={activityByDay(progress.attemptHistory, courseQuestions)} weeks={26} />
+                    </div>
                   </div>
                 )}
               </div>

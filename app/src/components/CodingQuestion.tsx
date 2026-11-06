@@ -23,7 +23,6 @@ interface Props {
   // Called once, on the first failed submit that opens the retry panel, so the
   // miss counts for scheduling while the learner can still retry.
   onFirstMiss?: (meta?: AnswerMeta) => void;
-  onNext?: () => void;
   showHints: boolean;
   // Partial-credit this pass would earn per hint tier [none, signature, skeleton],
   // supplied by the SR engine so the retry panel can show the cost before a reveal.
@@ -34,7 +33,6 @@ export const CodingQuestion: React.FC<Props> = ({
   question,
   onAnswer,
   onFirstMiss,
-  onNext,
   showHints,
   hintCreditSchedule,
 }) => {
@@ -482,11 +480,6 @@ export const CodingQuestion: React.FC<Props> = ({
         )}
         {phase === 'done' && (
           <>
-            {onNext && (
-              <StyledButton variant="primary" onClick={onNext}>
-                Next Question →
-              </StyledButton>
-            )}
             {!showSolution && (
               <StyledButton variant="danger" onClick={() => setShowSolution(true)}>
                 Show Solution

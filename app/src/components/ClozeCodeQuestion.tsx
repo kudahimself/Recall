@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic } from '../types';
-import { StyledButton } from './StyledButton';
 import { DataTables } from './DataTables';
 import { renderInlineCode } from './InlineCode';
 import { LivePreview } from './visual/LivePreview';
@@ -9,7 +8,6 @@ import './ClozeCodeQuestion.css';
 interface Props {
   question: ClozeQ;
   onAnswer: (isCorrect: boolean) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -109,7 +107,6 @@ function tokenize(template: string, blankCount: number): Segment[] {
 export const ClozeCodeQuestion: React.FC<Props> = ({
   question,
   onAnswer,
-  onNext,
   showHints,
 }) => {
   const blankCount = question.blanks.length;
@@ -261,11 +258,6 @@ export const ClozeCodeQuestion: React.FC<Props> = ({
             </div>
           )}
           <p>{renderInlineCode(question.explanation, question.topic)}</p>
-          {onNext && (
-            <StyledButton variant="primary" onClick={onNext}>
-              Next Question →
-            </StyledButton>
-          )}
         </div>
       )}
 

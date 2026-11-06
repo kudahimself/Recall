@@ -8,7 +8,6 @@ import { ExplanationBlock, HintToggle, LETTERS, QuestionHead, ResultBanner, seed
 interface Props {
   question: ChooseJustifyQ;
   onAnswer: (isCorrect: boolean, meta?: AnswerMeta) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -20,7 +19,7 @@ type Stage = 'decide' | 'justify' | 'graded';
  * recorded with that credit: 1, 0.5 for the right decision with the wrong
  * reason (a pass under the bar, so the card comes back sooner), else 0.
  */
-export const ChooseJustifyQuestion: React.FC<Props> = ({ question, onAnswer, onNext, showHints }) => {
+export const ChooseJustifyQuestion: React.FC<Props> = ({ question, onAnswer, showHints }) => {
   const decisions = useMemo(() => seededOrder(question.decisions, `${question.id}:d`), [question.decisions, question.id]);
   const reasons = useMemo(() => seededOrder(question.reasons, `${question.id}:r`), [question.reasons, question.id]);
   const [stage, setStage] = useState<Stage>('decide');
@@ -114,7 +113,7 @@ export const ChooseJustifyQuestion: React.FC<Props> = ({ question, onAnswer, onN
       {stage === 'graded' && (
         <>
           <ResultBanner verdict={verdict} title={banner.title} detail={banner.detail} />
-          <ExplanationBlock question={question} onNext={onNext} />
+          <ExplanationBlock question={question} />
         </>
       )}
     </div>

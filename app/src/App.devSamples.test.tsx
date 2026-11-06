@@ -25,7 +25,8 @@ test('?sample=<id> opens a spot-the-flaw sample in the quiz view, grades it, and
   fireEvent.click(lines[4]);
   fireEvent.click(screen.getByRole('button', { name: 'Check line 5' }));
   expect(screen.getByRole('status')).toHaveTextContent('Correct');
-  expect(await screen.findByRole('button', { name: /Next Question/ })).toBeInTheDocument();
+  // One Next after the answer, not a second one inside the explanation.
+  expect(await screen.findAllByRole('button', { name: /^Next question/i })).toHaveLength(1);
 
   const stored = localStorage.getItem(PROGRESS_KEY);
   expect(stored === null || !stored.includes('dev-sample')).toBe(true);

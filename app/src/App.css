@@ -2011,8 +2011,23 @@ a:hover { color: var(--accent); }
 
 /* Mobile: < 768px */
 @media (max-width: 767px) {
+  /* The rail is a fixed overlay here, out of the grid: one track for the content. */
   .app-body {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Icons only, so the header fits a 390 px phone. */
+  .header-right {
+    gap: var(--space-sm);
+  }
+
+  .header-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .home-view,
