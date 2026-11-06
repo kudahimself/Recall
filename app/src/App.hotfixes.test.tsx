@@ -168,7 +168,7 @@ describe('F7: filters', () => {
     expect(screen.getByRole('button', { name: 'Beginner' })).toHaveClass('active');
   });
 
-  test('a lesson serves only the exercises of the selected topics, whatever their type', async () => {
+  test('a lesson reached under a topic filter serves and completes against its full exercise list', async () => {
     localStorage.setItem('recall-active-course', 'backend');
     localStorage.setItem('recall-dev-unlock-all', '1');
     localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.PY_DATACLASSES] }));
@@ -176,10 +176,14 @@ describe('F7: filters', () => {
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
     fireEvent.click(await screen.findByRole('button', { name: /Try the exercises/ }, { timeout: 3000 }));
 
-    const dataclassesExercise = questions.find(q => q.id === 'py-dataclasses-cloze-2')!;
     const typeHintsExercise = questions.find(q => q.id === 'py-types-union-1')!;
-    expect(await screen.findByText(dataclassesExercise.question)).toBeInTheDocument();
-    expect(screen.queryByText(typeHintsExercise.question)).toBeNull();
+    expect(await screen.findByText(typeHintsExercise.question)).toBeInTheDocument();
+    expect(screen.getByText(/exercise 1 of 5/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('radio')[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
+    expect(await screen.findByRole('button', { name: NEXT })).toHaveTextContent(/Next exercise/);
+    expect(localStorage.getItem(LESSONS_KEY)).toBeNull();
   });
 
   test('a lesson started from the path serves its exercises whatever the topic filter', async () => {
