@@ -241,4 +241,34 @@ class NotificationConsumer(AsyncWebSocketConsumer):
     tags: ['channels', 'websocket', 'consumer', 'async', 'cloze'],
     concepts: ['dj-channels-realtime'],
   },
+  {
+    id: 'dj-channels-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DJ_CHANNELS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'This consumer is routed at `ws/rooms/<room>/` with the Redis channel layer. Ann and Ben open `ws/rooms/lobby/`, Cal opens `ws/rooms/kitchen/`, and then Ann sends the text `hi`. What does each client receive? The answer is three lines, one per client in the order Ann, Ben, Cal: the name, a colon, a space, then the text that client receives, or the word `nothing`.',
+    code: `from channels.generic.websocket import AsyncWebsocketConsumer
+
+class RoomConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.group = "room_" + self.scope["url_route"]["kwargs"]["room"]
+        await self.channel_layer.group_add(self.group, self.channel_name)
+        await self.accept()
+
+    async def receive(self, text_data):
+        await self.channel_layer.group_send(
+            self.group, {"type": "room.post", "text": text_data})
+
+    async def room_post(self, event):
+        await self.send(text_data=event["text"].upper())`,
+    expectedOutput: `Ann: HI
+Ben: HI
+Cal: nothing`,
+    explanation: 'Each socket gets its own consumer, and `connect` adds that consumer\'s `channel_name` to the group for its room, so Ann and Ben are in `room_lobby` and Cal is in `room_kitchen`. `group_send` delivers the event to every member of the group, the sender included, so Ann gets her own message back as well as Ben. Channels turns the event\'s `"type"` of `room.post` into a call to `room_post` on each member, which uppercases the text and sends it down that member\'s socket. Cal\'s group never sees the event. A chat that should not echo to the sender has to skip it in the handler, for example by putting the sender\'s `channel_name` in the event and comparing.',
+    hints: ['group_send reaches every channel in the group, including the one that sent it.', 'The "type" value with dots turned into underscores names the handler each member runs.'],
+    tags: ['channels', 'websocket', 'group_send', 'groups', 'predict'],
+    concepts: ['dj-channels-realtime'],
+  },
 ];

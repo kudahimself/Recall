@@ -806,8 +806,8 @@ export const backendOrderedQuestions: Question[] = [
 
   // ===== Topic.DJ_CHANNELS =====
   q('be-infra-channels-1'), q('dj-channels-gap-1'), q('dj-channels-cloze-1'), q('be-infra-channels-3'),
-  q('be-infra-channels-4'), q('dj-channels-groupsend-cloze-1'), q('be-infra-channels-2'),
+  q('be-infra-channels-4'), q('dj-channels-groupsend-cloze-1'), q('be-infra-channels-2'), q('dj-channels-predict-1'),
 
   // ===== Topic.DJ_MONITORING =====
-  q('be-infra-monitoring-3'), q('be-infra-monitoring-1'), q('dj-monitoring-extra-cloze-1'), q('be-infra-monitoring-2'),
+  q('be-infra-monitoring-3'), q('be-infra-monitoring-1'), q('dj-monitoring-extra-cloze-1'), q('be-infra-monitoring-2'), q('dj-monitoring-predict-1'),
 ];

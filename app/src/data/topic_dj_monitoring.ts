@@ -129,4 +129,33 @@ class OrderView(APIView):
       tags: ['sentry', 'error-tracking', 'monitoring', 'production'],
       concepts: ['dj-monitoring'],
     },
+  {
+    id: 'dj-monitoring-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_MONITORING,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'This script sets up a logger by hand, the way a Django `LOGGING` setting does, with one handler writing to standard output. What does it print? Write one line per log record that reaches the output, in order, laid out as the formatter\'s format string lays it out.',
+    code: `import logging
+import sys
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter("%(levelname)s order=%(order_id)s %(message)s"))
+log = logging.getLogger("shop")
+log.addHandler(handler)
+log.setLevel(logging.INFO)
+
+log.debug("cart loaded", extra={"order_id": 7})
+log.info("payment sent", extra={"order_id": 7})
+log.warning("retry %d of 3", 2, extra={"order_id": 7})
+log.error("card declined", extra={"order_id": 8})`,
+    expectedOutput: `INFO order=7 payment sent
+WARNING order=7 retry 2 of 3
+ERROR order=8 card declined`,
+    explanation: 'A logger set to `INFO` drops every record below that level, so the `debug` call prints nothing. The levels run DEBUG, INFO, WARNING, ERROR, CRITICAL, and everything from INFO up gets through. Each key in `extra` becomes an attribute of the record, which is why the format string can name `%(order_id)s`. The `%d` in the warning is filled from the argument `2` only when the record is actually emitted, which is why loggers take arguments rather than a pre-built f-string. In production the same level threshold is what keeps DEBUG noise out while INFO and above still reach the log store.',
+    hints: ['setLevel(logging.INFO) drops records whose level is below INFO.', 'Keys passed in extra become fields the format string can use.'],
+    tags: ['logging', 'log-levels', 'structured-logging', 'monitoring', 'predict'],
+    concepts: ['py-logging-config', 'dj-monitoring'],
+  },
 ];
