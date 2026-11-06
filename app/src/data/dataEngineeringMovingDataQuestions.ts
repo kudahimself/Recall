@@ -1707,7 +1707,7 @@ const backfills: Question[] = [
     topic: Topic.DE_BACKFILLS,
     course: DE,
     question:
-      'A bug counted refunds as sales. A backfill re-runs the fixed daily job for 2026-11-01 to 11-03, replacing each day of fact_sales from raw_sales. monthly_summary is built by a separate job that runs on the 1st of each month, and it was built from the wrong rows.\n' +
+      'A bug counted refunds as sales. A backfill re-runs the fixed daily job for 2026-11-01 to 11-03, replacing each day of fact_sales from raw_sales. monthly_summary was built by a separate monthly job after 2026-11-01 to 11-03 were loaded, so it was built from the wrong rows, and the backfill does not re-run it.\n' +
       'After the backfill, how much higher is monthly_summary\'s November total than the November sum of fact_sales?',
     tables: [
       table('raw_sales (fixed job keeps sales only)', ['sale_date', 'kind', 'amount'], [
