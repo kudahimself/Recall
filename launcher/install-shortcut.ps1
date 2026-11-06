@@ -4,7 +4,7 @@ param(
   [Parameter(Mandatory=$true)][string]$Distro,
   [Parameter(Mandatory=$true)][string]$StartScript,
   [Parameter(Mandatory=$true)][int]$Port,
-  [Parameter(Mandatory=$true)][string]$LogoPng        # Windows path to app/public/logo192.png
+  [Parameter(Mandatory=$true)][string]$LogoPng        # Windows path to app/public/icon-192.png
 )
 $ErrorActionPreference = 'Stop'
 $dir = Join-Path $env:LOCALAPPDATA 'Recall'

@@ -6,4 +6,4 @@ HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 chmod +x "$HERE"/*.sh
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$HERE/install-shortcut.ps1")" \
   -Distro "$WSL_DISTRO_NAME" -StartScript "$HERE/recall-start.sh" -Port "$(tr -d '[:space:]' < "$HERE/port")" \
-  -LogoPng "$(wslpath -w "$HERE/../app/public/logo192.png")"
+  -LogoPng "$(wslpath -w "$HERE/../app/public/icon-192.png")"

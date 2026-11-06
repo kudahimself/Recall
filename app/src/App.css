@@ -53,29 +53,6 @@ body {
   z-index: 10;
 }
 
-.app-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-family: var(--font-display);
-  font-weight: var(--weight-semibold);
-  font-size: var(--fs-xl);
-  letter-spacing: -0.01em;
-  color: var(--text);
-  user-select: none;
-  flex-shrink: 0;
-}
-
-.app-brand-mark {
-  width: var(--icon-l);
-  height: var(--icon-l);
-  color: var(--accent-text);
-}
-
-.app-brand-name {
-  color: var(--text);
-}
-
 /* Header left section */
 .header-left {
   display: flex;
@@ -1257,8 +1234,6 @@ a:hover { color: var(--highlight); }
     padding: 0 16px;
     gap: 12px;
   }
-
-  .app-brand-name { display: none; }
 
   .home-view { padding: 28px 16px 56px; gap: 24px; }
   .course-hero { padding: 24px 20px; }

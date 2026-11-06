@@ -102,6 +102,11 @@
   --on-accent-soft: rgba(12, 12, 20, 0.24);
   --on-accent-line: rgba(255, 255, 255, 0.28);
 
+  /* ---- Logo: the graphite-yellow elephant tile; never a button or text colour ---- */
+  --brand: #e8c547;       /* logo tile */
+  --on-brand: #16130a;    /* mark on the tile, 11.1:1 */
+  --logo-tile: 28px;      /* header tile; corner radius is 22% of it, as in the icons */
+
   /* ---- Feedback ---- */
   --success: #4ade80;
   --success-soft: rgba(74, 222, 128, 0.1);

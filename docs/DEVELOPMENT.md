@@ -386,6 +386,7 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 - `QuestionShell` - the frame of a question: prompt, answer area, hint, the verdict (`FeedbackBanner`) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus.
 - `OptionList` - options (multiple choice, choose and justify), code lines (spot the flaw) or checkboxes (explain's key points), with 1-9 keys and word-and-icon marks after grading
 - Multiple choice, predict output and the four decision and design types render on `QuestionShell`; cloze, Parsons and coding still use their own markup, with `StyledButton`, `StyledBadge` and `InlineCode.tsx` (a thin wrapper over `InlineText`).
+- `Logo` - the header's elephant tile (`public/icon.svg`) and "Recall" wordmark
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
 
 **Keyboard:** `src/keyboard/shortcuts.ts` is the one shortcut registry; `useShortcut` binds a key from it, and the `?` overlay (`ShortcutHelp.tsx`) is generated from it.
@@ -395,6 +396,7 @@ Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from i
 Direction A "Night": dark purple, one brand fill for primary buttons in every course (a course's hue is only a marker).
 Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css`; component CSS uses tokens only (`app/scripts/check-css-tokens.js`), and old variable names are aliased there for the screens not yet moved.
 Fonts are IBM Plex Sans and Mono, self-hosted through `@fontsource`.
+The logo is the yellow elephant tile (`--brand` / `--on-brand` in `tokens.css`, never a button or text colour); `src/brand/recall-mark.svg` is its one source and `npm run build:icons` (`scripts/build-icons.js`) regenerates every icon in `public/` from it.
 Layouts target a desktop or laptop viewport without page scrolling.
 
 **Monaco Editor config:**
