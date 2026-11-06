@@ -56,7 +56,7 @@ export const dj_monitoring_questions: Question[] = [
       topic: Topic.DJ_MONITORING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a Django REST Framework API view `OrderView` that uses a configured logger named `"myapp"` to record messages. Inside the `post` method, log an `"Order creation started"` info message with `extra` parameters for `user_id` (from `request.user.id`) and `items_count` (the length of the items list in request data). Then try to call `create_order(request.user, request.data["items"])`. If it succeeds, log an `"Order created successfully"` info message with the `order_id` in `extra` and return a 201 response. If any exception is raised, log an `"Order creation failed"` error message with `user_id` and the exception string in `extra`, ensuring the full stack trace is included (`exc_info=True`), and return a 400 response.',
+      question: 'Write a DRF `APIView` named `OrderView` that logs through the `"myapp"` logger from the starter. Assume `create_order(user, items)` already exists: it returns an order with an `id`, or raises an exception. In `post`, first log the INFO message "Order creation started" with `extra` fields `user_id` (the requesting user\'s id) and `items_count` (how many items the request data holds under "items"). Then pass the user and those items to `create_order`. If it succeeds, log the INFO message "Order created successfully" with `extra` fields `user_id` and `order_id`, and return a 201 response whose body holds the new `order_id`. If it raises any exception, log "Order creation failed" at ERROR level with the traceback attached and `extra` fields `user_id` and `error` (the exception as a string), and return a 400 response whose body maps `error` to "Order failed".',
       starterCode: `import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -99,15 +99,40 @@ class OrderView(APIView):
                 extra={"user_id": request.user.id, "error": str(e)},
                 exc_info=True,  # includes full stack trace
             )
-            return Response({"error": "Order failed"}, status=400)`,
-      explanation: 'Django\'s LOGGING dict configures Python\'s built-in logging module. The "extra" dict in logger calls adds context that appears in the formatted output. exc_info=True captures the full stack trace, which is critical for debugging production errors.',
+            return Response({"error": "Order failed"}, status=400)
+# OR
+import logging
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+logger = logging.getLogger("myapp")
+
+class OrderView(APIView):
+    def post(self, request):
+        items = request.data["items"]
+        logger.info("Order creation started", extra={"user_id": request.user.id, "items_count": len(items)})
+        try:
+            order = create_order(request.user, items)
+        except Exception as e:
+            logger.exception("Order creation failed", extra={"user_id": request.user.id, "error": str(e)})
+            return Response({"error": "Order failed"}, status=400)
+        logger.info("Order created successfully", extra={"user_id": request.user.id, "order_id": order.id})
+        return Response({"order_id": order.id}, status=201)`,
+      requires: [
+        /["']items_count["']/,
+        /["']order_id["']/,
+        /exc_info\s*=\s*True|logger\.exception\(/,
+        /status\s*=\s*(?:201\b|status\.HTTP_201_CREATED)/,
+        /status\s*=\s*(?:400\b|status\.HTTP_400_BAD_REQUEST)/,
+      ],
+      explanation: 'Each key in `extra` becomes a field on the log record, so a JSON formatter can write `user_id`, `items_count` or `order_id` as separate keys and the log store can find every failure for one user, instead of a search through message text. `exc_info=True` attaches the traceback to the ERROR record; `logger.exception(...)` inside the `except` does exactly the same at ERROR level, so either form is right, while a bare `logger.error(f"...{e}")` keeps one line and loses where it failed. The messages stay fixed strings, so every failure groups under the same message. One caution for real code: catching every `Exception` and answering 400 turns a server bug into a client error; catch the specific error `create_order` raises for bad input and let anything else become a 500 that Sentry reports.',
       hints: [
         'logging.getLogger("myapp") gets the logger configured in settings',
-        'exc_info=True includes the stack trace in the log entry',
+        'exc_info=True includes the stack trace in the log entry; logger.exception(...) inside an except does the same at ERROR',
       ],
       tieredHints: {
         apiSignature: 'logger.error(msg, *args, exc_info=None, extra=None, stack_info=False)',
-        skeleton: 'import logging\nfrom rest_framework.views import ____\nfrom rest_framework.response import ____\n\nlogger = logging.____("myapp")\n\nclass OrderView(____):\n    def ____(self, ____):\n        logger.____(\n            "Order creation started",\n            ____={"user_id": ____.user.id, "items_count": ____(____.data.get("items", []))},\n        )\n\n        ____:\n            ____ = ____(____.user, ____.data["items"])\n            logger.____(\n                "Order created successfully",\n                ____={"user_id": ____.user.id, "order_id": ____.id},\n            )\n            return ____({"order_id": ____.id}, status=201)\n\n        ____ Exception as ____:\n            logger.____(\n                "Order creation failed",\n                ____={"user_id": ____.user.id, "error": str(____)},\n                ____=True,\n            )\n            return ____({"error": "Order failed"}, status=400)',
+        skeleton: 'import logging\nfrom rest_framework.views import APIView\nfrom rest_framework.response import Response\n\nlogger = logging.getLogger("myapp")\n\nclass OrderView(APIView):\n    def post(self, request):\n        logger.____("Order creation started", ____={...})\n\n        try:\n            order = ____\n            logger.____("Order created successfully", ____={...})\n            return ____\n\n        except Exception as e:\n            logger.____("Order creation failed", ____={...}, ____)\n            return ____',
       },
       tags: ['logging', 'django', 'monitoring', 'error-handling'],
       concepts: ['py-logging-config', 'dj-monitoring', 'py-exception-hierarchy'],
@@ -125,7 +150,7 @@ class OrderView(APIView):
         { id: 'c', text: 'A drop-in replacement for Django\'s logging module that routes every log record to a hosted dashboard', isCorrect: false },
         { id: 'd', text: 'It captures unhandled exceptions with stack traces and request context, groups duplicates, and alerts on new issues — set it up before launch', isCorrect: true },
       ],
-      explanation: 'Without Sentry, unhandled exceptions in production are silent — users see a 500 error page and you never know it happened. Sentry captures every unhandled exception with: the full stack trace, the HTTP request that caused it, which user was affected, browser/OS info, and breadcrumbs (recent events leading to the error). It groups duplicate errors so "NullPointerException in checkout" appears once with a count, not as thousands of individual alerts. Setting it up takes 5 minutes: pip install sentry-sdk, add sentry_sdk.init() to settings.py. There is no reason to wait.',
+      explanation: 'Without error tracking, an unhandled exception in production shows the user a 500 page and leaves a traceback in a server log that nobody is reading. Sentry captures every unhandled exception with its full stack trace, the HTTP request that caused it, which user was affected and breadcrumbs (the recent log lines and events before it). It groups repeats, so a `KeyError` in checkout shows up as one issue with a count instead of thousands of alerts, and it alerts you when a new issue appears. It does not replace `logging`: your log calls still go to their handlers, and Sentry only turns ERROR records into events and keeps lower ones as breadcrumbs. Setup is `pip install sentry-sdk` and `sentry_sdk.init(dsn=...)` in settings, so do it before launch rather than after the first outage.',
       tags: ['sentry', 'error-tracking', 'monitoring', 'production'],
       concepts: ['dj-monitoring'],
     },
