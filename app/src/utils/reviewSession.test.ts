@@ -176,7 +176,7 @@ describe('the review list', () => {
     expect(startReviewSession(pool, state.p, state.store, {}, clock, { size: 30, reviewShare: 0.8 }).total).toBe(24);
   });
 
-  it('under filters serves a due family left out by the cap before showing nothing', () => {
+  it('under filters a due family left out by the cap waits for Keep going', () => {
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     const firsts: Question[] = [];
     for (const q of pool) {
@@ -189,7 +189,8 @@ describe('the review list', () => {
     const left = firsts.find(q => !session.queue.some(e => e.family === familyOf(q)))!;
     expect(left).toBeDefined();
     const filtered = pool.filter(q => familyOf(q) === familyOf(left) && state.p.questionsAttempted.has(q.id));
-    const pick = selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock);
+    expect(selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+    const pick = selectSessionQuestion(continueSession(session), filtered, pool, state.p, state.store, {}, undefined, clock);
     expect(pick?.question.id).toBe(left.id);
   });
 
@@ -302,7 +303,7 @@ describe('the bounded session', () => {
     expect(isSessionCurrent(session, NOW + DAY)).toBe(false);
   });
 
-  it('under filters the plan serves inside them, and practice past it comes from the same families, never the older selector', () => {
+  it('under filters the plan serves inside them, and practice past it comes only after Keep going, never from the older selector', () => {
     const legacy = jest.spyOn(SRS, 'selectNextQuestion');
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     let session = startReviewSession(pool, state.p, state.store, {}, clock);
@@ -325,7 +326,9 @@ describe('the bounded session', () => {
     answer(state, pick.question.id, clock, true);
     session = recordReviewAnswer(session, pick.question.id, true, pick.kind).session;
     const only = [pick.question, extra!];
-    expect(selectSessionQuestion(session, only, pool, state.p, state.store, {}, undefined, clock))
+    expect(isSessionDone(session)).toBe(false);
+    expect(selectSessionQuestion(session, only, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+    expect(selectSessionQuestion(continueSession(session), only, pool, state.p, state.store, {}, undefined, clock))
       .toEqual({ question: extra, kind: 'practice' });
     expect(selectSessionQuestion(session, [pick.question], pool, state.p, state.store, {}, undefined, clock)).toBeNull();
     expect(legacy).not.toHaveBeenCalled();

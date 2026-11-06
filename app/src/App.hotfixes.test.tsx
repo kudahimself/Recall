@@ -10,17 +10,17 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import App from './App';
 import { PROGRESS_KEY } from './utils/progressStorage';
 import { questions } from './data/questions';
-import { Course, QuestionType, Topic } from './types';
+import { Course, Difficulty, MultipleChoiceQuestion, QuestionType, Topic } from './types';
 import { LESSONS } from './data/lessons';
 import { LESSONS_KEY } from './utils/spacedRepetition';
 import { getCourseForTopic } from './utils/courseConfig';
 import { localDayKey, ReviewSession, serializeSessions } from './utils/reviewSession';
-import { MAX_REASKS_PER_SESSION, TODAY_SESSION_KEY, TODAY_SIZE_KEY } from './utils/spacedRepetition';
+import { TODAY_SESSION_KEY, TODAY_SIZE_KEY } from './utils/spacedRepetition';
 
 const NEXT = /next (question|exercise)|finish the lesson/i;
 
-function progressWith(answered: string[]) {
-  const t = Date.now() - 60_000;
+function progressWith(answered: string[], ago = 60_000) {
+  const t = Date.now() - ago;
   return JSON.stringify({
     questionsAttempted: answered,
     correctAnswers: answered,
@@ -31,6 +31,22 @@ function progressWith(answered: string[]) {
     repetitionQueue: {},
     masteredTopics: [],
   });
+}
+
+const plain = (text: string) => text.replace(/`/g, '');
+
+/** Answers the multiple-choice card on screen correctly and moves on. */
+async function answerShownMcq() {
+  await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+  const radios = screen.getAllByRole('radio');
+  const labels = radios.map(r => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
+  const shown = questions.find(q => q.type === QuestionType.MULTIPLE_CHOICE
+    && q.options.every(o => labels.some(l => l.includes(plain(o.text))))) as MultipleChoiceQuestion;
+  const right = shown.options.find(o => o.isCorrect)!;
+  fireEvent.click(radios[labels.findIndex(l => l.includes(plain(right.text)))]);
+  fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
+  fireEvent.click(await screen.findByRole('button', { name: NEXT }));
+  return shown;
 }
 
 const nav = (name: string) =>
@@ -223,26 +239,52 @@ describe('F7: filters', () => {
     localStorage.setItem('recall-dev-unlock-all', '1');
     localStorage.setItem(TODAY_SIZE_KEY, '10');
     localStorage.setItem(LESSONS_KEY, JSON.stringify(Object.fromEntries(LESSONS.map(l => [l.id, 1]))));
-    localStorage.setItem('recall-filters', JSON.stringify({ questionTypes: [QuestionType.MULTIPLE_CHOICE] }));
+    localStorage.setItem('recall-filters', JSON.stringify({
+      difficulties: [Difficulty.BEGINNER], questionTypes: [QuestionType.MULTIPLE_CHOICE],
+    }));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
 
     let answered = 0;
-    while (!screen.queryByText('Done for today') && answered < 40) {
-      await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
-      fireEvent.click(screen.getAllByRole('radio')[0]);
-      fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
-      fireEvent.click(await screen.findByRole('button', { name: NEXT }));
+    while (!screen.queryByText(/Done for today|Nothing left today/) && answered < 40) {
+      await answerShownMcq();
       answered += 1;
-      await screen.findByText(/Done for today|Submit Answer/, {}, { timeout: 3000 }).catch(() => null);
     }
 
     expect(screen.getByText('Done for today')).toBeInTheDocument();
-    expect(answered).toBeGreaterThanOrEqual(10);
-    expect(answered).toBeLessThanOrEqual(10 + MAX_REASKS_PER_SESSION);
-    expect(screen.queryByText(/Nothing left today for these filters/)).toBeNull();
+    expect(answered).toBe(10);
     fireEvent.click(screen.getByRole('button', { name: /Keep going/ }));
     expect(await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 })).toBeInTheDocument();
+  }, 30_000);
+
+  test('with reviews due in a topic outside the filter, fresh slots used up inside it end on Nothing left today', async () => {
+    const sql = questions.filter(q => getCourseForTopic(q.topic) === Course.SQL);
+    const select = sql.filter(q => q.topic === Topic.TSQL_SELECT);
+    const others = Array.from(new Set(sql.map(q => q.topic))).filter(t => t !== Topic.TSQL_SELECT);
+    localStorage.setItem('recall-active-course', 'sql');
+    localStorage.setItem('recall-dev-unlock-all', '1');
+    localStorage.setItem(TODAY_SIZE_KEY, '10');
+    localStorage.setItem(LESSONS_KEY, JSON.stringify(Object.fromEntries(LESSONS.map(l => [l.id, 1]))));
+    localStorage.setItem(PROGRESS_KEY, progressWith(select.map(q => q.id), 40 * 24 * 3600_000));
+    localStorage.setItem('recall-filters', JSON.stringify({
+      topics: others, difficulties: [Difficulty.BEGINNER], questionTypes: [QuestionType.MULTIPLE_CHOICE],
+    }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
+
+    const served: string[] = [];
+    while (!screen.queryByText(/Done for today|Nothing left today/) && served.length < 40) {
+      served.push((await answerShownMcq()).topic);
+    }
+
+    expect(screen.getByText(/Nothing left today for these filters/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+    expect(served.length).toBeGreaterThan(0);
+    expect(served.length).toBeLessThanOrEqual(10);
+    expect(served).not.toContain(Topic.TSQL_SELECT);
+    const session = JSON.parse(localStorage.getItem(TODAY_SESSION_KEY)!)[Course.SQL];
+    expect(session.freshLeft).toBe(0);
+    expect(session.queue.length).toBeGreaterThan(0);
   }, 30_000);
 
   test('a filtered session with nothing servable even unfiltered ends on the summary', async () => {
@@ -269,8 +311,7 @@ describe('F7: filters', () => {
       topics: [Topic.TSQL_SELECT], difficulties: ['beginner'], questionTypes: ['parsons'],
     }));
     render(<App />);
-    const tiles = screen.getByRole('heading', { name: 'Switch course' }).closest('section')!;
-    fireEvent.click(within(tiles).getByRole('button', { name: /Backend Engineering/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Backend Engineering/ })[0]);
 
     const saved = JSON.parse(localStorage.getItem('recall-filters')!);
     expect(saved.topics).toEqual(expect.arrayContaining([Topic.PY_DATACLASSES, Topic.TSQL_SELECT]));
