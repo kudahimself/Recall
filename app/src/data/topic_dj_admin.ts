@@ -20,7 +20,7 @@ export const dj_admin_questions: Question[] = [
       topic: Topic.DJ_ADMIN,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Register Article in admin with title and status shown in the changelist, and let admins filter by status.',
+      question: 'Register Article in the admin with title, status and created_at as changelist columns, a sidebar filter on status, and a search box that matches on title. Fill in the three option names.',
       template: `from django.contrib import admin
 from .models import Article
 
@@ -31,7 +31,7 @@ class ArticleAdmin(admin.ModelAdmin):
     ___ = ("title",)`,
       blanks: ['list_display', 'list_filter', 'search_fields'],
       solution: 'from django.contrib import admin\nfrom .models import Article\n\n@admin.register(Article)\nclass ArticleAdmin(admin.ModelAdmin):\n    list_display = ("title", "status", "created_at")\n    list_filter = ("status",)\n    search_fields = ("title",)',
-      explanation: '`list_display` controls the columns shown in the changelist. `list_filter` adds the right-side filter sidebar. `search_fields` powers the top search box (uses LIKE / icontains). Trailing comma on single-element tuples — `("status",)` is a tuple, `("status")` is just a string.',
+      explanation: '`list_display` controls the columns shown in the changelist. `list_filter` adds the right-side filter sidebar. `search_fields` powers the top search box (uses LIKE / icontains). Trailing comma on single-element tuples: `("status",)` is a tuple, `("status")` is just a string.',
       hints: ['list_display = columns', 'list_filter = sidebar filter', 'Trailing comma for single-element tuple'],
       tags: ['django', 'admin', 'ModelAdmin', 'cloze'],
       concepts: ['dj-admin'],
@@ -69,13 +69,13 @@ print(str(Article(title="Hello")))`,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: `Build an \`ArticleAdmin\` that combines four production patterns:
-  
-  1. Inline editing of related \`Comment\` rows beneath each Article (use a TabularInline).
-  2. A custom admin action \`mark_published\` that bulk-flips selected articles' status to "published". The action must surface a success message via \`self.message_user(request, ...)\`.
-  3. \`get_queryset\` overridden so non-superusers only see articles they authored (multi-tenant safety).
-  4. \`list_display\` showing title, author, and a custom method \`comment_count\` (annotated via the queryset, not computed in Python per row).
-  
-  \`Comment\` has a ForeignKey \`article\` to Article. \`Article\` has \`author\` (FK to User), \`title\`, \`status\`.`,
+
+1. Inline editing of related \`Comment\` rows beneath each Article (use a TabularInline named \`CommentInline\`, with no blank rows for new comments).
+2. A custom admin action \`mark_published\` that bulk-flips selected articles' status to "published". The action must surface a success message via \`self.message_user(request, ...)\`.
+3. \`get_queryset\` overridden so non-superusers only see articles they authored (multi-tenant safety).
+4. \`list_display\` showing title, author, status and a custom method \`comment_count\` (annotated via the queryset, not computed in Python per row, and sortable by that annotation).
+
+\`Comment\` has a ForeignKey \`article\` to Article. \`Article\` has \`author\` (FK to User), \`title\`, \`status\`.`,
       starterCode: `from django.contrib import admin
 from django.db.models import Count
 from .models import Article, Comment
@@ -117,7 +117,7 @@ class ArticleAdmin(admin.ModelAdmin):
     def mark_published(self, request, queryset):
         updated = queryset.update(status="published")
         self.message_user(request, f"Marked {updated} articles as published")`,
-      explanation: 'Four primitives in one ModelAdmin. `TabularInline` shows related rows in a compact table beneath the parent; `extra=0` hides blank "create new" rows. The annotated count goes through `get_queryset` so the changelist column comes from the SQL aggregate (one query for all rows) — computing it in `comment_count(self, obj)` via `obj.comment_set.count()` would be N+1. `@admin.display(ordering=...)` lets the column header sort by the annotation. The `actions = [...]` list pairs with `@admin.action`-decorated methods. `get_queryset` filtered by `request.user` is the key multi-tenant guard — without it, every staff user sees every row.',
+      explanation: 'Four primitives in one ModelAdmin. `TabularInline` shows related rows in a compact table beneath the parent; `extra=0` hides blank "create new" rows. The annotated count goes through `get_queryset` so the changelist column comes from the SQL aggregate (one query for all rows); computing it in `comment_count(self, obj)` via `obj.comment_set.count()` would be N+1. `@admin.display(ordering=...)` lets the column header sort by the annotation. The `actions = [...]` list pairs with `@admin.action`-decorated methods. `get_queryset` filtered by `request.user` is the key multi-tenant guard: without it, every staff user sees every row.',
       hints: [
         'TabularInline.extra = 0 hides blank create-rows',
         'Annotate in get_queryset; surface via a display method',
@@ -283,7 +283,7 @@ class PostAdmin(admin.ModelAdmin):
       topic: Topic.DJ_ADMIN,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the inline base class and the attribute that shows one blank row for adding a new Comment.',
+      question: 'Fill in the inline base class that lays the comments out as a compact table (one row per Comment), and the attribute that shows one blank row for adding a new Comment.',
       template: `from django.contrib import admin
 from .models import Post, Comment
 
@@ -358,17 +358,17 @@ class PostAdmin(admin.____):
       topic: Topic.DJ_ADMIN,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the decorator that labels this bulk action, and how it is exposed on PostAdmin.',
-      template: `@admin.___(description="Mark selected as published")
-def publish(self, request, queryset):
-    queryset.update(is_published=True)
+      question: 'Fill in the attribute that exposes the bulk action on PostAdmin by name, and the decorator that labels it in the dropdown.',
+      template: `class PostAdmin(admin.ModelAdmin):
+    ___ = ["publish"]
 
-class PostAdmin(admin.ModelAdmin):
-    ___ = ["publish"]`,
-      blanks: ['action', 'actions'],
-      solution: '@admin.action(description="Mark selected as published")\ndef publish(self, request, queryset):\n    queryset.update(is_published=True)\n\nclass PostAdmin(admin.ModelAdmin):\n    actions = ["publish"]',
-      explanation: '`@admin.action(description=...)` sets the label shown in the admin\'s action dropdown. The method itself always takes `(self, request, queryset)`. Adding its name to the `actions` list on the ModelAdmin exposes it in that dropdown.',
-      hints: ['Decorator sets the dropdown label', 'List attribute exposing the action by name'],
+    @admin.___(description="Mark selected as published")
+    def publish(self, request, queryset):
+        queryset.update(is_published=True)`,
+      blanks: ['actions', 'action'],
+      solution: 'class PostAdmin(admin.ModelAdmin):\n    actions = ["publish"]\n\n    @admin.action(description="Mark selected as published")\n    def publish(self, request, queryset):\n        queryset.update(is_published=True)',
+      explanation: '`@admin.action(description=...)` sets the label shown in the admin\'s action dropdown. The method always takes `(self, request, queryset)`. Adding its name to the `actions` list on the ModelAdmin exposes it in that dropdown; a name in `actions` is looked up as a method of the ModelAdmin, so the action lives inside the class (a function outside it would have to be listed as the function itself, `actions = [publish]`).',
+      hints: ['List attribute exposing the action by name', 'Decorator sets the dropdown label'],
       tags: ['django', 'admin', 'actions', 'cloze'],
       concepts: ['dj-admin'],
     },

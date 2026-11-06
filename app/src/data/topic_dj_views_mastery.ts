@@ -43,7 +43,7 @@ export const dj_views_mastery_questions: Question[] = [
       topic: Topic.DJ_VIEWS_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A GET request hits this view. What is printed, and what status is returned?',
+      question: 'A GET request hits this view. What does this print? Give every printed line in order (the last line is the status code).',
       code: `from django.http import HttpResponse
 from django.views import View
 
@@ -76,7 +76,7 @@ after
       topic: Topic.DJ_VIEWS_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'A GET request hits this CBV, which only implements POST and restricts its verbs. What status does the client see?',
+      question: 'A GET request hits this CBV, which only implements POST and restricts its verbs. What status code does the client see? Type the number.',
       code: `from django.http import HttpResponse
 from django.views import View
 
@@ -89,7 +89,7 @@ class OnlyPost(View):
 response = OnlyPost.as_view()(get_request)   # get_request.method == "GET"
 print(response.status_code)`,
       expectedOutput: `405`,
-      explanation: '`dispatch()` checks the verb against `http_method_names` *before* dispatching. "get" is not in the list, so it calls `http_method_not_allowed()`, which returns `HttpResponseNotAllowed` — status **405**, with an `Allow: POST` header. The absence of a `get()` method is moot: the verb is rejected at the gate.',
+      explanation: '`dispatch()` checks the verb against `http_method_names` *before* dispatching. "get" is not in the list, so it calls `http_method_not_allowed()`, which returns `HttpResponseNotAllowed` - status **405**, with an `Allow: POST` header. The absence of a `get()` method is moot: the verb is rejected at the gate.',
       hints: ['http_method_names is checked in dispatch()', 'Disallowed verb → 405'],
       tags: ['django', 'views', 'CBV', 'http_method_names', '405', 'predict'],
       concepts: ['dj-view-patterns'],
@@ -124,17 +124,16 @@ print(response.status_code)`,
       topic: Topic.DJ_VIEWS_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Apply a function decorator (`cache_page`) to an entire CBV by wrapping its dispatch entry point. Fill the adapter helper.',
-      template: `from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
+      question: 'Apply a function decorator (`cache_page`) to an entire CBV by wrapping its dispatch entry point. Fill in the adapter helper (its import is left out so it does not give the answer away).',
+      template: `from django.views.decorators.cache import cache_page
 from django.views.generic import ListView
 
 @___(cache_page(60), name="dispatch")
 class ArticleListView(ListView):
     model = Article`,
       blanks: ['method_decorator'],
-      solution: 'from django.utils.decorators import method_decorator\nfrom django.views.decorators.cache import cache_page\nfrom django.views.generic import ListView\n\n@method_decorator(cache_page(60), name="dispatch")\nclass ArticleListView(ListView):\n    model = Article',
-      explanation: '`method_decorator(decorator, name="dispatch")` adapts the function decorator `cache_page(60)` so it wraps the view\'s `dispatch` method — caching every request the view handles.',
+      solution: 'from django.views.decorators.cache import cache_page\nfrom django.views.generic import ListView\n\n@method_decorator(cache_page(60), name="dispatch")\nclass ArticleListView(ListView):\n    model = Article',
+      explanation: '`method_decorator(decorator, name="dispatch")` (imported from `django.utils.decorators`) adapts the function decorator `cache_page(60)` so it wraps the view\'s `dispatch` method - caching every request the view handles.',
       hints: ['The helper that adapts a function decorator for a method', 'name="dispatch" targets every verb'],
       tags: ['django', 'views', 'CBV', 'method_decorator', 'cache_page', 'cloze'],
       concepts: ['dj-view-patterns'],
@@ -147,9 +146,8 @@ class ArticleListView(ListView):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'You have a class-based `ReportView` (a subclass of Django\'s template-rendering generic view, template `"report.html"`). Apply view-level caching of 5 minutes (300 seconds) to the whole view by decorating its request-dispatch entry point with the cache decorator, using the helper that adapts a function decorator for use on a class. Show the class with the decorator applied.',
-      starterCode: `from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
-from django.views.generic import TemplateView
+      starterCode: `# ReportView: a template-rendering generic view for "report.html",
+# cached for 300 seconds on every request it handles.
 `,
       testCases: [
         {
@@ -167,7 +165,7 @@ class ReportView(TemplateView):
     template_name = "report.html"`,
       tieredHints: {
         apiSignature: '@method_decorator(decorator, name="dispatch")',
-        skeleton: 'from django.utils.decorators import method_decorator\nfrom django.views.decorators.cache import cache_page\nfrom django.views.generic import TemplateView\n\n@____(____(____), name="____")\nclass ____(____):\n    ____ = "report.html"',
+        skeleton: 'from django.utils.decorators import ____\nfrom django.views.decorators.cache import ____\nfrom django.views.generic import ____\n\n@____(____(____), name="____")\nclass ____(____):\n    ____ = "report.html"',
       },
       explanation: '`cache_page` is a function-view decorator, so it cannot wrap a class directly. `method_decorator(cache_page(300), name="dispatch")` adapts it to wrap `dispatch`, caching the rendered response for 300 seconds across all verbs the view handles.',
       hints: [
@@ -228,9 +226,8 @@ class ReportView(TemplateView):
       topic: Topic.DJ_VIEWS_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Stream a CSV from a generator so the whole file never sits in memory. Fill the response class.',
-      template: `from django.http import StreamingHttpResponse
-from .models import Item
+      question: 'Stream a CSV from a generator so the whole file never sits in memory. Fill in the response class (its import is left out so it does not give the answer away).',
+      template: `from .models import Item
 
 def export(request):
     def rows():
@@ -239,8 +236,8 @@ def export(request):
             yield f"{obj.id},{obj.label}\\n"
     return ___(rows(), content_type="text/csv")`,
       blanks: ['StreamingHttpResponse'],
-      solution: 'from django.http import StreamingHttpResponse\nfrom .models import Item\n\ndef export(request):\n    def rows():\n        yield "id,label\\n"\n        for obj in Item.objects.iterator():\n            yield f"{obj.id},{obj.label}\\n"\n    return StreamingHttpResponse(rows(), content_type="text/csv")',
-      explanation: '`StreamingHttpResponse(iterator, content_type=...)` streams each yielded string as it is produced. Pairing it with `.iterator()` on the queryset keeps the ORM from caching all rows, so memory stays flat regardless of table size.',
+      solution: 'from .models import Item\n\ndef export(request):\n    def rows():\n        yield "id,label\\n"\n        for obj in Item.objects.iterator():\n            yield f"{obj.id},{obj.label}\\n"\n    return StreamingHttpResponse(rows(), content_type="text/csv")',
+      explanation: '`StreamingHttpResponse(iterator, content_type=...)`, imported from `django.http`, streams each yielded string as it is produced. Pairing it with `.iterator()` on the queryset keeps the ORM from caching all rows, so memory stays flat regardless of table size.',
       hints: ['The response class that takes an iterator', 'Pair with queryset .iterator() for low memory'],
       tags: ['django', 'views', 'StreamingHttpResponse', 'streaming', 'cloze'],
       concepts: ['dj-view-patterns'],

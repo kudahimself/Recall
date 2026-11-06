@@ -95,7 +95,7 @@ fallback`,
       topic: Topic.DJ_CACHING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Implement two views: (1) a `product_list` view decorated with @cache_page to cache the entire response for 15 minutes, and (2) a `product_detail` view that uses low-level caching with cache.get/cache.set to cache individual product data for 10 minutes. If the cache misses, query the Product model and store the result.',
+      question: 'Implement two views: (1) a `product_list` view decorated with @cache_page to cache the entire response for 15 minutes, and (2) a `product_detail(request, pk)` view that uses low-level caching with cache.get/cache.set to cache individual product data for 10 minutes under the key `product_<pk>` (e.g. `product_7`). If the cache misses, load the Product by primary key, answering 404 when it does not exist (Product is in the app\'s `.models`), and store it. `product_list` renders `products/list.html` with every product as `products`; `product_detail` renders `products/detail.html` with `product`.',
       starterCode: ``,
       testCases: [
         {
@@ -136,7 +136,7 @@ def product_detail(request, pk):
         cache.____(cache_key, product, 60 * 10)
     return render(request, 'products/detail.html', {'product': product})`,
       },
-      explanation: '@cache_page(seconds) caches the entire HTTP response — both the rendered HTML and headers. It is best for pages that are identical for all users (anonymous views). The timeout of 60*15 = 900 seconds = 15 minutes. Low-level caching with cache.get()/cache.set() gives you control over what gets cached and for how long. The pattern "get from cache, if None query DB and set cache" is called cache-aside (or lazy-loading). This is preferred for detail views because you can cache individual objects with unique keys, invalidate specific entries when data changes, and avoid caching user-specific content accidentally.',
+      explanation: '@cache_page(seconds) caches the entire HTTP response, both the rendered HTML and the headers. It is best for pages that are identical for all users (anonymous views). The timeout of 60*15 = 900 seconds = 15 minutes. Low-level caching with cache.get()/cache.set() gives you control over what gets cached and for how long. The pattern "get from cache, if None query DB and set cache" is called cache-aside (or lazy-loading). This is preferred for detail views because you can cache individual objects with unique keys, invalidate specific entries when data changes, and avoid caching user-specific content accidentally.',
       hints: [
         '@cache_page takes seconds as argument: 60 * 15 = 15 minutes',
         'cache.get() returns None on cache miss',
@@ -296,7 +296,7 @@ value = cache.___("key", compute, timeout=60)`,
       topic: Topic.DJ_CACHING,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use `get_or_set` for the canonical "compute once, cache, reuse" pattern. Import `cache`. Write `get_site_stats()` that returns the value cached under `"site:stats"`, computing it via a `compute_stats` callable (called only on a cache miss) with a 300-second timeout. Subsequent calls within 5 min return the cached value.',
+      question: 'Use `get_or_set` for the canonical "compute once, cache, reuse" pattern. Import `cache`. Write `get_site_stats()` that returns the value cached under `"site:stats"`, computing it via a `compute_stats` callable (called only on a cache miss) with a 300-second timeout. Subsequent calls within 5 min return the cached value. Also define `compute_stats()`: it returns a dict with `"users"` (the number of `User` rows) and `"posts"` (the number of `Post` rows, with `Post` imported from the app\'s `.models`).',
       starterCode: `# Write get_site_stats(): return the value cached under "site:stats",
 # computing it via the compute_stats callable only on a cache miss,
 # with a 5-minute TTL.
@@ -331,34 +331,12 @@ def ____():
       },
       explanation: '`get_or_set(key, callable_or_value, timeout)` replaces the `v = cache.get(k); if v is None: v = compute(); cache.set(k, v); return v` dance. Passing a CALLABLE (not the value) means compute only runs on miss. Naming convention: colon-separated keys (`"site:stats"`, `"user:42:profile"`) for grep-ability. Watch out for thundering-herd (many misses at the same instant hammering the source); use `cache.add()` + external lock or libraries like `django-cacheops` for advanced patterns.',
       hints: [
-        'get_or_set(key, callable, timeout) — callable runs only on miss',
+        'get_or_set(key, callable, timeout) - the callable runs only on a miss',
         'Colon-separated keys for grep-friendly debugging',
-        'Thundering herd risk on popular keys — consider locking',
+        'Thundering herd risk on popular keys - consider locking',
       ],
       tags: ['django', 'caching', 'get_or_set', 'memoisation'],
       concepts: ['dj-caching'],
-    },
-  {
-      id: 'dj-caching-signal-cloze-1',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_CACHING,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Fill in the decorator that runs this function every time a Post is saved.',
-      template: `from django.db.models.signals import post_save
-from django.dispatch import receiver
-from .models import Post
-
-@___(post_save, sender=Post)
-def on_post_saved(sender, instance, **kwargs):
-    print(f"Saved: {instance}")`,
-      blanks: ['receiver'],
-      solution: 'from django.db.models.signals import post_save\nfrom django.dispatch import receiver\nfrom .models import Post\n\n@receiver(post_save, sender=Post)\ndef on_post_saved(sender, instance, **kwargs):\n    print(f"Saved: {instance}")',
-      explanation: '`@receiver(signal, sender=Model)` connects a function to a Django signal — here `post_save`, which fires after every `.save()` on `Post`. The function always accepts `sender`, `instance`, and `**kwargs` (the extra kwargs vary by signal).',
-      hints: ['Decorator that wires a function to a signal', 'sender= scopes it to one model'],
-      tags: ['django', 'signals', 'post_save', 'receiver', 'cloze'],
-      concepts: ['dj-signal-vs-override'],
     },
   {
       id: 'py-dj-cache-invalidate',

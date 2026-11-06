@@ -62,7 +62,7 @@ def notify_slack(sender, instance, created, **kwargs):
         '    def __init__(self):',
       ],
       solution: 'class LoggingMiddleware:\n    def __init__(self, get_response):\n        self.get_response = get_response\n\n    def __call__(self, request):\n        log.info(f"{request.method} {request.path}")\n        response = self.get_response(request)\n        log.info(f"-> {response.status_code}")\n        return response',
-      explanation: 'Modern Django middleware is a callable class: `__init__(self, get_response)` is called once per process; `__call__(self, request)` runs per-request. Code before `self.get_response(request)` is "view going in"; code after is "response going out". Old `process_request`/`process_response` style is deprecated.',
+      explanation: 'Modern Django middleware is a callable class: `__init__(self, get_response)` is called once per process; `__call__(self, request)` runs per-request. Code before `self.get_response(request)` is "view going in"; code after is "response going out". `process_request`/`process_response` are hooks of the old style (today they only work through `MiddlewareMixin`), and this class defines neither, so they are not part of the answer.',
       hints: ['__init__ takes get_response', '__call__ is per-request', 'Pre-view code → call get_response → post-view code'],
       tags: ['django', 'middleware', 'parsons'],
       concepts: ['dj-middleware-ordering'],
@@ -75,12 +75,12 @@ def notify_slack(sender, instance, created, **kwargs):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: `Build a middleware \`RequestContextMiddleware\` that combines three observability primitives:
-  
-  1. Generate a UUID4 per request and attach it to the request as \`request.correlation_id\`.
-  2. Time the request: measure the wall-clock duration of \`get_response(request)\`.
-  3. On the way out, inject \`X-Correlation-ID\` and \`X-Response-Time-Ms\` headers on the response (the latter as an integer, milliseconds rounded).
-  
-  Use the modern callable-class middleware pattern.`,
+
+1. Generate a UUID4 per request and attach it to the request as \`request.correlation_id\`.
+2. Time the request: measure the wall-clock duration of \`get_response(request)\`.
+3. On the way out, inject \`X-Correlation-ID\` and \`X-Response-Time-Ms\` headers on the response (the latter as whole milliseconds, with the fraction dropped).
+
+Use the modern callable-class middleware pattern.`,
       starterCode: `import time
 import uuid
 `,
@@ -111,7 +111,7 @@ class RequestContextMiddleware:
         apiSignature: 'uuid.uuid4().hex; time.perf_counter(); response[header] = str(val)',
         skeleton: 'import time\nimport uuid\n\n\nclass RequestContextMiddleware:\n    def ____(self, get_response):\n        self.get_response = ____\n\n    def ____(self, request):\n        request.____ = ____.____().____\n        start = ____.____()\n        response = self.____(request)\n        elapsed_ms = ____((____.____() - start) * ____)\n        response[____] = request.____  # "X-Correlation-ID"\n        response[____] = ____(elapsed_ms)  # "X-Response-Time-Ms"\n        return ____',
       },
-      explanation: 'Three primitives in one pass: pre-view code attaches state to `request`, the view runs in between, post-view code reads timing and stamps the response. `time.perf_counter()` (not `time.time()`) is monotonic and meant for measuring intervals — `time.time()` can jump backward on NTP adjustments. Response headers must be strings — Django\'s `HttpResponse` rejects non-string values silently in some places. Setting `correlation_id` on `request` makes it readable from views and downstream middleware (logging filters, especially).',
+      explanation: 'Three primitives in one pass: pre-view code attaches state to `request`, the view runs in between, post-view code reads timing and stamps the response. `time.perf_counter()` (not `time.time()`) is monotonic and meant for measuring intervals, while `time.time()` can jump backward on NTP adjustments. `int()` drops the fraction; `round()` would round to the nearest millisecond instead. Header values end up as strings: Django converts an int with `str()` when you assign it, and the reference does that explicitly. Setting `correlation_id` on `request` makes it readable from views and downstream middleware (logging filters, especially).',
       hints: [
         'Pre-view code → call get_response → post-view code',
         'time.perf_counter is monotonic; time.time can drift',
@@ -130,7 +130,7 @@ class RequestContextMiddleware:
       language: CodeLanguage.PYTHON,
       question: `An \`Order\` model needs a denormalised \`total\` field that's the sum of its \`OrderLine\` rows' \`subtotal\`. Recompute the total on every line save AND every line delete using signals, so reading \`order.total\` never requires aggregating at query time.
 
-  \`OrderLine\` has fields: \`order\` (ForeignKey to Order, on_delete=CASCADE), \`subtotal\` (DecimalField). Use \`Sum\` from django.db.models. The recomputed total should default to 0 when the order has no lines.`,
+\`OrderLine\` has fields: \`order\` (ForeignKey to Order, on_delete=CASCADE), \`subtotal\` (DecimalField). Use \`Sum\` from django.db.models. The recomputed total should default to 0 when the order has no lines.`,
       starterCode: `from decimal import Decimal
 from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
@@ -165,15 +165,29 @@ def line_saved(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=OrderLine)
 def line_deleted(sender, instance, **kwargs):
-    _recompute_total(instance.order_id)`,
+    _recompute_total(instance.order_id)
+# OR
+from decimal import Decimal
+from django.db.models import Sum
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from .models import Order, OrderLine
+
+
+@receiver([post_save, post_delete], sender=OrderLine)
+def recompute_order_total(sender, instance, **kwargs):
+    total = OrderLine.objects.filter(order_id=instance.order_id).aggregate(
+        s=Sum("subtotal"),
+    )["s"] or Decimal("0")
+    Order.objects.filter(pk=instance.order_id).update(total=total)`,
       tieredHints: {
         apiSignature: '@receiver(signal, sender=Model); aggregate(Sum(...)); queryset.update(...)',
         skeleton: 'from decimal import Decimal\nfrom django.db.models import Sum\nfrom django.db.models.signals import post_save, post_delete\nfrom django.dispatch import receiver\nfrom .models import Order, OrderLine\n\n\ndef ____(____):\n    total = ____.____.____(order_id=____).____(\n        s=____("____"),\n    )["____"] or ____("0")\n    ____.____.____(pk=____).____(total=____)\n\n\n@____(____, sender=____)\ndef ____(sender, ____, **kwargs):\n    ____(____.____)\n\n\n@____(____, sender=____)\ndef ____(sender, ____, **kwargs):\n    ____(____.____)',
       },
-      explanation: 'The denormalisation pattern: store the rolled-up value, recompute on every change to the source rows. `aggregate(s=Sum(...))` returns `{"s": value}` — `value` is `None` when no rows, hence `or Decimal("0")`. Use `Order.objects.filter(...).update(...)` (queryset update, single SQL) instead of `order.save()` — avoids triggering Order\'s own signals (which could cascade). Both `post_save` AND `post_delete` are needed: deleting a line otherwise leaves the cached total stale. `instance.order_id` (not `.order`) avoids one extra query to hydrate the FK.',
+      explanation: 'The denormalisation pattern: store the rolled-up value, recompute on every change to the source rows. `aggregate(s=Sum(...))` returns `{"s": value}`, and `value` is `None` when no rows, hence `or Decimal("0")`. Use `Order.objects.filter(...).update(...)` (queryset update, single SQL) instead of `order.save()`; it avoids triggering Order\'s own signals (which could cascade). Both `post_save` AND `post_delete` are needed: deleting a line otherwise leaves the cached total stale. `@receiver` also accepts a list, so `@receiver([post_save, post_delete], sender=OrderLine)` lets one handler serve both. `instance.order_id` (not `.order`) avoids one extra query to hydrate the FK.',
       hints: [
-        'aggregate returns dict — extract by key',
-        'Sum returns None if no rows — coalesce to 0',
+        'aggregate returns dict - extract by key',
+        'Sum returns None if no rows - coalesce to 0',
         'queryset.update() avoids triggering parent signals',
         'Both post_save AND post_delete needed',
         'instance.order_id avoids hydrating the FK',
@@ -212,10 +226,10 @@ def line_deleted(sender, instance, **kwargs):
       options: [
         { id: 'a', text: 'pre_save: validate/modify data before DB write. post_save: trigger side effects (emails, cache invalidation) after DB write. pre_delete: cleanup related data. m2m_changed: react to many-to-many relationship adds/removes.', isCorrect: true },
         { id: 'b', text: 'pre_save: runs before the form is rendered. post_save: runs after the HTTP response is sent. pre_delete: prevents deletion by returning False. m2m_changed: fires when a model\'s CharField is modified.', isCorrect: false },
-        { id: 'c', text: 'pre_save and post_save both fire after the database write — pre_save just fires first. pre_delete fires after deletion. m2m_changed only works with SQLite.', isCorrect: false },
+        { id: 'c', text: 'pre_save and post_save both fire after the database write; pre_save just fires first. pre_delete fires after deletion. m2m_changed only works with SQLite.', isCorrect: false },
         { id: 'd', text: 'All four signals are deprecated in Django 4+. Modern Django uses model methods like on_save() and on_delete() instead.', isCorrect: false },
       ],
-      explanation: 'pre_save fires before Model.save() hits the database — it\'s your last chance to modify field values (e.g., auto-generating slugs, normalizing data). post_save fires after the row is written to the database, making it safe for side effects that depend on the object having a primary key (sending notifications, creating related objects). The "created" kwarg tells you if it\'s a new instance or an update. pre_delete fires before deletion, useful for cleaning up files or external resources that CASCADE won\'t handle. m2m_changed fires when items are added/removed/cleared from a ManyToManyField via .add(), .remove(), or .clear(). A common gotcha: signal handlers run in the same transaction as the trigger, so a failure in your handler can roll back the original operation.',
+      explanation: 'pre_save fires before Model.save() hits the database; it\'s your last chance to modify field values (e.g., auto-generating slugs, normalizing data). post_save fires after the row is written to the database, making it safe for side effects that depend on the object having a primary key (sending notifications, creating related objects). The "created" kwarg tells you if it\'s a new instance or an update. pre_delete fires before deletion, useful for cleaning up files or external resources that CASCADE won\'t handle. m2m_changed fires when items are added/removed/cleared from a ManyToManyField via .add(), .remove(), or .clear(). A common gotcha: handlers run synchronously inside the caller\'s transaction, so when the save happens inside `atomic()` an exception in your handler rolls back the original write too (in plain autocommit the row is already committed and only the error propagates).',
       hints: [
         'pre_ signals fire before the database operation, post_ signals fire after',
         'm2m_changed relates to ManyToManyField operations',
@@ -320,36 +334,14 @@ class BlogConfig(AppConfig):
         apiSignature: 'class AppConfig; def ready(self)',
         skeleton: '# blog/apps.py\nfrom django.apps import AppConfig\n\nclass BlogConfig(____):\n    name = "blog"\n\n    def ____(self):\n        from . import ____  # noqa\n\n# blog/signals.py\n# @receiver(...) functions go here',
       },
-      explanation: 'Signals only fire if their `@receiver` decorators have been evaluated. Putting them at the top of `models.py` works but couples models to signal logic. Better: separate `signals.py`, imported in `AppConfig.ready()` so Django loads it automatically. `INSTALLED_APPS` must use the `AppConfig` path (`"blog.apps.BlogConfig"`) for `ready()` to run.',
+      explanation: 'Signals only fire if their `@receiver` decorators have been evaluated. Putting them at the top of `models.py` works but couples models to signal logic. Better: separate `signals.py`, imported in `AppConfig.ready()` so Django loads it automatically. With a single `AppConfig` subclass in `blog/apps.py`, Django uses it automatically when `INSTALLED_APPS` lists `"blog"` (since Django 3.2), so `ready()` runs; the full path `"blog.apps.BlogConfig"` is only needed to pick one of several configs.',
       hints: [
         'Signals must be imported at startup to be active',
         'Separate signals.py keeps models.py clean',
-        'INSTALLED_APPS needs the AppConfig path for ready() to run',
+        'A single AppConfig in apps.py is picked up automatically from INSTALLED_APPS',
       ],
       tags: ['django', 'signals', 'AppConfig', 'ready'],
       concepts: ['dj-signal-vs-override'],
-    },
-  {
-      id: 'py-dj-mw-what',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.DJ_SIGNALS_MW,
-      course: Course.BACKEND,
-      question: 'What is Django middleware?',
-      options: [
-        { id: 'a', text: 'The database driver layer that translates ORM queries into backend-specific SQL before execution', isCorrect: false },
-        { id: 'b', text: 'A library of template tags that run before each render to inject shared context variables', isCorrect: false },
-        { id: 'c', text: 'A pipeline of callables wrapping every request/response — each layer can modify the request going in and the response going out', isCorrect: true },
-        { id: 'd', text: 'Another name for class-based views, since both take a request and return a response object', isCorrect: false },
-      ],
-      explanation: 'Middleware is a Russian-doll architecture around views. Request flows top-to-bottom through `MIDDLEWARE` list; response flows bottom-to-top. `SecurityMiddleware` adds security headers; `SessionMiddleware` loads session; `AuthenticationMiddleware` sets `request.user`; `CsrfViewMiddleware` validates CSRF tokens; `CommonMiddleware` handles `APPEND_SLASH`. Order matters — session must load before auth so auth can read it.',
-      hints: [
-        'Request flows down; response flows up',
-        'Each MW sees request + response and can modify both',
-        'Order in MIDDLEWARE list is critical',
-      ],
-      tags: ['django', 'middleware', 'basics'],
-      concepts: ['dj-middleware-ordering'],
     },
   {
       id: 'py-dj-mw-custom',
