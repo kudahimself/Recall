@@ -1,7 +1,7 @@
 /**
  * Backend (Python) lessons, one per topic, in course order.
  *
- * Sections 1-9, Python Fundamentals through Python Mastery & Advanced: every
+ * Sections 1-10, Python Fundamentals through Real-time & Monitoring: every
  * topic.
  *
  * Prose keeps one sentence per source line (`lines`); check-lessons.js runs
@@ -5692,6 +5692,228 @@ returns desk
       'py-modern-parsons-10',
       'py-modern-predict-1',
       'be-infra-modern-2',
+    ],
+  },
+  {
+    id: 'dj_channels/1',
+    topicKeys: [Topic.DJ_CHANNELS],
+    step: 1,
+    title: 'WebSockets (Django Channels)',
+    idea: [
+      lines(
+        "An HTTP request ends once the response is sent, so the server cannot speak until the client asks again.",
+        "A WebSocket stays open after its handshake, and either side can send at any time, which chat, live notifications and dashboards need.",
+        "Django Channels adds WebSockets to Django: the project runs under an ASGI server such as Daphne or Uvicorn, and `asgi.py` routes `http` to the usual views and `websocket` to a `URLRouter` of consumers.",
+      ),
+      lines(
+        "A consumer is to a socket what a view is to a request; each open socket gets its own.",
+        "Its methods follow the socket's life: `connect` accepts with `self.accept()` or refuses with `self.close()`, `receive` runs for each client message, and `disconnect` runs when it closes.",
+        "URL parts are in `self.scope[\"url_route\"][\"kwargs\"]`, and `AuthMiddlewareStack` puts the user in `self.scope[\"user\"]`.",
+        "`AsyncJsonWebsocketConsumer` decodes and encodes JSON for you, with `receive_json` and `send_json`.",
+      ),
+      lines(
+        "Consumers reach each other through the channel layer.",
+        "Each has a unique `self.channel_name`, `group_add(group, channel_name)` joins a named group, `group_discard` leaves it, and `group_send(group, event)` delivers the event to every member, the sender included.",
+        "The event's `\"type\"`, with dots turned into underscores, names the method each member runs: `\"chat.message\"` calls `chat_message(self, event)`, which sends to that member's own socket.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# asgi.py
+application = ProtocolTypeRouter({
+    "http": get_asgi_application(),                     # the usual views
+    "websocket": AuthMiddlewareStack(URLRouter([
+        path("ws/thing/<key>/", ThingConsumer.as_asgi()),
+    ])),
+})
+
+# consumers.py
+class ThingConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.group = "thing_" + self.scope["url_route"]["kwargs"]["key"]
+        await self.channel_layer.group_add(self.group, self.channel_name)
+        await self.accept()                     # or self.close() to refuse
+
+    async def disconnect(self, code):
+        await self.channel_layer.group_discard(self.group, self.channel_name)
+
+    async def receive(self, text_data):         # one message from this client
+        await self.channel_layer.group_send(
+            self.group, {"type": "thing.update", "data": text_data})
+
+    async def thing_update(self, event):        # "thing.update" -> thing_update
+        await self.send(text_data=event["data"])   # to this member's socket
+
+# settings.py
+CHANNEL_LAYERS = {"default": {
+    "BACKEND": "channels_redis.core.RedisChannelLayer",
+    "CONFIG": {"hosts": [("redis-host", 6379)]},
+}}`,
+    },
+    pitfall: lines(
+      "`InMemoryChannelLayer` keeps its groups inside one process.",
+      "Under two or more ASGI workers, `group_send` reaches only the consumers in the sender's process, so part of every room silently misses each message.",
+      "Keep the in-memory layer for development and tests, and in production point `CHANNEL_LAYERS` at `RedisChannelLayer` from channels_redis, which carries group messages between every process and server.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Django project "library" with channels installed and CHANNEL_LAYERS
+# set to InMemoryChannelLayer; run in python manage.py shell
+import asyncio
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.routing import URLRouter
+from channels.testing import WebsocketCommunicator
+from django.urls import path
+
+class DeskConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        self.group = "desk_" + self.scope["url_route"]["kwargs"]["branch"]
+        await self.channel_layer.group_add(self.group, self.channel_name)
+        await self.accept()
+
+    async def receive_json(self, content, **kwargs):
+        await self.channel_layer.group_send(
+            self.group, {"type": "hold.ready", "title": content["title"]})
+
+    async def hold_ready(self, event):
+        await self.send_json({"ready": event["title"]})
+
+app = URLRouter([path("ws/desk/<branch>/", DeskConsumer.as_asgi())])
+
+async def main():
+    front = WebsocketCommunicator(app, "/ws/desk/north/")
+    back = WebsocketCommunicator(app, "/ws/desk/north/")
+    south = WebsocketCommunicator(app, "/ws/desk/south/")
+    for screen in (front, back, south):
+        await screen.connect()
+    await back.send_json_to({"title": "Dune"})
+    print(await front.receive_json_from(), await back.receive_json_from())
+    print(await south.receive_nothing())
+    for screen in (front, back, south):
+        await screen.disconnect()
+
+asyncio.run(main())`,
+      steps: [
+        lines(
+          "Lines 10-13: each socket gets its own consumer, and `connect` reads the branch from the URL.",
+          "The two north screens join `desk_north`, the south screen joins `desk_south`, and each accepts its handshake.",
+        ),
+        "Lines 15-17: the JSON consumer has already decoded the client's message into `content`, and `group_send` hands the event to the channel layer for every member of the sender's group.",
+        "Lines 19-20: the type `hold.ready` becomes the method name `hold_ready`, which each member runs to send JSON down its own socket.",
+        "Lines 22 and 25-27: `URLRouter` maps the path to the consumer as `urls.py` maps paths to views, and each `WebsocketCommunicator` plays a browser opening that socket, as in a test.",
+        lines(
+          "Lines 30-32: the back screen sends Dune, and both north screens receive it, the sender included.",
+          "`receive_nothing()` returns `True` because the south group never got the event.",
+        ),
+      ],
+      output: `{'ready': 'Dune'} {'ready': 'Dune'}
+True`,
+    },
+    exercises: [
+      'be-infra-channels-1',
+      'dj-channels-cloze-1',
+      'be-infra-channels-3',
+      'dj-channels-predict-1',
+      'dj-channels-groupsend-cloze-1',
+    ],
+  },
+  {
+    id: 'dj_monitoring/1',
+    topicKeys: [Topic.DJ_MONITORING],
+    step: 1,
+    title: 'Monitoring & Observability',
+    idea: [
+      lines(
+        "In production nobody watches a terminal, so a Django app reports through Python's `logging` module, configured by the `LOGGING` setting, a `dictConfig` dict.",
+        "A logger, usually `logging.getLogger(__name__)`, makes records, handlers send them somewhere such as the console, a file or Sentry, and formatters lay them out.",
+        "Logger names form a dotted tree, and a record passes up to its parents' handlers, so configuring `shop` covers `shop.views` too.",
+      ),
+      lines(
+        "Every record has a level, DEBUG, INFO, WARNING, ERROR or CRITICAL, and a logger or handler drops records below its own level, so production can run at INFO.",
+        "`extra={\"order_id\": 7}` adds fields to the record, and a JSON formatter writes them as separate keys, so the log store can find every error for order 7: that is structured logging.",
+        "`logger.exception(...)` inside an `except` logs at ERROR with the traceback, as `exc_info=True` does at any level.",
+      ),
+      lines(
+        "Logs hold what you chose to write; error tracking catches what you did not expect.",
+        "`sentry_sdk.init(dsn=...)` in settings sends every unhandled exception to Sentry with its stack trace and request, groups repeats into one issue and alerts on new ones.",
+        "Metrics such as request rate, latency and error rate show trends that single log lines cannot.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# settings.py
+LOGGING = {
+    "version": 1,
+    "formatters": {"json": {"()": "path.to.JsonFormatter"}},
+    "handlers": {"console": {"class": "logging.StreamHandler",
+                             "formatter": "json"}},
+    "loggers": {"app": {"handlers": ["console"], "level": "INFO"}},
+}
+sentry_sdk.init(dsn=env("SENTRY_DSN"), traces_sample_rate=0.1)
+
+# app/views.py
+logger = logging.getLogger(__name__)     # "app.views", under "app"
+logger.debug("noise")                    # dropped: below INFO
+logger.info("thing happened", extra={"key": value})   # a field, not text
+try:
+    risky()
+except SomeError:
+    logger.exception("what failed", extra={"key": value})  # ERROR + traceback
+    raise                                # still a 500, and Sentry sees it`,
+    },
+    pitfall: lines(
+      "Inside an `except`, `logger.error(f\"payment failed: {e}\")` keeps one line of text and drops the traceback, so nobody can see where it failed.",
+      "The f-string also buries the context in the message, so a log search cannot filter on it and every message reads differently.",
+      "Write `logger.exception(\"payment failed\", extra={\"order_id\": order.id})`, which keeps the traceback, with the context as fields.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      code: `import json
+import logging
+import logging.config
+
+BUILT_IN = set(vars(logging.makeLogRecord({})))
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        entry = {"level": record.levelname, "msg": record.getMessage()}
+        entry |= {k: v for k, v in vars(record).items() if k not in BUILT_IN}
+        if record.exc_info:
+            entry["error"] = record.exc_info[0].__name__
+        return json.dumps(entry)
+
+logging.config.dictConfig({
+    "version": 1,
+    "formatters": {"json": {"()": JsonFormatter}},
+    "handlers": {"out": {"class": "logging.StreamHandler",
+                         "stream": "ext://sys.stdout", "formatter": "json"}},
+    "loggers": {"library": {"handlers": ["out"], "level": "INFO"}},
+})
+log = logging.getLogger("library.loans")
+
+log.debug("shelf scanned", extra={"book_id": 12})
+log.info("loan made", extra={"book_id": 12, "member_id": 7})
+try:
+    due = {"Dune": "2026-11-20"}["Emma"]
+except KeyError:
+    log.exception("due date missing", extra={"book_id": 31})`,
+      steps: [
+        "Lines 5 and 10: every record carries the same built-in attributes, so any other attribute came from `extra`, and the formatter copies it into the JSON as a field of its own.",
+        "Lines 15-21: this is the dict Django reads from `LOGGING`: the `library` logger keeps INFO and up and hands records to the `out` handler, which writes them as JSON to standard output.",
+        "Line 22: `library.loans` has no level or handler of its own, so it takes INFO from its parent `library` and its records go up to that handler, as `getLogger(__name__)` in `library/loans.py` would.",
+        "Line 24: DEBUG is below INFO, so this record is dropped and prints nothing.",
+        "Lines 26-29: `log.exception` logs at ERROR and attaches the exception, so the formatter can name it; a plain-text formatter would print the whole traceback.",
+      ],
+      output: `{"level": "INFO", "msg": "loan made", "book_id": 12, "member_id": 7}
+{"level": "ERROR", "msg": "due date missing", "book_id": 31, "error": "KeyError"}`,
+    },
+    exercises: [
+      'be-infra-monitoring-3',
+      'be-infra-monitoring-1',
+      'dj-monitoring-predict-1',
+      'dj-monitoring-extra-cloze-1',
+      'be-infra-monitoring-2',
     ],
   },
 ];
