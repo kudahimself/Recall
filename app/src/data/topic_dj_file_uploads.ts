@@ -32,7 +32,7 @@ ___ = "/media/"
 ___ = BASE_DIR / "media"`,
       blanks: ['ImageField', 'MEDIA_URL', 'MEDIA_ROOT'],
       solution: '# models.py\nfrom django.db import models\n\nclass UserProfile(models.Model):\n    avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)\n\n# settings.py\nMEDIA_URL = "/media/"\nMEDIA_ROOT = BASE_DIR / "media"',
-      explanation: '`ImageField` (a `FileField` subclass that also validates actual image content — requires Pillow) stores the file on disk under `upload_to` and saves just the path in the database. `MEDIA_ROOT` is the absolute filesystem directory files are written to; `MEDIA_URL` is the URL prefix they are served under.',
+      explanation: '`ImageField` is a `FileField` that also checks the upload really is an image, which needs Pillow. It writes the file under `MEDIA_ROOT`, in the `upload_to` folder, and saves only the file\'s name, such as `avatars/2026/11/ana.png`, in the database. `MEDIA_ROOT` is the absolute filesystem directory files are written to; `MEDIA_URL` is the URL prefix they are served under.',
       hints: ['Field type for images specifically (not generic FileField)', 'ROOT = filesystem path; URL = the public prefix'],
       tags: ['django', 'file-upload', 'ImageField', 'MEDIA_ROOT', 'cloze'],
       concepts: ['dj-storage-backends'],
@@ -44,9 +44,22 @@ ___ = BASE_DIR / "media"`,
       topic: Topic.DJ_FILE_UPLOADS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Create a Django model with an ImageField, configure MEDIA_ROOT and MEDIA_URL in settings, write a DRF serializer that handles file upload, and add the URL pattern for serving media files in development.',
-      starterCode: `# models.py, settings.py, serializers.py, urls.py
-# Show all four files
+      question: `Set up avatar uploads across four files.
+
+- \`models.py\`: a \`UserProfile\` model with a one-to-one \`user\` link to \`settings.AUTH_USER_MODEL\`, deleted along with the user, and an optional image field \`avatar\` stored in a \`avatars/<year>/<month>/\` folder.
+- \`settings.py\`: uploaded files are written to the \`media\` folder in \`BASE_DIR\` and served under the URL prefix \`/media/\`.
+- \`serializers.py\`: a \`UserProfileSerializer\` model serializer with the fields \`id\`, \`user\` and \`avatar\`, where \`user\` is read-only, that refuses an avatar larger than 5 MB (5 * 1024 * 1024 bytes) with the message \`Image must be under 5 MB.\`
+- \`urls.py\`: the project's \`urlpatterns\` list already exists; add the pattern that serves the uploaded files while \`DEBUG\` is on.`,
+      starterCode: `# models.py
+
+
+# settings.py
+
+
+# serializers.py
+
+
+# urls.py
 `,
       testCases: [
         {
@@ -55,21 +68,18 @@ ___ = BASE_DIR / "media"`,
           description: 'Should set up complete file upload infrastructure',
         },
       ],
+      requires: [/ImageField/, /def\s+validate_avatar/],
       solution: `# models.py
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)
-    bio = models.TextField(blank=True)
-
-    def __str__(self):
-        return f"{self.user.username}'s profile"
 
 
-# settings.py (add to base settings)
+# settings.py
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -80,41 +90,71 @@ from .models import UserProfile
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    avatar = serializers.ImageField(required=False)
-
     class Meta:
         model = UserProfile
-        fields = ["id", "user", "avatar", "bio"]
+        fields = ["id", "user", "avatar"]
         read_only_fields = ["user"]
 
     def validate_avatar(self, value):
-        if value.size > 5 * 1024 * 1024:  # 5MB limit
-            raise serializers.ValidationError("Image must be under 5MB.")
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Image must be under 5 MB.")
         return value
 
 
 # urls.py
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
 
-urlpatterns = [
-    path("api/", include("myapp.urls")),
-]
-
-# Only serve media files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`,
-      explanation: 'ImageField stores the file path in the database and saves the actual file to MEDIA_ROOT/upload_to/. The upload_to="avatars/%Y/%m/" organizes files by year and month, preventing a single directory from accumulating thousands of files. MEDIA_URL tells Django how to generate URLs for these files. The serializer validates file size to prevent abuse. The static() URL pattern serves media files in development only — in production, Nginx serves them directly from the media directory, which is far more efficient.',
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# OR
+# models.py
+from django.conf import settings
+from django.db import models
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)
+
+
+# settings.py
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+
+# serializers.py
+from rest_framework import serializers
+from .models import UserProfile
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ["id", "user", "avatar"]
+        read_only_fields = ["user"]
+
+    def validate_avatar(self, value):
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Image must be under 5 MB.")
+        return value
+
+
+# urls.py
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`,
+      explanation: '`ImageField` keeps only the file\'s name in its column and writes the file under `MEDIA_ROOT`, in the `upload_to` folder; `%Y/%m/` gives each month its own folder, so no single directory collects every avatar. `MEDIA_URL` is what `.url` puts in front of the stored name. The model serializer builds the `avatar` field from the model, and DRF calls `validate_avatar` during `is_valid()`, so an oversized file becomes a 400 response with the message instead of a saved row. `static()` adds its pattern only while `DEBUG` is on, so the `if settings.DEBUG:` guard is optional; in production Nginx serves `/media/` from `MEDIA_ROOT`, or the files live on S3.',
       tieredHints: {
-        apiSignature: 'static(prefix, document_root=None) -> list',
-        skeleton: '# models.py\nfrom django.db import models\nfrom django.conf import settings\n\n\nclass UserProfile(models.Model):\n    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)\n    avatar = models.____(upload_to="avatars/%Y/%m/", blank=True)\n    bio = models.TextField(blank=True)\n\n    def __str__(self):\n        return f"{self.user.username}\'s profile"\n\n\n# settings.py (add to base settings)\nMEDIA_URL = "/media/"\nMEDIA_ROOT = BASE_DIR / "media"\n\n\n# serializers.py\nfrom rest_framework import serializers\nfrom .models import UserProfile\n\n\nclass UserProfileSerializer(serializers.ModelSerializer):\n    avatar = serializers.ImageField(required=False)\n\n    class Meta:\n        model = UserProfile\n        fields = ["id", "user", "avatar", "bio"]\n        read_only_fields = ["user"]\n\n    def validate_avatar(self, value):\n        if value.size > 5 * 1024 * 1024:  # 5MB limit\n            raise serializers.____("Image must be under 5MB.")\n        return value\n\n\n# urls.py\nfrom django.conf import settings\nfrom django.conf.urls.static import static\nfrom django.urls import path, include\n\nurlpatterns = [\n    path("api/", include("myapp.urls")),\n]\n\n# Only serve media files in development\nif settings.DEBUG:\n    urlpatterns += ____(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)',
+        apiSignature: 'models.ImageField(upload_to=...); def validate_<field>(self, value); static(prefix, document_root=...)',
+        skeleton: '# models.py\nfrom django.conf import settings\nfrom django.db import models\n\n\nclass UserProfile(models.Model):\n    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)\n    avatar = models.____(upload_to="avatars/%Y/%m/", blank=True)\n\n\n# settings.py\n____ = "/media/"\n____ = BASE_DIR / "media"\n\n\n# serializers.py\nfrom rest_framework import serializers\nfrom .models import UserProfile\n\n\nclass UserProfileSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = UserProfile\n        fields = ["id", "user", "avatar"]\n        read_only_fields = ["user"]\n\n    def ____(self, value):\n        if value.size > 5 * 1024 * 1024:\n            raise serializers.____("Image must be under 5 MB.")\n        return value\n\n\n# urls.py\nfrom django.conf import settings\nfrom django.conf.urls.static import static\n\nif settings.DEBUG:\n    urlpatterns += ____(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)',
       },
       hints: [
-        'upload_to supports strftime format strings for date-based directories',
-        'ImageField requires Pillow: pip install Pillow',
-        'static() in urls.py is only for development — Nginx serves media in production',
-        'validate_avatar runs during serializer.is_valid()',
+        'upload_to accepts strftime codes such as %Y and %m for date folders.',
+        'MEDIA_ROOT is the folder on disk; MEDIA_URL is the URL prefix.',
+        'A serializer method named validate_<field> checks one field and raises serializers.ValidationError to refuse it.',
+        'static() from django.conf.urls.static serves MEDIA_ROOT under MEDIA_URL in development.',
       ],
       tags: ['file-upload', 'imagefield', 'media', 'serializer', 'django'],
       concepts: ['dj-serializer-validation'],
@@ -149,7 +189,7 @@ if settings.DEBUG:
         { id: 'c', text: 'FileSystemStorage saves to local disk; use S3 via django-storages when running multiple servers or needing CDN delivery and backups', isCorrect: true },
         { id: 'd', text: 'Every production Django project must use S3, because FileSystemStorage is deprecated for deployment', isCorrect: false },
       ],
-      explanation: 'Django\'s storage backend is an abstraction layer — your code calls model.file.save() and the backend decides where the file goes. FileSystemStorage writes to MEDIA_ROOT on the local disk. This works for single-server setups but breaks with multiple servers (each server has different files). S3 storage (django-storages) saves to AWS S3, which is accessible from any server, automatically replicated, and can be fronted by CloudFront CDN. Switching backends requires zero changes to your models or views — just change DEFAULT_FILE_STORAGE in settings.',
+      explanation: 'Django\'s storage backend is an abstraction layer: your code calls model.file.save() and the backend decides where the file goes. FileSystemStorage writes to MEDIA_ROOT on the local disk. This works for single-server setups but breaks with multiple servers (each server has different files). S3 storage (django-storages) saves to AWS S3, which is accessible from any server, automatically replicated, and can be fronted by CloudFront CDN. Switching backends requires zero changes to your models or views: just point STORAGES["default"] at the S3 backend in settings (the older DEFAULT_FILE_STORAGE setting was removed in Django 5.1).',
       tags: ['storage-backend', 's3', 'django-storages', 'infrastructure'],
       concepts: ['dj-storage-backends'],
     },

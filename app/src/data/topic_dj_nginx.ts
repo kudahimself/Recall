@@ -20,7 +20,7 @@ export const dj_nginx_questions: Question[] = [
       topic: Topic.DJ_NGINX,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the two directives: proxy dynamic requests to Gunicorn, and forward the real client IP.',
+      question: 'Fill in the two blanks: the directive that hands every request to the `gunicorn_backend` upstream, and the Nginx variable that fills `X-Forwarded-For` with the address of the client.',
       template: `upstream gunicorn_backend {
     server unix:/run/gunicorn.sock;
 }
@@ -31,13 +31,14 @@ server {
 
     location / {
         ___ http://gunicorn_backend;
-        proxy_set_header X-Real-IP $___;
+        proxy_set_header X-Forwarded-For $___;
     }
 }`,
-      blanks: ['proxy_pass', 'remote_addr'],
-      solution: 'upstream gunicorn_backend {\n    server unix:/run/gunicorn.sock;\n}\n\nserver {\n    listen 80;\n    server_name example.com;\n\n    location / {\n        proxy_pass http://gunicorn_backend;\n        proxy_set_header X-Real-IP $remote_addr;\n    }\n}',
-      explanation: '`proxy_pass` forwards the request to the named upstream (Gunicorn). `proxy_set_header X-Real-IP $remote_addr` passes the real client IP through — without it, every request appears to originate from Nginx itself (127.0.0.1) inside Django.',
-      hints: ['Directive that forwards the request to Gunicorn', 'Nginx variable holding the real client IP'],
+      blanks: ['proxy_pass', 'proxy_add_x_forwarded_for'],
+      blankAlternates: [[], ['remote_addr']],
+      solution: 'upstream gunicorn_backend {\n    server unix:/run/gunicorn.sock;\n}\n\nserver {\n    listen 80;\n    server_name example.com;\n\n    location / {\n        proxy_pass http://gunicorn_backend;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    }\n}',
+      explanation: '`proxy_pass` sends the request on to the `gunicorn_backend` upstream, and so to Django. Behind the proxy, the connection Django sees comes from Nginx, so `REMOTE_ADDR` no longer holds the browser\'s address. `$proxy_add_x_forwarded_for` is the `X-Forwarded-For` the request arrived with, plus `$remote_addr`, the address that connected to Nginx, added at the end; Django reads it as `request.META["HTTP_X_FORWARDED_FOR"]`. `$remote_addr` on its own is also accepted: it sends only the connecting address and drops any list the request carried.',
+      hints: ['The directive that passes a request to an upstream starts with proxy_.', 'The lesson sets X-Forwarded-For from a variable that adds the client address to any list already there.'],
       tags: ['nginx', 'gunicorn', 'proxy_pass', 'cloze'],
       concepts: ['dj-deployment-cicd'],
     },
@@ -48,9 +49,12 @@ server {
       topic: Topic.DJ_NGINX,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a complete Nginx configuration for a Django application. Include: an upstream block pointing to Gunicorn, a server block with proxy_pass, static file serving with alias, and an HTTP-to-HTTPS redirect. Show the full nginx.conf.',
+      question: `Write the Nginx configuration that puts a Django site at example.com behind Gunicorn. It needs three blocks:
+
+- an \`upstream\` named \`gunicorn_backend\` for Gunicorn's socket \`unix:/run/gunicorn.sock\`
+- a server block on port 80 that answers every request with a 301 redirect to the same host and path over HTTPS
+- a server block on port 443 with \`ssl\`, using the certificate \`/etc/letsencrypt/live/example.com/fullchain.pem\` and the key \`/etc/letsencrypt/live/example.com/privkey.pem\`; it serves \`/static/\` from the directory \`/var/www/myproject/staticfiles/\` and passes every other request to the upstream with the \`Host\`, \`X-Forwarded-For\` and \`X-Forwarded-Proto\` headers set`,
       starterCode: `# /etc/nginx/sites-available/myproject
-# Write the full Nginx configuration
 `,
       testCases: [
         {
@@ -59,63 +63,46 @@ server {
           description: 'Should define a complete Nginx config for Django + Gunicorn',
         },
       ],
+      requires: [/\balias\s/, /\breturn\s+301\b/],
       solution: `# /etc/nginx/sites-available/myproject
 
-# Upstream: where Gunicorn is listening
 upstream gunicorn_backend {
     server unix:/run/gunicorn.sock;
 }
 
-# Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name example.com www.example.com;
+    server_name example.com;
     return 301 https://$host$request_uri;
 }
 
-# Main HTTPS server
 server {
     listen 443 ssl;
-    server_name example.com www.example.com;
-
+    server_name example.com;
     ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
 
-    client_max_body_size 10M;
-
-    # Static files — served directly by Nginx, not Django
     location /static/ {
         alias /var/www/myproject/staticfiles/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
     }
 
-    # Media files — user uploads
-    location /media/ {
-        alias /var/www/myproject/media/;
-        expires 7d;
-    }
-
-    # Everything else goes to Gunicorn/Django
     location / {
         proxy_pass http://gunicorn_backend;
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
     }
 }`,
-      explanation: 'Nginx sits in front of Gunicorn because it excels at tasks Python should not handle. Static files are served directly from disk — Nginx handles this orders of magnitude faster than Django. The HTTP-to-HTTPS redirect ensures all traffic is encrypted. proxy_set_header X-Forwarded-For passes the real client IP to Django (otherwise every request appears to come from 127.0.0.1). The Unix socket connection to Gunicorn avoids TCP overhead. Cache headers on static files reduce repeat requests.',
+      explanation: 'The `upstream` names Gunicorn\'s socket once, so `proxy_pass http://gunicorn_backend;` can send requests to it. The port 80 block only redirects, keeping the host and path, so no page is ever served over plain HTTP. In the HTTPS block, `alias` swaps `/static/` for the directory `collectstatic` filled, so Nginx reads those files from disk without taking a Gunicorn worker; `root` there would look for `/static/site.css` under `staticfiles/static/` and return 404. Every other path goes to Gunicorn with what Django would lose behind the proxy: the original `Host`, checked against `ALLOWED_HOSTS`, the client\'s address in `X-Forwarded-For`, and the scheme in `X-Forwarded-Proto`, which Django trusts once `SECURE_PROXY_SSL_HEADER` is set. A real site usually adds a `location /media/` for uploads and `client_max_body_size` to allow large ones.',
       hints: [
-        'upstream defines the backend — Gunicorn socket or host:port',
-        'alias vs root: alias replaces the entire location path',
-        'proxy_set_header X-Forwarded-For passes real client IPs',
-        'client_max_body_size limits upload size at the Nginx level',
+        'upstream gives Gunicorn\'s address a name for proxy_pass to use.',
+        'return 301 with $host and $request_uri keeps the host and the path.',
+        'alias swaps the matched /static/ prefix for the directory; root would add /static/ to it.',
+        'The three headers carry the original host, the client address and the scheme.',
       ],
       tieredHints: {
-        apiSignature: 'proxy_pass URL; proxy_set_header Field Value;',
-        skeleton: '# /etc/nginx/sites-available/myproject\n\n____ gunicorn_backend {\n    server unix:/run/gunicorn.sock;\n}\n\nserver {\n    listen 80;\n    server_name example.com www.example.com;\n    return 301 https://$host$request_uri;\n}\n\nserver {\n    listen 443 ssl;\n    server_name example.com www.example.com;\n\n    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;\n\n    client_max_body_size 10M;\n\n    location /static/ {\n        ____ /var/www/myproject/staticfiles/;\n        expires 30d;\n        add_header Cache-Control "public, immutable";\n    }\n\n    location /media/ {\n        alias /var/www/myproject/media/;\n        expires 7d;\n    }\n\n    location / {\n        ____ http://gunicorn_backend;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_redirect off;\n    }\n}',
+        apiSignature: 'upstream name { server address; }  return 301 URL;  alias path;  proxy_pass URL;  proxy_set_header Field Value;',
+        skeleton: '# /etc/nginx/sites-available/myproject\n\n____ gunicorn_backend {\n    server unix:/run/gunicorn.sock;\n}\n\nserver {\n    listen 80;\n    server_name example.com;\n    ____ 301 ____;\n}\n\nserver {\n    listen 443 ssl;\n    server_name example.com;\n    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;\n\n    location /static/ {\n        ____ /var/www/myproject/staticfiles/;\n    }\n\n    location / {\n        ____ http://gunicorn_backend;\n        proxy_set_header Host ____;\n        proxy_set_header X-Forwarded-For ____;\n        proxy_set_header X-Forwarded-Proto ____;\n    }\n}',
       },
       tags: ['nginx', 'gunicorn', 'deployment', 'ssl', 'proxy'],
       concepts: ['dj-deployment-cicd'],

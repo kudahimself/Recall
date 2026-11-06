@@ -20,13 +20,19 @@ export const dj_settings_questions: Question[] = [
       topic: Topic.DJ_SETTINGS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Set up split Django settings: base.py with shared configuration, development.py with DEBUG=True and SQLite, production.py with DEBUG=False, PostgreSQL, and security settings. Use django-environ to read environment variables from a .env file.',
+      question: `Split a project's settings into three files in a \`settings/\` package, using django-environ.
+
+- \`base.py\`: set \`BASE_DIR\` to the project root, three \`.parent\` steps up from the file; create \`env = environ.Env()\`; load the \`.env\` file in \`BASE_DIR\`; read \`SECRET_KEY\` from the environment with no default, and \`ALLOWED_HOSTS\` as a comma-separated list that defaults to empty.
+- \`development.py\`: start from everything in \`base.py\`, turn \`DEBUG\` on, and use SQLite in the file \`BASE_DIR / "db.sqlite3"\`.
+- \`production.py\`: start from everything in \`base.py\`, turn \`DEBUG\` off, read the database from the \`DATABASE_URL\` variable, turn on \`SECURE_SSL_REDIRECT\`, \`SESSION_COOKIE_SECURE\` and \`CSRF_COOKIE_SECURE\`, and set \`SECURE_HSTS_SECONDS\` to one year, 31536000.`,
       starterCode: `# settings/base.py
 import environ
 
-env = environ.Env()
 
-# Write base, development, and production settings
+# settings/development.py
+
+
+# settings/production.py
 `,
       testCases: [
         {
@@ -35,42 +41,23 @@ env = environ.Env()
           description: 'Should define split settings with environment variable support',
         },
       ],
+      requires: [/from\s+[\w.]*base\s+import\s+\*/, /SECRET_KEY["']\s*\)/],
       solution: `# settings/base.py
 import environ
 from pathlib import Path
 
-env = environ.Env(
-    DEBUG=(bool, False),
-)
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
-INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "rest_framework",
-    "myapp",
-]
-
-ROOT_URLCONF = "myproject.urls"
-STATIC_URL = "/static/"
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 
 # settings/development.py
-from .base import *  # noqa
+from .base import *
 
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -80,34 +67,58 @@ DATABASES = {
 
 
 # settings/production.py
-from .base import *  # noqa
+from .base import *
 
 DEBUG = False
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
-
-DATABASES = {
-    "default": env.db("DATABASE_URL"),
-}
-
-# Security settings — all required in production
+DATABASES = {"default": env.db("DATABASE_URL")}
 SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True`,
-      explanation: 'Split settings solve the "one settings file for all environments" problem. base.py contains everything shared (installed apps, middleware, templates). development.py adds DEBUG and SQLite for fast local work. production.py adds security hardening and reads the database URL from an environment variable. django-environ parses .env files and converts types automatically — env.db() parses a DATABASE_URL into Django\'s DATABASES dict, env.list() splits comma-separated strings into lists. The .env file is never committed to git.',
+# OR
+# settings/base.py
+import environ
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / ".env")
+
+SECRET_KEY = env("SECRET_KEY")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
+
+
+# settings/development.py
+from .base import *
+
+DEBUG = True
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+
+# settings/production.py
+from .base import *
+
+DEBUG = False
+DATABASES = {"default": env.db_url("DATABASE_URL")}
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 31536000
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True`,
+      explanation: 'Split settings keep what every environment shares in `base.py`; `development.py` and `production.py` start with `from .base import *` and change only what differs, and `DJANGO_SETTINGS_MODULE` (for example `myproject.settings.production`) picks the file. `read_env` loads the git-ignored `.env` file into the environment, `env("SECRET_KEY")` has no default, so a server without the key refuses to start, and `env.list` splits `a.com,b.com` into a list. `env.db("DATABASE_URL")` turns a URL such as `postgres://user:pass@host:5432/db` into a `DATABASES` entry, so production credentials never sit in the code. The four security settings send HTTP to HTTPS, tell browsers to use HTTPS for a year, and keep the session and CSRF cookies off plain HTTP; `python manage.py check --deploy` lists any that are missing.',
       hints: [
-        'environ.Env.read_env() loads the .env file',
-        'env.db("DATABASE_URL") parses postgres://user:pass@host/db',
-        'DJANGO_SETTINGS_MODULE=myproject.settings.production selects the file',
-        'from .base import * brings in all shared settings',
+        'environ.Env.read_env(path) loads the .env file.',
+        'env.list() splits a comma-separated value; env.db() parses a database URL.',
+        'from .base import * brings every shared setting into the other two files.',
+        'DEBUG = True in development and DEBUG = False in production.',
       ],
       tieredHints: {
-        apiSignature: 'environ.Env(*args, **kwargs); env.db(var=\'DATABASE_URL\')',
-        skeleton: '# settings/base.py\nimport environ\nfrom pathlib import Path\n\nenv = environ.Env(\n    DEBUG=(bool, False),\n)\n\nBASE_DIR = Path(__file__).resolve().parent.parent.parent\nenviron.Env.____(BASE_DIR / ".env")\n\nSECRET_KEY = env("SECRET_KEY")\nALLOWED_HOSTS = env.____("ALLOWED_HOSTS", default=[])\n\nINSTALLED_APPS = [\n    "django.contrib.admin",\n    "django.contrib.auth",\n    "django.contrib.contenttypes",\n    "django.contrib.sessions",\n    "django.contrib.messages",\n    "django.contrib.staticfiles",\n    "rest_framework",\n    "myapp",\n]\n\nROOT_URLCONF = "myproject.urls"\nSTATIC_URL = "/static/"\nDEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"\n\n\n# settings/development.py\nfrom .base import *\n\nDEBUG = True\nALLOWED_HOSTS = ["localhost", "127.0.0.1"]\n\nDATABASES = {\n    "default": {\n        "ENGINE": "django.db.backends.sqlite3",\n        "NAME": BASE_DIR / "db.sqlite3",\n    }\n}\n\n\n# settings/production.py\nfrom .base import *\n\nDEBUG = False\nALLOWED_HOSTS = env.____("ALLOWED_HOSTS")\n\nDATABASES = {\n    "default": env.____("DATABASE_URL"),\n}\n\nSECURE_SSL_REDIRECT = True\nSECURE_HSTS_SECONDS = 31536000\nSECURE_HSTS_INCLUDE_SUBDOMAINS = True\nSECURE_HSTS_PRELOAD = True\nSESSION_COOKIE_SECURE = True\nCSRF_COOKIE_SECURE = True\nSECURE_BROWSER_XSS_FILTER = True\nSECURE_CONTENT_TYPE_NOSNIFF = True',
+        apiSignature: "environ.Env.read_env(path); env(name); env.list(name, default=[]); env.db(name)",
+        skeleton: '# settings/base.py\nimport environ\nfrom pathlib import Path\n\nBASE_DIR = Path(__file__).resolve().parent.parent.parent\nenv = environ.Env()\nenviron.Env.____(BASE_DIR / ".env")\n\nSECRET_KEY = ____\nALLOWED_HOSTS = env.____("ALLOWED_HOSTS", default=[])\n\n\n# settings/development.py\n____\n\nDEBUG = True\nDATABASES = {\n    "default": {\n        "ENGINE": "django.db.backends.sqlite3",\n        "NAME": BASE_DIR / "db.sqlite3",\n    }\n}\n\n\n# settings/production.py\n____\n\nDEBUG = False\nDATABASES = {"default": env.____("DATABASE_URL")}\nSECURE_SSL_REDIRECT = ____\nSECURE_HSTS_SECONDS = 31536000\nSESSION_COOKIE_SECURE = ____\nCSRF_COOKIE_SECURE = ____',
       },
       tags: ['settings', 'django-environ', 'configuration', 'security'],
       concepts: ['py-security-primitives'],
@@ -142,7 +153,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True`,
         { id: 'c', text: 'Only the SSL settings — session and CSRF cookies are already marked Secure by default in production', isCorrect: false },
         { id: 'd', text: 'SECURE_SSL_REDIRECT, SECURE_HSTS_SECONDS, SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE, and ALLOWED_HOSTS', isCorrect: true },
       ],
-      explanation: 'Each setting closes a specific attack vector. SECURE_SSL_REDIRECT forces HTTPS (prevents sniffing). HSTS tells browsers to always use HTTPS for your domain (prevents SSL stripping). SESSION_COOKIE_SECURE and CSRF_COOKIE_SECURE prevent cookies from being sent over HTTP. ALLOWED_HOSTS prevents Host header attacks that can poison password reset emails. SecurityMiddleware must be first in MIDDLEWARE to enforce these before any other processing. Running manage.py check --deploy lists all missing security settings.',
+      explanation: 'Each setting closes a specific attack vector. SECURE_SSL_REDIRECT forces HTTPS (prevents sniffing). HSTS tells browsers to always use HTTPS for your domain (prevents SSL stripping). SESSION_COOKIE_SECURE and CSRF_COOKIE_SECURE prevent cookies from being sent over HTTP. ALLOWED_HOSTS prevents Host header attacks that can poison password reset emails. SecurityMiddleware, near the top of MIDDLEWARE, applies the HTTPS redirect and the HSTS header. Behind Nginx, Django only knows a request came over HTTPS once SECURE_PROXY_SSL_HEADER is set; without it, SECURE_SSL_REDIRECT redirects every request again and again. Running manage.py check --deploy lists all missing security settings.',
       tags: ['security', 'settings', 'production', 'ssl', 'hsts'],
       concepts: ['py-security-primitives'],
     },
@@ -168,6 +179,7 @@ DATABASES = {
     "default": env.___("DATABASE_URL")
 }`,
     blanks: ['read_env', 'db'],
+    blankAlternates: [[], ['db_url']],
     solution: `import environ
 from pathlib import Path
 
@@ -181,10 +193,10 @@ environ.Env.read_env(BASE_DIR / ".env")
 DATABASES = {
     "default": env.db("DATABASE_URL")
 }`,
-    explanation: '`environ.Env.read_env` loads environment variables from a `.env` file. `env.db("DATABASE_URL")` is a helper that parses a PostgreSQL/MySQL connection string into Django\'s `DATABASES` configuration format.',
+    explanation: '`environ.Env.read_env` loads environment variables from a `.env` file. `env.db("DATABASE_URL")` reads the variable and parses a URL such as `postgres://user:pass@host:5432/db` into the dictionary one `DATABASES` entry needs: the `postgres` scheme picks the PostgreSQL backend, and the user, password, host, port and name come from the URL. `env.db_url("DATABASE_URL")` is the same method under its longer name.',
     hints: [
-      'Use read_env to parse .env file',
-      'The helper for database connection strings is env.db()',
+      'A class method on environ.Env that reads a file named .env into the environment.',
+      'A short env method named after what it builds: one database entry from a URL.',
     ],
     tags: ['django', 'settings', 'django-environ', 'cloze'],
     concepts: ['py-security-primitives'],
