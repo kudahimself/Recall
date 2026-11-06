@@ -1660,23 +1660,6 @@ export const certificationQuestions: Question[] = [
   },
 
   {
-    id: 'platform-cluster-1',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_PLATFORM,
-    question: 'What is the primary difference between an All-Purpose cluster and a Job cluster in Databricks?',
-    options: [
-      { id: 'a', text: 'Job clusters support interactive notebook execution, whereas All-Purpose clusters only execute scheduled workflow tasks.', isCorrect: false },
-      { id: 'b', text: 'All-Purpose clusters remain active for interactive analysis, while ephemeral Job clusters provision for a job run and terminate upon completion.', isCorrect: true },
-      { id: 'c', text: 'Job clusters run exclusively on bare-metal hardware, whereas All-Purpose clusters run on virtualized cloud worker nodes.', isCorrect: false },
-      { id: 'd', text: 'All-Purpose clusters do not incur DBU charges, whereas Job clusters charge double DBU rates for automated execution.', isCorrect: false },
-    ],
-    explanation: 'All-purpose clusters are for interactive development (notebooks, exploration). Job clusters are ephemeral - created when a job starts, terminated when it ends. Job clusters cost less due to lower pricing tier.',
-    tags: ['clusters', 'all-purpose', 'job-cluster'],
-    concepts: ['dbx-cluster-config'],
-  },
-
-  {
     id: 'platform-cluster-2',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,

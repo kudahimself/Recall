@@ -2273,35 +2273,6 @@ FROM ____`,
   },
 
   {
-    id: 'catalog-3',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_PLATFORM,
-    language: CodeLanguage.SQL,
-    requires: [/CREATE\s+CATALOG/i],
-    question: 'Write a SQL query to create a top-level Unity Catalog container named "analytics".',
-    starterCode: `-- Create top-level catalog\n`,
-    testCases: [
-      {
-        input: '',
-        expectedOutput: 'CREATE CATALOG analytics',
-        description: 'Should create catalog',
-      },
-    ],
-    solution: `CREATE CATALOG analytics
--- OR
-CREATE CATALOG IF NOT EXISTS analytics`,
-    explanation: 'Catalogs are the top level of the Unity Catalog namespace. They organize schemas (databases) and tables.',
-    tieredHints: {
-      apiSignature: 'CREATE CATALOG [IF NOT EXISTS] catalog_name',
-      skeleton: `-- ____ catalog\n____ ____ analytics`,
-    },
-    hints: ['Use CREATE CATALOG catalog_name'],
-    tags: ['unity-catalog', 'create', 'catalog'],
-    concepts: ['ucat-namespaces', 'ps-dataframe-create'],
-  },
-
-  {
     id: 'catalog-4',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -2889,34 +2860,6 @@ result = dbutils.notebook.run("/Shared/ETL/Process", timeout_seconds=60, argumen
   },
 
   {
-    id: 'dbutils-13',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_UTILITIES,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks widget utilities to create a text input widget named "environment" with default value "dev".',
-    starterCode: `# Create text widget\n`,
-    testCases: [
-      {
-        input: 'widget name and default',
-        expectedOutput: 'dbutils.widgets.text("environment", "dev")',
-        description: 'Should create text widget',
-      },
-    ],
-    solution: `dbutils.widgets.text("environment", "dev")
-# OR
-dbutils.widgets.text(name="environment", defaultValue="dev")`,
-    explanation: 'dbutils.widgets.text() creates a text input widget. Users can enter values which can be retrieved with dbutils.widgets.get().',
-    tieredHints: {
-      apiSignature: 'dbutils.widgets.text(name: str, defaultValue: str, label: str = None)',
-      skeleton: `____.widgets.____("environment", "____")`,
-    },
-    hints: ['Use dbutils.widgets.text(name, defaultValue)'],
-    tags: ['dbutils', 'widgets', 'input'],
-    concepts: ['dbx-utilities', 'dbx-widgets'],
-  },
-
-  {
     id: 'dbutils-14',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
@@ -2943,108 +2886,6 @@ dbutils.widgets.dropdown(name="region", defaultValue="US", choices=["US", "EU", 
     hints: ['Use dbutils.widgets.dropdown(name, defaultValue, choices)'],
     tags: ['dbutils', 'widgets', 'dropdown'],
     concepts: ['dbx-utilities', 'dbx-widgets'],
-  },
-
-  {
-    id: 'dbutils-15',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DATABRICKS_UTILITIES,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks widget utilities to fetch the value of widget "environment" into variable "env".',
-    starterCode: `# Fetch widget value\nenv = `,
-    testCases: [
-      {
-        input: 'widget name',
-        expectedOutput: 'dbutils.widgets.get("environment")',
-        description: 'Should get widget value',
-      },
-    ],
-    solution: `env = dbutils.widgets.get("environment")
-# OR
-env = dbutils.widgets.get(name="environment")`,
-    explanation: 'dbutils.widgets.get() retrieves the current value of a widget.',
-    tieredHints: {
-      apiSignature: 'dbutils.widgets.get(name: str) -> str',
-      skeleton: `env = ____.widgets.____("____")`,
-    },
-    hints: ['Use dbutils.widgets.get(name)'],
-    tags: ['dbutils', 'widgets', 'get'],
-    concepts: ['dbx-utilities', 'dbx-widgets'],
-  },
-
-  {
-    id: 'dbutils-16',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DATABRICKS_UTILITIES,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks widget utilities to remove widget "environment".',
-    starterCode: `# Remove widget\n`,
-    testCases: [
-      {
-        input: 'widget name',
-        expectedOutput: 'dbutils.widgets.remove("environment")',
-        description: 'Should remove widget',
-      },
-    ],
-    solution: `dbutils.widgets.remove("environment")
-# OR
-dbutils.widgets.remove(name="environment")`,
-    explanation: 'dbutils.widgets.remove() removes a specific widget.',
-    tieredHints: {
-      apiSignature: 'dbutils.widgets.remove(name: str)',
-      skeleton: `____.widgets.____("____")`,
-    },
-    hints: ['Use dbutils.widgets.remove(name)'],
-    tags: ['dbutils', 'widgets', 'remove'],
-    concepts: ['dbx-utilities', 'dbx-widgets'],
-  },
-
-  {
-    id: 'dbutils-17',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_UTILITIES,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a Python statement using Databricks secret utilities to fetch key "api-key" from secret scope "prod" into variable "api_key".',
-    starterCode: `# Retrieve secret credential\napi_key = `,
-    testCases: [
-      {
-        input: 'scope and key',
-        expectedOutput: 'dbutils.secrets.get(scope="prod", key="api-key")',
-        description: 'Should get secret value',
-      },
-    ],
-    solution: `api_key = dbutils.secrets.get(scope="prod", key="api-key")
-# OR
-api_key = dbutils.secrets.get("prod", "api-key")`,
-    explanation: 'dbutils.secrets.get() retrieves secret values from Databricks secret scopes.',
-    tieredHints: {
-      apiSignature: 'dbutils.secrets.get(scope: str, key: str) -> str',
-      skeleton: `api_key = ____.secrets.____(scope="prod", key="____")`,
-    },
-    hints: ['Use dbutils.secrets.get(scope, key)'],
-    tags: ['dbutils', 'secrets', 'security'],
-    concepts: ['dbx-utilities', 'dbx-secrets'],
-  },
-
-  {
-    id: 'dbutils-18',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_UTILITIES,
-    question: 'What happens if you try to print a secret retrieved with dbutils.secrets.get()?',
-    options: [
-      { id: 'a', text: 'The unencrypted secret key string is printed directly to notebook cell output.', isCorrect: false },
-      { id: 'b', text: 'The call fails, because a secret value can only be passed to Spark options and connectors.', isCorrect: false },
-      { id: 'c', text: 'Databricks shows [REDACTED] in the cell output in place of the secret value.', isCorrect: true },
-      { id: 'd', text: 'The value prints in full, and is masked only when the notebook is exported.', isCorrect: false },
-    ],
-    explanation: 'Databricks replaces a secret\'s exact value with [REDACTED] wherever it would appear in cell output, while the variable still holds the real value for your code. Because the match is on the exact string, a changed copy of the value would print, so redaction prevents accidents rather than enforcing security; the scope\'s permissions decide who can read the secret at all.',
-    hints: ['Think about automatic output redaction in notebook logs.'],
-    tags: ['dbutils', 'secrets', 'security'],
-    concepts: ['dbx-utilities', 'dbx-secrets'],
   },
 
   {

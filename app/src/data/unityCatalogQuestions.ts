@@ -53,24 +53,6 @@ CREATE CATALOG analytics_prod`,
   },
 
   {
-    id: 'uc-basics-3',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.UNITY_CATALOG_BASICS,
-    question: 'Why does Databricks recommend replacing legacy DBFS mounts (/mnt) with Unity Catalog Volumes (/Volumes)?',
-    options: [
-      { id: 'a', text: 'DBFS mounts prohibit standard Spark SQL DataFrame reads and require custom Scala file readers.', isCorrect: false },
-      { id: 'b', text: 'Unity Catalog Volumes automatically convert incoming raw CSV files into compressed Delta tables.', isCorrect: false },
-      { id: 'c', text: 'DBFS mounts restrict cluster execution exclusively to legacy Single-User compute access modes.', isCorrect: false },
-      { id: 'd', text: 'Volumes govern non-tabular files with fine-grained SQL permissions while mounts expose credentials workspace-wide.', isCorrect: true },
-    ],
-    explanation: 'Legacy DBFS mounts expose storage credentials workspace-wide to all users on a cluster. Volumes use Unity Catalog GRANT permissions (e.g. READ VOLUME) for granular access control.',
-    hints: ['Focus on fine-grained access control vs broad credential exposure.'],
-    tags: ['volumes', 'dbfs', 'security'],
-    concepts: ['dbx-dbfs-mounts-vs-volumes'],
-  },
-
-  {
     id: 'uc-basics-4',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
