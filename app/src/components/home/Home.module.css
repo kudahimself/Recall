@@ -1,0 +1,172 @@
+/* Home: two columns that share the screen's height on a laptop, one column
+   that scrolls on a phone. */
+.home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--home-gap);
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--sp-4);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--home-gap);
+  min-width: 0;
+  min-height: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--home-gap);
+  min-height: 0;
+  padding: var(--home-pad);
+}
+
+/* Fits one screen: the columns take the height left under the top bar, and
+   the path and focus cards take what the others leave. */
+.fits {
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  padding: var(--home-pad-y) var(--sp-6) var(--sp-3);
+}
+
+.fits .grow {
+  flex: 1 1 0;
+}
+
+.keys {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+/* ---- Today ---- */
+.todayHead {
+  align-items: flex-start;
+  margin-bottom: calc(-1 * var(--sp-1));
+}
+
+.todayHead h2 {
+  font-size: var(--fs-h2);
+}
+
+.doneTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--success);
+}
+
+.doneTitle svg {
+  width: var(--icon-l);
+  height: var(--icon-l);
+}
+
+.plan {
+  margin: 0;
+  max-width: var(--plan-measure);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+}
+
+.plan strong {
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+
+.tileBar {
+  margin-top: var(--sp-1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+/* ---- Path ---- */
+.path {
+  margin: 0 calc(-1 * var(--sp-2));
+}
+
+.chevron {
+  width: var(--icon-m);
+  height: var(--icon-m);
+}
+
+/* ---- Course ---- */
+.courseLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: calc(-1 * var(--sp-2));
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gate {
+  display: flex;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+}
+
+.gate svg {
+  flex: none;
+  width: var(--icon-s);
+  height: var(--icon-s);
+  margin-top: var(--sp-1);
+  color: var(--text-3);
+}
+
+.gate strong {
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---- Worth another look ---- */
+.focus {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.focusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--control-sm);
+}
+
+.focusText {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+.focusMeta {
+  color: var(--text-3);
+}

@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
 import { Dialog } from '../components/ui/Dialog';
-import { KeyCombo } from '../components/ui/Kbd';
+import { KeySpec } from '../components/ui/Kbd';
 import { SHORTCUT_GROUPS, SHORTCUTS, ShortcutDef, useShortcut } from './shortcuts';
 import styles from './ShortcutHelp.module.css';
-
-/** "1-9" reads as two caps with a dash; everything else is one combination. */
-function KeySpec({ spec }: { spec: string }) {
-  if (spec === '1-9') {
-    return <span className={styles.range}><KeyCombo combo="1" /><span aria-hidden="true">-</span><KeyCombo combo="9" /></span>;
-  }
-  return <KeyCombo combo={spec === 'Esc' ? 'Escape' : spec} />;
-}
 
 /** The ? overlay: every shortcut, generated from the registry the keys use. */
 export function ShortcutHelpDialog({ onClose }: { onClose: () => void }) {
@@ -50,9 +42,14 @@ function HelpToggle({ onToggle }: { onToggle: () => void }) {
   return null;
 }
 
-/** Binds ? on the page and shows the overlay. */
-export function ShortcutHelp() {
-  const [open, setOpen] = useState(false);
+/**
+ * Binds ? on the page and shows the overlay. Pass `open` and `onOpenChange`
+ * to open it from a button too (the top bar's keyboard button).
+ */
+export function ShortcutHelp({ open: controlled, onOpenChange }: { open?: boolean; onOpenChange?: (open: boolean) => void } = {}) {
+  const [own, setOwn] = useState(false);
+  const open = controlled ?? own;
+  const setOpen = (next: boolean) => { setOwn(next); onOpenChange?.(next); };
   useShortcut('help', () => setOpen(true));
   return open ? <ShortcutHelpDialog onClose={() => setOpen(false)} /> : null;
 }

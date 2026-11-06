@@ -1,9 +1,9 @@
 /**
  * Regression tests for the frontend hotfixes, against the real <App/>:
  * the phone drawer starts closed (F1), one Next after an answer (F3), the
- * Activity tab shows activity only (F4), the Continue card names a topic of
- * the active course (F6), and filters mean what they say and survive a new
- * start in the same course (F7).
+ * Activity tab shows activity only (F4), Home names topics of the active
+ * course only (F6), and filters mean what they say and survive a new start in
+ * the same course (F7).
  */
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -157,20 +157,25 @@ describe('F4: the Activity tab', () => {
   });
 });
 
-describe('F6: Continue learning', () => {
+describe('F6: Home names the active course only', () => {
+  // Home has one start button (Today's session, which starts the active
+  // course), so the path beside it must be the active course's too.
   test('does not name another course\'s topic', () => {
     localStorage.setItem('recall-active-course', 'backend');
     localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
     render(<App />);
-    expect(screen.queryByText('Continue Learning')).toBeNull();
+    expect(screen.queryByText(getTopicPlace(Topic.TSQL_SELECT)!.unit)).toBeNull();
+    expect(screen.queryByText(getTopicPlace(Topic.TSQL_SELECT)!.section)).toBeNull();
   });
 
-  test('names the last topic answered in the active course', () => {
+  test('shows the section of the active course the learner is in', () => {
     localStorage.setItem('recall-active-course', 'backend');
     localStorage.setItem(PROGRESS_KEY, progressWith(['py-basic-1', 'tsql-select-mcq-1']));
     render(<App />);
-    expect(screen.getByText('Continue Learning')).toBeInTheDocument();
-    expect(screen.getByText('py basics')).toBeInTheDocument();
+    const place = getTopicPlace(Topic.PY_BASICS)!;
+    expect(screen.getByRole('heading', { name: place.section })).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: `Topics of ${place.section}` })).getByText(place.unit)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /today's session/ })).toHaveLength(1);
   });
 });
 
@@ -344,7 +349,7 @@ describe('F7: filters', () => {
     expect(sessionStored()).toMatchObject({ keepGoing: false, freshLeft: before.freshLeft, queue: before.queue });
 
     fireEvent.click(nav('Home'));
-    await screen.findByRole('heading', { name: 'Switch course' }, { timeout: 3000 });
+    await screen.findByRole('heading', { name: /Today's session|Done for today/ }, { timeout: 3000 });
     fireEvent.click(nav('Learn'));
     expect(await screen.findByText('Done for today', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(sessionStored().keepGoing).toBe(false);
@@ -412,7 +417,8 @@ describe('F7: filters', () => {
       topics: [Topic.TSQL_SELECT], difficulties: ['beginner'], questionTypes: ['parsons'],
     }));
     render(<App />);
-    fireEvent.click(screen.getAllByRole('button', { name: /Backend Engineering/ })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Switch course/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Backend Engineering' }));
 
     const saved = JSON.parse(localStorage.getItem('recall-filters')!);
     expect(saved.topics).toEqual(expect.arrayContaining([Topic.PY_DATACLASSES, Topic.TSQL_SELECT]));

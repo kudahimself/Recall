@@ -14,6 +14,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
  *   shortcut except Esc and a list's arrows, so holding Enter or Shift+Enter can never
  *   pick, submit or record an answer on the next step or question.
  * - Browser-reserved combinations (Ctrl+R, Ctrl+1-9 and the like) are never bound.
+ * - A sequence such as "G H" is two single keys: G arms it, and the next key
+ *   within SEQUENCE_MS completes it (any other key, or a pause, drops it).
  * - An open dialog takes the keys: only shortcuts registered while it is the
  *   top layer fire.
  */
@@ -33,15 +35,21 @@ export type ShortcutId =
   | 'listMove'
   | 'listToggle'
   | 'listReorder'
-  | 'listSwitch';
+  | 'listSwitch'
+  | 'goHome'
+  | 'goLearn'
+  | 'goProgress'
+  | 'goSettings'
+  | 'switchCourse'
+  | 'startSession';
 
-export type ShortcutGroup = 'Answering' | 'While typing' | 'Arranging lines' | 'Lessons' | 'Anywhere';
+export type ShortcutGroup = 'Answering' | 'While typing' | 'Arranging lines' | 'Lessons' | 'Anywhere' | 'Home';
 
 export interface ShortcutDef {
   /**
    * Key specs: "Enter", "H", "1-9", "Shift+Enter", "Mod+Enter" (Ctrl, or Cmd
-   * on macOS), "?", "Esc", "Space", "ArrowUp" and the other arrows, and
-   * "Alt+ArrowUp" / "Alt+ArrowDown".
+   * on macOS), "?", "Esc", "Space", "ArrowUp" and the other arrows,
+   * "Alt+ArrowUp" / "Alt+ArrowDown", or a sequence "G H".
    */
   keys: string[];
   label: string;
@@ -65,10 +73,24 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
   ruleCard: { keys: ['R'], label: 'Open or close the rule card', group: 'Lessons' },
   startExercises: { keys: ['Enter'], label: 'Start the exercises from a rule card', group: 'Lessons' },
   help: { keys: ['?'], label: 'Show or hide these shortcuts', group: 'Anywhere' },
-  close: { keys: ['Esc'], label: 'Close a dialog', group: 'Anywhere', whileTyping: true },
+  close: { keys: ['Esc'], label: 'Close a dialog or a list', group: 'Anywhere', whileTyping: true },
+  goHome: { keys: ['G H'], label: 'Go to Home', group: 'Anywhere' },
+  goLearn: { keys: ['G L'], label: "Go to Learn: today's session", group: 'Anywhere' },
+  goProgress: { keys: ['G P'], label: 'Go to Progress', group: 'Anywhere' },
+  goSettings: { keys: ['G S'], label: 'Go to Settings', group: 'Anywhere' },
+  switchCourse: { keys: ['C'], label: 'Switch course, then 1-5 to pick', group: 'Anywhere' },
+  startSession: { keys: ['Enter'], label: "Start today's session", group: 'Home' },
 };
 
-export const SHORTCUT_GROUPS: ShortcutGroup[] = ['Answering', 'While typing', 'Arranging lines', 'Lessons', 'Anywhere'];
+export const SHORTCUT_GROUPS: ShortcutGroup[] = ['Answering', 'While typing', 'Arranging lines', 'Lessons', 'Anywhere', 'Home'];
+
+/** How long the second key of a sequence ("G H") may wait after the first. */
+export const SEQUENCE_MS = 1500;
+
+/** The keys of a sequence spec ("G H" gives ["G", "H"]); one key for anything else. */
+export function sequenceKeys(spec: string): string[] {
+  return /^[A-Z] [A-Z]$/.test(spec) ? spec.split(' ') : [spec];
+}
 
 /** True when the key goes into a text box or editor, where single keys must type. */
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -86,6 +108,9 @@ const ARROWS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 function matchesSpec(spec: string, e: KeyboardEvent): boolean {
   const mod = e.ctrlKey || e.metaKey;
+  // A sequence matches on its last key, once its first key has armed it (see onKeyDown).
+  const seq = sequenceKeys(spec);
+  if (seq.length > 1) return pendingPrefix === seq[0] && matchesSpec(seq[1], e);
   if (spec === '1-9') return !mod && !e.altKey && /^[1-9]$/.test(e.key);
   if (spec === '?') return !mod && !e.altKey && e.key === '?';
   if (spec === 'Esc') return e.key === 'Escape';
@@ -128,26 +153,70 @@ let listening = false;
 // Esc, and the arrows of a list (holding one walks or carries a line along).
 const REPEATABLE = new Set<ShortcutId>(['leaveTyping', 'close', 'listMove', 'listReorder']);
 
+/** The first key of a sequence just pressed ("G"), until the next key or SEQUENCE_MS. */
+let pendingPrefix: string | null = null;
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearPending() {
+  pendingPrefix = null;
+  if (pendingTimer) clearTimeout(pendingTimer);
+  pendingTimer = null;
+}
+
+/** The sequence prefix this key arms ("G"), when an enabled binding on the top layer starts with it. */
+function prefixFor(e: KeyboardEvent, top: number): string | null {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return null;
+  const key = e.key.toUpperCase();
+  const armed = bindings.some(b => b.layer === top && b.enabled.current
+    && SHORTCUTS[b.id].keys.some(spec => { const seq = sequenceKeys(spec); return seq.length > 1 && seq[0] === key; }));
+  return armed ? key : null;
+}
+
 const topLayer = () => (openLayers.size ? Math.max(...Array.from(openLayers)) : 0);
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.defaultPrevented || e.isComposing) return;
+  if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
   const typing = isTypingTarget(e.target);
   const top = topLayer();
-  for (let i = bindings.length - 1; i >= 0; i--) {
-    const b = bindings[i];
-    if (b.layer !== top || !b.enabled.current) continue;
-    if (!matchesShortcut(b.id, e)) continue;
-    if (typing && !SHORTCUTS[b.id].whileTyping) continue;
-    if (e.repeat && !REPEATABLE.has(b.id)) {
-      e.preventDefault();
-      return;
-    }
-    if (b.handler.current(e) !== false) {
+  // The second key of a sequence: complete it below, or drop it.
+  const completing = pendingPrefix !== null;
+  if (!completing && !typing && !e.repeat) {
+    const prefix = prefixFor(e, top);
+    if (prefix) {
+      pendingPrefix = prefix;
+      pendingTimer = setTimeout(clearPending, SEQUENCE_MS);
       e.preventDefault();
       return;
     }
   }
+  // A completed sequence ("G" then "H") wins over a single-key binding of its last key ("H" hint).
+  if (completing) {
+    const handled = dispatch(e, typing, top, true);
+    clearPending();
+    if (handled) return;
+  }
+  dispatch(e, typing, top, false);
+}
+
+/** Run the newest matching binding; true when one took the key. */
+function dispatch(e: KeyboardEvent, typing: boolean, top: number, sequencesOnly: boolean): boolean {
+  for (let i = bindings.length - 1; i >= 0; i--) {
+    const b = bindings[i];
+    if (b.layer !== top || !b.enabled.current) continue;
+    const specs = SHORTCUTS[b.id].keys.filter(spec => !sequencesOnly || sequenceKeys(spec).length > 1);
+    if (!specs.some(spec => matchesSpec(spec, e))) continue;
+    if (typing && !SHORTCUTS[b.id].whileTyping) continue;
+    if (e.repeat && !REPEATABLE.has(b.id)) {
+      e.preventDefault();
+      return true;
+    }
+    if (b.handler.current(e) !== false) {
+      e.preventDefault();
+      return true;
+    }
+  }
+  return false;
 }
 
 function ensureListening() {

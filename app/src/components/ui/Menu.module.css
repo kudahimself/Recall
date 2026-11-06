@@ -1,0 +1,175 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  height: var(--control-md);
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  border: var(--border-w) solid var(--border-strong);
+  border-radius: var(--radius-m);
+  background: var(--raised);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  border-color: var(--text-3);
+}
+
+.chevron {
+  flex: none;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  color: var(--text-3);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.trigger[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+.triggerKey {
+  display: inline-flex;
+}
+
+/* Phones have no keyboard to press it with, and the list spans the screen. */
+@media (max-width: 767px) {
+  .triggerKey {
+    display: none;
+  }
+
+  .popover {
+    position: fixed;
+    top: var(--header-h);
+    left: var(--sp-3);
+    right: var(--sp-3);
+    width: auto;
+    max-width: none;
+  }
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  min-width: 100%;
+  max-width: calc(100vw - var(--sp-6));
+  padding: var(--sp-2);
+  background: var(--surface);
+  border: var(--border-w) solid var(--border-strong);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-3);
+  animation: menu-in var(--dur-fast) var(--ease) both;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--raised);
+}
+
+.item:focus-visible {
+  outline-offset: calc(-1 * var(--focus-w));
+}
+
+.item[aria-checked="true"] {
+  background: var(--accent-soft);
+}
+
+.itemKey {
+  display: inline-flex;
+  flex: none;
+}
+
+.itemIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border-radius: var(--radius-s);
+  background: var(--sunken);
+  border: var(--border-w) solid var(--border);
+}
+
+.itemIcon svg {
+  width: var(--icon-m);
+  height: var(--icon-m);
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.itemLabel {
+  font-size: var(--fs-body);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+}
+
+.itemDesc {
+  font-size: var(--fs-small);
+  line-height: var(--lh-tight);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.itemCheck {
+  flex: none;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  color: var(--accent-text);
+  visibility: hidden;
+}
+
+.item[aria-checked="true"] .itemCheck {
+  visibility: visible;
+}
+
+.footer {
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  border-top: var(--border-w) solid var(--border);
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}

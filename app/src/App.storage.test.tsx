@@ -4,7 +4,7 @@
  * write, a second tab, and an export that must import back unchanged.
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 import * as progressStorage from './utils/progressStorage';
 import {
@@ -33,10 +33,21 @@ const backups = () => listBackupKeys(localStorage).map(k => localStorage.getItem
 const historyIds = () =>
   JSON.parse(localStorage.getItem(PROGRESS_KEY) as string).attemptHistory.map((a: { questionId: string }) => a.questionId);
 
+/** Export, Import and Reset live on the Settings screen. */
+function openSettings() {
+  if (screen.queryByRole('heading', { name: 'Settings' })) return;
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Settings' }));
+}
+
+function exportButton() {
+  openSettings();
+  return screen.getByRole('button', { name: 'Export' });
+}
+
 async function resetActiveCourse() {
   jest.spyOn(window, 'confirm').mockReturnValue(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Progress' }));
-  const reset = await screen.findByRole('button', { name: /^Reset .* Progress$/ }, { timeout: 3000 });
+  openSettings();
+  const reset = await screen.findByRole('button', { name: /^Reset .* progress$/ }, { timeout: 3000 });
   fireEvent.click(reset);
 }
 
@@ -71,7 +82,7 @@ test('once the backup is made, saving resumes and the backup keeps the original 
   const raw = '{"attemptHistory": [';
   localStorage.setItem(PROGRESS_KEY, raw);
   render(<App />);
-  expect(screen.getByRole('button', { name: /Export/ })).toBeEnabled();
+  expect(exportButton()).toBeEnabled();
   expect(localStorage.getItem('recall-card-difficulty')).not.toBeNull();
 
   await resetActiveCourse();
@@ -110,7 +121,7 @@ test('the backup notice returns on a later clean load and Export carries the bac
   expect(screen.getByText(/Recall keeps a backup of progress it could not read/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Download backup/ }));
   expect(downloads[0][1]).toBe('old unreadable text');
-  fireEvent.click(screen.getByRole('button', { name: /Export/ }));
+  fireEvent.click(exportButton());
   expect(JSON.parse(downloads[1][1]).keys[backupKey]).toBe('old unreadable text');
   fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
   expect(screen.queryByText(/Recall keeps a backup/)).not.toBeInTheDocument();
@@ -136,7 +147,7 @@ test('without a backup, a failed load never writes, even after the in-memory sta
   const download = jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation(() => {});
   fireEvent.click(screen.getByRole('button', { name: /Download backup/ }));
   expect(download.mock.calls[0][1]).toBe('an older unreadable copy');
-  expect(screen.getByRole('button', { name: /Export/ })).toBeDisabled();
+  expect(exportButton()).toBeDisabled();
 
   await resetActiveCourse();
   expect(localStorage.getItem(PROGRESS_KEY)).toBe(raw);
@@ -229,16 +240,16 @@ test('a stale tab cannot export its older copy and is told to reload', () => {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(seeded));
   const download = jest.spyOn(progressStorage, 'downloadTextFile').mockImplementation(() => {});
   render(<App />);
-  expect(screen.getByRole('button', { name: /Export/ })).toBeEnabled();
+  expect(exportButton()).toBeEnabled();
 
   act(() => {
     window.dispatchEvent(new StorageEvent('storage', { key: PROGRESS_KEY, newValue: '{}' }));
   });
 
-  const exportButton = screen.getByRole('button', { name: /Export/ });
-  expect(exportButton).toBeDisabled();
+  const exportStale = exportButton();
+  expect(exportStale).toBeDisabled();
   expect(screen.getByText(/Reload this tab to export the latest progress/)).toBeInTheDocument();
-  fireEvent.click(exportButton);
+  fireEvent.click(exportStale);
   expect(download).not.toHaveBeenCalled();
 });
 
@@ -258,7 +269,7 @@ test('an export imports back to identical state', async () => {
   jest.spyOn(window, 'confirm').mockReturnValue(true);
 
   const { unmount: unmountFirst } = render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: /Export/ }));
+  fireEvent.click(exportButton());
   expect(downloads).toHaveLength(1);
   const exported = JSON.parse(downloads[0]);
   expect(exported).toEqual(expect.objectContaining({ format: 'recall-progress-export', version: 1, exportedAt: expect.any(String) }));
@@ -283,7 +294,7 @@ test('an export imports back to identical state', async () => {
 
   // Reloaded app exports the same record again.
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: /Export/ }));
+  fireEvent.click(exportButton());
   expect(JSON.parse(downloads[1]).keys).toEqual(exported.keys);
 });
 

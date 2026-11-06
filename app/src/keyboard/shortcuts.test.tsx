@@ -87,6 +87,34 @@ describe('useShortcut', () => {
     expect(onTypingSubmit).toHaveBeenCalledTimes(1);
   });
 
+  it('runs a sequence (G then H) ahead of the single key of its last letter, and only then', () => {
+    const onHome = jest.fn();
+    const onHint = jest.fn();
+    function Keys() {
+      useShortcut('hint', () => onHint());
+      useShortcut('goHome', () => onHome());
+      return <input aria-label="text box" />;
+    }
+    render(<Keys />);
+    fireEvent.keyDown(window, { key: 'g' });
+    fireEvent.keyDown(window, { key: 'h' });
+    expect(onHome).toHaveBeenCalledTimes(1);
+    expect(onHint).not.toHaveBeenCalled();
+    // H on its own is still the hint.
+    fireEvent.keyDown(window, { key: 'h' });
+    expect(onHint).toHaveBeenCalledTimes(1);
+    // G then another key drops the sequence, and that key does its own thing.
+    fireEvent.keyDown(window, { key: 'g' });
+    fireEvent.keyDown(window, { key: 'x' });
+    fireEvent.keyDown(window, { key: 'h' });
+    expect(onHome).toHaveBeenCalledTimes(1);
+    expect(onHint).toHaveBeenCalledTimes(2);
+    // Typing G and H in a text box types them.
+    fireEvent.keyDown(screen.getByLabelText('text box'), { key: 'g' });
+    fireEvent.keyDown(screen.getByLabelText('text box'), { key: 'h' });
+    expect(onHome).toHaveBeenCalledTimes(1);
+  });
+
   it('gives the keys to an open dialog, and back when it closes', () => {
     const onHint = jest.fn();
     function WithDialog() {

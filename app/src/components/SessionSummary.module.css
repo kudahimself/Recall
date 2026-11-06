@@ -1,0 +1,33 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  width: 100%;
+  max-width: var(--dialog-w);
+  margin: var(--sp-8) auto 0;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--success);
+}
+
+.title svg {
+  width: var(--icon-l);
+  height: var(--icon-l);
+}
+
+.lede {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--text-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}

@@ -204,7 +204,7 @@ Recall on already-learned topics outranks new material (Anki-style reviews-first
 
 **Today's session (`utils/reviewSession.ts`):**
 Each course has one bounded session a day, `TODAY_SESSION_SIZE` (20) questions by default, with an end and a summary.
-Size and review share are settings on the Today card on Home (`recall-today-size`, `recall-today-review-share`).
+Size and review share are on the Settings screen (`recall-today-size`, `recall-today-review-share`); every course uses them, and a session not started yet takes a change at once.
 When the session starts one fixed review list is built: due card families in unlocked topics, most overdue (lowest FSRS retrievability) first, each mapped to the one card it serves, capped at `TODAY_REVIEW_SHARE` of the session (12 of 20).
 Inside the list the old pickers' rules are ordering rules (`reviewListRank`): relearn families (missed last time) first, then drain cards (coding or advanced in a mastered topic), then the card's concept bucket in `REVIEW_LIST_BUCKET_ORDER`, each most overdue first.
 The rest of the session is fresh slots: the next unanswered card of the current topic's ramp, with a drill of a family already met after every `NEW_PER_DRILL` new cards.
@@ -242,7 +242,7 @@ The gate lives in the App, not the selector: when the session serves an unseen c
 After the lesson the session goes on with the rest of the topic's ramp.
 Answering the last exercise records the lesson under `recall-lessons`; new filters end a lesson in progress.
 Beside every card of a topic with a lesson, the rule card stays in a side panel, and `R` reopens it in full (Esc closes it).
-The learning path on Home shows each topic's lesson, ramp and review steps with "Start lesson" or "Rule card", and Progress -> Topics lists every topic with "Rule card" and "Drill" and the review schedule of its card families.
+The learning path (`components/PathList.tsx`) shows each topic's lesson, ramp and review steps with "Start lesson" or the rule card: Home shows the section holding the next lesson (else the current section), Progress -> Path every section, and Progress -> Topics lists every topic with "Rule card" and "Drill" and the review schedule of its card families.
 `scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, procedural T-SQL through `scripts/tsql-batch.js`, Python on python3) and prints its `output`, except an example that cannot run here (one of `NON_RUNNABLE_KINDS` in `utils/workedKinds.ts`) marked `worked.runs: false`, whose output is checked by hand; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
 
 **Exercises (`utils/exercises.ts`, `data/exercises/`, repo `exercises/`):**
@@ -434,7 +434,7 @@ Older `databricks-*` keys are copied to their `recall-*` names on first load and
 - History for question ids missing from the build is set aside on read and written back unchanged, so a renamed or removed question gets its history back if the id returns.
 - Every write goes through `safeSetItem`; a failure (for example a full quota) shows a "not being saved" banner instead of crashing the app.
 - A tab that sees another tab save answers (`storage` event) stops writing and asks for a reload, so two tabs never overwrite each other.
-- Export and Import in the header round-trip every `recall-*` key in `EXPORT_KEYS` and every unreadable-progress backup as one JSON file with a format version and export date.
+- Export and Import on the Settings screen round-trip every `recall-*` key in `EXPORT_KEYS` and every unreadable-progress backup as one JSON file with a format version and export date.
   This is also how progress moves to another origin (a different port or browser), since localStorage belongs to one origin.
   Import validates the whole file first and writes all keys or none; keys missing from the file (an older export) are left as they are.
   When this browser already holds answers, Import says what it would replace and asks first, then copies every key it overwrites to the single `recall-progress-pre-import-backup` key, itself an export file, replacing the copy any earlier import left there; if that copy cannot be written the import is refused.

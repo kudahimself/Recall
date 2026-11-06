@@ -131,14 +131,14 @@ touch-list (verified against the Data Engineering course):
    all sections, so the pathOrder branch is the main edit.)
 
 **UI**
-4. `src/App.tsx` — course meta map (label + theme class); the per-course stat-accumulator init
-   objects; the pathOrder + sections ternaries; the `theme-*` class switch.
-5. `src/components/NavigationRail.tsx` — add the course to the rail list (icon, label, color).
+4. `src/utils/courseMeta.ts` - `COURSE_META` (label, short name, icon, `theme-*` class) and
+   `COURSE_ORDER`, the order the top-bar course switcher lists courses in (its number keys).
+5. `src/App.tsx` - the course's concept registry in `resetProgress`, if it has one.
 6. `src/components/QuestionFilter.tsx` — add the course to its sections ternary.
 7. `src/components/ProgressTracker.tsx` — confirm it resolves the new course's sections/path.
-8. `src/App.css` — add the course's design tokens (`--<course>-solid`, gradient) and `theme-<course>`
-   class, following the existing per-course theming. No hardcoded px font-sizes (see the design-token
-   convention).
+8. `src/styles/tokens.css` - add the course's marker hue (`--course-<course>`) and its
+   `.theme-<course>` class; the hue tints dots and icons only, never a button. No raw colours or px
+   sizes in component CSS (`scripts/check-css-tokens.js`).
 
 **Data**
 9. Per-topic question files in `src/data/` (one per topic, `topic_*.ts` or the course's naming
