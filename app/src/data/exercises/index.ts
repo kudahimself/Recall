@@ -3,8 +3,8 @@
  * editor after the topic's lesson and ramp. The files live in the repo's
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
  * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
- * Python Advanced, Django, Django Advanced & Deployment, DRF Production Patterns and
- * Celery & Background Tasks so far.
+ * Python Advanced, Django, Django Advanced & Deployment, DRF Production Patterns,
+ * Celery & Background Tasks and Testing & CI/CD so far.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -775,6 +775,32 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Put one Redis server to work as the cache, the Celery broker, the session store and a leaderboard.',
       'Point `CACHES`, `CELERY_BROKER_URL` and `SESSION_ENGINE` at Redis, read a count through the cache and delete it when the data changes, count views with `add()` and `incr()`, and rank readers with a set and a sorted set through redis-py.',
+    ),
+  },
+  {
+    id: 'dj_factory_boy',
+    topicKeys: [Topic.DJ_FACTORY_BOY],
+    title: 'Loan desk factories',
+    folder: 'exercises/backend/dj_factory_boy',
+    starter: ['loan_desk/factories.py', 'loan_desk/scenarios.py'],
+    tests: 'test_loan_desk.py',
+    minutes: 25,
+    task: lines(
+      'Give the library\'s branches, members and loans factory_boy factories, then build the tests\' shared set-ups from them.',
+      'Fill fields with `Sequence`, `Faker` and `SubFactory`, bundle fields under a `Trait`, save groups that share one branch or member with `create_batch(n, field=value)`, and make an unsaved member with `build()`.',
+    ),
+  },
+  {
+    id: 'dj_cicd',
+    topicKeys: [Topic.DJ_CICD],
+    title: 'Release pipeline',
+    folder: 'exercises/backend/dj_cicd',
+    starter: ['.github/workflows/ci.yml'],
+    tests: 'test_release_pipeline.py',
+    minutes: 20,
+    task: lines(
+      'Fix the library\'s GitHub Actions workflow so it tests every change and deploys only what passed.',
+      'Run on pull requests and pushes to `main`, order the test steps, cache pip, run a Python version `matrix`, make `deploy` wait with `needs:` and an `if:` for a push to `main`, use the `production` environment and take the token from `secrets`.',
     ),
   },
 ];
