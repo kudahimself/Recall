@@ -67,6 +67,12 @@ export const RESPONSE_TIME_ENVELOPE_MS: Record<string, { easy: number; hard: num
   // Coding answers are long-form; a card taking a few minutes is normal effort,
   // not a recall failure. "easy" ≤ 4 min, "hard" only past ~10 min.
   coding:          { easy: 240_000, hard: 600_000 },
+  // Decision and design types: a typed value over small tables, two picks,
+  // reading a design line by line, and two or three typed sentences plus ticks.
+  predict_outcome: { easy: 15_000,  hard: 45_000 },
+  choose_justify:  { easy: 20_000,  hard: 60_000 },
+  spot_flaw:       { easy: 20_000,  hard: 60_000 },
+  explain:         { easy: 90_000,  hard: 240_000 },
 };
 
 /**

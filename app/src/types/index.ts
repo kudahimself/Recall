@@ -12,6 +12,11 @@ export enum QuestionType {
   PARSONS = 'parsons',
   PREDICT_OUTPUT = 'predict_output',
   CLOZE_CODE = 'cloze_code',
+  // Decision and design types (docs/DEVELOPMENT.md, Question Types 6-9).
+  PREDICT_OUTCOME = 'predict_outcome',
+  CHOOSE_JUSTIFY = 'choose_justify',
+  SPOT_FLAW = 'spot_flaw',
+  EXPLAIN = 'explain',
 }
 
 export enum Difficulty {
@@ -483,12 +488,97 @@ export interface ClozeCodeQuestion extends BaseQuestion {
   previewHtml?: string;
 }
 
+/** A typed answer that is tempting but wrong, and why: shown when the learner gives it. */
+export interface TemptingAnswer {
+  answer: string;
+  why: string;
+}
+
+/**
+ * Predict the outcome: small input tables, an optional job or situation, and a
+ * typed value (a count, a date, a total). Graded exactly after light
+ * normalization (utils/answerCredit.ts outcomeMatches); nothing to eliminate.
+ */
+export interface PredictOutcomeQuestion extends BaseQuestion {
+  type: QuestionType.PREDICT_OUTCOME;
+  // Input tables come from BaseQuestion.tables.
+  /** The job, query or config the situation runs (optional; prose-only situations omit it). */
+  code?: string;
+  /** Language of `code`, for its header; plain prose or pseudo-config omits it. */
+  language?: CodeLanguage;
+  /** The one right value, e.g. '8' or '2026-11-19'. */
+  answer: string;
+  /** Other spellings of the same value, e.g. ['eight']. */
+  acceptableAnswers?: string[];
+  /** Unit shown after the input and the answer, e.g. 'rows'. Typing it is optional. */
+  unit?: string;
+  /** Wrong answers worth naming: when the learner types one, its note is shown. */
+  tempting?: TemptingAnswer[];
+  /** Tables shown with the explanation, e.g. the target after both runs. */
+  resultTables?: SqlTable[];
+}
+
+/** One option of a choose-and-justify step. Exactly one per step is correct. */
+export interface ChoiceOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+/**
+ * Choose and justify: pick the decision, then the reason it is right. The
+ * reasons appear once the decision is locked in. Credit is 1 for both right,
+ * CHOOSE_JUSTIFY_DECISION_CREDIT (0.5) for the decision alone, 0 otherwise.
+ */
+export interface ChooseJustifyQuestion extends BaseQuestion {
+  type: QuestionType.CHOOSE_JUSTIFY;
+  decisions: ChoiceOption[];
+  reasons: ChoiceOption[];
+}
+
+/**
+ * Spot the flaw: a job, DAG or table design shown as numbered lines; the
+ * learner clicks the line that causes the stated symptom. Any line listed in
+ * `flawLines` counts as right (a flaw can span two lines).
+ */
+export interface SpotFlawQuestion extends BaseQuestion {
+  type: QuestionType.SPOT_FLAW;
+  /** The design, one entry per clickable line. */
+  lines: string[];
+  /** 1-based numbers of the lines that are the cause. */
+  flawLines: number[];
+  /** Language of the lines, for the header; prose or pseudo-config omits it. */
+  language?: CodeLanguage;
+  /** Context beside the lines (e.g. what staging holds); input tables come from BaseQuestion.tables. */
+  note?: string;
+  /** Tables shown with the explanation, e.g. rows per day over two runs. */
+  resultTables?: SqlTable[];
+}
+
+/**
+ * Explain in your own words: the learner types two or three sentences, then
+ * sees the model answer and ticks the key points their answer made. Credit is
+ * ticked / keyPoints.length. Review-only: never a new card or a ramp card
+ * (spacedRepetition.isReviewOnly).
+ */
+export interface ExplainQuestion extends BaseQuestion {
+  type: QuestionType.EXPLAIN;
+  /** The points a full answer makes, one sentence each (2-5). */
+  keyPoints: string[];
+  /** A model answer in two or three sentences, shown after the learner submits. */
+  modelAnswer: string;
+}
+
 export type Question =
   | MultipleChoiceQuestion
   | CodingQuestion
   | ParsonsQuestion
   | PredictOutputQuestion
-  | ClozeCodeQuestion;
+  | ClozeCodeQuestion
+  | PredictOutcomeQuestion
+  | ChooseJustifyQuestion
+  | SpotFlawQuestion
+  | ExplainQuestion;
 
 export interface QuestionAttempt {
   questionId: string;
@@ -496,8 +586,9 @@ export interface QuestionAttempt {
   isCorrect: boolean;
   attempts: number;
   timeSpent: number;
-  // Partial credit in [0, 1] for hint-assisted coding passes. Absent on legacy
-  // attempts, where credit is derived as `isCorrect ? 1 : 0`.
+  // Partial credit in [0, 1]: a hint-assisted coding pass, a choose-and-justify
+  // decision with the wrong reason, or an explain card's ticked key points.
+  // Absent on legacy attempts, where credit is derived as `isCorrect ? 1 : 0`.
   credit?: number;
   // Highest hint tier revealed before the terminal outcome (0 = none, 1 = signature, 2 = skeleton).
   hintTierUsed?: 0 | 1 | 2;
@@ -508,10 +599,13 @@ export interface QuestionAttempt {
 }
 
 // Extra outcome data a question component may pass to the recorder alongside the
-// boolean result. Only coding questions with tiered hints populate this today.
+// boolean result: coding questions with tiered hints, and the partial-credit
+// types (choose and justify, explain), which pass their `credit`.
 export interface AnswerMeta {
   hintTierUsed: 0 | 1 | 2;
   attempts: number;
+  /** Credit in [0, 1] the component graded itself; absent = derived from hints and the boolean. */
+  credit?: number;
 }
 
 export interface UserProgress {

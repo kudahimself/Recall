@@ -366,6 +366,8 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 **Question renderers:**
 - `MultipleChoiceQuestion.tsx`
 - `CodingQuestion.tsx`
+- `ParsonsQuestion.tsx`, `PredictOutputQuestion.tsx`, `ClozeCodeQuestion.tsx`
+- `PredictOutcomeQuestion.tsx`, `ChooseJustifyQuestion.tsx`, `SpotFlawQuestion.tsx`, `ExplainQuestion.tsx` (the decision and design types, see Question Types 6-9)
 
 **Progress/filters:**
 - `ProgressTracker.tsx` - hierarchical course → section → topic progress view
@@ -423,7 +425,7 @@ Older `databricks-*` keys are copied to their `recall-*` names on first load and
 
 ## Question Types
 
-Five formats live side-by-side.
+Nine formats live side-by-side: the five below, then four decision and design types (6-9) for courses that test judgment rather than code.
 Spaced repetition treats them all as equal-weight questions.
 
 Any question can carry `tables?: SqlTable[]` (`{ name, columns, rows }`, `null` cells render as NULL).
@@ -532,6 +534,85 @@ Lower cognitive load than cold writing; ideal as middle step of "worked → fade
 - Surrounding code must be unambiguously correct so user can focus on missing primitive
 
 **Reference file:** `src/data/pyBasicsClozeQuestions.ts`
+
+### Decision and design types (6-9)
+
+Four types where the learner produces an answer instead of picking a sentence: a value, a decision with its reason, a line, or an explanation.
+They were added for the Data Engineering rewrite but are tool-agnostic: tables, SQL or a few lines of pseudo-config are the notation.
+Grading lives in `src/utils/answerCredit.ts` (unit-tested in `answerCredit.test.ts`); the components are `PredictOutcomeQuestion.tsx`, `ChooseJustifyQuestion.tsx`, `SpotFlawQuestion.tsx` and `ExplainQuestion.tsx`, sharing `ReasoningParts.tsx` and `ReasoningQuestions.css`.
+`shapeErrors` is run over the whole bank by `questionBankIntegrity.test.ts`.
+One sample of each lives in `src/dev/sampleQuestions.ts`: the tests use them as fixtures, and the dev server shows one in the real quiz view at `http://localhost:3000/?sample=<id>` (`dev-sample-predict-outcome`, `dev-sample-choose-justify`, `dev-sample-spot-flaw`, `dev-sample-explain`), recording nothing.
+They are not in the bank.
+
+**Ramp place** (`RAMP_TYPE_ORDER` in `spacedRepetition.ts`): multiple choice, predict output, predict the outcome, choose and justify, Parsons, spot the flaw, cloze, coding.
+Explain is review-only and never in a ramp.
+
+**Partial credit.**
+Choose and justify and explain pass their own `credit` to the recorder (`AnswerMeta.credit`), stored on the attempt like a hinted coding pass.
+The constants are in `spacedRepetition.ts`:
+- credit at or above `CREDIT_CORRECT_THRESHOLD` (0.75) is a full pass;
+- for choose and justify only, credit from `PARTIAL_PASS_CREDIT` (0.5) up to the threshold is a pass under the bar, like a hinted pass: the card leaves today's list, its correct streak resets and its FSRS grade is capped at Hard (`PARTIAL_CREDIT_GRADE_CAP`, `capGradeForCredit`), so the family comes back sooner;
+- for choose and justify, credit below 0.5 is a miss (re-asked in the session, graded Again);
+- explain has no partial band: it passes only at 0.75, and anything below is a miss.
+In every case the fraction counts toward the topic's unlock bar, as hinted credit does.
+
+#### 6. Predict the Outcome (`QuestionType.PREDICT_OUTCOME`)
+
+Small input tables and a job or situation; the learner types one value (a count, a date, a total).
+Nothing to eliminate.
+
+**Schema:**
+- `tables?: SqlTable[]` - the input tables (the shared `BaseQuestion` field, rendered by `DataTables.tsx`)
+- `code?: string`, `language?: CodeLanguage` - the job, query or config that runs; prose-only situations omit both
+- `answer: string` - the one right value, e.g. `'8'` or `'2026-11-19'`
+- `acceptableAnswers?: string[]` - other spellings of the same value
+- `unit?: string` - shown after the input and the answer, e.g. `'rows'`; typing it is optional
+- `tempting?: { answer, why }[]` - wrong answers worth naming; all are shown after grading, and the one the learner typed is highlighted
+- `resultTables?: SqlTable[]` - tables shown with the explanation, e.g. the target after both runs
+
+**Grading:** exact after trimming, case-folding, collapsing spaces, dropping a final full stop and the unit (`outcomeMatches`); `8` is not `8.0`.
+
+#### 7. Choose and Justify (`QuestionType.CHOOSE_JUSTIFY`)
+
+Pick the decision, lock it in, then pick the reason it is right.
+Options are shown in a stable shuffle per question.
+
+**Schema:**
+- `decisions: ChoiceOption[]` and `reasons: ChoiceOption[]` - `{ id, text, isCorrect }`, exactly one correct in each
+
+**Credit** (`chooseJustifyCredit`): 1 for both right, `CHOOSE_JUSTIFY_DECISION_CREDIT` (0.5) for the right decision with the wrong reason, 0 for a wrong decision whatever the reason.
+
+**Authoring rule:** each wrong reason is a real misconception about why the decision works (speed, a guarantee it does not give), not a false sentence.
+
+#### 8. Spot the Flaw (`QuestionType.SPOT_FLAW`)
+
+A job, DAG or table design as numbered lines; the learner clicks the line that causes a stated symptom and checks it.
+
+**Schema:**
+- `lines: string[]` - one entry per clickable line
+- `flawLines: number[]` - 1-based numbers of the lines that are the cause; any of them is right (a flaw can span two lines)
+- `language?: CodeLanguage` - for the header; prose or pseudo-config omits it
+- `note?: string` - context beside the lines; input tables use `tables`
+- `resultTables?: SqlTable[]` - shown with the explanation
+
+**Authoring rule:** the lines on screen are the whole design; nothing outside them should be needed to find the flaw.
+
+#### 9. Explain in Your Own Words (`QuestionType.EXPLAIN`)
+
+Review-only.
+The learner types two or three sentences, then sees the model answer and ticks the key points their answer made.
+Recall does not grade prose.
+
+**Schema:**
+- `keyPoints: string[]` - 2-5 points a full answer makes, one sentence each
+- `modelAnswer: string` - two or three sentences, shown after the learner submits
+
+**Credit** (`explainCredit`): ticked key points / all key points, recorded when the learner confirms the ticks (3 of 4 meets the 0.75 bar).
+Explain passes only at the 0.75 bar: anything below, such as 2 of 4 or 2 of 3, counts as a miss (the 0.5 partial band is for choose and justify only).
+The fraction is still stored as the attempt's credit.
+
+**Review-only** (`REVIEW_ONLY_TYPES`, `isReviewOnly`): an explain card is never a new card, a ramp card, an unseen drill or practice card, and `check-lessons.js` rejects it as a lesson exercise.
+It joins its family's review rotation once every ramp card of its topic is answered (`pickFamilyCard`): unseen, it counts as the card seen longest ago, so the next review whose type rotation allows it serves it.
 
 ## Adding Questions
 

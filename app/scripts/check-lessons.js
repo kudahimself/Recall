@@ -12,7 +12,9 @@
  *   - it has fewer than 3 or more than 5 exercises, an exercise id is unknown,
  *     repeated, or of another topic, the exercises are not in ramp order
  *     (rampRank, ties in bank order), there is no multiple choice or no
- *     predict-output exercise, or the first exercise is a cold write;
+ *     predict exercise (predict output or predict the outcome), the first
+ *     exercise is a cold write, or an exercise is a review-only card
+ *     (isReviewOnly: an explain card);
  *   - its worked example does not run, or prints something other than
  *     `worked.output` (SQL on sql.js, Python on python3), or a SQL result of
  *     more than one row comes from a statement without ORDER BY (row order
@@ -60,7 +62,7 @@ const { LESSONS } = require(path.join(APP, 'src/data/lessons/index.ts'));
 const { rampRank } = require(path.join(APP, 'src/utils/spacedRepetition.ts'));
 const { getSectionUnits, SQL_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, WEBDEV_PATH_ORDER, DATA_ENG_PATH_ORDER } =
   require(path.join(APP, 'src/utils/courseConfig.ts'));
-const { familyOf } = require(path.join(APP, 'src/utils/spacedRepetition.ts'));
+const { familyOf, isReviewOnly } = require(path.join(APP, 'src/utils/spacedRepetition.ts'));
 
 const { NON_RUNNABLE_KINDS, nonRunnableKind } = require(path.join(APP, 'src/utils/workedKinds.ts'));
 
@@ -419,7 +421,7 @@ const UNITS = [SQL_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORDER, WEBDEV
 
 /** The answer-bearing code of an exercise: a solution and its alternatives, or a predict snippet. */
 function exerciseCode(q) {
-  if (q.type === 'predict_output') return q.code ? [q.code] : [];
+  if (q.type === 'predict_output' || q.type === 'predict_outcome') return q.code ? [q.code] : [];
   if (typeof q.solution === 'string') return splitAlternatives(q.solution);
   return [];
 }
@@ -437,7 +439,7 @@ function leakFindings(lesson) {
         findings.push({ severity: 'HIGH', message: `worked example repeats ${id} verbatim` });
         continue;
       }
-      if (q.type === 'predict_output') continue;
+      if (q.type === 'predict_output' || q.type === 'predict_outcome') continue;
       const tokens = [...essentialTokens(alt)];
       if (tokens.length < 3) continue;
       const recall = tokens.filter(t => workedTokens.has(t)).length / tokens.length;
@@ -469,6 +471,7 @@ async function checkLesson(lesson, seenIds) {
     const q = BY_ID.get(id);
     if (!q) { err(`unknown exercise id ${id}`); continue; }
     if (!lesson.topicKeys.includes(q.topic)) err(`${id} belongs to ${q.topic}, not this lesson's topic`);
+    if (isReviewOnly(q)) err(`${id} is a review-only ${q.type} card, never a lesson exercise`);
     qs.push(q);
   }
   for (let i = 1; i < qs.length; i++) {
@@ -482,7 +485,7 @@ async function checkLesson(lesson, seenIds) {
   }
   if (qs.length > 0) {
     if (!qs.some(q => q.type === 'multiple_choice')) err('no multiple-choice exercise');
-    if (!qs.some(q => q.type === 'predict_output')) err('no predict-output exercise');
+    if (!qs.some(q => q.type === 'predict_output' || q.type === 'predict_outcome')) err('no predict exercise (predict output or predict the outcome)');
     if (qs[0].type === 'coding') err('the first exercise is a cold write');
   }
   if (lesson.family && !qs.some(q => familyOf(q) === lesson.family)) err(`family ${lesson.family} is not the family of any exercise`);

@@ -36,6 +36,7 @@ import {
   REVIEW_LIST_BUCKET_ORDER,
   familyOf,
   isRampDifficultyOpen,
+  isReviewOnly,
   topicRamp,
   todayReviewCap,
   MAX_REASKS_PER_SESSION,
@@ -363,7 +364,7 @@ export function nextConsolidationCard(pools: Pools, ctx: CardPickContext, topic:
       && !ctx.queuedFamilies?.has(familyOf(q)))
     .sort((a, b) => rampRank(a) - rampRank(b));
   return usable.find(q => ctx.latest.get(q.id) === false)
-    ?? usable.find(q => !ctx.latest.has(q.id))
+    ?? usable.find(q => !ctx.latest.has(q.id) && !isReviewOnly(q))
     ?? null;
 }
 
@@ -382,7 +383,7 @@ export function nextDrillCard(pools: Pools, store: FsrsStore, ctx: CardPickConte
   for (const { f } of met) {
     const members = index.get(f)!;
     const unseen = members.find(q =>
-      !ctx.latest.has(q.id) && !ctx.served.has(q.id)
+      !ctx.latest.has(q.id) && !ctx.served.has(q.id) && !isReviewOnly(q)
       && (!ctx.unlocked || ctx.unlocked.has(q.topic))
       && isRampDifficultyOpen(ctx.byTopic.get(q.topic) ?? [q], ctx.latest, q.difficulty));
     const card = unseen ?? pickFamilyCard(members, store.families[f], ctx);
@@ -403,7 +404,7 @@ export function nextUnseenCard(pools: Pools, ctx: CardPickContext): Question | n
     return i < 0 ? order.length : i;
   };
   return pools.serve
-    .filter(q => !ctx.latest.has(q.id) && !ctx.served.has(q.id)
+    .filter(q => !ctx.latest.has(q.id) && !ctx.served.has(q.id) && !isReviewOnly(q)
       && (!ctx.unlocked || ctx.unlocked.has(q.topic))
       && isRampDifficultyOpen(ctx.byTopic.get(q.topic) ?? [q], ctx.latest, q.difficulty))
     .map((q, i) => ({ q, i }))

@@ -1,7 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { Topic, Difficulty, QuestionType, Course } from '../types';
 import { getCourseForTopic, DATABRICKS_SECTIONS, WEBDEV_SECTIONS, BACKEND_SECTIONS, DATA_ENG_SECTIONS, SQL_SECTIONS } from '../utils/courseConfig';
+import { questions } from '../data/questions';
 import './QuestionFilter.css';
+
+const TYPE_CHIP_LABEL: Record<QuestionType, string> = {
+  [QuestionType.MULTIPLE_CHOICE]: 'Multiple Choice',
+  [QuestionType.PARSONS]: 'Parsons',
+  [QuestionType.PREDICT_OUTPUT]: 'Predict Output',
+  [QuestionType.CLOZE_CODE]: 'Fill Blanks',
+  [QuestionType.CODING]: 'Coding',
+  [QuestionType.PREDICT_OUTCOME]: 'Predict Outcome',
+  [QuestionType.CHOOSE_JUSTIFY]: 'Choose & Justify',
+  [QuestionType.SPOT_FLAW]: 'Spot the Flaw',
+  [QuestionType.EXPLAIN]: 'Explain',
+};
 
 interface FilterOptions {
   topics: Topic[];
@@ -19,7 +32,11 @@ interface Props {
 export const QuestionFilter: React.FC<Props> = ({ filters, onFilterChange, onReset, activeCourse }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const allDifficulties = Object.values(Difficulty);
-  const allQuestionTypes = Object.values(QuestionType);
+  // Only the formats the course has questions of get a chip.
+  const allQuestionTypes = useMemo(() => {
+    const present = new Set(questions.filter(q => getCourseForTopic(q.topic) === activeCourse).map(q => q.type));
+    return Object.values(QuestionType).filter(t => present.has(t));
+  }, [activeCourse]);
 
   const examSections = activeCourse === Course.DATABRICKS
     ? DATABRICKS_SECTIONS
@@ -238,17 +255,7 @@ export const QuestionFilter: React.FC<Props> = ({ filters, onFilterChange, onRes
                 className={`filter-chip ${filters.questionTypes.includes(type) ? 'active' : ''}`}
                 onClick={() => handleQuestionTypeToggle(type)}
               >
-                <span className="chip-label">
-                  {type === QuestionType.MULTIPLE_CHOICE
-                    ? 'Multiple Choice'
-                    : type === QuestionType.PARSONS
-                    ? 'Parsons'
-                    : type === QuestionType.PREDICT_OUTPUT
-                    ? 'Predict Output'
-                    : type === QuestionType.CLOZE_CODE
-                    ? 'Fill Blanks'
-                    : 'Coding'}
-                </span>
+                <span className="chip-label">{TYPE_CHIP_LABEL[type]}</span>
               </button>
             ))}
           </div>
