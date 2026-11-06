@@ -59,13 +59,13 @@ export function KeySpec({ spec }: { spec: string }) {
  */
 export function KeyHints({ hints, className }: { hints: Array<[ShortcutId | string, string]>; className?: string }) {
   return (
-    <p className={[styles.hints, className].filter(Boolean).join(' ')} aria-hidden="true">
+    <span className={[styles.hints, className].filter(Boolean).join(' ')} aria-hidden="true">
       {hints.map(([key, label]) => (
         <span key={key + label} className={styles.hint}>
           <KeySpec spec={key in SHORTCUTS ? SHORTCUTS[key as ShortcutId].keys[0] : key} />
           {label}
         </span>
       ))}
-    </p>
+    </span>
   );
 }

@@ -123,7 +123,7 @@ import { NavRail, NavView } from './components/shell/NavRail';
 import { HomeView } from './components/home/HomeView';
 import { SettingsView } from './components/settings/SettingsView';
 import { PathSections } from './components/PathList';
-import { Activity, ArrowRight, BookOpen, Route, TrendingUp } from 'lucide-react';
+import { Activity, BookOpen, Route, TrendingUp } from 'lucide-react';
 import './App.css';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

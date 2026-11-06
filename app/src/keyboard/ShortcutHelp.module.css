@@ -1,6 +1,6 @@
-/* Two balanced columns: groups flow down the first, then the second. */
+/* Balanced columns (three on a laptop): groups flow down one, then the next. */
 .groups {
-  columns: 2;
+  columns: 3;
   column-gap: var(--sp-8);
 }
 
@@ -49,6 +49,12 @@
   margin: 0;
   font-size: var(--fs-small);
   color: var(--text-2);
+}
+
+@media (max-width: 1099px) {
+  .groups {
+    columns: 2;
+  }
 }
 
 @media (max-width: 767px) {

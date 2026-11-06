@@ -8,7 +8,7 @@ import styles from './ShortcutHelp.module.css';
 export function ShortcutHelpDialog({ onClose }: { onClose: () => void }) {
   const defs = Object.values(SHORTCUTS) as ShortcutDef[];
   return (
-    <Dialog title="Keyboard shortcuts" onClose={onClose}>
+    <Dialog title="Keyboard shortcuts" onClose={onClose} size="wide">
       <HelpToggle onToggle={onClose} />
       <div className={styles.groups}>
         {SHORTCUT_GROUPS.map(group => (

@@ -5,7 +5,7 @@ import { isTypingTarget, useShortcut } from '../../keyboard/shortcuts';
 import { Button } from './Button';
 import { FeedbackBanner, Verdict } from './FeedbackBanner';
 import { InlineText } from './InlineText';
-import { KeyCombo } from './Kbd';
+import { KeyHints } from './Kbd';
 import styles from './QuestionShell.module.css';
 
 /** Where Next goes and what it is called ("Next exercise", "Finish the lesson"), from the quiz view. */
@@ -334,17 +334,7 @@ export function QuestionShell({
         <span className={styles.spacer} />
         {/* On a short screen the difficulty and type move down here, beside the keys. */}
         <span className={styles.footMeta} aria-hidden="true">{meta}</span>
-        <span className={styles.keyHints} aria-hidden="true">
-          {keyHints.filter(([, label]) => label).map(([k, label]) => (
-            <span key={k + label} className={styles.keyHint}>
-              {/^\d-\d$/.test(k)
-                ? <><KeyCombo combo={k.split('-')[0]} />-<KeyCombo combo={k.split('-')[1]} /></>
-                : <KeyCombo combo={k} />}
-              {label}
-            </span>
-          ))}
-          <span className={styles.keyHint}><KeyCombo combo="?" />keys</span>
-        </span>
+        <KeyHints className={styles.keyHints} hints={[...keyHints.filter(([, label]) => label), ['help', 'keys']]} />
       </footer>
     </article>
   );
