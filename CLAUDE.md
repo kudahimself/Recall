@@ -54,7 +54,7 @@ Question construction workflow and question writing quality standards live in sk
   Heavy scaffolding leaks the answer.
 - **UI targets desktop viewport without scrolling** - dark-purple theme on the design tokens in
   `app/src/styles/tokens.css`.
-  Monaco Editor: `vs-dark`, no minimap, line numbers on, read-only after correct answer.
+  Monaco Editor config (theme, no minimap, read-only after correct answer): see `docs/DEVELOPMENT.md`.
 
 ## Agent conduct
 
