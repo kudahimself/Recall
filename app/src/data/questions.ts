@@ -737,32 +737,6 @@ df = spark.read.format("csv").option("header", True).load("/Volumes/main/hr/raw/
     concepts: ['ps-io-csv'],
   },
   {
-    id: 'ps-df-6',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.PYSPARK_DATAFRAMES,
-    language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (columns: id, name, age, email), print its schema as a tree: column names, data types and nullable flags.',
-    starterCode: `# Print the schema\ndf.`,
-    testCases: [
-      {
-        input: 'df DataFrame',
-        expectedOutput: 'df.printSchema() or df.schema',
-        description: 'Should access the schema',
-      },
-    ],
-    solution: 'df.printSchema()',
-    explanation: 'printSchema() prints the schema as a tree, one line per column with its type and nullable flag. df.schema returns the same information as a StructType object for code to inspect, and df.dtypes as a list of (name, type) pairs, but neither prints the tree.',
-    tieredHints: {
-      apiSignature: 'DataFrame.printSchema() -> None',
-      skeleton: `# ____ the schema as a tree
-____.____()`,
-    },
-    hints: ['Use the printSchema() method'],
-    tags: ['dataframe', 'schema'],
-    concepts: ['ps-dataframe-create'],
-  },
-  {
     id: 'ps-df-7',
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
@@ -1060,8 +1034,8 @@ result = df.fillna(0, "age")`,
   },
 ];
 
-// Generate variations of key concepts (5 variations per template)
-// We now have 28 variation templates (8 original + 20 new)
+// Generate variations of key concepts (5 variations per template).
+// No templates remain (see utils/questionVariations.ts), so this adds none.
 const variationQuestions = generateAllVariations(5);
 
 // Combine base questions, expanded questions, and variations

@@ -1,4 +1,4 @@
-import { CodingQuestion, Difficulty, Topic, QuestionType, CodeLanguage } from '../types';
+import { CodingQuestion } from '../types';
 
 interface VariationTemplate {
   conceptId: string; // Unique identifier for the concept being tested
@@ -106,83 +106,9 @@ export const variationTemplates: VariationTemplate[] = [
   // select, filter, groupBy+count, and when/otherwise. Variations just repeated the same
   // pattern with different column names.
 
-  // JOIN DATAFRAMES
-  {
-    conceptId: 'pyspark-join-inner',
-    baseQuestion: {
-      id: 'ps-transform-2',
-      // Spread onto every generated variation, so all five var* questions inherit it.
-      // The variation engine rewrites column and entity names in `solution` only,
-      // which is why this gate names no columns. No "inner" literal either: it is
-      // the default `how`, so omitting it is still a correct answer.
-      // The second pattern rejects an outer, cross, semi or anti join type, which
-      // would otherwise share every token with the `join(df2, "id")` branch.
-      requires: [/\.join\s*\(/, /\.join\s*\((?![^)]*["'](?:left|right|full|outer|cross|semi|anti|left_\w+|right_\w+|full_\w+|leftsemi|leftanti|leftouter|rightouter|fullouter)["'])/],
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.SQL_JOINS,
-      language: CodeLanguage.PYTHON,
-      question: 'Write a PySpark statement that inner joins DataFrame "df1" to DataFrame "df2" on the column "id" that both share, and assigns the result to "result".\n\nPySpark join() takes the other DataFrame, the join column (a string when both sides use the same name) and the join type ("inner", "left", "right", "full"). An inner join keeps only the rows whose key exists in both DataFrames.',
-      starterCode: `# Inner join df1 and df2 on their shared 'id' column\nresult = df1.`,
-      testCases: [
-        {
-          input: 'two DataFrames that share a key column',
-          expectedOutput: 'left.join(right, "key", "inner") or left.join(right, on="key", how="inner")',
-          description: 'Should inner join on the shared key column',
-        },
-      ],
-      solution: `result = df1.join(df2, "id", "inner")\n# OR\nresult = df1.join(df2, on="id", how="inner")\n# OR\nresult = df1.join(df2, "id")`,
-      explanation: 'When both DataFrames use the same column name, pass it as a string: PySpark joins on it and keeps a single copy of the column. inner is the default join type, so leaving it out gives the same result. For differently named keys, join on a condition such as df1.col1 == df2.col2.',
-      hints: ['Pass the other DataFrame, the shared column name as a string, and "inner"', 'A string key keeps one copy of the column', 'on= and how= work as named arguments'],
-      tags: ['dataframe', 'join', 'transformation'],
-    },
-    variations: {
-      // Each array has `count` post-original entries (5 here) so variation
-      // index 0..4 maps to a distinct substitution — without this, count=5
-      // against 4-entry arrays produces var0 and var4 with identical content.
-      columns: [
-        ['id', 'department_id', 'customer_id', 'product_id', 'user_id', 'plan_id'],
-      ],
-      // Entity pairs line up with the key above: employees/departments on
-      // department_id, orders/customers on customer_id, and so on.
-      entities: [
-        ['df1', 'employees', 'orders', 'order_items', 'users', 'accounts'],
-        ['df2', 'departments', 'customers', 'products', 'profiles', 'plans'],
-      ],
-    },
-  },
-
-  // ORDER BY
-  {
-    conceptId: 'pyspark-orderby',
-    baseQuestion: {
-      id: 'ps-transform-4',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PYSPARK_TRANSFORMATIONS,
-      language: CodeLanguage.PYTHON,
-      question: 'Write a PySpark statement that sorts DataFrame "df" by "salary" in descending order and assigns the result to "result".',
-      starterCode: `# Sort by salary descending\nresult = df.`,
-      testCases: [
-        {
-          input: 'df with the column to sort on',
-          expectedOutput: 'df.orderBy(desc(column)) or df.orderBy(column, ascending=False)',
-          description: 'Should sort in descending order',
-        },
-      ],
-      solution: `from pyspark.sql.functions import desc\n\nresult = df.orderBy(desc("salary"))\n# OR\nresult = df.orderBy(df.salary.desc())\n# OR\nresult = df.sort(desc("salary"))\n# OR\nresult = df.orderBy("salary", ascending=False)\n# OR\nresult = df.sort("salary", ascending=False)`,
-      explanation: 'orderBy() and sort() are aliases. For descending order use the desc() function, the .desc() method on a column, or ascending=False.',
-      hints: ['Use orderBy() or sort()', 'Use desc() for descending order'],
-      tags: ['dataframe', 'orderBy', 'sort'],
-    },
-    variations: {
-      // 5 post-original entries to match count=5 — see note on the join
-      // template above for why this matters.
-      columns: [
-        ['salary', 'price', 'revenue', 'score', 'age', 'rating'],
-      ],
-    },
-  },
+  // Join and orderBy variations removed - their five copies each duplicated
+  // ps-transform-2 (inner join on a shared key) and ps-transform-4 (sort
+  // descending) in questions.ts.
 
   // SQL variations removed — base questions in questions.ts already cover SELECT WHERE
   // and GROUP BY with aggregates. Variations just repeated the same pattern with different

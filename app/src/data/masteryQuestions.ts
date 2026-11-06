@@ -28,38 +28,6 @@ export const masteryQuestions: Question[] = [
   // FILE I/O (12 questions)
   // =====================================================================
 
-  {
-    id: 'io-1',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.PYSPARK_BASICS,
-    language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to read a CSV file from "/Volumes/main/hr/raw/employees.csv" into DataFrame "df" with headers enabled and schema inference enabled.`,
-    starterCode: `# Read CSV file into df\ndf = `,
-    requires: [/header/, /inferSchema/],
-    testCases: [
-      {
-        input: 'CSV file with headers',
-        expectedOutput: '.format("csv").option("header", "true").option("inferSchema", "true").load()',
-        description: 'Should read CSV with header and inferSchema',
-      },
-    ],
-    solution: `df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load("/Volumes/main/hr/raw/employees.csv")
-# OR
-df = spark.read.csv("/Volumes/main/hr/raw/employees.csv", header=True, inferSchema=True)
-# OR
-df = spark.read.option("header", "true").option("inferSchema", "true").csv("/Volumes/main/hr/raw/employees.csv")
-# OR
-df = spark.read.option("header", True).option("inferSchema", True).csv("/Volumes/main/hr/raw/employees.csv")`,
-    explanation: 'header=True treats the first row as column headers. inferSchema=True auto-detects column data types by scanning the file. In production, prefer explicit StructType schemas for performance.',
-    tieredHints: {
-      apiSignature: 'DataFrameReader.csv(path: str, header: bool = None, inferSchema: bool = None) -> DataFrame',
-      skeleton: `df = spark.read.____("/Volumes/main/hr/raw/employees.csv", ____=True, ____=True)`,
-    },
-    hints: ['Use spark.read.csv() or spark.read.format("csv")', 'Set header and inferSchema options'],
-    tags: ['csv', 'read', 'io', 'file-formats'],
-    concepts: ['ps-io-csv', 'ps-io-parquet'],
-  },
 
   {
     id: 'io-2',
@@ -614,38 +582,6 @@ FROM orders`,
     concepts: ['sql-case-expr', 'ps-when-otherwise'],
   },
 
-  {
-    id: 'casewhen-3',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.PYSPARK_DATAFRAMES,
-    language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to add an "age_group" column to DataFrame "df" (columns: id, emp_name, age): "Minor" if age < 18, "Adult" if age < 65, otherwise "Senior".',
-    starterCode: `# Categorize age groups\nresult = `,
-    requires: [/18\s*,\s*["']Minor["'][\s\S]*65\s*,\s*["']Adult["']/],
-    testCases: [
-      {
-        input: 'df with age column',
-        expectedOutput: 'when(col("age") < 18, "Minor").when(...).otherwise("Senior")',
-        description: 'Should categorize by age',
-      },
-    ],
-    solution: `from pyspark.sql.functions import when, col\n\nresult = df.withColumn("age_group",\n    when(col("age") < 18, "Minor")\n    .when(col("age") < 65, "Adult")\n    .otherwise("Senior")\n)\n# OR\nfrom pyspark.sql.functions import when\n\nresult = df.withColumn("age_group",\n    when(df.age < 18, "Minor")\n    .when(df.age < 65, "Adult")\n    .otherwise("Senior")\n)`,
-    explanation: 'Chain .when() conditions sequentially to implement multi-branch categorization. The first matching condition determines the output value.',
-    tieredHints: {
-      apiSignature: 'when(condition: Column, value: Any).otherwise(value: Any) -> Column',
-      skeleton: `from pyspark.sql.functions import when, col
-
-result = ____.____("____",
-    ____(col("____") < ____, "____")
-    .____(col("____") < ____, "____")
-    .____("____")
-)`,
-    },
-    hints: ['Use when(condition, value)', 'Chain .when() for second condition and .otherwise() for default'],
-    tags: ['when', 'otherwise', 'conditional', 'case'],
-    concepts: ['ps-when-otherwise', 'sql-case-expr'],
-  },
 
   {
     id: 'casewhen-4',
@@ -1215,7 +1151,7 @@ ____ ____ (
     id: 'pivot-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
-    topic: Topic.PYSPARK_DATAFRAMES,
+    topic: Topic.SPARK_SQL,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to pivot DataFrame "df" (columns: year, quarter, revenue) so each quarter value becomes its own column showing sum of revenue, grouped by year.',
     starterCode: `# Pivot quarter into columns grouped by year\nresult = `,
@@ -1318,7 +1254,7 @@ FROM wide_scores, ____ ____(3, "____", math, "____", science, "____", english) A
     id: 'pivot-4',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
-    topic: Topic.PYSPARK_DATAFRAMES,
+    topic: Topic.SPARK_SQL,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to pivot DataFrame "df" (columns: region, product_type, total_sales) on "product_type" grouped by "region", explicitly passing values ["Electronics", "Clothing", "Food"] to avoid an extra dataset scan.',
     starterCode: `# Pivot with explicit values\nresult = `,
