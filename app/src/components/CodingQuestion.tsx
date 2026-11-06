@@ -224,7 +224,10 @@ function CodeEditor({ questionId, language, value, onChange, readOnly, onCheck, 
       });
       resizeRef.current.observe(boxRef.current);
     }
+    let repeat = false;
+    editor.onKeyDown((e: any) => { repeat = !!e.browserEvent?.repeat; });
     const check = () => {
+      if (repeat) return;
       if (!checkRef.current()) shellRef.current?.primary();
     };
     for (const spec of SHORTCUTS.submitTyping.keys) editor.addCommand(monacoKey(monaco, spec), check);
@@ -301,6 +304,7 @@ export const CodingQuestion: React.FC<Props> = ({
   // The learner's answer when the checker cannot tell: does their code do the same as the reference?
   const [selfChoice, setSelfChoice] = useState<'same' | 'different' | null>(null);
   const editorRef = useRef<any>(null);
+  const checking = useRef(false);
 
   // Reset state when question changes
   useEffect(() => {
@@ -321,6 +325,7 @@ export const CodingQuestion: React.FC<Props> = ({
     setTestResults([]);
     setShowSolution(false);
     setSelfChoice(null);
+    checking.current = false;
   }, [question.id, question.starterCode]);
 
   // Record exactly one attempt for this question visit at a terminal outcome.
@@ -331,6 +336,16 @@ export const CodingQuestion: React.FC<Props> = ({
   };
 
   const handleSubmit = async () => {
+    if (checking.current) return;
+    checking.current = true;
+    try {
+      await grade();
+    } finally {
+      checking.current = false;
+    }
+  };
+
+  const grade = async () => {
     const attemptNumber = submitCount + 1;
     setSubmitCount(attemptNumber);
     let results: ValidationResult[];

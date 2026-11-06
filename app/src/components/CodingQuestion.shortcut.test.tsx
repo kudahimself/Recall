@@ -15,6 +15,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { CodingQuestion } from './CodingQuestion';
+import { validateByComputedStyle } from '../utils/computedStyleValidator';
 import {
   CodeLanguage,
   Difficulty,
@@ -46,6 +47,11 @@ const MOCK_ESCAPE = 9;
 const MOCK_KEY_R = 48;
 const mockCommands = new Map<number, (accessor: unknown) => void>();
 const mockContexts = new Map<number, string | undefined>();
+let mockKeyDown: ((e: { browserEvent: { repeat: boolean } }) => void) | undefined;
+
+jest.mock('../utils/computedStyleValidator', () => ({
+  validateByComputedStyle: jest.fn(),
+}));
 
 // Real Monaco calls addCommand handlers with a ServicesAccessor, not a DOM
 // event, so the fake fires them the same way.
@@ -72,6 +78,9 @@ jest.mock('@monaco-editor/react', () => {
         addCommand: (keybinding: number, handler: (accessor: unknown) => void, context?: string) => {
           mockCommands.set(keybinding, handler);
           mockContexts.set(keybinding, context);
+        },
+        onKeyDown: (listener: (e: { browserEvent: { repeat: boolean } }) => void) => {
+          mockKeyDown = listener;
         },
         focus: () => {},
         dispose: () => {},
@@ -120,6 +129,7 @@ async function pressCtrlEnter() {
 beforeEach(() => {
   mockCommands.clear();
   mockContexts.clear();
+  mockKeyDown = undefined;
   jest.useFakeTimers();
 });
 
@@ -186,5 +196,58 @@ describe('CodingQuestion Cmd/Ctrl+Enter', () => {
       fireCommand(MOCK_ESCAPE);
     });
     expect(screen.getByRole('article')).toHaveFocus();
+  });
+});
+
+describe('CodingQuestion double check', () => {
+  test('a second check while a preview grade is still running is ignored', async () => {
+    let settle: (results: unknown[]) => void = () => {};
+    (validateByComputedStyle as jest.Mock).mockImplementation(
+      () => new Promise(resolve => { settle = resolve; }),
+    );
+    const onAnswer = jest.fn();
+    const question = {
+      ...QUESTION,
+      previewChecks: [{ selector: 'p', property: 'color', description: 'colours the text' }],
+    } as unknown as CQ;
+    render(<CodingQuestion question={question} onAnswer={onAnswer} showHints={true} />);
+
+    await pressCtrlEnter();
+    await act(async () => {
+      fireCommand(MOCK_SHIFT | MOCK_ENTER);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Check/ }));
+    await act(async () => {
+      settle([{ passed: true, verdict: 'pass', description: 'colours the text' }]);
+    });
+
+    expect(validateByComputedStyle).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(true, expect.objectContaining({ attempts: 1 }));
+  });
+
+  test('a held Shift+Enter checks once; the repeat does not check again', async () => {
+    const onAnswer = jest.fn();
+    const question = {
+      ...QUESTION,
+      tieredHints: { apiSignature: 'sum(iterable) -> int', skeleton: 'total = ____(____)' },
+    } as CQ;
+    render(<CodingQuestion question={question} onAnswer={onAnswer} showHints={true} />);
+    const shiftEnter = (repeat: boolean) => act(async () => {
+      mockKeyDown?.({ browserEvent: { repeat } });
+      fireCommand(MOCK_SHIFT | MOCK_ENTER);
+    });
+
+    fireEvent.change(screen.getByTestId('code-editor'), { target: { value: 'nonsense unrelated tokens' } });
+    await shiftEnter(false);
+    expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('code-editor'), { target: { value: SOLUTION } });
+    await shiftEnter(true);
+    expect(onAnswer).not.toHaveBeenCalled();
+
+    await shiftEnter(false);
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(true, expect.objectContaining({ attempts: 2 }));
   });
 });

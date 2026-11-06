@@ -224,7 +224,7 @@ jest.mock('@monaco-editor/react', () => {
     const ref = ReactActual.useRef(null);
     ReactActual.useEffect(() => {
       onMount(
-        { addCommand: (k: number, h: () => void) => mockCommands.set(k, h), focus: () => ref.current?.focus(), dispose: () => {} },
+        { addCommand: (k: number, h: () => void) => mockCommands.set(k, h), onKeyDown: () => {}, focus: () => ref.current?.focus(), dispose: () => {} },
         {
           KeyMod: { CtrlCmd: MOCK_CTRL_CMD, Shift: MOCK_SHIFT },
           KeyCode: { Enter: MOCK_ENTER, Escape: MOCK_ESCAPE },
