@@ -606,7 +606,7 @@ export interface TopicLesson {
     output?: string;
     /**
      * false only for an example that cannot run here, one of NON_RUNNABLE_KINDS in
-     * utils/workedKinds.ts (a Django / DRF example, a GitHub Actions workflow, an Nginx config):
+     * utils/workedKinds.ts (a Django / DRF example, a GitHub Actions workflow, an Nginx config, a Databricks notebook cell):
      * check-lessons.js then checks everything but the run, and `output` is verified by hand.
      */
     runs?: false;
