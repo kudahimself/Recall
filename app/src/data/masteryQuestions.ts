@@ -949,6 +949,23 @@ result = ____.____(____).____()`,
     tags: ['union', 'distinct', 'set-operations'],
     concepts: ['sql-set-operations', 'ps-distinct-drop-dup'],
   },
+  {
+    id: 'setop-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.SQL_SET_OPERATIONS,
+    question: 'In a notebook, `SELECT id FROM a UNION SELECT id FROM b` returns 3 rows. Ported to PySpark as a.union(b) over the same two tables, it returns 5 rows. Why?',
+    options: [
+      { id: 'a', text: 'DataFrame union() matches columns by name rather than by position, so it adds the rows of b a second time.', isCorrect: false },
+      { id: 'b', text: 'SQL UNION drops rows whose id is null, while DataFrame union() keeps them, so the null ids add two rows.', isCorrect: false },
+      { id: 'c', text: 'DataFrame union() runs per partition, so a row held in two partitions is counted once in each of them.', isCorrect: false },
+      { id: 'd', text: 'DataFrame union() keeps every row, as SQL UNION ALL does, so the duplicate ids that UNION removed stay.', isCorrect: true },
+    ],
+    explanation: 'SQL UNION removes duplicate rows from the combined result, and UNION ALL keeps them. DataFrame union() (and its old alias unionAll()) behaves like UNION ALL, so a port of a SQL UNION needs .distinct() after it: a.union(b).distinct(). union() matches columns by position, not by name; unionByName() is the one that matches names. Neither drops nulls.',
+    hints: ['Which SQL operator keeps duplicates?', 'What does a.union(b).distinct() add?'],
+    tags: ['union', 'set-operations', 'distinct'],
+    concepts: ['sql-set-operations', 'ps-union'],
+  },
 
   // =====================================================================
   // SEMI-JOINS & ANTI-JOINS (6 questions)

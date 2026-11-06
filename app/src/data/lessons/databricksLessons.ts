@@ -2,13 +2,17 @@
  * Databricks lessons, one per topic, in course order.
  *
  * Section 1, Lakehouse Platform: every topic.
+ * Section 2, ELT with Spark SQL & Python: every topic.
  *
- * Prose keeps one sentence per source line (`lines`). A worked example here is
- * a Databricks notebook cell: it needs a workspace with Unity Catalog to run,
- * so it sets `runs: false`, says in its first-line comment what it assumes,
- * and its output was checked by hand against current Databricks (Unity
- * Catalog, Delta Lake 3+). SQL runs through `spark.sql`, as it would in a
- * Python notebook.
+ * Prose keeps one sentence per source line (`lines`). Most worked examples
+ * here are Databricks notebook cells: they need a workspace to run, so they
+ * set `runs: false`, say in their first-line comment what they assume, and
+ * their output was checked against current Databricks (Unity Catalog, Delta
+ * Lake 3+); the section 2 cells were also run on Spark 4.0 with ANSI mode on
+ * and off. SQL in a cell runs through `spark.sql`, as it would in a Python
+ * notebook. A plain SQL example (joins, aggregations, subqueries, set
+ * operations) uses only SQL that Spark and the checker's engine agree on, so
+ * check-lessons.js runs it.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -705,6 +709,992 @@ print(spark.read.option("versionAsOf", 3).table(t).count())`,
       'delta-optimize-predict-1',
       'delta-optimize-2',
       'delta-9',
+    ],
+  },
+  // ===== Section 2, ELT with Spark SQL & Python =====
+  {
+    id: 'pyspark_basics/1',
+    topicKeys: [Topic.PYSPARK_BASICS, Topic.PYSPARK_DATAFRAMES],
+    step: 1,
+    title: 'DataFrame Basics (select, filter, withColumn)',
+    idea: [
+      lines(
+        "A DataFrame is a table of rows with named, typed columns, spread over the cluster in partitions.",
+        "In a notebook you get one from `spark.table(\"cat.sch.t\")`, from `spark.read` on files such as CSV, JSON or Parquet, or from `spark.createDataFrame(rows, columns)`, and `printSchema()` shows its columns and types.",
+      ),
+      lines(
+        "`select` keeps the columns you list, `filter` (or `where`) keeps the rows whose condition is true, and `withColumn(\"c\", expr)` adds a column, or replaces the one already named `c`.",
+        "Column expressions come from `pyspark.sql.functions`, such as `col`, `lit` and `when(...).otherwise(...)`, while `selectExpr` takes SQL strings instead, one per output column, like `\"price * qty AS total\"`.",
+        "`col(\"c\").cast(\"double\")` changes a column's type.",
+      ),
+      lines(
+        "`df.write` saves a DataFrame with a mode: `errorifexists` (the default), `append`, `overwrite` or `ignore`.",
+        "`saveAsTable(\"cat.sch.t\")` writes it as a Delta table in Unity Catalog.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql.functions import col, when
+df = spark.table("cat.sch.t")              # or spark.read.csv(path, header=True)
+df.printSchema()                           # column names and types
+df2 = (df.select("a", "b")                 # keep these columns
+         .filter(col("a") > 0)             # keep these rows; where() is the same
+         .withColumn("c", col("b") * 2)    # add a column, or replace one named c
+         .withColumn("band", when(col("a") > 9, "high").otherwise("low")))
+df.selectExpr("a", "b * 2 AS c")           # SQL strings, one per output column
+df2.show(5)                                # an action: print 5 rows
+df2.write.mode("append").saveAsTable("cat.sch.t2")`,
+    },
+    pitfall: lines(
+      "A DataFrame never changes, so `df.withColumn(...)` on a line of its own does nothing: the new column is in the DataFrame it returns, which is thrown away.",
+      "Assign the result, `df = df.withColumn(...)`, or chain the calls into one expression.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql.functions import col, when
+books = spark.createDataFrame(
+    [("Dune", "9.99", 3), ("Emma", "4.50", 0), ("Ubik", "7.25", 5)],
+    ["title", "price", "stock"],
+)
+books.withColumn("price", col("price").cast("double"))
+print(books.dtypes[1])
+books = books.withColumn("price", col("price").cast("double"))
+shelf = (books.filter(col("stock") > 0)
+              .withColumn("value", col("price") * col("stock"))
+              .withColumn("tier", when(col("price") >= 8, "premium").otherwise("standard"))
+              .select("title", "value", "tier"))
+for r in shelf.orderBy("title").collect():
+    print(r.title, round(r.value, 2), r.tier)`,
+      steps: [
+        "Lines 3-6: `createDataFrame` builds three rows with named columns, and the prices arrive as strings.",
+        "Lines 7-8: the cast on line 7 returns a new DataFrame that nobody keeps, so `price` is still a string.",
+        "Line 9: assigning the result back to `books` makes the cast stick.",
+        "Lines 10-13: `filter` drops Emma, who has no stock, and each `withColumn` adds one column, `tier` through `when` and `otherwise`.",
+        "Lines 14-15: `select` kept only three columns, and `collect` brings the two rows back to print.",
+      ],
+      output: `('price', 'string')
+Dune 29.97 premium
+Ubik 36.25 standard`,
+    },
+    exercises: [
+      'ps-basic-1',
+      'ps-df-1',
+      'io-6',
+      'ps-selectexpr-4',
+      'ps-df-4',
+    ],
+  },
+  {
+    id: 'pyspark_transformations/1',
+    topicKeys: [Topic.PYSPARK_TRANSFORMATIONS, Topic.PYSPARK_ACTIONS],
+    step: 1,
+    title: 'Transformations & Actions (groupBy, orderBy, dropDuplicates, repartition, collect)',
+    idea: [
+      lines(
+        "A transformation, such as `select`, `filter`, `groupBy`, `orderBy`, `join` or `dropDuplicates`, returns a new DataFrame and only adds a step to the plan: nothing runs yet.",
+        "An action, such as `count`, `show`, `collect`, `first`, `take(n)` or a write, runs the whole plan as a job and returns a result.",
+      ),
+      lines(
+        "Narrow transformations (`select`, `filter`, `withColumn`) work on each partition alone, while wide ones (`groupBy`, `orderBy`, `distinct`, `join`, `repartition`) shuffle rows between machines, which is the costly part.",
+        "`groupBy(\"k\").agg(...)` gives one row per key, `distinct()` drops rows equal in every column, and `dropDuplicates([\"k\"])` keeps one row per key.",
+      ),
+      lines(
+        "`repartition(n)` shuffles into n partitions, more or fewer, while `coalesce(n)` only merges partitions without a shuffle, so it can only lower the count.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql.functions import col, count, sum as sum_
+out = (df.filter(col("x") > 0)                # narrow: no data moves
+         .dropDuplicates(["k", "x"])          # wide: one row per (k, x)
+         .groupBy("k")                        # wide: shuffle by key
+         .agg(count("*").alias("n"), sum_("x").alias("total"))
+         .orderBy(col("total").desc()))       # wide: a global sort
+out.count(); out.show(5); out.first(); out.take(3)   # actions: each runs a job
+rows = out.collect()                          # every row to the driver: small results only
+df.repartition(8); df.coalesce(2)             # shuffle into 8 / merge down to 2
+a.unionByName(b)                              # stack, matching columns by name`,
+    },
+    pitfall: lines(
+      "`dropDuplicates([\"k\"])` keeps one row per key, but Spark does not say which one, and it can differ between runs.",
+      "To keep a chosen row, such as the newest, keep `row_number() == 1` over a window ordered by that column.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql.functions import col, count, sum as sum_
+loans = spark.createDataFrame(
+    [("leeds", "Dune", 2), ("leeds", "Dune", 2), ("york", "Emma", 1),
+     ("leeds", "Ubik", 4), ("york", "Kim", 3)],
+    ["branch", "title", "days"],
+)
+by_branch = (loans.distinct()
+                  .groupBy("branch")
+                  .agg(count("*").alias("loans"), sum_("days").alias("days"))
+                  .orderBy(col("days").desc()))
+print(loans.count(), loans.distinct().count())
+for r in by_branch.collect():
+    print(r.branch, r.loans, r.days)
+print(by_branch.first().branch)`,
+      steps: [
+        "Lines 3-7: the Leeds loan of Dune appears twice, identical in every column.",
+        "Lines 8-11: `distinct`, `groupBy`, `agg` and `orderBy` only build a plan, and no job has run yet.",
+        "Line 12: each `count` is an action, so two jobs run: 5 rows, and 4 once the duplicate is gone.",
+        "Lines 13-14: `collect` runs the plan and returns one row per branch, sorted by total days, Leeds with 2 + 4 = 6 first.",
+        "Line 15: `first` is another action, so the plan runs again and returns only the top row.",
+      ],
+      output: `5 4
+leeds 2 6
+york 2 4
+leeds`,
+    },
+    exercises: [
+      'action-1',
+      'ps-trans-narrow-1',
+      'ps-trans-dedup-1',
+      'ps-trans-dedup-2',
+      'grouping-5',
+    ],
+  },
+  {
+    id: 'string_functions/1',
+    topicKeys: [Topic.STRING_FUNCTIONS],
+    step: 1,
+    title: 'String Functions (upper, lower, concat, trim, regexp)',
+    idea: [
+      lines(
+        "String functions come from `pyspark.sql.functions` and work on a whole column, row by row: `upper`, `lower`, `trim` (with `ltrim` and `rtrim`), `length`, and `substring(col, pos, len)`, whose positions start at 1.",
+        "`split(col, pattern)` turns a string into an array of its parts.",
+      ),
+      lines(
+        "`concat(a, b, ...)` joins columns and literals, with `lit(\" \")` for a fixed piece of text, and `concat_ws(sep, a, b, ...)` joins them with a separator between each.",
+      ),
+      lines(
+        "`regexp_replace(col, pattern, replacement)` rewrites every match of a regular expression, and `regexp_extract(col, pattern, group)` returns one capture group, or an empty string when nothing matches.",
+        "In SQL, `LIKE 'ab%'` matches text that starts with `ab`, and `LIKE '%ab%'` text that contains it anywhere.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql import functions as F
+df.select(
+    F.lower(F.trim("s")),                   # "  Ab " -> "ab"
+    F.length("s"), F.substring("s", 1, 3),  # positions start at 1
+    F.concat("a", F.lit(" "), "b"),         # null when any input is null
+    F.concat_ws("-", "a", "b", "c"),        # skips null inputs
+    F.split("csv", ","),                    # an array<string>
+    F.regexp_replace("s", "[0-9]", "#"),    # every match
+    F.regexp_extract("s", "@(.+)$", 1),     # capture group 1, "" when no match
+)`,
+    },
+    pitfall: lines(
+      "`concat` returns null for the whole row when any input is null, so one missing middle name blanks a full name.",
+      "Use `concat_ws`, which skips nulls, or wrap each part that can be null in `coalesce(col, lit(\"\"))`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql.functions import concat, concat_ws, lit, lower, trim, regexp_extract, regexp_replace, substring
+members = spark.createDataFrame(
+    [("  Ada ", None, "ADA@Library.org", "LIB-0042"), ("Kim", "J", "kim@uni.ac.uk", "LIB-7")],
+    ["first", "middle", "email", "card"],
+)
+out = members.select(
+    trim("first").alias("first"),
+    concat(trim("first"), lit(" "), "middle").alias("joined"),
+    concat_ws(" ", trim("first"), "middle").alias("label"),
+    regexp_extract(lower("email"), "@(.+)$", 1).alias("domain"),
+    regexp_replace(substring("card", 5, 4), "^0+", "").alias("number"),
+)
+for r in out.orderBy("first").collect():
+    print(r.first, r.joined, r.label, r.domain, r.number, sep=" | ")`,
+      steps: [
+        "Line 8: `trim` strips the spaces around \"  Ada \".",
+        "Lines 9-10: Ada has no middle name, so `concat` gives null (printed as None), while `concat_ws` skips the null and gives \"Ada\".",
+        "Line 11: `lower` runs first, then the capture group `(.+)` takes everything after the @.",
+        "Line 12: `substring` starts at position 5, the first character after \"LIB-\", and `regexp_replace` strips the leading zeros.",
+        "Lines 14-15: Kim has every part, so both joins give \"Kim J\".",
+      ],
+      output: `Ada | None | Ada | library.org | 42
+Kim | Kim J | Kim J | uni.ac.uk | 7`,
+    },
+    exercises: [
+      'string-mcq-1',
+      'sql-predict-7',
+      'string-4',
+    ],
+  },
+  {
+    id: 'datetime_functions/1',
+    topicKeys: [Topic.DATETIME_FUNCTIONS],
+    step: 1,
+    title: 'Date & Time Functions (date_format, datediff, to_date)',
+    idea: [
+      lines(
+        "Spark has a DateType, a calendar day, and a TimestampType, a day and a time, and `current_date()` and `current_timestamp()` give today and now.",
+        "`to_date(col, \"dd/MM/yyyy\")` and `to_timestamp(col, \"yyyy-MM-dd HH:mm:ss\")` parse strings, and ISO text such as `2026-03-15` needs no pattern at all.",
+      ),
+      lines(
+        "`year`, `month`, `dayofmonth` and `hour` take out one part as a number.",
+        "`date_add(d, n)` and `date_sub(d, n)` move a date by days, `add_months(d, n)` by months, and `datediff(end, start)` counts the days from start to end.",
+        "`date_format(d, pattern)` turns a date into text.",
+      ),
+      lines(
+        "Pattern letters are case-sensitive: `yyyy` is the year, `MM` the month, `dd` the day of the month, `HH` the hour from 0 to 23, `mm` the minute, and `EEE` the short day name.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql import functions as F
+df.select(
+    F.to_date("s", "dd/MM/yyyy"),                # string -> date
+    F.to_timestamp("s", "yyyy-MM-dd HH:mm:ss"),  # string -> timestamp
+    F.year("d"), F.month("d"), F.dayofmonth("d"),
+    F.date_add("d", 30), F.date_sub("d", 7), F.add_months("d", 1),
+    F.datediff("end_d", "start_d"),              # end minus start, in days
+    F.date_format("d", "dd MMM yyyy"),           # date -> string
+    F.current_date(),
+)`,
+    },
+    pitfall: lines(
+      "`mm` is minutes and `MM` is the month, so `date_format(d, \"yyyy-mm-dd\")` prints `2026-00-15` for 15 March, with no error to warn you.",
+      "Check the case of every pattern letter, `MM` for months and `dd` for days.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql.functions import date_add, date_format, datediff, month, to_date
+loans = spark.createDataFrame(
+    [("Dune", "28/01/2026", "2026-02-03"), ("Emma", "15/02/2026", "2026-02-20")],
+    ["title", "out_str", "back_str"],
+)
+dated = loans.select(
+    "title",
+    to_date("out_str", "dd/MM/yyyy").alias("out_d"),
+    to_date("back_str").alias("back_d"),
+)
+report = dated.select(
+    "title",
+    datediff("back_d", "out_d").alias("days"),
+    date_format(date_add("out_d", 21), "EEE dd MMM").alias("due"),
+    month("out_d").alias("m"),
+)
+for r in report.orderBy("title").collect():
+    print(r.title, r.days, r.due, r.m)`,
+      steps: [
+        "Lines 9-10: the loan dates are day first, so `to_date` needs `dd/MM/yyyy`, while the ISO return dates need no pattern.",
+        "Line 14: `datediff` takes the later date first; 28 January to 3 February is 6 days, across the month end.",
+        "Line 15: `date_add` moves each loan 21 days on, and `EEE dd MMM` prints the day name, the day and the short month.",
+        "Line 16: `month` gives the loan month as a number, 1 for January.",
+      ],
+      output: `Dune 6 Wed 18 Feb 1
+Emma 5 Sun 08 Mar 2`,
+    },
+    exercises: [
+      'datetime-mcq-1',
+      'datetime-predict-1',
+      'datetime-3',
+    ],
+  },
+  {
+    id: 'collection_functions/1',
+    topicKeys: [Topic.COLLECTION_FUNCTIONS],
+    step: 1,
+    title: 'Collection Functions (arrays, maps, explode)',
+    idea: [
+      lines(
+        "An array column holds a list of values of one type in each row, a map column holds key-value pairs, and a struct holds fixed named fields.",
+        "`array(a, b)` builds an array from columns, `create_map(k1, v1, k2, v2)` builds a map from keys and values in turn, and `split` and `collect_list` also return arrays.",
+      ),
+      lines(
+        "`size(col)` counts an array's elements or a map's entries, `array_contains(col, v)` tests whether an array holds a value, `array_sort` sorts each row's array, and `flatten` turns an array of arrays into one array.",
+        "`col(\"m\")[\"key\"]` reads a map, and a missing key gives null, not an error.",
+      ),
+      lines(
+        "`explode(col)` turns each element into a row of its own, repeating the row's other columns, and on a map it gives two columns, `key` and `value`.",
+        "`explode_outer` does the same but keeps a row whose array is empty or null, with a null in place of the element.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql import functions as F
+df.select(
+    F.array("a", "b", "c").alias("arr"),      # one array per row
+    F.create_map("k1", "v1", "k2", "v2"),     # key, value, key, value
+    F.size("arr"), F.array_sort("arr"),
+    F.flatten("nested"),                      # [[1, 2], [3]] -> [1, 2, 3]
+    F.col("m")["key"],                        # null when the key is missing
+)
+df.filter(F.array_contains("arr", "x"))       # rows whose array holds "x"
+df.select("id", F.explode("arr").alias("item"))   # one row per element
+df.select("id", F.explode_outer("arr"))       # also keeps empty and null arrays`,
+    },
+    pitfall: lines(
+      "`explode` makes no rows at all from an empty or null array, so those parent rows silently disappear from everything after it.",
+      "Use `explode_outer` when every parent row must survive.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql.functions import array_contains, array_sort, col, explode, size
+shelves = spark.createDataFrame(
+    [("A", ["Ubik", "Dune"], {"floor": "1"}), ("B", [], {"floor": "2", "wing": "east"}), ("C", ["Emma"], {})],
+    "shelf string, titles array<string>, info map<string,string>",
+)
+summary = shelves.select(
+    "shelf",
+    size("titles").alias("n"),
+    array_sort("titles").alias("sorted"),
+    col("info")["wing"].alias("wing"),
+)
+for r in summary.orderBy("shelf").collect():
+    print(r.shelf, r.n, r.sorted, r.wing)
+print(shelves.filter(array_contains("titles", "Dune")).count())
+one_per_title = shelves.select("shelf", explode("titles").alias("title"))
+print(one_per_title.count(), sorted({r.shelf for r in one_per_title.collect()}))`,
+      steps: [
+        "Lines 9-11: `size` counts the titles, `array_sort` sorts each row's array, and only shelf B's map has a `wing` key, so the others give None.",
+        "Line 15: `array_contains` keeps the one shelf whose array holds Dune.",
+        "Lines 16-17: `explode` makes one row per title, 3 in all, and shelf B, with an empty array, is gone from the result.",
+      ],
+      output: `A 2 ['Dune', 'Ubik'] None
+B 0 [] east
+C 1 ['Emma'] None
+1
+3 ['A', 'C']`,
+    },
+    exercises: [
+      'collection-6',
+      'ps-maplib-1',
+      'collection-3',
+      'collection-predict-1',
+      'collection-1',
+    ],
+  },
+  {
+    id: 'math_functions/1',
+    topicKeys: [Topic.MATH_FUNCTIONS],
+    step: 1,
+    title: 'Math & Aggregate Functions (sum, avg, round)',
+    idea: [
+      lines(
+        "Math functions work on each row: `round(col, 2)` rounds a half up, `bround` rounds a half to the even neighbour, `ceil` and `floor` go up and down, and `abs`, `sqrt`, `pow(x, y)` and `exp` do what their names say.",
+        "`greatest(a, b)` and `least(a, b)` compare columns across one row, and `sqrt` of a negative number gives NaN, not null.",
+      ),
+      lines(
+        "Aggregate functions, `sum`, `avg`, `min`, `max`, `count` and `countDistinct`, turn many rows into one, so they run inside `groupBy(...).agg(...)`, a bare `df.agg(...)` or a window, never bare inside `withColumn` (only with `.over(w)`).",
+        "They skip nulls: `avg` divides by the number of values that are not null, and `count(\"col\")` counts those values while `count(\"*\")` counts rows.",
+      ),
+      lines(
+        "These names are also Python built-ins, `sum`, `min`, `max`, `abs` and `round`, so import the module, `from pyspark.sql import functions as F`, and call `F.sum` and `F.round`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql import functions as F
+df.select(
+    F.round("x", 2), F.bround("x", 0),        # half up / half to even
+    F.ceil("x"), F.floor("x"), F.abs("x"),
+    F.pow("x", 2), F.sqrt("x"),               # sqrt of a negative is NaN
+    F.greatest("a", "b"),                     # the larger value on each row
+)
+df.groupBy("k").agg(
+    F.sum("x").alias("total"), F.avg("x").alias("mean"),   # nulls skipped
+    F.count("*").alias("all_rows"), F.count("x").alias("filled"),
+)`,
+    },
+    pitfall: lines(
+      "`from pyspark.sql.functions import sum, round` replaces Python's own `sum` and `round` for the rest of the notebook, so later plain Python code gets a Column back or fails far from the import.",
+      "Import the module as `F` and call `F.sum`, or import under another name, as in `sum as sum_`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+import pyspark.sql.functions as F
+fines = spark.createDataFrame(
+    [("leeds", 2.25, 3), ("leeds", 1.5, None), ("york", 4.0, 1), ("york", None, 2)],
+    "branch string, fine double, days int",
+)
+per_branch = fines.groupBy("branch").agg(
+    F.round(F.sum("fine"), 1).alias("total"),
+    F.avg("days").alias("avg_days"),
+    F.count("*").alias("rows"),
+    F.count("fine").alias("fined"),
+)
+for r in per_branch.orderBy("branch").collect():
+    print(r.branch, r.total, r.avg_days, r.rows, r.fined)
+print(round(2.5), fines.select(F.round(F.lit(2.5))).first()[0])`,
+      steps: [
+        "Line 8: Leeds' fines sum to 3.75, and `F.round` to one place rounds the half up, to 3.8.",
+        "Line 9: `avg` skips the null, so Leeds averages 3 days over one value, not 1.5 over two rows.",
+        "Lines 10-11: `count(\"*\")` counts both York rows, while `count(\"fine\")` counts only the one with a fine.",
+        "Line 15: `F.round` left Python's `round` alone, which rounds a half to even and gives 2, while Spark gives 3.0.",
+      ],
+      output: `leeds 3.8 3.0 2 2
+york 4.0 1.5 2 1
+2 3.0`,
+    },
+    exercises: [
+      'math-1',
+      'math-2',
+      'math-3',
+      'math-predict-1',
+      'ps-agglib-6',
+    ],
+  },
+  {
+    id: 'null_handling/1',
+    topicKeys: [Topic.NULL_HANDLING],
+    step: 1,
+    title: 'Null Handling (coalesce, isNull, fillna)',
+    idea: [
+      lines(
+        "A null is a missing value, and any comparison with it, `==`, `!=` or `>`, gives null rather than true or false.",
+        "`filter` keeps only the rows whose condition is true, so a null drops the row.",
+        "Test for it with `isNull()` and `isNotNull()`, or `IS NULL` in SQL, since `== None` never matches.",
+      ),
+      lines(
+        "Arithmetic with a null gives null, so `5 + null` is null.",
+        "`coalesce(a, b, c)` returns its first argument that is not null, the usual way to supply a default.",
+        "`eqNullSafe`, `<=>` in SQL, treats two nulls as equal, for joins on keys that can be null.",
+      ),
+      lines(
+        "`fillna(0)` fills nulls in the numeric columns only, and `fillna({\"qty\": 0, \"notes\": \"none\"})` gives each column its own value.",
+        "`na.drop()` removes every row that has any null; `how=\"all\"`, `subset=[...]` and `thresh=n` narrow it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql.functions import coalesce, col, lit
+df.filter(col("c").isNull())                       # never col("c") == None
+df.filter((col("c") != "x") | col("c").isNull())   # keep the nulls on purpose
+df.withColumn("contact", coalesce("email", "phone", lit("none")))
+df.fillna({"qty": 0, "notes": "unknown"})          # per column; fillna(0) skips strings
+df.na.drop(how="all", subset=["a", "b"])           # drop only when both are null
+a.join(b, a.k.eqNullSafe(b.k))                     # null keys match each other`,
+    },
+    pitfall: lines(
+      "`filter(col(\"phone\") != \"555\")` also drops every row whose phone is null, because null != \"555\" is null, not true.",
+      "Add `| col(\"phone\").isNull()` when those rows should stay.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql.functions import coalesce, col, lit
+members = spark.createDataFrame(
+    [(1, "07700 1", None, 2), (2, None, "0113 555", None), (3, None, None, 1)],
+    "id int, mobile string, landline string, fines int",
+)
+print(members.filter(col("mobile") != "07700 1").count())
+print(members.filter(col("mobile").isNull()).count())
+filled = members.fillna({"fines": 0}).withColumn(
+    "reach", coalesce("mobile", "landline", lit("post"))
+)
+for r in filled.orderBy("id").collect():
+    print(r.id, r.reach, r.fines + 1)`,
+      steps: [
+        "Line 7: members 2 and 3 have no mobile, so `!=` gives null for them, and the count is 0, not 2.",
+        "Line 8: `isNull` finds exactly those two rows.",
+        "Line 9: `fillna` with a dict fills only `fines`, so member 2's fine becomes 0.",
+        "Line 10: `coalesce` takes the mobile, else the landline, else the literal \"post\".",
+        "Line 13: every fine is filled now, so `fines + 1` is never null.",
+      ],
+      output: `0
+2
+1 07700 1 3
+2 0113 555 1
+3 post 2`,
+    },
+    exercises: [
+      'null-2',
+      'null-4',
+      'sql-predict-1',
+      'null-3',
+      'null-1',
+    ],
+  },
+  {
+    id: 'sql_joins/1',
+    topicKeys: [Topic.SQL_JOINS],
+    step: 1,
+    title: 'SQL Joins (inner, left, right, cross, self)',
+    idea: [
+      lines(
+        "A join pairs the rows of two tables whose keys match.",
+        "`INNER JOIN` keeps only the pairs, `LEFT JOIN` keeps every left row and fills the right columns with NULL where nothing matches, `RIGHT JOIN` does the same for the right table, and `FULL OUTER JOIN` keeps both sides.",
+        "A left row with three matches becomes three rows, so a join can grow the row count.",
+      ),
+      lines(
+        "`CROSS JOIN` pairs every row with every row, and a self join reads one table twice under two aliases, such as an employee and their manager.",
+        "Spark adds `LEFT SEMI JOIN`, the left rows that have a match, like `EXISTS`, and `LEFT ANTI JOIN`, the left rows that have none, and both return only the left table's columns.",
+      ),
+      lines(
+        "In PySpark, `a.join(b, \"k\", \"left\")` joins on a column both share and keeps one copy of it, and `a.join(b, a.k == b.id, \"left_anti\")` joins on an expression.",
+        "The type is one of `inner`, `left`, `right`, `full`, `cross`, `left_semi` and `left_anti`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT a.col, b.col
+FROM a
+LEFT JOIN b ON a.k = b.k;              -- every a row; b columns NULL when no match
+-- INNER JOIN: pairs only   RIGHT / FULL OUTER JOIN: keep b / both sides
+SELECT * FROM a LEFT SEMI JOIN b ON a.k = b.k;   -- a rows with a match
+SELECT * FROM a LEFT ANTI JOIN b ON a.k = b.k;   -- a rows with no match
+SELECT e.emp_name, m.emp_name AS boss
+FROM emp e LEFT JOIN emp m ON e.boss_id = m.id;  -- a self join
+-- PySpark: a.join(b, "k", "left")   a.join(b, a.k == b.id, "left_anti")`,
+    },
+    pitfall: lines(
+      "A condition on the right table in `WHERE`, such as `WHERE b.col <> 'x'`, removes the rows a LEFT JOIN kept, since their `b.col` is NULL, and the join turns into an inner join.",
+      "Put that condition in the `ON` clause to keep every left row.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'members',
+          columns: ['member_id', 'member_name'],
+          rows: [
+            [1, 'Ada'],
+            [2, 'Ben'],
+            [3, 'Cy'],
+          ],
+        },
+        {
+          name: 'loans',
+          columns: ['loan_id', 'member_id', 'title'],
+          rows: [
+            [10, 1, 'Dune'],
+            [11, 1, 'Emma'],
+            [12, 2, 'Dune'],
+          ],
+        },
+      ],
+      code: `SELECT m.member_name, l.title
+FROM members m
+LEFT JOIN loans l ON l.member_id = m.member_id AND l.title <> 'Dune'
+ORDER BY m.member_name;
+
+SELECT m.member_name, l.title
+FROM members m
+LEFT JOIN loans l ON l.member_id = m.member_id
+WHERE l.title <> 'Dune'
+ORDER BY m.member_name;`,
+      steps: [
+        "Lines 1-4: the `ON` condition leaves out the Dune loans, so Ben, whose only loan was Dune, and Cy, who has none, stay with a NULL title.",
+        "Line 9: here `WHERE` tests the title after the join, and it is not true for Cy's NULL or Ben's Dune, so only Ada is left.",
+      ],
+      output: `member_name | title
+Ada | Emma
+Ben | NULL
+Cy | NULL
+
+member_name | title
+Ada | Emma`,
+    },
+    exercises: [
+      'sql-misc-mcq-5',
+      'sql-predict-3',
+      'sql-predict-4',
+      'semijoin-1',
+      'sql-join-6',
+    ],
+  },
+  {
+    id: 'sql_aggregations/1',
+    topicKeys: [Topic.SQL_AGGREGATIONS],
+    step: 1,
+    title: 'SQL Aggregations & GROUP BY',
+    idea: [
+      lines(
+        "`GROUP BY` collapses the rows that share the grouping columns into one row each, and aggregates such as `COUNT`, `SUM`, `AVG`, `MIN` and `MAX` sum up each group.",
+        "With no `GROUP BY`, an aggregate query returns exactly one row.",
+        "Every selected column must be grouped or inside an aggregate, and Databricks also accepts `GROUP BY ALL`, which groups by every column that is not aggregated.",
+      ),
+      lines(
+        "`WHERE` filters rows before grouping and cannot use an aggregate, while `HAVING` filters groups after it, as in `HAVING COUNT(*) > 10`.",
+        "`COUNT(*)` counts rows, `COUNT(col)` counts the values that are not NULL, and the other aggregates skip NULLs too.",
+      ),
+      lines(
+        "`GROUP BY ROLLUP (a, b)` adds a subtotal for each `a` and a grand total, `CUBE (a, b)` adds every combination, and `GROUPING SETS ((a, b), (a))` lists exactly the groupings you want.",
+        "In a subtotal row, the columns rolled up show NULL.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT k, COUNT(*) AS n, COUNT(col) AS filled, SUM(x) AS total
+FROM t
+WHERE x > 0                -- rows, before grouping
+GROUP BY k                 -- or GROUP BY ALL on Databricks
+HAVING COUNT(*) > 1        -- groups, after grouping
+ORDER BY total DESC;
+SELECT a, b, SUM(x) FROM t GROUP BY ROLLUP (a, b);    -- (a, b), (a), ()
+SELECT a, b, SUM(x) FROM t GROUP BY CUBE (a, b);      -- every combination
+SELECT a, b, SUM(x) FROM t GROUP BY GROUPING SETS ((a, b), (a));`,
+    },
+    pitfall: lines(
+      "An aggregate in `WHERE`, such as `WHERE COUNT(*) > 1`, is an error, because `WHERE` runs on single rows before any group exists.",
+      "Filter on an aggregate with `HAVING`, and keep `WHERE` for conditions on single rows.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'loans',
+          columns: ['branch', 'title', 'fine'],
+          rows: [
+            ['leeds', 'Dune', 2],
+            ['leeds', 'Emma', null],
+            ['leeds', 'Atlas', 5],
+            ['york', 'Ubik', 3],
+            ['hull', 'Kim', 1],
+            ['hull', 'Poems', 4],
+          ],
+        },
+      ],
+      code: `SELECT branch, COUNT(*) AS loans, COUNT(fine) AS fined, SUM(fine) AS fines
+FROM loans
+WHERE title <> 'Atlas'
+GROUP BY branch
+HAVING COUNT(*) > 1
+ORDER BY branch;`,
+      steps: [
+        "Line 3: `WHERE` removes the Atlas row before any group is formed.",
+        "Line 4: the remaining rows form three groups: Leeds with 2 rows, York with 1 and Hull with 2.",
+        "Line 5: `HAVING` then drops York, whose group has only one row.",
+        "Line 1: Leeds has 2 loans but only 1 fine, since `COUNT(fine)` and `SUM` skip the NULL.",
+      ],
+      output: `branch | loans | fined | fines
+hull | 2 | 2 | 5
+leeds | 2 | 1 | 2`,
+    },
+    exercises: [
+      'sql-predict-2',
+      'sql-misc-mcq-2',
+      'sql-misc-mcq-3',
+      'sql-predict-5',
+      'sql-6',
+    ],
+  },
+  {
+    id: 'sql_subqueries/1',
+    topicKeys: [Topic.SQL_SUBQUERIES],
+    step: 1,
+    title: 'Subqueries & CTEs (correlated, EXISTS, WITH)',
+    idea: [
+      lines(
+        "A subquery is a query inside another.",
+        "A scalar subquery returns one value, as in `WHERE pages > (SELECT AVG(pages) FROM books)`, and `IN (SELECT ...)` tests a value against the list a subquery returns.",
+        "A subquery in `FROM` is a derived table, and it takes an alias.",
+      ),
+      lines(
+        "A correlated subquery refers to the outer row, as in `(SELECT AVG(x) FROM t i WHERE i.k = o.k)`, so its answer changes from row to row.",
+        "`EXISTS (SELECT 1 FROM u WHERE u.k = t.k)` is true when at least one row matches, and `NOT EXISTS` when none does.",
+      ),
+      lines(
+        "`WITH name AS (SELECT ...)` names a subquery up front, a common table expression or CTE, which the main query and any later CTE can read by name.",
+        "It lets a long query read from top to bottom, and it is neither stored nor faster than the same subquery written inline.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `WITH k_avg AS (                          -- a CTE: a named subquery
+  SELECT k, AVG(x) AS avg_x FROM t GROUP BY k
+), big AS (                              -- a later CTE can read an earlier one
+  SELECT k FROM k_avg WHERE avg_x > 100
+)
+SELECT * FROM t
+WHERE x > (SELECT AVG(x) FROM t)                     -- scalar subquery
+  AND k IN (SELECT k FROM big)                       -- a list of values
+  AND EXISTS (SELECT 1 FROM u WHERE u.id = t.id);    -- correlated
+-- NOT EXISTS (SELECT 1 FROM u WHERE u.id = t.id): no matching row`,
+    },
+    pitfall: lines(
+      "`NOT IN (SELECT col ...)` returns no rows at all once the subquery returns a single NULL, because `x <> NULL` is never true.",
+      "Use `NOT EXISTS`, or filter `WHERE col IS NOT NULL` inside the subquery.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'books',
+          columns: ['book_id', 'title', 'genre', 'pages'],
+          rows: [
+            [1, 'Dune', 'scifi', 400],
+            [2, 'Ubik', 'scifi', 200],
+            [3, 'Emma', 'classic', 300],
+            [4, 'Kim', 'classic', 500],
+          ],
+        },
+        {
+          name: 'loans',
+          columns: ['loan_id', 'book_id'],
+          rows: [
+            [10, 1],
+            [12, 3],
+            [13, null],
+          ],
+        },
+      ],
+      code: `WITH genre_avg AS (
+  SELECT genre, AVG(pages) AS avg_pages FROM books GROUP BY genre
+)
+SELECT b.title, b.pages
+FROM books b JOIN genre_avg g ON g.genre = b.genre
+WHERE b.pages > g.avg_pages
+ORDER BY b.title;
+SELECT (SELECT COUNT(*) FROM books WHERE book_id NOT IN (SELECT book_id FROM loans)) AS not_in,
+  (SELECT COUNT(*) FROM books b
+   WHERE NOT EXISTS (SELECT 1 FROM loans l WHERE l.book_id = b.book_id)) AS not_exists;`,
+      steps: [
+        "Lines 1-7: the CTE holds each genre's average, scifi 300 and classic 400, and the main query reads it like a table.",
+        "Line 8: loan 13 has a NULL `book_id`, so `NOT IN` is never true for any book and counts 0.",
+        "Lines 9-10: the correlated `NOT EXISTS` counts the 2 books never borrowed.",
+      ],
+      output: `title | pages
+Dune | 400
+Kim | 500
+
+not_in | not_exists
+0 | 2`,
+    },
+    exercises: [
+      'cte-3',
+      'sql-predict-11',
+      'cte-1',
+      'subq-1',
+    ],
+  },
+  {
+    id: 'window_functions/1',
+    topicKeys: [Topic.WINDOW_FUNCTIONS, Topic.SQL_WINDOW_FUNCTIONS],
+    step: 1,
+    title: 'Window Functions (row_number, rank, lag, lead)',
+    idea: [
+      lines(
+        "A window function computes a value for each row from a set of related rows, its window, and unlike `groupBy` it keeps every row.",
+        "In PySpark the window is `Window.partitionBy(\"k\").orderBy(\"x\")`, in SQL `OVER (PARTITION BY k ORDER BY x)`, and the calculation starts again for each key.",
+      ),
+      lines(
+        "`row_number()` numbers the rows 1, 2, 3, `rank()` gives ties the same number and then skips (1, 1, 3), and `dense_rank()` does not skip (1, 1, 2).",
+        "`lag(col, 1)` reads the previous row's value and `lead(col, 1)` the next row's, and both give null at the edge of the partition.",
+      ),
+      lines(
+        "An aggregate such as `sum` or `max` with `.over(w)` adds its result to every row of the window.",
+        "With an `orderBy`, its frame runs from the first row to the current row, and `rowsBetween(start, end)` sets the frame in rows, such as the 6 rows before and the current one for a moving average.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark.sql import Window
+from pyspark.sql import functions as F
+w = Window.partitionBy("k").orderBy(F.col("x").desc())
+df.select("*",
+    F.row_number().over(w),                    # 1, 2, 3
+    F.rank().over(w), F.dense_rank().over(w),  # ties: 1, 1, 3 / 1, 1, 2
+    F.lag("x", 1).over(w),                     # previous row; null on the first
+    F.sum("x").over(Window.partitionBy("k").orderBy("t")
+                   .rowsBetween(Window.unboundedPreceding, Window.currentRow)),
+)
+# SQL: AVG(x) OVER (PARTITION BY k ORDER BY t ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)`,
+    },
+    pitfall: lines(
+      "A running total with only an `orderBy` uses a RANGE frame, so rows that tie on the ordering column share one total instead of adding up one by one.",
+      "Set the frame yourself, `.rowsBetween(Window.unboundedPreceding, Window.currentRow)` or `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`, whenever ties are possible.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+from pyspark.sql import Window
+from pyspark.sql.functions import col, lag, rank, sum as sum_
+loans = spark.createDataFrame([("leeds", 1, 5), ("leeds", 2, 5), ("leeds", 3, 2)],
+    ["branch", "week", "loans"])
+by_loans = Window.partitionBy("branch").orderBy(col("loans").desc())
+by_week = Window.partitionBy("branch").orderBy("week")
+by_size = Window.partitionBy("branch").orderBy("loans")
+rows_frame = (Window.partitionBy("branch").orderBy("loans", "week")
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow))
+out = loans.select("week", "loans",
+    rank().over(by_loans).alias("rk"),
+    (col("loans") - lag("loans").over(by_week)).alias("change"),
+    sum_("loans").over(by_size).alias("range_total"),
+    sum_("loans").over(rows_frame).alias("rows_total"))
+for r in out.orderBy("week").collect():
+    print(r.week, r.loans, r.rk, r.change, r.range_total, r.rows_total)`,
+      steps: [
+        "Lines 6-8: `by_loans` puts the busiest week first, `by_week` runs in time order, and `by_size` orders by loans, where weeks 1 and 2 tie on 5.",
+        "Lines 9-10: `rows_frame` breaks that tie by week and sets a ROWS frame, so it adds the rows one at a time.",
+        "Line 12: weeks 1 and 2 tie on 5 loans, so both rank 1, and week 3 ranks 3.",
+        "Line 13: `lag` reads the week before, so week 1 has no change, None, and week 3 is 2 - 5 = -3.",
+        "Lines 14-15: `by_size` has no frame, so it uses RANGE, and the tied weeks 1 and 2 both get 2 + 5 + 5 = 12, while the ROWS frame gives week 1 7 and week 2 12.",
+      ],
+      output: `1 5 1 None 12 7
+2 5 1 0 12 12
+3 2 3 -3 2 2`,
+    },
+    exercises: [
+      'window-4',
+      'window-adv-4',
+      'winfn-5',
+      'window-predict-1',
+      'window-1',
+    ],
+  },
+  {
+    id: 'sql_set_operations/1',
+    topicKeys: [Topic.SQL_SET_OPERATIONS],
+    step: 1,
+    title: 'Set Operations (UNION, INTERSECT, EXCEPT)',
+    idea: [
+      lines(
+        "A set operation stacks the results of two queries with the same number of columns and compatible types, matching the columns by position, not by name.",
+        "`UNION ALL` keeps every row of both, and `UNION` also removes duplicate rows from the whole result.",
+      ),
+      lines(
+        "`INTERSECT` returns the distinct rows found in both results, and `EXCEPT` the distinct rows of the first that are not in the second, so the order of the two queries matters.",
+        "Spark also has `INTERSECT ALL` and `EXCEPT ALL`, which keep duplicates, and `MINUS`, another name for `EXCEPT`.",
+      ),
+      lines(
+        "In PySpark, `a.union(b)` is UNION ALL by position, `unionByName(b)` matches the columns by name, and `intersect`, `subtract` (EXCEPT) and `exceptAll` cover the rest.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `SELECT k, col FROM a
+UNION ALL                  -- every row of both
+SELECT k, col FROM b;
+-- UNION         : also drops duplicate rows from the whole result
+-- INTERSECT     : distinct rows found in both
+-- EXCEPT        : distinct rows of a that are not in b (MINUS is the same)
+-- INTERSECT ALL / EXCEPT ALL : keep duplicates
+-- PySpark: a.union(b).distinct()   a.unionByName(b)   a.intersect(b)   a.subtract(b)`,
+    },
+    pitfall: lines(
+      "`DataFrame.union()` keeps duplicates, as `UNION ALL` does, so a SQL `UNION` ported to PySpark as `a.union(b)` returns extra rows.",
+      "Add `.distinct()` after it, `a.union(b).distinct()`.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'spring_list',
+          columns: ['title'],
+          rows: [['Dune'], ['Emma'], ['Dune']],
+        },
+        {
+          name: 'summer_list',
+          columns: ['title'],
+          rows: [['Emma'], ['Ubik']],
+        },
+      ],
+      code: `SELECT title FROM spring_list
+UNION ALL
+SELECT title FROM summer_list
+ORDER BY title;
+
+SELECT title FROM spring_list
+EXCEPT
+SELECT title FROM summer_list;`,
+      steps: [
+        "Lines 1-4: `UNION ALL` keeps all five rows, both Dunes and both Emmas, and the `ORDER BY` sorts the combined result.",
+        "Line 2: `UNION` there would remove every duplicate, the two Dunes from the spring list included, and return Dune, Emma and Ubik.",
+        "Lines 6-8: `EXCEPT` keeps the spring titles that are not on the summer list, Dune, once, and `INTERSECT` would give Emma.",
+      ],
+      output: `title
+Dune
+Dune
+Emma
+Emma
+Ubik
+
+title
+Dune`,
+    },
+    exercises: [
+      'setop-mcq-1',
+      'sql-predict-12',
+      'setop-1',
+    ],
+  },
+  {
+    id: 'spark_sql/1',
+    topicKeys: [Topic.SPARK_SQL],
+    step: 1,
+    title: 'Spark SQL Constructs (temp views, PIVOT, CASE, CAST)',
+    idea: [
+      lines(
+        "`df.createOrReplaceTempView(\"v\")` gives a DataFrame a name that `spark.sql(\"SELECT ... FROM v\")` can query, and the result is a DataFrame again.",
+        "A temp view lives only in the current Spark session and stores no data, and `CREATE OR REPLACE TEMP VIEW v AS SELECT ...` makes one in SQL.",
+      ),
+      lines(
+        "`CASE WHEN cond THEN a WHEN cond2 THEN b ELSE c END` returns the value of the first true branch, and a row that matches none gets the `ELSE` value.",
+        "`CAST(col AS INT)`, or `col::int`, changes a type; text that is not a number either fails the cast or becomes NULL, depending on ANSI mode, while `try_cast` always returns NULL.",
+      ),
+      lines(
+        "`PIVOT (SUM(x) FOR col IN ('a', 'b'))` turns the listed values of `col` into columns and groups by every other column of its input, so select only the columns you need first.",
+        "`stack(n, 'a', a, 'b', b) AS (label, value)`, or `UNPIVOT`, turns columns back into rows.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `df.createOrReplaceTempView("v")                    # this session only
+spark.sql("""SELECT * FROM (
+  SELECT k, cat, try_cast(amount AS INT) AS amount FROM v   -- NULL, never an error
+) PIVOT (SUM(amount) FOR cat IN ('a', 'b'))""")    # one column per listed value
+spark.sql("""SELECT k,
+  CASE WHEN x > 100 THEN 'high'                    -- the first true branch wins
+       WHEN x > 10  THEN 'mid'
+       ELSE 'low' END AS band
+FROM v""")`,
+    },
+    pitfall: lines(
+      "`CASE` stops at the first true `WHEN`, so a broad condition placed first, such as `x > 10` before `x > 100`, hides every branch after it.",
+      "Order the branches from the narrowest condition to the broadest.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; spark is the notebook's session, no tables needed
+spark.createDataFrame(
+    [("leeds", "Q1", "12"), ("leeds", "Q2", "7"), ("york", "Q1", "30"), ("york", "Q2", "n/a")],
+    ["branch", "quarter", "loans_txt"],
+).createOrReplaceTempView("loans_v")
+spark.sql("""CREATE OR REPLACE TEMP VIEW loans_clean AS
+SELECT branch, quarter, try_cast(loans_txt AS INT) AS loans FROM loans_v""")
+bands = spark.sql("""SELECT CASE WHEN loans >= 20 THEN 'busy'
+  WHEN loans >= 10 THEN 'steady' ELSE 'quiet' END AS band
+FROM loans_clean ORDER BY branch, quarter""")
+print([r.band for r in bands.collect()])
+wide = spark.sql("""SELECT * FROM (SELECT branch, quarter, loans FROM loans_clean)
+PIVOT (SUM(loans) FOR quarter IN ('Q1', 'Q2'))""")
+for r in wide.orderBy("branch").collect():
+    print(r.branch, r.Q1, r.Q2)`,
+      steps: [
+        "Lines 2-5: the DataFrame becomes the temp view `loans_v`, which the SQL below can read by name.",
+        "Lines 6-7: `try_cast` turns the text into numbers, and \"n/a\" becomes NULL instead of failing.",
+        "Lines 8-11: the branches are tried in order, narrowest first, so 30 is busy, 12 steady and 7 quiet, and the NULL matches no `WHEN` and falls to `ELSE`.",
+        "Lines 12-13: `PIVOT` makes a Q1 and a Q2 column, one row per branch, the only column left over.",
+        "Lines 14-15: York's Q2 sum is NULL, printed as None, because its only value was NULL.",
+      ],
+      output: `['steady', 'quiet', 'busy', 'quiet']
+leeds 12 7
+york 30 None`,
+    },
+    exercises: [
+      'ps-pivot-intro-2',
+      'sql-misc-mcq-7',
+      'sql-predict-13',
+      'casewhen-2',
     ],
   },
 ];

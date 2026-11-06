@@ -3317,6 +3317,123 @@ print(d.numFiles, spark.table(t).count())`,
     concepts: ['delta-optimize'],
   },
 
+  // ===== ELT LESSON QUESTIONS (one MCQ or predict per function-library topic that lacked one) =====
+
+  {
+    id: 'string-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.STRING_FUNCTIONS,
+    question: 'DataFrame "df" has string columns first, middle and last, and one row ("Ada", null, "Lovelace"). What do concat("first", lit(" "), "middle", lit(" "), "last") and concat_ws(" ", "first", "middle", "last") return for it?',
+    options: [
+      { id: 'a', text: 'Both return "Ada  Lovelace" with two spaces, since each one reads the null middle name as an empty string.', isCorrect: false },
+      { id: 'b', text: 'Both return null, since any null input makes a string function return null for that whole row.', isCorrect: false },
+      { id: 'c', text: 'concat returns null, since one null input nulls it, and concat_ws skips the null: "Ada Lovelace".', isCorrect: true },
+      { id: 'd', text: 'concat returns "Ada Lovelace" and concat_ws returns null, since only concat_ws checks its inputs.', isCorrect: false },
+    ],
+    explanation: 'concat() follows the SQL rule that one null input makes the whole result null, so a missing middle name blanks the full name. concat_ws() joins its inputs with the separator and skips the nulls, so it returns "Ada Lovelace" with one space. When some parts can be null, use concat_ws, or wrap each part in coalesce(col, lit("")) before concat.',
+    hints: ['What does SQL do with an expression that has one null input?', 'The _ws form treats nulls differently.'],
+    tags: ['string', 'concat', 'concat_ws', 'null'],
+    concepts: ['ps-string-fns', 'ps-null-handling'],
+  },
+  {
+    id: 'datetime-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DATETIME_FUNCTIONS,
+    question: 'Column "due" is a DateType column, and one row holds 2026-03-15. What does date_format("due", "yyyy-mm-dd") return for that row?',
+    options: [
+      { id: 'a', text: '"2026-03-15", because Spark reads "mm" and "MM" as the same month field in a date pattern.', isCorrect: false },
+      { id: 'b', text: '"2026-00-15", because "mm" means minutes, and a date is taken as midnight, so its minutes are 00.', isCorrect: true },
+      { id: 'c', text: 'null, because a pattern holding a time field cannot be applied to a value of DateType.', isCorrect: false },
+      { id: 'd', text: 'An analysis error, because "mm" is a time field and "due" holds dates, not timestamps.', isCorrect: false },
+    ],
+    explanation: 'Spark datetime patterns are case-sensitive: "MM" is the month and "mm" is the minute of the hour. A date is formatted as if it were midnight, so "mm" prints 00 and the pattern gives "2026-00-15", with no error and no null. The same trap catches "DD" (day of the year) for "dd" (day of the month) and "hh" (12-hour clock) for "HH".',
+    hints: ['Datetime pattern letters are case-sensitive.', 'Which letter is the month: M or m?'],
+    tags: ['datetime', 'date_format', 'patterns'],
+    concepts: ['ps-datetime-fns'],
+  },
+  {
+    id: 'datetime-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATETIME_FUNCTIONS,
+    language: CodeLanguage.PYTHON,
+    question: 'DataFrame "df" has string columns out_str and back_str and one row: ("2026-01-30", "2026-02-02"). What does this print? The answer is two lines, each one whole number.',
+    code: `from pyspark.sql.functions import datediff, to_date
+out_d, back_d = to_date("out_str"), to_date("back_str")
+r = df.select(datediff(back_d, out_d).alias("a"),
+              datediff(out_d, back_d).alias("b")).first()
+print(r.a)
+print(r.b)`,
+    expectedOutput: `3
+-3`,
+    explanation: 'datediff(end, start) is end minus start in whole days, counted across the month boundary: 30 January to 2 February is 3 days. The arguments are not interchangeable, and nothing takes the absolute value: with the start first, the same two dates give -3. Put the later date first, as in datediff(returned, borrowed).',
+    hints: ['Which argument does datediff subtract from which?', 'January has 31 days.'],
+    tags: ['datetime', 'datediff', 'to_date', 'predict'],
+    concepts: ['ps-datetime-fns'],
+  },
+  {
+    id: 'collection-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.COLLECTION_FUNCTIONS,
+    language: CodeLanguage.PYTHON,
+    question: 'What does this print? The answer is two lines, each a row count.',
+    code: `# df rows, as (member, genres), genres an array<string>:
+#   ("ana", ["sci-fi", "crime"])
+#   ("bo",  [])
+#   ("cy",  None)
+#   ("di",  ["poetry"])
+from pyspark.sql.functions import explode, explode_outer
+print(df.select("member", explode("genres")).count())
+print(df.select("member", explode_outer("genres")).count())`,
+    expectedOutput: `3
+5`,
+    explanation: 'explode() makes one row per array element, so ana gives 2 rows and di gives 1, while bo (an empty array) and cy (a null array) give none and drop out: 3 rows. explode_outer() keeps those members with a null element instead: 2 + 1 + 1 + 1 = 5 rows. Use explode_outer when a parent row must survive even with nothing to explode.',
+    hints: ['How many rows does explode make from an empty array?', 'The _outer form keeps the parent row.'],
+    tags: ['collection', 'explode', 'explode_outer', 'predict'],
+    concepts: ['ps-collection-fns'],
+  },
+  {
+    id: 'math-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.MATH_FUNCTIONS,
+    language: CodeLanguage.PYTHON,
+    question: 'DataFrame "df" has one DoubleType column, x, holding 0.5, 1.5 and 2.5. What does this print? The answer is two lines, each a Python list of floats.',
+    code: `import pyspark.sql.functions as F
+rows = (df.orderBy("x")
+          .select(F.round("x").alias("up"), F.bround("x").alias("even"))
+          .collect())
+print([r.up for r in rows])
+print([r.even for r in rows])`,
+    expectedOutput: `[1.0, 2.0, 3.0]
+[0.0, 2.0, 2.0]`,
+    explanation: 'Spark round() rounds a half away from zero (HALF_UP), so 0.5, 1.5 and 2.5 become 1, 2 and 3. bround() uses banker\'s rounding (HALF_EVEN): a half goes to the nearest even number, giving 0, 2 and 2. Python\'s own round() is banker\'s rounding too, so round(2.5) in plain Python is 2 while Spark round gives 3.0. Both functions keep the DoubleType, so the values print as floats.',
+    hints: ['round and bround only differ on exact halves.', 'Which way does bround send a half: up, or to the even neighbour?'],
+    tags: ['math', 'round', 'bround', 'predict'],
+    concepts: ['ps-math-fns'],
+  },
+  {
+    id: 'window-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.WINDOW_FUNCTIONS,
+    language: CodeLanguage.PYTHON,
+    question: 'DataFrame "df" has integer columns day_no and loans and four rows: (1, 5), (2, 3), (2, 4), (3, 2). What does this print? The answer is one line: a Python list of four whole numbers.',
+    code: `from pyspark.sql import Window
+from pyspark.sql.functions import sum as sum_
+w = Window.orderBy("day_no")
+out = df.withColumn("running", sum_("loans").over(w))
+print([r.running for r in out.orderBy("day_no", "loans").collect()])`,
+    expectedOutput: `[5, 12, 12, 14]`,
+    explanation: 'A window with orderBy and no frame uses RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW. RANGE counts every row with the same day_no as the current row, so both day-2 rows see 5 + 3 + 4 = 12 rather than 8 and then 12. For a row-by-row running total, set the frame yourself: .rowsBetween(Window.unboundedPreceding, Window.currentRow), which gives [5, 8, 12, 14] here.',
+    hints: ['Two rows share day_no 2.', 'What frame does a window with orderBy get by default: ROWS or RANGE?'],
+    tags: ['window', 'running-total', 'frame', 'predict'],
+    concepts: ['sql-window-frame'],
+  },
+
   // ===== DELTA LAKE VACUUM (4 questions) =====
 
   {
