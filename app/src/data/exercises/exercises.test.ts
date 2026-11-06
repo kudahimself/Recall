@@ -1,11 +1,12 @@
 /**
  * Exercises (src/data/exercises/) against the repo's exercises/ folder: every
  * entry points at a real folder whose README title, starter and tests match,
- * every folder has an entry, each Python Fundamentals, Python Advanced, Django and
- * Django Advanced & Deployment topic has one, test files and modules have names
- * unique across exercises so pytest can collect them all from the repo root, and
- * exercises/check_exercises.py passes (each exercise's tests fail on its starter
- * and pass on its reference solution), so an exercise cannot rot.
+ * every folder has an entry, each Python Fundamentals, Python Advanced, Django,
+ * Django Advanced & Deployment and DRF Production Patterns topic has one, test
+ * files and modules have names unique across exercises so pytest can collect them
+ * all from the repo root, and exercises/check_exercises.py passes (each
+ * exercise's tests fail on its starter and pass on its reference solution), so
+ * an exercise cannot rot.
  */
 import fs from 'fs';
 import path from 'path';
@@ -68,7 +69,7 @@ describe('exercise list', () => {
     expect(shared).toEqual([]);
   });
 
-  it.each(['Python Fundamentals', 'Python Advanced', 'Django', 'Django Advanced & Deployment'])('has an exercise for every %s topic, in path order', section => {
+  it.each(['Python Fundamentals', 'Python Advanced', 'Django', 'Django Advanced & Deployment', 'DRF Production Patterns'])('has an exercise for every %s topic, in path order', section => {
     expect(BACKEND_SECTIONS[section]).toBeDefined();
     const units = getSectionUnits(section).map(([, keys]) => keys);
     const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));

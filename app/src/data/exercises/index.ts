@@ -3,7 +3,7 @@
  * editor after the topic's lesson and ramp. The files live in the repo's
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
  * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
- * Python Advanced, Django and Django Advanced & Deployment so far.
+ * Python Advanced, Django, Django Advanced & Deployment and DRF Production Patterns so far.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -709,6 +709,45 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Write a management command and the production settings.',
       'An `overdue` command with a positional date, `--grace` and a `--flag` switch, run with `call_command`, then settings that read `DEBUG`, the secret key and the hosts from the environment, force HTTPS with secure cookies and HSTS, and pass the `check --deploy` security checks.',
+    ),
+  },
+  {
+    id: 'dj_pagination_generics',
+    topicKeys: [Topic.DJ_PAGINATION_GENERICS],
+    title: 'Catalogue pages',
+    folder: 'exercises/backend/dj_pagination_generics',
+    starter: ['catalogue_pages/pagination.py', 'catalogue_pages/views.py'],
+    tests: 'test_catalogue_pages.py',
+    minutes: 25,
+    task: lines(
+      'Serve the catalogue and each reader\'s loans through DRF\'s generic views, a page at a time.',
+      'Pick the generic view for each endpoint, page the books with `PageNumberPagination` and a client-chosen size reshaped in `get_paginated_response()`, filter them per request in `get_queryset()`, and page a reader\'s own loans with `CursorPagination`.',
+    ),
+  },
+  {
+    id: 'dj_api_docs',
+    topicKeys: [Topic.DJ_API_DOCS],
+    title: 'Catalogue docs',
+    folder: 'exercises/backend/dj_api_docs',
+    starter: ['catalogue_docs/docs_settings.py', 'catalogue_docs/urls.py', 'catalogue_docs/views.py'],
+    tests: 'test_catalogue_docs.py',
+    minutes: 20,
+    task: lines(
+      'Document a small API with drf-spectacular.',
+      'Install it and its `AutoSchema`, route the raw schema and the Swagger UI page, then add `@extend_schema` where the guess falls short: an action that answers another shape and an `APIView` with no serializer, until the schema builds with no warnings.',
+    ),
+  },
+  {
+    id: 'dj_custom_managers',
+    topicKeys: [Topic.DJ_CUSTOM_MANAGERS, Topic.DJ_SERVICE_LAYER],
+    title: 'Front counter',
+    folder: 'exercises/backend/dj_custom_managers',
+    starter: ['front_counter/models.py', 'front_counter/services.py', 'front_counter/views.py'],
+    tests: 'test_front_counter.py',
+    minutes: 25,
+    task: lines(
+      'Give the lending desk named queries, one service that holds the lending rules, and a thin view.',
+      'A manager that hides deleted members with a `counts()` method, a `QuerySet` whose methods chain through `as_manager()`, a `lend()` service that checks, writes and refuses with domain errors inside `atomic()`, and a view that only turns its result into a response.',
     ),
   },
 ];
