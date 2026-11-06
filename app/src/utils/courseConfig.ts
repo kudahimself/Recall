@@ -70,6 +70,9 @@ const DATA_ENG_TOPICS = new Set<string>([
   Topic.DE_WHAT_IS_ORCHESTRATION, Topic.DE_AIRFLOW_DAGSTER, Topic.DE_RETRIES_IDEMPOTENCY,
   Topic.DE_DATA_QUALITY_BASICS, Topic.DE_OBSERVABILITY_LINEAGE, Topic.DE_GOVERNANCE,
   Topic.DE_FOR_AI,
+  // Moving Data
+  Topic.DE_ETL_ELT_STAGING, Topic.DE_FULL_VS_INCREMENTAL, Topic.DE_IDEMPOTENT_LOADS,
+  Topic.DE_CHANGE_DATA_CAPTURE, Topic.DE_DEDUP_LATE_DATA, Topic.DE_BACKFILLS,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -477,8 +480,11 @@ export const DATABRICKS_PATH_ORDER = [
 ];
 
 /**
- * Data Engineering Concepts course — tool-agnostic, MCQ-only.
- * Built as many small topics, each ramping from a TRUE beginner intro (plain
+ * Data Engineering Concepts course — tool-agnostic.
+ * Being rewritten section by section as decisions and designs (a lesson per
+ * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
+ * explain cards in review); Moving Data is the first rewritten section. The
+ * older sections are MCQ-only, built as many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
  * exactly-once semantics, open-table-format guts). The selector serves
@@ -501,16 +507,29 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   'Architecture & Open Table Formats': {
     weight: 'Step 2',
     topics: {
-      'What Is ETL/ELT?': ['de_what_is_etl'],
-      'ETL vs ELT': ['de_etl_vs_elt'],
       'What Is a Lakehouse?': ['de_lakehouse'],
       'Why Put Tables on Files?': ['de_table_formats_intro'],
       'Iceberg, Delta & Hudi': ['de_iceberg_delta_hudi'],
       'Transformation Tools (dbt / SQLMesh)': ['de_transformation_tools'],
     },
   },
-  'Modeling Concepts': {
+  // The first rewritten section (decisions and designs). It absorbs the old
+  // ETL / ELT, CDC and retries topics, whose keys stay in DATA_ENG_TOPICS so
+  // stored scores still map to this course. Placed at Step 3 by owner
+  // decision: a learner past Step 2 meets it before the old later steps.
+  'Moving Data': {
     weight: 'Step 3',
+    topics: {
+      'ETL, ELT & Staging': ['de_etl_elt_staging'],
+      'Full vs Incremental Loads': ['de_full_vs_incremental'],
+      'Re-runs & Idempotent Loads': ['de_idempotent_loads'],
+      'Change Data Capture': ['de_change_data_capture'],
+      'Deduplication & Late-Arriving Data': ['de_dedup_late_data'],
+      'Backfills & Reprocessing': ['de_backfills'],
+    },
+  },
+  'Modeling Concepts': {
+    weight: 'Step 4',
     topics: {
       'Why Model Data?': ['de_why_model'],
       'Facts & Dimensions': ['de_tables_facts_dims'],
@@ -521,19 +540,18 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Streaming': {
-    weight: 'Step 4',
+    weight: 'Step 5',
     topics: {
       'What Is a Stream?': ['de_what_is_a_stream'],
       'Event Time vs Processing Time': ['de_event_vs_processing_time'],
       'Windows & Watermarks': ['de_windows'],
       'Kafka Basics': ['de_kafka_basics'],
-      'Change Data Capture (CDC)': ['de_cdc'],
       'Delivery Guarantees': ['de_streaming_guarantees'],
       'Streaming SQL': ['de_streaming_sql'],
     },
   },
   'Distributed Systems & Storage': {
-    weight: 'Step 5',
+    weight: 'Step 6',
     topics: {
       'Why Distribute?': ['de_why_distribute'],
       'Partitioning & Sharding': ['de_partitioning'],
@@ -543,11 +561,10 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Operations, Quality & Modern DE': {
-    weight: 'Step 6',
+    weight: 'Step 7',
     topics: {
       'What Is Orchestration?': ['de_what_is_orchestration'],
       'Airflow, Dagster & Prefect': ['de_airflow_dagster'],
-      'Retries, Sensors & Idempotency': ['de_retries_idempotency'],
       'Data Quality Basics': ['de_data_quality_basics'],
       'Observability & Lineage': ['de_observability_lineage'],
       'Governance': ['de_governance'],
@@ -560,7 +577,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   // it. Appending disrupts no existing unlock state; the cost is that the
   // hardware layer arrives as a deepening pass over material already seen.
   'Machines, Memory & Disks': {
-    weight: 'Step 7',
+    weight: 'Step 8',
     topics: {
       'The Memory Hierarchy': ['de_memory_hierarchy'],
       'RAM vs Disk': ['de_ram_vs_disk'],
@@ -577,6 +594,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
 export const DATA_ENG_PATH_ORDER = [
   'Foundations',
   'Architecture & Open Table Formats',
+  'Moving Data',
   'Modeling Concepts',
   'Streaming',
   'Distributed Systems & Storage',

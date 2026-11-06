@@ -99,6 +99,8 @@ export enum Topic {
   DE_OBJECT_STORAGE = 'de_object_storage',
   DE_DATA_LAKE_WAREHOUSE = 'de_data_lake_warehouse',
   // Architecture & Open Table Formats (small beginner-first topics)
+  // Retired into Moving Data (no questions; kept so stored progress keeps its course):
+  // DE_WHAT_IS_ETL, DE_ETL_VS_ELT, DE_CDC, DE_RETRIES_IDEMPOTENCY.
   DE_WHAT_IS_ETL = 'de_what_is_etl',
   DE_ETL_VS_ELT = 'de_etl_vs_elt',
   DE_LAKEHOUSE = 'de_lakehouse',
@@ -134,6 +136,15 @@ export enum Topic {
   DE_OBSERVABILITY_LINEAGE = 'de_observability_lineage',
   DE_GOVERNANCE = 'de_governance',
   DE_FOR_AI = 'de_for_ai',
+  // Moving Data - the first section of the Data Engineering rewrite (decisions
+  // and designs: a lesson per topic, then predict / choose-and-justify /
+  // Parsons / spot-the-flaw cards, explain cards in review).
+  DE_ETL_ELT_STAGING = 'de_etl_elt_staging',
+  DE_FULL_VS_INCREMENTAL = 'de_full_vs_incremental',
+  DE_IDEMPOTENT_LOADS = 'de_idempotent_loads',
+  DE_CHANGE_DATA_CAPTURE = 'de_change_data_capture',
+  DE_DEDUP_LATE_DATA = 'de_dedup_late_data',
+  DE_BACKFILLS = 'de_backfills',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).

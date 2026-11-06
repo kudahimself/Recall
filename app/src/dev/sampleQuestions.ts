@@ -22,7 +22,7 @@ export const SAMPLE_PREDICT_OUTCOME: PredictOutcomeQuestion = {
   id: 'dev-sample-predict-outcome',
   type: QuestionType.PREDICT_OUTCOME,
   difficulty: Difficulty.BEGINNER,
-  topic: Topic.DE_RETRIES_IDEMPOTENCY,
+  topic: Topic.DE_IDEMPOTENT_LOADS,
   question:
     'The nightly job below loads 2026-11-01. It writes its rows, then times out before reporting success, so the orchestrator runs it again.\n' +
     'After both runs, how many rows for 2026-11-01 are in daily_sales?',
@@ -75,7 +75,7 @@ export const SAMPLE_CHOOSE_JUSTIFY: ChooseJustifyQuestion = {
   id: 'dev-sample-choose-justify',
   type: QuestionType.CHOOSE_JUSTIFY,
   difficulty: Difficulty.INTERMEDIATE,
-  topic: Topic.DE_RETRIES_IDEMPOTENCY,
+  topic: Topic.DE_IDEMPOTENT_LOADS,
   question:
     "Orders come from a shop API. An order's status can change for up to 30 days after it is placed, and each nightly extract returns every order updated yesterday, whatever its order_date.\n" +
     'fact_orders is partitioned by order_date and the orchestrator retries failed runs. Which load keeps fact_orders correct, and why?',
@@ -104,7 +104,7 @@ export const SAMPLE_SPOT_FLAW: SpotFlawQuestion = {
   id: 'dev-sample-spot-flaw',
   type: QuestionType.SPOT_FLAW,
   difficulty: Difficulty.ADVANCED,
-  topic: Topic.DE_RETRIES_IDEMPOTENCY,
+  topic: Topic.DE_IDEMPOTENT_LOADS,
   question:
     'This load replaces the day it is given, inside one transaction, yet running it twice for 2026-11-01 leaves duplicate rows behind.\n' +
     'Click the line that causes it.',
@@ -150,7 +150,7 @@ export const SAMPLE_EXPLAIN: ExplainQuestion = {
   id: 'dev-sample-explain',
   type: QuestionType.EXPLAIN,
   difficulty: Difficulty.ADVANCED,
-  topic: Topic.DE_RETRIES_IDEMPOTENCY,
+  topic: Topic.DE_IDEMPOTENT_LOADS,
   question:
     'In two or three sentences: why does "at-least-once delivery plus an idempotent write" end in the same table as exactly-once processing?\n' +
     'Name one kind of step that breaks it.',
