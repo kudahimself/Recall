@@ -1373,4 +1373,22 @@ dbutils.widgets.remove(name="env")`,
     tags: ['dbutils', 'widgets'],
     concepts: ['dbx-widgets'],
   },
+  {
+    id: 'dbx-notebooks-sec-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DATABRICKS_NOTEBOOKS_SECURITY,
+    language: CodeLanguage.PYTHON,
+    question: 'Nobody has changed the widget in the notebook toolbar, so it holds its default value. What does this cell print? The answer is two lines, one per `print`.',
+    code: `dbutils.widgets.text("batch_size", "10")
+size = dbutils.widgets.get("batch_size")
+print(size * 2)
+print(int(size) * 2)`,
+    expectedOutput: `1010
+20`,
+    explanation: 'A widget\'s value is always a string, whatever it looks like, so `dbutils.widgets.get` returns `"10"`, not `10`. Multiplying a string by 2 repeats it, which prints `1010`. Convert the value first, as the second `print` does with `int(size)`, to get the number 20.',
+    hints: ['What type does dbutils.widgets.get return?', 'In Python, a string times 2 repeats the string.'],
+    tags: ['dbutils', 'widgets', 'predict'],
+    concepts: ['dbx-widgets'],
+  },
 ];

@@ -139,7 +139,7 @@ test('a Python worked example runs on python3', () => {
   expect(r.output).toBe('[1, 2]');
 });
 
-test('a Django worked example, a GitHub Actions workflow or an Nginx config with runs: false is not run, and runs: false elsewhere fails', () => {
+test('a Django worked example, a GitHub Actions workflow, an Nginx config or a Databricks notebook cell with runs: false is not run, and runs: false elsewhere fails', () => {
   const r = probe(`
     const { LESSONS } = require('./src/data/lessons/index.ts');
     const base = LESSONS.find(l => l.id === 'tsql_select/1');
@@ -148,14 +148,21 @@ test('a Django worked example, a GitHub Actions workflow or an Nginx config with
     const nginx = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'server {\\n    listen 80;\\n    location / {\\n        proxy_pass http://app;\\n    }\\n}', output: 'app' } };
     const locationOnly = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'location / {\\n    proxy_pass http://app;\\n}', output: 'app' } };
     const yamlOnly = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'steps:\\n  - run: echo ok', output: 'ok' } };
+    const notebook = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'print(spark.table("main.s.t").count())', output: '3' } };
+    const sdk = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'from databricks.sdk import WorkspaceClient\\nprint(WorkspaceClient().current_user.me().active)', output: 'True' } };
+    const ownSession = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'from pyspark.sql import SparkSession\\nspark = SparkSession.builder.getOrCreate()\\nprint(spark.range(3).count())', output: '3' } };
     const plain = { ...base, worked: { ...base.worked, language: 'python', tables: undefined, runs: false, code: 'print(1)', output: '1' } };
     const errors = async l => (await C.checkLesson(l, new Set())).errors;
-    return { django: await errors(django), workflow: await errors(workflow), nginx: await errors(nginx), locationOnly: await errors(locationOnly), yamlOnly: await errors(yamlOnly), plain: await errors(plain) };
+    return { django: await errors(django), workflow: await errors(workflow), nginx: await errors(nginx), locationOnly: await errors(locationOnly), yamlOnly: await errors(yamlOnly), notebook: await errors(notebook), sdk: await errors(sdk), ownSession: await errors(ownSession), plain: await errors(plain) };
   `);
   expect(r.django.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
   expect(r.workflow.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
   expect(r.nginx.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
   expect(r.locationOnly.join('\n')).toMatch(/runs: false is only for a Django/);
   expect(r.yamlOnly.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.notebook.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  expect(r.sdk.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  // Code that builds its own SparkSession runs anywhere pyspark is installed, so it must run.
+  expect(r.ownSession.join('\n')).toMatch(/runs: false is only for a Django/);
   expect(r.plain.join('\n')).toMatch(/runs: false is only for a Django/);
 });

@@ -18,8 +18,9 @@
  *     more than one row comes from a statement without ORDER BY (row order
  *     would then depend on the engine); an example of a kind that cannot run
  *     here (NON_RUNNABLE_KINDS in src/utils/workedKinds.ts: a Django / DRF
- *     example, a GitHub Actions workflow, an Nginx config) sets
- *     `worked.runs: false` and is not run (its output is verified by hand), and
+ *     example, a GitHub Actions workflow, an Nginx config, a Databricks
+ *     notebook cell) sets `worked.runs: false` and is not run (its output is
+ *     verified by hand), and
  *     `runs: false` on any other example fails;
  *   - the worked example repeats an exercise's solution: the solution (or one
  *     of its `-- OR` / `# OR` forms) appears in it verbatim, or the worked code

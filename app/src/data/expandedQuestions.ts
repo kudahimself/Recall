@@ -2416,6 +2416,24 @@ GRANT SELECT ON SCHEMA analytics.sales TO analysts`,
     concepts: ['ucat-namespaces'],
   },
 
+  {
+    id: 'platform-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATABRICKS_PLATFORM,
+    language: CodeLanguage.SQL,
+    question: 'These statements run in order in one SQL session on a Unity Catalog workspace, where catalogs `shop` and `dev` both exist and `shop` has a schema `sales`. What does the last query return? The answer is one row: the catalog, a comma, then the schema.',
+    code: `USE CATALOG shop;
+USE SCHEMA sales;
+USE CATALOG dev;
+SELECT current_catalog(), current_schema();`,
+    expectedOutput: `dev, default`,
+    explanation: '`USE CATALOG` sets the session\'s current catalog and also resets its current schema to `default`. The earlier `USE SCHEMA sales` therefore does not carry over to `dev`, and unqualified table names now resolve in `dev.default`. Code that must not depend on session state, such as a scheduled job, names its tables in full as `catalog.schema.table`.',
+    hints: ['USE CATALOG changes more than the catalog.', 'Which schema does a newly chosen catalog start in?'],
+    tags: ['unity-catalog', 'namespace', 'use-catalog', 'predict'],
+    concepts: ['ucat-namespaces'],
+  },
+
   // ===== NULL HANDLING & COALESCE (10 questions) =====
 
   {
@@ -3333,6 +3351,125 @@ OPTIMIZE sales ZORDER BY customer_id`,
     explanation: 'ZORDER BY is most effective when applied to high-cardinality columns that appear frequently in query WHERE filters or join conditions. Avoid Z-Ordering existing partition columns.',
     tags: ['delta', 'zorder', 'optimization'],
     concepts: ['delta-acid', 'delta-zorder', 'ps-execution-plans'],
+  },
+
+  // ===== DELTA LAKE LESSON QUESTIONS (one MCQ or predict per topic that lacked one) =====
+
+  {
+    id: 'delta-basics-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DELTA_LAKE_BASICS,
+    question: 'A Delta table\'s folder in cloud storage holds Parquet data files and a `_delta_log` folder of numbered JSON commits. What does a reader of the table use `_delta_log` for?',
+    options: [
+      { id: 'a', text: 'To replay every changed row since the table was created, rebuilding the current rows one change at a time.', isCorrect: false },
+      { id: 'b', text: 'To look up rows by primary key through the index files that Delta keeps for each column of the table.', isCorrect: false },
+      { id: 'c', text: 'To return cached query results, so repeated reads of the same table skip the Parquet files entirely.', isCorrect: false },
+      { id: 'd', text: 'To find which Parquet files make up the latest committed version, so it reads those files and no others.', isCorrect: true },
+    ],
+    explanation: 'Each commit in `_delta_log` records which data files were added and which were removed. A reader replays those file actions to get the Parquet files of the latest version (or of an older one, which is time travel) and reads only those. That is what makes a write atomic: until its commit lands, readers do not see its new files. The log holds file actions and statistics, not row changes, indexes or cached results.',
+    hints: ['A commit records files added and files removed.'],
+    tags: ['delta', 'transaction-log', 'acid'],
+    concepts: ['delta-lake', 'delta-acid'],
+  },
+  {
+    id: 'delta-basics-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DELTA_LAKE_BASICS,
+    language: CodeLanguage.PYTHON,
+    question: 'The Unity Catalog table `main.demo.nums` does not exist before this cell, and nothing else writes to it or maintains it. What does the cell print? The answer is two lines: the row count, then the number of rows in the table\'s history.',
+    code: `t = "main.demo.nums"
+spark.range(3).write.mode("overwrite").saveAsTable(t)
+spark.range(5).write.mode("append").saveAsTable(t)
+spark.range(2).write.mode("overwrite").saveAsTable(t)
+print(spark.table(t).count())
+print(spark.sql(f"DESCRIBE HISTORY {t}").count())`,
+    expectedOutput: `2
+3`,
+    explanation: 'On Databricks `saveAsTable` writes a Delta table by default. The first write creates it with 3 rows and the append adds 5 more, but the last write uses `overwrite`, which atomically replaces the whole table with the 2 new rows. Every successful write is one commit, so the history has three versions, 0, 1 and 2, and the older ones can still be read with time travel even though the table now holds 2 rows.',
+    hints: ['overwrite replaces the table; it does not add to it.', 'Each write is one version in the history.'],
+    tags: ['delta', 'overwrite', 'append', 'history', 'predict'],
+    concepts: ['delta-lake'],
+  },
+  {
+    id: 'delta-ops-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DELTA_OPERATIONS,
+    language: CodeLanguage.SQL,
+    question: 'The statements run in order on Delta tables. What does the final query return? The answer is its rows, one per line.',
+    code: `CREATE OR REPLACE TABLE members (id INT, city STRING);
+INSERT INTO members VALUES (1, 'Leeds'), (2, 'York');
+CREATE OR REPLACE TABLE moves (id INT, city STRING);
+INSERT INTO moves VALUES (2, 'Hull'), (3, 'Bath');
+MERGE INTO members m USING moves v ON m.id = v.id
+WHEN MATCHED THEN UPDATE SET m.city = v.city
+WHEN NOT MATCHED THEN INSERT *;
+SELECT id, city FROM members ORDER BY id;`,
+    expectedOutput: `1, Leeds
+2, Hull
+3, Bath`,
+    explanation: 'MERGE matches each row of the source, `moves`, to the target, `members`, on `id`. Id 2 matches, so its city is updated to Hull, and id 3 has no match, so `INSERT *` adds it. Member 1 is not in the source at all, and MERGE leaves unmatched target rows alone: it does not make the target equal to the source. Deleting them takes a `WHEN NOT MATCHED BY SOURCE THEN DELETE` clause. The whole MERGE lands as one commit.',
+    hints: ['What happens to a target row that no source row matches?'],
+    tags: ['delta', 'merge', 'upsert', 'predict'],
+    concepts: ['delta-merge'],
+  },
+  {
+    id: 'delta-tt-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DELTA_TIME_TRAVEL,
+    question: 'A query reads `orders VERSION AS OF 3` while the Delta table is at version 7. Where does Delta get the rows of version 3 from?',
+    options: [
+      { id: 'a', text: 'From the data files that version 3 lists in the transaction log, still in storage until VACUUM removes them.', isCorrect: true },
+      { id: 'b', text: 'From a full copy of the table that Delta saves inside `_delta_log` each time a new version is committed.', isCorrect: false },
+      { id: 'c', text: 'From undoing versions 7 down to 4 row by row, applying the changes of each commit in reverse order.', isCorrect: false },
+      { id: 'd', text: 'From a nightly snapshot of the table that Databricks keeps for each workspace in its DBFS root storage.', isCorrect: false },
+    ],
+    explanation: 'A Delta commit adds and removes whole files: an UPDATE or DELETE writes new files and marks the old ones removed, without deleting them. The log can therefore rebuild the file list of any version, and reading version 3 means reading the files that were live at version 3. Nothing is copied or undone. This is also why VACUUM limits time travel: once it deletes removed files older than the retention period (7 days by default), versions that need them can no longer be read.',
+    hints: ['An UPDATE does not delete the files it replaces.'],
+    tags: ['delta', 'time-travel', 'transaction-log'],
+    concepts: ['delta-time-travel'],
+  },
+  {
+    id: 'delta-tt-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DELTA_TIME_TRAVEL,
+    language: CodeLanguage.SQL,
+    question: 'The Delta table `fines` does not exist before these statements, which run in order. What does the last query return? The answer is its rows, one per line.',
+    code: `CREATE OR REPLACE TABLE fines (id INT, amount INT);
+INSERT INTO fines VALUES (1, 5), (2, 8);
+UPDATE fines SET amount = 0 WHERE id = 2;
+DELETE FROM fines WHERE id = 1;
+SELECT id, amount FROM fines VERSION AS OF 2 ORDER BY id;`,
+    expectedOutput: `1, 5
+2, 0`,
+    explanation: 'Each statement that changes the table commits one version, numbered from 0: the CREATE is version 0, the INSERT version 1, the UPDATE version 2 and the DELETE version 3. `VERSION AS OF 2` reads the table as it was right after the UPDATE, so both rows are there and id 2 already has amount 0. The DELETE came later, so it does not show.',
+    hints: ['Versions are numbered from 0, starting with the CREATE.'],
+    tags: ['delta', 'time-travel', 'version-as-of', 'predict'],
+    concepts: ['delta-time-travel'],
+  },
+  {
+    id: 'delta-optimize-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DELTA_OPTIMIZATION,
+    language: CodeLanguage.PYTHON,
+    question: '`main.shop.clicks` is a new, empty Delta table with one STRING column. Each INSERT here writes one small file, and nothing else writes to or maintains the table. What does the cell print? The answer is one line: the file count, a space, then the row count.',
+    code: `t = "main.shop.clicks"
+for page in ["home", "cart", "pay"]:
+    spark.sql(f"INSERT INTO {t} VALUES ('{page}')")
+spark.sql(f"OPTIMIZE {t}")
+spark.sql(f"INSERT INTO {t} VALUES ('done')")
+d = spark.sql(f"DESCRIBE DETAIL {t}").first()
+print(d.numFiles, spark.table(t).count())`,
+    expectedOutput: `2 4`,
+    explanation: 'The three inserts leave three small files. OPTIMIZE compacts them into one larger file and commits that as a new version: it changes how the rows are stored, never the rows themselves. The INSERT after it writes another small file, so the table ends with 2 files and 4 rows. Compaction does not stay switched on: new writes add files until OPTIMIZE runs again, or until auto compaction or predictive optimization does it for you.',
+    hints: ['OPTIMIZE never adds or removes rows.', 'What does the INSERT after OPTIMIZE write?'],
+    tags: ['delta', 'optimize', 'compaction', 'predict'],
+    concepts: ['delta-optimize'],
   },
 
   // ===== DELTA LAKE VACUUM (4 questions) =====

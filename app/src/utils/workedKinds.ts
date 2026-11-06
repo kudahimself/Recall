@@ -31,6 +31,15 @@ export const NON_RUNNABLE_KINDS: NonRunnableKind[] = [
     needs: 'an Nginx server',
     test: code => /^server\s*\{/m.test(code) && /^\s+listen\s+\S/m.test(code) && /^\s+location\s+[^{\n]+\{/m.test(code),
   },
+  {
+    // Calls the notebook's own `spark` session or `dbutils`, which only a Databricks
+    // runtime provides (the code never creates either), or imports the Databricks SDK.
+    kind: 'a Databricks notebook cell (spark, dbutils or the Databricks SDK)',
+    needs: 'a Databricks workspace',
+    test: code =>
+      (/\b(spark|dbutils)\.\w/.test(code) && !/^\s*(spark|dbutils)\s*=/m.test(code) && !/\bSparkSession\b/.test(code))
+      || /^\s*from\s+databricks\.sdk\b/m.test(code),
+  },
 ];
 
 /** The non-runnable kind a worked example's code is, if any. */
