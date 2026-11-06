@@ -193,7 +193,7 @@ describe('the review list', () => {
     expect(pick?.question.id).toBe(left.id);
   });
 
-  it('after the session is done, a filtered view still serves a due family beyond the cap; unfiltered it ends', () => {
+  it('after the session is done, filtered or not it ends; after Keep going a filtered view serves a due family beyond the cap', () => {
     const state = { p: emptyProgress(), store: replayHistory([], byId) };
     const firsts: Question[] = [];
     for (const q of pool) {
@@ -208,8 +208,9 @@ describe('the review list', () => {
     expect(isSessionDone(session)).toBe(true);
     expect(selectSessionQuestion(session, pool, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
     const filtered = pool.filter(q => familyOf(q) === familyOf(left) && state.p.questionsAttempted.has(q.id));
-    const pick = selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock);
-    expect(pick).toEqual({ question: left, kind: 'practice' });
+    expect(selectSessionQuestion(session, filtered, pool, state.p, state.store, {}, undefined, clock)).toBeNull();
+    const pick = selectSessionQuestion(continueSession(session), filtered, pool, state.p, state.store, {}, undefined, clock);
+    expect(pick?.question.id).toBe(left.id);
   });
 
   it('under filters to another type, never reviews a family still in the list a second time', () => {

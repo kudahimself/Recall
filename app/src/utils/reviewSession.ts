@@ -419,13 +419,15 @@ export interface SessionPick {
 
 /**
  * What the session serves next, or null when the bounded session is done (or
- * nothing at all can be served). Order: a review list card; past the bound, a
- * family still due today, in review list order; a fresh slot (new card, a
- * drill after every NEW_PER_DRILL new ones); a re-ask that is still spacing
- * out; and, only when filters (or "Keep going") leave none of those
- * servable, practice from the same list and families (a due family beyond
- * the cap, a drill, then an unseen card; it does not use up a slot). Without filters, a session with nothing left
- * to serve ends early (null).
+ * nothing at all can be served). A bounded session ends at its size, filtered
+ * or not: once it is done, only "Keep going" serves more. Order: a review list
+ * card; past the bound, a family still due today, in review list order; a
+ * fresh slot (new card, a drill after every NEW_PER_DRILL new ones); a re-ask
+ * that is still spacing out; and, only when filters (or "Keep going") leave
+ * none of those servable, practice from the same list and families (a due
+ * family beyond the cap, a drill, then an unseen card; it uses up a fresh
+ * slot). Without filters, a session with nothing left to serve ends early
+ * (null).
  */
 export function selectSessionQuestion(
   session: ReviewSession,
@@ -439,8 +441,8 @@ export function selectSessionQuestion(
 ): SessionPick | null {
   const listed = nextReviewCard(session, servePool);
   if (listed) return { question: listed, kind: 'review' };
+  if (isSessionDone(session)) return null;
   const filtered = servePool.length !== coursePool.length;
-  if (isSessionDone(session) && !filtered) return null;
 
   const pools: Pools = { course: coursePool, serve: servePool };
   const ctx = pickContext(coursePool, progress, cardDifficulty, session.served);
@@ -473,9 +475,9 @@ export function selectSessionQuestion(
   const spacing = nextReviewCard(session, servePool, true);
   if (spacing) return { question: spacing, kind: 'review' };
 
-  // Nothing of today's plan is servable. Under filters, or past the bound,
-  // practice goes on from the same list and families (due families beyond
-  // the cap first); otherwise the day is done.
+  // Nothing of today's plan is servable. Under filters before the bound, or
+  // past it after Keep going, practice goes on from the same list and
+  // families (due families beyond the cap first); otherwise the day is done.
   if (!filtered && !session.keepGoing) return null;
   const practice = dueCard() ?? nextDrillCard(pools, store, ctx, now) ?? nextUnseenCard(pools, ctx);
   return practice ? { question: practice, kind: 'practice' } : null;
@@ -483,11 +485,11 @@ export function selectSessionQuestion(
 
 /**
  * The session after one answer. A list card leaves the list (one fewer
- * review); a new or drill card uses up a fresh slot. A first miss of a card
- * that is not itself a re-ask comes back once, REASK_SPACING cards later,
- * while the session has re-asks left; `requeued` says so, for the "+1 again"
- * on the pill. Practice answers (the older selector, under filters) use up
- * nothing.
+ * review); a new, drill or practice card uses up a fresh slot, so a filtered
+ * session still ends at its size. A first miss of a card that is not itself a
+ * re-ask comes back once, REASK_SPACING cards later, while the session has
+ * re-asks left; `requeued` says so, for the "+1 again" on the pill. Practice
+ * answers are not asked again.
  */
 export function recordReviewAnswer(
   session: ReviewSession,
@@ -503,7 +505,7 @@ export function recordReviewAnswer(
   const counted = entry?.again ? 'again' : kind;
   const tally = { ...session.tally, [counted]: session.tally[counted] + 1, correct: session.tally.correct + (isCorrect ? 1 : 0) };
   const queue = idx >= 0 ? [...session.queue.slice(0, idx), ...session.queue.slice(idx + 1)] : [...session.queue];
-  const freshLeft = !entry && (kind === 'new' || kind === 'drill') && !session.keepGoing
+  const freshLeft = !entry && kind !== 'review' && !session.keepGoing
     ? Math.max(0, session.freshLeft - 1)
     : session.freshLeft;
   const base: ReviewSession = { ...session, queue, answered, served, tally, freshLeft };

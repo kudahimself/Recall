@@ -212,7 +212,8 @@ When the ramp is held by its difficulty gate, or finished but below the unlock b
 The session serves the list first, and the "Reviews left N" pill and the Today card show its length, so the number drops by exactly one per answered review.
 A first miss anywhere in the session comes back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
 Families due beyond the cap stay due and lead the next days' lists; "Keep going" lifts the bound and serves them, then fresh slots, for as long as the learner wants.
-Under topic, difficulty or type filters the plan serves what it can inside them; past the plan, and also after "Done for today", "Practice" comes from the same list and families (due families beyond the cap, then a drill of a family already met, then an unseen card) without using a slot.
+Under topic, difficulty or type filters the plan serves what it can inside them; past the plan, "Practice" comes from the same list and families (due families beyond the cap, then a drill of a family already met, then an unseen card) and uses up a slot.
+A filtered session still ends at its size with "Done for today"; practice under filters goes on only after "Keep going".
 The older selector below is not used by the session.
 The session is stored under `recall-today-session`, so a reload the same day resumes it (count, slots left, cards served, and "Done for today"); a new day starts a new one.
 

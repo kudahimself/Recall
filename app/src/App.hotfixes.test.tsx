@@ -10,12 +10,12 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import App from './App';
 import { PROGRESS_KEY } from './utils/progressStorage';
 import { questions } from './data/questions';
-import { Course, Topic } from './types';
+import { Course, QuestionType, Topic } from './types';
 import { LESSONS } from './data/lessons';
 import { LESSONS_KEY } from './utils/spacedRepetition';
 import { getCourseForTopic } from './utils/courseConfig';
 import { localDayKey, ReviewSession, serializeSessions } from './utils/reviewSession';
-import { TODAY_SESSION_KEY } from './utils/spacedRepetition';
+import { MAX_REASKS_PER_SESSION, TODAY_SESSION_KEY, TODAY_SIZE_KEY } from './utils/spacedRepetition';
 
 const NEXT = /next (question|exercise)|finish the lesson/i;
 
@@ -218,24 +218,32 @@ describe('F7: filters', () => {
     expect(screen.queryByText(/No questions match your current filters/)).toBeNull();
   });
 
-  test('a filtered session that is over ends on the summary, with Keep going', async () => {
+  test('a filtered session answered through to its size ends on the summary, and Keep going serves more', async () => {
     localStorage.setItem('recall-active-course', 'sql');
-    localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
-    localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.TSQL_SELECT] }));
-    const finished: ReviewSession = {
-      day: localDayKey(), size: 20, queue: [], total: 0, overflow: 0, freshLeft: 0, answered: 20, reasks: 0,
-      served: ['tsql-select-mcq-1'], keepGoing: false,
-      tally: { review: 0, new: 20, drill: 0, practice: 0, again: 0, correct: 20 },
-    };
-    localStorage.setItem(TODAY_SESSION_KEY, serializeSessions({ [Course.SQL]: finished }));
+    localStorage.setItem('recall-dev-unlock-all', '1');
+    localStorage.setItem(TODAY_SIZE_KEY, '10');
+    localStorage.setItem(LESSONS_KEY, JSON.stringify(Object.fromEntries(LESSONS.map(l => [l.id, 1]))));
+    localStorage.setItem('recall-filters', JSON.stringify({ questionTypes: [QuestionType.MULTIPLE_CHOICE] }));
     render(<App />);
-    fireEvent.click(nav('Learn'));
+    fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
 
-    expect(await screen.findByText('Done for today', {}, { timeout: 3000 })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Keep going/ })).toBeInTheDocument();
+    let answered = 0;
+    while (!screen.queryByText('Done for today') && answered < 40) {
+      await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+      fireEvent.click(screen.getAllByRole('radio')[0]);
+      fireEvent.click(screen.getByRole('button', { name: /Submit Answer/ }));
+      fireEvent.click(await screen.findByRole('button', { name: NEXT }));
+      answered += 1;
+      await screen.findByText(/Done for today|Submit Answer/, {}, { timeout: 3000 }).catch(() => null);
+    }
+
+    expect(screen.getByText('Done for today')).toBeInTheDocument();
+    expect(answered).toBeGreaterThanOrEqual(10);
+    expect(answered).toBeLessThanOrEqual(10 + MAX_REASKS_PER_SESSION);
     expect(screen.queryByText(/Nothing left today for these filters/)).toBeNull();
-    expect(screen.queryByText(/No questions match your current filters/)).toBeNull();
-  });
+    fireEvent.click(screen.getByRole('button', { name: /Keep going/ }));
+    expect(await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 })).toBeInTheDocument();
+  }, 30_000);
 
   test('a filtered session with nothing servable even unfiltered ends on the summary', async () => {
     localStorage.setItem('recall-active-course', 'sql');
