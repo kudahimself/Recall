@@ -403,6 +403,7 @@ interface LessonFlow {
   lessonId: string;
   course: Course;
   stage: 'card' | 'exercise';
+  startedByLearner?: boolean;
 }
 
 /** Per-card FSRS difficulty (1–10, 0=uninitialized). Persisted alongside concept progress. */
@@ -637,10 +638,14 @@ function App() {
   // unseen card whose topic's lesson is not met opens that lesson's rule card
   // instead; the card itself is left for the session to serve again after the
   // lesson. Exercises are answered through handleAnswer like any new card.
-  // A lesson keeps its own exercise types and difficulties, but only serves exercises from the selected topics.
-  const lessonExerciseBank = useMemo(
+  // A lesson keeps its own exercise types and difficulties; one reached in a session only serves the selected topics.
+  const filteredExerciseBank = useMemo(
     () => new Map(Array.from(QUESTIONS_BY_ID).filter(([, q]) => filters.topics.includes(q.topic))),
     [filters.topics],
+  );
+  const lessonExerciseBank = useCallback(
+    (flow: LessonFlow) => (flow.startedByLearner ? QUESTIONS_BY_ID : filteredExerciseBank),
+    [filteredExerciseBank],
   );
 
   const serveWithLessons = useCallback((pick: SessionPick | null, course: Course, flow: LessonFlow | null) => {
@@ -651,7 +656,7 @@ function App() {
         serveQuestion(null);
         return;
       }
-      const exercise = nextLessonExercise(lesson, progress.questionsAttempted, lessonExerciseBank);
+      const exercise = nextLessonExercise(lesson, progress.questionsAttempted, lessonExerciseBank(flow));
       if (exercise) {
         setLessonFlow(flow);
         serveQuestion({ question: exercise, kind: 'new' });
@@ -1044,8 +1049,8 @@ function App() {
 
     // The lesson in progress is complete once its last exercise is answered.
     const flowLesson = lessonFlow?.stage === 'exercise' ? getLesson(lessonFlow.lessonId) : undefined;
-    if (flowLesson && flowLesson.exercises.includes(answered.id)
-      && !nextLessonExercise(flowLesson, newQuestionsAttempted, lessonExerciseBank)) {
+    if (lessonFlow && flowLesson && flowLesson.exercises.includes(answered.id)
+      && !nextLessonExercise(flowLesson, newQuestionsAttempted, lessonExerciseBank(lessonFlow))) {
       const completedAt = Date.now();
       setLessonsDone(prev => (prev[flowLesson.id] !== undefined ? prev : { ...prev, [flowLesson.id]: completedAt }));
     }
@@ -1170,7 +1175,7 @@ function App() {
     if (session !== reviewSessions[activeCourse]) {
       setReviewSessions(prev => ({ ...prev, [activeCourse]: session }));
     }
-    serveWithLessons(null, activeCourse, { lessonId, course: activeCourse, stage: 'card' });
+    serveWithLessons(null, activeCourse, { lessonId, course: activeCourse, stage: 'card', startedByLearner: true });
     changeView('quiz');
   };
 
@@ -2323,7 +2328,7 @@ function App() {
                     {showNextButton && (
                       <div className="next-button-container">
                         <button className="next-button" onClick={loadNextQuestion}>
-                          {inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, lessonExerciseBank)
+                          {inLessonExercise && lessonFlow && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, lessonExerciseBank(lessonFlow))
                             ? 'Finish the lesson'
                             : inLessonExercise ? 'Next exercise' : 'Next question'}
                           <ArrowRight className="next-button-icon" size={16} />

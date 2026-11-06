@@ -11,6 +11,9 @@ import App from './App';
 import { PROGRESS_KEY } from './utils/progressStorage';
 import { questions } from './data/questions';
 import { Topic } from './types';
+import { LESSONS } from './data/lessons';
+import { LESSONS_KEY } from './utils/spacedRepetition';
+import { getCourseForTopic } from './utils/courseConfig';
 
 const NEXT = /next (question|exercise)|finish the lesson/i;
 
@@ -177,5 +180,20 @@ describe('F7: filters', () => {
     const typeHintsExercise = questions.find(q => q.id === 'py-types-union-1')!;
     expect(await screen.findByText(dataclassesExercise.question)).toBeInTheDocument();
     expect(screen.queryByText(typeHintsExercise.question)).toBeNull();
+  });
+
+  test('a lesson started from the path serves its exercises whatever the topic filter', async () => {
+    localStorage.setItem('recall-active-course', 'backend');
+    localStorage.setItem('recall-dev-unlock-all', '1');
+    localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.TSQL_JOINS] }));
+    const otherBackendLessons = LESSONS.filter(l => l.id !== 'py_type_hints/1'
+      && getCourseForTopic(l.topicKeys[0]) === getCourseForTopic(Topic.PY_DATACLASSES));
+    localStorage.setItem(LESSONS_KEY, JSON.stringify(Object.fromEntries(otherBackendLessons.map(l => [l.id, 1]))));
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Start lesson' }, { timeout: 3000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /Try the exercises/ }, { timeout: 3000 }));
+
+    const firstExercise = questions.find(q => q.id === 'py-types-union-1')!;
+    expect(await screen.findByText(firstExercise.question)).toBeInTheDocument();
   });
 });
