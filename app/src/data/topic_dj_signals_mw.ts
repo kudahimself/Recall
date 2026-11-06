@@ -344,28 +344,6 @@ class BlogConfig(AppConfig):
       concepts: ['dj-signal-vs-override'],
     },
   {
-      id: 'py-dj-mw-what',
-      type: QuestionType.MULTIPLE_CHOICE,
-      difficulty: Difficulty.BEGINNER,
-      topic: Topic.DJ_SIGNALS_MW,
-      course: Course.BACKEND,
-      question: 'What is Django middleware?',
-      options: [
-        { id: 'a', text: 'The database driver layer that translates ORM queries into backend-specific SQL before execution', isCorrect: false },
-        { id: 'b', text: 'A library of template tags that run before each render to inject shared context variables', isCorrect: false },
-        { id: 'c', text: 'A pipeline of callables wrapping every request/response — each layer can modify the request going in and the response going out', isCorrect: true },
-        { id: 'd', text: 'Another name for class-based views, since both take a request and return a response object', isCorrect: false },
-      ],
-      explanation: 'Middleware is a Russian-doll architecture around views. Request flows top-to-bottom through `MIDDLEWARE` list; response flows bottom-to-top. `SecurityMiddleware` adds security headers; `SessionMiddleware` loads session; `AuthenticationMiddleware` sets `request.user`; `CsrfViewMiddleware` validates CSRF tokens; `CommonMiddleware` handles `APPEND_SLASH`. Order matters — session must load before auth so auth can read it.',
-      hints: [
-        'Request flows down; response flows up',
-        'Each MW sees request + response and can modify both',
-        'Order in MIDDLEWARE list is critical',
-      ],
-      tags: ['django', 'middleware', 'basics'],
-      concepts: ['dj-middleware-ordering'],
-    },
-  {
       id: 'py-dj-mw-custom',
       type: QuestionType.CODING,
       difficulty: Difficulty.BEGINNER,

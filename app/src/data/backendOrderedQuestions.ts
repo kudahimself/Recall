@@ -691,7 +691,7 @@ export const backendOrderedQuestions: Question[] = [
   q('celery-drf-25'), q('dj-custom-managers-queryset-cloze-1'), q('celery-drf-23'), q('dj-custom-managers-predict-1'), q('dj-orm-adv-3'),
 
   // ===== Topic.DJ_SIGNALS_MW =====
-  q('dj-signals-mw-gap-1'), q('dj-signals-mw-gap-2'), q('py-dj-mw-what'), q('dj-sigmw-3'),
+  q('dj-signals-mw-gap-1'), q('dj-signals-mw-gap-2'), q('dj-sigmw-3'),
   q('dj-middleware-parsons-1'), q('dj-signals-cloze-1'), q('py-dj-signal-post-save-profile'), q('dj-signals-appconfig-cloze-1'),
   q('py-dj-signal-register-ready'),
   q('py-dj-mw-custom'), q('dj-sigmw-2'), q('py-dj-mw-order'), q('dj-signals-mw-adv-1'),
@@ -701,7 +701,7 @@ export const backendOrderedQuestions: Question[] = [
   q('dj-caching-gap-1'), q('py-dj-cache-why'), q('dj-caching-cloze-1'), q('dj-caching-getset-cloze-1'),
   q('py-dj-cache-get-set'), q('py-dj-cache-page'), q('dj-caching-getorset-cloze-1'), q('py-dj-cache-getorset'),
   q('dj-caching-gap-2'), q('py-dj-cache-backends'), q('dj-caching-predict-1'), q('dj-caching-parsons-1'),
-  q('dj-caching-signal-cloze-1'), q('py-dj-cache-invalidate'), q('dj-cache-2'),
+  q('py-dj-cache-invalidate'), q('dj-cache-2'),
 
   // ===== Topic.DJ_TRANSACTIONS =====
   q('dj-transactions-gap-1'), q('py-dj-tx-what'), q('dj-transactions-parsons-1'), q('py-dj-tx-atomic-decorator'),

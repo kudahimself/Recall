@@ -339,28 +339,6 @@ def ____():
       concepts: ['dj-caching'],
     },
   {
-      id: 'dj-caching-signal-cloze-1',
-      type: QuestionType.CLOZE_CODE,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.DJ_CACHING,
-      course: Course.BACKEND,
-      language: CodeLanguage.PYTHON,
-      question: 'Fill in the decorator that runs this function every time a Post is saved.',
-      template: `from django.db.models.signals import post_save
-from django.dispatch import receiver
-from .models import Post
-
-@___(post_save, sender=Post)
-def on_post_saved(sender, instance, **kwargs):
-    print(f"Saved: {instance}")`,
-      blanks: ['receiver'],
-      solution: 'from django.db.models.signals import post_save\nfrom django.dispatch import receiver\nfrom .models import Post\n\n@receiver(post_save, sender=Post)\ndef on_post_saved(sender, instance, **kwargs):\n    print(f"Saved: {instance}")',
-      explanation: '`@receiver(signal, sender=Model)` connects a function to a Django signal — here `post_save`, which fires after every `.save()` on `Post`. The function always accepts `sender`, `instance`, and `**kwargs` (the extra kwargs vary by signal).',
-      hints: ['Decorator that wires a function to a signal', 'sender= scopes it to one model'],
-      tags: ['django', 'signals', 'post_save', 'receiver', 'cloze'],
-      concepts: ['dj-signal-vs-override'],
-    },
-  {
       id: 'py-dj-cache-invalidate',
       type: QuestionType.CODING,
       difficulty: Difficulty.INTERMEDIATE,
