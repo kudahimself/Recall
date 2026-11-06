@@ -189,4 +189,28 @@ DATABASES = {
     tags: ['django', 'settings', 'django-environ', 'cloze'],
     concepts: ['py-security-primitives'],
   },
+  {
+    id: 'dj-settings-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DJ_SETTINGS,
+    course: Course.BACKEND,
+    language: CodeLanguage.PYTHON,
+    question: 'The server sets `DEBUG` in its environment, as the first line simulates, and sets no `PAGE_SIZE`. `environ` is django-environ. What do the two `print` calls output? The answer is two lines, each two values separated by a space.',
+    code: `import os
+import environ
+
+os.environ["DEBUG"] = "False"
+debug = os.environ.get("DEBUG", False)
+print(debug == False, bool(debug))
+
+env = environ.Env(DEBUG=(bool, True), PAGE_SIZE=(int, 20))
+print(env("DEBUG"), env("PAGE_SIZE") + 5)`,
+    expectedOutput: `False True
+False 25`,
+    explanation: 'Every environment variable is a string. `os.environ.get("DEBUG", False)` returns the string `"False"`, which is not equal to the boolean `False` and, being a non-empty string, is truthy: a settings file that does `DEBUG = os.environ.get("DEBUG", False)` runs production with DEBUG on. `environ.Env(DEBUG=(bool, True))` declares a type and a default for each variable, so `env("DEBUG")` casts the string to the boolean `False`, and `PAGE_SIZE`, which is not set, falls back to its default `20` as an int, so adding 5 gives 25.',
+    hints: ['os.environ only holds strings, and a non-empty string is truthy.', 'environ.Env(NAME=(cast, default)) casts the value and supplies the default when the variable is missing.'],
+    tags: ['django', 'settings', 'django-environ', 'environment-variables', 'predict'],
+    concepts: ['py-security-primitives'],
+  },
 ];

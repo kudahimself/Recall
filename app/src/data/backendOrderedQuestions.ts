@@ -776,13 +776,13 @@ export const backendOrderedQuestions: Question[] = [
   q('py-dj-cicd-secrets'), q('dj-cicd-parsons-1'), q('py-dj-cicd-deploy-step'), q('dj-cicd-predict-1'),
 
   // ===== Topic.DJ_NGINX =====
-  q('be-infra-nginx-3'), q('dj-nginx-proxypass-cloze-1'), q('be-infra-nginx-1'), q('be-infra-nginx-2'),
+  q('be-infra-nginx-3'), q('dj-nginx-proxypass-cloze-1'), q('be-infra-nginx-1'), q('be-infra-nginx-2'), q('dj-nginx-predict-1'),
 
   // ===== Topic.DJ_SETTINGS =====
-  q('be-infra-settings-2'), q('be-infra-settings-3'), q('dj-settings-cloze-1'), q('be-infra-settings-1'),
+  q('be-infra-settings-2'), q('be-infra-settings-3'), q('dj-settings-cloze-1'), q('be-infra-settings-1'), q('dj-settings-predict-1'),
 
   // ===== Topic.DJ_FILE_UPLOADS =====
-  q('be-infra-uploads-3'), q('dj-uploads-basics-cloze-1'), q('be-infra-uploads-1'), q('be-infra-uploads-2'),
+  q('be-infra-uploads-3'), q('dj-uploads-basics-cloze-1'), q('be-infra-uploads-1'), q('be-infra-uploads-2'), q('dj-uploads-predict-1'),
 
   // ===== Topic.DJ_POSTGRES =====
   q('be-infra-postgres-2'), q('dj-postgres-gap-1'), q('dj-postgres-gap-2'), q('be-infra-dbperf-4'),

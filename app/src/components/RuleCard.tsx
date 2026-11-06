@@ -8,6 +8,7 @@ import React from 'react';
 import { ArrowRight, BookOpen, CheckCircle2, X } from 'lucide-react';
 import { CodeLanguage, LessonTable, Question, TopicLesson } from '../types';
 import { LessonContext, QUESTION_TYPE_LABEL, proseText } from '../utils/lessons';
+import { nonRunnableKind } from '../utils/workedKinds';
 import './RuleCard.css';
 
 /** Text with `code` spans. */
@@ -145,7 +146,7 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
               <div className="rc-checked">
                 <CheckCircle2 size={12} />{' '}
                 {lesson.worked.runs === false
-                  ? `This example needs ${/^jobs:\s*$/m.test(lesson.worked.code) ? 'a GitHub Actions runner' : 'a Django project'} to run, so its output was checked by hand.`
+                  ? `This example needs ${nonRunnableKind(lesson.worked.code)?.needs ?? 'its own setup'} to run, so its output was checked by hand.`
                   : 'This example is run by check-lessons.js on every test run, and its output matches.'}
               </div>
             </>

@@ -81,6 +81,8 @@ House rules (check-lessons.js enforces the first two):
 - Python: plain `print` output; it runs on `python3 -I`.
   A Django / DRF example cannot run without a project: set `runs: false` (allowed only when the code imports `django` or `rest_framework`), say in a first-line comment what project and model it assumes, and verify `output` by hand.
   A GitHub Actions workflow cannot run without a runner either: keep `language: CodeLanguage.PYTHON` as the bank's CI/CD questions do, set `runs: false` (allowed only when the code has top-level `on:` and `jobs:` and a job's `runs-on:`), and make `output` the lines its `run` steps print, verified by hand.
+  An Nginx config cannot run without a server: keep `language: CodeLanguage.PYTHON` as the bank's Nginx questions do, set `runs: false` (allowed only when the code has a top-level `server {` block with a `listen` directive and a `location ... {` block), and make `output` what Nginx does with requests the first-line comment lists, verified by hand.
+  These kinds live in one list, `NON_RUNNABLE_KINDS` in `app/src/utils/workedKinds.ts`; a new kind is added there, kept as narrow, with a case in `checkLessons.test.ts`.
 - Set `output` to exactly what the code prints (SQL: `col | col` header and rows, a blank line between result sets).
   Run the checker to get it, then read it and confirm every value by hand against the steps.
 

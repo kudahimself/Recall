@@ -16,8 +16,9 @@
  *   - its worked example does not run, or prints something other than
  *     `worked.output` (SQL on sql.js, Python on python3), or a SQL result of
  *     more than one row comes from a statement without ORDER BY (row order
- *     would then depend on the engine); a Django / DRF example, which needs a
- *     project to run, or a GitHub Actions workflow, which needs a runner, sets
+ *     would then depend on the engine); an example of a kind that cannot run
+ *     here (NON_RUNNABLE_KINDS in src/utils/workedKinds.ts: a Django / DRF
+ *     example, a GitHub Actions workflow, an Nginx config) sets
  *     `worked.runs: false` and is not run (its output is verified by hand), and
  *     `runs: false` on any other example fails;
  *   - the worked example repeats an exercise's solution: the solution (or one
@@ -60,13 +61,7 @@ const { getSectionUnits, SQL_PATH_ORDER, BACKEND_PATH_ORDER, DATABRICKS_PATH_ORD
   require(path.join(APP, 'src/utils/courseConfig.ts'));
 const { familyOf } = require(path.join(APP, 'src/utils/spacedRepetition.ts'));
 
-/** A worked example that imports Django or DRF, which may skip its run. */
-const FRAMEWORK_IMPORT = /^\s*(from|import)\s+(django|rest_framework)\b/m;
-
-/** A GitHub Actions workflow (top-level `on:` and `jobs:`, a job's `runs-on:`), the other kind that may skip its run. */
-function isWorkflow(code) {
-  return /^on:/m.test(code) && /^jobs:\s*$/m.test(code) && /^\s+runs-on:\s*\S/m.test(code);
-}
+const { NON_RUNNABLE_KINDS, nonRunnableKind } = require(path.join(APP, 'src/utils/workedKinds.ts'));
 
 const MIN_EXERCISES = 3;
 const MAX_EXERCISES = 5;
@@ -498,8 +493,9 @@ async function checkLesson(lesson, seenIds) {
   } else if (w.output === undefined) {
     err('worked example has no output to check');
   } else if (w.runs === false) {
-    if (w.language !== 'python' || !(FRAMEWORK_IMPORT.test(w.code) || isWorkflow(w.code))) {
-      err('runs: false is only for a Django / DRF example that imports the framework, or a GitHub Actions workflow');
+    if (w.language !== 'python' || !nonRunnableKind(w.code)) {
+      const kinds = NON_RUNNABLE_KINDS.map(k => k.kind);
+      err(`runs: false is only for ${kinds.slice(0, -1).join(', ')} or ${kinds[kinds.length - 1]}`);
     }
   } else {
     const r = await runWorked(w);
