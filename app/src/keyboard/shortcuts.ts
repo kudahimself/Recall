@@ -10,6 +10,9 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
  *   contenteditable or the Monaco editor). Radios and checkboxes are not typing.
  * - Only shortcuts marked `whileTyping` (Shift+Enter, Ctrl/Cmd+Enter, Esc)
  *   work inside a text box.
+ * - A held key fires once: auto-repeated keydowns are swallowed for every
+ *   shortcut except the Esc ones, so holding Enter or Shift+Enter can never
+ *   pick, submit or record an answer on the next step or question.
  * - Browser-reserved combinations (Ctrl+R, Ctrl+1-9 and the like) are never bound.
  * - An open dialog takes the keys: only shortcuts registered while it is the
  *   top layer fire.
