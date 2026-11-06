@@ -7,5 +7,6 @@
 import { TopicLesson } from '../../types';
 import { sqlLessons } from './sqlLessons';
 import { pythonLessons } from './pythonLessons';
+import { databricksLessons } from './databricksLessons';
 
-export const LESSONS: TopicLesson[] = [...sqlLessons, ...pythonLessons];
+export const LESSONS: TopicLesson[] = [...sqlLessons, ...pythonLessons, ...databricksLessons];
