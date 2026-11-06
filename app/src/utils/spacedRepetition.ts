@@ -1154,7 +1154,8 @@ export class SpacedRepetitionSystem {
 
   /**
    * Cap an FSRS response grade by the answer's credit: a pass under
-   * CREDIT_CORRECT_THRESHOLD (half credit, 2 of 4 key points) is at most Hard.
+   * CREDIT_CORRECT_THRESHOLD (half credit: a choose and justify answer with
+   * the right decision and the wrong reason) is at most Hard.
    * A hinted coding pass under the bar is already capped this low by its hint
    * tier, so replaying old history gives the same grades.
    */
