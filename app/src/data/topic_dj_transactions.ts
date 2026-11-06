@@ -20,7 +20,7 @@ export const dj_transactions_questions: Question[] = [
       topic: Topic.DJ_TRANSACTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Wrap a credit/debit transfer in a single atomic block so either both rows update or neither does.',
+      question: 'Wrap a transfer in a single atomic block so either both rows update or neither does: debit the `from_id` account first, then credit the `to_id` account. `Account` and `F` are already imported.',
       correctOrder: [
         'from django.db import transaction',
         '',
@@ -36,7 +36,7 @@ export const dj_transactions_questions: Question[] = [
         '        Account.objects.filter(pk=from_id).balance -= amount',
       ],
       solution: 'from django.db import transaction\n\ndef transfer(from_id, to_id, amount):\n    with transaction.atomic():\n        Account.objects.filter(pk=from_id).update(balance=F("balance") - amount)\n        Account.objects.filter(pk=to_id).update(balance=F("balance") + amount)',
-      explanation: '`transaction.atomic()` is a context manager (or decorator). On normal exit it COMMITs; on any unhandled exception it ROLLBACKs both updates. Use F() expressions to push the math into SQL — read-modify-write in Python would lose updates under concurrent writes.',
+      explanation: '`transaction.atomic()` is a context manager (or decorator). On normal exit it COMMITs; on any unhandled exception it ROLLBACKs both updates. Use F() expressions to push the math into SQL; read-modify-write in Python would lose updates under concurrent writes.',
       hints: ['transaction.atomic() is a context manager or decorator', 'F() avoids race conditions on counters'],
       tags: ['django', 'transactions', 'atomic', 'parsons'],
       concepts: ['dj-transaction-atomic'],
@@ -48,7 +48,7 @@ export const dj_transactions_questions: Question[] = [
       topic: Topic.DJ_TRANSACTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'What\'s in the database after this runs? (Article model exists; no rows initially.)',
+      question: 'What does this print? (The Article table starts empty.) Type the number.',
       code: `from django.db import transaction
 
 try:
@@ -61,7 +61,7 @@ except ValueError:
 
 print(Article.objects.count())`,
       expectedOutput: `0`,
-      explanation: 'When the `atomic` block exits via exception, Django ROLLBACKs everything done inside — so neither Article persists. Catching the exception OUTSIDE the `with` is what allows the script to continue; catching INSIDE would not have rolled back. Atomic blocks are all-or-nothing.',
+      explanation: 'When the `atomic` block exits via exception, Django ROLLBACKs everything done inside, so neither Article persists. Catching the exception OUTSIDE the `with` is what allows the script to continue; catching INSIDE would not have rolled back. Atomic blocks are all-or-nothing.',
       hints: ['Exception inside atomic = rollback', 'Catch outside the `with` to let rollback happen'],
       tags: ['django', 'transactions', 'rollback', 'predict'],
       concepts: ['dj-transaction-atomic'],
@@ -73,7 +73,7 @@ print(Article.objects.count())`,
       topic: Topic.DJ_TRANSACTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Write a `transfer_funds` function that transfers money between two accounts atomically. Use transaction.atomic() to ensure that if any step fails (insufficient funds, account not found), all database changes are rolled back. The Account model has fields: owner (CharField), balance (DecimalField). Raise a ValueError if the sender has insufficient funds.',
+      question: 'Write `transfer_funds(from_id, to_id, amount)` that moves `amount` from one account to another atomically. Use transaction.atomic() to ensure that if any step fails (insufficient funds, account not found), all database changes are rolled back. The Account model has fields: owner (CharField), balance (DecimalField). Load both accounts by primary key and lock their rows so a concurrent transfer cannot read a stale balance. Raise `ValueError("Insufficient funds")` if the sender has insufficient funds. Otherwise debit the sender, credit the receiver, and record the transfer by creating a `TransferLog` with `from_account`, `to_account` and `amount`. `Account` and `TransferLog` come from the app\'s `.models`.',
       starterCode: ``,
       testCases: [
         {
@@ -109,7 +109,7 @@ def transfer_funds(from_id, to_id, amount):
         apiSignature: 'transaction.atomic(); queryset.select_for_update().get(pk=id)',
         skeleton: 'from django.db import transaction\nfrom .models import Account, TransferLog\nfrom decimal import Decimal\n\ndef ____(from_id, to_id, amount):\n    with ____.____():\n        sender = ____.____.____().get(pk=from_id)\n        receiver = ____.____.____().get(pk=to_id)\n\n        if sender.____ < amount:\n            raise ____("Insufficient funds")\n\n        sender.____ -= amount\n        sender.____()\n\n        receiver.____ += amount\n        receiver.____()\n\n        ____.____.____(\n            from_account=sender,\n            to_account=receiver,\n            amount=amount,\n        )',
       },
-      explanation: 'transaction.atomic() creates a database savepoint. If any exception is raised inside the block, ALL changes within it are rolled back — the sender\'s debit, receiver\'s credit, and the transfer log are all undone. This is critical for financial operations where partial updates would mean money disappearing or being duplicated. The select_for_update() call acquires a row-level lock, preventing other transactions from modifying these accounts until this transaction completes. Without atomic(), if the code crashed after debiting the sender but before crediting the receiver, the money would vanish. The with-statement syntax is preferred over the @transaction.atomic decorator because it gives you finer control over exactly which operations should be atomic.',
+      explanation: 'The outermost transaction.atomic() opens a database transaction (only a nested one is a savepoint). If any exception is raised inside the block, ALL changes within it are rolled back: the sender\'s debit, receiver\'s credit, and the transfer log are all undone. This is critical for financial operations where partial updates would mean money disappearing or being duplicated. The select_for_update() call acquires a row-level lock, preventing other transactions from modifying these accounts until this transaction completes. Without atomic(), if the code crashed after debiting the sender but before crediting the receiver, the money would vanish. Here the whole body is atomic, so decorating the function with @transaction.atomic is equivalent; the with-statement gives finer control when only part of a function should be atomic.',
       hints: [
         'Use "with transaction.atomic():" as a context manager',
         'select_for_update() locks rows to prevent concurrent modification',
@@ -147,11 +147,10 @@ def transfer_funds(from_id, to_id, amount):
       topic: Topic.DJ_TRANSACTIONS,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Ensure that all database writes inside a view function named `checkout` execute within a single transaction, so they either all succeed or all roll back. Define this view taking a `request`, create a new `Order` for the current user, and decrement the `count` column of the matching `Inventory` item by one using an `F` expression. Import `transaction` and `models` from `django.db` and use the view decorator approach to enforce the transaction.',
-      starterCode: `# Write checkout(request) decorated with @transaction.atomic:
-# create an Order for request.user, then decrement the matching
-# Inventory row's count by 1 with an F() update. Both writes commit
-# together or both roll back.
+      question: 'Ensure that all database writes inside a view function named `checkout` execute within a single transaction, so they either all succeed or all roll back. Define this view taking a `request`, create a new `Order` for the current user with `total=100`, decrement the `count` column of the `Inventory` row whose `item` is 1 by one using an `F` expression, then return an `HttpResponse` with the text `Order <pk> created`. `Order` and `Inventory` come from the app\'s `.models`. Import `transaction` and `models` from `django.db` and use the view decorator approach to enforce the transaction.',
+      starterCode: `# Write checkout(request): create an Order for request.user, then
+# decrement the matching Inventory row's count by 1 with an F() update.
+# Both writes must commit together or both roll back.
 `,
       testCases: [
         {
@@ -173,11 +172,11 @@ def checkout(request):
         apiSignature: '@transaction.atomic; models.F("count") - 1',
         skeleton: 'from django.db import transaction, models\nfrom django.http import HttpResponse\nfrom .models import Order, Inventory\n\n@____.____\ndef ____(request):\n    order = ____.____.____(user=request.user, total=100)\n    ____.____.____(item=1).____(count=models.____("count") - 1)\n    return ____(f"Order {____.pk} created")',
       },
-      explanation: '`@transaction.atomic` on a view wraps the entire request in a transaction. Any exception that escapes the view triggers a rollback. Use when a view performs more than one write that must commit together. WARNING: long transactions hold locks and slow concurrency — don\'t put slow external calls (HTTP, long sleep) inside. Alternative: `with transaction.atomic():` context manager for partial-block scoping (next question).',
+      explanation: '`@transaction.atomic` on a view wraps the entire request in a transaction. Any exception that escapes the view triggers a rollback. Use when a view performs more than one write that must commit together. WARNING: long transactions hold locks and slow concurrency, so don\'t put slow external calls (HTTP, long sleep) inside. Alternative: the `with transaction.atomic():` context manager scopes the transaction to part of a function.',
       hints: [
         '@transaction.atomic wraps the full function',
         'Exception → rollback; return → commit',
-        'Keep transactions short — no external I/O inside',
+        'Keep transactions short - no external I/O inside',
       ],
       tags: ['django', 'transactions', 'atomic'],
       concepts: ['dj-transaction-atomic'],
@@ -190,9 +189,9 @@ def checkout(request):
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Scope a transaction block to only cover the save operations within a function named `process(a, b)`. Perform non-transactional prep (`a.normalize()` and `b.normalize()`), execute a transactional block enclosing `a.save()` and `b.save()`, and finish with a non-transactional follow-up (`notify(a, b)`). Ensure that any exception raised during the saves rolls back only those modifications.',
-      starterCode: `# Write process(a, b): do non-transactional prep, then open a
-# transaction.atomic() block scoping ONLY two related saves
-# (a.save(), b.save()), then do non-transactional follow-up.
+      starterCode: `# Write process(a, b): non-transactional prep, then ONLY the two
+# related saves (a.save(), b.save()) inside one transaction, then the
+# non-transactional follow-up.
 `,
       testCases: [
         {
@@ -218,7 +217,7 @@ def process(a, b):
         apiSignature: 'with transaction.atomic(): ...',
         skeleton: 'from django.db import transaction\n\ndef ____(a, b):\n    a.____()\n    b.____()\n\n    with ____.____():\n        a.____()\n        b.____()\n\n    ____(a, b)',
       },
-      explanation: 'Scoping matters because transactions hold locks. Non-DB work (logging, metrics, notifications, HTTP calls) should live OUTSIDE the atomic block. Can nest: an inner `atomic()` becomes a SAVEPOINT — its exception rolls back only the inner, preserving the outer. For cleanup that must run after commit (not during), use `transaction.on_commit(callable)` — fires when the outermost atomic block commits, perfect for triggering Celery tasks without races.',
+      explanation: 'Scoping matters because transactions hold locks. Non-DB work (logging, metrics, notifications, HTTP calls) should live OUTSIDE the atomic block. Can nest: an inner `atomic()` becomes a SAVEPOINT, and its exception rolls back only the inner block, preserving the outer. For cleanup that must run after commit (not during), use `transaction.on_commit(callable)`, which fires when the outermost atomic block commits, perfect for triggering Celery tasks without races.',
       hints: [
         '`with transaction.atomic():` scopes a transaction',
         'Nested atomic = savepoint; inner fail leaves outer intact',
@@ -375,12 +374,12 @@ def ____(payload):
       course: Course.BACKEND,
       question: 'What does `DATABASES[...]["ATOMIC_REQUESTS"] = True` do, and what\'s the tradeoff?',
       options: [
-        { id: 'a', text: 'Nothing on its own — it only takes effect once each view also opts in with `@transaction.atomic`', isCorrect: false },
+        { id: 'a', text: 'Nothing on its own; it only takes effect once each view also opts in with `@transaction.atomic`', isCorrect: false },
         { id: 'b', text: 'Makes requests faster by batching every query in a view into a single database round-trip', isCorrect: false },
         { id: 'c', text: 'Enables Postgres-only transaction features; on MySQL and SQLite the setting is silently ignored', isCorrect: false },
         { id: 'd', text: 'Wraps every view in a transaction: an exception rolls back the request\'s DB work, but the transaction is held for the full request', isCorrect: true },
       ],
-      explanation: 'The "dev-mode safety net" setting. Simplifies reasoning (any raised exception = clean rollback) but harms throughput on larger systems — every view holds a connection for its full duration, connections become scarce. Most larger projects disable it and opt-in with `@transaction.atomic` per view. Middle ground: turn on for the admin + write-heavy endpoints only by setting `ATOMIC_REQUESTS` per DB alias.',
+      explanation: 'The "dev-mode safety net" setting. Simplifies reasoning (any raised exception = clean rollback) but harms throughput on larger systems: every view keeps its transaction (and any row locks it took) open for the whole request, including template rendering and slow external calls. Most larger projects disable it and opt in with `@transaction.atomic` per view. Middle ground: keep it on and exempt slow or read-only views with `@transaction.non_atomic_requests`; the setting itself applies per database alias, not per view.',
       hints: [
         'Wraps every view in a transaction automatically',
         'Simple correctness; reduces concurrency on slow views',

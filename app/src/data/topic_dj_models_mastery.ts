@@ -102,7 +102,7 @@ True
         ___ = ["-spent"]`,
       blanks: ['proxy', 'ordering'],
       solution: 'class VipCustomer(Customer):\n    class Meta:\n        proxy = True\n        ordering = ["-spent"]',
-      explanation: '`proxy = True` tells Django this model reuses the parent\'s table — no migration, no new columns. `ordering` (or any other Python-level behaviour: managers, methods) can differ from the parent even though the rows are identical.',
+      explanation: '`proxy = True` tells Django this model reuses the parent\'s table - no new table, no new columns (`makemigrations` still writes a migration for it, which creates nothing in the database). `ordering` (or any other Python-level behaviour: managers, methods) can differ from the parent even though the rows are identical.',
       hints: ['The Meta flag meaning "same table as parent"', 'Meta option for default query ordering'],
       tags: ['django', 'models', 'inheritance', 'proxy', 'cloze'],
       concepts: ['dj-model-construction'],
@@ -127,7 +127,8 @@ True
     class Meta:
         proxy = True
         ordering = ["-created_at"]`,
-      explanation: 'A proxy model (`proxy = True`) shares the parent\'s table — no migration, no new columns — and only changes Python-level behaviour. Here it sets a different default `ordering`, so `RecentOrder.objects.all()` returns the same rows as `Order` but newest-first. A proxy can add managers/methods/ordering but never new fields.',
+      requires: ['proxy'],
+      explanation: 'A proxy model (`proxy = True`) shares the parent\'s table - no new table, no new columns (`makemigrations` still records it, but the migration creates nothing in the database) - and only changes Python-level behaviour. Here it sets a different default `ordering`, so `RecentOrder.objects.all()` returns the same rows as `Order` but newest-first. A proxy can add managers/methods/ordering but never new fields.',
       hints: [
         'Inherit from `Order` and set `class Meta: proxy = True`',
         'Add `ordering = ["-created_at"]` in the same Meta',
@@ -148,12 +149,12 @@ True
       course: Course.BACKEND,
       question: 'A `rating` field is declared `validators=[MinValueValidator(0)]`. You run `Article(rating=-5).save()` directly. What happens?',
       options: [
-        { id: 'a', text: 'The row is written with `-5` — `Model.save()` does NOT run field validators; only `full_clean()` does', isCorrect: true },
+        { id: 'a', text: 'The row is written with `-5`: `Model.save()` does NOT run field validators; only `full_clean()` does', isCorrect: true },
         { id: 'b', text: 'A `ValidationError` is raised before the row is written, because `save()` always validates first', isCorrect: false },
         { id: 'c', text: 'An `IntegrityError` is raised by the database, since a validator emits a CHECK constraint automatically', isCorrect: false },
-        { id: 'd', text: 'The value is silently clamped to `0` — the validator\'s minimum — and then the row is written', isCorrect: false },
+        { id: 'd', text: 'The value is silently clamped to `0`, the validator\'s minimum, and then the row is written', isCorrect: false },
       ],
-      explanation: 'Field `validators` (and the `clean()` hook) run inside `full_clean()`, which `save()` does NOT call. So a direct `.save()` with an invalid value writes it unchanged. Validators only protect you on paths that call `full_clean()` (forms, serializers) — or you add a real DB `CheckConstraint`.',
+      explanation: 'Field `validators` (and the `clean()` hook) run inside `full_clean()`, which `save()` does NOT call. So a direct `.save()` with an invalid value writes it unchanged. Validators only protect you on paths that run them: `full_clean()` (which a `ModelForm` calls in `is_valid()`), or a DRF `ModelSerializer`, which copies the field\'s validators onto its own fields. For a guarantee on every write path, add a real DB `CheckConstraint`.',
       hints: [
         'save() skips validation entirely',
         'Validators run in full_clean(), not save()',
@@ -169,15 +170,15 @@ True
       course: Course.BACKEND,
       question: 'Given that `Model.save()` skips validation, how do field `validators` and `clean()` actually get enforced in a typical app?',
       options: [
-        { id: 'a', text: 'Through `full_clean()`, which `ModelForm` and DRF serializers call inside `is_valid()` — so form/serializer-driven writes are validated', isCorrect: true },
+        { id: 'a', text: 'Through `full_clean()`, which a `ModelForm` calls inside `is_valid()`, so form-driven writes are validated', isCorrect: true },
         { id: 'b', text: 'Through `save()`, which calls `full_clean()` internally whenever `DEBUG=True` is set in settings', isCorrect: false },
         { id: 'c', text: 'Through the database, which re-runs each Python validator as a trigger on every INSERT/UPDATE', isCorrect: false },
         { id: 'd', text: 'Through `objects.create()`, the one write path that calls `full_clean()` before saving the row', isCorrect: false },
       ],
-      explanation: 'The validation entry point is `full_clean()` (which runs `clean_fields()` → `clean()` → `validate_constraints()`). Forms and serializers call it for you during `is_valid()`. Plain ORM writes (`save()`, `create()`, `bulk_create`, `.update()`) do not — if you write through them, call `full_clean()` yourself or rely on DB constraints.',
+      explanation: 'The validation entry point is `full_clean()` (which runs `clean_fields()`, `clean()`, `validate_unique()` and `validate_constraints()`). A `ModelForm` calls it for you during `is_valid()`. A DRF `ModelSerializer` does not: it copies each model field\'s validators onto its own fields, so those run, but the model\'s `clean()` is never called. Plain ORM writes (`save()`, `create()`, `bulk_create`, `.update()`) validate nothing - if you write through them, call `full_clean()` yourself or rely on DB constraints. `DEBUG` changes none of this, and the database knows nothing about Python validators.',
       hints: [
         'full_clean() is the validation entry point',
-        'Forms/serializers call it; raw ORM writes do not',
+        'ModelForm.is_valid() calls it; raw ORM writes do not',
       ],
       tags: ['django', 'models', 'validation', 'full_clean'],
       concepts: ['dj-model-construction'],
@@ -194,7 +195,7 @@ True
 p.save()
 print(Product.objects.get(pk=p.pk).stock)`,
       expectedOutput: `-10`,
-      explanation: '`save()` never runs the field\'s `MinValueValidator`, so the invalid `-10` is written and read straight back. The validator would only have fired through `full_clean()` (a form/serializer). To make the database itself reject negatives you would add a `CheckConstraint(check=Q(stock__gte=0))`.',
+      explanation: '`save()` never runs the field\'s `MinValueValidator`, so the invalid `-10` is written and read straight back. The validator would only have fired through `full_clean()` (which a `ModelForm` calls) or a DRF serializer\'s copy of it. To make the database itself reject negatives you would add `models.CheckConstraint(condition=Q(stock__gte=0), name="stock_gte_0")` to `Meta.constraints` (the old `check=` keyword was removed in Django 6.0).',
       hints: ['Validators fire in full_clean(), which save() skips', 'The invalid value persists unchanged'],
       tags: ['django', 'models', 'validation', 'save', 'predict'],
       concepts: ['dj-model-construction'],
@@ -218,7 +219,7 @@ class Event(models.Model):
             raise ___("End date cannot be before start date.")`,
       blanks: ['clean', 'ValidationError'],
       solution: 'from django.core.exceptions import ValidationError\n\nclass Event(models.Model):\n    start = models.DateField()\n    end = models.DateField()\n\n    def clean(self):\n        if self.end < self.start:\n            raise ValidationError("End date cannot be before start date.")',
-      explanation: 'Cross-field rules (those needing more than one field) go in `clean()`, called by `full_clean()` after per-field validation. Raise `django.core.exceptions.ValidationError` to signal failure — a `ModelForm`/serializer surfaces it as a form error. Remember `save()` won\'t call this on its own.',
+      explanation: 'Cross-field rules (those needing more than one field) go in `clean()`, called by `full_clean()` after per-field validation. Raise `django.core.exceptions.ValidationError` to signal failure - a `ModelForm` surfaces it as a form error (a DRF serializer never calls the model\'s `clean()`). Remember `save()` won\'t call this on its own.',
       hints: ['Cross-field hook is `clean(self)`', 'Signal failure with `ValidationError`'],
       tags: ['django', 'models', 'validation', 'clean', 'cloze'],
       concepts: ['dj-model-construction'],
@@ -230,7 +231,7 @@ class Event(models.Model):
       topic: Topic.DJ_MODELS_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Define an `Event` model with a `start` date and an `end` date. Add cross-field validation — the model-level hook that `full_clean()` invokes — so that validating an event whose `end` precedes its `start` raises a `ValidationError`.',
+      question: 'Define an `Event` model with a `start` date and an `end` date. Add cross-field validation (the model-level hook that `full_clean()` invokes) so that validating an event whose `end` precedes its `start` raises a `ValidationError`.',
       starterCode: `from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -250,7 +251,7 @@ class Event(models.Model):
     def clean(self):
         if self.end < self.start:
             raise ValidationError("End date cannot be before start date.")`,
-      explanation: 'Validation spanning multiple fields belongs in `clean()`, which `full_clean()` runs after the per-field checks. Raising `ValidationError` makes `ModelForm`/serializer `is_valid()` fail with that message. Note `Model.save()` does not call `clean()` — forms/serializers (or an explicit `full_clean()`) do.',
+      explanation: 'Validation spanning multiple fields belongs in `clean()`, which `full_clean()` runs after the per-field checks. Raising `ValidationError` makes a `ModelForm`\'s `is_valid()` fail with that message. Note `Model.save()` does not call `clean()`, and neither does a DRF serializer; a `ModelForm` (or an explicit `full_clean()`) does.',
       hints: [
         'Override `def clean(self):`',
         'Compare `self.end < self.start` and `raise ValidationError(...)`',

@@ -89,7 +89,7 @@ export const dj_orm_mastery_questions: Question[] = [
       topic: Topic.DJ_ORM_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Annotate each Article with its row number `rn` within its author\'s articles, newest first. Import the helpers, then build the windowed annotation.',
+      question: 'Annotate each Article with its row number `rn` within its author\'s articles, newest first, and store the queryset in `ranked`. Import the helpers, then build the windowed annotation, passing `expression`, `partition_by` and `order_by` to `Window` in that order.',
       correctOrder: [
         'from django.db.models import Window, F',
         'from django.db.models.functions import RowNumber',
@@ -120,7 +120,7 @@ export const dj_orm_mastery_questions: Question[] = [
       topic: Topic.DJ_ORM_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Annotate every Article with its position `rn` among that author\'s articles, newest first — so each author\'s newest article gets `rn=1`, the next `rn=2`, and so on. Use a window function partitioned per author; no Python loops and no subqueries. `Article` has `author` (ForeignKey) and `created_at`.',
+      question: 'Annotate every Article with its position `rn` among that author\'s articles, newest first, so each author\'s newest article gets `rn=1`, the next `rn=2`, and so on. Use a window function partitioned per author; no Python loops and no subqueries. `Article` has `author` (ForeignKey) and `created_at`.',
       starterCode: `# Annotate each Article with rn = its position within its author's articles, newest first.
 `,
       testCases: [
@@ -140,12 +140,30 @@ ranked = Article.objects.annotate(
         partition_by=[F("author_id")],
         order_by=F("created_at").desc(),
     )
-)`,
-      explanation: 'A window function keeps every row while computing across the partition. `partition_by=[F("author_id")]` makes each author a window; `order_by=F("created_at").desc()` numbers newest-first; `RowNumber()` yields 1, 2, 3… per partition. The result is one query returning all articles, each carrying its per-author rank — impossible with a collapsing aggregate and far cheaper than a correlated count subquery per row.',
+)
+# OR
+from django.db.models import Window, F
+from django.db.models.functions import RowNumber
+from .models import Article
+
+ranked = Article.objects.annotate(
+    rn=Window(
+        expression=RowNumber(),
+        partition_by=F("author"),
+        order_by="-created_at",
+    )
+)
+# OR
+from django.db.models import Window, F
+from django.db.models.functions import RowNumber
+from .models import Article
+
+ranked = Article.objects.annotate(rn=Window(expression=RowNumber(), partition_by=[F("author_id")], order_by=F("created_at").desc()))`,
+      explanation: 'A window function keeps every row while computing across the partition. `partition_by=[F("author_id")]` makes each author a window; `order_by=F("created_at").desc()` (or the string `"-created_at"`) numbers newest-first; `RowNumber()` yields 1, 2, 3… per partition. The result is one query returning all articles, each carrying its per-author rank - impossible with a collapsing aggregate and far cheaper than a correlated count subquery per row.',
       hints: [
         'Window(expression=RowNumber(), partition_by=[...], order_by=...)',
         'partition_by per author; order_by created_at descending',
-        'Stays annotate — every row is kept, each gets its rn',
+        'Stays annotate - every row is kept, each gets its rn',
       ],
       tieredHints: {
         apiSignature: 'Window(expression, partition_by=None, order_by=None, frame=None)',
@@ -204,7 +222,7 @@ ranked = Article.objects.annotate(
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
       question: 'Write `reserve_one(pk)` that decrements the `stock` of the `Product` with that pk by 1, but never lets two concurrent callers oversell (drive stock below zero). Lock the row for the duration of a transaction: if stock is already 0, return False without changing it; otherwise decrement, save, and return True. `Product` has an integer `stock`.',
-      starterCode: `# def reserve_one(pk): row-lock the product in a transaction; guard stock; return created flag.
+      starterCode: `# def reserve_one(pk): row-lock the product in a transaction; guard stock; return True or False.
 `,
       testCases: [
         {
@@ -224,7 +242,7 @@ def reserve_one(pk):
         product.stock -= 1
         product.save()
         return True`,
-      explanation: 'The `select_for_update()` inside `transaction.atomic()` locks the product row, so a concurrent caller blocks until this transaction commits — serialising the read-modify-write and making the `stock <= 0` guard reliable. Without the lock, two callers could both read `stock == 1`, both pass the guard, and both save `0`/`-1` (oversell). A lock-free alternative is a conditional `update(stock=F("stock") - 1)` filtered on `stock__gt=0`, but the prompt asks for the explicit row-lock pattern.',
+      explanation: 'The `select_for_update()` inside `transaction.atomic()` locks the product row, so a concurrent caller blocks until this transaction commits - serialising the read-modify-write and making the `stock <= 0` guard reliable. Without the lock, two callers could both read `stock == 1`, both pass the guard, and both save `0`: two reservations come out of one unit (oversell). A lock-free alternative is a conditional `update(stock=F("stock") - 1)` filtered on `stock__gt=0`, but the prompt asks for the explicit row-lock pattern.',
       hints: [
         'Open transaction.atomic(), then select_for_update().get(pk=pk)',
         'Guard stock <= 0 before decrementing',
@@ -289,7 +307,7 @@ def reserve_one(pk):
       topic: Topic.DJ_ORM_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Fill in the two eager-loading calls and the dotted lookup that trims to just title and the author\'s username.',
+      question: 'Fill in the two eager-loading calls and the double-underscore lookup that trims the loaded columns to just the title and the author\'s username.',
       template: `articles = (
     Article.objects
     .___("author")
@@ -298,8 +316,8 @@ def reserve_one(pk):
 )`,
       blanks: ['select_related', 'prefetch_related', 'author__username'],
       solution: 'articles = (\n    Article.objects\n    .select_related("author")\n    .prefetch_related("tags")\n    .only("title", "author__username")\n)',
-      explanation: '`select_related` JOINs the FK; `prefetch_related` loads the M2M in a second query. `.only()` accepts dotted relation lookups too — `"author__username"` keeps just that column from the joined author row, alongside `"title"` from Article itself.',
-      hints: ['FK eager-load, then M2M eager-load', 'only() accepts dotted relation paths like a filter'],
+      explanation: '`select_related` JOINs the FK; `prefetch_related` loads the M2M in a second query. `.only()` accepts double-underscore relation lookups too - `"author__username"` keeps just that column from the joined author row, alongside `"title"` from Article itself (the primary keys and the `author_id` link are always loaded). A dotted `"author.username"` is not a lookup and raises an error.',
+      hints: ['FK eager-load, then M2M eager-load', 'only() accepts double-underscore relation paths, like a filter'],
       tags: ['django', 'orm', 'select_related', 'prefetch_related', 'only', 'cloze'],
       concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch'],
     },
@@ -446,12 +464,12 @@ print(len(connection.queries))`,
       course: Course.BACKEND,
       question: 'What is `select_related()` in Django and when should you use it?',
       options: [
-        { id: 'a', text: 'It selects only specific fields from the database', isCorrect: false },
-        { id: 'b', text: 'It caches query results for 5 minutes', isCorrect: false },
-        { id: 'c', text: 'It selects related objects asynchronously in the background', isCorrect: false },
-        { id: 'd', text: 'It performs a SQL JOIN to fetch related ForeignKey objects in a single query, avoiding N+1 queries', isCorrect: true },
+        { id: 'a', text: 'It narrows the SELECT to the related fields you name, like `only()`, so wide rows load faster', isCorrect: false },
+        { id: 'b', text: 'It keeps the related objects in a cache, so later querysets in other requests reuse them without a query', isCorrect: false },
+        { id: 'c', text: 'It JOINs every related row into one query, many-to-many included, so use it on any relation', isCorrect: false },
+        { id: 'd', text: 'It JOINs a ForeignKey (or one-to-one) into the same query, so reading it in a loop adds no queries', isCorrect: true },
       ],
-      explanation: 'The N+1 problem: if you query 100 books and access `book.author.name` in a loop, Django makes 100 extra queries (one per book). `Book.objects.select_related("author")` does a single JOIN and fetches all authors at once. Use `select_related` for ForeignKey/OneToOne fields (forward relations). Use `prefetch_related` for ManyToMany or reverse FK relations.',
+      explanation: 'The N+1 problem: if you query 100 books and access `book.author.name` in a loop, Django makes 100 extra queries (one per book). `Book.objects.select_related("author")` does a single JOIN and fetches all authors at once. Use `select_related` for ForeignKey/OneToOne fields (forward relations); it raises an error on a many-to-many, which needs `prefetch_related` (as does a reverse FK). It does not choose columns (that is `only()`), and it caches nothing beyond the objects of this one queryset.',
       hints: [
         '`select_related` = one SQL JOIN; no extra queries per object',
         'Use for ForeignKey (forward). Use `prefetch_related` for M2M or reverse FK',
@@ -467,12 +485,12 @@ print(len(connection.queries))`,
       course: Course.BACKEND,
       question: 'What is `prefetch_related()` and how does it differ from `select_related()`?',
       options: [
-        { id: 'a', text: 'They are identical — use either one for any relationship type', isCorrect: false },
-        { id: 'b', text: '`select_related` uses SQL JOINs (for FK/O2O); `prefetch_related` makes separate queries and joins in Python (for M2M or reverse FK)', isCorrect: true },
-        { id: 'c', text: '`prefetch_related` is only for GenericForeignKey; `select_related` is for everything else', isCorrect: false },
-        { id: 'd', text: '`prefetch_related` caches the result; `select_related` always queries fresh', isCorrect: false },
+        { id: 'a', text: 'Both JOIN in SQL; `prefetch_related` just adds DISTINCT so a many-to-many JOIN does not repeat the parent rows', isCorrect: false },
+        { id: 'b', text: '`select_related` JOINs a FK/O2O into the query; `prefetch_related` runs a second query for M2M or reverse FK and joins in Python', isCorrect: true },
+        { id: 'c', text: '`prefetch_related` is only for GenericForeignKey; `select_related` JOINs every other relation, many-to-many included', isCorrect: false },
+        { id: 'd', text: '`prefetch_related` loads each object\'s related rows lazily on first access; `select_related` loads them all up front', isCorrect: false },
       ],
-      explanation: '`select_related` does a SQL JOIN — efficient for FK/O2O (forward relations). `prefetch_related` does two separate queries and joins the results in Python — necessary for M2M and reverse FK relations (where a JOIN would cause row duplication). For `Article.objects.prefetch_related("tags")`, Django does: 1) get all articles, 2) get all tags for those articles, 3) Python-side join.',
+      explanation: '`select_related` does a SQL JOIN - efficient for FK/O2O (forward relations). `prefetch_related` does two separate queries and joins the results in Python - necessary for M2M and reverse FK relations, where a JOIN would repeat each parent row once per related row. For `Article.objects.prefetch_related("tags")`, Django does: 1) get all articles, 2) get all tags for those articles in one query, 3) Python-side join. Both load the related rows when the queryset is evaluated, not lazily per object, and `select_related` cannot follow a many-to-many at all.',
       hints: [
         'FK forward → `select_related` (JOIN); M2M or reverse FK → `prefetch_related` (2 queries)',
         'Both solve N+1 but with different SQL strategies',
@@ -585,7 +603,7 @@ print(len(connection.queries))`,
         '    .include("article")',
       ],
       solution: 'comments = (\n    Comment.objects\n    .select_related("article")\n    .all()\n)\nfor c in comments:\n    print(c.article.title)',
-      explanation: '`select_related` does an SQL JOIN and pulls related rows in the same query - for ForeignKey and OneToOne. `prefetch_related` issues a separate query and joins in Python - for ManyToMany and reverse FK. Without either, accessing `c.article.title` triggers one extra SELECT per comment (the N+1 problem).',
+      explanation: '`select_related` does an SQL JOIN and pulls related rows in the same query - for ForeignKey and OneToOne. `prefetch_related` issues a separate query and joins in Python - meant for ManyToMany and reverse FK; on this ForeignKey it would also avoid the N+1, but with two queries and no JOIN, so it is not the method the prompt asks for. Without either, accessing `c.article.title` triggers one extra SELECT per comment (the N+1 problem). Querysets have no `.join()` or `.include()` method.',
       hints: ['select_related for FK/OneToOne', 'prefetch_related for M2M / reverse FK', 'No JOIN method called .join'],
       tags: ['django', 'orm', 'select_related', 'n-plus-one', 'parsons'],
       concepts: ['dj-orm-query-construction', 'dj-select-related-vs-prefetch', 'dj-n-plus-one'],
@@ -634,7 +652,7 @@ def run():
       topic: Topic.DJ_ORM_MASTERY,
       course: Course.BACKEND,
       language: CodeLanguage.PYTHON,
-      question: 'Use `prefetch_related` with `"tags"` for a many-to-many reverse lookup. Given a `Post` model whose `tags` attribute is a `ManyToManyField` to `Tag`, fetch all posts with the tags prefetched — one additional query TOTAL, not per post. Iterate the queryset inside a `run` function and for each post print a line of the form `"<title>: <comma-separated tag names>"` — build the tag name list by joining the `name` of each tag in `post.tags.all()` with `", "`.',
+      question: 'Use `prefetch_related` with `"tags"` for a many-to-many field. Given a `Post` model whose `tags` attribute is a `ManyToManyField` to `Tag`, fetch all posts with the tags prefetched - one additional query TOTAL, not per post. Iterate the queryset inside a `run` function and for each post print a line of the form `"<title>: <comma-separated tag names>"`; build the tag name list by joining the `name` of each tag in `post.tags.all()` with `", "`.',
       starterCode: `# Write run(): iterate all posts and print "<title>: <tag names>"
 # (tag names comma-separated), prefetching the M2M tags so the
 # whole tag set loads in one extra query, not one per post.
@@ -652,10 +670,10 @@ def run():
     for p in Post.objects.prefetch_related("tags"):
         names = ", ".join(t.name for t in p.tags.all())
         print(f"{p.title}: {names}")`,
-      explanation: '`prefetch_related` does two queries (one for the main model, one for the related table) and matches them in Python — works for M2M, reverse FK, reverse OneToOne. Without it, `post.tags.all()` fires per iteration. Can be composed with `select_related` in the same queryset: `.select_related("author").prefetch_related("tags", "comments__user")`. For complex filtering of prefetches, use `Prefetch(...)` objects.',
+      explanation: '`prefetch_related` does two queries (one for the main model, one for the related table) and matches them in Python - meant for M2M, reverse FK and reverse OneToOne. Without it, `post.tags.all()` fires per iteration. Can be composed with `select_related` in the same queryset: `.select_related("author").prefetch_related("tags", "comments__user")`. For complex filtering of prefetches, use `Prefetch(...)` objects.',
       hints: [
         'prefetch_related for M2M and reverse FK',
-        'Two queries total — not per parent',
+        'Two queries total - not per parent',
         'Composable with select_related in the same queryset',
       ],
       tieredHints: {

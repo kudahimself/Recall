@@ -44,13 +44,13 @@ export const dj_rest_mastery_questions: Question[] = [
     course: Course.BACKEND,
     question: 'For a standard DRF `ModelViewSet`, which default HTTP status codes does each operation return?',
     options: [
-      { id: 'a', text: '201 on create, 200 on list/retrieve/update, 204 on destroy; validation failure → 400, unauthenticated → 401, forbidden → 403, missing object → 404', isCorrect: true },
+      { id: 'a', text: '201 on create, 200 on list/retrieve/update and 204 on destroy; invalid data is a 400 and a missing object a 404', isCorrect: true },
       { id: 'b', text: '200 OK for every successful method including create and delete; DRF reserves 201 and 204 only for file downloads and streaming responses', isCorrect: false },
       { id: 'c', text: '201 Created for both POST and PUT, and 202 Accepted for DELETE, because deletions are queued and processed asynchronously by default', isCorrect: false },
       { id: 'd', text: 'A failed validation returns 422 Unprocessable Entity and a missing object returns 400 Bad Request; DRF does not use 404 for detail routes', isCorrect: false },
     ],
-    explanation: 'Returning the right code is part of a correct REST API. DRF defaults: create → 201 (with the new representation), retrieve/list/update → 200, destroy → 204 (empty body). Errors: invalid payload → 400, no/!invalid credentials → 401, authenticated-but-not-allowed → 403, no such object → 404. DRF uses 400 (not 422) for validation by default. Overriding a code usually means returning `Response(data, status=...)` explicitly.',
-    hints: ['create 201, destroy 204, the rest 200', '401 = who are you; 403 = not allowed', 'DRF uses 400 for validation, not 422'],
+    explanation: 'Returning the right code is part of a correct REST API. DRF defaults: create → 201 (with the new representation), retrieve/list/update → 200, destroy → 204 (empty body). Errors: invalid payload → 400, no such object → 404, and DRF uses 400 (not 422) for validation by default. A failed permission check is a 403, and so is an anonymous caller under the default authentication classes: DRF answers 401 only when the first authentication class can send a `WWW-Authenticate` challenge (`TokenAuthentication`, `BasicAuthentication`), and `SessionAuthentication`, first in the default list, cannot. Overriding a code usually means returning `Response(data, status=...)` explicitly.',
+    hints: ['create 201, destroy 204, the rest 200', 'A missing object is 404', 'DRF uses 400 for validation, not 422'],
     tags: ['django', 'drf', 'status-codes', 'rest-semantics'],
     concepts: ['dj-view-patterns'],
   },
@@ -62,13 +62,13 @@ export const dj_rest_mastery_questions: Question[] = [
     course: Course.BACKEND,
     question: 'On a DRF detail route, how do PUT and PATCH differ in how the serializer treats the payload?',
     options: [
-      { id: 'a', text: 'PUT is a full replace — the serializer runs without partial, so omitted writable fields fall back to defaults or raise "required" errors; PATCH runs with `partial=True`, updating only the fields supplied', isCorrect: true },
+      { id: 'a', text: 'PUT runs the serializer without `partial`, so every required field must be sent or it is a 400; PATCH runs with `partial=True`, validating only the fields sent', isCorrect: true },
       { id: 'b', text: 'PUT updates only the fields present in the request body, while PATCH demands that every writable field be re-sent in full on each call', isCorrect: false },
       { id: 'c', text: 'PUT and PATCH are identical in DRF; the router maps both verbs to the same `partial_update` handler with `partial=True` set', isCorrect: false },
       { id: 'd', text: 'PUT creates the object when the pk is absent, while PATCH always returns 404 whenever the target row does not already exist', isCorrect: false },
     ],
-    explanation: 'PUT → `update` with `partial=False`: the body is treated as the full new representation, so a missing required field is an error (or resets to default). PATCH → `partial_update` with `partial=True`: only provided fields are validated/applied. Choosing PUT when you mean "tweak one field" silently blanks the others — a common bug. DRF wires both automatically in `ModelViewSet`/`UpdateModelMixin`.',
-    hints: ['PUT = full replace (partial=False)', 'PATCH = partial=True, only sent fields', 'PUT with one field can blank the rest'],
+    explanation: 'PUT → `update` with `partial=False`: the body is treated as the full new representation, so leaving out a required field is a 400 with "This field is required." An optional field left out keeps its stored value (DRF does not reset it to the model default). PATCH → `partial_update` with `partial=True`: only the fields sent are validated and applied. So a client that sends just one field with PUT gets a 400 for the other required fields, where PATCH would succeed. DRF wires both automatically in `ModelViewSet`/`UpdateModelMixin`.',
+    hints: ['PUT = full replace (partial=False)', 'PATCH = partial=True, only sent fields', 'PUT with one field fails on the other required fields'],
     tags: ['django', 'drf', 'put-vs-patch', 'rest-semantics'],
     concepts: ['dj-view-patterns'],
   },
@@ -85,7 +85,7 @@ export const dj_rest_mastery_questions: Question[] = [
         model = Article
         fields = ["id", "title"]
 
-article = Article.objects.create(title="Old")   # pk=3
+article = Article.objects.create(title="Old")   # the first and only Article row
 s = ArticleSerializer(article, data={"title": "New"})
 s.is_valid()
 s.save()
@@ -93,7 +93,7 @@ print(article.title)
 print(Article.objects.count())`,
     expectedOutput: `New
 1`,
-    explanation: '`serializer.save()` dispatches on whether an instance was passed at construction: instance present → it calls `update()` (in-place), instance absent → `create()` (new row). Here the article is passed, so `save()` updates it to "New" — no second row is created, so the count stays 1. Forgetting the instance argument is the classic "PATCH created a duplicate" bug.',
+    explanation: '`serializer.save()` dispatches on whether an instance was passed at construction: instance present → it calls `update()` (in-place), instance absent → `create()` (new row). Here the article is passed, so `save()` updates it to "New"; no second row is created, so the count stays 1. Forgetting the instance argument is the classic "PATCH created a duplicate" bug.',
     hints: ['Instance + data → update(), not create()', 'No new row is inserted', 'save() picks create vs update by the instance arg'],
     tags: ['django', 'drf', 'serializer-save', 'predict'],
     concepts: ['dj-serializer-validation'],
@@ -158,14 +158,14 @@ print(Article.objects.count())`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DJ_REST_MASTERY,
     course: Course.BACKEND,
-    question: 'A `HyperlinkedModelSerializer` raises an assertion about a missing `request` when instantiated inside a plain `APIView`. Why — and what fixes it?',
+    question: 'A `HyperlinkedModelSerializer` raises an assertion about a missing `request` when instantiated inside a plain `APIView`. Why, and what fixes it?',
     options: [
       { id: 'a', text: 'Hyperlinked fields build absolute URLs and need `request` in the serializer context; generic views supply it automatically, but a hand-instantiated serializer must be passed `context={"request": request}`', isCorrect: true },
       { id: 'b', text: 'Hyperlinked serializers only work behind a `DefaultRouter`; they cannot be used with `path()` entries in a URLConf under any circumstances', isCorrect: false },
       { id: 'c', text: 'The model is missing a `get_absolute_url` method, which every hyperlinked serializer calls internally to render the value of its `url` field', isCorrect: false },
       { id: 'd', text: 'Hyperlinked relation fields are write-only by default, so they error unless the inbound request body already includes a fully-qualified URL', isCorrect: false },
     ],
-    explanation: 'To turn a relation into an absolute URL (`http://host/articles/3/`), the field needs the request to know the scheme/host — DRF reads it from `self.context["request"]`. Generic views/viewsets populate the context via `get_serializer_context()`, so it "just works" there. In a bare `APIView` you build the serializer yourself, so you must pass `context={"request": request}` or hit the assertion. (Option (a) is the correct explanation.)',
+    explanation: 'To turn a relation into an absolute URL (`http://host/articles/3/`), the field needs the request to know the scheme/host; DRF reads it from `self.context["request"]`. Generic views/viewsets populate the context via `get_serializer_context()`, so it "just works" there. In a bare `APIView` you build the serializer yourself, so you must pass `context={"request": request}` or hit the assertion. A router is not required, and `get_absolute_url` is not used: the URL comes from `reverse()` on the view name.',
     hints: ['Absolute URLs need request → from context', 'Generic views pass it; manual instantiation does not', 'Fix: context={"request": request}'],
     tags: ['django', 'drf', 'hyperlinked-serializer', 'serializer-context'],
     concepts: ['dj-serializer-validation'],
@@ -276,7 +276,7 @@ def custom_exception_handler(exc, context):
     topic: Topic.DJ_REST_MASTERY,
     course: Course.BACKEND,
     language: CodeLanguage.PYTHON,
-    question: 'Write a custom DRF exception handler that wraps every handled error response in a uniform envelope `{"error": <original detail>, "status_code": <code>}`. Delegate to DRF\'s built-in handler first, reshape its response only when one was produced (leave the unhandled case — where it returns None — untouched), and show the settings key that registers the handler.',
+    question: 'Write a custom DRF exception handler that wraps every handled error response in a uniform envelope `{"error": <original detail>, "status_code": <code>}`. Delegate to DRF\'s built-in handler first, reshape its response only when one was produced (leave the unhandled case, where it returns None, untouched). Name the function `custom_exception_handler` in `myapp/handlers.py`, and show the settings entry that registers it.',
     starterCode: `from rest_framework.views import exception_handler
 `,
     testCases: [
@@ -300,11 +300,11 @@ def custom_exception_handler(exc, context):
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "myapp.handlers.custom_exception_handler",
 }`,
-    explanation: 'DRF routes any `APIException` (plus `Http404`/`PermissionDenied`) through the configured `EXCEPTION_HANDLER`. Calling the built-in handler first yields the standard `Response` (status + `detail`); it returns `None` for exceptions DRF does not handle (e.g. a raw `KeyError`), which must bubble up as a 500 — so guard on `response is not None` before reshaping. Registering the dotted path in `REST_FRAMEWORK["EXCEPTION_HANDLER"]` makes it apply API-wide, giving every client one consistent error shape.',
+    explanation: 'DRF routes any `APIException` (plus `Http404`/`PermissionDenied`) through the configured `EXCEPTION_HANDLER`. Calling the built-in handler first yields the standard `Response` (status + `detail`); it returns `None` for exceptions DRF does not handle (e.g. a raw `KeyError`), which must bubble up as a 500, so guard on `response is not None` before reshaping. Registering the dotted path in `REST_FRAMEWORK["EXCEPTION_HANDLER"]` makes it apply API-wide, giving every client one consistent error shape.',
     hints: ['Delegate to the built-in handler, then reshape', 'Guard: response is not None (None → unhandled 500)', 'Register via REST_FRAMEWORK["EXCEPTION_HANDLER"] dotted path'],
     tieredHints: {
       apiSignature: 'exception_handler(exc, context) -> Response; REST_FRAMEWORK = {\'EXCEPTION_HANDLER\': ...}',
-      skeleton: '# handlers.py\nfrom rest_framework.views import ____\n\n\ndef custom_exception_handler(exc, context):\n    response = ____(exc, context)\n    if response is not None:\n        response.data = {\n            "error": response.data,\n            "status_code": response.status_code,\n        }\n    return response\n\n\n# settings.py\nREST_FRAMEWORK = {\n    "____": "myapp.handlers.custom_exception_handler",\n}',
+      skeleton: '# handlers.py\nfrom rest_framework.views import ____\n\n\ndef custom_exception_handler(exc, context):\n    response = ____(exc, context)\n    if ____:\n        response.data = {\n            "error": ____,\n            "status_code": ____,\n        }\n    return response\n\n\n# settings.py\nREST_FRAMEWORK = {\n    "____": "myapp.handlers.custom_exception_handler",\n}',
     },
     tags: ['django', 'drf', 'exception-handler', 'error-handling'],
     concepts: ['dj-view-patterns'],
