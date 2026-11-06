@@ -1235,7 +1235,6 @@ a:hover { color: var(--highlight); }
     gap: 12px;
   }
 
-
   .home-view { padding: 28px 16px 56px; gap: 24px; }
   .course-hero { padding: 24px 20px; }
   .course-hero-title { font-size: var(--fs-3xl); }
