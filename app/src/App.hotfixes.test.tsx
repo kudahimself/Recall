@@ -9,6 +9,8 @@ import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import App from './App';
 import { PROGRESS_KEY } from './utils/progressStorage';
+import { questions } from './data/questions';
+import { Topic } from './types';
 
 const NEXT = /next (question|exercise)|finish the lesson/i;
 
@@ -142,5 +144,38 @@ describe('F7: filters', () => {
     fireEvent.click(nav('Learn'));
     expect(await screen.findByText(/You're all caught up/, {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Submit Answer/ })).toBeNull();
+  });
+
+  test('a reload keeps the filters the learner set', async () => {
+    localStorage.setItem('recall-active-course', 'sql');
+    localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
+    const { unmount } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
+    await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+    expect(screen.getByRole('button', { name: 'Advanced' })).not.toHaveClass('active');
+    unmount();
+
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
+    await screen.findByRole('button', { name: /Submit Answer/ }, { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
+    expect(screen.getByRole('button', { name: 'Advanced' })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: 'Beginner' })).toHaveClass('active');
+  });
+
+  test('a lesson serves only the exercises of the selected topics, whatever their type', async () => {
+    localStorage.setItem('recall-active-course', 'backend');
+    localStorage.setItem('recall-dev-unlock-all', '1');
+    localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.PY_DATACLASSES] }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Try the exercises/ }, { timeout: 3000 }));
+
+    const dataclassesExercise = questions.find(q => q.id === 'py-dataclasses-cloze-2')!;
+    const typeHintsExercise = questions.find(q => q.id === 'py-types-union-1')!;
+    expect(await screen.findByText(dataclassesExercise.question)).toBeInTheDocument();
+    expect(screen.queryByText(typeHintsExercise.question)).toBeNull();
   });
 });

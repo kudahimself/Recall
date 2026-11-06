@@ -8,7 +8,6 @@ import { ExplanationBlock, HintToggle, QuestionHead, ResultBanner } from './Reas
 interface Props {
   question: SpotFlawQ;
   onAnswer: (isCorrect: boolean) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -17,7 +16,7 @@ interface Props {
  * causes the stated symptom and checks it. Any line in `flawLines` is right
  * (utils/answerCredit spotFlawCorrect). After grading the flaw lines are marked.
  */
-export const SpotFlawQuestion: React.FC<Props> = ({ question, onAnswer, onNext, showHints }) => {
+export const SpotFlawQuestion: React.FC<Props> = ({ question, onAnswer, showHints }) => {
   const [picked, setPicked] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const correct = submitted && picked !== null && spotFlawCorrect(question, picked);
@@ -93,7 +92,7 @@ export const SpotFlawQuestion: React.FC<Props> = ({ question, onAnswer, onNext, 
             title={correct ? 'Correct' : 'Not quite'}
             detail={correct ? undefined : `The flaw is line ${question.flawLines.join(' or ')}`}
           />
-          <ExplanationBlock question={question} onNext={onNext}>
+          <ExplanationBlock question={question}>
             <DataTables tables={question.resultTables} />
           </ExplanationBlock>
         </>

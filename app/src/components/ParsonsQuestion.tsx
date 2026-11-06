@@ -35,7 +35,6 @@ import './ParsonsQuestion.css';
 interface Props {
   question: ParsonsQ;
   onAnswer: (isCorrect: boolean) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -162,7 +161,6 @@ const SortableAnswerLine: React.FC<{
 export const ParsonsQuestion: React.FC<Props> = ({
   question,
   onAnswer,
-  onNext,
   showHints,
 }) => {
   // Empty/whitespace-only entries in correctOrder are formatting noise for the
@@ -495,11 +493,6 @@ export const ParsonsQuestion: React.FC<Props> = ({
               <div className="reference-label">Reference solution:</div>
               <pre className="reference-code">{question.solution}</pre>
             </div>
-          )}
-          {onNext && (
-            <StyledButton variant="primary" onClick={onNext}>
-              Next Question →
-            </StyledButton>
           )}
         </div>
       )}

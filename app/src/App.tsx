@@ -122,7 +122,7 @@ import { ExplainQuestion } from './components/ExplainQuestion';
 import { sampleFromSearch } from './dev/sampleQuestions';
 import { ProgressTracker } from './components/ProgressTracker';
 import { activityByDay, HeatmapCalendar } from './components/HeatmapCalendar';
-import { allFilters, filterQuestions, FilterOptions } from './utils/questionFilters';
+import { allFilters, filterQuestions, FilterOptions, parseFilters, serializeFilters } from './utils/questionFilters';
 import { QuestionFilter } from './components/QuestionFilter';
 import { NavigationRail } from './components/NavigationRail';
 import {
@@ -466,10 +466,7 @@ function App() {
   const orphansRef = useRef(initialLoad.orphans);
   const [progress, setProgress] = useState<UserProgress>(initialLoad.progress);
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
-  // Filters start from "everything" on each load rather than from the saved
-  // copy: a saved list predates topics and question types added since, and
-  // would hide them without saying so.
-  const [filters, setFilters] = useState<FilterOptions>(allFilters);
+  const [filters, setFilters] = useState<FilterOptions>(() => parseFilters(localStorage.getItem(STORAGE_KEYS.filters)));
   const [misconceptions, setMisconceptions] = useState<MisconceptionStore>(loadMisconceptions);
   const [conceptProgress, setConceptProgress] = useState<ConceptProgress>(
     () => loadConceptProgress(initialLoad.progress, !studyWritesBlocked(initialLoad)),
@@ -640,6 +637,12 @@ function App() {
   // unseen card whose topic's lesson is not met opens that lesson's rule card
   // instead; the card itself is left for the session to serve again after the
   // lesson. Exercises are answered through handleAnswer like any new card.
+  // A lesson keeps its own exercise types and difficulties, but only serves exercises from the selected topics.
+  const lessonExerciseBank = useMemo(
+    () => new Map(Array.from(QUESTIONS_BY_ID).filter(([, q]) => filters.topics.includes(q.topic))),
+    [filters.topics],
+  );
+
   const serveWithLessons = useCallback((pick: SessionPick | null, course: Course, flow: LessonFlow | null) => {
     const lesson = flow && flow.course === course ? getLesson(flow.lessonId) : undefined;
     if (flow && lesson) {
@@ -648,7 +651,7 @@ function App() {
         serveQuestion(null);
         return;
       }
-      const exercise = nextLessonExercise(lesson, progress.questionsAttempted, QUESTIONS_BY_ID);
+      const exercise = nextLessonExercise(lesson, progress.questionsAttempted, lessonExerciseBank);
       if (exercise) {
         setLessonFlow(flow);
         serveQuestion({ question: exercise, kind: 'new' });
@@ -663,7 +666,7 @@ function App() {
     }
     setLessonFlow(null);
     serveQuestion(pick);
-  }, [serveQuestion, progress.questionsAttempted, lessonsDone]);
+  }, [serveQuestion, progress.questionsAttempted, lessonsDone, lessonExerciseBank]);
 
   // A dev sample (?sample=<id>) opens straight on the quiz view.
   useEffect(() => {
@@ -727,7 +730,7 @@ function App() {
 
   // Save filters
   useEffect(() => {
-    persist(STORAGE_KEYS.filters, JSON.stringify(filters), 'ui');
+    persist(STORAGE_KEYS.filters, serializeFilters(filters), 'ui');
   }, [filters, persist]);
 
   // Save misconception telemetry
@@ -808,7 +811,7 @@ function App() {
     const text = buildExport({
       [STORAGE_KEYS.progress]: serializeProgress(progress, orphansRef.current),
       [STORAGE_KEYS.profile]: JSON.stringify(profile),
-      [STORAGE_KEYS.filters]: JSON.stringify(filters),
+      [STORAGE_KEYS.filters]: serializeFilters(filters),
       [STORAGE_KEYS.activeCourse]: activeCourse,
       [STORAGE_KEYS.misconceptions]: JSON.stringify(misconceptions),
       [STORAGE_KEYS.conceptProgress]: JSON.stringify(conceptProgress),
@@ -1042,7 +1045,7 @@ function App() {
     // The lesson in progress is complete once its last exercise is answered.
     const flowLesson = lessonFlow?.stage === 'exercise' ? getLesson(lessonFlow.lessonId) : undefined;
     if (flowLesson && flowLesson.exercises.includes(answered.id)
-      && !nextLessonExercise(flowLesson, newQuestionsAttempted, QUESTIONS_BY_ID)) {
+      && !nextLessonExercise(flowLesson, newQuestionsAttempted, lessonExerciseBank)) {
       const completedAt = Date.now();
       setLessonsDone(prev => (prev[flowLesson.id] !== undefined ? prev : { ...prev, [flowLesson.id]: completedAt }));
     }
@@ -2320,7 +2323,7 @@ function App() {
                     {showNextButton && (
                       <div className="next-button-container">
                         <button className="next-button" onClick={loadNextQuestion}>
-                          {inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, QUESTIONS_BY_ID)
+                          {inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, lessonExerciseBank)
                             ? 'Finish the lesson'
                             : inLessonExercise ? 'Next exercise' : 'Next question'}
                           <ArrowRight className="next-button-icon" size={16} />

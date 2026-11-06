@@ -8,7 +8,6 @@ import { ExplanationBlock, QuestionHead, ResultBanner } from './ReasoningParts';
 interface Props {
   question: ExplainQ;
   onAnswer: (isCorrect: boolean, meta?: AnswerMeta) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -20,7 +19,7 @@ type Stage = 'write' | 'tick' | 'graded';
  * does not grade prose; credit is ticked / key points (utils/answerCredit
  * explainCredit), recorded when the learner confirms the ticks.
  */
-export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer, onNext }) => {
+export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer }) => {
   const [text, setText] = useState('');
   const [stage, setStage] = useState<Stage>('write');
   const [ticked, setTicked] = useState<Set<number>>(new Set());
@@ -124,7 +123,7 @@ export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer, onNext })
             title={`${ticked.size} of ${total} · credit ${Math.round(credit * 100) / 100}`}
             detail={standing}
           />
-          <ExplanationBlock question={question} onNext={onNext} />
+          <ExplanationBlock question={question} />
         </>
       )}
     </div>

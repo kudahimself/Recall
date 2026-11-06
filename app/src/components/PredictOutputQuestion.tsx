@@ -9,7 +9,6 @@ import './PredictOutputQuestion.css';
 interface Props {
   question: PredictQ;
   onAnswer: (isCorrect: boolean) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -19,7 +18,6 @@ interface Props {
 export const PredictOutputQuestion: React.FC<Props> = ({
   question,
   onAnswer,
-  onNext,
   showHints,
 }) => {
   const [userOutput, setUserOutput] = useState('');
@@ -110,11 +108,6 @@ export const PredictOutputQuestion: React.FC<Props> = ({
             </div>
           )}
           <p>{renderInlineCode(question.explanation, question.topic)}</p>
-          {onNext && (
-            <StyledButton variant="primary" onClick={onNext}>
-              Next Question →
-            </StyledButton>
-          )}
         </div>
       )}
 

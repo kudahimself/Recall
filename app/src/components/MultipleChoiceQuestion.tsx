@@ -12,7 +12,6 @@ interface Props {
   // The handler in App records the event for telemetry and surfacing in
   // ProgressTracker. Optional — components without telemetry just don't pass it.
   onMisconception?: (tag: string, questionId: string) => void;
-  onNext?: () => void;
   showHints: boolean;
 }
 
@@ -47,7 +46,6 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
   question,
   onAnswer,
   onMisconception,
-  onNext,
   showHints,
 }) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -186,11 +184,6 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
         <div className="explanation">
           <h4>Explanation:</h4>
           <p>{renderInlineCode(question.explanation, question.topic)}</p>
-          {onNext && (
-            <StyledButton variant="primary" onClick={onNext}>
-              Next Question →
-            </StyledButton>
-          )}
         </div>
       )}
 
