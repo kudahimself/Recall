@@ -11,11 +11,18 @@ From the repository root:
 ```bash
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install pytest
+pip install -r exercises/requirements.txt
 ```
 
-Plain Python 3 and pytest are all you need.
+`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django and Django REST Framework, which only the Django exercises (`exercises/backend/dj_*`) need.
+Python 3.10 or newer runs them all.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
+
+## Django exercises
+
+Each Django exercise folder holds one Django app and a `conftest.py` that sets Django up from the shared settings in `exercises/backend/exercise_settings.py`; leave `conftest.py` and the settings as they are.
+The tests run on an SQLite database that lives in memory for the test run, so there is no server or database to start, and Django's test client sends the requests.
+Run from inside an exercise folder, only that folder's app is installed, so a half-finished exercise elsewhere cannot break the one you are on.
 
 ## Doing an exercise
 
@@ -40,8 +47,10 @@ exercises/
     README.md                task, examples, how to run
     <module>.py              the starter you fill in
     test_<module>.py         the pytest tests
+  backend/exercise_settings.py  the Django settings every Django exercise shares
   solutions/<course>/<topic>/  reference solutions, laid over the starter files
   check_exercises.py         checks every exercise (see below)
+  requirements.txt           the packages to install, pinned
 ```
 
 The reference solutions sit apart from the exercises so that opening an exercise folder never shows the answer.

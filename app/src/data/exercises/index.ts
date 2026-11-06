@@ -2,8 +2,8 @@
  * Every exercise, in course order: one per topic, done in the learner's own
  * editor after the topic's lesson and ramp. The files live in the repo's
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
- * Written one section per PR, like the lessons: Backend (Python) Fundamentals and
- * Python Advanced so far.
+ * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
+ * Python Advanced and Django so far.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -443,6 +443,139 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Turn a small package into a project by describing it in `pyproject.toml`.',
       'Give it a name, version, `requires-python` and a dependency range, a `loans` command under `[project.scripts]` and a `[tool.loan_tool]` setting, then make the package read that setting, print its version and tell whether it runs inside a virtual environment.',
+    ),
+  },
+  // ===== Section 3, Django =====
+  // Django exercises run on the shared settings in exercises/backend/exercise_settings.py
+  // (SQLite in memory, loaded by each folder's conftest.py) and need exercises/requirements.txt.
+  {
+    id: 'dj_setup',
+    topicKeys: [Topic.DJ_SETUP],
+    title: 'Branch project setup',
+    folder: 'exercises/backend/dj_setup',
+    starter: ['branchsite/settings/base.py', 'branchsite/settings/dev.py', 'branchsite/settings/prod.py', 'circulation/models.py'],
+    tests: 'test_branch_setup.py',
+    minutes: 20,
+    task: lines(
+      'Finish a small Django project as `startproject` and `startapp` leave it.',
+      'Register the `circulation` app by its config class, split the settings into `dev.py` and `prod.py` that build on `base.py`, add a field to the `Loan` model, then run `makemigrations`, `migrate` and `showmigrations` yourself with `manage.py`.',
+    ),
+  },
+  {
+    id: 'dj_models',
+    topicKeys: [Topic.DJ_MODELS],
+    title: 'Catalogue models',
+    folder: 'exercises/backend/dj_models',
+    starter: ['catalog/models.py'],
+    tests: 'test_catalog_models.py',
+    minutes: 20,
+    task: lines(
+      'Write the catalogue\'s four models: branches, authors, tags and books.',
+      'Pick the field types, put each `ForeignKey` on the many side with `CASCADE` or `PROTECT`, link books and tags with a `ManyToManyField`, name the way back with `related_name`, and set `__str__` and `Meta.ordering`.',
+    ),
+  },
+  {
+    id: 'dj_orm',
+    topicKeys: [Topic.DJ_ORM],
+    title: 'Holdings queries',
+    folder: 'exercises/backend/dj_orm',
+    starter: ['holdings/queries.py'],
+    tests: 'test_holdings_queries.py',
+    minutes: 25,
+    task: lines(
+      'Answer eight questions about the library\'s holdings, each with one ORM query.',
+      'Filter with lookups such as `pages__lt`, follow the author with `author__full_name`, combine with `Q(...) | Q(...)`, take `first()` instead of a `get()` that can raise, return a lazy sliced QuerySet, and ask with `count()` and `exists()` before you `create()`.',
+    ),
+  },
+  {
+    id: 'dj_views',
+    topicKeys: [Topic.DJ_VIEWS],
+    title: 'Loan desk views',
+    folder: 'exercises/backend/dj_views',
+    starter: ['desk/views.py'],
+    tests: 'test_desk_views.py',
+    minutes: 20,
+    task: lines(
+      'Write the loan desk\'s four function views.',
+      'Answer JSON for a book with `get_object_or_404`, read a search term from `request.GET` with a default, render a confirm page on GET and redirect after a POST, and answer 201 or 400 from a posted form field.',
+    ),
+  },
+  {
+    id: 'dj_cbv',
+    topicKeys: [Topic.DJ_CBV],
+    title: 'Stacks views',
+    folder: 'exercises/backend/dj_cbv',
+    starter: ['stacks/views.py'],
+    tests: 'test_stacks_views.py',
+    minutes: 20,
+    task: lines(
+      'Write four class-based views for the stacks.',
+      'A paginated `ListView` with `get_queryset()` and a `get_context_data()` that keeps the parent\'s context, a `DetailView` with its own template, a `View` that answers only POST, and a list behind `LoginRequiredMixin` placed on the left.',
+    ),
+  },
+  {
+    id: 'dj_templates',
+    topicKeys: [Topic.DJ_TEMPLATES],
+    title: 'New books page',
+    folder: 'exercises/backend/dj_templates',
+    starter: ['noticeboard/templates/noticeboard/new_books.html'],
+    tests: 'test_noticeboard_page.py',
+    minutes: 20,
+    task: lines(
+      'Write the noticeboard\'s new-books template.',
+      'Extend the base layout and fill its blocks, loop over the books with `forloop.counter` and an `{% empty %}` branch, link each with `{% url %}`, use the `upper`, `truncatechars` and `default` filters and an `{% if %}`, and include the opening-hours snippet.',
+    ),
+  },
+  {
+    id: 'dj_urls',
+    topicKeys: [Topic.DJ_URLS],
+    title: 'Lending routes',
+    folder: 'exercises/backend/dj_urls',
+    starter: ['borrowing/urls.py', 'librarysite/urls.py'],
+    tests: 'test_borrowing_routes.py',
+    minutes: 20,
+    task: lines(
+      'Route the lending pages: an app URLconf, mounted by the project\'s.',
+      'Name and namespace each route, capture with the `int`, `slug` and `uuid` converters in the right order, use `re_path` for a four-digit year, and mount the app with `include()`, checked with `reverse()` and `resolve()`.',
+    ),
+  },
+  {
+    id: 'dj_forms',
+    topicKeys: [Topic.DJ_FORMS],
+    title: 'Hold request forms',
+    folder: 'exercises/backend/dj_forms',
+    starter: ['holds/forms.py'],
+    tests: 'test_hold_forms.py',
+    minutes: 20,
+    task: lines(
+      'Write a hold-request `Form` and a `ModelForm` for new books.',
+      'Choose fields whose own checks do the work, such as `EmailField` and `IntegerField(min_value=1, max_value=3)`, clean one field in `clean_<field>()` that returns its value, and check two fields together in `clean()`.',
+    ),
+  },
+  {
+    id: 'dj_auth',
+    topicKeys: [Topic.DJ_AUTH],
+    title: 'Member sign-in',
+    folder: 'exercises/backend/dj_auth',
+    starter: ['members/models.py', 'members/views.py'],
+    tests: 'test_member_auth.py',
+    minutes: 25,
+    task: lines(
+      'Let members sign in to see their loans, and only librarians renew one.',
+      'Point a foreign key at `settings.AUTH_USER_MODEL`, create users with hashed passwords, `authenticate()` then `login()`, guard views with `@login_required`, and grant a permission through a group checked with `has_perm()`.',
+    ),
+  },
+  {
+    id: 'dj_rest',
+    topicKeys: [Topic.DJ_REST],
+    title: 'Book API',
+    folder: 'exercises/backend/dj_rest',
+    starter: ['book_api/serializers.py', 'book_api/views.py'],
+    tests: 'test_book_api.py',
+    minutes: 25,
+    task: lines(
+      'Serve the books as a JSON API with Django REST Framework.',
+      'A `ModelSerializer`, an `@api_view` list that reads with `many=True` and validates input passed as `data=`, and an `APIView` for one book whose `permission_classes` let anyone read but only signed-in users change it.',
     ),
   },
 ];
