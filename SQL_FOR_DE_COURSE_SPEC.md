@@ -178,12 +178,11 @@ in every row. Per-primitive matrices are produced when each topic is authored.
       `SQL_PATH_ORDER`; `getTopicOrder` pathOrder+sections branches; `getSelectionPolicy`
       (`useConceptSRS: false`).
 - [ ] `src/utils/spacedRepetition.ts` — `getUnlockedSections` pathOrder branch.
-- [ ] `src/App.tsx` — course meta (label "SQL for Data Engineering" + theme); stat-init objects;
-      pathOrder/sections ternaries; `theme-*` switch.
-- [ ] `src/components/NavigationRail.tsx` — rail entry (icon, label, color).
+- [ ] `src/utils/courseMeta.ts` - `COURSE_META` entry (label "SQL for Data Engineering", icon, theme)
+      and `COURSE_ORDER` (the top-bar course switcher).
 - [ ] `src/components/QuestionFilter.tsx` — sections ternary.
 - [ ] `src/components/ProgressTracker.tsx` — resolves SQL sections/path.
-- [ ] `src/App.css` — `--sql-solid` token + `theme-sql` (no hardcoded px font-sizes).
+- [ ] `src/styles/tokens.css` - `--course-sql` marker hue + `.theme-sql` (no raw colours or px sizes).
 - [ ] `src/data/topic_tsql_*.ts` files; aggregate into `src/data/questions.ts`.
 - [ ] `src/data/sqlOrderedQuestions.ts` — ordered bank (`q(id)` lookups in ramp order).
 
