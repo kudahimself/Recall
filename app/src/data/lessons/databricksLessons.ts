@@ -3,13 +3,18 @@
  *
  * Section 1, Lakehouse Platform: every topic.
  * Section 2, ELT with Spark SQL & Python: every topic.
+ * Section 3, Incremental Data Processing: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). Most worked examples
  * here are Databricks notebook cells: they need a workspace to run, so they
  * set `runs: false`, say in their first-line comment what they assume, and
  * their output was checked against current Databricks (Unity Catalog, Delta
  * Lake 3+); the section 2 cells were also run on Spark 4.0 with ANSI mode on
- * and off. SQL in a cell runs through `spark.sql`, as it would in a Python
+ * and off, and the section 3 streaming, medallion and change data feed cells
+ * on Spark 4.0 with Delta 4.0 (the medallion cell with QUALIFY written as a
+ * subquery, which open-source Spark lacks). The Auto Loader cell needs a
+ * workspace, so its output follows the Databricks Auto Loader schema
+ * docs. SQL in a cell runs through `spark.sql`, as it would in a Python
  * notebook. A plain SQL example (joins, aggregations, subqueries, set
  * operations) uses only SQL that Spark and the checker's engine agree on, so
  * check-lessons.js runs it.
@@ -1695,6 +1700,292 @@ york 30 None`,
       'sql-misc-mcq-7',
       'sql-predict-13',
       'casewhen-2',
+    ],
+  },
+
+  // ===== Section 3, Incremental Data Processing =====
+  {
+    id: 'structured_streaming/1',
+    topicKeys: [Topic.STRUCTURED_STREAMING],
+    step: 1,
+    title: 'Structured Streaming (readStream, writeStream, triggers)',
+    idea: [
+      lines(
+        "Structured Streaming treats a source as a table that keeps growing: `spark.readStream` in place of `spark.read` makes a streaming DataFrame, and the transformations are the batch ones.",
+        "Each trigger runs a micro-batch over only the rows that arrived since the last one.",
+      ),
+      lines(
+        "`writeStream` needs an output mode: `append` writes only new result rows, `complete` rewrites the whole result on each batch, as a running aggregation needs, and `update` writes only the rows that changed.",
+        "The checkpoint records how far the source has been read and the state of aggregations, so a restarted query resumes where it stopped, and a Delta sink gets each row exactly once.",
+      ),
+      lines(
+        "With no trigger, batches run back to back; `processingTime=\"1 minute\"` runs one a minute, and `availableNow=True` processes everything waiting and stops, replacing the deprecated `once=True`.",
+        "A stateful operation on event time, such as a windowed count or `dropDuplicates`, needs `withWatermark(\"ts\", \"10 minutes\")` so Spark can drop state older than the threshold.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `df = spark.readStream.table("src")      # a stream of the new rows
+q = (df.filter("x > 0")                 # the batch transformations
+       .writeStream
+       .outputMode("append")            # append | update | complete
+       .option("checkpointLocation", chk)   # one folder per query
+       .trigger(availableNow=True)      # or processingTime="1 minute"
+       .toTable("target"))
+q.awaitTermination()                    # wait for the run to end`,
+    },
+    pitfall: lines(
+      "The checkpoint is the query's memory: a new or deleted checkpoint folder makes it start over and read the whole source again, duplicating rows in an append target, and two queries sharing one folder corrupt each other.",
+      "Give every query its own checkpoint folder, and keep it as long as the target table.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Unity Catalog notebook; main.library and its volume chk are writable
+src = "main.library.checkouts"
+spark.sql(f"CREATE OR REPLACE TABLE {src} (branch STRING)")
+spark.sql(f"INSERT INTO {src} VALUES ('leeds'), ('leeds'), ('york')")
+def refresh_counts():
+    (spark.readStream.table(src)
+        .groupBy("branch").count()
+        .writeStream.outputMode("complete")
+        .option("checkpointLocation", "/Volumes/main/library/chk/counts")
+        .trigger(availableNow=True).toTable("main.library.branch_counts")
+        .awaitTermination())
+refresh_counts()
+spark.sql(f"INSERT INTO {src} VALUES ('york')")
+refresh_counts()
+for r in spark.table("main.library.branch_counts").sort("branch").collect():
+    print(r.branch, r["count"])`,
+      steps: [
+        "Lines 2-4: the source table starts with two Leeds checkouts and one York checkout.",
+        "Lines 6-7: `readStream` reads the table as a stream, and the count per branch is an aggregation whose running totals live in the checkpoint between runs.",
+        "Lines 8-11: `complete` mode rewrites the whole result table on every batch, since an earlier count can change; availableNow processes what is waiting and stops, and `awaitTermination` waits for it.",
+        "Lines 12-14: the second run starts where the checkpoint stopped, reads only the new York row and adds it to York's stored count.",
+        "Lines 15-16: the result holds one row per branch, 2 each, and Leeds was not counted again.",
+      ],
+      output: `leeds 2
+york 2`,
+    },
+    exercises: [
+      'streaming-1',
+      'streaming-2',
+      'streaming-5',
+      'streaming-predict-1',
+      'streaming-4',
+    ],
+  },
+  {
+    id: 'auto_loader/1',
+    topicKeys: [Topic.AUTO_LOADER],
+    step: 1,
+    title: 'Auto Loader (cloudFiles, schema evolution)',
+    idea: [
+      lines(
+        "Auto Loader is the `cloudFiles` stream source: it watches a folder in a Unity Catalog volume or cloud storage and loads each new file once.",
+        "The stream's checkpoint records every file loaded, so a rerun or a restart picks up only new files, and DBFS mounts under `/mnt` are legacy paths that a `/Volumes/...` path or an external location replaces.",
+      ),
+      lines(
+        "It finds new files by listing the folder, the default, or in file notification mode (`cloudFiles.useNotifications`), where the cloud's storage events announce each file and no listing is needed, which scales to millions of files.",
+      ),
+      lines(
+        "`cloudFiles.schemaLocation` keeps the inferred schema between runs; JSON and CSV columns are inferred as strings unless `cloudFiles.inferColumnTypes` or `cloudFiles.schemaHints` say otherwise, and values that do not fit go to `_rescued_data`.",
+        "With the default `schemaEvolutionMode`, `addNewColumns`, a new column stops the stream once and is added to the schema, and the next start goes on with it, which a job set to retry does for you.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `(spark.readStream.format("cloudFiles")         # Auto Loader
+    .option("cloudFiles.format", "csv")         # json, csv, ...
+    .option("cloudFiles.schemaLocation", sch)   # the inferred schema
+    .option("cloudFiles.schemaHints", "c INT")  # optional
+    .option("header", "true")                   # CSV's own options
+    .load("/Volumes/cat/sch/vol/landing/")      # a volume, not /mnt
+    .select("*", "_metadata.file_path")         # source file
+    .writeStream.option("checkpointLocation", chk)  # files done
+    .trigger(availableNow=True)
+    .toTable("cat.sch.bronze_t"))`,
+    },
+    pitfall: lines(
+      "`spark.readStream.format(\"json\")` is a plain file stream, not Auto Loader: it needs a schema given up front and gets no schema inference, evolution or rescued data.",
+      "Auto Loader is always `.format(\"cloudFiles\")`, with the file type in the `cloudFiles.format` option.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Unity Catalog notebook; volume main.library.landing holds returns/day1.json:
+# line 1 {"isbn": "A1", "copies": 1}, line 2 {"isbn": "B2", "copies": "two"}
+chk = "/Volumes/main/library/chk/returns"
+(spark.readStream.format("cloudFiles")
+    .option("cloudFiles.format", "json")
+    .option("cloudFiles.schemaLocation", chk)
+    .option("cloudFiles.schemaHints", "copies INT")
+    .load("/Volumes/main/library/landing/returns")
+    .select("*", "_metadata.file_name")
+    .writeStream.option("checkpointLocation", chk)
+    .trigger(availableNow=True).toTable("main.library.returns_bronze")
+    .awaitTermination())
+for r in spark.table("main.library.returns_bronze").orderBy("isbn").collect():
+    print(r.isbn, r.copies, r.file_name, r._rescued_data is not None)`,
+      steps: [
+        "Lines 4-5: `cloudFiles` makes this Auto Loader, reading JSON files.",
+        "Lines 6-7: the schema inferred on the first run is kept under `chk` and reused, and the hint makes `copies` an INT where JSON would default to a string; one folder can hold this and the checkpoint.",
+        "Line 9: `_metadata.file_name` records the file each row came from, the lineage a Bronze table keeps.",
+        "Lines 10-12: the checkpoint now lists day1.json as loaded, so a later run reads only new files.",
+        "Lines 13-14: \"two\" is not an INT, so B2's copies is NULL and the raw value is kept in `_rescued_data` instead of failing the stream.",
+      ],
+      output: `A1 1 day1.json False
+B2 None day1.json True`,
+    },
+    exercises: [
+      'autoloader-1',
+      'autoloader-3',
+      'autoloader-4',
+      'autoloader-predict-1',
+      'autoloader-2',
+    ],
+  },
+  {
+    id: 'medallion_architecture/1',
+    topicKeys: [Topic.MEDALLION_ARCHITECTURE],
+    step: 1,
+    title: 'Medallion Architecture (bronze/silver/gold)',
+    idea: [
+      lines(
+        "The Medallion, or multi-hop, architecture passes data through three layers of Delta tables, each built from the one before.",
+        "Bronze holds the records as they arrived, append only, with lineage such as the source file and load time, so every later layer can be rebuilt from it.",
+      ),
+      lines(
+        "Silver cleans Bronze: it drops or quarantines bad rows, casts types, keeps one row per key and joins reference data, giving the trusted version of each entity.",
+        "Gold holds business-level tables built from Silver, such as daily revenue or one table per report, shaped for BI tools and the people who read them.",
+      ),
+      lines(
+        "The layers are often separate Unity Catalog schemas, such as `main.bronze`, `main.silver` and `main.gold`, so access follows quality: analysts read Gold, engineers Bronze.",
+        "Auto Loader usually feeds Bronze, and streams or Lakeflow pipelines carry new rows from layer to layer, while a `CREATE OR REPLACE TABLE ... AS` rebuild suits small data.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- Bronze, main.bronze.t: raw records + source file and load time
+-- Silver: cleaned and typed, one row per key, read from Bronze
+CREATE OR REPLACE TABLE main.silver.t AS
+SELECT k, try_cast(col AS INT) AS col, d
+FROM main.bronze.t
+WHERE k IS NOT NULL                 -- or send to a quarantine table
+QUALIFY ROW_NUMBER() OVER (PARTITION BY k ORDER BY loaded_at DESC) = 1;
+-- Gold: business aggregates for BI, read from Silver
+CREATE OR REPLACE TABLE main.gold.t_by_d AS
+SELECT d, SUM(col) AS total, COUNT(*) AS n
+FROM main.silver.t GROUP BY d;`,
+    },
+    pitfall: lines(
+      "A Gold table built straight from Bronze counts every replayed file and bad record, so its totals are wrong in a way no one sees.",
+      "Gold reads Silver only, and Bronze keeps everything, even rows Silver rejects, so Silver can be rebuilt when a rule changes.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Unity Catalog notebook; the schemas main.bronze, main.silver, main.gold exist
+spark.sql("""CREATE OR REPLACE TABLE main.bronze.loans AS SELECT * FROM VALUES
+  ('L1', 'leeds', '2', 1), ('L1', 'leeds', '3', 2),
+  ('L2', 'york', '5', 1), ('L3', 'york', 'n/a', 1)
+  AS t(loan_id, branch, fee, batch)""")
+spark.sql("""CREATE OR REPLACE TABLE main.silver.loans AS
+SELECT loan_id, branch, try_cast(fee AS INT) AS fee FROM main.bronze.loans
+QUALIFY ROW_NUMBER() OVER (PARTITION BY loan_id ORDER BY batch DESC) = 1""")
+spark.sql("""CREATE OR REPLACE TABLE main.gold.branch_fees AS
+SELECT branch, COUNT(*) AS loans, SUM(fee) AS fees
+FROM main.silver.loans GROUP BY branch""")
+for t in ["bronze.loans", "silver.loans", "gold.branch_fees"]:
+    print(t, spark.table(f"main.{t}").count())
+for r in spark.table("main.gold.branch_fees").orderBy("branch").collect():
+    print(r.branch, r.loans, r.fees)`,
+      steps: [
+        "Lines 2-5: Bronze holds the loan records as they were loaded, all text: L1 came twice, its fee corrected in batch 2, and L3's fee is \"n/a\".",
+        "Lines 6-8: Silver keeps the latest row per loan, so L1's fee is 3, and `try_cast` turns \"n/a\" into NULL instead of failing the build.",
+        "Lines 9-11: Gold reads Silver and sums the fees per branch; SUM skips L3's NULL fee, while COUNT(*) still counts the loan.",
+        "Lines 12-15: 4 Bronze rows become 3 Silver rows and 2 Gold rows, and Leeds reports one loan with a fee of 3, not two loans with 5.",
+      ],
+      output: `bronze.loans 4
+silver.loans 3
+gold.branch_fees 2
+leeds 1 3
+york 2 5`,
+    },
+    exercises: [
+      'medallion-1',
+      'medallion-2',
+      'medallion-3',
+      'medallion-predict-1',
+      'medallion-5',
+    ],
+  },
+  {
+    id: 'change_data_capture/1',
+    topicKeys: [Topic.CHANGE_DATA_CAPTURE],
+    step: 1,
+    title: 'Change Data Capture (CDF, table_changes)',
+    idea: [
+      lines(
+        "Change Data Capture passes on only the rows that changed in a source, not the whole table, so a target stays in step without a full reload.",
+        "On Delta, the Change Data Feed records the row-level changes of each commit once the table property `delta.enableChangeDataFeed = true` is set, at `CREATE TABLE` or later with `ALTER TABLE`, and only from that commit on.",
+      ),
+      lines(
+        "`table_changes('t', start)` returns the changed rows from version `start` on, or up to an end version given third, with the table's columns plus `_change_type`, `_commit_version` and `_commit_timestamp`.",
+        "`_change_type` is `insert`, `delete`, or for an update two rows: `update_preimage` with the old values and `update_postimage` with the new.",
+      ),
+      lines(
+        "A stream reads the same feed with `readChangeFeed` set to true and a `startingVersion`, and a `MERGE` applies the changes to a target.",
+        "Lakeflow pipelines do that last step with `AUTO CDC`, which replaces `APPLY CHANGES INTO`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `CREATE TABLE t (k INT, v STRING)            -- or ALTER TABLE t later
+  TBLPROPERTIES (delta.enableChangeDataFeed = true);
+SELECT * FROM table_changes('t', 5);        -- versions 5 to the latest
+SELECT * FROM table_changes('t', 5, 8);     -- versions 5 to 8
+-- adds _change_type, _commit_version, _commit_timestamp
+-- _change_type: insert | update_preimage | update_postimage | delete
+-- as a stream, in Python:
+-- spark.readStream.option("readChangeFeed", "true")
+--   .option("startingVersion", 5).table("t")`,
+    },
+    pitfall: lines(
+      "Every updated row appears twice in the feed, so a consumer that applies all rows writes the old values too, or counts each update as two changes.",
+      "Drop the `update_preimage` rows before applying changes, unless you need the old values.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Unity Catalog notebook; main.library.titles does not exist yet
+t = "main.library.titles"
+spark.sql(f"""CREATE TABLE {t} (isbn STRING, shelf STRING)
+TBLPROPERTIES (delta.enableChangeDataFeed = true)""")
+spark.sql(f"INSERT INTO {t} VALUES ('A1', 'main'), ('B2', 'main'), ('C3', 'main')")
+spark.sql(f"UPDATE {t} SET shelf = 'annex' WHERE isbn = 'B2'")
+spark.sql(f"DELETE FROM {t} WHERE isbn = 'C3'")
+changes = spark.sql(f"""SELECT isbn, shelf, _change_type, _commit_version
+FROM table_changes('{t}', 2)
+WHERE _change_type != 'update_preimage'
+ORDER BY _commit_version, isbn""")
+for r in changes.collect():
+    print(r._commit_version, r.isbn, r.shelf, r._change_type)`,
+      steps: [
+        "Lines 3-4: the table records its changes from its first commit, version 0.",
+        "Lines 5-7: the INSERT is version 1, the UPDATE version 2 and the DELETE version 3.",
+        "Lines 8-9: `table_changes` from version 2 skips the three inserts and returns the UPDATE's two rows and the DELETE's one.",
+        "Line 10: dropping `update_preimage` leaves B2's new shelf, and the delete row carries C3's last values, enough for a MERGE to apply both changes downstream.",
+      ],
+      output: `2 B2 annex update_postimage
+3 C3 main delete`,
+    },
+    exercises: [
+      'cdc-1',
+      'cdc-2',
+      'cdc-6',
+      'cdc-predict-1',
+      'cdc-3',
     ],
   },
 ];
