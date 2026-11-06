@@ -242,7 +242,7 @@ df = spark.table("prod.finance.orders")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.UNITY_CATALOG_BASICS,
     language: CodeLanguage.SQL,
-    question: 'Both tables are in Unity Catalog, and the `abfss://` path lies inside an external location you hold `READ FILES` on. The statements run in order. What does the last query return? The answer is one number.',
+    question: 'Both tables are in Unity Catalog, and the `abfss://` path lies inside an external location you hold `CREATE EXTERNAL TABLE` and `READ FILES` on. The statements run in order. What does the last query return? The answer is one number.',
     code: `CREATE TABLE main.shop.app_orders (id INT);
 CREATE TABLE main.shop.lake_orders (id INT)
   LOCATION 'abfss://lake@acme.dfs.core.windows.net/orders';
@@ -252,7 +252,7 @@ DROP TABLE main.shop.app_orders;
 DROP TABLE main.shop.lake_orders;
 SELECT COUNT(*) FROM delta.\`abfss://lake@acme.dfs.core.windows.net/orders\`;`,
     expectedOutput: `2`,
-    explanation: '`app_orders` has no `LOCATION`, so it is a managed table: Unity Catalog owns its files, and `DROP TABLE` removes them as well (`UNDROP` can bring it back for 7 days, then the files are deleted). `lake_orders` has a `LOCATION`, so it is an external table: `DROP TABLE` only removes it from the catalog, and its Delta files stay at the path. Reading the path directly still finds its 2 rows, and `CREATE TABLE ... LOCATION` on the same path registers them again.',
+    explanation: '`app_orders` has no `LOCATION`, so it is a managed table: Unity Catalog owns its files, and `DROP TABLE` removes them as well (`UNDROP` can bring it back for 7 days, then the files are deleted within 30 days). `lake_orders` has a `LOCATION`, so it is an external table: `DROP TABLE` only removes it from the catalog, and its Delta files stay at the path. Reading the path directly still finds its 2 rows, and `CREATE TABLE ... LOCATION` on the same path registers them again.',
     hints: ['Which of the two tables did you give a LOCATION?', 'Dropping an external table forgets the table, not its files.'],
     tags: ['unity-catalog', 'managed-table', 'external-table', 'drop', 'predict'],
     concepts: ['ucat-managed-vs-external'],
