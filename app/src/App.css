@@ -864,23 +864,9 @@ body {
   min-height: 0;
 }
 
-/* The types not yet on the shared shell (cloze, Parsons, coding) fill the column. */
-.quiz-main > .coding-question,
-.quiz-main > .parsons-question,
-.quiz-main > .cloze-code-question {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
 /* The first rule card of a lesson uses the whole width. */
 .quiz-view-card .quiz-main > .rule-card {
   flex: 1 1 auto;
-}
-
-.next-button-container {
-  flex: none;
-  display: flex;
-  justify-content: center;
 }
 
 /* Errors and empty sessions inside the quiz view. */

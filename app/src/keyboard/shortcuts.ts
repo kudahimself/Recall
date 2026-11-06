@@ -11,7 +11,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
  * - Only shortcuts marked `whileTyping` (Shift+Enter, Ctrl/Cmd+Enter, Esc)
  *   work inside a text box.
  * - A held key fires once: auto-repeated keydowns are swallowed for every
- *   shortcut except the Esc ones, so holding Enter or Shift+Enter can never
+ *   shortcut except Esc and a list's arrows, so holding Enter or Shift+Enter can never
  *   pick, submit or record an answer on the next step or question.
  * - Browser-reserved combinations (Ctrl+R, Ctrl+1-9 and the like) are never bound.
  * - An open dialog takes the keys: only shortcuts registered while it is the
@@ -28,12 +28,21 @@ export type ShortcutId =
   | 'ruleCard'
   | 'startExercises'
   | 'help'
-  | 'close';
+  | 'close'
+  | 'nextBlank'
+  | 'listMove'
+  | 'listToggle'
+  | 'listReorder'
+  | 'listSwitch';
 
-export type ShortcutGroup = 'Answering' | 'While typing' | 'Lessons' | 'Anywhere';
+export type ShortcutGroup = 'Answering' | 'While typing' | 'Arranging lines' | 'Lessons' | 'Anywhere';
 
 export interface ShortcutDef {
-  /** Key specs: "Enter", "H", "1-9", "Shift+Enter", "Mod+Enter" (Ctrl, or Cmd on macOS), "?", "Esc". */
+  /**
+   * Key specs: "Enter", "H", "1-9", "Shift+Enter", "Mod+Enter" (Ctrl, or Cmd
+   * on macOS), "?", "Esc", "Space", "ArrowUp" and the other arrows, and
+   * "Alt+ArrowUp" / "Alt+ArrowDown".
+   */
   keys: string[];
   label: string;
   group: ShortcutGroup;
@@ -44,17 +53,22 @@ export interface ShortcutDef {
 export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
   pick: { keys: ['1-9'], label: 'Pick an option or a line', group: 'Answering' },
   submit: { keys: ['Enter'], label: 'Check your answer, then go to the next one', group: 'Answering' },
-  hint: { keys: ['H'], label: 'Show or hide the hint', group: 'Answering' },
-  solution: { keys: ['S'], label: 'Show the solution after a miss', group: 'Answering' },
-  submitTyping: { keys: ['Shift+Enter', 'Mod+Enter'], label: 'Check from inside a text box', group: 'While typing', whileTyping: true },
-  leaveTyping: { keys: ['Esc'], label: 'Leave the text box, so single keys work again', group: 'While typing', whileTyping: true },
+  hint: { keys: ['H'], label: 'Show the hint (in code: the next hint)', group: 'Answering' },
+  solution: { keys: ['S'], label: 'Show the solution after a miss (in code: give up)', group: 'Answering' },
+  submitTyping: { keys: ['Shift+Enter', 'Mod+Enter'], label: 'Check from a text box, a blank or the code editor', group: 'While typing', whileTyping: true },
+  nextBlank: { keys: ['Enter'], label: 'In a blank: go to the next one (checks on the last)', group: 'While typing', whileTyping: true },
+  leaveTyping: { keys: ['Esc'], label: 'Leave the text box or editor, so single keys work again', group: 'While typing', whileTyping: true },
+  listMove: { keys: ['ArrowUp', 'ArrowDown'], label: 'Move between lines', group: 'Arranging lines' },
+  listToggle: { keys: ['Space'], label: 'Add the line to your solution, or take it back', group: 'Arranging lines' },
+  listReorder: { keys: ['Alt+ArrowUp', 'Alt+ArrowDown'], label: 'Move the line up or down in your solution', group: 'Arranging lines' },
+  listSwitch: { keys: ['ArrowLeft', 'ArrowRight'], label: 'Switch between the lines and your solution', group: 'Arranging lines' },
   ruleCard: { keys: ['R'], label: 'Open or close the rule card', group: 'Lessons' },
   startExercises: { keys: ['Enter'], label: 'Start the exercises from a rule card', group: 'Lessons' },
   help: { keys: ['?'], label: 'Show or hide these shortcuts', group: 'Anywhere' },
   close: { keys: ['Esc'], label: 'Close a dialog', group: 'Anywhere', whileTyping: true },
 };
 
-export const SHORTCUT_GROUPS: ShortcutGroup[] = ['Answering', 'While typing', 'Lessons', 'Anywhere'];
+export const SHORTCUT_GROUPS: ShortcutGroup[] = ['Answering', 'While typing', 'Arranging lines', 'Lessons', 'Anywhere'];
 
 /** True when the key goes into a text box or editor, where single keys must type. */
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -68,6 +82,8 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return false;
 }
 
+const ARROWS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
 function matchesSpec(spec: string, e: KeyboardEvent): boolean {
   const mod = e.ctrlKey || e.metaKey;
   if (spec === '1-9') return !mod && !e.altKey && /^[1-9]$/.test(e.key);
@@ -76,6 +92,9 @@ function matchesSpec(spec: string, e: KeyboardEvent): boolean {
   if (spec === 'Enter') return e.key === 'Enter' && !mod && !e.altKey && !e.shiftKey;
   if (spec === 'Shift+Enter') return e.key === 'Enter' && e.shiftKey && !mod && !e.altKey;
   if (spec === 'Mod+Enter') return e.key === 'Enter' && mod && !e.altKey;
+  if (spec === 'Space') return e.key === ' ' && !mod && !e.altKey && !e.shiftKey;
+  if (ARROWS.has(spec)) return e.key === spec && !mod && !e.altKey && !e.shiftKey;
+  if (spec.startsWith('Alt+') && ARROWS.has(spec.slice(4))) return e.key === spec.slice(4) && e.altKey && !mod && !e.shiftKey;
   // A single letter, either case, no modifiers.
   return spec.length === 1 && !mod && !e.altKey && e.key.toLowerCase() === spec.toLowerCase();
 }
@@ -106,7 +125,8 @@ const openLayers = new Set<number>();
 let layerCounter = 0;
 let listening = false;
 
-const REPEATABLE = new Set<ShortcutId>(['leaveTyping', 'close']);
+// Esc, and the arrows of a list (holding one walks or carries a line along).
+const REPEATABLE = new Set<ShortcutId>(['leaveTyping', 'close', 'listMove', 'listReorder']);
 
 const topLayer = () => (openLayers.size ? Math.max(...Array.from(openLayers)) : 0);
 

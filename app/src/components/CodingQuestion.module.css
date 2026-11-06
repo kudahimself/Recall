@@ -1,0 +1,129 @@
+/* Coding: the editor takes the height the card has left, with the hints,
+   the solution or the live preview beside it. Buttons, code blocks, the
+   banner and the preview come from components/ui; only the arrangement and
+   the editor's frame live here. */
+
+.workspace {
+  min-height: 0;
+}
+
+/* ---- The editor ---- */
+.editor {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: var(--editor-min-h);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.editor:focus-within {
+  border-color: var(--focus);
+}
+
+.monaco {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Monaco sizes itself to this box, so it is pinned to it rather than to a flex chain. */
+.monaco > :global(section) {
+  position: absolute;
+  inset: 0;
+}
+
+/* Before Monaco loads, the starter code stands in its place. */
+.loading {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  opacity: 0.7;
+}
+
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  min-height: var(--control-sm);
+  padding: var(--sp-0) var(--sp-2) var(--sp-0) var(--sp-3);
+  border-top: var(--border-w) solid var(--border);
+  background: var(--sunken);
+}
+
+.barHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+}
+
+.barSpacer {
+  flex: 1 1 auto;
+}
+
+.barLang {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+}
+
+/* ---- Beside the editor ---- */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Sample data beside the editor: it gives up height (its rows scroll) before the solution does. */
+.side > :global(.data-tables) {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.panel {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-height: 0;
+}
+
+/* The solution and the preview share the height that is left. */
+.fillPanel {
+  flex: 1 1 0;
+  min-height: var(--region-min-h);
+}
+
+.panelHead {
+  flex: none;
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.scroll {
+  max-height: var(--table-max-h);
+  overflow: auto;
+}
+
+/* ---- In the banner ---- */
+.ask {
+  margin: 0;
+}
+
+.credit {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}

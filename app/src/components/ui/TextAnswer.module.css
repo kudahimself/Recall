@@ -107,6 +107,49 @@
   color: var(--text-2);
 }
 
+/* ---- A blank inside a line of code (cloze) ---- */
+.blank {
+  composes: field mono;
+  width: calc(var(--blank-ch) * 1ch + 2 * var(--sp-2));
+  max-width: 100%;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-s);
+  vertical-align: baseline;
+}
+
+.blankDone {
+  display: inline-block;
+  padding: 0 var(--sp-2);
+  border: var(--border-w) solid;
+  border-radius: var(--radius-s);
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: var(--lh-code);
+  text-decoration: none;
+  white-space: pre;
+}
+
+.blankRight {
+  border-color: var(--success-line);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* A wrong blank: what was typed, struck through, then the answer beside it. */
+.blankWrong {
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-thickness: var(--focus-w);
+}
+
+.blankFix {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+}
+
 /* ---- After grading ---- */
 .compare {
   display: grid;

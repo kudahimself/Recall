@@ -3,7 +3,7 @@
  *   - untiered coding keeps classic one-shot behavior (fail -> recorded once)
  *   - a failed tiered submit opens the retry panel with hints LOCKED
  *   - tier escalation, then a clean pass records the hint tier + attempt count
- *   - Give Up records a failure and reveals the solution
+ *   - Give up records a failure and reveals the solution
  *
  * Monaco is mocked as a plain textarea so the test can drive the code value.
  *
@@ -78,11 +78,13 @@ function setCode(value: string) {
   fireEvent.change(screen.getByTestId('code-editor'), { target: { value } });
 }
 
+// The check is async (it awaits the grader): let its state updates land.
 async function clickRun() {
-  await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: /Run Code/ }));
-  });
+  fireEvent.click(screen.getByRole('button', { name: /^Check/ }));
+  await act(() => Promise.resolve());
 }
+
+const hintHeading = (name: string) => screen.queryByRole('heading', { name });
 
 describe('untiered coding - classic one-shot', () => {
   it('records a single failure with no retry panel', async () => {
@@ -94,7 +96,7 @@ describe('untiered coding - classic one-shot', () => {
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
     expect(onAnswer).toHaveBeenCalledWith(false, { hintTierUsed: 0, attempts: 1 });
-    expect(screen.queryByRole('button', { name: /Try Again/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Try again/ })).not.toBeInTheDocument();
   });
 });
 
@@ -111,15 +113,15 @@ describe('tiered coding - retry panel and locked hints', () => {
     );
 
     // Hints locked before any submit.
-    expect(screen.queryByText(/API signature:/)).not.toBeInTheDocument();
+    expect(hintHeading('Signature')).not.toBeInTheDocument();
 
     setCode('nonsense unrelated tokens');
     await clickRun();
 
     expect(onAnswer).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /Try Again/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument();
     // Still locked until the learner spends a tier.
-    expect(screen.queryByText(/API signature:/)).not.toBeInTheDocument();
+    expect(hintHeading('Signature')).not.toBeInTheDocument();
   });
 });
 
@@ -142,12 +144,12 @@ describe('tiered coding - the first failed submit counts as a miss (decision 7)'
     expect(onFirstMiss).toHaveBeenCalledWith({ hintTierUsed: 0, attempts: 1 });
     expect(onAnswer).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: /Try Again/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
     setCode('still wrong tokens');
     await clickRun();
     expect(onFirstMiss).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: /Try Again/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
     setCode(SOLUTION);
     await clickRun();
     expect(onAnswer).toHaveBeenCalledTimes(1);
@@ -171,13 +173,14 @@ describe('tiered coding - escalation then a clean pass', () => {
     await clickRun();
 
     // Reveal tier 1, then tier 2.
-    fireEvent.click(screen.getByRole('button', { name: /Reveal signature/ }));
-    expect(screen.getByText(/API signature:/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Reveal skeleton/ }));
-    expect(screen.getByText(/Skeleton:/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Show the signature/ }));
+    expect(hintHeading('Signature')).toBeInTheDocument();
+    expect(screen.getByText('sum(iterable, /, start=0) -> int')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Show the skeleton/ }));
+    expect(hintHeading('Skeleton')).toBeInTheDocument();
 
     // Retry with the correct solution.
-    fireEvent.click(screen.getByRole('button', { name: /Try Again/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
     setCode(SOLUTION);
     await clickRun();
 
@@ -201,9 +204,10 @@ describe('tiered coding - give up', () => {
     setCode('nonsense unrelated tokens');
     await clickRun();
 
-    fireEvent.click(screen.getByRole('button', { name: /Give Up/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Give up/ }));
 
     expect(onAnswer).toHaveBeenCalledWith(false, { hintTierUsed: 0, attempts: 1 });
-    expect(screen.getByText(/Explanation:/)).toBeInTheDocument();
+    expect(screen.getByText('sum() adds the iterable.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Solution' })).toBeInTheDocument();
   });
 });

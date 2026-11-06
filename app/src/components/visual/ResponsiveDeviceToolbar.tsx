@@ -1,5 +1,7 @@
 import React from 'react';
-import './ResponsiveDeviceToolbar.css';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import styles from './LivePreview.module.css';
 
 // null = Fill (preview takes the pane's full width).
 export type DevicePreset = number | null;
@@ -10,18 +12,19 @@ interface Props {
   // Actual rendered width of the preview frame, for the px badge.
   renderedWidth: number | null;
   // Layout-overlay toggle (flex/grid inspector). All optional so existing
-  // callers render unchanged; the pill only appears when containers exist.
+  // callers render unchanged; the button only appears when containers exist.
   overlayAvailable?: boolean;
   overlayOn?: boolean;
   onToggleOverlay?: () => void;
 }
 
-const PRESETS: { label: string; width: DevicePreset }[] = [
-  { label: 'SE', width: 375 },
-  { label: 'Phone', width: 667 },
-  { label: 'Tablet', width: 768 },
-  { label: 'Laptop', width: 1024 },
-  { label: 'Fill', width: null },
+// Widths as numbers: they read the same as the px readout and the breakpoints.
+const PRESETS: { label: string; width: DevicePreset; title: string }[] = [
+  { label: '375', width: 375, title: 'A small phone, 375px wide' },
+  { label: '667', width: 667, title: 'A phone on its side, 667px wide' },
+  { label: '768', width: 768, title: 'A tablet, 768px wide' },
+  { label: '1024', width: 1024, title: 'A laptop, 1024px wide' },
+  { label: 'Fill', width: null, title: 'The width of this pane' },
 ];
 
 // Tailwind's default breakpoint ladder - pure lookup, no Tailwind runtime.
@@ -43,35 +46,37 @@ export const ResponsiveDeviceToolbar: React.FC<Props> = ({
   onToggleOverlay,
 }) => {
   return (
-    <div className="device-toolbar">
-      <div className="device-toolbar-presets">
+    <div className={styles.toolbar}>
+      <div className={styles.presets} role="group" aria-label="Preview width">
         {PRESETS.map(preset => (
-          <button
+          <Button
             key={preset.label}
-            type="button"
-            className={`device-preset${active === preset.width ? ' device-preset-active' : ''}`}
+            size="xs"
+            variant="ghost"
+            aria-pressed={active === preset.width}
             onClick={() => onChange(preset.width)}
-            title={preset.width ? `${preset.width}px` : 'Fill available width'}
+            title={preset.title}
           >
             {preset.label}
-          </button>
+          </Button>
         ))}
       </div>
-      <div className="device-toolbar-readout">
+      <div className={styles.readout}>
         {overlayAvailable && onToggleOverlay && (
-          <button
-            type="button"
-            className={`device-preset${overlayOn ? ' device-preset-active' : ''}`}
+          <Button
+            size="xs"
+            variant="ghost"
+            aria-pressed={!!overlayOn}
             onClick={onToggleOverlay}
             title="Show flex/grid containers, items, tracks and gaps over the preview"
           >
             Layout
-          </button>
+          </Button>
         )}
         {renderedWidth !== null && (
           <>
-            <span className="device-width-badge">{renderedWidth}px</span>
-            <span className="device-breakpoint-pill">{tailwindBreakpoint(renderedWidth)}</span>
+            <span className={styles.width}>{renderedWidth}px</span>
+            <Badge tone="accent" title="The Tailwind breakpoint at this width">{tailwindBreakpoint(renderedWidth)}</Badge>
           </>
         )}
       </div>

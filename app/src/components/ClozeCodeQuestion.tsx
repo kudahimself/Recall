@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic } from '../types';
+import { useShortcut } from '../keyboard/shortcuts';
 import { DataTables } from './DataTables';
-import { renderInlineCode } from './InlineCode';
+import { CodeBlock, languageLabel } from './ui/CodeBlock';
+import { Prose } from './ui/InlineText';
+import { AnswerColumns, QuestionShell } from './ui/QuestionShell';
+import { Blank } from './ui/TextAnswer';
 import { LivePreview } from './visual/LivePreview';
-import './ClozeCodeQuestion.css';
 
 interface Props {
   question: ClozeQ;
@@ -16,7 +19,7 @@ const BLANK_MARKER = '___';
 // Normalize a blank value for comparison so cosmetic whitespace around operators
 // and punctuation doesn't cause false rejections (e.g. `[0]*3` vs `[0] * 3`,
 // `lambda x: x` vs `lambda x : x`, `f(1, 2)` vs `f(1,2)`). Whitespace INSIDE
-// string literals is preserved — we walk single/double-quoted regions and skip
+// string literals is preserved - we walk single/double-quoted regions and skip
 // them. Whitespace between two word characters (e.g. `for x in range`) is also
 // preserved, since the collapse only fires around non-word non-space characters.
 function normalizeBlank(s: string, caseInsensitive = false): string {
@@ -69,198 +72,128 @@ export function blankMatches(
   return !!alts && alts.some(a => normalizeBlank(a, ci) === got);
 }
 
-// Split the template into segments alternating between code text and blank slots.
-// Returns: [textSegment, textSegment, ...] where blank slots are represented as
-// `null` in a parallel array. We split on the literal `___` token.
-interface Segment {
-  kind: 'text' | 'blank';
-  // For text: the literal code. For blank: the blank index.
-  text?: string;
-  blankIndex?: number;
-}
-
-// Convert the template into alternating text/blank segments. If the template
-// contains more `___` markers than `blanks` entries (data bug), the extras are
-// folded back into the trailing text segment as literal `___` so they render
-// as static text rather than producing out-of-range inputs that crash on submit.
-function tokenize(template: string, blankCount: number): Segment[] {
-  const parts = template.split(BLANK_MARKER);
-  const segments: Segment[] = [];
-  parts.forEach((text, i) => {
-    if (i <= blankCount) {
-      segments.push({ kind: 'text', text });
-      if (i < parts.length - 1 && i < blankCount) {
-        segments.push({ kind: 'blank', blankIndex: i });
-      }
-    } else {
-      // Stitch overflow markers + their following text back into the previous
-      // text segment so the rendered code reads correctly.
-      const last = segments[segments.length - 1];
-      if (last && last.kind === 'text') {
-        last.text = (last.text ?? '') + BLANK_MARKER + text;
-      }
-    }
-  });
-  return segments;
-}
-
-export const ClozeCodeQuestion: React.FC<Props> = ({
-  question,
-  onAnswer,
-  showHints,
-}) => {
-  const blankCount = question.blanks.length;
-  const segments = useMemo(
-    () => tokenize(question.template, blankCount),
-    [question.template, blankCount],
+/**
+ * The template with each blank filled in, for the live preview. A template
+ * with more `___` markers than blanks (a data slip) keeps the extras as
+ * written, as the code block shows them.
+ */
+function assemble(template: string, values: readonly string[]): string {
+  return template.split(BLANK_MARKER).reduce(
+    (out, piece, i) => (i === 0 ? piece : out + (i - 1 < values.length ? values[i - 1] : BLANK_MARKER) + piece),
+    '',
   );
+}
 
-  const [values, setValues] = useState<string[]>(() => Array(blankCount).fill(''));
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-
-  useEffect(() => {
-    setValues(Array(blankCount).fill(''));
-    setIsSubmitted(false);
-    setShowHint(false);
-  }, [question.id, blankCount]);
-
-  const setBlank = (idx: number, value: string) => {
-    setValues(prev => {
-      const next = [...prev];
-      next[idx] = value;
-      return next;
-    });
-  };
-
-  const checkBlank = (idx: number, value: string | undefined): boolean =>
-    blankMatches(question, idx, value);
-
-  const evaluate = (): boolean => {
-    return values.every((v, i) => checkBlank(i, v));
-  };
-
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-    onAnswer(evaluate());
-  };
+/**
+ * Fill in the blanks: the worked example as a code block with an answer
+ * field in place of each blank. Enter goes to the next blank and checks on
+ * the last; Shift+Enter or Ctrl/Cmd+Enter check from any blank. Once checked,
+ * each blank shows what was typed, and a wrong one shows the answer beside it.
+ */
+export const ClozeCodeQuestion: React.FC<Props> = ({ question, onAnswer, showHints }) => {
+  const count = question.blanks.length;
+  const [values, setValues] = useState<string[]>(() => Array(count).fill(''));
+  const [graded, setGraded] = useState(false);
+  const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
   const allFilled = values.every(v => v.trim().length > 0);
-  const wasCorrect = isSubmitted && evaluate();
+  const right = graded && values.every((v, i) => blankMatches(question, i, v));
 
-  // Live preview: assemble the template with the current blank values so the
-  // learner sees their fills render as they type. HTML questions preview the
-  // assembled markup; CSS questions render it over the question's previewHtml.
-  const isHtmlQuestion = question.language === CodeLanguage.HTML;
-  const previewActive = isHtmlQuestion || Boolean(question.previewHtml);
-  const assembledCode = useMemo(
-    () =>
-      segments
-        .map(seg =>
-          seg.kind === 'text' ? seg.text ?? '' : values[seg.blankIndex ?? 0] ?? '',
-        )
-        .join(''),
-    [segments, values],
-  );
+  const setBlank = (idx: number, value: string) =>
+    setValues(prev => prev.map((v, i) => (i === idx ? value : v)));
 
-  const blankClass = (idx: number): string => {
-    if (!isSubmitted) return 'cloze-blank';
-    return checkBlank(idx, values[idx])
-      ? 'cloze-blank correct'
-      : 'cloze-blank wrong';
+  const check = () => {
+    if (graded || !allFilled) return;
+    setGraded(true);
+    onAnswer(values.every((v, i) => blankMatches(question, i, v)));
   };
 
+  const blankIndex = (target: EventTarget | null) => inputs.current.findIndex(el => el === target);
+  const focusBlank = (idx: number) => inputs.current[idx]?.focus();
+  const firstEmpty = () => values.findIndex(v => v.trim().length === 0);
+
+  // Enter in a blank: on to the next one; on the last, check (or go back to one still empty).
+  useShortcut('nextBlank', e => {
+    const idx = blankIndex(e.target);
+    if (idx < 0) return false;
+    if (idx < count - 1) focusBlank(idx + 1);
+    else if (allFilled) check();
+    else focusBlank(firstEmpty());
+    return true;
+  }, !graded);
+
+  // Shift+Enter with a blank still empty goes to it; otherwise the shell checks.
+  useShortcut('submitTyping', e => {
+    if (blankIndex(e.target) < 0 || allFilled) return false;
+    focusBlank(firstEmpty());
+    return true;
+  }, !graded);
+
+  // HTML questions preview the assembled markup; CSS questions render it over the question's previewHtml.
+  const isHtml = question.language === CodeLanguage.HTML;
+  const preview = isHtml || Boolean(question.previewHtml);
+  const assembled = useMemo(() => assemble(question.template, values), [question.template, values]);
+
+  const code = (
+    <CodeBlock
+      code={question.template}
+      language={question.language}
+      label={languageLabel(question.language)}
+      numbered
+      aria-label="Code with blanks"
+      slots={{
+        marker: BLANK_MARKER,
+        render: idx => {
+          if (idx >= count) return null;
+          const longest = Math.max(
+            question.blanks[idx].length,
+            ...(question.blankAlternates?.[idx] ?? []).map(a => a.length),
+            values[idx].length,
+            3,
+          );
+          return (
+            <Blank
+              index={idx}
+              count={count}
+              value={values[idx]}
+              onChange={v => setBlank(idx, v)}
+              widthCh={longest + 1}
+              inputRef={el => { inputs.current[idx] = el; }}
+              status={graded ? (blankMatches(question, idx, values[idx]) ? 'right' : 'wrong') : undefined}
+              expected={question.blanks[idx]}
+            />
+          );
+        },
+      }}
+    />
+  );
+
   return (
-    <div className="cloze-code-question">
-      <h3 className="question-text">{renderInlineCode(question.question, question.topic)}</h3>
-
-      <div className="badges-row">
-        <div className="difficulty-badge">{question.difficulty.toUpperCase()}</div>
-        <div className="topic-badge">
-          {question.topic.replace(/_/g, ' ').toUpperCase()}
-        </div>
-        <div className="format-badge">FILL IN BLANKS</div>
-      </div>
-
-      <div className="cloze-instructions">
-        Complete the worked example by filling in the blanks. The surrounding code is
-        already correct - focus on what's missing.
-      </div>
-
+    <QuestionShell
+      question={question}
+      format="Fill in the blanks"
+      task={count === 1 ? 'The code around the blank is already right; type what is missing.' : 'The code around the blanks is already right; type what is missing.'}
+      graded={graded}
+      typed
+      action={{ label: 'Check answer', onAction: check, disabled: !allFilled }}
+      hint={showHints ? question.hints : null}
+      feedback={graded ? {
+        verdict: right ? 'right' : 'wrong',
+        title: right ? 'Correct' : 'Not quite',
+        body: <Prose text={question.explanation} />,
+      } : null}
+    >
       <DataTables tables={question.tables} />
-
-      <div className="cloze-block-wrapper">
-        <div className="cloze-block-header">{question.language.toUpperCase()}</div>
-        <pre className="cloze-block">
-          {segments.map((seg, i) => {
-            if (seg.kind === 'text') {
-              return <span key={`text-${i}`}>{seg.text}</span>;
-            }
-            if (seg.blankIndex === undefined) return null;
-            const idx = seg.blankIndex;
-            const expectedLen = question.blanks[idx]?.length ?? 0;
-            const altMaxLen = (question.blankAlternates?.[idx] ?? [])
-              .reduce((m, a) => Math.max(m, a.length), 0);
-            const typedLen = values[idx]?.length ?? 0;
-            const ch = Math.max(expectedLen, altMaxLen, typedLen, 3) + 2;
-            return (
-              <input
-                key={`blank-${idx}`}
-                aria-label={`Blank ${idx + 1}`}
-                className={blankClass(idx)}
-                value={values[idx]}
-                onChange={e => setBlank(idx, e.target.value)}
-                disabled={isSubmitted}
-                spellCheck={false}
-                autoCapitalize="off"
-                autoCorrect="off"
-                style={{ width: `${ch}ch` }}
-              />
-            );
-          })}
-        </pre>
-      </div>
-
-      {previewActive && (
-        <div className="cloze-preview-wrapper">
+      {preview ? (
+        <AnswerColumns columns="minmax(0, 1.2fr) minmax(0, 1fr)">
+          {code}
           <LivePreview
-            html={isHtmlQuestion ? assembledCode : question.previewHtml ?? ''}
-            css={isHtmlQuestion ? undefined : assembledCode}
+            html={isHtml ? assembled : question.previewHtml ?? ''}
+            css={isHtml ? undefined : assembled}
             tailwind={question.topic === Topic.TAILWIND}
           />
-        </div>
-      )}
-
-      {!isSubmitted && showHints && question.hints && question.hints.length > 0 && (
-        <div className="hints-section">
-          <button className="hint-button" onClick={() => setShowHint(!showHint)}>
-            {showHint ? 'Hide Hint' : 'Show Hint'}
-          </button>
-          {showHint && <div className="hint">{question.hints[0]}</div>}
-        </div>
-      )}
-
-      {!isSubmitted ? (
-        <button
-          className="submit-button"
-          onClick={handleSubmit}
-          disabled={!allFilled}
-        >
-          Submit
-        </button>
-      ) : (
-        <div className="explanation">
-          <h4>{wasCorrect ? 'Correct.' : 'Not quite.'}</h4>
-          {!wasCorrect && (
-            <div className="reference-solution">
-              <div className="reference-label">Reference solution:</div>
-              <pre className="reference-code">{question.solution}</pre>
-            </div>
-          )}
-          <p>{renderInlineCode(question.explanation, question.topic)}</p>
-        </div>
-      )}
-
-    </div>
+        </AnswerColumns>
+      ) : code}
+    </QuestionShell>
   );
 };

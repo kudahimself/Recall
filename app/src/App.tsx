@@ -361,16 +361,6 @@ function loadConceptProgress(progress: UserProgress, canWrite: boolean): Concept
 
 const QUESTIONS_BY_ID = new Map(questions.map(q => [q.id, q]));
 
-/** Question types drawn by the shared QuestionShell, which owns their Next button. */
-const SHELL_TYPES: ReadonlySet<QuestionType> = new Set([
-  QuestionType.MULTIPLE_CHOICE,
-  QuestionType.PREDICT_OUTPUT,
-  QuestionType.PREDICT_OUTCOME,
-  QuestionType.CHOOSE_JUSTIFY,
-  QuestionType.SPOT_FLAW,
-  QuestionType.EXPLAIN,
-]);
-
 /**
  * The card-family schedule (`recall-fsrs`). Rebuilt from attemptHistory when
  * the key is missing, unreadable, an older schema, or built from a different
@@ -511,11 +501,10 @@ function App() {
 
   // Development only: `?sample=<id>` shows one of src/dev/sampleQuestions.ts
   // in the quiz view, for screenshots and trying a question type by hand.
-  const [devSample] = useState(() => sampleFromSearch(window.location.search));
+  const [devSample] = useState(() => sampleFromSearch(window.location.search, process.env.NODE_ENV, QUESTIONS_BY_ID));
 
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [sessionStartTime] = useState(Date.now());
-  const [showNextButton, setShowNextButton] = useState(false);
   const [sessionStats, setSessionStats] = useState({ answered: 0, correct: 0 });
   // Today's session per course (utils/reviewSession), stored so a reload the
   // same day resumes it; a new day builds a new one from progress.
@@ -624,7 +613,6 @@ function App() {
     firstMissRecordedRef.current = null;
     setReaskShown(false);
     setQuestionStartTime(Date.now());
-    setShowNextButton(false);
   }, []);
 
   // The lesson gate (utils/lessons). A lesson in progress serves its rule card,
@@ -943,10 +931,7 @@ function App() {
   const handleAnswer = (isCorrect: boolean, meta?: AnswerMeta) => {
     if (!currentQuestion) return;
     // A dev sample (?sample=<id>) is shown, never recorded.
-    if (devSample && currentQuestion.id === devSample.id) {
-      setShowNextButton(true);
-      return;
-    }
+    if (devSample && currentQuestion.id === devSample.id) return;
 
     const timeSpent = Date.now() - questionStartTime;
 
@@ -1050,11 +1035,9 @@ function App() {
       setReaskShown(result.requeued);
     }
 
-    // Reveal Next BEFORE the FSRS bookkeeping. If applyReview throws (corrupt
-    // state, unknown concept id, etc.) the user can still advance — losing one
-    // concept update is acceptable; stranding the user on the just-answered
-    // question is not.
-    setShowNextButton(true);
+    // Next is the question's own (QuestionShell shows it once graded), so a
+    // throw in the FSRS bookkeeping below (corrupt state, unknown concept id)
+    // cannot strand the learner on the answered question.
     setSessionStats({
       answered: sessionStats.answered + 1,
       correct: sessionStats.correct + (isCorrect ? 1 : 0),
@@ -2199,9 +2182,6 @@ function App() {
               onNext: loadNextQuestion,
               missNote: reaskShown ? 'It comes back once more, a few cards later.' : undefined,
             };
-            // The types on the shared QuestionShell show Next in their own footer;
-            // the others (cloze, Parsons, coding) still get it below the card.
-            const shellOwnsNext = !!currentQuestion && SHELL_TYPES.has(currentQuestion.type);
             const kind = inLessonExercise
               ? { label: `Lesson exercise ${exerciseIdx + 1} of ${flowLesson!.exercises.length}`, tone: 'accent' as const, title: 'A lesson exercise: an existing question of the topic, right after its rule card.' }
               : servedKind === 'review'
@@ -2263,15 +2243,6 @@ function App() {
                       {renderQuestion()}
                     </QuestionErrorBoundary>
                   </QuestionNavContext.Provider>
-
-                  {showNextButton && !shellOwnsNext && (
-                    <div className="next-button-container">
-                      <Button variant="primary" size="lg" onClick={loadNextQuestion}>
-                        {nav.label}
-                        <ArrowRight aria-hidden="true" size={16} />
-                      </Button>
-                    </div>
-                  )}
                 </div>
                 {showRulePanel && screenLesson && (
                   <RuleCardPanel

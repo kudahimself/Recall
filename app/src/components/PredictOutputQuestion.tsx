@@ -4,9 +4,8 @@ import { outputInstruction, outputMatches } from '../utils/predictOutput';
 import { DataTables } from './DataTables';
 import { CodeBlock, languageLabel } from './ui/CodeBlock';
 import { Prose } from './ui/InlineText';
-import { QuestionShell } from './ui/QuestionShell';
+import { AnswerColumns, QuestionShell } from './ui/QuestionShell';
 import { AnswerCompare, TextAnswer } from './ui/TextAnswer';
-import styles from './PredictOutputQuestion.module.css';
 
 interface Props {
   question: PredictQ;
@@ -53,7 +52,8 @@ export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, sho
       } : null}
     >
       <DataTables tables={question.tables} />
-      <div className={[styles.work, sideBySide ? styles.split : ''].filter(Boolean).join(' ')}>
+      {/* Short code sits beside the answer, so the whole question fits a laptop screen. */}
+      <AnswerColumns columns={sideBySide ? 'minmax(0, 1.15fr) minmax(0, 1fr)' : 'minmax(0, 1fr)'}>
         <CodeBlock code={question.code} language={question.language} label={languageLabel(question.language)} numbered />
         {!graded ? (
           <TextAnswer
@@ -76,7 +76,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, sho
             ]}
           />
         )}
-      </div>
+      </AnswerColumns>
     </QuestionShell>
   );
 };

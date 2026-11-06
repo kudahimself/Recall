@@ -42,8 +42,17 @@ export function splitComment(line: string, language?: CodeLanguage): [string, st
   return [line, ''];
 }
 
+/** Places in the code where something else goes: each marker becomes `render(index)`, in order. */
+export interface CodeSlots {
+  marker: string;
+  /** What goes in the slot; null shows the marker as written (more markers than slots). */
+  render: (index: number) => React.ReactNode | null;
+}
+
 interface CodeBlockProps {
   code: string;
+  /** Fill-in places in the code (a cloze's blanks). */
+  slots?: CodeSlots;
   language?: CodeLanguage;
   /** Show line numbers. */
   numbered?: boolean;
@@ -53,14 +62,35 @@ interface CodeBlockProps {
   compact?: boolean;
   /** Hide trailing comments (the rule card panel keeps only the form). */
   hideComments?: boolean;
+  /** Take the height of its container and scroll inside it. */
+  fill?: boolean;
   className?: string;
   'aria-label'?: string;
 }
 
-/** Read-only code, one style everywhere: questions, rule cards, explanations. */
-export function CodeBlock({ code, language, numbered, label, compact, hideComments, className, ...aria }: CodeBlockProps) {
+/**
+ * Read-only code, one style everywhere: questions, rule cards, explanations,
+ * the solution of a coding question. With `slots` it is a cloze: each blank
+ * marker in the code becomes an answer field, in place in its line.
+ */
+export function CodeBlock({ code, slots, language, numbered, label, compact, hideComments, fill, className, ...aria }: CodeBlockProps) {
+  let slot = 0;
+  // Text with its slot markers replaced, counting slots across the whole block.
+  const withSlots = (text: string, key: string): React.ReactNode => {
+    if (!slots || !text.includes(slots.marker)) return text;
+    return text.split(slots.marker).map((piece, i) => {
+      if (i === 0) return piece;
+      const node = slots.render(slot++);
+      return (
+        <React.Fragment key={`${key}-${i}`}>
+          {node ?? slots.marker}
+          {piece}
+        </React.Fragment>
+      );
+    });
+  };
   return (
-    <figure className={[styles.block, compact ? styles.compact : '', className].filter(Boolean).join(' ')} {...aria}>
+    <figure className={[styles.block, compact ? styles.compact : '', fill ? styles.fill : '', className].filter(Boolean).join(' ')} {...aria}>
       {label && <figcaption className={styles.label}>{label}</figcaption>}
       <pre className={styles.pre}>
         <code>
@@ -68,11 +98,11 @@ export function CodeBlock({ code, language, numbered, label, compact, hideCommen
             const [body, comment] = splitComment(line, language);
             const shown = hideComments ? body.replace(/\s+$/, '') : body;
             return (
-              <span className={styles.line} key={i}>
+              <span className={[styles.line, slots ? styles.slotLine : ''].filter(Boolean).join(' ')} key={i}>
                 {numbered && <span className={styles.ln} aria-hidden="true">{i + 1}</span>}
                 <span className={styles.text}>
-                  {shown}
-                  {comment && !hideComments && <span className={styles.comment}>{comment}</span>}
+                  {withSlots(shown, `b${i}`)}
+                  {comment && !hideComments && <span className={styles.comment}>{withSlots(comment, `c${i}`)}</span>}
                   {!shown && (!comment || hideComments) ? ' ' : null}
                 </span>
               </span>

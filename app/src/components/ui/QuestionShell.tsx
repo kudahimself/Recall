@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Lightbulb } from 'lucide-react';
 import { Question } from '../../types';
 import { isTypingTarget, useShortcut } from '../../keyboard/shortcuts';
@@ -18,6 +18,16 @@ export interface QuestionNav {
 
 export const QuestionNavContext = createContext<QuestionNav | null>(null);
 
+/** What the shell offers the answer area inside it. */
+export interface QuestionShellApi {
+  /** Run the step's main action (check, then Next), as Enter does; false when there is none. */
+  primary: () => boolean;
+  /** Leave a text box or editor: focus goes to the question, so single keys work again. */
+  leave: () => void;
+}
+
+export const QuestionShellContext = createContext<QuestionShellApi | null>(null);
+
 export interface ShellFeedback {
   verdict: Verdict;
   /** The verdict word: "Correct", "Not quite". */
@@ -31,7 +41,17 @@ export interface ShellAction {
   label: string;
   onAction: () => void;
   disabled?: boolean;
+  /** The word beside its key in the key hints; "check" unless given. */
+  keyWord?: string;
 }
+
+/** An action with its own key (H or S) and a short note beside its button, e.g. what it costs. */
+export interface ShellKeyAction extends ShellAction {
+  note?: string;
+}
+
+/** A key hint in the footer: the keys ("Space", "Alt+ArrowUp/ArrowDown") and what they do. */
+export type KeyHint = [string, string];
 
 interface QuestionShellProps {
   question: Question;
@@ -42,57 +62,77 @@ interface QuestionShellProps {
   graded: boolean;
   /** The step's main action while answering ("Check answer"); Next replaces it once graded. */
   action?: ShellAction;
-  /** The question's hint, toggled with H while answering. */
-  hint?: string | null;
+  /**
+   * The question's hints, shown with H while answering. Several hints come one
+   * at a time: each H shows the next, and after the last H hides them.
+   */
+  hint?: string | readonly string[] | null;
+  /** H runs this instead of showing a hint (coding: reveal the next hint tier, which costs credit). */
+  hintAction?: ShellKeyAction | null;
+  /**
+   * The verdict banner. Usually given once graded; a type can show one before
+   * that too (a coding check that failed but can be tried again).
+   */
   feedback?: ShellFeedback | null;
   /** Shown after a miss once asked for (S). */
   solution?: React.ReactNode;
+  /** S runs this instead of showing `solution` (coding: give up, or show the solution beside the code). */
+  solutionAction?: ShellKeyAction | null;
   /** Changes when a multi-step question moves on (decide, then justify): focus returns to the answer. */
   stage?: string;
   /** How many options the 1-9 keys pick from, for the key hints. */
   pickCount?: number;
   /** The answer is typed in a text box (Shift+Enter checks). */
   typed?: boolean;
+  /** Key hints for the answer area itself (Parsons' list keys), before the check key. */
+  keys?: KeyHint[];
   /** A content-heavy type (tables, two option lists, code lines): on a short screen it trades a little air for room. */
   dense?: boolean;
+  /** The card takes the whole column and a growing region (an editor) takes the height left. */
+  fill?: boolean;
   className?: string;
   children: React.ReactNode;
 }
 
 const DIFFICULTY_LABEL: Record<string, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
 
-const FIRST_CONTROL = 'input:not([disabled]):not([type="hidden"]):not([type="radio"]), textarea:not([disabled]), select:not([disabled])';
+const FIRST_CONTROL = 'input:not([disabled]):not([type="hidden"]):not([type="radio"]), textarea:not([disabled]), select:not([disabled]), [role="listbox"]:not([aria-disabled="true"])';
 
 /**
  * The frame every question type renders its answer area in: badges and the
- * prompt, the answer, the hint, the graded banner in a live region, and one
- * footer with the step's action, which becomes Next once graded.
+ * prompt, the answer, the hint, the banner in a live region, and one footer
+ * with the step's action, which becomes Next once graded.
  *
  * It owns the keys of a question (Enter checks then goes Next, Shift+Enter or
  * Ctrl/Cmd+Enter check from a text box, H hint, S solution after a miss, Esc
  * leaves a text box) and focus: the first answer control on mount and on each
- * new step, the banner once graded.
+ * new step, the banner when it appears.
  */
 export function QuestionShell({
-  question, format, task, graded, action, hint, feedback, solution, stage,
-  pickCount, typed = false, dense = false, className, children,
+  question, format, task, graded, action, hint, hintAction, feedback, solution, solutionAction, stage,
+  pickCount, typed = false, keys, dense = false, fill = false, className, children,
 }: QuestionShellProps) {
   const nav = useContext(QuestionNavContext);
   const promptId = useId();
   const cardRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
-  const [hintOpen, setHintOpen] = useState(false);
+  const [hintsShown, setHintsShown] = useState(0);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
+  const hints = useMemo(
+    () => (hint == null ? [] : (typeof hint === 'string' ? [hint] : [...hint]).filter(h => h.trim().length > 0)),
+    [hint],
+  );
   const missed = graded && !!feedback && feedback.verdict !== 'right';
   const canShowSolution = missed && !!solution && !solutionOpen;
-  const hasHint = !graded && !!hint;
+  const hasHint = !graded && !hintAction && hints.length > 0;
+  const hasFeedback = !!feedback;
 
   // Focus the first answer control when the question (or its step) appears.
   useEffect(() => {
-    if (graded) return;
+    if (graded || hasFeedback) return;
     const body = bodyRef.current;
     if (!body) return;
     const radio = body.querySelector<HTMLInputElement>('input[type="radio"]:checked:not([disabled])')
@@ -102,13 +142,13 @@ export function QuestionShell({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
-  // Once graded: open the banner smoothly and move focus to it.
+  // When the banner appears (or the answer is graded): open it smoothly and move focus to it.
   useEffect(() => {
-    if (!graded) { setRevealed(false); return; }
+    if (!hasFeedback) { setRevealed(false); return; }
     const frame = requestAnimationFrame(() => setRevealed(true));
     bannerRef.current?.focus({ preventScroll: true });
     return () => cancelAnimationFrame(frame);
-  }, [graded]);
+  }, [hasFeedback, graded]);
 
   const inQuestion = (target: EventTarget | null) =>
     !(target instanceof Node) || target === document.body || !!cardRef.current?.contains(target);
@@ -123,6 +163,18 @@ export function QuestionShell({
     action.onAction();
     return true;
   };
+
+  const leave = () => cardRef.current?.focus({ preventScroll: true });
+
+  // The answer area reaches the shell through this; refs keep it stable across renders.
+  const primaryRef = useRef(primary);
+  primaryRef.current = primary;
+  const api = useMemo<QuestionShellApi>(() => ({
+    primary: () => primaryRef.current(),
+    leave: () => cardRef.current?.focus({ preventScroll: true }),
+  }), []);
+
+  const nextHint = () => setHintsShown(n => (n >= hints.length ? 0 : n + 1));
 
   useShortcut('submit', e => {
     const t = e.target;
@@ -144,22 +196,44 @@ export function QuestionShell({
 
   useShortcut('submitTyping', e => (inQuestion(e.target) ? primary() : false));
 
-  useShortcut('hint', () => { setHintOpen(o => !o); }, hasHint);
+  useShortcut('hint', () => {
+    if (hintAction) {
+      if (hintAction.disabled) return false;
+      hintAction.onAction();
+      return true;
+    }
+    nextHint();
+    return true;
+  }, hasHint || (!!hintAction && !hintAction.disabled));
 
-  useShortcut('solution', () => { setSolutionOpen(true); }, canShowSolution);
+  useShortcut('solution', () => {
+    if (solutionAction) {
+      if (solutionAction.disabled) return false;
+      solutionAction.onAction();
+      return true;
+    }
+    setSolutionOpen(true);
+    return true;
+  }, solutionAction ? !solutionAction.disabled : canShowSolution);
 
   useShortcut('leaveTyping', e => {
     if (!isTypingTarget(e.target) || !inQuestion(e.target)) return false;
-    cardRef.current?.focus({ preventScroll: true });
+    leave();
     return true;
   });
 
-  const keyHints: Array<[string, string]> = graded
-    ? [['Enter', nav ? 'next' : ''], ...(canShowSolution ? [['S', 'solution'] as [string, string]] : [])]
+  const hintLabel = hintsShown === 0 ? 'Hint'
+    : hintsShown < hints.length ? `Next hint (${hintsShown + 1} of ${hints.length})`
+    : hints.length > 1 ? 'Hide hints' : 'Hide hint';
+
+  const showsSolutionKey = solutionAction ? !solutionAction.disabled : canShowSolution;
+  const keyHints: KeyHint[] = graded
+    ? [['Enter', nav ? 'next' : ''], ...(showsSolutionKey ? [['S', 'solution'] as KeyHint] : [])]
     : [
-      ...(pickCount ? [[pickCount > 1 ? `1-${Math.min(pickCount, 9)}` : '1', 'pick'] as [string, string]] : []),
-      [typed ? 'Shift+Enter' : 'Enter', 'check'],
-      ...(hasHint ? [['H', 'hint'] as [string, string]] : []),
+      ...(keys ?? []),
+      ...(pickCount ? [[pickCount > 1 ? `1-${Math.min(pickCount, 9)}` : '1', 'pick'] as KeyHint] : []),
+      ...(action ? [[typed ? 'Shift+Enter' : 'Enter', action.keyWord ?? 'check'] as KeyHint] : []),
+      ...(hasHint ? [['H', 'hint'] as KeyHint] : []),
     ];
 
   const meta = (
@@ -170,10 +244,17 @@ export function QuestionShell({
     </>
   );
 
+  const keyAction = (a: ShellKeyAction, key: string) => (
+    <span className={styles.keyAction}>
+      <Button variant="ghost" shortcut={key} onClick={a.onAction} disabled={a.disabled}>{a.label}</Button>
+      {a.note && <span className={styles.note}>{a.note}</span>}
+    </span>
+  );
+
   return (
     <article
       ref={cardRef}
-      className={[styles.card, dense ? styles.dense : '', className].filter(Boolean).join(' ')}
+      className={[styles.card, dense ? styles.dense : '', fill ? styles.fill : '', className].filter(Boolean).join(' ')}
       aria-labelledby={promptId}
       tabIndex={-1}
       data-graded={graded || undefined}
@@ -185,17 +266,25 @@ export function QuestionShell({
       </header>
 
       <div className={styles.body} ref={bodyRef}>
-        {children}
+        <QuestionShellContext.Provider value={api}>
+          {children}
+        </QuestionShellContext.Provider>
 
-        {hasHint && hintOpen && (
+        {hasHint && hintsShown > 0 && (
           <div className={styles.hint}>
             <Lightbulb className={styles.hintIcon} aria-hidden="true" />
-            <span><InlineText text={hint as string} /></span>
+            {hints.length === 1
+              ? <span><InlineText text={hints[0]} /></span>
+              : (
+                <ol className={styles.hintList}>
+                  {hints.slice(0, hintsShown).map((h, i) => <li key={i}><InlineText text={h} /></li>)}
+                </ol>
+              )}
           </div>
         )}
       </div>
 
-      {/* The verdict sits between the answer and the footer, outside the
+      {/* The banner sits between the answer and the footer, outside the
           scrolling body, so it is always in view with Next; a long answer
           area gives up height instead. */}
       <div
@@ -204,7 +293,7 @@ export function QuestionShell({
         className={[styles.live, revealed ? styles.liveOpen : ''].filter(Boolean).join(' ')}
       >
         <div className={styles.liveInner}>
-          {graded && feedback && (
+          {feedback && (
             <FeedbackBanner
               ref={bannerRef}
               verdict={feedback.verdict}
@@ -232,20 +321,23 @@ export function QuestionShell({
             </Button>
           )}
         {hasHint && (
-          <Button variant="ghost" shortcut="H" icon={<Lightbulb />} onClick={() => setHintOpen(o => !o)} aria-expanded={hintOpen}>
-            {hintOpen ? 'Hide hint' : 'Hint'}
+          <Button variant="ghost" shortcut="H" icon={<Lightbulb />} onClick={nextHint} aria-expanded={hintsShown > 0}>
+            {hintLabel}
           </Button>
         )}
-        {canShowSolution && (
-          <Button variant="ghost" shortcut="S" onClick={() => setSolutionOpen(true)}>Show solution</Button>
-        )}
+        {!graded && hintAction && keyAction(hintAction, 'H')}
+        {solutionAction
+          ? keyAction(solutionAction, 'S')
+          : canShowSolution && (
+            <Button variant="ghost" shortcut="S" onClick={() => setSolutionOpen(true)}>Show solution</Button>
+          )}
         <span className={styles.spacer} />
         {/* On a short screen the difficulty and type move down here, beside the keys. */}
         <span className={styles.footMeta} aria-hidden="true">{meta}</span>
         <span className={styles.keyHints} aria-hidden="true">
           {keyHints.filter(([, label]) => label).map(([k, label]) => (
             <span key={k + label} className={styles.keyHint}>
-              {k.includes('-') && !k.includes('+')
+              {/^\d-\d$/.test(k)
                 ? <><KeyCombo combo={k.split('-')[0]} />-<KeyCombo combo={k.split('-')[1]} /></>
                 : <KeyCombo combo={k} />}
               {label}
@@ -255,6 +347,44 @@ export function QuestionShell({
         </span>
       </footer>
     </article>
+  );
+}
+
+/**
+ * A part of the answer area that gives up height before the card would
+ * scroll: it shrinks and scrolls inside itself (a long list of lines). With
+ * `grow` it also takes the height left over (an editor in a `fill` card).
+ */
+export function QuestionRegion({ grow = false, className, children, ...rest }: {
+  grow?: boolean;
+  className?: string;
+  children: React.ReactNode;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={[styles.region, grow ? styles.grow : '', className].filter(Boolean).join(' ')} {...rest}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Side-by-side parts of an answer (code beside the answer box, the editor
+ * beside the live preview), as grid columns such as
+ * "minmax(0, 1.15fr) minmax(0, 1fr)". One column on a phone.
+ */
+export function AnswerColumns({ columns, className, children, ...rest }: {
+  columns: string;
+  className?: string;
+  children: React.ReactNode;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={[styles.columns, className].filter(Boolean).join(' ')}
+      style={{ '--answer-columns': columns } as React.CSSProperties}
+      {...rest}
+    >
+      {children}
+    </div>
   );
 }
 

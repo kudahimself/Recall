@@ -76,6 +76,63 @@ export function TextAnswer({ id, label, value, onChange, multiline, rows = 3, pl
   );
 }
 
+interface BlankProps {
+  /** 0-based position among the blanks. */
+  index: number;
+  count: number;
+  value: string;
+  onChange: (value: string) => void;
+  /** Width in characters, so the blank sits in its line of code. */
+  widthCh: number;
+  /** After grading: right, or wrong with the expected text shown beside what was typed. */
+  status?: 'right' | 'wrong';
+  expected?: string;
+  inputRef?: (el: HTMLInputElement | null) => void;
+}
+
+/**
+ * A fill-in blank inside a line of code (cloze): the same field as a typed
+ * answer, sized in characters. Keys come from the question (Enter goes to the
+ * next blank). After grading it shows what was typed, marked right, or struck
+ * through with the expected text beside it.
+ */
+export function Blank({ index, count, value, onChange, widthCh, status, expected, inputRef }: BlankProps) {
+  const name = `Blank ${index + 1} of ${count}`;
+  if (status === 'right') {
+    return (
+      <span className={[styles.blankDone, styles.blankRight].join(' ')}>
+        <span className="sr-only">{name}, right: </span>
+        {value}
+      </span>
+    );
+  }
+  if (status === 'wrong') {
+    return (
+      <span className={styles.blankFix}>
+        <span className="sr-only">{name}, not right. You wrote </span>
+        <s className={[styles.blankDone, styles.blankWrong].join(' ')}>{value}</s>
+        <span className="sr-only">; the answer is </span>
+        <ins className={[styles.blankDone, styles.blankRight].join(' ')}>{expected}</ins>
+      </span>
+    );
+  }
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      aria-label={name}
+      className={styles.blank}
+      style={{ '--blank-ch': widthCh } as React.CSSProperties}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      spellCheck={false}
+      autoCapitalize="off"
+      autoCorrect="off"
+      autoComplete="off"
+    />
+  );
+}
+
 /** A typed answer after grading, beside the expected one. */
 export function AnswerCompare({ items, columns = items.length }: {
   items: Array<{ label: string; value: React.ReactNode; tone: 'right' | 'wrong' | 'neutral'; mono?: boolean }>;

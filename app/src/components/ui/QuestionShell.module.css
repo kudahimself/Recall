@@ -76,6 +76,50 @@
   flex-shrink: 0;
 }
 
+/* A region of the answer that gives up height before the card would scroll:
+   it shrinks, down to a few lines, and scrolls inside itself. */
+.body > .region {
+  flex: 0 5 auto;
+  min-height: var(--region-min-h);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sample-data tables give up height the same way, but slower than a list
+   or an editor (shrink 1 against their 5): their rows scroll inside, and
+   each grid keeps its header and two rows. */
+.body > :global(.data-tables) {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+/* A card that fills the column: its body and a growing region (the code
+   editor) take the height left after the prompt, the banner and the footer. */
+.fill {
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+.fill .body {
+  flex: 1 1 auto;
+}
+
+.body > .grow {
+  flex: 1 5 auto;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: var(--answer-columns);
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.region > .columns {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .hint {
   display: flex;
   align-items: flex-start;
@@ -87,6 +131,14 @@
   color: var(--text);
   font-size: var(--fs-body);
   animation: hint-in var(--dur) var(--ease) both;
+}
+
+.hintList {
+  margin: 0;
+  padding-left: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
 }
 
 .hintIcon {
@@ -150,6 +202,18 @@
   flex: 1 1 auto;
 }
 
+/* A keyed action (H, S) with what it costs beside it. */
+.keyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.note {
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+}
+
 .keyHints {
   display: inline-flex;
   flex-wrap: wrap;
@@ -207,6 +271,10 @@
 }
 
 @media (max-width: 767px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .head,
   .body,
   .live {

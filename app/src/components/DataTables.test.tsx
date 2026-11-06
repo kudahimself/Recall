@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { DataTables } from './DataTables';
-import { renderInlineCode } from './InlineCode';
+import { InlineText } from './ui/InlineText';
 import { PredictOutputQuestion } from './PredictOutputQuestion';
 import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
 import { questions } from '../data/questions';
@@ -69,16 +69,16 @@ describe('DataTables', () => {
   });
 });
 
-describe('renderInlineCode (the shared InlineText, in every course)', () => {
+describe('InlineText, the one prose renderer in every course', () => {
   it('turns backticked spans into inline code and leaves the rest as text', () => {
-    render(<p data-testid="text">{renderInlineCode('Use `IS NULL`, not `= NULL`.', Topic.TSQL_FILTERING)}</p>);
+    render(<p data-testid="text"><InlineText text="Use `IS NULL`, not `= NULL`." /></p>);
     const text = screen.getByTestId('text');
     expect(codesIn(text).map(c => c.textContent)).toEqual(['IS NULL', '= NULL']);
     expect(text.textContent).toBe('Use IS NULL, not = NULL.');
   });
 
   it('shows an unpaired backtick as written', () => {
-    render(<p data-testid="text">{renderInlineCode('a `b` c ` d', Topic.TSQL_FILTERING)}</p>);
+    render(<p data-testid="text"><InlineText text="a `b` c ` d" /></p>);
     const text = screen.getByTestId('text');
     expect(codesIn(text)).toHaveLength(1);
     expect(text.textContent).toBe('a b c ` d');

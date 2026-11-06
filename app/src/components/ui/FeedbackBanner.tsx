@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { Check, CircleDot, X } from 'lucide-react';
+import { Check, CircleDot, CircleHelp, X } from 'lucide-react';
 import styles from './FeedbackBanner.module.css';
 
 export type Verdict = 'right' | 'partial' | 'wrong';
@@ -48,3 +48,37 @@ export const FeedbackBanner = forwardRef<HTMLDivElement, FeedbackBannerProps>(fu
     </div>
   );
 });
+
+export interface ResultItem {
+  /** Passed, failed, or not decided (the checker cannot tell). */
+  state: 'pass' | 'fail' | 'unsure';
+  text: React.ReactNode;
+  /** Why it failed, or what came out. */
+  detail?: React.ReactNode;
+}
+
+const RESULT_ICON: Record<ResultItem['state'], React.ReactNode> = {
+  pass: <Check strokeWidth={2.5} />,
+  fail: <X strokeWidth={2.5} />,
+  unsure: <CircleHelp strokeWidth={2.25} />,
+};
+
+const RESULT_WORD: Record<ResultItem['state'], string> = { pass: 'Passed', fail: 'Failed', unsure: 'Not sure' };
+
+/** The checks a banner reports (a coding question's tests): one row each, marked by icon and word. */
+export function ResultList({ items, className }: { items: ResultItem[]; className?: string }) {
+  return (
+    <ul className={[styles.results, className].filter(Boolean).join(' ')}>
+      {items.map((item, i) => (
+        <li key={i} className={[styles.result, styles[item.state]].join(' ')}>
+          <span className={styles.resultIcon} aria-hidden="true">{RESULT_ICON[item.state]}</span>
+          <span className={styles.resultText}>
+            <span className="sr-only">{RESULT_WORD[item.state]}: </span>
+            {item.text}
+            {item.detail && <span className={styles.resultDetail}>{item.detail}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
