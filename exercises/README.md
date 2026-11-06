@@ -14,7 +14,7 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r exercises/requirements.txt
 ```
 
-`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework and drf-spectacular, which only the Django exercises (`exercises/backend/dj_*`) need.
+`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py and fakeredis, which only the Django exercises (`exercises/backend/dj_*`) need.
 Python 3.10 or newer runs them all.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
 

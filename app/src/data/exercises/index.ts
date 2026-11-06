@@ -3,7 +3,8 @@
  * editor after the topic's lesson and ramp. The files live in the repo's
  * exercises/ folder (see exercises/README.md); this list is what the app shows.
  * Written one section per PR, like the lessons: Backend (Python) Fundamentals,
- * Python Advanced, Django, Django Advanced & Deployment and DRF Production Patterns so far.
+ * Python Advanced, Django, Django Advanced & Deployment, DRF Production Patterns and
+ * Celery & Background Tasks so far.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -748,6 +749,32 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Give the lending desk named queries, one service that holds the lending rules, and a thin view.',
       'A manager that hides deleted members with a `counts()` method, a `QuerySet` whose methods chain through `as_manager()`, a `lend()` service that checks, writes and refuses with domain errors inside `atomic()`, and a view that only turns its result into a response.',
+    ),
+  },
+  {
+    id: 'dj_celery',
+    topicKeys: [Topic.DJ_CELERY],
+    title: 'Due notices',
+    folder: 'exercises/backend/dj_celery',
+    starter: ['due_notices/celery_app.py', 'due_notices/tasks.py', 'due_notices/views.py'],
+    tests: 'test_due_notices.py',
+    minutes: 25,
+    task: lines(
+      'Move the library\'s due-date emails out of the request and into Celery tasks.',
+      'Set up the Celery app from the `CELERY_*` settings with a beat schedule, write a bound `@shared_task` that retries when the mail server is down, a task that queues one notice per due loan, a report built as a `chain` of signatures, and views that queue the work with `delay()` and `apply_async(countdown=...)` and answer 202 with the task id at once.',
+    ),
+  },
+  {
+    id: 'dj_redis',
+    topicKeys: [Topic.DJ_REDIS],
+    title: 'Reading room',
+    folder: 'exercises/backend/dj_redis',
+    starter: ['reading_room/redis_settings.py', 'reading_room/stats.py'],
+    tests: 'test_reading_room.py',
+    minutes: 25,
+    task: lines(
+      'Put one Redis server to work as the cache, the Celery broker, the session store and a leaderboard.',
+      'Point `CACHES`, `CELERY_BROKER_URL` and `SESSION_ENGINE` at Redis, read a count through the cache and delete it when the data changes, count views with `add()` and `incr()`, and rank readers with a set and a sorted set through redis-py.',
     ),
   },
 ];
