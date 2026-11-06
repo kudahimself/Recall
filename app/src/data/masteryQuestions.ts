@@ -34,8 +34,9 @@ export const masteryQuestions: Question[] = [
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to read a CSV file from "/data/employees.csv" into DataFrame "df" with headers enabled and schema inference enabled.`,
+    question: `Write a PySpark statement to read a CSV file from "/Volumes/main/hr/raw/employees.csv" into DataFrame "df" with headers enabled and schema inference enabled.`,
     starterCode: `# Read CSV file into df\ndf = `,
+    requires: [/header/, /inferSchema/],
     testCases: [
       {
         input: 'CSV file with headers',
@@ -43,13 +44,17 @@ export const masteryQuestions: Question[] = [
         description: 'Should read CSV with header and inferSchema',
       },
     ],
-    solution: `df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load("/data/employees.csv")
+    solution: `df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load("/Volumes/main/hr/raw/employees.csv")
 # OR
-df = spark.read.csv("/data/employees.csv", header=True, inferSchema=True)`,
+df = spark.read.csv("/Volumes/main/hr/raw/employees.csv", header=True, inferSchema=True)
+# OR
+df = spark.read.option("header", "true").option("inferSchema", "true").csv("/Volumes/main/hr/raw/employees.csv")
+# OR
+df = spark.read.option("header", True).option("inferSchema", True).csv("/Volumes/main/hr/raw/employees.csv")`,
     explanation: 'header=True treats the first row as column headers. inferSchema=True auto-detects column data types by scanning the file. In production, prefer explicit StructType schemas for performance.',
     tieredHints: {
       apiSignature: 'DataFrameReader.csv(path: str, header: bool = None, inferSchema: bool = None) -> DataFrame',
-      skeleton: `df = spark.read.____("/data/employees.csv", ____=True, ____=True)`,
+      skeleton: `df = spark.read.____("/Volumes/main/hr/raw/employees.csv", ____=True, ____=True)`,
     },
     hints: ['Use spark.read.csv() or spark.read.format("csv")', 'Set header and inferSchema options'],
     tags: ['csv', 'read', 'io', 'file-formats'],
@@ -62,8 +67,9 @@ df = spark.read.csv("/data/employees.csv", header=True, inferSchema=True)`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to save DataFrame "df" as a Parquet file at storage path "/output/employees.parquet", replacing any existing files at that location.`,
+    question: 'Write a PySpark statement that saves DataFrame "df" as Parquet files in the volume directory "/Volumes/main/hr/curated/employees_parquet", replacing anything already there.',
     starterCode: `# Write df to Parquet in overwrite mode\n`,
+    requires: [/overwrite/, /parquet/],
     testCases: [
       {
         input: 'DataFrame to write',
@@ -71,13 +77,17 @@ df = spark.read.csv("/data/employees.csv", header=True, inferSchema=True)`,
         description: 'Should write Parquet in overwrite mode',
       },
     ],
-    solution: `df.write.format("parquet").mode("overwrite").save("/output/employees.parquet")
+    solution: `df.write.format("parquet").mode("overwrite").save("/Volumes/main/hr/curated/employees_parquet")
 # OR
-df.write.parquet("/output/employees.parquet", mode="overwrite")`,
+df.write.parquet("/Volumes/main/hr/curated/employees_parquet", mode="overwrite")
+# OR
+df.write.mode("overwrite").parquet("/Volumes/main/hr/curated/employees_parquet")
+# OR
+df.write.mode("overwrite").format("parquet").save("/Volumes/main/hr/curated/employees_parquet")`,
     explanation: 'Parquet is a compressed columnar storage format. Specifying mode("overwrite") replaces existing output files. Available save modes include: "append", "overwrite", "errorifexists" (default), and "ignore".',
     tieredHints: {
       apiSignature: 'DataFrameWriter.parquet(path: str, mode: str = None) -> None',
-      skeleton: `df.write.____("/output/employees.parquet", ____="____")`,
+      skeleton: `df.write.____("/Volumes/main/hr/curated/employees_parquet", ____="____")`,
     },
     hints: ['Use .write.parquet() or .write.format("parquet")', 'Set mode to "overwrite"'],
     tags: ['parquet', 'write', 'io', 'file-formats'],
@@ -90,7 +100,7 @@ df.write.parquet("/output/employees.parquet", mode="overwrite")`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to read a JSON dataset from "/data/events.json" into DataFrame "df".`,
+    question: `Write a PySpark statement to read a JSON dataset from "/Volumes/main/web/raw/events.json" into DataFrame "df".`,
     starterCode: `# Read JSON file into df\ndf = `,
     testCases: [
       {
@@ -99,14 +109,13 @@ df.write.parquet("/output/employees.parquet", mode="overwrite")`,
         description: 'Should read JSON file',
       },
     ],
-    solution: `df = spark.read.json("/data/events.json")
+    solution: `df = spark.read.json("/Volumes/main/web/raw/events.json")
 # OR
-df = spark.read.format("json").load("/data/events.json")`,
+df = spark.read.format("json").load("/Volumes/main/web/raw/events.json")`,
     explanation: 'spark.read.json() parses single-line or multi-line JSON files. For multi-line JSON objects, pass option("multiLine", "true").',
     tieredHints: {
       apiSignature: 'DataFrameReader.json(path: str) -> DataFrame',
-      skeleton: `-- ____ read JSON file
-df = ____.____.____("/data/events.json")`,
+      skeleton: 'df = ____.____.____("/Volumes/main/web/raw/events.json")',
     },
     hints: ['Use spark.read.json() or spark.read.format("json")'],
     tags: ['json', 'read', 'io', 'file-formats'],
@@ -119,26 +128,28 @@ df = ____.____.____("/data/events.json")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to read a metastore-registered Delta table named "sales" into DataFrame "df".`,
+    question: 'Write a PySpark statement that reads the Unity Catalog table "main.sales.orders" into DataFrame "df".',
     starterCode: `# Read catalog table into df\ndf = `,
     testCases: [
       {
-        input: 'Delta table',
-        expectedOutput: 'spark.read.table("sales") or spark.table("sales")',
-        description: 'Should read Delta table',
+        input: 'Unity Catalog table main.sales.orders',
+        expectedOutput: 'spark.read.table("main.sales.orders") or spark.table("main.sales.orders")',
+        description: 'Should read the catalog table',
       },
     ],
-    solution: `df = spark.read.table("sales")
+    solution: `df = spark.read.table("main.sales.orders")
 # OR
-df = spark.table("sales")
+df = spark.table("main.sales.orders")
 # OR
-df = spark.read.format("delta").table("sales")`,
-    explanation: 'spark.table("table_name") reads a managed or external table registered in the metastore. For un-registered Delta paths, use spark.read.format("delta").load("/path").',
+df = spark.read.format("delta").table("main.sales.orders")
+# OR
+df = spark.sql("SELECT * FROM main.sales.orders")`,
+    explanation: 'spark.table("catalog.schema.table"), or its long form spark.read.table(...), reads any table registered in Unity Catalog, managed or external, into a DataFrame, and Delta is the default format so no format call is needed. A table name is not a path: to read Delta files by location you would use spark.read.format("delta").load(path) instead.',
     tieredHints: {
       apiSignature: 'SparkSession.table(tableName: str) -> DataFrame',
-      skeleton: `df = ____.____("____")`,
+      skeleton: 'df = ____.____("____")',
     },
-    hints: ['Use spark.table("sales") or spark.read.table("sales")'],
+    hints: ['Use spark.table() or spark.read.table() with the three-level name'],
     tags: ['delta', 'read', 'io', 'file-formats'],
     concepts: ['delta-acid', 'ps-io-csv', 'ps-io-parquet'],
   },
@@ -149,8 +160,9 @@ df = spark.read.format("delta").table("sales")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to write DataFrame "df" to a catalog Delta table named "output_sales", appending new records to the existing table.`,
+    question: 'Write a PySpark statement that appends the rows of DataFrame "df" to the existing catalog table "output_sales" (a Delta table), keeping the rows already in it.',
     starterCode: `# Append df to catalog Delta table\n`,
+    requires: [/append/, /saveAsTable/],
     testCases: [
       {
         input: 'DataFrame',
@@ -160,7 +172,11 @@ df = spark.read.format("delta").table("sales")`,
     ],
     solution: `df.write.format("delta").mode("append").saveAsTable("output_sales")
 # OR
-df.write.mode("append").saveAsTable("output_sales")`,
+df.write.mode("append").saveAsTable("output_sales")
+# OR
+df.write.saveAsTable("output_sales", mode="append")
+# OR
+df.write.saveAsTable("output_sales", format="delta", mode="append")`,
     explanation: 'saveAsTable("table_name") writes DataFrame contents into a catalog table. Specifying mode("append") appends rows without overwriting existing data.',
     tieredHints: {
       apiSignature: 'DataFrameWriter.saveAsTable(name: str, mode: str = None) -> None',
@@ -176,14 +192,14 @@ df.write.mode("append").saveAsTable("output_sales")`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
-    question: 'Which set represents the four valid DataFrame save modes supported by PySpark?',
+    question: 'Which list names the four save modes a PySpark DataFrame writer accepts?',
     options: [
-      { id: 'a', text: 'overwrite (replaces table data), append (attaches rows), error (fails if path exists, default), ignore (skips write if path exists).', isCorrect: true },
-      { id: 'b', text: 'create (initializes storage path), update (modifies matching rows), delete (purges files), merge (combines underlying schemas).', isCorrect: false },
-      { id: 'c', text: 'insert (applies new records), replace (swaps target files), truncate (wipes table data), drop (deletes metastore catalog entity).', isCorrect: false },
-      { id: 'd', text: 'read (opens data stream), write (commits data stream), append (attaches new records), overwrite (replaces storage directory).', isCorrect: false },
+      { id: 'a', text: 'overwrite (replace the data), append (add the rows), errorifexists (fail if data exists; the default), ignore (skip the write if data exists).', isCorrect: true },
+      { id: 'b', text: 'overwrite (replace the data), append (add the rows), merge (upsert by key), errorifexists (fail if data exists; the default).', isCorrect: false },
+      { id: 'c', text: 'insert (add the rows), replace (swap the files), truncate (empty, then write), errorifexists (fail if data exists; the default).', isCorrect: false },
+      { id: 'd', text: 'append (add the rows), overwrite (replace the data), update (change matching rows), ignore (skip the write if data exists).', isCorrect: false },
     ],
-    explanation: 'PySpark supports four write modes: "error" / "errorifexists" (default: throws AnalysisException if data exists), "overwrite" (replaces data), "append" (adds rows), and "ignore" (skips write silently if data exists).',
+    explanation: 'A DataFrame writer has exactly four modes: "errorifexists" (also spelled "error", the default, which fails when the target already holds data), "overwrite", "append" and "ignore" (which silently skips the write). Upserts and updates are not save modes: on Delta they are MERGE INTO and UPDATE statements.',
     tags: ['write-modes', 'io', 'file-formats'],
     concepts: ['ps-write-modes', 'ps-io-csv', 'ps-io-parquet'],
   },
@@ -211,7 +227,7 @@ df.write.mode("append").saveAsTable("output_sales")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark statement to read a pipe-delimited ("|") CSV file from "/data/sales.csv" into DataFrame "df" with headers enabled and schema inference enabled.`,
+    question: `Write a PySpark statement to read a pipe-delimited ("|") CSV file from "/Volumes/main/sales/raw/sales.csv" into DataFrame "df" with headers enabled and schema inference enabled.`,
     starterCode: `# Read pipe-delimited CSV into df\ndf = `,
     testCases: [
       {
@@ -220,13 +236,13 @@ df.write.mode("append").saveAsTable("output_sales")`,
         description: 'Should read with pipe delimiter',
       },
     ],
-    solution: `df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").option("delimiter", "|").load("/data/sales.csv")
+    solution: `df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").option("delimiter", "|").load("/Volumes/main/sales/raw/sales.csv")
 # OR
-df = spark.read.csv("/data/sales.csv", header=True, inferSchema=True, sep="|")`,
+df = spark.read.csv("/Volumes/main/sales/raw/sales.csv", header=True, inferSchema=True, sep="|")`,
     explanation: 'Custom delimiters can be set using option("delimiter", "|") or option("sep", "|") in chained style, or via sep="|" keyword argument in spark.read.csv(). Note that the header option is singular "header".',
     tieredHints: {
       apiSignature: 'DataFrameReader.csv(path: str, header: bool = None, inferSchema: bool = None, sep: str = None) -> DataFrame',
-      skeleton: `df = spark.read.____("/data/sales.csv", ____=True, ____=True, ____="|")`,
+      skeleton: `df = spark.read.____("/Volumes/main/sales/raw/sales.csv", ____=True, ____=True, ____="|")`,
     },
     hints: ['Use option("delimiter", "|") or option("sep", "|")', 'Or use sep="|" in spark.read.csv()'],
     tags: ['csv', 'delimiter', 'io', 'file-formats'],
@@ -239,34 +255,43 @@ df = spark.read.csv("/data/sales.csv", header=True, inferSchema=True, sep="|")`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.SQL,
-    question: `Write a SQL DDL statement to create a table named "employees" using CSV format from data files at "/data/employees.csv", specifying header="true" and inferSchema="true".`,
+    question: 'Write a SQL statement that creates an external table named "employees" over the CSV files in the cloud directory "s3://acme-hr/raw/employees/" (registered as a Unity Catalog external location), with the options header "true" and inferSchema "true".',
     starterCode: `-- Create SQL table from CSV path\n`,
     testCases: [
       {
-        input: 'CSV file',
-        expectedOutput: 'CREATE TABLE ... USING CSV',
-        description: 'Should create table from CSV',
+        input: 'CSV files in an external location',
+        expectedOutput: 'CREATE TABLE ... USING CSV OPTIONS (...) LOCATION ...',
+        description: 'Should create an external CSV table',
       },
     ],
     solution: `CREATE TABLE employees
 USING CSV
 OPTIONS (header "true", inferSchema "true")
-LOCATION "/data/employees.csv"
+LOCATION "s3://acme-hr/raw/employees/"
 -- OR
 CREATE TABLE IF NOT EXISTS employees
 USING CSV
 OPTIONS (header "true", inferSchema "true")
-LOCATION "/data/employees.csv"`,
-    explanation: 'CREATE TABLE ... USING CSV specifies the table format. OPTIONS (header "true", inferSchema "true") sets format options, and LOCATION "/path" points to the underlying data directory.',
+LOCATION "s3://acme-hr/raw/employees/"
+-- OR
+CREATE TABLE employees
+USING CSV
+OPTIONS (header = "true", inferSchema = "true")
+LOCATION "s3://acme-hr/raw/employees/"
+-- OR
+CREATE TABLE IF NOT EXISTS employees
+USING CSV
+OPTIONS (header = "true", inferSchema = "true")
+LOCATION "s3://acme-hr/raw/employees/"`,
+    explanation: 'USING CSV sets the file format, OPTIONS passes the reader options, and LOCATION points the table at an existing directory, which makes it an external table: dropping it later removes only the catalog entry, not the files. In Unity Catalog that directory must sit inside an external location you have access to; paths on the DBFS root are a legacy, pre-Unity Catalog pattern.',
     tieredHints: {
       apiSignature: 'CREATE TABLE table_name USING CSV OPTIONS (option "value") LOCATION "path"',
-      skeleton: `-- ____ table from CSV
-CREATE TABLE employees
+      skeleton: `CREATE TABLE employees
 ____ CSV
 ____ (header "true", inferSchema "true")
-____ "/data/employees.csv"`,
+____ "s3://acme-hr/raw/employees/"`,
     },
-    hints: ['Use CREATE TABLE table_name USING CSV', 'Use OPTIONS (header "true", inferSchema "true")', 'Specify LOCATION "/data/employees.csv"'],
+    hints: ['Use CREATE TABLE table_name USING CSV', 'Use OPTIONS (header "true", inferSchema "true")', 'Specify LOCATION "s3://acme-hr/raw/employees/"'],
     tags: ['sql', 'create-table', 'csv', 'io'],
     concepts: ['ps-dataframe-create', 'ps-io-csv'],
   },
@@ -295,6 +320,7 @@ Target Schema Definition:
 +-----------+-------------+----------+
 \`\`\``,
     starterCode: `# Import StructType, StructField, and data types\n# Build schema = StructType([...])\n`,
+    requires: [/StructType/, /^(?![\s\S]*\bFalse\b)/],
     testCases: [
       {
         input: 'Schema definition',
@@ -309,8 +335,17 @@ schema = StructType([
     StructField("name", StringType(), True),
     StructField("salary", DoubleType(), True),
     StructField("is_active", BooleanType(), True)
+])
+# OR
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType, BooleanType
+
+schema = StructType([
+    StructField("id", IntegerType()),
+    StructField("name", StringType()),
+    StructField("salary", DoubleType()),
+    StructField("is_active", BooleanType())
 ])`,
-    explanation: 'StructType defines a schema as a list of StructFields. Each StructField takes column name, data type object, and nullable flag (True/False). Explicit schemas eliminate schema inference overhead and prevent unexpected data type casting bugs.',
+    explanation: `StructType defines a schema as a list of StructFields. Each StructField takes a column name, a data type object and a nullable flag, which defaults to True when you leave it out. Explicit schemas skip the inference scan and stop a stray value from changing a column's type.`,
     tieredHints: {
       apiSignature: 'StructType(fields: List[StructField])',
       skeleton: `from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType, BooleanType
@@ -333,7 +368,7 @@ schema = ____([
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: `Write a PySpark script to define an explicit schema for columns id (integer), name (string), email (string), and read a CSV file at "/data/users.csv" into DataFrame "df" with headers enabled using that schema.
+    question: `Write a PySpark script to define an explicit schema for columns id (integer), name (string), email (string), and read a CSV file at "/Volumes/main/crm/raw/users.csv" into DataFrame "df" with headers enabled using that schema.
 
 Input File Schema Target:
 \`\`\`text
@@ -346,6 +381,7 @@ Input File Schema Target:
 +-----------+-------------+
 \`\`\``,
     starterCode: `# Define StructType schema and read CSV into df\n`,
+    requires: [/schema/, /header/],
     testCases: [
       {
         input: 'CSV with explicit schema',
@@ -361,9 +397,47 @@ schema = StructType([
     StructField("email", StringType(), True)
 ])
 
-df = spark.read.schema(schema).option("header", "true").csv("/data/users.csv")
+df = spark.read.schema(schema).option("header", "true").csv("/Volumes/main/crm/raw/users.csv")
 # OR
-df = spark.read.option("header", "true").schema(schema).csv("/data/users.csv")`,
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+
+schema = StructType([
+    StructField("id", IntegerType(), True),
+    StructField("name", StringType(), True),
+    StructField("email", StringType(), True)
+])
+
+df = spark.read.option("header", "true").schema(schema).csv("/Volumes/main/crm/raw/users.csv")
+# OR
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+
+schema = StructType([
+    StructField("id", IntegerType(), True),
+    StructField("name", StringType(), True),
+    StructField("email", StringType(), True)
+])
+
+df = spark.read.csv("/Volumes/main/crm/raw/users.csv", header=True, schema=schema)
+# OR
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+
+schema = StructType([
+    StructField("id", IntegerType(), True),
+    StructField("name", StringType(), True),
+    StructField("email", StringType(), True)
+])
+
+df = spark.read.schema(schema).csv("/Volumes/main/crm/raw/users.csv", header=True)
+# OR
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+
+schema = StructType([
+    StructField("id", IntegerType(), True),
+    StructField("name", StringType(), True),
+    StructField("email", StringType(), True)
+])
+
+df = spark.read.schema(schema).option("header", True).csv("/Volumes/main/crm/raw/users.csv")`,
     explanation: 'Using .schema(schema) applies your pre-defined StructType directly during reading. This bypasses the extra file scan required by inferSchema="true", guaranteeing data type safety in production pipelines.',
     tieredHints: {
       apiSignature: 'DataFrameReader.schema(schema: StructType) -> DataFrameReader',
@@ -375,7 +449,7 @@ schema = ____([
     ____("email", ____(), True)
 ])
 
-df = ____.____.____(schema).____("header", "true").____("/data/users.csv")`,
+df = ____.____.____(schema).____("header", "true").____("/Volumes/main/crm/raw/users.csv")`,
     },
     hints: ['Define StructType first, then pass to .schema()', 'Use option("header", "true")'],
     tags: ['schema', 'read', 'csv', 'structtype'],
@@ -458,6 +532,7 @@ ____.____()`,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to add a column "salary_band" to DataFrame "df" (columns: id, name, salary): "High" if salary > 100000, "Medium" if salary > 50000, otherwise "Low".',
     starterCode: `# Add salary_band column using conditional logic\nresult = `,
+    requires: [/100000\s*,\s*["']High["'][\s\S]*50000\s*,\s*["']Medium["']/],
     testCases: [
       {
         input: 'df with salary column',
@@ -480,7 +555,7 @@ result = df.withColumn("salary_band",
     .when(df.salary > 50000, "Medium")
     .otherwise("Low")
 )`,
-    explanation: 'when(condition, value) is PySpark\'s equivalent of CASE/WHEN. Chain multiple .when() calls for elif logic, and end with .otherwise() for the default value.',
+    explanation: `when(condition, value) is PySpark's CASE WHEN. Chained .when() calls are tried in order and the first true one wins, so the narrower test (> 100000) has to come before the broader one (> 50000), or every high salary is labelled Medium. .otherwise() gives the default.`,
     tieredHints: {
       apiSignature: 'when(condition: Column, value: Any).otherwise(value: Any) -> Column',
       skeleton: `from pyspark.sql.functions import when, col
@@ -498,7 +573,7 @@ result = df.withColumn("salary_band",
 
   {
     id: 'casewhen-2',
-    requires: [/\bCASE\b/i, /\bWHEN\b/i, /\bELSE\b/i],
+    requires: [/\bCASE\b/i, /\bWHEN\b/i, /\bELSE\b/i, /1000\s+THEN\s+['"]Large['"][\s\S]*100\s+THEN\s+['"]Medium['"]/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
@@ -512,15 +587,25 @@ result = df.withColumn("salary_band",
         description: 'Should use CASE/WHEN',
       },
     ],
-    solution: `SELECT *,\n  CASE\n    WHEN amount > 1000 THEN "Large"\n    WHEN amount > 100 THEN "Medium"\n    ELSE "Small"\n  END AS size\nFROM orders\n-- OR\nSELECT id, amount, order_status,\n  CASE WHEN amount > 1000 THEN 'Large' WHEN amount > 100 THEN 'Medium' ELSE 'Small' END AS size\nFROM orders`,
-    explanation: 'SQL CASE/WHEN is the standard way to add conditional logic. WHEN conditions are evaluated in order — first match wins. ELSE provides the default. END closes the expression.',
+    solution: `SELECT *,
+  CASE
+    WHEN amount > 1000 THEN 'Large'
+    WHEN amount > 100 THEN 'Medium'
+    ELSE 'Small'
+  END AS size
+FROM orders
+-- OR
+SELECT id, amount, order_status,
+  CASE WHEN amount > 1000 THEN 'Large' WHEN amount > 100 THEN 'Medium' ELSE 'Small' END AS size
+FROM orders`,
+    explanation: 'CASE tries its WHEN branches top to bottom and returns the first true one, so the narrower test (amount > 1000) must come before the broader one (amount > 100), or every large order is labelled Medium. ELSE gives the default and END closes the expression.',
     tieredHints: {
       apiSignature: 'CASE WHEN cond1 THEN val1 WHEN cond2 THEN val2 ELSE default END AS alias',
       skeleton: `SELECT *,
   ____
-    ____ amount > 1000 ____ "Large"
-    ____ amount > 100 ____ "Medium"
-    ____ "Small"
+    ____ amount > 1000 ____ 'Large'
+    ____ amount > 100 ____ 'Medium'
+    ____ 'Small'
   ____ AS size
 FROM orders`,
     },
@@ -537,6 +622,7 @@ FROM orders`,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to add an "age_group" column to DataFrame "df" (columns: id, emp_name, age): "Minor" if age < 18, "Adult" if age < 65, otherwise "Senior".',
     starterCode: `# Categorize age groups\nresult = `,
+    requires: [/18\s*,\s*["']Minor["'][\s\S]*65\s*,\s*["']Adult["']/],
     testCases: [
       {
         input: 'df with age column',
@@ -577,14 +663,28 @@ result = ____.____("____",
         description: 'Should calculate conditional bonus',
       },
     ],
-    solution: `SELECT emp_name, department, salary,\n  CASE\n    WHEN department = "Engineering" THEN salary * 0.2\n    WHEN department = "Sales" THEN salary * 0.15\n    ELSE salary * 0.1\n  END AS bonus\nFROM employees\n-- OR\nSELECT emp_name, department, salary,\n  CASE WHEN department = 'Engineering' THEN salary * 0.20 WHEN department = 'Sales' THEN salary * 0.15 ELSE salary * 0.10 END AS bonus\nFROM employees`,
+    solution: `SELECT emp_name, department, salary,
+  CASE
+    WHEN department = 'Engineering' THEN salary * 0.2
+    WHEN department = 'Sales' THEN salary * 0.15
+    ELSE salary * 0.1
+  END AS bonus
+FROM employees
+-- OR
+SELECT emp_name, department, salary,
+  CASE WHEN department = 'Engineering' THEN salary * 0.20 WHEN department = 'Sales' THEN salary * 0.15 ELSE salary * 0.10 END AS bonus
+FROM employees
+-- OR
+SELECT emp_name, department, salary,
+  CASE department WHEN 'Engineering' THEN salary * 0.2 WHEN 'Sales' THEN salary * 0.15 ELSE salary * 0.1 END AS bonus
+FROM employees`,
     explanation: 'CASE/WHEN can include calculations, not just static values. The result expression after THEN can be any valid SQL expression including arithmetic on other columns.',
     tieredHints: {
       apiSignature: 'CASE WHEN cond1 THEN expr1 WHEN cond2 THEN expr2 ELSE expr3 END AS alias',
       skeleton: `SELECT ____, ____, ____,
   ____
-    ____ department = "____" ____ salary * 0.2
-    ____ department = "____" ____ salary * 0.15
+    ____ department = '____' ____ salary * 0.2
+    ____ department = '____' ____ salary * 0.15
     ____ salary * 0.1
   ____ AS ____
 FROM ____`,
@@ -637,7 +737,7 @@ SELECT * FROM ____ WHERE ____ > 60000`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_SUBQUERIES,
     language: CodeLanguage.SQL,
-    question: 'Write a query with two CTEs: "active_orders" (orders where order_status = "active" from "orders" table with columns: id, customer_id, amount, order_status) and "customer_totals" (sum of amount per customer_id from active_orders named "total"). Select customer_id and total where total exceeds 5000.',
+    question: `Write a query with two CTEs over the "orders" table (columns: id, customer_id, amount, order_status): "active_orders" holds the orders whose order_status is 'active', and "customer_totals" sums amount per customer_id from active_orders as "total". Select customer_id and total where total exceeds 5000.`,
     starterCode: `-- Multiple CTEs\n`,
     testCases: [
       {
@@ -646,12 +746,12 @@ SELECT * FROM ____ WHERE ____ > 60000`,
         description: 'Should chain multiple CTEs',
       },
     ],
-    solution: `WITH active_orders AS (\n  SELECT * FROM orders WHERE order_status = "active"\n),\ncustomer_totals AS (\n  SELECT customer_id, SUM(amount) as total\n  FROM active_orders\n  GROUP BY customer_id\n)\nSELECT * FROM customer_totals WHERE total > 5000\n-- OR\nWITH active_orders AS (SELECT id, customer_id, amount FROM orders WHERE order_status = 'active'), customer_totals AS (SELECT customer_id, SUM(amount) AS total FROM active_orders GROUP BY customer_id) SELECT customer_id, total FROM customer_totals WHERE total > 5000`,
+    solution: `WITH active_orders AS (\n  SELECT * FROM orders WHERE order_status = 'active'\n),\ncustomer_totals AS (\n  SELECT customer_id, SUM(amount) as total\n  FROM active_orders\n  GROUP BY customer_id\n)\nSELECT * FROM customer_totals WHERE total > 5000\n-- OR\nWITH active_orders AS (SELECT id, customer_id, amount FROM orders WHERE order_status = 'active'), customer_totals AS (SELECT customer_id, SUM(amount) AS total FROM active_orders GROUP BY customer_id) SELECT customer_id, total FROM customer_totals WHERE total > 5000`,
     explanation: 'Multiple CTEs are separated by commas. Later CTEs can reference earlier ones. This creates a readable pipeline of transformations.',
     tieredHints: {
       apiSignature: 'WITH cte1 AS (query1), cte2 AS (query2) SELECT ... FROM cte2',
       skeleton: `____ active_orders ____ (
-  SELECT * FROM ____ WHERE ____ = "active"
+  SELECT * FROM ____ WHERE ____ = 'active'
 ),
 customer_totals ____ (
   SELECT customer_id, ____(amount) as ____
@@ -894,7 +994,7 @@ SELECT * FROM ____`,
 
   {
     id: 'setop-4',
-    requires: [/\bEXCEPT\b|\bMINUS\b/i],
+    requires: [/all_employees[\s\S]*\b(EXCEPT|MINUS)\b[\s\S]*terminated_employees/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
@@ -908,8 +1008,18 @@ SELECT * FROM ____`,
         description: 'Should use EXCEPT',
       },
     ],
-    solution: `SELECT * FROM all_employees\nEXCEPT\nSELECT * FROM terminated_employees\n-- OR\nSELECT id, emp_name, department FROM all_employees\nEXCEPT\nSELECT id, emp_name, department FROM terminated_employees`,
-    explanation: 'EXCEPT (also called MINUS in some databases) returns rows from the first query that are not in the second query. Order matters — it subtracts the second set from the first.',
+    solution: `SELECT * FROM all_employees
+EXCEPT
+SELECT * FROM terminated_employees
+-- OR
+SELECT id, emp_name, department FROM all_employees
+EXCEPT
+SELECT id, emp_name, department FROM terminated_employees
+-- OR
+SELECT * FROM all_employees
+MINUS
+SELECT * FROM terminated_employees`,
+    explanation: 'EXCEPT (also called MINUS in some databases) returns rows from the first query that are not in the second query. Order matters - it subtracts the second set from the first.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM t1 EXCEPT SELECT cols FROM t2',
       skeleton: `-- ____ non-matching records
@@ -924,12 +1034,12 @@ SELECT * FROM ____`,
 
   {
     id: 'setop-5',
-    requires: [/\.union(ByName)?\s*\(/i, /\.distinct\s*\(/],
+    requires: [/\.union(ByName)?\s*\(/i, /\.distinct\s*\(|\.drop_?[dD]uplicates\s*\(/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SET_OPERATIONS,
     language: CodeLanguage.PYTHON,
-    question: 'Using PySpark, combine DataFrames "df1" and "df2" (same schema: id, user_name, email), removing duplicate rows.',
+    question: 'Write a PySpark statement that combines DataFrames "df1" and "df2" (same schema: id, user_name, email) into one, removes duplicate rows, and assigns the result to "result".',
     starterCode: `# Union DataFrames removing duplicates\n`,
     testCases: [
       {
@@ -938,12 +1048,17 @@ SELECT * FROM ____`,
         description: 'Should union DataFrames',
       },
     ],
-    solution: `result = df1.union(df2).distinct()\n# OR\nresult = df1.unionByName(df2).distinct()`,
-    explanation: 'PySpark union() combines DataFrames by position (like UNION ALL — keeps duplicates). Add .distinct() to remove duplicates. unionByName() matches columns by name, not position — safer when column order might differ.',
+    solution: `result = df1.union(df2).distinct()
+# OR
+result = df1.unionByName(df2).distinct()
+# OR
+result = df1.union(df2).dropDuplicates()
+# OR
+result = df1.unionByName(df2).dropDuplicates()`,
+    explanation: 'PySpark union() combines DataFrames by position (like UNION ALL - keeps duplicates). Add .distinct() to remove duplicates. unionByName() matches columns by name, not position - safer when column order might differ.',
     tieredHints: {
       apiSignature: 'DataFrame.union(other: DataFrame).distinct() -> DataFrame',
-      skeleton: `-- ____ DataFrames removing duplicates
-result = ____.____(____).____()`,
+      skeleton: 'result = ____.____(____).____()',
     },
     hints: ['union() is UNION ALL (keeps duplicates)', 'Add .distinct() for dedup', 'unionByName() matches by column name'],
     tags: ['union', 'distinct', 'set-operations'],
@@ -978,19 +1093,19 @@ result = ____.____(____).____()`,
     topic: Topic.SQL_JOINS,
     question: 'What is the difference between a LEFT SEMI JOIN and a LEFT ANTI JOIN?',
     options: [
-      { id: 'a', text: 'Semi join returns rows from the left table that have a match in the right table. Anti join returns rows that do NOT have a match.', isCorrect: true },
-      { id: 'b', text: 'Semi join is faster than anti join', isCorrect: false },
-      { id: 'c', text: 'Anti join includes columns from both tables', isCorrect: false },
-      { id: 'd', text: 'They produce the same result', isCorrect: false },
+      { id: 'a', text: 'Semi join keeps the left rows that have a match in the right table; anti join keeps the left rows that have none.', isCorrect: true },
+      { id: 'b', text: 'Semi join keeps the matched left rows and adds the right columns; anti join keeps the right rows with no match.', isCorrect: false },
+      { id: 'c', text: 'Semi join keeps only the first matching right row per left row; anti join keeps every left row with nulls on the right.', isCorrect: false },
+      { id: 'd', text: 'Semi join keeps the left rows that have no match in the right table; anti join keeps the left rows that have one.', isCorrect: false },
     ],
-    explanation: 'Semi join acts like an EXISTS filter — it returns left rows where a match exists in the right table, but only returns left table columns. Anti join is the opposite — it returns left rows where NO match exists (like NOT EXISTS).',
+    explanation: `A LEFT SEMI JOIN works like EXISTS: it keeps each left row that has at least one match, once, and returns only the left table's columns. A LEFT ANTI JOIN works like NOT EXISTS: it keeps the left rows with no match, again with only the left columns. Neither adds columns from the right table.`,
     tags: ['semi-join', 'anti-join', 'join-types'],
     concepts: ['sql-joins-semi-anti', 'sql-joins-inner-outer'],
   },
 
   {
     id: 'semijoin-2',
-    requires: [/left_semi|leftsemi/i],
+    requires: [/["'](left_?)?semi["']/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1004,12 +1119,17 @@ result = ____.____(____).____()`,
         description: 'Should use left semi join',
       },
     ],
-    solution: `result = orders_df.join(active_customers_df, "customer_id", "left_semi")`,
-    explanation: 'Left semi join returns only rows from the left DataFrame where a matching key exists in the right DataFrame. It does not add any columns from the right table — it acts purely as a filter.',
+    solution: `result = orders_df.join(active_customers_df, "customer_id", "left_semi")
+# OR
+result = orders_df.join(active_customers_df, on="customer_id", how="left_semi")
+# OR
+result = orders_df.join(active_customers_df, "customer_id", "leftsemi")
+# OR
+result = orders_df.join(active_customers_df, "customer_id", "semi")`,
+    explanation: 'Left semi join returns only rows from the left DataFrame where a matching key exists in the right DataFrame. It does not add any columns from the right table - it acts purely as a filter.',
     tieredHints: {
       apiSignature: 'DataFrame.join(other: DataFrame, on: str, how: str = "left_semi") -> DataFrame',
-      skeleton: `-- ____ semi join
-result = ____.____(____, "____", "____")`,
+      skeleton: 'result = ____.____(____, "____", "____")',
     },
     hints: ['Use "left_semi" as the join type', 'Only left table columns are returned'],
     tags: ['semi-join', 'left-semi', 'join', 'pyspark'],
@@ -1047,12 +1167,12 @@ result = ____.____(____, ____.____ ____ order_items_df.____, "____")`,
 
   {
     id: 'semijoin-4',
-    requires: [/\bEXISTS\s*\(/i],
+    requires: [/\bEXISTS\s*\(/i, /^(?![\s\S]*\bNOT\s+EXISTS\b)/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
     language: CodeLanguage.SQL,
-    question: 'Using SQL, find all employees from the "employees" table (columns: id, emp_name, department) who have submitted at least one expense report in the "expense_reports" table (columns: id, employee_id, amount) using EXISTS.\n\nEXISTS returns TRUE if a correlated subquery returns at least one row. Use SELECT 1 inside — the actual value doesn\'t matter, only whether any row matches.',
+    question: 'Using SQL, find all employees from the "employees" table (columns: id, emp_name, department) who have submitted at least one expense report in the "expense_reports" table (columns: id, employee_id, amount) using EXISTS.\n\nEXISTS returns TRUE if a correlated subquery returns at least one row. Use SELECT 1 inside - the actual value doesn\'t matter, only whether any row matches.',
     starterCode: `-- Find employees with expense reports\n`,
     testCases: [
       {
@@ -1061,8 +1181,18 @@ result = ____.____(____, ____.____ ____ order_items_df.____, "____")`,
         description: 'Should use EXISTS',
       },
     ],
-    solution: `SELECT * FROM employees e\nWHERE EXISTS (\n  SELECT 1 FROM expense_reports er\n  WHERE er.employee_id = e.id\n)`,
-    explanation: 'EXISTS returns TRUE if the subquery returns at least one row. It is the SQL equivalent of a semi join. SELECT 1 is conventional — the actual selected value does not matter.',
+    solution: `SELECT * FROM employees e
+WHERE EXISTS (
+  SELECT 1 FROM expense_reports er
+  WHERE er.employee_id = e.id
+)
+-- OR
+SELECT * FROM employees e
+WHERE EXISTS (
+  SELECT * FROM expense_reports er
+  WHERE er.employee_id = e.id
+)`,
+    explanation: 'EXISTS returns TRUE if the subquery returns at least one row. It is the SQL equivalent of a semi join. SELECT 1 is conventional - the actual selected value does not matter.',
     tieredHints: {
       apiSignature: 'WHERE EXISTS (SELECT 1 FROM table WHERE condition)',
       skeleton: `SELECT * FROM employees e
@@ -1127,8 +1257,17 @@ result = df.groupBy("year").pivot("quarter").agg({"revenue": "sum"})`,
         description: 'Should pivot months to columns',
       },
     ],
-    solution: `SELECT * FROM (\n  SELECT product, sale_month, amount FROM monthly_sales\n)\nPIVOT (\n  SUM(amount) FOR sale_month IN ("Jan", "Feb", "Mar", "Apr", "May", "Jun")\n)\n-- OR\nSELECT * FROM (SELECT product, sale_month, amount FROM monthly_sales) PIVOT (SUM(amount) FOR sale_month IN ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'))`,
-    explanation: 'PIVOT transforms rows into columns. The aggregate (SUM) is applied for each value listed in the IN clause, creating one column per value. The subquery must only include the group column, pivot column, and value column — any extra columns would create unintended groupings.',
+    solution: `SELECT * FROM (
+  SELECT product, sale_month, amount FROM monthly_sales
+)
+PIVOT (
+  SUM(amount) FOR sale_month IN ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun')
+)
+-- OR
+SELECT * FROM (SELECT product, sale_month, amount FROM monthly_sales) PIVOT (SUM(amount) FOR sale_month IN ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'))
+-- OR
+SELECT * FROM monthly_sales PIVOT (SUM(amount) FOR sale_month IN ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'))`,
+    explanation: 'PIVOT transforms rows into columns. The aggregate (SUM) is applied for each value listed in the IN clause, creating one column per value. The subquery must only include the group column, pivot column, and value column - any extra columns would create unintended groupings.',
     tieredHints: {
       apiSignature: 'PIVOT (AGG(val) FOR col IN (v1, v2, ...))',
       skeleton: `SELECT * FROM (
@@ -1145,7 +1284,7 @@ ____ (
 
   {
     id: 'pivot-3',
-    requires: [/stack\s*\(/i],
+    requires: [/stack\s*\(/i, /\(\s*subject\s*,\s*score\s*\)/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -1205,7 +1344,7 @@ result = df.groupBy("region").pivot("product_type", ["Electronics", "Clothing", 
 
   {
     id: 'pivot-5',
-    requires: [/stack\s*\(/i],
+    requires: [/stack\s*\(/i, /\(\s*quarter\s*,\s*rating\s*\)/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_SQL,
@@ -1252,8 +1391,17 @@ FROM employee_ratings, ____ ____(4, "Q1", ____, "Q2", ____, "Q3", ____, "Q4", __
         description: 'Should pivot survey questions to columns',
       },
     ],
-    solution: `SELECT * FROM (\n  SELECT respondent_id, question_text, response FROM survey_responses\n)\nPIVOT (\n  MAX(response) FOR question_text IN ("Satisfaction", "Likelihood", "Effort")\n)\n-- OR\nSELECT * FROM (SELECT respondent_id, question_text, response FROM survey_responses) PIVOT (MAX(response) FOR question_text IN ('Satisfaction', 'Likelihood', 'Effort'))`,
-    explanation: 'MAX(response) is used as the aggregate because each respondent has exactly one response per question — MAX just picks that single value. If there could be multiple responses, you might use FIRST() or collect_list(). The subquery limits to only the 3 needed columns to avoid unintended groupings.',
+    solution: `SELECT * FROM (
+  SELECT respondent_id, question_text, response FROM survey_responses
+)
+PIVOT (
+  MAX(response) FOR question_text IN ('Satisfaction', 'Likelihood', 'Effort')
+)
+-- OR
+SELECT * FROM (SELECT respondent_id, question_text, response FROM survey_responses) PIVOT (MAX(response) FOR question_text IN ('Satisfaction', 'Likelihood', 'Effort'))
+-- OR
+SELECT * FROM survey_responses PIVOT (MAX(response) FOR question_text IN ('Satisfaction', 'Likelihood', 'Effort'))`,
+    explanation: 'MAX(response) is used as the aggregate because each respondent has exactly one response per question - MAX just picks that single value. If there could be multiple responses, you might use FIRST() or collect_list(). The subquery limits to only the 3 needed columns to avoid unintended groupings.',
     tieredHints: {
       apiSignature: 'PIVOT (AGG(val) FOR col IN (v1, v2, ...))',
       skeleton: `SELECT * FROM (
@@ -1302,12 +1450,12 @@ result = ____.____("____", ____("____").____("____"))`,
 
   {
     id: 'cast-2',
-    requires: [/CAST\s*\(/i],
+    requires: [/CAST\s*\(|::\s*double/i, /double/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_SQL,
     language: CodeLanguage.SQL,
-    question: 'Using the "raw_data" table (columns: id, amount — where amount is stored as STRING), cast the amount column to DOUBLE in a SELECT query. Name the calculated column "amount".',
+    question: 'Using the "raw_data" table (columns: id, amount, where amount is stored as STRING), write a SELECT that returns id and amount converted to DOUBLE, keeping the name "amount".',
     starterCode: `-- Cast string to double\n`,
     testCases: [
       {
@@ -1316,12 +1464,18 @@ result = ____.____("____", ____("____").____("____"))`,
         description: 'Should cast to double',
       },
     ],
-    solution: `SELECT id, CAST(amount AS DOUBLE) as amount\nFROM raw_data\n-- OR\nSELECT id, CAST(amount AS double) AS amount\nFROM raw_data`,
-    explanation: 'CAST(column AS type) converts data types in SQL. Common types: INT, BIGINT, DOUBLE, FLOAT, STRING, DATE, TIMESTAMP, BOOLEAN. Use :: as shorthand in some contexts: amount::DOUBLE.',
+    solution: `SELECT id, CAST(amount AS DOUBLE) as amount
+FROM raw_data
+-- OR
+SELECT id, amount::double AS amount
+FROM raw_data
+-- OR
+SELECT id, try_cast(amount AS DOUBLE) AS amount
+FROM raw_data`,
+    explanation: 'CAST(column AS DOUBLE), or the shorthand amount::double, converts the type. Text that is not a number fails the query in ANSI mode (the default on current runtimes) or becomes NULL with ANSI off; try_cast(amount AS DOUBLE) always returns NULL for such text instead of failing.',
     tieredHints: {
       apiSignature: 'CAST(expression AS dataType)',
-      skeleton: `-- ____ string to double
-SELECT id, ____(amount ____ DOUBLE) as ____
+      skeleton: `SELECT id, ____(amount ____ DOUBLE) as ____
 FROM ____`,
     },
     hints: ['Use CAST(column AS TYPE)', 'Common types: INT, DOUBLE, STRING, DATE'],
@@ -1335,7 +1489,7 @@ FROM ____`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to cast string column "created_at" (ISO format "YYYY-MM-DD") in DataFrame "df" to date type.',
+    question: 'Write a PySpark statement that converts the string column "created_at" of DataFrame "df" (ISO text such as "2026-03-15") to date type, keeping the name "created_at", and assigns the result to "result".',
     starterCode: `# Cast created_at column to date\nresult = `,
     testCases: [
       {
@@ -1344,7 +1498,17 @@ FROM ____`,
         description: 'Should cast string to date',
       },
     ],
-    solution: `from pyspark.sql.functions import col\n\nresult = df.withColumn("created_at", col("created_at").cast("date"))\n# OR\nfrom pyspark.sql.types import DateType\n\nresult = df.withColumn("created_at", df.created_at.cast(DateType()))`,
+    solution: `from pyspark.sql.functions import col
+
+result = df.withColumn("created_at", col("created_at").cast("date"))
+# OR
+from pyspark.sql.types import DateType
+
+result = df.withColumn("created_at", df.created_at.cast(DateType()))
+# OR
+from pyspark.sql.functions import to_date
+
+result = df.withColumn("created_at", to_date("created_at"))`,
     explanation: 'cast("date") parses standard ISO date strings (yyyy-MM-dd). For non-standard date formats, use to_date(col, format_string).',
     tieredHints: {
       apiSignature: 'Column.cast(dataType: str = "date") -> Column',
@@ -1366,7 +1530,7 @@ result = ____.____("____", ____("____").____("____"))`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_ACTIONS,
-    question: 'How do PySpark transformations differ fundamental from PySpark actions during query execution?',
+    question: 'How do PySpark transformations differ from PySpark actions when a query runs?',
     options: [
       { id: 'a', text: 'Transformations execute faster across partitions, while actions spend latency building execution plans.', isCorrect: false },
       { id: 'b', text: 'Transformations build a lazy execution DAG without running jobs, whereas actions trigger immediate computation.', isCorrect: true },
@@ -1383,14 +1547,14 @@ result = ____.____("____", ____("____").____("____"))`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_ACTIONS,
-    question: 'Which list contains exclusively PySpark actions that trigger immediate cluster job execution?',
+    question: 'Which list contains only PySpark actions, calls that run a job straight away?',
     options: [
-      { id: 'a', text: 'select(), filter(), groupBy(), and join() (all construct DataFrame DAGs).', isCorrect: false },
-      { id: 'b', text: 'withColumn(), drop(), alias(), and cast() (all construct DataFrame DAGs).', isCorrect: false },
-      { id: 'c', text: 'show(), count(), collect(), take(), first(), and write() (all trigger jobs).', isCorrect: true },
-      { id: 'd', text: 'orderBy(), distinct(), union(), and limit() (all construct DataFrame DAGs).', isCorrect: false },
+      { id: 'a', text: 'select(), filter(), groupBy() and join() (each one runs a job).', isCorrect: false },
+      { id: 'b', text: 'withColumn(), drop(), alias() and cast() (each one runs a job).', isCorrect: false },
+      { id: 'c', text: 'show(), count(), collect(), take(), first() and saveAsTable() (each one runs a job).', isCorrect: true },
+      { id: 'd', text: 'orderBy(), distinct(), union() and limit() (each one runs a job).', isCorrect: false },
     ],
-    explanation: 'Actions evaluate the lineage graph and return values or save output. show(), count(), collect(), take(), first(), and write() are all actions.',
+    explanation: 'Actions run the plan and return a value or write data: show(), count(), collect(), take(), first(), and the write calls such as saveAsTable() or save(). The other lists hold transformations, which only add steps to the plan, including the wide ones (groupBy, join, orderBy, distinct) that will shuffle once an action runs.',
     tags: ['action', 'transformation', 'lazy', 'fundamentals'],
     concepts: ['ps-actions-vs-transforms', 'dbx-architecture'],
   },
@@ -1431,8 +1595,7 @@ result = ____.____("____", ____("____").____("____"))`,
     explanation: 'show(5) displays the top 5 rows in console tabular format, and count() returns total row count as an integer.',
     tieredHints: {
       apiSignature: 'DataFrame.show(n: int = 20) -> None; DataFrame.count() -> int',
-      skeleton: `-- ____ top 5 rows and count
-____.____(5)
+      skeleton: `____.____(5)
 row_count = ____.____()`,
     },
     hints: ['Call show(5) on df', 'Assign df.count() to row_count'],
@@ -1459,8 +1622,7 @@ row_count = ____.____()`,
     explanation: 'first() returns a single Row object, while take(n) or head(n) returns a list of n Row objects.',
     tieredHints: {
       apiSignature: 'DataFrame.first() -> Row; DataFrame.take(num: int) -> List[Row]',
-      skeleton: `-- ____ top rows
-first_row = ____.____()
+      skeleton: `first_row = ____.____()
 first_three = ____.____(3)`,
     },
     hints: ['Use df.first() or df.head() for the first row', 'Use df.take(3) or df.head(3) for the list'],
@@ -1676,7 +1838,7 @@ ALTER TABLE users CHANGE COLUMN email SET NOT NULL`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SUBQUERIES,
     language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, emp_name, department, salary), find all employees whose salary is above the company-wide average salary.\n\nRecall: aggregate functions like AVG() cannot be used directly in a WHERE clause — WHERE filters rows before aggregation. You need a scalar subquery (a subquery that returns a single value) to compute the average first.',
+    question: 'Using the "employees" table (columns: id, emp_name, department, salary), find all employees whose salary is above the company-wide average salary.\n\nRecall: aggregate functions like AVG() cannot be used directly in a WHERE clause - WHERE filters rows before aggregation. You need a scalar subquery (a subquery that returns a single value) to compute the average first.',
     starterCode: `-- Subquery in WHERE\n-- Hint: WHERE salary > AVG(salary) won't work\n`,
     testCases: [
       {
@@ -1692,7 +1854,7 @@ ALTER TABLE users CHANGE COLUMN email SET NOT NULL`,
       skeleton: `SELECT * FROM employees
 WHERE salary > (____ ____(salary) ____ ____)`,
     },
-    hints: ['WHERE salary > AVG(salary) fails — aggregates can\'t go in WHERE', 'Use (SELECT AVG(salary) FROM employees) as a scalar subquery', 'The outer query compares each row\'s salary against that single number'],
+    hints: ['WHERE salary > AVG(salary) fails - aggregates can\'t go in WHERE', 'Use (SELECT AVG(salary) FROM employees) as a scalar subquery', 'The outer query compares each row\'s salary against that single number'],
     tags: ['subquery', 'scalar', 'where', 'sql'],
     concepts: ['sql-subqueries', 'ps-select-filter'],
   },
@@ -1704,7 +1866,7 @@ WHERE salary > (____ ____(salary) ____ ____)`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_SUBQUERIES,
     language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, emp_name, department, salary), find employees whose salary is above the average salary OF THEIR OWN department using a correlated subquery.\n\nA correlated subquery references the outer query — it runs once per row. Use table aliases (e1, e2) to distinguish the outer and inner references to the same table.',
+    question: 'Using the "employees" table (columns: id, emp_name, department, salary), find employees whose salary is above the average salary OF THEIR OWN department using a correlated subquery.\n\nA correlated subquery references the outer query - it runs once per row. Use table aliases (e1, e2) to distinguish the outer and inner references to the same table.',
     starterCode: `-- Correlated subquery\n`,
     testCases: [
       {
@@ -1713,7 +1875,19 @@ WHERE salary > (____ ____(salary) ____ ____)`,
         description: 'Should use correlated subquery',
       },
     ],
-    solution: `SELECT * FROM employees e1\nWHERE salary > (\n  SELECT AVG(salary)\n  FROM employees e2\n  WHERE e2.department = e1.department\n)`,
+    solution: `SELECT * FROM employees e1
+WHERE salary > (
+  SELECT AVG(salary)
+  FROM employees e2
+  WHERE e2.department = e1.department
+)
+-- OR
+SELECT * FROM employees e1
+WHERE e1.salary > (
+  SELECT AVG(e2.salary)
+  FROM employees e2
+  WHERE e2.department = e1.department
+)`,
     explanation: 'A correlated subquery references the outer query (e1.department). It executes once per row in the outer query, comparing each employee\'s salary to their own department\'s average. Use table aliases to distinguish outer vs inner references.',
     tieredHints: {
       apiSignature: 'WHERE col > (SELECT AVG(col) FROM t2 WHERE t2.fk = t1.pk)',
@@ -1731,7 +1905,7 @@ WHERE salary > (
 
   {
     id: 'subq-3',
-    requires: [/\bIN\s*\(\s*SELECT/i],
+    requires: [/\bIN\s*\(\s*SELECT/i, /^(?![\s\S]*\bNOT\s+IN\b)/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_SUBQUERIES,
@@ -1818,31 +1992,58 @@ ____ ____ ____ (
 
   {
     id: 'subq-6',
-    requires: [/ROW_NUMBER\s*\(/i, /\(\s*SELECT/i],
+    requires: [/MAX\s*\(/i, /\(\s*SELECT/i, /GROUP\s+BY/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_SUBQUERIES,
     language: CodeLanguage.SQL,
-    question: 'Using the "employees" table (columns: id, emp_name, department, salary), find the top earner in each department using a subquery in FROM (a derived table).\n\nA derived table is a subquery in the FROM clause that you give an alias. Use ROW_NUMBER() to rank employees within each department, then filter to rank 1 in the outer query.',
-    starterCode: `-- Derived table subquery\n`,
+    question: `Using the "employees" table (columns: id, emp_name, department, salary), find the top earner of each department (keep every employee who ties for the top salary).
+
+Use a derived table: a subquery in FROM, with an alias, that returns each department and its highest salary as "max_salary". Join employees to it on the department and on salary = max_salary.`,
+    starterCode: `-- Derived table of department maximums, joined back to employees
+`,
     testCases: [
       {
         input: 'employees table',
-        expectedOutput: 'FROM (SELECT ... ROW_NUMBER() ...) WHERE rn = 1',
-        description: 'Should use derived table',
+        expectedOutput: 'JOIN (SELECT department, MAX(salary) AS max_salary FROM employees GROUP BY department) m ON ...',
+        description: 'Should join employees to a derived table of department maximums',
       },
     ],
-    solution: `SELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rn\n  FROM employees\n) ranked\nWHERE rn = 1`,
-    explanation: 'A subquery in FROM creates a derived table (inline view). Here we use ROW_NUMBER() inside the subquery to rank employees per department, then filter to keep only rank 1 in the outer query.',
+    solution: `SELECT e.*
+FROM employees e
+JOIN (
+  SELECT department, MAX(salary) AS max_salary
+  FROM employees
+  GROUP BY department
+) m
+ON e.department = m.department AND e.salary = m.max_salary
+-- OR
+SELECT e.*
+FROM employees e
+INNER JOIN (
+  SELECT department, MAX(salary) AS max_salary
+  FROM employees
+  GROUP BY department
+) m
+ON e.department = m.department AND e.salary = m.max_salary
+-- OR
+SELECT e.*
+FROM employees e
+JOIN (SELECT department, MAX(salary) AS max_salary FROM employees GROUP BY department) m
+ON m.department = e.department AND m.max_salary = e.salary`,
+    explanation: `The derived table m collapses employees to one row per department with its highest salary, and it needs an alias to be joined. Joining back on both the department and salary = max_salary keeps exactly the employees who earn their department's maximum, ties included. The window-function way to do the same, ROW_NUMBER() or RANK() over a partition, comes in the next topic.`,
     tieredHints: {
       apiSignature: 'SELECT * FROM (SELECT cols, ROW_NUMBER() OVER (...) as rn FROM table) alias WHERE rn = 1',
-      skeleton: `SELECT * FROM (
-  SELECT *, ____() OVER (____ BY department ____ BY salary DESC) as rn
-  FROM ____
-) ranked
-WHERE rn = 1`,
+      skeleton: `SELECT e.*
+FROM employees e
+JOIN (
+  SELECT ____, ____(salary) AS max_salary
+  FROM employees
+  GROUP BY ____
+) m
+ON e.department = m.____ AND e.salary = m.____`,
     },
-    hints: ['Use a subquery in FROM with an alias', 'ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...) for ranking'],
+    hints: ['Build the derived table first: one row per department with MAX(salary)', 'Give the subquery an alias, such as m', 'Join on the department and on salary = max_salary'],
     tags: ['subquery', 'derived-table', 'row-number', 'sql'],
     concepts: ['sql-subqueries', 'sql-window-ranking'],
   },
@@ -1872,9 +2073,7 @@ result = sizes_df.join(colors_df, how="cross")`,
     explanation: 'crossJoin() generates a Cartesian product of both DataFrames (N × M rows). Alternatively, pass how="cross" to join().',
     tieredHints: {
       apiSignature: 'DataFrame.crossJoin(other: DataFrame) -> DataFrame',
-      skeleton: `-- ____ cross join
-result = sizes_df.____(colors_df)
--- ____`,
+      skeleton: 'result = ____.____(____)',
     },
     hints: ['Use sizes_df.crossJoin(colors_df)', 'Or use sizes_df.join(colors_df, how="cross")'],
     tags: ['cross-join', 'cartesian', 'join'],
@@ -1897,12 +2096,19 @@ result = sizes_df.____(colors_df)
         description: 'Should cross join',
       },
     ],
-    solution: `SELECT d.cal_date, s.store_id, s.store_name\nFROM dates d\nCROSS JOIN stores s\n-- OR\nSELECT cal_date, store_id, store_name\nFROM dates\nCROSS JOIN stores`,
+    solution: `SELECT d.cal_date, s.store_id, s.store_name
+FROM dates d
+CROSS JOIN stores s
+-- OR
+SELECT cal_date, store_id, store_name
+FROM dates
+CROSS JOIN stores
+-- OR
+SELECT * FROM dates CROSS JOIN stores`,
     explanation: 'CROSS JOIN produces every combination of rows from both tables. Useful for generating scaffolding (all dates × all stores) that you then LEFT JOIN actual data onto to find gaps.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM t1 CROSS JOIN t2',
-      skeleton: `-- ____ date-store combinations
-SELECT d.cal_date, s.store_id, s.store_name
+      skeleton: `SELECT d.cal_date, s.store_id, s.store_name
 FROM ____ d
 ____ ____ ____ s`,
     },
@@ -1947,9 +2153,7 @@ ____ ____ ____ s`,
     explanation: 'repartition(n) triggers a full shuffle to redistribute data into n partitions (can increase or decrease count). coalesce(n) cannot increase partition count.',
     tieredHints: {
       apiSignature: 'DataFrame.repartition(numPartitions: int) -> DataFrame',
-      skeleton: `-- ____ partitions to 100
-result = ____.____(100)
--- ____`,
+      skeleton: 'result = ____.____(____)',
     },
     hints: ['Use df.repartition(100)', 'coalesce cannot increase partition count'],
     tags: ['repartition', 'partitioning', 'parallelism'],
@@ -1967,12 +2171,12 @@ result = ____.____(100)
     topic: Topic.WINDOW_FUNCTIONS,
     question: 'Three employees have salaries: 50000, 50000, 60000 (ordered ascending). What values do rank(), dense_rank(), and row_number() assign?',
     options: [
-      { id: 'a', text: 'rank: 1,1,2 | dense_rank: 1,1,2 | row_number: 1,1,2 — assumes all functions treat ties identically', isCorrect: false },
-      { id: 'b', text: 'rank: 1,2,3 | dense_rank: 1,1,2 | row_number: 1,1,3 — assumes rank increments sequentially without ties', isCorrect: false },
-      { id: 'c', text: 'rank: 1,1,3 | dense_rank: 1,1,2 | row_number: 1,2,3 — rank skips after ties, dense_rank does not skip', isCorrect: true },
-      { id: 'd', text: 'rank: 1,1,2 | dense_rank: 1,1,3 | row_number: 1,2,3 — reverses skip behavior between rank and dense_rank', isCorrect: false },
+      { id: 'a', text: 'rank: 1,1,2 | dense_rank: 1,1,2 | row_number: 1,1,2 - assumes all functions treat ties identically', isCorrect: false },
+      { id: 'b', text: 'rank: 1,2,3 | dense_rank: 1,1,2 | row_number: 1,1,3 - assumes rank increments sequentially without ties', isCorrect: false },
+      { id: 'c', text: 'rank: 1,1,3 | dense_rank: 1,1,2 | row_number: 1,2,3 - rank skips after ties, dense_rank does not skip', isCorrect: true },
+      { id: 'd', text: 'rank: 1,1,2 | dense_rank: 1,1,3 | row_number: 1,2,3 - reverses skip behavior between rank and dense_rank', isCorrect: false },
     ],
-    explanation: 'rank() assigns the same rank to ties but skips the next position (1,1,3). dense_rank() assigns the same rank to ties but doesn\'t skip (1,1,2). row_number() always assigns unique sequential numbers regardless of ties (1,2,3) — the order of tied rows is nondeterministic.',
+    explanation: 'rank() assigns the same rank to ties but skips the next position (1,1,3). dense_rank() assigns the same rank to ties but doesn\'t skip (1,1,2). row_number() always assigns unique sequential numbers regardless of ties (1,2,3) - the order of tied rows is nondeterministic.',
     tags: ['rank', 'dense-rank', 'row-number', 'window', 'comparison'],
     concepts: ['sql-window-ranking'],
   },
@@ -2015,7 +2219,7 @@ result = ____.____("____", ____().____(____))`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_WINDOW_FUNCTIONS,
     language: CodeLanguage.SQL,
-    question: 'Using the "sales" table (columns: sale_date, amount), calculate a 7-day moving average of amount across a window frame containing the current row and the 6 preceding rows. Alias the resulting column as "moving_avg_7d".',
+    question: 'Using the "sales" table (columns: sale_date, amount; one row per day), calculate a 7-day moving average of amount over a window frame of the current row and the 6 preceding rows. Alias the resulting column as "moving_avg_7d".',
     starterCode: `-- 7-day moving average\n`,
     testCases: [
       {
@@ -2024,7 +2228,9 @@ result = ____.____("____", ____().____(____))`,
         description: 'Should use window frame for moving average',
       },
     ],
-    solution: `SELECT sale_date, amount, AVG(amount) OVER (ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as moving_avg_7d FROM sales\n-- OR\nSELECT sale_date, amount, AVG(amount) OVER (ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as moving_avg_7d FROM sales`,
+    solution: `SELECT sale_date, amount, AVG(amount) OVER (ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as moving_avg_7d FROM sales
+-- OR
+SELECT *, AVG(amount) OVER (ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as moving_avg_7d FROM sales`,
     explanation: 'ROWS BETWEEN defines a window frame. "6 PRECEDING AND CURRENT ROW" includes the current row plus the 6 before it (7 rows total). This creates a rolling/moving average. RANGE BETWEEN uses logical ranges instead of row counts.',
     tieredHints: {
       apiSignature: 'AVG(col) OVER (ORDER BY date_col ROWS BETWEEN n PRECEDING AND CURRENT ROW)',
@@ -2051,13 +2257,19 @@ result = ____.____("____", ____().____(____))`,
         description: 'Should calculate cumulative sum',
       },
     ],
-    solution: `SELECT id, account_id, amount, txn_date, SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumulative_sum FROM transactions\n-- OR\nSELECT id, account_id, amount, txn_date, SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date) as cumulative_sum FROM transactions`,
-    explanation: 'SUM() OVER (PARTITION BY ... ORDER BY ...) calculates a cumulative sum within each partition. The explicit frame ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW is actually the default when ORDER BY is present, so both versions produce the same result. Being explicit is clearer but not required.',
+    solution: `SELECT id, account_id, amount, txn_date, SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumulative_sum FROM transactions
+-- OR
+SELECT *, SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumulative_sum FROM transactions
+-- OR
+SELECT id, account_id, amount, txn_date, SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date) as cumulative_sum FROM transactions
+-- OR
+SELECT *, SUM(amount) OVER (PARTITION BY account_id ORDER BY txn_date) as cumulative_sum FROM transactions`,
+    explanation: 'SUM() OVER (PARTITION BY account_id ORDER BY txn_date ...) restarts the total for each account and adds the amounts in date order. The explicit frame ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW adds one row at a time. Leaving it out gives the default RANGE frame, which is the same until two transactions of one account share a txn_date: then both rows show the total including both, so the explicit ROWS frame is the safer choice.',
     tieredHints: {
       apiSignature: 'SUM(col) OVER (PARTITION BY p_col ORDER BY o_col ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)',
       skeleton: `SELECT id, account_id, amount, txn_date, ____(amount) OVER (____ BY account_id ____ BY txn_date ____ BETWEEN ____ PRECEDING AND ____ ROW) as ____ FROM ____`,
     },
-    hints: ['Use SUM(amount) OVER (...) with PARTITION BY account_id', 'ORDER BY txn_date defines the accumulation order', 'ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW is optional — it is the default when ORDER BY is specified'],
+    hints: ['Use SUM(amount) OVER (...) with PARTITION BY account_id', 'ORDER BY txn_date defines the accumulation order', 'ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW adds one row at a time, even when two rows share a date'],
     tags: ['window-frame', 'cumulative', 'running-total', 'sql'],
     concepts: ['sql-window-frame'],
   },
@@ -2074,38 +2286,48 @@ result = ____.____("____", ____().____(____))`,
       { id: 'c', text: 'ROWS requires explicit partition keys; RANGE applies globally across all unpartitioned dataset rows', isCorrect: false },
       { id: 'd', text: 'ROWS and RANGE execute identical window evaluation logic but RANGE incurs lower memory overhead', isCorrect: false },
     ],
-    explanation: 'ROWS BETWEEN 2 PRECEDING AND CURRENT ROW always includes exactly 3 rows. RANGE BETWEEN 2 PRECEDING AND CURRENT ROW includes all rows whose ORDER BY value is within 2 of the current value — which could be more than 3 rows if there are ties.',
+    explanation: 'ROWS BETWEEN 2 PRECEDING AND CURRENT ROW always includes exactly 3 rows. RANGE BETWEEN 2 PRECEDING AND CURRENT ROW includes all rows whose ORDER BY value is within 2 of the current value - which could be more than 3 rows if there are ties.',
     tags: ['window-frame', 'rows', 'range', 'window'],
     concepts: ['sql-window-frame', 'sql-window-ranking'],
   },
 
   {
     id: 'winfn-6',
-    requires: [/first\s*\(/, /last\s*\(/, /\.over\s*\(/],
+    requires: [/\.over\s*\(/, /unboundedFollowing|\bmax\s*\(/, /^(?![\s\S]*orderBy(?![\s\S]*unboundedFollowing))/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
     language: CodeLanguage.PYTHON,
-    question: 'Given a DataFrame "df" with columns "id", "department", and "salary", project the lowest and highest salary values within each department ordered by salary into new columns "lowest_salary" and "highest_salary" respectively.',
+    question: `Given a DataFrame "df" with columns "id", "department" and "salary", add two columns to every row: "lowest_salary" and "highest_salary", the lowest and highest salary of that row's department.`,
     starterCode: ``,
     testCases: [
       {
         input: 'df with department and salary',
-        expectedOutput: 'first("salary").over(...) and last("salary").over(...)',
-        description: 'Should use first and last window functions',
+        expectedOutput: 'min("salary") and max("salary") over Window.partitionBy("department")',
+        description: 'Should put the department minimum and maximum on every row',
       },
     ],
-    solution: `from pyspark.sql.window import Window\nfrom pyspark.sql.functions import first, last\n\nwindowSpec = Window.partitionBy("department").orderBy("salary")\nresult = df.withColumn("lowest_salary", first("salary").over(windowSpec)).withColumn("highest_salary", last("salary").over(windowSpec))\n# OR\nfrom pyspark.sql.window import Window\nfrom pyspark.sql.functions import first, last, col\n\nwindowSpec = Window.partitionBy("department").orderBy(col("salary"))\nresult = df.withColumn("lowest_salary", first(col("salary")).over(windowSpec)).withColumn("highest_salary", last(col("salary")).over(windowSpec))`,
-    explanation: 'first() returns the first value in the window frame. last() returns the last value. With ORDER BY salary, first gives the lowest and last gives the highest within each partition.',
+    solution: `from pyspark.sql.window import Window
+from pyspark.sql.functions import min, max
+
+windowSpec = Window.partitionBy("department")
+result = df.withColumn("lowest_salary", min("salary").over(windowSpec)).withColumn("highest_salary", max("salary").over(windowSpec))
+# OR
+from pyspark.sql.window import Window
+from pyspark.sql.functions import first, last
+
+windowSpec = Window.partitionBy("department").orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+result = df.withColumn("lowest_salary", first("salary").over(windowSpec)).withColumn("highest_salary", last("salary").over(windowSpec))`,
+    explanation: `min() and max() over Window.partitionBy("department") put the department's lowest and highest salary on every row. first() and last() over a window ordered by salary work too, but only with a frame covering the whole partition: with an orderBy and no frame, the default frame stops at the current row, so last("salary") returns each row's own salary rather than the department's highest.`,
     tieredHints: {
       apiSignature: 'first(col).over(windowSpec); last(col).over(windowSpec)',
       skeleton: `from pyspark.sql.window import Window
-from pyspark.sql.functions import first, last
+from pyspark.sql.functions import min, max
 
-windowSpec = ____.____("____").____("____")
-result = ____.____("____", ____("____").____(____)).____("____", ____("____").____(____))`,
+windowSpec = ____.____("department")
+result = df.withColumn("lowest_salary", ____("salary").over(____)).withColumn("highest_salary", ____("salary").over(____))`,
     },
-    hints: ['first() and last() are window functions', 'Apply .over(windowSpec)'],
+    hints: ['An aggregate with .over(w) adds its result to every row of the window', 'Partition by department; no ordering is needed for min and max', 'With an orderBy, first/last need rowsBetween(unboundedPreceding, unboundedFollowing)'],
     tags: ['first', 'last', 'window', 'aggregate'],
     concepts: ['ps-aggregate-fns', 'sql-window-offset', 'sql-window-ranking'],
   },

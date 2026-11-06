@@ -63,19 +63,19 @@ export const pysparkTransformationsQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
     language: CodeLanguage.PYTHON,
-    question: 'What does this print?',
+    question: 'This runs on classic compute (df.rdd is not available on serverless or Standard access mode compute). What does it print? The answer is three lines, each one whole number.',
     code: `base = spark.range(20).repartition(8)
 print(base.rdd.getNumPartitions())
 
 merged = base.coalesce(2)
 print(merged.rdd.getNumPartitions())
 
-grown = merged.coalesce(6)
-print(grown.rdd.getNumPartitions())`,
+small = spark.range(20).repartition(2)
+print(small.coalesce(6).rdd.getNumPartitions())`,
     expectedOutput: `8
 2
 2`,
-    explanation: 'repartition(8) does a full shuffle and lands on exactly 8 partitions. coalesce(2) merges those 8 down to 2 without moving rows between machines - it is narrow, which is why it is cheap. The catch is on the last line: coalesce can only ever REDUCE the partition count. Asking it for 6 when you have 2 is a no-op, so it stays at 2. Growing the count requires repartition(6) and its shuffle.',
+    explanation: 'repartition(8) does a full shuffle and lands on exactly 8 partitions. coalesce(2) merges those 8 down to 2 without a shuffle, which is why it is cheap. The last line is the catch: coalesce can only lower the count, so asking a 2-partition DataFrame for 6 leaves it at 2; growing it needs repartition(6) and its shuffle. (Chaining coalesce(6) straight after coalesce(2) would not show this, because the optimizer keeps only the last of two back-to-back coalesce calls.)',
     hints: ['coalesce only merges downward', 'Which of these three calls actually shuffles?'],
     tags: ['transformations', 'partitioning', 'coalesce', 'repartition', 'predict'],
     concepts: ['ps-partitioning', 'ps-narrow-vs-wide', 'ps-shuffle'],
@@ -101,7 +101,11 @@ result = `,
 
 result = df.sortWithinPartitions(desc("salary"))
 # OR
-result = df.sortWithinPartitions("salary", ascending=False)`,
+result = df.sortWithinPartitions("salary", ascending=False)
+# OR
+from pyspark.sql.functions import col
+
+result = df.sortWithinPartitions(col("salary").desc())`,
     explanation: 'orderBy() guarantees a global ordering, which forces a range-partitioning shuffle across the whole cluster. sortWithinPartitions() sorts each partition independently and moves no rows, so it stays a narrow transformation. It is the right tool when a downstream step only needs locally ordered data - writing sorted files per partition, or feeding an operation that processes one partition at a time.',
     tieredHints: {
       apiSignature: 'DataFrame.sortWithinPartitions(*cols, ascending: bool | list = True) -> DataFrame',
@@ -202,14 +206,16 @@ result = current_df.unionByName(archive_df, ___=True)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
     language: CodeLanguage.PYTHON,
-    question: 'What does this print?',
-    code: `# df rows, as (customer_id, region, amount):
-#   (7, "north", 100)
-#   (7, "north", 250)
-#   (8, "south",  50)
-#   (8, "south",  50)
-
-print(df.count())
+    question: 'DataFrame "df" holds the rows shown. What does this print? The answer is three lines, each one whole number.',
+    tables: [
+      { name: 'df', columns: ['customer_id', 'region', 'amount'], rows: [
+        [7, 'north', 100],
+        [7, 'north', 250],
+        [8, 'south', 50],
+        [8, 'south', 50],
+      ] },
+    ],
+    code: `print(df.count())
 print(df.distinct().count())
 print(df.dropDuplicates(["customer_id"]).count())`,
     expectedOutput: `4

@@ -243,7 +243,7 @@ const baseQuestions: Question[] = [
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark script to initialize a SparkSession with application name "MyFirstApp" and assign it to variable "spark".',
+    question: 'In a Databricks notebook `spark` already exists, but a standalone PySpark script has to build its own session. Write the line that creates (or reuses) a SparkSession with application name "MyFirstApp" and assigns it to variable "spark".',
     starterCode: `# Create SparkSession with appName "MyFirstApp"\n`,
     testCases: [
       {
@@ -253,7 +253,7 @@ const baseQuestions: Question[] = [
       },
     ],
     solution: `from pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName("MyFirstApp").getOrCreate()`,
-    explanation: 'SparkSession.builder provides a fluent API to configure and create a SparkSession. appName() sets the application name, and getOrCreate() creates a new session or returns an existing one.',
+    explanation: 'SparkSession.builder starts a session definition, appName() names the application, and getOrCreate() returns the session already running in this process or builds a new one. A Databricks notebook has already done this for you, which is why notebook code uses `spark` directly.',
     tieredHints: {
       apiSignature: 'SparkSession.builder.appName(name: str).getOrCreate() -> SparkSession',
       skeleton: `from pyspark.sql import SparkSession
@@ -270,7 +270,7 @@ spark = SparkSession.____.____("MyFirstApp").____()`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark script to create a DataFrame "df" with columns "id" and "name" from a list of tuples: [(1, "Alice"), (2, "Bob"), (3, "Charlie")].',
+    question: `Using the notebook's \`spark\` session, write PySpark code that creates a DataFrame "df" with columns "id" and "name" from the list of tuples [(1, "Alice"), (2, "Bob"), (3, "Charlie")].`,
     starterCode: `# Create DataFrame from list of tuples\n`,
     testCases: [
       {
@@ -279,7 +279,12 @@ spark = SparkSession.____.____("MyFirstApp").____()`,
         description: 'Should create DataFrame with id and name columns',
       },
     ],
-    solution: `from pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName("DataFrameExample").getOrCreate()\ndata = [(1, "Alice"), (2, "Bob"), (3, "Charlie")]\ndf = spark.createDataFrame(data, ["id", "name"])\n# OR\ndf = spark.createDataFrame([(1, "Alice"), (2, "Bob"), (3, "Charlie")], ["id", "name"])`,
+    solution: `data = [(1, "Alice"), (2, "Bob"), (3, "Charlie")]
+df = spark.createDataFrame(data, ["id", "name"])
+# OR
+df = spark.createDataFrame([(1, "Alice"), (2, "Bob"), (3, "Charlie")], ["id", "name"])
+# OR
+df = spark.createDataFrame([(1, "Alice"), (2, "Bob"), (3, "Charlie")], "id INT, name STRING")`,
     explanation: 'The createDataFrame() method accepts a list of tuples and a list of column name strings to instantiate a DataFrame.',
     tieredHints: {
       apiSignature: 'SparkSession.createDataFrame(data: List[tuple], schema: List[str]) -> DataFrame',
@@ -352,8 +357,7 @@ df = ____.____(data, ["____", "____"])`,
     explanation: 'filter() and where() are identical aliases for filtering rows based on a column condition or SQL predicate string.',
     tieredHints: {
       apiSignature: 'DataFrame.filter(condition: Column | str) -> DataFrame',
-      skeleton: `-- ____ filter age > 25
-result = ____.____(____.____ > 25)`,
+      skeleton: 'result = ____.____(____.____ > 25)',
     },
     hints: ['Use filter() or where()', 'You can use column notation (df.age > 25) or SQL strings ("age > 25")'],
     tags: ['dataframe', 'filter', 'where'],
@@ -367,6 +371,7 @@ result = ____.____(____.____ > 25)`,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement using conditional logic to add a column "age_group" to DataFrame "df", setting value to "adult" if "age" >= 18, else "minor".',
     starterCode: `# Add age_group column with conditional logic\n`,
+    requires: [/18\s*,\s*["']adult["']/],
     testCases: [
       {
         input: 'df with age column',
@@ -394,6 +399,7 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to group DataFrame "df" (columns: emp_id, emp_name, department, salary) by column "department" and calculate the number of employees per department. The result column must be named "count".',
     starterCode: `# Group by department and count\nresult = `,
+    requires: [/\.count\s*\(\s*\)|alias\s*\(\s*["']count["']\s*\)/],
     testCases: [
       {
         input: 'df with columns: emp_id, emp_name, department, salary',
@@ -418,14 +424,14 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
-    question: 'Which of the following is a PySpark transformation (lazily evaluated) rather than an action?',
+    question: 'Which of these DataFrame methods is a transformation (lazily evaluated) rather than an action?',
     options: [
       { id: 'a', text: 'count()', isCorrect: false },
-      { id: 'b', text: 'map()', isCorrect: true },
+      { id: 'b', text: 'filter()', isCorrect: true },
       { id: 'c', text: 'collect()', isCorrect: false },
       { id: 'd', text: 'show()', isCorrect: false },
     ],
-    explanation: 'map() is a lazy transformation that appends an operation to the execution DAG without triggering immediate Spark job execution. In contrast, count(), collect(), and show() are actions that force Spark to execute jobs.',
+    explanation: 'filter() only adds a step to the query plan and returns a new DataFrame, so nothing runs yet. count(), collect() and show() are actions: each one runs the whole plan as a job and hands back a result.',
     tags: ['transformations', 'actions', 'lazy-evaluation'],
     concepts: ['ps-actions-vs-transforms'],
   },
@@ -433,7 +439,7 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     id: 'ps-transform-2',
     // No "inner" literal: it is the default `how`, so `df1.join(df2, "id")` is
     // a correct answer and must not be hard-failed by the gate.
-    requires: [/\.join\s*\(/],
+    requires: [/\.join\s*\((?![^)]*["'](?:left|right|full|outer|cross|semi|anti|left_\w+|right_\w+|full_\w+|leftsemi|leftanti|leftouter|rightouter|fullouter)["'])/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_TRANSFORMATIONS,
@@ -447,8 +453,14 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
         description: 'Should perform inner join on id column',
       },
     ],
-    solution: `result = df1.join(df2, "id", "inner")\n# OR\nresult = df1.join(df2, on="id", how="inner")\n# OR\nresult = df1.join(df2, "id")`,
-    explanation: 'join(df2, "id", "inner") performs an inner join on the specified key column across DataFrames.',
+    solution: `result = df1.join(df2, "id", "inner")
+# OR
+result = df1.join(df2, on="id", how="inner")
+# OR
+result = df1.join(df2, "id")
+# OR
+result = df1.join(df2, df1.id == df2.id, "inner")`,
+    explanation: 'join(df2, "id", "inner") joins on the column both DataFrames share and keeps one copy of it; inner is also the default, so join(df2, "id") is the same. Joining on an expression, df1.id == df2.id, keeps both id columns.',
     tieredHints: {
       apiSignature: 'DataFrame.join(other: DataFrame, on: str, how: str = "inner") -> DataFrame',
       skeleton: `result = ____.____(____, "____", "____")`,
@@ -465,6 +477,7 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
     language: CodeLanguage.PYTHON,
     question: 'Write a PySpark statement to remove duplicate rows from DataFrame "df" based on all columns.',
     starterCode: `# Remove duplicate rows\nresult = `,
+    requires: [/\.distinct\s*\(\s*\)|drop_?[dD]uplicates\s*\(\s*\)/],
     testCases: [
       {
         input: 'df with duplicate rows',
@@ -472,7 +485,11 @@ result = ____.____("____", ____(df.____ >= 18, "____").____("____"))`,
         description: 'Should remove duplicate rows',
       },
     ],
-    solution: `result = df.distinct()\n# OR\nresult = df.dropDuplicates()`,
+    solution: `result = df.distinct()
+# OR
+result = df.dropDuplicates()
+# OR
+result = df.drop_duplicates()`,
     explanation: 'distinct() and dropDuplicates() both return a new DataFrame with duplicate rows removed across all columns.',
     tieredHints: {
       apiSignature: 'DataFrame.distinct() -> DataFrame',
@@ -532,8 +549,7 @@ result = df.____(____("____"))`,
     explanation: 'createOrReplaceTempView() registers a DataFrame as a temporary view that can be queried using SQL. The view is session-scoped.',
     tieredHints: {
       apiSignature: 'DataFrame.createOrReplaceTempView(name: str) -> None',
-      skeleton: `-- ____ create temp view
-____.____("____")`,
+      skeleton: '____.____("____")',
     },
     hints: ['Use createOrReplaceTempView()', 'Pass the view name as a string'],
     tags: ['sql', 'temp-view', 'dataframe'],
@@ -692,20 +708,29 @@ result = impressions.____(
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_BASICS,
     language: CodeLanguage.PYTHON,
-    question: 'Read a CSV file from "/data/employees.csv" into a DataFrame with header.',
+    question: 'Write a PySpark statement that reads the CSV file "/Volumes/main/hr/raw/employees.csv" (a Unity Catalog volume path) into DataFrame "df", treating the first line as the header.',
     starterCode: `# Read CSV file\ndf = spark.`,
+    requires: [/header/],
     testCases: [
       {
-        input: 'CSV file at /data/employees.csv',
-        expectedOutput: 'spark.read.csv("/data/employees.csv", header=True)',
+        input: 'CSV file at /Volumes/main/hr/raw/employees.csv',
+        expectedOutput: 'spark.read.csv("/Volumes/main/hr/raw/employees.csv", header=True)',
         description: 'Should read CSV with header',
       },
     ],
-    solution: `df = spark.read.csv("/data/employees.csv", header=True)\n# OR\ndf = spark.read.format("csv").option("header", "true").load("/data/employees.csv")`,
+    solution: `df = spark.read.csv("/Volumes/main/hr/raw/employees.csv", header=True)
+# OR
+df = spark.read.option("header", True).csv("/Volumes/main/hr/raw/employees.csv")
+# OR
+df = spark.read.option("header", "true").csv("/Volumes/main/hr/raw/employees.csv")
+# OR
+df = spark.read.format("csv").option("header", "true").load("/Volumes/main/hr/raw/employees.csv")
+# OR
+df = spark.read.format("csv").option("header", True).load("/Volumes/main/hr/raw/employees.csv")`,
     explanation: 'spark.read.csv() reads CSV files. The header=True option indicates the first row contains column names.',
     tieredHints: {
       apiSignature: 'DataFrameReader.csv(path: str, header: bool = None) -> DataFrame',
-      skeleton: `df = ____.____.____("/data/employees.csv", ____=True)`,
+      skeleton: `df = ____.____.____("/Volumes/main/hr/raw/employees.csv", ____=True)`,
     },
     hints: ['Use spark.read.csv()', 'Set header=True to use first row as column names'],
     tags: ['io', 'csv', 'read'],
@@ -717,7 +742,7 @@ result = impressions.____(
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (which has columns: id, name, age, email), show the schema (column names, data types, and nullable info).',
+    question: 'Using DataFrame "df" (columns: id, name, age, email), print its schema as a tree: column names, data types and nullable flags.',
     starterCode: `# Print the schema\ndf.`,
     testCases: [
       {
@@ -726,15 +751,14 @@ result = impressions.____(
         description: 'Should access the schema',
       },
     ],
-    solution: `df.printSchema()\n# OR\ndf.schema`,
-    explanation: 'printSchema() displays the schema of a DataFrame in a tree format. Alternatively, df.schema returns the StructType schema object.',
+    solution: 'df.printSchema()',
+    explanation: 'printSchema() prints the schema as a tree, one line per column with its type and nullable flag. df.schema returns the same information as a StructType object for code to inspect, and df.dtypes as a list of (name, type) pairs, but neither prints the tree.',
     tieredHints: {
       apiSignature: 'DataFrame.printSchema() -> None',
-      skeleton: `-- ____ DataFrame schema
-df.____()
--- ____`,
+      skeleton: `# ____ the schema as a tree
+____.____()`,
     },
-    hints: ['Use printSchema() method or access the schema attribute'],
+    hints: ['Use the printSchema() method'],
     tags: ['dataframe', 'schema'],
     concepts: ['ps-dataframe-create'],
   },
@@ -744,7 +768,7 @@ df.____()
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Count the total number of rows in a DataFrame.',
+    question: 'Write a PySpark statement that counts the rows of DataFrame "df" and stores the number in "row_count".',
     starterCode: `# Count rows\nrow_count = df.`,
     testCases: [
       {
@@ -757,9 +781,7 @@ df.____()
     explanation: 'count() is an action that returns the number of rows in a DataFrame.',
     tieredHints: {
       apiSignature: 'DataFrame.count() -> int',
-      skeleton: `-- ____ total rows
-row_count = df.____()
--- ____`,
+      skeleton: '____ = ____.____()',
     },
     hints: ['Use count() method'],
     tags: ['dataframe', 'count', 'action'],
@@ -771,8 +793,9 @@ row_count = df.____()
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Rename column "old_name" to "new_name".',
+    question: 'Write a PySpark statement that renames column "old_name" of DataFrame "df" to "new_name" and assigns the result to "result".',
     starterCode: `# Rename column\nresult = df.`,
+    requires: [/["']old_name["']\s*(,|:)\s*["']new_name["']/],
     testCases: [
       {
         input: 'df with old_name column',
@@ -780,8 +803,10 @@ row_count = df.____()
         description: 'Should rename column',
       },
     ],
-    solution: `result = df.withColumnRenamed("old_name", "new_name")`,
-    explanation: 'withColumnRenamed() returns a new DataFrame with a column renamed.',
+    solution: `result = df.withColumnRenamed("old_name", "new_name")
+# OR
+result = df.withColumnsRenamed({"old_name": "new_name"})`,
+    explanation: 'withColumnRenamed(existing, new) returns a new DataFrame with one column renamed: old name first, new name second. withColumnsRenamed({"old": "new"}), added in Spark 3.4, renames several at once from a dict.',
     tieredHints: {
       apiSignature: 'DataFrame.withColumnRenamed(existing: str, new: str) -> DataFrame',
       skeleton: `result = df.____("____", "____")`,
@@ -796,7 +821,7 @@ row_count = df.____()
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Drop the "temp_column" from a DataFrame.',
+    question: 'Write a PySpark statement that removes the column "temp_column" from DataFrame "df" and assigns the result to "result".',
     starterCode: `# Drop column\nresult = df.`,
     testCases: [
       {
@@ -809,8 +834,7 @@ row_count = df.____()
     explanation: 'drop() removes one or more columns from a DataFrame and returns a new DataFrame.',
     tieredHints: {
       apiSignature: 'DataFrame.drop(*cols: str) -> DataFrame',
-      skeleton: `-- ____ drop column
-result = ____.____("____")`,
+      skeleton: 'result = ____.____("____")',
     },
     hints: ['Use drop() method', 'Pass the column name as a string'],
     tags: ['dataframe', 'drop', 'columns'],
@@ -831,8 +855,10 @@ result = ____.____("____")`,
         description: 'Should get distinct countries',
       },
     ],
-    solution: `result = df.select("country").distinct()`,
-    explanation: 'Combining select() with distinct() returns unique values from specified columns.',
+    solution: `result = df.select("country").distinct()
+# OR
+result = df.select("country").dropDuplicates()`,
+    explanation: 'select("country") keeps just that column, and distinct() then drops the repeated rows, leaving one row per country. dropDuplicates() with no arguments does the same thing.',
     tieredHints: {
       apiSignature: 'DataFrame.distinct() -> DataFrame',
       skeleton: `result = df.____("____").____()`,
@@ -930,12 +956,12 @@ print(evens.count())`,
   // ===== ADDITIONAL PRACTICE QUESTIONS =====
   {
     id: 'ps-transform-5',
-    requires: [/\.join\s*\(/, /['"]left['"]/],
+    requires: [/\.join\s*\(/, /['"]left(_?outer)?['"]/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
     language: CodeLanguage.PYTHON,
-    question: 'Perform a left join between df1 (columns: id, name, dept_id) and df2 (columns: id, department_name) on the "id" column.',
+    question: 'Write a PySpark statement that left joins DataFrame "df1" (columns: id, name, dept_id) to "df2" (columns: id, department_name) on their shared "id" column, keeping every row of df1, and assigns the result to "result".',
     starterCode: `# Left join df1 and df2\nresult = df1.`,
     testCases: [
       {
@@ -944,7 +970,13 @@ print(evens.count())`,
         description: 'Should perform left join',
       },
     ],
-    solution: `result = df1.join(df2, "id", "left")`,
+    solution: `result = df1.join(df2, "id", "left")
+# OR
+result = df1.join(df2, on="id", how="left")
+# OR
+result = df1.join(df2, "id", "left_outer")
+# OR
+result = df1.join(df2, "id", "leftouter")`,
     explanation: 'Left join keeps all rows from the left DataFrame (df1) and matching rows from the right DataFrame (df2).',
     tieredHints: {
       apiSignature: 'DataFrame.join(other: DataFrame, on: str, how: str = "left") -> DataFrame',
@@ -960,8 +992,9 @@ print(evens.count())`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (columns: id, product, amount), calculate the sum of the "amount" column.',
-    starterCode: `# Import the sum aggregate from pyspark.sql.functions\n# Assign result to the aggregation of df returning the total of "amount"\n`,
+    question: 'Using DataFrame "df" (columns: id, product, amount), write a PySpark statement that computes the total of the "amount" column as a one-row DataFrame and assigns it to "result".',
+    starterCode: `# Total of the amount column, as a one-row DataFrame
+result = `,
     testCases: [
       {
         input: 'df with amount column',
@@ -969,7 +1002,17 @@ print(evens.count())`,
         description: 'Should calculate sum of amount',
       },
     ],
-    solution: `from pyspark.sql.functions import sum\n\nresult = df.agg(sum("amount"))\n# OR\nresult = df.select(sum("amount"))`,
+    solution: `from pyspark.sql.functions import sum
+
+result = df.agg(sum("amount"))
+# OR
+from pyspark.sql.functions import sum
+
+result = df.select(sum("amount"))
+# OR
+result = df.agg({"amount": "sum"})
+# OR
+result = df.groupBy().sum("amount")`,
     explanation: 'agg() performs aggregations. sum() is an aggregate function that calculates the total of a numeric column.',
     tieredHints: {
       apiSignature: 'DataFrame.agg(*exprs: Column) -> DataFrame',
@@ -987,8 +1030,9 @@ result = ____.____(____("____"))`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'Fill null values in the "age" column with 0.',
+    question: 'Write a PySpark statement that replaces the nulls in column "age" of DataFrame "df" with 0, leaving every other column alone, and assigns the result to "result".',
     starterCode: `# Fill null values in age column\nresult = df.`,
+    requires: [/age/],
     testCases: [
       {
         input: 'df with age column containing nulls',
@@ -996,12 +1040,19 @@ result = ____.____(____("____"))`,
         description: 'Should fill nulls with 0',
       },
     ],
-    solution: `result = df.fillna(0, subset=["age"])\n# OR\nresult = df.na.fill(0, subset=["age"])`,
-    explanation: 'fillna() or na.fill() replaces null values. The subset parameter specifies which columns to fill.',
+    solution: `result = df.fillna(0, subset=["age"])
+# OR
+result = df.na.fill(0, subset=["age"])
+# OR
+result = df.fillna({"age": 0})
+# OR
+result = df.na.fill({"age": 0})
+# OR
+result = df.fillna(0, "age")`,
+    explanation: 'fillna() (or na.fill()) replaces nulls. Without a subset, fillna(0) touches every numeric column; subset=["age"], or the dict form {"age": 0}, limits it to the one column.',
     tieredHints: {
       apiSignature: 'DataFrame.fillna(value: Any, subset: List[str] = None) -> DataFrame',
-      skeleton: `-- ____ fill nulls
-result = ____.____(0, subset=["____"])`,
+      skeleton: 'result = ____.____(0, subset=["____"])',
     },
     hints: ['Use fillna() or na.fill()', 'Use subset parameter to specify columns'],
     tags: ['dataframe', 'null-handling', 'fillna'],

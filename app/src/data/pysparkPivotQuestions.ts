@@ -104,13 +104,15 @@ long_df = wide_df.selectExpr(
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'What does this print?',
-    code: `# sales_df rows, as (region, product, amount):
-#   ("north", "Toys",  10)
-#   ("north", "Books", 20)
-#   ("south", "Books",  5)
-
-result = sales_df.groupBy("region").pivot("product").sum("amount")
+    question: 'DataFrame "sales_df" holds the rows shown. What does this print? The answer is one line: a Python list of column names.',
+    tables: [
+      { name: 'sales_df', columns: ['region', 'product', 'amount'], rows: [
+        ['north', 'Toys', 10],
+        ['north', 'Books', 20],
+        ['south', 'Books', 5],
+      ] },
+    ],
+    code: `result = sales_df.groupBy("region").pivot("product").sum("amount")
 print(result.columns)`,
     expectedOutput: `['region', 'Books', 'Toys']`,
     explanation: 'The groupBy key stays as the first column, then one column per distinct pivot value. When you do not supply the values yourself, Spark scans the column for distinct values and returns them SORTED, so Books precedes Toys regardless of the order they appear in the data. That scan is a real job over the whole dataset - which is exactly what passing the values list explicitly avoids.',
@@ -158,12 +160,14 @@ print(result.columns)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'What does this print?',
-    code: `# wide_df rows, as (student, math, science, english):
-#   ("ana", 90, 80, 70)
-#   ("bo",  60, 50, 40)
-
-long_df = wide_df.selectExpr(
+    question: 'DataFrame "wide_df" holds the rows shown. What does this print? The answer is two lines, each one whole number.',
+    tables: [
+      { name: 'wide_df', columns: ['student', 'math', 'science', 'english'], rows: [
+        ['ana', 90, 80, 70],
+        ['bo', 60, 50, 40],
+      ] },
+    ],
+    code: `long_df = wide_df.selectExpr(
     "student",
     "stack(3, 'math', math, 'science', science, 'english', english) as (subject, score)"
 )
@@ -221,14 +225,16 @@ result = `,
     ],
     solution: `result = wide_df.unpivot(["student"], ["math", "science", "english"], "subject", "score")
 # OR
-result = wide_df.melt(["student"], ["math", "science", "english"], "subject", "score")`,
+result = wide_df.melt(["student"], ["math", "science", "english"], "subject", "score")
+# OR
+result = wide_df.unpivot(ids=["student"], values=["math", "science", "english"], variableColumnName="subject", valueColumnName="score")`,
     explanation: 'DataFrame.unpivot(ids, values, variableColumnName, valueColumnName) arrived in Spark 3.4 and is the native reverse of pivot(): ids are the columns carried through unchanged, values are the columns collapsed into rows, and the last two arguments name the label and value columns. melt() is the same method under its pandas-familiar name.',
     tieredHints: {
       apiSignature: 'DataFrame.unpivot(ids, values, variableColumnName, valueColumnName) -> DataFrame',
       skeleton: `result = ____.____(["student"], [____], "subject", "score")`,
     },
     hints: ['Spark 3.4 added a native DataFrame method for this', 'First the columns to keep, then the columns to collapse'],
-    requires: [/unpivot|melt/],
+    requires: [/unpivot|melt/, /subject["']\s*,\s*(valueColumnName\s*=\s*)?["']score/],
     tags: ['unpivot', 'reshape', 'wide-format'],
     concepts: ['ps-pivot-unpivot'],
   },
@@ -262,7 +268,7 @@ result = `,
 )`,
     },
     hints: ['stack() has no Python function - it must arrive as a SQL string', 'The carried column is just another expression in the same call'],
-    requires: ['stack', 'selectExpr'],
+    requires: ['stack', 'selectExpr', /\(\s*subject\s*,\s*score\s*\)/i],
     tags: ['unpivot', 'stack', 'reshape', 'wide-format'],
     concepts: ['ps-pivot-unpivot'],
   },

@@ -100,7 +100,7 @@ result = ____.withColumn("name_upper", ____(df.____))`,
   // CONCAT
   {
     id: 'string-3',
-    requires: [/concat\w*\s*\(/],
+    requires: [/concat\w*\s*\(/, /first_name[\s\S]*last_name/],
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.STRING_FUNCTIONS,
@@ -120,8 +120,12 @@ result = df.withColumn("full_name", concat(df.first_name, lit(" "), df.last_name
 # OR
 from pyspark.sql.functions import concat, lit, col
 
-result = df.withColumn("full_name", concat(col("first_name"), lit(" "), col("last_name")))`,
-    explanation: 'concat() joins multiple string columns/literals. lit(" ") provides a constant space string literal.',
+result = df.withColumn("full_name", concat(col("first_name"), lit(" "), col("last_name")))
+# OR
+from pyspark.sql.functions import concat_ws
+
+result = df.withColumn("full_name", concat_ws(" ", "first_name", "last_name"))`,
+    explanation: 'concat() joins columns and literals, with lit(" ") for the fixed space. concat_ws(" ", ...) does the same with the separator given once, and it also skips nulls, where concat() returns null for the whole row if either name is null.',
     tieredHints: {
       apiSignature: 'concat(*cols: Column | str) -> Column',
       skeleton: `from pyspark.sql.functions import concat, lit
@@ -135,7 +139,7 @@ result = df.withColumn("full_name", ____(df.first_name, ____(" "), df.____))`,
 
   {
     id: 'string-4',
-    requires: [/concat_ws\s*\(/],
+    requires: [/concat_ws\s*\(/, /city[\s\S]*state[\s\S]*country/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -175,7 +179,7 @@ result = ____.withColumn("location", ____(", ", df.city, df.state, df.____))`,
   // SUBSTRING
   {
     id: 'string-5',
-    requires: [/substr/],
+    requires: [/substr\w*\s*\((?:[^,]+,\s*)?1\s*,\s*3\s*\)/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -295,7 +299,7 @@ result = ____.withColumn("tags_array", ____(df.tags, "____"))`,
   // REGEXP_REPLACE
   {
     id: 'string-8',
-    requires: [/regexp_replace\s*\(/],
+    requires: [/regexp_replace\s*\(/, /regexp_replace\s*\([^,]+,\s*r?["'][^"']*["']\s*,\s*["']X["']\s*\)/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -319,7 +323,11 @@ result = df.withColumn("masked_text", regexp_replace(col("text"), "\\\\d", "X"))
 # OR
 from pyspark.sql.functions import regexp_replace
 
-result = df.withColumn("masked_text", regexp_replace("text", "[0-9]", "X"))`,
+result = df.withColumn("masked_text", regexp_replace("text", "[0-9]", "X"))
+# OR
+from pyspark.sql.functions import regexp_replace
+
+result = df.withColumn("masked_text", regexp_replace("text", r"\\d", "X"))`,
     explanation: 'regexp_replace(column, pattern, replacement) substitutes regex matches with replacement string.',
     tieredHints: {
       apiSignature: 'regexp_replace(str: Column | str, pattern: str, replacement: str) -> Column',
@@ -334,7 +342,7 @@ result = df.withColumn("masked_text", ____(df.text, "____", "____"))`,
 
   {
     id: 'string-9',
-    requires: [/regexp_replace\s*\(/],
+    requires: [/regexp_replace\s*\(/, /regexp_replace\s*\([^,]+,\s*r?["'][^"']+["']\s*,\s*["']["']\s*\)/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRING_FUNCTIONS,
@@ -575,8 +583,8 @@ result = ____.withColumn("date_parsed", ____(df.____, "____"))`,
     starterCode: `# Parse ts_string into event_time\nresult = `,
     testCases: [
       {
-        input: 'df with timestamp_string column',
-        expectedOutput: 'to_timestamp(df.timestamp_string, "yyyy-MM-dd HH:mm:ss")',
+        input: 'df with ts_string column',
+        expectedOutput: 'to_timestamp(df.ts_string, "yyyy-MM-dd HH:mm:ss")',
         description: 'Should convert string to timestamp',
       },
     ],
@@ -685,7 +693,7 @@ result = ____.withColumn("reminder_date", ____(df.end_date, ____))`,
   // DATEDIFF
   {
     id: 'datetime-7',
-    requires: [/datediff\s*\(/],
+    requires: [/datediff\s*\(/, /datediff\s*\(\s*(?:df\.end_date|df\[["']end_date["']\]|col\(\s*["']end_date["']\s*\)|["']end_date["'])/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -969,12 +977,12 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.COLLECTION_FUNCTIONS,
     question: 'DataFrame "df" has an ArrayType column "skills". Which expression keeps only the rows whose skills array includes the element "Python"?',
     options: [
-      { id: 'a', text: 'df.filter(df.skills.contains("Python")) — contains() does substring matching on StringType columns, not element lookup', isCorrect: false },
-      { id: 'b', text: 'df.filter(array_contains(df.skills, "Python")) — array_contains() tests an ArrayType column for one specific element', isCorrect: true },
-      { id: 'c', text: 'df.filter(df.skills.isin("Python")) — isin() tests whether a scalar column equals any of the listed values', isCorrect: false },
-      { id: 'd', text: 'df.filter(arrays_overlap(df.skills, "Python")) — arrays_overlap() compares two array columns, not an array and a scalar', isCorrect: false },
+      { id: 'a', text: 'df.filter(df.skills.contains("Python")) - contains() looks for the value inside the column, element by element', isCorrect: false },
+      { id: 'b', text: 'df.filter(array_contains(df.skills, "Python")) - array_contains() tests whether the array holds that element', isCorrect: true },
+      { id: 'c', text: `df.filter(df.skills.isin("Python")) - isin() checks membership, so it searches the array's elements`, isCorrect: false },
+      { id: 'd', text: 'df.filter(df.skills == "Python") - comparing an array to a value checks each element against it', isCorrect: false },
     ],
-    explanation: 'array_contains(col, value) returns true when the array holds that element. contains() is the string-substring test and silently returns null on an array column; isin() compares a scalar against a value list; arrays_overlap() needs a second array as its argument.',
+    explanation: 'array_contains(col, value) is true when the array holds that element. The other three compare the whole column value with a string: contains() is a string function, and isin() and == need both sides to have one type, so on an ArrayType column Spark rejects each of them with a data type mismatch error (AnalysisException) before the query runs.',
     tags: ['collection', 'array_contains', 'array', 'filter', 'functions'],
     concepts: ['ps-collection-fns', 'ps-select-filter'],
   },
@@ -987,12 +995,12 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.COLLECTION_FUNCTIONS,
     question: 'Given DataFrame "df" with integer columns col1, col2, col3, which PySpark function expression creates a single new column containing all three values as an array?',
     options: [
-      { id: 'a', text: 'array(col1, col2, col3) — combines row values across columns into a single ArrayType column', isCorrect: true },
-      { id: 'b', text: 'collect_list(col1, col2, col3) — aggregates values across multiple grouped rows into a list', isCorrect: false },
-      { id: 'c', text: 'concat(col1, col2, col3) — joins string or existing array values together into a merged string', isCorrect: false },
-      { id: 'd', text: 'struct(col1, col2, col3) — packages multiple columns into a named StructType record object', isCorrect: false },
+      { id: 'a', text: 'array(col1, col2, col3) - builds one array per row from the values of the listed columns', isCorrect: true },
+      { id: 'b', text: 'collect_list(col1, col2, col3) - gathers the listed columns of each row into one list', isCorrect: false },
+      { id: 'c', text: 'concat(col1, col2, col3) - joins the listed values of each row into one array', isCorrect: false },
+      { id: 'd', text: 'struct(col1, col2, col3) - packs the listed values of each row into an array of three', isCorrect: false },
     ],
-    explanation: 'array() constructs an ArrayType column from scalar column arguments. collect_list() is a row aggregation function, struct() creates named fields, and concat() concatenates existing arrays or strings.',
+    explanation: 'array() builds an ArrayType column from the column values of each row. collect_list() is an aggregate over the rows of a group and takes one column; concat() on integer columns casts them to strings and returns the text "123", not an array; struct() builds a record with named fields, which is not an array.',
     tags: ['collection', 'array', 'create', 'functions'],
     concepts: ['ps-collection-fns', 'ps-dataframe-create'],
   },
@@ -1003,14 +1011,14 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.COLLECTION_FUNCTIONS,
-    question: 'Given a DataFrame containing an array column "scores" with unsorted numeric values, which PySpark function sorts array elements in ascending order within each row?',
+    question: `Column "scores" holds an array of unsorted numbers in each row. Which expression sorts the numbers inside each row's array into ascending order, leaving the row count unchanged?`,
     options: [
-      { id: 'a', text: 'sort_array(scores) — this function does not support ascending element sorting in PySpark SQL', isCorrect: false },
-      { id: 'b', text: 'array_sort(scores) — sorts all elements within each array column in ascending order per row', isCorrect: true },
-      { id: 'c', text: 'orderBy("scores") — sorts entire DataFrame rows based on column values rather than array elements', isCorrect: false },
-      { id: 'd', text: 'array_order(scores) — this function name is invalid and does not exist in PySpark API', isCorrect: false },
+      { id: 'a', text: 'df.orderBy("scores") - ordering by an array column sorts the elements of each array', isCorrect: false },
+      { id: 'b', text: `array_sort("scores") - sorts the elements inside each row's array, ascending`, isCorrect: true },
+      { id: 'c', text: 'explode("scores") then orderBy - sorts the elements and keeps one row per array', isCorrect: false },
+      { id: 'd', text: 'df.sortWithinPartitions("scores") - sorts the values held inside each array', isCorrect: false },
     ],
-    explanation: 'array_sort() sorts elements within array values in ascending order. orderBy() reorders DataFrame rows.',
+    explanation: `array_sort() sorts the elements inside each array and keeps one row per array; sort_array(), whose default is ascending, does the same. orderBy() and sortWithinPartitions() reorder whole rows, comparing the arrays as values, and leave each array's elements as they were. explode() gives one row per element, so the row count grows and the arrays are gone.`,
     tags: ['collection', 'array_sort', 'array', 'functions'],
     concepts: ['ps-collection-fns'],
   },
@@ -1021,14 +1029,14 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.COLLECTION_FUNCTIONS,
-    question: 'Which PySpark function returns the element count of an ArrayType or key-value count of a MapType column?',
+    question: 'Which PySpark function returns, for each row, the number of elements in an ArrayType column or the number of entries in a MapType column?',
     options: [
-      { id: 'a', text: 'length() — computes character count of StringType columns, not array or map collections', isCorrect: false },
-      { id: 'b', text: 'count() — evaluates row-level aggregation counts in groupBy operations rather than collection size', isCorrect: false },
-      { id: 'c', text: 'size() — returns the total number of elements in an array or key-value entries in a map', isCorrect: true },
-      { id: 'd', text: 'len() — native Python built-in function that cannot be evaluated on PySpark Column objects', isCorrect: false },
+      { id: 'a', text: 'length() - it measures any value, so on an array it gives the element count', isCorrect: false },
+      { id: 'b', text: 'count() - it counts the elements of the array in each row', isCorrect: false },
+      { id: 'c', text: 'size() - it counts the elements of an array or the entries of a map', isCorrect: true },
+      { id: 'd', text: 'array_max() - it returns the highest position in the array, its length', isCorrect: false },
     ],
-    explanation: 'size() returns element counts for arrays and maps. length() evaluates string character length.',
+    explanation: 'size() returns the number of elements of an array or entries of a map, row by row. length() takes only strings and binary values, so Spark rejects it on an array; count() is an aggregate that counts rows, not elements; array_max() returns the largest element.',
     tags: ['collection', 'size', 'array', 'functions'],
     concepts: ['ps-collection-fns'],
   },
@@ -1041,12 +1049,12 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.COLLECTION_FUNCTIONS,
     question: 'You have two ArrayType columns "arr1" and "arr2". Which PySpark function combines them into a single merged array preserving duplicates?',
     options: [
-      { id: 'a', text: 'array_union(arr1, arr2) — merges array elements while deduplicating duplicate entries', isCorrect: false },
-      { id: 'b', text: 'flatten(array(arr1, arr2)) — constructs a nested array and flattens it with unnecessary overhead', isCorrect: false },
-      { id: 'c', text: 'arr1 + arr2 — Python addition operator is invalid on PySpark Column objects', isCorrect: false },
-      { id: 'd', text: 'concat(arr1, arr2) — concatenates elements of multiple array columns into one array', isCorrect: true },
+      { id: 'a', text: 'array_union(arr1, arr2) - appends arr2 to arr1 and keeps every element', isCorrect: false },
+      { id: 'b', text: 'arrays_zip(arr1, arr2) - joins the two arrays end to end into one array', isCorrect: false },
+      { id: 'c', text: 'arr1 + arr2 - + joins two array columns the way it joins two Python lists', isCorrect: false },
+      { id: 'd', text: 'concat(arr1, arr2) - joins the two arrays end to end and keeps duplicates', isCorrect: true },
     ],
-    explanation: 'concat() merges multiple array columns into one single array, preserving element order and duplicate entries. array_union() deduplicates elements.',
+    explanation: 'concat() on array columns joins them end to end and keeps every element, duplicates included (flatten(array(arr1, arr2)) gives the same result). array_union() removes duplicates, arrays_zip() pairs the elements by position into structs, and + is numeric addition in Spark, so it fails with a data type mismatch on arrays.',
     tags: ['collection', 'concat', 'array', 'functions'],
     concepts: ['ps-collection-fns', 'ps-string-fns'],
   },
@@ -1059,12 +1067,12 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.COLLECTION_FUNCTIONS,
     question: 'Given column "nested" containing nested arrays (ArrayType of ArrayType), which PySpark function flattens it into a single 1D array column?',
     options: [
-      { id: 'a', text: 'flatten(nested) — converts a nested array of arrays into a single flattened array column', isCorrect: true },
-      { id: 'b', text: 'explode(nested) — generates separate DataFrame rows per inner array rather than a single flat array', isCorrect: false },
-      { id: 'c', text: 'concat(nested) — joins array strings together but does not flatten nested array structures', isCorrect: false },
-      { id: 'd', text: 'array_flatten(nested) — non-existent PySpark function name that raises an AttributeError', isCorrect: false },
+      { id: 'a', text: 'flatten(nested) - merges the inner arrays of each row into one array', isCorrect: true },
+      { id: 'b', text: 'explode(nested) - unpacks the inner arrays into one array per row', isCorrect: false },
+      { id: 'c', text: 'concat(nested) - given one argument, joins the inner arrays it holds', isCorrect: false },
+      { id: 'd', text: 'array_distinct(nested) - removes the nesting and any repeated element', isCorrect: false },
     ],
-    explanation: 'flatten() converts nested arrays [[1,2],[3,4]] into a single array [1,2,3,4]. explode() creates separate rows per inner element.',
+    explanation: 'flatten() turns [[1, 2], [3, 4]] into [1, 2, 3, 4], one array per row. explode() gives one row per inner array instead; concat() with a single argument returns that array unchanged, still nested; array_distinct() removes repeated inner arrays but keeps the nesting.',
     tags: ['collection', 'flatten', 'array', 'nested', 'functions'],
     concepts: ['ps-collection-fns'],
   },
@@ -1096,10 +1104,10 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.MATH_FUNCTIONS,
     question: 'DataFrame "df" has a DoubleType column "price". Which expression produces a numeric column holding price rounded to 2 decimal places?',
     options: [
-      { id: 'a', text: 'format_number("price", 2) — produces the right digits but returns a StringType column, not a number', isCorrect: false },
-      { id: 'b', text: 'floor(col("price") * 100) / 100 — truncates the third decimal downward instead of rounding it', isCorrect: false },
-      { id: 'c', text: 'bround("price", 2) — rounds half to even, so a trailing 5 lands on the nearest even digit', isCorrect: false },
-      { id: 'd', text: 'round("price", 2) — rounds half away from zero to the requested number of decimal places', isCorrect: true },
+      { id: 'a', text: 'format_number("price", 2) - produces the right digits but returns a StringType column, not a number', isCorrect: false },
+      { id: 'b', text: 'floor(col("price") * 100) / 100 - truncates the third decimal downward instead of rounding it', isCorrect: false },
+      { id: 'c', text: 'bround("price", 2) - rounds half to even, so a trailing 5 lands on the nearest even digit', isCorrect: false },
+      { id: 'd', text: 'round("price", 2) - rounds half away from zero to the requested number of decimal places', isCorrect: true },
     ],
     explanation: 'round(col, scale) is the numeric rounding function. format_number() returns a formatted string and breaks any downstream arithmetic; floor()-based scaling always rounds down; bround() uses banker\'s rounding, which differs from round() only on exact halves.',
     tags: ['math', 'round', 'functions'],
@@ -1130,12 +1138,12 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.MATH_FUNCTIONS,
     question: 'A notebook runs "from pyspark.sql.functions import abs" near the top. Further down, unrelated code calls abs(-5) on a plain Python integer. What is the result?',
     options: [
-      { id: 'a', text: 'It returns 5, because the imported abs() detects non-Column input and delegates to the built-in', isCorrect: false },
-      { id: 'b', text: 'It raises ImportError, because pyspark.sql.functions does not export a function named abs', isCorrect: false },
-      { id: 'c', text: 'It returns a Column expression, because the import shadowed the built-in for the whole module', isCorrect: true },
-      { id: 'd', text: 'It returns 5, because Python resolves built-in names ahead of module-level imported names', isCorrect: false },
+      { id: 'a', text: 'It returns 5, because the imported abs() spots a plain number and hands it to the built-in', isCorrect: false },
+      { id: 'b', text: 'It returns 5, because Python looks up built-in names before names imported into the module', isCorrect: false },
+      { id: 'c', text: 'It returns the Column expression abs(-5), because PySpark wraps the literal into a column', isCorrect: false },
+      { id: 'd', text: 'It raises a type error, because the imported abs() accepts only a Column or a column name', isCorrect: true },
     ],
-    explanation: 'A bare "from ... import abs" rebinds the name for the entire module, so the built-in is gone. PySpark wraps the literal and hands back Column<\'abs(-5)\'> instead of 5, which then fails somewhere far from the import. The same trap applies to round, max, min, sum, and filter. Import the module as F and call F.abs() to keep both.',
+    explanation: 'A bare "from pyspark.sql.functions import abs" rebinds the name abs for the whole module, so abs(-5) calls the PySpark function, which accepts only a Column or a column name and raises PySparkTypeError [NOT_EXPECTED_TYPE] for the int, far from the import that caused it. The same trap applies to round, max, min, sum and filter. Import the module as F and call F.abs() to keep both.',
     tags: ['math', 'abs', 'imports', 'functions'],
     concepts: ['ps-math-fns'],
   },
@@ -1164,12 +1172,12 @@ result = ____.select("order_id", ____(df.products).____("product"))`,
     topic: Topic.MATH_FUNCTIONS,
     question: 'Which pair of pyspark.sql.functions computes "e raised to x" and "x raised to y" respectively?',
     options: [
-      { id: 'a', text: 'exp(x) and pow(x, y) — exp() is the natural exponential; pow() takes an explicit base and exponent', isCorrect: true },
-      { id: 'b', text: 'power(x) and pow(x, y) — power() is the Spark SQL spelling and is not exported to the Python API', isCorrect: false },
-      { id: 'c', text: 'log(x) and pow(x, y) — log() computes the natural logarithm, which is the inverse of exponentiation', isCorrect: false },
-      { id: 'd', text: 'exp(x) and multiply(x, y) — multiply() is not a PySpark function; column products use the * operator', isCorrect: false },
+      { id: 'a', text: 'exp(x) and pow(x, y) - exp() fixes the base at e, while pow() takes the base and the exponent', isCorrect: true },
+      { id: 'b', text: 'power(x) and pow(x, y) - power() with a single argument raises e to the power of x', isCorrect: false },
+      { id: 'c', text: 'log(x) and pow(x, y) - log() raises e to the power of x, which is the reverse of ln', isCorrect: false },
+      { id: 'd', text: 'exp(x) and multiply(x, y) - multiply() repeats x as a factor y times over', isCorrect: false },
     ],
-    explanation: 'exp(x) is e**x with the base fixed; pow(base, exponent) takes both. A constant base needs lit(), as in pow(lit(2), df.exponent), because a bare Python number on the left of a two-Column function is ambiguous. POWER is the SQL name for the same function and only works inside spark.sql() or expr().',
+    explanation: 'exp(x) is e raised to x, with the base fixed; pow(x, y), also exported as power(x, y), takes both. power() with one argument is an error, log() is the natural logarithm, the inverse of exp(), and pyspark.sql.functions has no multiply(). Column objects also support **, so col("x") ** col("y") is the same as pow. A constant base needs lit(), as in pow(lit(2), "exponent").',
     tags: ['math', 'pow', 'exp', 'functions'],
     concepts: ['ps-math-fns'],
   },
@@ -1279,31 +1287,48 @@ result = ____.____("____", ____().over(____))`,
 
   {
     id: 'window-3',
-    requires: [/lag\s*\(/, /\.over\s*\(/],
+    requires: [/lag\s*\(/, /\.over\s*\(/, /partitionBy/],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.WINDOW_FUNCTIONS,
     language: CodeLanguage.PYTHON,
-    question: 'Given a DataFrame "df" with columns "employee_id", "salary", and "sale_date", retrieve each employee\'s preceding salary value when ordered chronologically by "sale_date". Store the result in a new column named "previous_salary".',
-    starterCode: ``,
+    question: `Given a DataFrame "df" with columns "employee_id", "sale_date" and "amount" (one row per sale), add a column "previous_amount" holding the amount of the same employee's previous sale, ordered by "sale_date". An employee's first sale gets null.`,
+    starterCode: `# Previous sale amount of the same employee
+`,
     testCases: [
       {
-        input: 'df with sale_date and salary',
-        expectedOutput: 'lag(df.salary, 1).over(windowSpec)',
-        description: 'Should get previous row salary',
+        input: 'df with employee_id, sale_date and amount',
+        expectedOutput: 'lag("amount", 1).over(Window.partitionBy("employee_id").orderBy("sale_date"))',
+        description: 'Should read the previous sale of the same employee',
       },
     ],
-    solution: `from pyspark.sql.window import Window\nfrom pyspark.sql.functions import lag\n\nwindowSpec = Window.orderBy("sale_date")\nresult = df.withColumn("previous_salary", lag(df.salary, 1).over(windowSpec))\n# OR\nfrom pyspark.sql.window import Window\nfrom pyspark.sql.functions import lag, col\n\nwindowSpec = Window.orderBy(col("sale_date"))\nresult = df.withColumn("previous_salary", lag(col("salary"), 1).over(windowSpec))`,
-    explanation: 'lag(column, offset) retrieves the value from a previous row. offset=1 means previous row, offset=2 means 2 rows back.',
+    solution: `from pyspark.sql.window import Window
+from pyspark.sql.functions import lag
+
+windowSpec = Window.partitionBy("employee_id").orderBy("sale_date")
+result = df.withColumn("previous_amount", lag("amount", 1).over(windowSpec))
+# OR
+from pyspark.sql.window import Window
+from pyspark.sql.functions import lag, col
+
+windowSpec = Window.partitionBy(col("employee_id")).orderBy(col("sale_date"))
+result = df.withColumn("previous_amount", lag(col("amount"), 1).over(windowSpec))
+# OR
+from pyspark.sql.window import Window
+from pyspark.sql.functions import lag
+
+windowSpec = Window.partitionBy("employee_id").orderBy("sale_date")
+result = df.withColumn("previous_amount", lag("amount").over(windowSpec))`,
+    explanation: 'partitionBy("employee_id") restarts the window for each employee, and orderBy("sale_date") puts their sales in time order, so lag("amount", 1) reads the amount of the sale just before. The first sale of each employee has no row before it in its partition, so lag returns null. Without partitionBy the previous row could belong to another employee.',
     tieredHints: {
       apiSignature: 'lag(col: Column | str, count: int = 1, default: Any = None) -> Column',
       skeleton: `from pyspark.sql.window import Window
 from pyspark.sql.functions import lag
 
-ws = ____.____("sale_date")
-result = ____.____("____", ____(df.____, ____).over(____))`,
+windowSpec = ____.____("employee_id").____("sale_date")
+result = df.withColumn("previous_amount", ____("amount", ____).over(____))`,
     },
-    hints: ['Use lag(column, offset).over()', 'offset=1 for previous row'],
+    hints: ['Partition by employee_id so each employee has their own sequence', 'lag(column, 1) reads the previous row of the window'],
     tags: ['window', 'lag', 'functions'],
     concepts: ['sql-window-ranking', 'sql-window-offset'],
   },
@@ -1315,12 +1340,12 @@ result = ____.____("____", ____(df.____, ____).over(____))`,
     topic: Topic.WINDOW_FUNCTIONS,
     question: 'The lag() function retrieves values from preceding rows. Which function performs the opposite operation by looking forward to succeeding rows?',
     options: [
-      { id: 'a', text: 'next(column) — built-in function that fetches the subsequent row value', isCorrect: false },
-      { id: 'b', text: 'lead(column, offset) — looks forward by offset rows; returns NULL at end', isCorrect: true },
-      { id: 'c', text: 'lag(column, -1) — accepts negative offset values to navigate forward in rows', isCorrect: false },
-      { id: 'd', text: 'first(column) — extracts the first available value within the window partition', isCorrect: false },
+      { id: 'a', text: 'next(column) - a window function that fetches the value of the following row', isCorrect: false },
+      { id: 'b', text: 'lead(column, offset) - looks forward by offset rows and returns NULL past the end', isCorrect: true },
+      { id: 'c', text: 'nth_value(column, 2) - returns the value of the row right after the current one', isCorrect: false },
+      { id: 'd', text: 'first(column) - returns the value of the row that comes next in the window', isCorrect: false },
     ],
-    explanation: 'lead(column, offset) is the counterpart to lag(). lead looks forward, lag looks backward. Both return NULL at the boundary (lead at the last row, lag at the first row). Both require .over(windowSpec) with an ORDER BY.',
+    explanation: 'lead(column, offset) is the counterpart to lag(): lead reads forward, lag reads back, and both return NULL past the edge of the partition (lead at the last row, lag at the first). Spark also accepts a negative lag offset, lag(col, -1), which reads forward like lead, but lead is the clear way to say it. nth_value(col, 2) is the second row of the whole frame, not the next row, and first() is the first row of the frame; there is no next() function.',
     tags: ['window', 'lead', 'lag', 'functions'],
     concepts: ['sql-window-ranking', 'sql-window-offset'],
   },
@@ -1332,12 +1357,12 @@ result = ____.____("____", ____(df.____, ____).over(____))`,
     topic: Topic.WINDOW_FUNCTIONS,
     question: 'To calculate an explicit running total (cumulative sum) in PySpark across ordered rows, which window frame specification should you configure?',
     options: [
-      { id: 'a', text: 'rowsBetween(Window.unboundedPreceding, Window.currentRow) — sums from start to current row', isCorrect: true },
-      { id: 'b', text: 'rowsBetween(Window.currentRow, Window.unboundedFollowing) — sums from current row to last row', isCorrect: false },
-      { id: 'c', text: 'rangeBetween(-1, 0) — accumulates values exclusively across the immediate previous and current rows', isCorrect: false },
-      { id: 'd', text: 'No frame required — sum().over() automatically calculates a running total without any order specification', isCorrect: false },
+      { id: 'a', text: 'rowsBetween(Window.unboundedPreceding, Window.currentRow) - sums from start to current row', isCorrect: true },
+      { id: 'b', text: 'rowsBetween(Window.currentRow, Window.unboundedFollowing) - sums from current row to last row', isCorrect: false },
+      { id: 'c', text: 'rangeBetween(-1, 0) - accumulates values exclusively across the immediate previous and current rows', isCorrect: false },
+      { id: 'd', text: 'No frame required - sum().over() automatically calculates a running total without any order specification', isCorrect: false },
     ],
-    explanation: 'rowsBetween(unboundedPreceding, currentRow) means "from the very first row in the partition up to the current row". This accumulates the sum row by row. Note: with ORDER BY present, this is actually the default frame — but being explicit is clearer and avoids confusion with RANGE vs ROWS behavior.',
+    explanation: 'rowsBetween(Window.unboundedPreceding, Window.currentRow) means "from the first row of the partition up to this row, counted in rows", which adds the values up one row at a time. Leaving the frame out is not the same: with an orderBy, the default frame is RANGE from the start to the current row, so rows that tie on the ordering column share one total.',
     tags: ['window', 'sum', 'running-total', 'frame', 'functions'],
     concepts: ['sql-window-ranking', 'ps-aggregate-fns', 'sql-window-frame'],
   },
@@ -1349,12 +1374,12 @@ result = ____.____("____", ____(df.____, ____).over(____))`,
     topic: Topic.WINDOW_FUNCTIONS,
     question: 'You need to divide employees into 4 equal groups (quartiles) based on salary. Which window function should you use?',
     options: [
-      { id: 'a', text: 'percent_rank() — calculates relative percentage ranks from 0.0 to 1.0 rather than integer buckets', isCorrect: false },
-      { id: 'b', text: 'rank() — assigns ordinal ranking numbers with gaps for ties rather than balanced size groups', isCorrect: false },
-      { id: 'c', text: 'dense_rank() — assigns consecutive ordinal ranking numbers without gaps for tied values', isCorrect: false },
-      { id: 'd', text: 'ntile(4) — distributes rows into approximately equal numbered bucket groups across partitions', isCorrect: true },
+      { id: 'a', text: 'percent_rank() - gives each row its quartile, 1 to 4, from its relative rank', isCorrect: false },
+      { id: 'b', text: 'rank() - with ties grouped, gives each salary band a number from 1 to 4', isCorrect: false },
+      { id: 'c', text: 'dense_rank() - with no gaps, numbers the rows into 4 groups of equal size', isCorrect: false },
+      { id: 'd', text: 'ntile(4) - splits the ordered rows into 4 buckets of near-equal size, numbered 1 to 4', isCorrect: true },
     ],
-    explanation: 'ntile(n) divides rows into n approximately equal buckets numbered 1 to n. Unlike rank()/dense_rank() which assign sequential positions, ntile guarantees roughly equal group sizes. percent_rank() returns a relative position (0.0 to 1.0), not a group number.',
+    explanation: 'ntile(n) splits the ordered rows of each partition into n buckets as equal in size as possible, numbered 1 to n. rank() and dense_rank() number positions, so with distinct salaries they run up to the row count, not 4; percent_rank() returns a fraction between 0.0 and 1.0, not a bucket number.',
     tags: ['window', 'ntile', 'percentile', 'functions'],
     concepts: ['sql-window-ranking', 'ps-aggregate-fns'],
   },
@@ -1645,7 +1670,7 @@ OPTIMIZE events ZORDER BY user_id, event_time`,
   {
     id: 'sql-join-1',
     // Bare JOIN is an inner join in SQL, so the INNER keyword cannot be required.
-    requires: [/\bJOIN\b/i, /\bON\b/i],
+    requires: [/\bJOIN\b/i, /\bON\b/i, /^(?![\s\S]*\b(LEFT|RIGHT|FULL|CROSS|OUTER|SEMI|ANTI)\b)/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1680,7 +1705,7 @@ ____ e.department_id ____ d.id`,
 
   {
     id: 'sql-join-2',
-    requires: [/LEFT\s+(OUTER\s+)?JOIN/i],
+    requires: [/FROM\s+orders\b[\s\S]*LEFT\s+(OUTER\s+)?JOIN\s+customers\b|FROM\s+customers\b[\s\S]*RIGHT\s+(OUTER\s+)?JOIN\s+orders\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1700,7 +1725,11 @@ ON o.customer_id = c.id
 -- OR
 SELECT * FROM orders
 LEFT JOIN customers
-ON orders.customer_id = customers.id`,
+ON orders.customer_id = customers.id
+-- OR
+SELECT * FROM customers c
+RIGHT JOIN orders o
+ON o.customer_id = c.id`,
     explanation: 'LEFT JOIN retains all rows from the left table (orders) and joins matching right-table (customers) rows.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM table1 LEFT JOIN table2 ON table1.fk = table2.pk',
@@ -1715,7 +1744,7 @@ ____ o.customer_id ____ c.id`,
 
   {
     id: 'sql-join-3',
-    requires: [/RIGHT\s+(OUTER\s+)?JOIN/i],
+    requires: [/FROM\s+products\b[\s\S]*RIGHT\s+(OUTER\s+)?JOIN\s+categories\b|FROM\s+categories\b[\s\S]*LEFT\s+(OUTER\s+)?JOIN\s+products\b/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
@@ -1735,7 +1764,11 @@ ON p.category_id = c.id
 -- OR
 SELECT * FROM products
 RIGHT JOIN categories
-ON products.category_id = categories.id`,
+ON products.category_id = categories.id
+-- OR
+SELECT * FROM categories c
+LEFT JOIN products p
+ON p.category_id = c.id`,
     explanation: 'RIGHT JOIN retains all records from the right table (categories) regardless of left-table (products) matches.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM table1 RIGHT JOIN table2 ON table1.fk = table2.pk',
@@ -1770,7 +1803,11 @@ ON u.id = p.user_id
 -- OR
 SELECT * FROM users
 FULL OUTER JOIN profiles
-ON users.id = profiles.user_id`,
+ON users.id = profiles.user_id
+-- OR
+SELECT * FROM users u
+FULL JOIN profiles p
+ON u.id = p.user_id`,
     explanation: 'FULL OUTER JOIN combines unmatched and matched records from both tables into a unified result set.',
     tieredHints: {
       apiSignature: 'SELECT cols FROM table1 FULL OUTER JOIN table2 ON table1.pk = table2.fk',
@@ -1818,12 +1855,12 @@ ____ e.____ ____ m.id`,
 
   {
     id: 'sql-join-6',
-    requires: [/\.join\s*\(/, /['"]left['"]/],
+    requires: [/\.join\s*\(/, /['"]left(_?outer)?['"]/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SQL_JOINS,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to perform a left join between DataFrame "orders_df" (columns: order_id, customer_id, amount) and "customers_df" (columns: id, name, email) matching orders_df.customer_id with customers_df.id.',
+    question: 'Write a PySpark statement that left joins DataFrame "orders_df" (columns: order_id, customer_id, amount) to "customers_df" (columns: id, name, email), matching orders_df.customer_id with customers_df.id and keeping every order, and assigns the result to "result".',
     starterCode: `# Left join orders_df and customers_df\nresult = `,
     testCases: [
       {
@@ -1834,7 +1871,9 @@ ____ e.____ ____ m.id`,
     ],
     solution: `result = orders_df.join(customers_df, orders_df.customer_id == customers_df.id, "left")
 # OR
-result = orders_df.join(customers_df, orders_df["customer_id"] == customers_df["id"], "left")`,
+result = orders_df.join(customers_df, orders_df["customer_id"] == customers_df["id"], "left")
+# OR
+result = orders_df.join(customers_df, orders_df.customer_id == customers_df.id, "left_outer")`,
     explanation: 'PySpark join() accepts the target DataFrame, join predicate expression (using == operator), and join type string.',
     tieredHints: {
       apiSignature: 'DataFrame.join(other: DataFrame, on: Column | str, how: str = "inner") -> DataFrame',
@@ -1849,7 +1888,7 @@ result = orders_df.join(customers_df, orders_df["customer_id"] == customers_df["
 
   {
     id: 'grouping-1',
-    requires: [/ROLLUP\s*\(/i],
+    requires: [/ROLLUP/i],
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SQL_AGGREGATIONS,
@@ -1869,8 +1908,12 @@ GROUP BY ROLLUP(region)
 -- OR
 SELECT region, SUM(amount)
 FROM sales
-GROUP BY ROLLUP(region)`,
-    explanation: 'ROLLUP creates subtotals at each level of grouping plus a grand total across all rows.',
+GROUP BY ROLLUP(region)
+-- OR
+SELECT region, SUM(amount) AS total_amount
+FROM sales
+GROUP BY region WITH ROLLUP`,
+    explanation: 'ROLLUP(region) returns one row per region plus a grand-total row, in which region shows NULL. GROUP BY region WITH ROLLUP is the older spelling of the same thing.',
     tieredHints: {
       apiSignature: 'GROUP BY ROLLUP(col1, col2, ...)',
       skeleton: `SELECT region, ____(amount) as total_amount
@@ -2161,7 +2204,7 @@ FROM ____`,
       },
     ],
     solution: `SELECT *,\n       SUM(amount) OVER (ORDER BY sale_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as running_total\nFROM sales\n-- OR\nSELECT *,\n       SUM(amount) OVER (ORDER BY sale_date) as running_total\nFROM sales`,
-    explanation: 'A running total accumulates values row by row. ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW tells SQL to sum from the very first row up to the current row. Without this frame clause, SUM() OVER(ORDER BY ...) defaults to RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW, which groups rows with the same ORDER BY value together — ROWS is more predictable for running totals.',
+    explanation: 'A running total accumulates values row by row. ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW tells SQL to sum from the very first row up to the current row. Without this frame clause, SUM() OVER(ORDER BY ...) defaults to RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW, which groups rows with the same ORDER BY value together - ROWS is more predictable for running totals.',
     tieredHints: {
       apiSignature: 'SUM(col) OVER (ORDER BY date_col ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)',
       skeleton: `SELECT *,
@@ -2189,7 +2232,17 @@ FROM ____`,
         description: 'Should get previous month value',
       },
     ],
-    solution: `SELECT *,\n       LAG(revenue, 1) OVER (ORDER BY month) as prev_month_revenue\nFROM monthly_revenue\n-- OR\nSELECT month, revenue,\n       LAG(revenue) OVER (ORDER BY month) as prev_month_revenue\nFROM monthly_revenue`,
+    solution: `SELECT *,
+       LAG(revenue, 1) OVER (ORDER BY month) as prev_month_revenue
+FROM monthly_revenue
+-- OR
+SELECT month, revenue,
+       LAG(revenue) OVER (ORDER BY month) as prev_month_revenue
+FROM monthly_revenue
+-- OR
+SELECT *,
+       LAG(revenue) OVER (ORDER BY month) as prev_month_revenue
+FROM monthly_revenue`,
     explanation: 'LAG(column, offset) retrieves a value from a previous row relative to the current row, based on the ORDER BY in the window. LAG(revenue, 1) gets the revenue from 1 row back. The first row has no predecessor, so it returns NULL. This is commonly used for month-over-month or period-over-period comparisons without needing a self-join.',
     tieredHints: {
       apiSignature: 'LAG(col, offset=1, default=None) OVER (ORDER BY col)',
@@ -2408,7 +2461,7 @@ SELECT current_catalog(), current_schema();`,
 
   {
     id: 'null-1',
-    requires: [/coalesce\s*\(/],
+    requires: [/coalesce\s*\(/, /coalesce\s*\(\s*(?:df\.email|df\[["']email["']\]|col\(\s*["']email["']\s*\)|["']email["'])\s*,\s*(?:df\.phone|df\[["']phone["']\]|col\(\s*["']phone["']\s*\)|["']phone["'])\s*,\s*(?:df\.contact|df\[["']contact["']\]|col\(\s*["']contact["']\s*\)|["']contact["'])/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NULL_HANDLING,
@@ -2452,12 +2505,12 @@ result = df.withColumn("primary_contact", ____(df.email, df.____, df.____))`,
     topic: Topic.NULL_HANDLING,
     question: 'Which expression filters DataFrame "df" down to the rows where column "email" is null?',
     options: [
-      { id: 'a', text: 'df.filter(df.email.isNull()) — isNull() builds the per-row null test that Spark evaluates', isCorrect: true },
-      { id: 'b', text: 'df.filter(df.email == None) — comparing a Column to None yields null, so no row is ever kept', isCorrect: false },
-      { id: 'c', text: 'df.filter(df.email is None) — Python identity runs once on the Column object and returns False', isCorrect: false },
-      { id: 'd', text: 'df.filter(isnan("email")) — isnan() detects the float NaN value, which is not the same as null', isCorrect: false },
+      { id: 'a', text: 'df.filter(df.email.isNull()) - isNull() builds the per-row test for a missing value', isCorrect: true },
+      { id: 'b', text: 'df.filter(df.email == None) - comparing with None is translated into IS NULL', isCorrect: false },
+      { id: 'c', text: `df.filter(df.email is None) - Python's identity test is passed to Spark as a null check`, isCorrect: false },
+      { id: 'd', text: 'df.filter(isnan("email")) - isnan() is true for every value that is missing', isCorrect: false },
     ],
-    explanation: 'isNull() (or the isnull() function, or the SQL string "email IS NULL") is the null test. Equality against None returns null rather than true, so the filter drops everything; "is None" is evaluated by Python before Spark ever sees it; isnan() only matches NaN, which is a float value and distinct from a missing one.',
+    explanation: 'isNull() (or the SQL string "email IS NULL") is the null test. df.email == None builds email = NULL, which is null on every row, so no row is kept; df.email is None is evaluated by Python to False before Spark sees it, and filter() rejects a plain bool with a type error; isnan() matches only the float NaN, which is a value, not a missing one.',
     tags: ['null-handling', 'filter', 'isnull'],
     concepts: ['ps-null-handling', 'ps-select-filter'],
   },
@@ -2498,12 +2551,12 @@ result = df.withColumn("primary_contact", ____(df.email, df.____, df.____))`,
 
   {
     id: 'null-5',
-    requires: [/dropna\s*\(|na\s*\.\s*drop\s*\(/, /how\s*=\s*['"]all['"]/],
+    requires: [/dropna\s*\(|na\s*\.\s*drop\s*\(/, /['"]all['"]/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NULL_HANDLING,
     language: CodeLanguage.PYTHON,
-    question: 'Write a PySpark statement to drop rows from DataFrame "df" only when all columns in the row are null.',
+    question: 'Write a PySpark statement that drops the rows of DataFrame "df" in which every column is null, keeps all other rows, and assigns the result to "result".',
     starterCode: `# Drop rows where all columns are null\nresult = `,
     testCases: [
       {
@@ -2514,7 +2567,11 @@ result = df.withColumn("primary_contact", ____(df.email, df.____, df.____))`,
     ],
     solution: `result = df.na.drop(how="all")
 # OR
-result = df.dropna(how="all")`,
+result = df.dropna(how="all")
+# OR
+result = df.dropna("all")
+# OR
+result = df.na.drop("all")`,
     explanation: 'na.drop(how="all") drops rows only when every column in the row evaluates to null.',
     tieredHints: {
       apiSignature: 'DataFrameNaFunctions.drop(how: str = "any", thresh: int = None, subset: List[str] = None) -> DataFrame',
