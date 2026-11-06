@@ -75,7 +75,6 @@ When spawned to backfill or audit `requires` on Databricks CODING questions, fol
 | `delta-5` | ADVANCED | `DELTA_OPERATIONS` | `['MERGE INTO']` | `expandedQuestions.ts` | 🟢 Completed | Requires MERGE INTO keyword |
 | `delta-8` | INTERMEDIATE | `DELTA_OPTIMIZATION` | `['OPTIMIZE']` | `expandedQuestions.ts` | 🟢 Completed | Requires OPTIMIZE keyword |
 | `delta-9` | ADVANCED | `DELTA_OPTIMIZATION` | `['ZORDER BY']` | `expandedQuestions.ts` | 🟢 Completed | Requires ZORDER BY keyword |
-| `catalog-3` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `['CREATE CATALOG']` | `expandedQuestions.ts` | 🟢 Completed | Requires CREATE CATALOG keyword |
 | `catalog-4` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `['CREATE SCHEMA']` | `expandedQuestions.ts` | 🟢 Completed | Requires CREATE SCHEMA keyword |
 | `catalog-6` | ADVANCED | `DATABRICKS_PLATFORM` | `['GRANT']` | `expandedQuestions.ts` | 🟢 Completed | Requires GRANT keyword |
 | `delta-clone-2` | INTERMEDIATE | `DELTA_OPERATIONS` | `['DEEP CLONE']` | `expandedQuestions.ts` | 🟢 Completed | Requires DEEP CLONE keyword |

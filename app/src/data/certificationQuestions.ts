@@ -1613,14 +1613,14 @@ export const certificationQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_PLATFORM,
-    question: 'What is Databricks Repos?',
+    question: 'What is a Databricks Git folder (formerly called Repos)?',
     options: [
       { id: 'a', text: 'A local DBFS file system cache designed to store temporary Parquet file outputs across cluster restarts.', isCorrect: false },
       { id: 'b', text: 'A workspace Git integration allowing developers to clone repositories, manage branches, and commit code directly in Databricks.', isCorrect: true },
       { id: 'c', text: 'A cloud object storage mounting tool that replaces external AWS IAM roles with local secret scope parameters.', isCorrect: false },
       { id: 'd', text: 'A cluster provisioning engine that automatically spins up driver nodes for scheduled job runs.', isCorrect: false },
     ],
-    explanation: 'Databricks Repos integrates with Git providers (GitHub, GitLab, Azure DevOps, Bitbucket). You can clone repos, create branches, commit changes, and push/pull directly from the workspace UI.',
+    explanation: 'A Git folder, called Repos until it was renamed, clones a repository from a Git provider (GitHub, GitLab, Azure DevOps, Bitbucket and others) into the workspace. From the workspace UI you can then switch or create branches, commit, push and pull. It holds code, not data: tables and files stay in cloud storage under Unity Catalog.',
     tags: ['repos', 'git', 'version-control'],
     concepts: ['dbx-repos'],
   },
@@ -1630,14 +1630,14 @@ export const certificationQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
-    question: 'Which Git operations can developers perform directly within the Databricks Repos user interface?',
+    question: 'Which Git operations can developers perform directly in the Databricks Git folder (formerly Repos) user interface?',
     options: [
       { id: 'a', text: 'Clone, commit, push, pull, create and switch branches, view diffs, and resolve merge conflicts.', isCorrect: true },
       { id: 'b', text: 'Clone and pull remote repositories, but committing and pushing code changes require external terminal CLI tools.', isCorrect: false },
       { id: 'c', text: 'Stage and commit code changes locally, but pushing to remote repositories and switching branches are unsupported.', isCorrect: false },
       { id: 'd', text: 'Create local workspace snapshot backups, but standard Git version control operations are completely unavailable.', isCorrect: false },
     ],
-    explanation: 'Repos supports full Git workflows: cloning repos, creating branches, committing changes, pushing to remote, pulling updates, viewing diffs, and resolving conflicts - all from the Databricks UI.',
+    explanation: 'Git folders (formerly Repos) support the everyday Git workflow from the Databricks UI: cloning, creating and switching branches, committing, pushing, pulling, viewing diffs, and resolving merge conflicts. No terminal is needed for any of these.',
     tags: ['repos', 'git-operations'],
     concepts: ['dbx-repos'],
   },
@@ -1647,33 +1647,16 @@ export const certificationQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
-    question: 'What file types are supported within Databricks Repos workspace directories?',
+    question: 'What file types can a Databricks Git folder (formerly Repos) hold?',
     options: [
-      { id: 'a', text: 'Only standard Databricks notebooks (.py, .sql, .scala, .r) are allowed in Repos folders.', isCorrect: false },
+      { id: 'a', text: 'Only standard Databricks notebooks (.py, .sql, .scala, .r) are allowed in Git folders.', isCorrect: false },
       { id: 'b', text: 'Only binary Delta Lake transaction log files and compressed Parquet data outputs.', isCorrect: false },
       { id: 'c', text: 'Notebooks, plain Python/SQL source files, YAML/JSON configuration files, and arbitrary text files.', isCorrect: true },
       { id: 'd', text: 'Only compiled Scala JAR files and packaged Python wheel (.whl) distribution archives.', isCorrect: false },
     ],
-    explanation: 'Repos support any file type that Git supports. You can have notebooks, Python modules, SQL files, config files (YAML/JSON), tests, and more - enabling proper software engineering practices.',
+    explanation: 'A Git folder holds whatever the repository holds: notebooks, Python modules, SQL files, YAML or JSON config, tests and other text files, within the workspace\'s file size limits. Because the folder root is on sys.path, a notebook can import the repository\'s .py modules like any Python package.',
     tags: ['repos', 'file-types'],
     concepts: ['dbx-repos'],
-  },
-
-  {
-    id: 'platform-cluster-1',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DATABRICKS_PLATFORM,
-    question: 'What is the primary difference between an All-Purpose cluster and a Job cluster in Databricks?',
-    options: [
-      { id: 'a', text: 'Job clusters support interactive notebook execution, whereas All-Purpose clusters only execute scheduled workflow tasks.', isCorrect: false },
-      { id: 'b', text: 'All-Purpose clusters remain active for interactive analysis, while ephemeral Job clusters provision for a job run and terminate upon completion.', isCorrect: true },
-      { id: 'c', text: 'Job clusters run exclusively on bare-metal hardware, whereas All-Purpose clusters run on virtualized cloud worker nodes.', isCorrect: false },
-      { id: 'd', text: 'All-Purpose clusters do not incur DBU charges, whereas Job clusters charge double DBU rates for automated execution.', isCorrect: false },
-    ],
-    explanation: 'All-purpose clusters are for interactive development (notebooks, exploration). Job clusters are ephemeral - created when a job starts, terminated when it ends. Job clusters cost less due to lower pricing tier.',
-    tags: ['clusters', 'all-purpose', 'job-cluster'],
-    concepts: ['dbx-cluster-config'],
   },
 
   {
@@ -1705,7 +1688,7 @@ export const certificationQuestions: Question[] = [
       { id: 'c', text: 'It automatically purges unreferenced Delta Lake table snapshots from underlying cloud object storage.', isCorrect: false },
       { id: 'd', text: 'It automatically downgrades worker instance types to smaller instance sizes during off-peak hours.', isCorrect: false },
     ],
-    explanation: 'Auto-termination stops the cluster after a set period of inactivity (default 120 minutes). This prevents clusters from running indefinitely and incurring unnecessary costs.',
+    explanation: 'Auto-termination stops an all-purpose cluster once it has been idle, with no commands running, for the number of minutes set when it was created. Nobody pays for a forgotten cluster overnight, and a stopped cluster keeps its configuration, so it can be started again. Job compute does not need it, since it shuts down when its run ends.',
     tags: ['clusters', 'auto-termination', 'cost'],
     concepts: ['dbx-cluster-config'],
   },
@@ -1735,8 +1718,8 @@ export const certificationQuestions: Question[] = [
     language: CodeLanguage.SQL,
     // One alternation, not two entries: `requires` is an AND list, so
     // [/EXTENDED/, /DETAIL/] demanded both spellings at once and failed everything.
-    requires: [/DESCRIBE\s+(EXTENDED|DETAIL)/i],
-    question: 'Write a SQL query to inspect detailed metadata, storage location, and table properties of table "sales.orders".',
+    requires: [/DESC(RIBE)?\s+(TABLE\s+)?(EXTENDED|DETAIL)/i],
+    question: 'Write a SQL statement that shows the storage location and table properties of the table "sales.orders", not only its columns.',
     starterCode: `-- Inspect detailed table metadata\n`,
     testCases: [
       {
@@ -1747,8 +1730,12 @@ export const certificationQuestions: Question[] = [
     ],
     solution: `DESCRIBE EXTENDED sales.orders
 -- OR
-DESCRIBE DETAIL sales.orders`,
-    explanation: 'DESCRIBE EXTENDED shows column names, types, comments, plus detailed table metadata including location, provider, properties, and statistics. DESCRIBE TABLE gives only column info.',
+DESCRIBE DETAIL sales.orders
+-- OR
+DESCRIBE TABLE EXTENDED sales.orders
+-- OR
+DESC EXTENDED sales.orders`,
+    explanation: 'DESCRIBE EXTENDED (also written DESCRIBE TABLE EXTENDED or DESC EXTENDED) lists the columns and then facts about the table: its type (MANAGED or EXTERNAL), location, owner, provider and properties. DESCRIBE DETAIL gives one row for a Delta table with its format, location, file count, size and properties. A plain DESCRIBE shows only the columns.',
     hints: ['Use DESCRIBE EXTENDED or DESCRIBE DETAIL'],
     tieredHints: {
       apiSignature: 'DESCRIBE EXTENDED table_name',
@@ -1790,8 +1777,9 @@ DESCRIBE DETAIL sales.orders`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_PLATFORM,
     language: CodeLanguage.SQL,
-    question: 'Create a session-scoped temporary view named "active_users" from the "users" table containing only records where account_status is "active".',
+    question: 'Write a SQL statement that creates a temporary view named "active_users", lasting only for this session, over the rows of the "users" table whose account_status is \'active\'.',
     starterCode: `-- Create active_users temp view\n`,
+    requires: [/TEMP(ORARY)?\s+VIEW/i],
     testCases: [
       {
         input: 'users table',
@@ -1799,10 +1787,12 @@ DESCRIBE DETAIL sales.orders`,
         description: 'Should create temporary view',
       },
     ],
-    solution: `CREATE OR REPLACE TEMP VIEW active_users AS\nSELECT * FROM users WHERE account_status = "active"
+    solution: `CREATE OR REPLACE TEMP VIEW active_users AS\nSELECT * FROM users WHERE account_status = 'active'
 -- OR
-CREATE TEMP VIEW active_users AS\nSELECT * FROM users WHERE account_status = "active"`,
-    explanation: 'CREATE OR REPLACE TEMP VIEW creates a session-scoped view that disappears when the cluster restarts. "OR REPLACE" overwrites the view if it already exists, avoiding errors on re-run.',
+CREATE TEMP VIEW active_users AS\nSELECT * FROM users WHERE account_status = 'active'
+-- OR
+CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE account_status = 'active'`,
+    explanation: 'CREATE TEMP VIEW (or TEMPORARY VIEW) saves the query, not its rows, under a name that only this Spark session can see; it is gone when the session ends, for example when the notebook is detached. OR REPLACE lets the cell be re-run without an error. A view created without TEMP would be saved in the catalog for everyone with access.',
     hints: ['Use CREATE OR REPLACE TEMP VIEW view_name AS SELECT ...'],
     tieredHints: {
       apiSignature: 'CREATE OR REPLACE TEMP VIEW view_name AS SELECT ...',

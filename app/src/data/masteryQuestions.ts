@@ -1473,7 +1473,9 @@ first_three = ____.____(3)`,
     ],
     solution: `RESTORE TABLE orders TO VERSION AS OF 5
 -- OR
-RESTORE orders TO VERSION AS OF 5`,
+RESTORE orders TO VERSION AS OF 5
+-- OR
+RESTORE TABLE orders VERSION AS OF 5`,
     explanation: 'RESTORE TABLE orders TO VERSION AS OF 5 creates a new commit version in the transaction log that restores the table state to version 5. Data files from version 5 are re-referenced without physically duplicating storage.',
     tieredHints: {
       apiSignature: 'RESTORE TABLE table_name TO VERSION AS OF version',
@@ -1503,8 +1505,10 @@ ____ TABLE orders ____ ____ AS OF 5`,
     ],
     solution: `RESTORE TABLE users TO TIMESTAMP AS OF "2024-01-15T10:00:00"
 -- OR
-RESTORE users TO TIMESTAMP AS OF '2024-01-15T10:00:00'`,
-    explanation: 'RESTORE TABLE supports TIMESTAMP AS OF "yyyy-MM-ddTHH:mm:ss". Delta resolves the commit version that was active at that timestamp and commits a new version restoring that data state.',
+RESTORE users TO TIMESTAMP AS OF '2024-01-15T10:00:00'
+-- OR
+RESTORE TABLE users TO TIMESTAMP AS OF '2024-01-15 10:00:00'`,
+    explanation: 'RESTORE TABLE ... TO TIMESTAMP AS OF takes a timestamp string, such as "2024-01-15T10:00:00" or "2024-01-15 10:00:00". Delta finds the version that was current at that moment and commits a new version holding its rows, so the history keeps every later version and the restore can itself be undone. The restore fails if VACUUM has already deleted files that version needs.',
     tieredHints: {
       apiSignature: 'RESTORE TABLE table_name TO TIMESTAMP AS OF timestamp',
       skeleton: `-- ____ table to timestamp
@@ -1518,22 +1522,11 @@ ____ TABLE users ____ ____ AS OF "2024-01-15T10:00:00"`,
   {
     id: 'restore-3',
     type: QuestionType.CODING,
-    requires: [/DESCRIBE\s+HISTORY/i],
+    requires: [/DESC(RIBE)?\s+HISTORY/i],
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DELTA_TIME_TRAVEL,
     language: CodeLanguage.SQL,
-    question: `Write a SQL statement to view the complete operational audit log and commit history of Delta table "transactions".
-
-Expected Command Output Format:
-\`\`\`text
-+---------+-------------------+---------+-----------+-----------------------+
-| version | timestamp         | userName| operation | operationParameters   |
-+---------+-------------------+---------+-----------+-----------------------+
-| 3       | 2024-01-15 10:05  | user_a  | RESTORE   | {"versionTo": 1}      |
-| 2       | 2024-01-15 09:30  | user_b  | DELETE    | {"predicate": "id=5"} |
-| 1       | 2024-01-15 09:00  | user_a  | WRITE     | {"mode": "Append"}    |
-+---------+-------------------+---------+-----------+-----------------------+
-\`\`\``,
+    question: `Write a SQL statement that lists the commit history of the Delta table "transactions": one row per version, newest first, with its timestamp, user, operation and parameters.`,
     starterCode: `-- Inspect table commit history\n`,
     testCases: [
       {
@@ -1542,8 +1535,10 @@ Expected Command Output Format:
         description: 'Should show table history',
       },
     ],
-    solution: `DESCRIBE HISTORY transactions`,
-    explanation: 'DESCRIBE HISTORY returns table lineage and metadata changes (version, timestamp, userId, operation, parameters, metrics), allowing data engineers to identify specific commits for time travel or auditing.',
+    solution: `DESCRIBE HISTORY transactions
+-- OR
+DESC HISTORY transactions`,
+    explanation: 'DESCRIBE HISTORY returns one row per commit, newest first, with the version, timestamp, user, operation (WRITE, MERGE, DELETE, RESTORE, OPTIMIZE and so on), its parameters and metrics. It is how you find the version number to read with VERSION AS OF or to RESTORE to. It shows commits to this table only; lineage across tables is a separate Unity Catalog feature.',
     tieredHints: {
       apiSignature: 'DESCRIBE HISTORY table_name',
       skeleton: `-- ____ table commit history
@@ -1584,7 +1579,7 @@ ____ ____ transactions`,
   {
     id: 'constraint-2',
     type: QuestionType.CODING,
-    requires: [/ALTER\s+TABLE/i, /ALTER\s+COLUMN/i, /SET\s+NOT\s+NULL/i],
+    requires: [/ALTER\s+TABLE/i, /(ALTER|CHANGE)\s+COLUMN/i, /SET\s+NOT\s+NULL/i],
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_OPERATIONS,
     language: CodeLanguage.SQL,
@@ -1597,8 +1592,10 @@ ____ ____ transactions`,
         description: 'Should add NOT NULL',
       },
     ],
-    solution: `ALTER TABLE users ALTER COLUMN email SET NOT NULL`,
-    explanation: 'ALTER TABLE users ALTER COLUMN email SET NOT NULL verifies existing data for NULLs and prevents any future writes containing NULL values in the email column.',
+    solution: `ALTER TABLE users ALTER COLUMN email SET NOT NULL
+-- OR
+ALTER TABLE users CHANGE COLUMN email SET NOT NULL`,
+    explanation: 'ALTER TABLE users ALTER COLUMN email SET NOT NULL (CHANGE COLUMN is the same command) first checks that no existing row has a NULL email, failing if one does, and from then on rejects any write that would put a NULL there. Like a CHECK constraint, NOT NULL is enforced on every write, while primary and foreign keys are informational only.',
     // No tieredHints: the solution is a single clause, so the apiSignature tier
     // already hands over the whole form and a skeleton tier can only blank one
     // token (retention 0.93). The untiered `hints` path is the right scaffold here.
