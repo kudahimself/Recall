@@ -150,8 +150,9 @@ describe('SpotFlawQuestion', () => {
 });
 
 describe('ExplainQuestion', () => {
-  const renderIt = (onAnswer = jest.fn()) =>
-    render(<ExplainQuestion question={SAMPLE_EXPLAIN} onAnswer={onAnswer} showHints />);
+  const THREE_POINT_EXPLAIN = { ...SAMPLE_EXPLAIN, keyPoints: SAMPLE_EXPLAIN.keyPoints.slice(0, 3) };
+  const renderIt = (onAnswer = jest.fn(), question = SAMPLE_EXPLAIN) =>
+    render(<ExplainQuestion question={question} onAnswer={onAnswer} showHints />);
   const typeAndSubmit = () => {
     fireEvent.change(screen.getByLabelText(/Your answer/), { target: { value: 'At-least-once never loses a batch.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit and see the key points' }));
@@ -169,20 +170,24 @@ describe('ExplainQuestion', () => {
   });
 
   it.each([
-    [[0, 1, 2], true, 0.75, 'counts as correct'],
-    [[0, 3], true, 0.5, 'a pass under the bar'],
-    [[1], false, 0.25, 'counts as a miss'],
-  ])('records ticks %j as credit', (ticks, isCorrect, credit, standing) => {
+    [4, [0, 1, 2], true, 3 / 4, '0.75', 'counts as correct'],
+    [4, [0, 3], false, 2 / 4, '0.5', 'counts as a miss'],
+    [4, [1], false, 1 / 4, '0.25', 'counts as a miss'],
+    [3, [0, 2], false, 2 / 3, '0.67', 'counts as a miss'],
+  ])('with %i key points records ticks %j as credit, passing only at 0.75', (total, ticks, isCorrect, credit, shown, standing) => {
     const onAnswer = jest.fn();
-    renderIt(onAnswer);
+    renderIt(onAnswer, total === 3 ? THREE_POINT_EXPLAIN : SAMPLE_EXPLAIN);
     typeAndSubmit();
     const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(total);
     ticks.forEach(i => fireEvent.click(boxes[i]));
-    expect(screen.getByText(new RegExp(`${ticks.length} of 4 · ${standing}`))).toBeInTheDocument();
+    expect(screen.getByText(`${ticks.length} of ${total} · ${standing}`)).toBeInTheDocument();
     expect(onAnswer).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: `Record ${ticks.length} of 4` }));
+    fireEvent.click(screen.getByRole('button', { name: `Record ${ticks.length} of ${total}` }));
     expect(onAnswer).toHaveBeenCalledWith(isCorrect, { hintTierUsed: 0, attempts: 1, credit });
-    expect(screen.getByRole('status')).toHaveTextContent(`credit ${credit}`);
+    expect(screen.getByRole('status')).toHaveTextContent(`credit ${shown}`);
+    expect(screen.getByRole('status')).toHaveTextContent(standing);
+    expect(screen.getByRole('status')).not.toHaveTextContent(/under the bar/);
     screen.getAllByRole('checkbox').forEach(b => expect(b).toBeDisabled());
   });
 });

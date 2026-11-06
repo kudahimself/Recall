@@ -551,8 +551,9 @@ Explain is review-only and never in a ramp.
 Choose and justify and explain pass their own `credit` to the recorder (`AnswerMeta.credit`), stored on the attempt like a hinted coding pass.
 The constants are in `spacedRepetition.ts`:
 - credit at or above `CREDIT_CORRECT_THRESHOLD` (0.75) is a full pass;
-- credit from `PARTIAL_PASS_CREDIT` (0.5) up to the threshold is a pass under the bar, like a hinted pass: the card leaves today's list, its correct streak resets and its FSRS grade is capped at Hard (`PARTIAL_CREDIT_GRADE_CAP`, `capGradeForCredit`), so the family comes back sooner;
-- credit below 0.5 is a miss (re-asked in the session, graded Again).
+- for choose and justify only, credit from `PARTIAL_PASS_CREDIT` (0.5) up to the threshold is a pass under the bar, like a hinted pass: the card leaves today's list, its correct streak resets and its FSRS grade is capped at Hard (`PARTIAL_CREDIT_GRADE_CAP`, `capGradeForCredit`), so the family comes back sooner;
+- for choose and justify, credit below 0.5 is a miss (re-asked in the session, graded Again);
+- explain has no partial band: it passes only at 0.75, and anything below is a miss.
 In every case the fraction counts toward the topic's unlock bar, as hinted credit does.
 
 #### 6. Predict the Outcome (`QuestionType.PREDICT_OUTCOME`)
@@ -607,6 +608,8 @@ Recall does not grade prose.
 - `modelAnswer: string` - two or three sentences, shown after the learner submits
 
 **Credit** (`explainCredit`): ticked key points / all key points, recorded when the learner confirms the ticks (3 of 4 meets the 0.75 bar).
+Explain passes only at the 0.75 bar: anything below, such as 2 of 4 or 2 of 3, counts as a miss (the 0.5 partial band is for choose and justify only).
+The fraction is still stored as the attempt's credit.
 
 **Review-only** (`REVIEW_ONLY_TYPES`, `isReviewOnly`): an explain card is never a new card, a ramp card, an unseen drill or practice card, and `check-lessons.js` rejects it as a lesson exercise.
 It joins its family's review rotation once every ramp card of its topic is answered (`pickFamilyCard`): unseen, it counts as the card seen longest ago, so the next review whose type rotation allows it serves it.

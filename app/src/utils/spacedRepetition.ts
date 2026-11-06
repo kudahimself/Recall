@@ -126,18 +126,20 @@ export const HINT_GRADE_CAP = [4, 2, 1] as const;            // FSRS grade ceili
 // Self-graded partial credit (choose and justify, explain). The component
 // grades the credit; these constants turn it into the answer's outcome:
 //   credit >= CREDIT_CORRECT_THRESHOLD           -> a full pass (streak continues)
-//   PARTIAL_PASS_CREDIT <= credit < the threshold -> a pass under the bar, like a
-//       hinted pass: the card leaves the drain and today's list, but its streak
-//       resets and its FSRS grade is capped at PARTIAL_CREDIT_GRADE_CAP (Hard),
-//       so the family comes back sooner
-//   credit < PARTIAL_PASS_CREDIT                  -> a miss (re-asked, graded Again);
-//       the fraction still counts toward the topic's unlock bar
+//   PARTIAL_PASS_CREDIT <= credit < the threshold -> choose and justify only: a
+//       pass under the bar, like a hinted pass: the card leaves the drain and
+//       today's list, but its streak resets and its FSRS grade is capped at
+//       PARTIAL_CREDIT_GRADE_CAP (Hard), so the family comes back sooner
+//   credit < PARTIAL_PASS_CREDIT                  -> a miss (re-asked, graded Again)
+// Explain has no partial band: it passes only at CREDIT_CORRECT_THRESHOLD, so
+// 2 of 4 key points is a miss. In every case the fraction still counts toward
+// the topic's unlock bar.
 export const PARTIAL_PASS_CREDIT = 0.5;
 export const PARTIAL_CREDIT_GRADE_CAP = 2;
 // Choose and justify: the right decision with the wrong reason.
 export const CHOOSE_JUSTIFY_DECISION_CREDIT = 0.5;
 
-/** Whether an answer with this credit counts as a pass (isCorrect); see PARTIAL_PASS_CREDIT. */
+/** Whether a choose and justify answer with this credit counts as a pass (isCorrect); see PARTIAL_PASS_CREDIT. */
 export function isPassingCredit(credit: number): boolean {
   return credit >= PARTIAL_PASS_CREDIT;
 }

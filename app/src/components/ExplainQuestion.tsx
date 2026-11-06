@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnswerMeta, ExplainQuestion as ExplainQ } from '../types';
 import { explainCredit } from '../utils/answerCredit';
-import { CREDIT_CORRECT_THRESHOLD, isPassingCredit } from '../utils/spacedRepetition';
+import { CREDIT_CORRECT_THRESHOLD } from '../utils/spacedRepetition';
 import { renderInlineCode } from './InlineCode';
 import { ExplanationBlock, QuestionHead, ResultBanner } from './ReasoningParts';
 
@@ -28,11 +28,8 @@ export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer, onNext })
   const total = question.keyPoints.length;
   const credit = explainCredit(question, ticked);
   const passBar = Math.ceil(CREDIT_CORRECT_THRESHOLD * total);
-  const standing = credit >= CREDIT_CORRECT_THRESHOLD
-    ? 'counts as correct'
-    : isPassingCredit(credit)
-    ? 'a pass under the bar: back sooner'
-    : 'counts as a miss';
+  const passed = credit >= CREDIT_CORRECT_THRESHOLD;
+  const standing = passed ? 'counts as correct' : 'counts as a miss';
 
   const toggle = (i: number) => {
     if (stage !== 'tick') return;
@@ -46,10 +43,10 @@ export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer, onNext })
   const record = () => {
     if (stage !== 'tick') return;
     setStage('graded');
-    onAnswer(isPassingCredit(credit), { hintTierUsed: 0, attempts: 1, credit });
+    onAnswer(passed, { hintTierUsed: 0, attempts: 1, credit });
   };
 
-  const verdict = credit >= CREDIT_CORRECT_THRESHOLD ? 'right' : isPassingCredit(credit) ? 'partial' : 'wrong';
+  const verdict = passed ? 'right' : 'wrong';
 
   return (
     <div className="reasoning-question explain-question">
