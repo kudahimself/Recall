@@ -60,8 +60,8 @@ export const sqlMisconceptionMCQs: Question[] = [
     question: 'Which query returns each `department` together with its total head count, listing only departments with more than 10 people?',
     options: [
       { id: 'a', text: 'SELECT department, COUNT(*) FROM employees GROUP BY department HAVING COUNT(*) > 10', isCorrect: true },
-      { id: 'b', text: 'SELECT department, COUNT(*) FROM employees WHERE COUNT(*) > 10 GROUP BY department', isCorrect: false },
-      { id: 'c', text: 'SELECT department, COUNT(*) FROM employees GROUP BY department WHERE COUNT(*) > 10', isCorrect: false },
+      { id: 'b', text: 'SELECT department, COUNT(*) FROM employees WHERE COUNT(*) > 10 GROUP BY department', isCorrect: false, misconceptionTag: 'sql-where-vs-having' },
+      { id: 'c', text: 'SELECT department, COUNT(*) FROM employees GROUP BY department WHERE COUNT(*) > 10', isCorrect: false, misconceptionTag: 'sql-where-vs-having' },
       { id: 'd', text: 'SELECT department, COUNT(*) FROM employees WHERE department > 10 GROUP BY department', isCorrect: false },
     ],
     explanation: 'HAVING filters groups after GROUP BY, so it is where an aggregate condition such as COUNT(*) > 10 goes. WHERE filters single rows before any group exists and cannot use an aggregate, whether it is written before GROUP BY or after it (the latter is also a syntax error), and WHERE department > 10 compares the department name with a number instead of counting people.',
@@ -77,9 +77,9 @@ export const sqlMisconceptionMCQs: Question[] = [
     question: 'In strict ANSI SQL, which of these queries is valid?',
     options: [
       { id: 'a', text: 'SELECT department, MAX(salary) FROM employees GROUP BY department', isCorrect: true },
-      { id: 'b', text: 'SELECT department, emp_name, MAX(salary) FROM employees GROUP BY department', isCorrect: false },
-      { id: 'c', text: 'SELECT department, emp_name FROM employees GROUP BY department ORDER BY MAX(salary)', isCorrect: false },
-      { id: 'd', text: 'SELECT * FROM employees GROUP BY department HAVING MAX(salary) > 50000', isCorrect: false },
+      { id: 'b', text: 'SELECT department, emp_name, MAX(salary) FROM employees GROUP BY department', isCorrect: false, misconceptionTag: 'sql-group-by-non-aggregated' },
+      { id: 'c', text: 'SELECT department, emp_name FROM employees GROUP BY department ORDER BY MAX(salary)', isCorrect: false, misconceptionTag: 'sql-group-by-non-aggregated' },
+      { id: 'd', text: 'SELECT * FROM employees GROUP BY department HAVING MAX(salary) > 50000', isCorrect: false, misconceptionTag: 'sql-group-by-non-aggregated' },
     ],
     explanation: 'Every selected column that is not inside an aggregate must appear in GROUP BY. A department has many emp_name values, so selecting emp_name next to MAX(salary) has no single answer per group, and SELECT * has the same problem. Older MySQL silently picked an arbitrary row; strict ANSI SQL and Spark SQL reject the query.',
     tags: ['group-by', 'aggregation'],
@@ -94,7 +94,7 @@ export const sqlMisconceptionMCQs: Question[] = [
     question: '`customers` has 1000 rows. 200 of them have no matching row in `orders`. How many rows does `SELECT * FROM customers c INNER JOIN orders o ON c.id = o.customer_id` produce?',
     options: [
       { id: 'a', text: 'At least 800 rows: the 200 customers with no order drop out, and a customer with several orders appears once per order.', isCorrect: true },
-      { id: 'b', text: 'Exactly 1000 rows: INNER JOIN keeps every customer and fills the order columns with NULL where nothing matches.', isCorrect: false },
+      { id: 'b', text: 'Exactly 1000 rows: INNER JOIN keeps every customer and fills the order columns with NULL where nothing matches.', isCorrect: false, misconceptionTag: 'sql-inner-vs-left-join' },
       { id: 'c', text: 'Exactly 800 rows: INNER JOIN keeps each matched customer once, however many orders that customer has placed.', isCorrect: false },
       { id: 'd', text: 'Exactly 200 rows: INNER JOIN keeps only the customers whose id has no matching row in the orders table.', isCorrect: false },
     ],

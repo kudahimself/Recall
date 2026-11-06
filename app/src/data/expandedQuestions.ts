@@ -693,7 +693,7 @@ result = ____.withColumn("reminder_date", ____(df.end_date, ____))`,
   // DATEDIFF
   {
     id: 'datetime-7',
-    requires: [/datediff\s*\(/, /datediff\s*\(\s*(?:df\.end_date|df\[["']end_date["']\]|col\(\s*["']end_date["']\s*\)|["']end_date["'])/],
+    requires: [/datediff\s*\(/, /datediff\s*\(\s*(?:df\.end_date|df\[["']end_date["']\]|(?:F\.)?col\(\s*["']end_date["']\s*\)|["']end_date["'])/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATETIME_FUNCTIONS,
@@ -2461,7 +2461,7 @@ SELECT current_catalog(), current_schema();`,
 
   {
     id: 'null-1',
-    requires: [/coalesce\s*\(/, /coalesce\s*\(\s*(?:df\.email|df\[["']email["']\]|col\(\s*["']email["']\s*\)|["']email["'])\s*,\s*(?:df\.phone|df\[["']phone["']\]|col\(\s*["']phone["']\s*\)|["']phone["'])\s*,\s*(?:df\.contact|df\[["']contact["']\]|col\(\s*["']contact["']\s*\)|["']contact["'])/],
+    requires: [/coalesce\s*\(/, /coalesce\s*\(\s*(?:df\.email|df\[["']email["']\]|(?:F\.)?col\(\s*["']email["']\s*\)|["']email["'])\s*,\s*(?:df\.phone|df\[["']phone["']\]|(?:F\.)?col\(\s*["']phone["']\s*\)|["']phone["'])\s*,\s*(?:df\.contact|df\[["']contact["']\]|(?:F\.)?col\(\s*["']contact["']\s*\)|["']contact["'])/],
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NULL_HANDLING,
