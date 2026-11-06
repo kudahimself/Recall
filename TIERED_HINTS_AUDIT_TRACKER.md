@@ -168,7 +168,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `window-adv-1` | ADVANCED | `SQL_WINDOW_FUNCTIONS` | `expandedQuestions.ts` | 🟢 Completed | |
 | `window-adv-2` | ADVANCED | `SQL_WINDOW_FUNCTIONS` | `expandedQuestions.ts` | 🟢 Completed | |
 | `window-adv-3` | ADVANCED | `SQL_WINDOW_FUNCTIONS` | `expandedQuestions.ts` | 🟢 Completed | |
-| `catalog-3` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `expandedQuestions.ts` | 🟢 Completed | |
 | `catalog-4` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `expandedQuestions.ts` | 🟢 Completed | |
 | `catalog-5` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `expandedQuestions.ts` | 🟢 Completed | |
 | `catalog-6` | ADVANCED | `DATABRICKS_PLATFORM` | `expandedQuestions.ts` | 🟢 Completed | |
@@ -189,11 +188,7 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `dbutils-10` | BEGINNER | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
 | `dbutils-11` | INTERMEDIATE | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
 | `dbutils-12` | BEGINNER | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
-| `dbutils-13` | INTERMEDIATE | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
 | `dbutils-14` | INTERMEDIATE | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
-| `dbutils-15` | BEGINNER | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
-| `dbutils-16` | BEGINNER | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
-| `dbutils-17` | INTERMEDIATE | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
 | `dbutils-19` | INTERMEDIATE | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
 | `dbutils-20` | INTERMEDIATE | `DATABRICKS_UTILITIES` | `expandedQuestions.ts` | 🟢 Completed | |
 | `delta-clone-2` | INTERMEDIATE | `DELTA_OPERATIONS` | `expandedQuestions.ts` | 🟢 Completed | |

@@ -96,7 +96,6 @@ Agents must refer to the following skill instruction files when working on quest
 | `platform-repos-1` | MULTIPLE_CHOICE | BEGINNER | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio |
 | `platform-repos-2` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio |
 | `platform-repos-3` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio (was 3.07x) |
-| `platform-cluster-1` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio (was 3.36x) |
 | `platform-cluster-2` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio (was 2.34x) |
 | `platform-cluster-3` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio |
 | `platform-cluster-4` | MULTIPLE_CHOICE | ADVANCED | `src/data/certificationQuestions.ts` | 🟢 Completed | Rewrote distractors to fix length ratio (was 4.0x) |
@@ -105,7 +104,6 @@ Agents must refer to the following skill instruction files when working on quest
 | `platform-sql-3` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Removed prompt keyword leaks, added CREATE TEMP VIEW alternate |
 | `catalog-1` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Equalized option length parity across all options |
 | `catalog-2` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Rotated correct option to `b` & added descriptions |
-| `catalog-3` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Added IF NOT EXISTS solution alternate |
 | `catalog-4` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Added IF NOT EXISTS solution alternate |
 | `catalog-5` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Refined 3-level namespace prompt |
 | `catalog-6` | CODING | ADVANCED | `src/data/expandedQuestions.ts` | 🟢 Completed | Refined prompt & added catalog.schema alternate |
@@ -149,7 +147,6 @@ Agents must refer to the following skill instruction files when working on quest
 |---|---|---|---|---|---|
 | `uc-basics-1` | MULTIPLE_CHOICE | BEGINNER | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Pedagogical prompt rephrase, equalized distractor length parity, rotated option to `c` |
 | `uc-basics-2` | CODING | BEGINNER | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Solved-first, added catalog alternate solution, cleaned prompt wording |
-| `uc-basics-3` | MULTIPLE_CHOICE | BEGINNER | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Balanced option length ratio (1.21x), rotated option to `d`, refined distractor quality |
 | `uc-basics-4` | CODING | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Solved-first, removed prompt keywords, standardized starter comment |
 | `uc-basics-5` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Perfect option length parity across all 4 options, rotated option to `b` |
 | `uc-basics-6` | CODING | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Refined 3-tier namespace prompt, standardized DDL starter code |
@@ -185,12 +182,7 @@ Agents must refer to the following skill instruction files when working on quest
 | `dbutils-10` | CODING | BEGINNER | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, added timeout_seconds= alternate |
 | `dbutils-11` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, standardized params dict |
 | `dbutils-12` | CODING | BEGINNER | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, cleaned prompt |
-| `dbutils-13` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, added defaultValue= alternate |
 | `dbutils-14` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, standardized choices |
-| `dbutils-15` | CODING | BEGINNER | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, added name= alternate |
-| `dbutils-16` | CODING | BEGINNER | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, added name= alternate |
-| `dbutils-17` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, added positional alternate |
-| `dbutils-18` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Equalized distractor length parity across all options & rotated option to `c` |
 | `dbutils-19` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, standardized prompt |
 | `dbutils-20` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, added positional alternate |
 | `dbutils-mount-2` | CODING | INTERMEDIATE | `src/data/expandedQuestions.ts` | 🟢 Completed | Solved-first, removed method leak from prompt/starter, standardized prompt |
