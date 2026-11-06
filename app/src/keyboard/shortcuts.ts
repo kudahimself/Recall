@@ -103,6 +103,8 @@ const openLayers = new Set<number>();
 let layerCounter = 0;
 let listening = false;
 
+const REPEATABLE = new Set<ShortcutId>(['leaveTyping', 'close']);
+
 const topLayer = () => (openLayers.size ? Math.max(...Array.from(openLayers)) : 0);
 
 function onKeyDown(e: KeyboardEvent) {
@@ -114,7 +116,10 @@ function onKeyDown(e: KeyboardEvent) {
     if (b.layer !== top || !b.enabled.current) continue;
     if (!matchesShortcut(b.id, e)) continue;
     if (typing && !SHORTCUTS[b.id].whileTyping) continue;
-    if (e.repeat && !SHORTCUTS[b.id].whileTyping) continue;
+    if (e.repeat && !REPEATABLE.has(b.id)) {
+      e.preventDefault();
+      return;
+    }
     if (b.handler.current(e) !== false) {
       e.preventDefault();
       return;

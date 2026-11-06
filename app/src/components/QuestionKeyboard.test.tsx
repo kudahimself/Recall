@@ -227,6 +227,17 @@ describe('Explain, keys only', () => {
     expect(onAnswer).not.toHaveBeenCalled();
   });
 
+  it('keeps the tick step open when Shift+Enter is held after submitting the text', () => {
+    const onAnswer = jest.fn();
+    renderWithNav(<ExplainQuestion question={SAMPLE_EXPLAIN} onAnswer={onAnswer} showHints />);
+    fireEvent.change(screen.getByLabelText(/Your answer/), { target: { value: 'An idempotent write makes a repeat harmless.' } });
+    press('Enter', { shiftKey: true });
+    press('Enter', { shiftKey: true, repeat: true });
+    press('Enter', { shiftKey: true, repeat: true });
+    expect(onAnswer).not.toHaveBeenCalled();
+    expect(screen.getByRole('group', { name: 'Key points' })).toBeInTheDocument();
+  });
+
   it('submits the text with Shift+Enter, ticks points with numbers, records with Shift+Enter, then Next', () => {
     const onAnswer = jest.fn();
     const { onNext } = renderWithNav(<ExplainQuestion question={SAMPLE_EXPLAIN} onAnswer={onAnswer} showHints />);

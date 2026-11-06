@@ -71,6 +71,22 @@ describe('useShortcut', () => {
     expect(onPick).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores a held Shift+Enter or Ctrl+Enter, even inside a text box', () => {
+    const onTypingSubmit = jest.fn();
+    function Keys() {
+      useShortcut('submitTyping', () => onTypingSubmit());
+      return <textarea aria-label="area" />;
+    }
+    render(<Keys />);
+    const area = screen.getByLabelText('area');
+    fireEvent.keyDown(area, { key: 'Enter', shiftKey: true, repeat: true });
+    fireEvent.keyDown(area, { key: 'Enter', ctrlKey: true, repeat: true });
+    fireEvent.keyDown(window, { key: 'Enter', shiftKey: true, repeat: true });
+    expect(onTypingSubmit).not.toHaveBeenCalled();
+    fireEvent.keyDown(area, { key: 'Enter', shiftKey: true });
+    expect(onTypingSubmit).toHaveBeenCalledTimes(1);
+  });
+
   it('gives the keys to an open dialog, and back when it closes', () => {
     const onHint = jest.fn();
     function WithDialog() {
