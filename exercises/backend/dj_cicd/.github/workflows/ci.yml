@@ -1,0 +1,21 @@
+# Release pipeline: a first try at CI/CD for the library's Django project.
+# It runs, but it breaks the rules in dj_cicd/README.md: fix it so the tests in
+# test_release_pipeline.py pass. The file stays YAML that GitHub Actions can read.
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pip install -r requirements.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python manage.py test
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./deploy.sh
+        env:
+          DEPLOY_TOKEN: dpl_live_4f9a2c7e1b

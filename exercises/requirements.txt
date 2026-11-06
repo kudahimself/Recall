@@ -9,6 +9,9 @@
 # Celery, redis-py and fakeredis are for the Celery and Redis exercises
 # (exercises/backend/dj_celery, dj_redis): Celery runs the tasks eagerly in the test
 # process and fakeredis stands in for the Redis server, so neither needs a broker or server.
+# factory_boy and Faker are for the test-data exercise (exercises/backend/dj_factory_boy).
+# The CI/CD exercise (exercises/backend/dj_cicd) reads its workflow with PyYAML,
+# which drf-spectacular installs.
 # Django 5.2 is the long-term-support release and runs on Python 3.10 to 3.14.
 pytest==9.1.1
 Django==5.2.19
@@ -18,3 +21,5 @@ drf-spectacular==0.30.0
 celery==5.6.3
 redis==8.1.0
 fakeredis==2.40.0
+factory_boy==3.3.3
+Faker==40.44.0
