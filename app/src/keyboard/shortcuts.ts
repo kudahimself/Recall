@@ -114,6 +114,7 @@ function onKeyDown(e: KeyboardEvent) {
     if (b.layer !== top || !b.enabled.current) continue;
     if (!matchesShortcut(b.id, e)) continue;
     if (typing && !SHORTCUTS[b.id].whileTyping) continue;
+    if (e.repeat && !SHORTCUTS[b.id].whileTyping) continue;
     if (b.handler.current(e) !== false) {
       e.preventDefault();
       return;

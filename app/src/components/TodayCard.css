@@ -69,7 +69,7 @@
 }
 
 .today-reviews-left {
-  color: var(--backend-hover);
+  color: var(--accent-text);
 }
 
 .today-stat-of {

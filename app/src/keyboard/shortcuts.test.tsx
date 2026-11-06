@@ -52,6 +52,25 @@ describe('useShortcut', () => {
     expect(onHint).toHaveBeenCalledTimes(2);
   });
 
+  it('ignores auto-repeated keys, so holding Enter cannot pick or check the next question', () => {
+    const onPick = jest.fn();
+    const onSubmit = jest.fn();
+    function Keys() {
+      useShortcut('pick', () => onPick());
+      useShortcut('submit', () => onSubmit());
+      return null;
+    }
+    render(<Keys />);
+    fireEvent.keyDown(window, { key: 'Enter', repeat: true });
+    fireEvent.keyDown(window, { key: '1', repeat: true });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onPick).not.toHaveBeenCalled();
+    fireEvent.keyDown(window, { key: 'Enter' });
+    fireEvent.keyDown(window, { key: '1' });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
   it('gives the keys to an open dialog, and back when it closes', () => {
     const onHint = jest.fn();
     function WithDialog() {

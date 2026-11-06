@@ -134,6 +134,11 @@ export function QuestionShell({
       t.click();
       return true;
     }
+    // Enter on an answer checkbox toggles it, like Space.
+    if (t instanceof HTMLInputElement && t.type === 'checkbox' && !t.disabled) {
+      t.click();
+      return true;
+    }
     return primary();
   });
 

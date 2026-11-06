@@ -61,7 +61,7 @@ export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer }) => {
       format="Explain in your own words"
       graded={stage === 'graded'}
       stage={stage}
-      typed={stage === 'write'}
+      typed={stage !== 'graded'}
       action={action}
       pickCount={stage === 'tick' ? total : undefined}
       feedback={stage === 'graded' ? {

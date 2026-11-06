@@ -393,7 +393,7 @@ Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from i
 
 **UI theme:**
 Direction A "Night": dark purple, one brand fill for primary buttons in every course (a course's hue is only a marker).
-Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css`; component CSS uses tokens only (`src/styles/cssTokens.test.ts`), and old variable names are aliased there for the screens not yet moved.
+Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css`; component CSS uses tokens only (`app/scripts/check-css-tokens.js`), and old variable names are aliased there for the screens not yet moved.
 Fonts are IBM Plex Sans and Mono, self-hosted through `@fontsource`.
 Layouts target a desktop or laptop viewport without page scrolling.
 

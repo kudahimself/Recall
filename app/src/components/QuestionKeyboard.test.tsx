@@ -211,7 +211,23 @@ describe('Spot the flaw, keys only', () => {
 });
 
 describe('Explain, keys only', () => {
-  it('submits the text with Shift+Enter, ticks points with numbers, records with Enter, then Next', () => {
+  it('ticks the focused key point with Enter instead of recording 0 of N', () => {
+    const onAnswer = jest.fn();
+    renderWithNav(<ExplainQuestion question={SAMPLE_EXPLAIN} onAnswer={onAnswer} showHints />);
+    fireEvent.change(screen.getByLabelText(/Your answer/), { target: { value: 'An idempotent write makes a repeat harmless.' } });
+    press('Enter', { shiftKey: true });
+
+    const boxes = within(screen.getByRole('group', { name: 'Key points' })).getAllByRole('checkbox') as HTMLInputElement[];
+    expect(document.activeElement).toBe(boxes[0]);
+    press('Enter');
+    expect(onAnswer).not.toHaveBeenCalled();
+    expect(boxes[0].checked).toBe(true);
+    press('Enter');
+    expect(boxes[0].checked).toBe(false);
+    expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  it('submits the text with Shift+Enter, ticks points with numbers, records with Shift+Enter, then Next', () => {
     const onAnswer = jest.fn();
     const { onNext } = renderWithNav(<ExplainQuestion question={SAMPLE_EXPLAIN} onAnswer={onAnswer} showHints />);
     const box = screen.getByLabelText(/Your answer/);
@@ -225,7 +241,7 @@ describe('Explain, keys only', () => {
     press('2');
     press('3');
     expect(within(points).getAllByRole('checkbox').filter(c => (c as HTMLInputElement).checked)).toHaveLength(3);
-    press('Enter');
+    press('Enter', { shiftKey: true });
     expect(onAnswer).toHaveBeenCalledWith(true, { hintTierUsed: 0, attempts: 1, credit: 0.75 });
     focusedIsVerdict();
     press('Enter');
