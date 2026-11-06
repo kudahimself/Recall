@@ -31,6 +31,8 @@ const PUBLIC = path.join(APP, 'public');
 // Mark scale inside a 64 tile, as a share of the 64 box. The tile keeps a
 // margin round the ink; the maskable icon shrinks it to 80% of that so the
 // whole mark stays inside the circle Android crops to.
+// The 16 and 32 px favicon frames (TINY, SMALL) are deliberately simplified
+// versions of the chosen option C mark, for legibility at small sizes.
 // At 16 and 32 px the tile margin and corner radius would cost the mark most
 // of its pixels, so the favicon frames use a tighter tile. At 16 px the ear
 // and eye cut-outs blur into grey, so that frame drops them (a solid
