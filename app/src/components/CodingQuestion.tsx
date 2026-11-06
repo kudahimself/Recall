@@ -179,9 +179,10 @@ export const CodingQuestion: React.FC<Props> = ({
       }
     });
 
-    // Add keyboard shortcut for reset (Cmd/Ctrl + R)
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyR, (e: any) => {
-      e?.preventDefault();
+    // Add keyboard shortcut for reset (Cmd/Ctrl + R).
+    // Monaco passes a ServicesAccessor, not a DOM event; the binding itself
+    // already consumes the keystroke, so the browser does not reload.
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyR, () => {
       resetRef.current();
     });
 

@@ -40,7 +40,16 @@ beforeAll(() => {
 const MOCK_CTRL_CMD = 2048;
 const MOCK_ENTER = 3;
 const MOCK_KEY_R = 48;
-const mockCommands = new Map<number, (e?: any) => void>();
+const mockCommands = new Map<number, (accessor: unknown) => void>();
+
+// Real Monaco calls addCommand handlers with a ServicesAccessor, not a DOM
+// event, so the fake fires them the same way.
+const mockAccessor = { get: () => undefined };
+function fireCommand(keybinding: number) {
+  const handler = mockCommands.get(keybinding);
+  expect(handler).toBeDefined();
+  handler!(mockAccessor);
+}
 
 jest.mock('@monaco-editor/react', () => {
   const ReactActual = jest.requireActual('react');
@@ -55,7 +64,7 @@ jest.mock('@monaco-editor/react', () => {
   }) => {
     ReactActual.useEffect(() => {
       const editor = {
-        addCommand: (keybinding: number, handler: (e?: any) => void) => {
+        addCommand: (keybinding: number, handler: (accessor: unknown) => void) => {
           mockCommands.set(keybinding, handler);
         },
         focus: () => {},
@@ -97,10 +106,8 @@ const QUESTION = {
 } as CQ;
 
 async function pressCtrlEnter() {
-  const handler = mockCommands.get(MOCK_CTRL_CMD | MOCK_ENTER);
-  expect(handler).toBeDefined();
   await act(async () => {
-    handler!();
+    fireCommand(MOCK_CTRL_CMD | MOCK_ENTER);
   });
 }
 
@@ -142,10 +149,8 @@ describe('CodingQuestion Cmd/Ctrl+Enter', () => {
     render(<CodingQuestion question={QUESTION} onAnswer={jest.fn()} showHints={true} />);
 
     fireEvent.change(screen.getByTestId('code-editor'), { target: { value: SOLUTION } });
-    const reset = mockCommands.get(MOCK_CTRL_CMD | MOCK_KEY_R);
-    expect(reset).toBeDefined();
     await act(async () => {
-      reset!({ preventDefault: () => {} });
+      fireCommand(MOCK_CTRL_CMD | MOCK_KEY_R);
     });
 
     expect((screen.getByTestId('code-editor') as HTMLTextAreaElement).value).toBe('# your code here');
