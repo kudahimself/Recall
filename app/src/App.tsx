@@ -1190,7 +1190,7 @@ function App() {
       );
     }
     const todaySession = reviewSessions[activeCourse];
-    if (!currentQuestion && todaySession && getFilteredQuestions().length === courseQuestions.length) {
+    if (!currentQuestion && todaySession && getFilteredQuestions().length > 0) {
       // The bounded session is over (or nothing in it is left to serve).
       return (
         <SessionSummary

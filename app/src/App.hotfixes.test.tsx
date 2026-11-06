@@ -140,6 +140,8 @@ describe('F7: filters', () => {
     const topics = screen.getAllByRole('button', { name: 'Deselect All' })[0];
     fireEvent.click(topics);
     expect(await screen.findByText(/You're all caught up/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+    expect(screen.queryByText('Done for today')).toBeNull();
     expect(screen.queryByRole('button', { name: /Submit Answer/ })).toBeNull();
 
     fireEvent.click(nav('Home'));
@@ -199,5 +201,17 @@ describe('F7: filters', () => {
 
     const firstExercise = questions.find(q => q.id === 'py-types-union-1')!;
     expect(await screen.findByText(firstExercise.question)).toBeInTheDocument();
+  });
+
+  test('a filtered session with nothing left to serve ends on the summary, with Keep going', async () => {
+    localStorage.setItem('recall-active-course', 'sql');
+    localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
+    localStorage.setItem('recall-filters', JSON.stringify({ topics: [Topic.TSQL_JOINS] }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
+
+    expect(await screen.findByText('Done for today', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Keep going/ })).toBeInTheDocument();
+    expect(screen.queryByText(/No questions match your current filters/)).toBeNull();
   });
 });
