@@ -1088,7 +1088,7 @@ C 1 ['Emma'] None
         "`greatest(a, b)` and `least(a, b)` compare columns across one row, and `sqrt` of a negative number gives NaN, not null.",
       ),
       lines(
-        "Aggregate functions, `sum`, `avg`, `min`, `max`, `count` and `countDistinct`, turn many rows into one, so they run inside `groupBy(...).agg(...)`, a bare `df.agg(...)` or a window, never inside `withColumn`.",
+        "Aggregate functions, `sum`, `avg`, `min`, `max`, `count` and `countDistinct`, turn many rows into one, so they run inside `groupBy(...).agg(...)`, a bare `df.agg(...)` or a window, never bare inside `withColumn` (only with `.over(w)`).",
         "They skip nulls: `avg` divides by the number of values that are not null, and `count(\"col\")` counts those values while `count(\"*\")` counts rows.",
       ),
       lines(
@@ -1516,31 +1516,31 @@ df.select("*",
       runs: false,
       code: `# Databricks notebook; spark is the notebook's session, no tables needed
 from pyspark.sql import Window
-from pyspark.sql.functions import col, dense_rank, lag, rank, sum as sum_
-loans = spark.createDataFrame(
-    [("leeds", 1, 5), ("leeds", 2, 5), ("leeds", 3, 2), ("york", 1, 4), ("york", 2, 6)],
-    ["branch", "week", "loans"],
-)
+from pyspark.sql.functions import col, lag, rank, sum as sum_
+loans = spark.createDataFrame([("leeds", 1, 5), ("leeds", 2, 5), ("leeds", 3, 2)],
+    ["branch", "week", "loans"])
 by_loans = Window.partitionBy("branch").orderBy(col("loans").desc())
 by_week = Window.partitionBy("branch").orderBy("week")
-out = loans.select("branch", "week", "loans",
-    rank().over(by_loans).alias("rk"), dense_rank().over(by_loans).alias("dr"),
+by_size = Window.partitionBy("branch").orderBy("loans")
+rows_frame = (Window.partitionBy("branch").orderBy("loans", "week")
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow))
+out = loans.select("week", "loans",
+    rank().over(by_loans).alias("rk"),
     (col("loans") - lag("loans").over(by_week)).alias("change"),
-    sum_("loans").over(by_week.rowsBetween(Window.unboundedPreceding, Window.currentRow)).alias("so_far"))
-for r in out.orderBy("branch", "week").collect():
-    print(r.branch, r.week, r.loans, r.rk, r.dr, r.change, r.so_far)`,
+    sum_("loans").over(by_size).alias("range_total"),
+    sum_("loans").over(rows_frame).alias("rows_total"))
+for r in out.orderBy("week").collect():
+    print(r.week, r.loans, r.rk, r.change, r.range_total, r.rows_total)`,
       steps: [
-        "Lines 8-9: both windows restart for each branch; one orders by loans, busiest first, the other by week.",
-        "Line 11: Leeds weeks 1 and 2 tie on 5 loans, so both rank 1, and week 3 gets `rank` 3 but `dense_rank` 2.",
-        "Line 12: `lag` reads the week before, so the first week of each branch has no change, None, and Leeds week 3 is 2 - 5 = -3.",
-        "Line 13: the ROWS frame adds the weeks up one at a time, 5, 10, 12, even though weeks 1 and 2 tie on loans.",
-        "Lines 14-15: every input row is still there, five rows, each with its window values.",
+        "Lines 6-8: `by_loans` puts the busiest week first, `by_week` runs in time order, and `by_size` orders by loans, where weeks 1 and 2 tie on 5.",
+        "Lines 9-10: `rows_frame` breaks that tie by week and sets a ROWS frame, so it adds the rows one at a time.",
+        "Line 12: weeks 1 and 2 tie on 5 loans, so both rank 1, and week 3 ranks 3.",
+        "Line 13: `lag` reads the week before, so week 1 has no change, None, and week 3 is 2 - 5 = -3.",
+        "Lines 14-15: `by_size` has no frame, so it uses RANGE, and the tied weeks 1 and 2 both get 2 + 5 + 5 = 12, while the ROWS frame gives week 1 7 and week 2 12.",
       ],
-      output: `leeds 1 5 1 1 None 5
-leeds 2 5 1 1 0 10
-leeds 3 2 3 2 -3 12
-york 1 4 2 2 None 4
-york 2 6 1 1 2 10`,
+      output: `1 5 1 None 12 7
+2 5 1 0 12 12
+3 2 3 -3 2 2`,
     },
     exercises: [
       'window-4',
