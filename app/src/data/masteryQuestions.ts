@@ -758,12 +758,6 @@ def reverse_string(s):
 result = df.withColumn("reversed_title", reverse_string("title"))
 # OR
 from pyspark.sql.functions import udf
-from pyspark.sql.types import StringType
-
-reverse_string = udf(lambda s: s[::-1] if s else None, StringType())
-result = df.withColumn("reversed_title", reverse_string("title"))
-# OR
-from pyspark.sql.functions import udf
 
 @udf("string")
 def reverse_string(s):
