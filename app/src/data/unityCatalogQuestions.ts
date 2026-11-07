@@ -271,7 +271,7 @@ SELECT COUNT(*) FROM delta.\`abfss://lake@acme.dfs.core.windows.net/orders\`;`,
   {
     id: 'uc-gov-2',
     type: QuestionType.CODING,
-    difficulty: Difficulty.BEGINNER,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.UNITY_CATALOG_GOVERNANCE,
     language: CodeLanguage.SQL,
     requires: [/ALTER\s+TABLE\s+main\.gold\.metrics\s+SET\s+ROW\s+FILTER\s+main\.gold\.region_filter\s+ON\s*\(\s*region\s*\)/i],
