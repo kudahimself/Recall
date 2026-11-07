@@ -215,7 +215,7 @@ Families due beyond the cap stay due and lead the next days' lists; "Keep going"
 Under topic, difficulty or type filters the plan serves what it can inside them, and the session still ends at its size with "Done for today".
 When the filters have nothing left of the plan while cards outside them are still waiting, the quiz says "Nothing left today for these filters" and offers Reset filters.
 Only after "Keep going" does "Practice" come from the same list and families (due families beyond the cap, then a drill of a family already met, then an unseen card), without using a slot.
-"Drill" and "Review weak topic" on Progress start that practice on their topics straight away; the drill mode is held in the App only, never on the session, so today's bound is unchanged, and Reset filters, Start and a course switch end it.
+"Drill" (D) on Progress → Topics and Review schedule, and "Drill all" on Progress → Overview, start that practice on their topics straight away; the drill mode is held in the App only, never on the session, so today's bound is unchanged, and Reset filters, Start and a course switch end it.
 The older selector below is not used by the session.
 The session is stored under `recall-today-session`, so a reload the same day resumes it (count, slots left, cards served, and "Done for today"); a new day starts a new one.
 
