@@ -30,12 +30,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.STRUCTURED_STREAMING,
     question: 'What is Structured Streaming in Apache Spark?',
     options: [
-      { id: 'a', text: 'Storage management component in Spark SQL that compresses real-time stream event payloads', isCorrect: false },
-      { id: 'b', text: 'Batch processing execution framework designed exclusively for static database queries', isCorrect: false },
-      { id: 'c', text: 'Stream processing engine built on Spark SQL that treats streaming data as an unbounded table', isCorrect: true },
-      { id: 'd', text: 'Distributed relational database system for managing low-latency ACID transactions', isCorrect: false },
+      { id: 'a', text: 'A separate streaming API with its own DStream operations, which differ from DataFrame transformations', isCorrect: false },
+      { id: 'b', text: 'A scheduler that re-runs a batch query over the whole source table at a fixed interval', isCorrect: false },
+      { id: 'c', text: 'A stream engine on Spark SQL that treats a stream as a table that keeps growing', isCorrect: true },
+      { id: 'd', text: 'A record-at-a-time engine that handles each event the moment it arrives, with no batches', isCorrect: false },
     ],
-    explanation: 'Structured Streaming treats a live data stream as an unbounded table that is continuously appended. You express streaming computations the same way as batch computations on static data.',
+    explanation: 'Structured Streaming treats a stream as an unbounded table that keeps getting new rows: `spark.readStream` makes a streaming DataFrame and you use the same transformations as in batch. Each trigger runs a micro-batch over only the rows that arrived since the last one, so it is neither a full re-run of a batch query nor record-at-a-time processing. DStreams are the older Spark Streaming API that Structured Streaming replaced.',
     tags: ['streaming', 'fundamentals'],
     concepts: ['stream-readstream-writestream', 'dbx-architecture'],
   },
@@ -47,12 +47,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.STRUCTURED_STREAMING,
     question: 'Which three output modes are available in Structured Streaming?',
     options: [
-      { id: 'a', text: 'Insert mode, Replace mode, Delete mode', isCorrect: false },
-      { id: 'b', text: 'Read mode, Write mode, Execute mode', isCorrect: false },
-      { id: 'c', text: 'Start mode, Stop mode, Restart mode', isCorrect: false },
-      { id: 'd', text: 'Append mode, Complete mode, Update mode', isCorrect: true },
+      { id: 'a', text: 'Append, Overwrite, ErrorIfExists', isCorrect: false },
+      { id: 'b', text: 'Append, Overwrite, Merge', isCorrect: false },
+      { id: 'c', text: 'Insert, Update, Delete', isCorrect: false },
+      { id: 'd', text: 'Append, Complete, Update', isCorrect: true },
     ],
-    explanation: 'Append mode outputs only new rows. Complete mode outputs the entire updated result table. Update mode outputs only changed rows since the last trigger.',
+    explanation: 'A streaming write takes one of three output modes: append writes only new result rows, complete rewrites the whole result table on each trigger, and update writes only the result rows that changed. Overwrite and ErrorIfExists are save modes of a batch `df.write`, Merge is a Delta SQL statement, and insert, update and delete are kinds of row change, not output modes.',
     tags: ['streaming', 'output-modes'],
     concepts: ['stream-readstream-writestream', 'stream-output-modes'],
   },
@@ -89,21 +89,28 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    question: 'Write the streaming DataFrame "stream_df" to a Delta table named "output_events" in append mode. Configure the checkpoint path to "/checkpoints/events".',
+    question: 'Write the streaming DataFrame "stream_df" to the Delta table "output_events" in append mode, with its checkpoint in the volume folder "/Volumes/main/default/checkpoints/output_events". Assign the running query to "query".',
     starterCode: `query = stream_df`,
+    requires: [/checkpointLocation/, /toTable/, /^(?![\s\S]*outputMode\(\s*["'](?:complete|update)["'])/],
     testCases: [
       {
         input: 'streaming DataFrame',
-        expectedOutput: 'writeStream.format("delta").outputMode("append").option("checkpointLocation", "/checkpoints/events").toTable("output_events")',
+        expectedOutput: 'writeStream.outputMode("append").option("checkpointLocation", ...).toTable("output_events")',
         description: 'Should write stream to Delta with checkpoint',
       },
     ],
-    solution: `query = stream_df.writeStream.format("delta").outputMode("append").option("checkpointLocation", "/checkpoints/events").toTable("output_events")\n# OR\nquery = stream_df.writeStream.outputMode("append").option("checkpointLocation", "/checkpoints/events").toTable("output_events")`,
-    explanation: 'writeStream writes a streaming DataFrame. Use .toTable("name") to write to a named table. checkpointLocation is required for fault tolerance — it stores progress so the stream can recover from failures.',
+    solution: `query = stream_df.writeStream.format("delta").outputMode("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output_events").toTable("output_events")
+# OR
+query = stream_df.writeStream.outputMode("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output_events").toTable("output_events")
+# OR
+query = stream_df.writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/output_events").toTable("output_events")
+# OR
+query = stream_df.writeStream.toTable("output_events", outputMode="append", checkpointLocation="/Volumes/main/default/checkpoints/output_events")`,
+    explanation: 'writeStream writes a streaming DataFrame, and .toTable("name") starts the query and writes to a table, which is Delta by default. Append is the default output mode, so outputMode("append") can be left out. The checkpointLocation is required: it records how far the source has been read, so a restarted query resumes where it stopped instead of reading everything again.',
     hints: ['Use .writeStream with .toTable("name") to write to a table', 'Set outputMode to "append"', 'Always set checkpointLocation'],
     tieredHints: {
       apiSignature: 'DataStreamWriter.outputMode(outputMode).option(key, value).toTable(tableName)',
-      skeleton: 'query = stream_df.____.format("delta").____("append").option("checkpointLocation", "/checkpoints/events").____("output_events")',
+      skeleton: 'query = stream_df.____.____("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output_events").____("output_events")',
     },
     tags: ['streaming', 'writeStream', 'checkpoint'],
     concepts: ['stream-readstream-writestream', 'stream-checkpoint'],
@@ -116,12 +123,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.STRUCTURED_STREAMING,
     question: 'What is the purpose of a checkpoint in Structured Streaming?',
     options: [
-      { id: 'a', text: 'To store progress and state metadata for fault-tolerant stream recovery', isCorrect: true },
-      { id: 'b', text: 'To compress micro-batch data payloads before writing to target storage tables', isCorrect: false },
-      { id: 'c', text: 'To schedule and trigger automated execution of streaming notebook workflows', isCorrect: false },
-      { id: 'd', text: 'To restrict the maximum volume of rows processed in a single micro-batch', isCorrect: false },
+      { id: 'a', text: 'To record how far the source has been read and the state of aggregations, so a restarted query resumes where it stopped', isCorrect: true },
+      { id: 'b', text: 'To keep a copy of every row written to the target, so the target table can be rebuilt if it is dropped', isCorrect: false },
+      { id: 'c', text: 'To hold the schedule that tells the query when to start its next micro-batch', isCorrect: false },
+      { id: 'd', text: 'To cap the number of rows each micro-batch may read from the source', isCorrect: false },
     ],
-    explanation: 'Checkpoints track which data has been processed and store intermediate state. If a stream fails, it can restart from the checkpoint instead of reprocessing everything.',
+    explanation: `The checkpoint is the query's memory: the offsets it has read up to and the state of stateful operations such as running counts. On a restart the query reads the checkpoint and carries on from there, so nothing is skipped or read twice. The trigger sets the schedule, options such as maxFilesPerTrigger cap a batch, and the checkpoint holds no copy of the output.`,
     tags: ['streaming', 'checkpoint', 'fault-tolerance'],
     concepts: ['stream-readstream-writestream', 'stream-checkpoint'],
   },
@@ -131,14 +138,14 @@ export const certificationQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRUCTURED_STREAMING,
-    question: 'In Spark Structured Streaming, which trigger type processes the next micro-batch immediately after the previous one completes, with no wait time between batches?',
+    question: 'A streaming query should keep running and start each micro-batch as soon as the previous one finishes, with no wait in between. Which trigger setting does that?',
     options: [
-      { id: 'a', text: 'Once trigger — processes all available data once in a single batch then stops', isCorrect: false },
-      { id: 'b', text: 'Default trigger (processingTime="0 seconds") — starts the next batch with zero delay', isCorrect: true },
-      { id: 'c', text: 'Continuous trigger — experimental engine providing low-latency row-by-row processing', isCorrect: false },
-      { id: 'd', text: 'Fixed interval trigger (e.g. 30 seconds) — enforces explicit pauses between micro-batches', isCorrect: false },
+      { id: 'a', text: 'Call no .trigger() at all and keep the default', isCorrect: true },
+      { id: 'b', text: '.trigger(availableNow=True)', isCorrect: false },
+      { id: 'c', text: '.trigger(processingTime="1 minute")', isCorrect: false },
+      { id: 'd', text: '.trigger(once=True)', isCorrect: false },
     ],
-    explanation: 'When no trigger is specified, Spark defaults to processingTime="0 seconds" — it starts the next micro-batch immediately after the previous one finishes with zero wait time.',
+    explanation: 'With no trigger set, Spark runs micro-batches back to back: the next one starts as soon as the previous one finishes (the same as processingTime="0 seconds"), and the query keeps running. availableNow=True also runs batches back to back, but stops once everything waiting has been processed. processingTime="1 minute" waits for the next minute mark, and the deprecated once=True runs a single batch and stops.',
     tags: ['streaming', 'trigger'],
     concepts: ['stream-readstream-writestream', 'stream-triggers'],
   },
@@ -149,8 +156,9 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    question: 'Configure the streaming DataFrame "stream_df" to write to the Delta table "output" in append mode, executing micro-batches every 30 seconds. Store checkpoints at "/checkpoints/data".',
+    question: 'Write the streaming DataFrame "stream_df" to the Delta table "output" in append mode, starting a micro-batch every 30 seconds, with its checkpoint in "/Volumes/main/default/checkpoints/output". Assign the running query to "query".',
     starterCode: `query = stream_df`,
+    requires: [/processingTime\s*=\s*["']30 seconds["']/, /checkpointLocation/],
     testCases: [
       {
         input: 'streaming query',
@@ -158,12 +166,16 @@ export const certificationQuestions: Question[] = [
         description: 'Should set 30 second trigger',
       },
     ],
-    solution: `query = stream_df.writeStream.format("delta").outputMode("append").option("checkpointLocation", "/checkpoints/data").trigger(processingTime="30 seconds").toTable("output")\n# OR\nquery = stream_df.writeStream.outputMode("append").option("checkpointLocation", "/checkpoints/data").trigger(processingTime="30 seconds").toTable("output")`,
-    explanation: 'processingTime trigger runs micro-batches at the specified interval. If processing takes longer than the interval, the next batch starts immediately after the previous one finishes.',
+    solution: `query = stream_df.writeStream.format("delta").outputMode("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output").trigger(processingTime="30 seconds").toTable("output")
+# OR
+query = stream_df.writeStream.outputMode("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output").trigger(processingTime="30 seconds").toTable("output")
+# OR
+query = stream_df.writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/output").trigger(processingTime="30 seconds").toTable("output")`,
+    explanation: 'trigger(processingTime="30 seconds") starts a micro-batch every 30 seconds. If a batch takes longer than the interval, the next one starts as soon as it finishes. Append is the default output mode, so outputMode("append") can be left out, and toTable writes Delta by default.',
     hints: ['Configure trigger using processingTime="30 seconds"', 'Set checkpointLocation and outputMode before writing to table'],
     tieredHints: {
       apiSignature: 'DataStreamWriter.trigger(processingTime=None).toTable(tableName)',
-      skeleton: 'query = stream_df.____.____("delta").____("append").____("checkpointLocation", "/checkpoints/data").____(____="30 seconds").____("output")',
+      skeleton: 'query = stream_df.____.____("append").____("checkpointLocation", "/Volumes/main/default/checkpoints/output").____(____="30 seconds").____("output")',
     },
     tags: ['streaming', 'trigger', 'processingTime'],
     concepts: ['stream-readstream-writestream', 'stream-triggers'],
@@ -175,8 +187,9 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    question: 'Configure the streaming DataFrame "stream_df" to process all currently available incoming data across micro-batches and then automatically terminate execution. Persist the output in append mode to Delta table "output" with checkpoint path "/checkpoints/data".',
+    question: 'Write the streaming DataFrame "stream_df" to the Delta table "output" in append mode, with its checkpoint in "/Volumes/main/default/checkpoints/output", so that the query processes all the data waiting now, in as many micro-batches as it needs, and then stops. Assign the query to "query".',
     starterCode: `query = stream_df`,
+    requires: [/availableNow\s*=\s*True/, /checkpointLocation/],
     testCases: [
       {
         input: 'streaming query',
@@ -184,12 +197,16 @@ export const certificationQuestions: Question[] = [
         description: 'Should use availableNow trigger',
       },
     ],
-    solution: `query = stream_df.writeStream.format("delta").outputMode("append").option("checkpointLocation", "/checkpoints/data").trigger(availableNow=True).toTable("output")\n# OR\nquery = stream_df.writeStream.outputMode("append").option("checkpointLocation", "/checkpoints/data").trigger(availableNow=True).toTable("output")`,
-    explanation: 'Trigger.AvailableNow processes all available data in multiple batches then stops. Unlike Trigger.Once (deprecated), it can process data in multiple micro-batches for better scalability.',
+    solution: `query = stream_df.writeStream.format("delta").outputMode("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output").trigger(availableNow=True).toTable("output")
+# OR
+query = stream_df.writeStream.outputMode("append").option("checkpointLocation", "/Volumes/main/default/checkpoints/output").trigger(availableNow=True).toTable("output")
+# OR
+query = stream_df.writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/output").trigger(availableNow=True).toTable("output")`,
+    explanation: 'trigger(availableNow=True) processes everything waiting in the source, split into as many micro-batches as needed, and then stops the query, which suits a scheduled job. It replaces the deprecated trigger(once=True), which forced all of it into a single batch.',
     hints: ['Set availableNow=True in trigger', 'Write to Delta table with checkpointing enabled'],
     tieredHints: {
       apiSignature: 'DataStreamWriter.trigger(availableNow=False).toTable(tableName)',
-      skeleton: 'query = stream_df.____.____("delta").____("append").____("checkpointLocation", "/checkpoints/data").____(____=____).____("output")',
+      skeleton: 'query = stream_df.____.____("append").____("checkpointLocation", "/Volumes/main/default/checkpoints/output").____(____=____).____("output")',
     },
     tags: ['streaming', 'trigger', 'availableNow'],
     concepts: ['stream-readstream-writestream', 'stream-triggers'],
@@ -202,12 +219,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.STRUCTURED_STREAMING,
     question: 'What is a watermark in Structured Streaming?',
     options: [
-      { id: 'a', text: 'Unique micro-batch commit identifier generated for each transactional stream batch', isCorrect: false },
-      { id: 'b', text: 'Max file size constraint applied when writing streaming parquet partition outputs', isCorrect: false },
-      { id: 'c', text: 'Threshold defining how late data can arrive before being dropped from stateful aggregations', isCorrect: true },
-      { id: 'd', text: 'Encryption key used to secure stream payloads transferred between worker nodes', isCorrect: false },
+      { id: 'a', text: 'A marker in the checkpoint of how far the source has been read, so a restart resumes there', isCorrect: false },
+      { id: 'b', text: 'A limit on how many rows each micro-batch may read from the source', isCorrect: false },
+      { id: 'c', text: 'A threshold on how late event-time data may arrive, after which Spark can drop the old state', isCorrect: true },
+      { id: 'd', text: 'A delay that holds every row back for the threshold, so late rows can be sorted in first', isCorrect: false },
     ],
-    explanation: 'Watermarks let the engine automatically track the current event time and clean up old state. Data arriving later than the watermark threshold is considered "too late" and dropped from stateful operations.',
+    explanation: `withWatermark("ts", "10 minutes") tells Spark that data more than 10 minutes behind the latest event time seen is too late. Spark can then finish old windows and drop their state instead of keeping it forever; rows later than that may be dropped. The read position is the checkpoint's offsets, not the watermark, batch size is set by options such as maxFilesPerTrigger, and rows are not held back.`,
     tags: ['streaming', 'watermark', 'late-data'],
     concepts: ['stream-readstream-writestream', 'stream-watermarks'],
   },
@@ -218,7 +235,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    requires: ['withWatermark'],
+    requires: [/withWatermark\(\s*["']event_time["']\s*,\s*["']10 minutes["']\s*\)/],
     question: 'Given streaming DataFrame "stream_df" containing event records, configure a 10-minute threshold on column "event_time" to manage late-arriving records during stateful operations.',
     starterCode: `result = stream_df`,
     testCases: [
@@ -229,7 +246,7 @@ export const certificationQuestions: Question[] = [
       },
     ],
     solution: `result = stream_df.withWatermark("event_time", "10 minutes")\n# OR\nresult = stream_df.withWatermark('event_time', '10 minutes')`,
-    explanation: 'withWatermark(eventTimeColumn, delayThreshold) tells Spark to wait up to the threshold for late data. After that, late records are dropped from stateful operations like aggregations and joins.',
+    explanation: 'withWatermark(eventTimeColumn, delayThreshold) tells Spark how late data may arrive: rows within 10 minutes of the latest event_time seen are still counted, and state for anything older can be dropped. Rows that arrive later than the threshold may be ignored by stateful operations such as windowed aggregations and deduplication.',
     hints: ['Apply watermark configuration to the streaming DataFrame', 'Specify column name and delay interval string'],
     tieredHints: {
       apiSignature: 'DataFrame.withWatermark(eventTime, delayThreshold) -> DataFrame',
@@ -246,12 +263,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.STRUCTURED_STREAMING,
     question: 'When should you use "complete" output mode?',
     options: [
-      { id: 'a', text: 'When you only want newly appended rows written out on each trigger', isCorrect: false },
-      { id: 'b', text: 'When you want old historical data purged automatically from target storage', isCorrect: false },
-      { id: 'c', text: 'When executing non-stateful projection and filtering operations on streams', isCorrect: false },
-      { id: 'd', text: 'When you need the complete updated aggregation table written out on each trigger', isCorrect: true },
+      { id: 'a', text: 'When each trigger should write only the new rows, which never change once written', isCorrect: false },
+      { id: 'b', text: 'When each trigger should write only the aggregate rows that changed in that batch', isCorrect: false },
+      { id: 'c', text: 'When the query only filters and selects columns, with no aggregation', isCorrect: false },
+      { id: 'd', text: 'When each trigger should rewrite the whole aggregated result table', isCorrect: true },
     ],
-    explanation: 'Complete mode rewrites the entire result table on each trigger. It is required for aggregation queries where previous results may change (e.g., running counts). Append mode cannot be used with aggregations without watermarks.',
+    explanation: 'Complete mode rewrites the whole result table on every trigger, which suits a running aggregation whose earlier counts change. Writing only the changed aggregate rows is update mode (a Delta table sink accepts append and complete, not update). Append writes each new row once, and a query with no aggregation cannot use complete mode. An aggregation in append mode needs a watermark.',
     tags: ['streaming', 'output-modes', 'complete'],
     concepts: ['stream-readstream-writestream', 'stream-output-modes'],
   },
@@ -262,21 +279,28 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    question: 'Read a stream of JSON files from path "/mnt/data/events/" into DataFrame "stream_df" using the predefined schema "event_schema".',
+    question: 'Read a stream of JSON files from the volume folder "/Volumes/main/default/landing/events/" into the DataFrame "stream_df", using the schema already defined in the variable "event_schema".',
     starterCode: `stream_df = spark.readStream`,
+    requires: [/event_schema/, /readStream/, /json/],
     testCases: [
       {
-        input: 'JSON files at /mnt/data/events/',
-        expectedOutput: 'spark.readStream.format("json").schema(event_schema).load("/mnt/data/events/")',
+        input: 'JSON files in /Volumes/main/default/landing/events/',
+        expectedOutput: 'spark.readStream.format("json").schema(event_schema).load("/Volumes/main/default/landing/events/")',
         description: 'Should read JSON stream with schema',
       },
     ],
-    solution: `stream_df = spark.readStream.format("json").schema(event_schema).load("/mnt/data/events/")\n# OR\nstream_df = spark.readStream.json("/mnt/data/events/", schema=event_schema)`,
-    explanation: 'Streaming reads MUST have an explicit schema — Spark cannot infer it from a stream because files arrive continuously. Both the chained (.format().schema().load()) and shorthand (.json(path, schema=)) approaches are valid.',
-    hints: ['Schema is required for file-based streams — inferSchema is not supported', 'Use .format("json").schema(event_schema).load(path) or .json(path, schema=event_schema)'],
+    solution: `stream_df = spark.readStream.format("json").schema(event_schema).load("/Volumes/main/default/landing/events/")
+# OR
+stream_df = spark.readStream.schema(event_schema).json("/Volumes/main/default/landing/events/")
+# OR
+stream_df = spark.readStream.json("/Volumes/main/default/landing/events/", schema=event_schema)
+# OR
+stream_df = spark.readStream.schema(event_schema).format("json").load("/Volumes/main/default/landing/events/")`,
+    explanation: 'A plain file stream needs its schema up front: by default Spark does not infer it for a stream, since files keep arriving, and readStream without a schema fails with "Schema must be specified". The chained .format("json").schema(...).load(path) and the shorthand .json(path, schema=...) are the same reader. Auto Loader, the next topic, is the stream source that infers and evolves the schema for you.',
+    hints: ['A file stream does not infer its schema by default, so pass event_schema', 'Use .format("json").schema(event_schema).load(path) or .json(path, schema=event_schema)'],
     tieredHints: {
       apiSignature: 'DataStreamReader.format(source).schema(schema).load(path=None) -> DataFrame',
-      skeleton: 'stream_df = spark.____.____("json").____(____).____("/mnt/data/events/")',
+      skeleton: 'stream_df = spark.____.____("json").____(____).____("/Volumes/main/default/landing/events/")',
     },
     tags: ['streaming', 'json', 'schema'],
     concepts: ['stream-readstream-writestream', 'ps-io-json', 'ps-dataframe-create'],
@@ -287,14 +311,14 @@ export const certificationQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
-    question: 'What happens if a Structured Streaming job fails and restarts?',
+    question: 'A streaming query writes to a Delta table with a checkpoint location. It fails in the middle of a micro-batch and is restarted with the same checkpoint. What happens?',
     options: [
-      { id: 'a', text: 'It reprocesses all historical files from the beginning of the stream', isCorrect: false },
-      { id: 'b', text: 'It resumes from the last checkpoint, guaranteeing exactly-once processing', isCorrect: true },
-      { id: 'c', text: 'It skips the failed micro-batch and resumes processing next records', isCorrect: false },
-      { id: 'd', text: 'It requires manual schema re-definition and table purging before restart', isCorrect: false },
+      { id: 'a', text: 'It reads the whole source again from the start, since the failed run did not finish', isCorrect: false },
+      { id: 'b', text: 'It resumes from the offsets in the checkpoint and redoes the unfinished batch, writing each row once', isCorrect: true },
+      { id: 'c', text: 'It skips the micro-batch that failed and carries on with the rows after it', isCorrect: false },
+      { id: 'd', text: 'It redoes the unfinished batch, so the rows that batch wrote before the failure appear twice', isCorrect: false },
     ],
-    explanation: 'With checkpointing enabled and a Delta sink, Structured Streaming provides exactly-once guarantees. The checkpoint stores the offset and state, so on restart, processing resumes from where it left off.',
+    explanation: 'The checkpoint records which offsets each batch covers and which batches committed. On restart the query redoes the batch that did not commit, over the same offsets, and the Delta sink records the batches it has committed, so rows are not written twice: exactly-once. Nothing is skipped, and only a new or deleted checkpoint makes the query read the whole source again.',
     tags: ['streaming', 'fault-tolerance', 'exactly-once'],
     concepts: ['stream-readstream-writestream', 'stream-checkpoint'],
   },
@@ -310,12 +334,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.AUTO_LOADER,
     question: 'What is Auto Loader in Databricks?',
     options: [
-      { id: 'a', text: 'Automated cluster scaling manager that provisions worker nodes based on CPU consumption', isCorrect: false },
-      { id: 'b', text: 'An optimized file ingestion engine that incrementally processes new files arriving in cloud storage', isCorrect: true },
-      { id: 'c', text: 'Batch execution scheduler used to orchestrate dependent Databricks Workflow job pipelines', isCorrect: false },
-      { id: 'd', text: 'Relational catalog metadata service for governing access permissions across Unity Catalog schemas', isCorrect: false },
+      { id: 'a', text: 'A cluster feature that adds worker nodes automatically when more files arrive', isCorrect: false },
+      { id: 'b', text: 'A stream source that loads each new file arriving in cloud storage or a volume exactly once', isCorrect: true },
+      { id: 'c', text: 'A batch command that reloads every file in a folder each time it runs', isCorrect: false },
+      { id: 'd', text: 'A job scheduler that runs a notebook whenever a file lands in a folder', isCorrect: false },
     ],
-    explanation: 'Auto Loader (cloudFiles) incrementally and efficiently processes new data files as they arrive in cloud storage. It uses file notification or directory listing to discover new files.',
+    explanation: 'Auto Loader is the `cloudFiles` stream source: it watches a folder in a Unity Catalog volume or cloud storage, and its checkpoint records every file it has loaded, so each run picks up only new files. It also infers and evolves the schema. It does not scale clusters or schedule jobs, and it never reloads files it has already loaded.',
     tags: ['autoloader', 'ingestion', 'cloudFiles'],
     concepts: ['stream-autoloader'],
   },
@@ -326,21 +350,26 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.AUTO_LOADER,
     language: CodeLanguage.PYTHON,
-    question: 'Configure Auto Loader to stream incoming JSON files from "/mnt/data/raw/" into DataFrame "stream_df". Store the inferred schema at path "/checkpoints/schema".',
+    question: 'Use Auto Loader to stream the JSON files arriving in the volume folder "/Volumes/main/default/landing/raw/" into the DataFrame "stream_df", keeping the inferred schema in "/Volumes/main/default/checkpoints/raw/schema".',
     starterCode: `stream_df = spark.readStream`,
+    requires: [/format\(\s*["']cloudFiles["']\s*\)/, /cloudFiles\.format["']\s*,\s*["']json/, /cloudFiles\.schemaLocation/],
     testCases: [
       {
-        input: 'JSON files in /mnt/data/raw/',
+        input: 'JSON files in /Volumes/main/default/landing/raw/',
         expectedOutput: '.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", ...)',
         description: 'Should use cloudFiles format with JSON',
       },
     ],
-    solution: `stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/checkpoints/schema").load("/mnt/data/raw/")\n# OR\nstream_df = spark.readStream.option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/checkpoints/schema").format("cloudFiles").load("/mnt/data/raw/")`,
-    explanation: 'Auto Loader uses "cloudFiles" as the format — this is what makes it Auto Loader rather than a regular stream reader. cloudFiles.format tells it the underlying file type. cloudFiles.schemaLocation is required for schema inference.',
+    solution: `stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/raw/schema").load("/Volumes/main/default/landing/raw/")
+# OR
+stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/raw/schema").option("cloudFiles.format", "json").load("/Volumes/main/default/landing/raw/")
+# OR
+stream_df = spark.readStream.option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/raw/schema").format("cloudFiles").load("/Volumes/main/default/landing/raw/")`,
+    explanation: 'format("cloudFiles") is what makes the reader Auto Loader rather than a plain file stream, and the cloudFiles.format option names the file type. cloudFiles.schemaLocation is where Auto Loader keeps the schema it inferred, so later runs reuse it and record any new columns there.',
     hints: ['Set format to "cloudFiles"', 'Specify "cloudFiles.format" as "json"', 'Set "cloudFiles.schemaLocation" option'],
     tieredHints: {
       apiSignature: 'DataStreamReader.format("cloudFiles").option(key, value).load(path=None) -> DataFrame',
-      skeleton: 'stream_df = spark.____.____("cloudFiles").____("cloudFiles.format", ____).____("cloudFiles.schemaLocation", ____).____("/mnt/data/raw/")',
+      skeleton: 'stream_df = spark.____.____("cloudFiles").____("cloudFiles.format", ____).____("cloudFiles.schemaLocation", ____).____("/Volumes/main/default/landing/raw/")',
     },
     tags: ['autoloader', 'cloudFiles', 'json'],
     concepts: ['stream-autoloader', 'ps-io-json'],
@@ -358,7 +387,7 @@ export const certificationQuestions: Question[] = [
       { id: 'c', text: 'Directory listing mode and File notification mode', isCorrect: true },
       { id: 'd', text: 'Synchronous blocking mode and Asynchronous non-blocking mode', isCorrect: false },
     ],
-    explanation: 'Directory listing mode scans the input directory to find new files (default). File notification mode sets up cloud-native event notifications (e.g., AWS SNS/SQS) for better scalability with millions of files.',
+    explanation: `In directory listing mode, the default, Auto Loader lists the input folder to find new files. In file notification mode (cloudFiles.useNotifications, or file events on a Unity Catalog external location) the cloud's storage events announce each new file, such as AWS SNS/SQS, so no listing is needed, which scales to millions of files.`,
     tags: ['autoloader', 'file-detection'],
     concepts: ['stream-autoloader'],
   },
@@ -368,14 +397,14 @@ export const certificationQuestions: Question[] = [
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.AUTO_LOADER,
-    question: 'How does Auto Loader handle schema evolution when new columns appear in source files?',
+    question: 'Auto Loader runs with the default schema evolution mode, addNewColumns. A new file has a column that the stored schema does not have. What happens?',
     options: [
-      { id: 'a', text: 'It fails the stream immediately requiring manual column definition', isCorrect: false },
-      { id: 'b', text: 'It silently drops newly observed columns without updating metadata', isCorrect: false },
-      { id: 'c', text: 'It requires purging checkpoint storage before processing new columns', isCorrect: false },
-      { id: 'd', text: 'It can automatically detect and merge new columns via schemaEvolutionMode', isCorrect: true },
+      { id: 'a', text: 'The stream stops once, the column is added to the stored schema, and the restarted stream carries on with it', isCorrect: true },
+      { id: 'b', text: 'The column is added on the fly and the running stream carries on without stopping', isCorrect: false },
+      { id: 'c', text: 'The new column is ignored and the stored schema stays as it was', isCorrect: false },
+      { id: 'd', text: `The new column's values go into _rescued_data and the schema never changes`, isCorrect: false },
     ],
-    explanation: 'Auto Loader can be configured to handle schema evolution. With cloudFiles.schemaEvolutionMode set to "addNewColumns", it automatically adds new columns. The schema is tracked in schemaLocation.',
+    explanation: 'With the default schemaEvolutionMode, addNewColumns, Auto Loader stops the stream with an UnknownFieldException and adds the new column to the schema kept in cloudFiles.schemaLocation; the next start goes on with it, which a job set to retry does for you. Ignoring new columns is the "none" mode, and keeping the schema fixed while sending them to _rescued_data is the "rescue" mode.',
     tags: ['autoloader', 'schema-evolution'],
     concepts: ['stream-autoloader', 'stream-schema-evolution'],
   },
@@ -386,8 +415,9 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.AUTO_LOADER,
     language: CodeLanguage.PYTHON,
-    question: 'Create an Auto Loader ingestion stream that reads CSV files with headers from "/mnt/landing/", stores inferred schema at "/checkpoints/bronze/schema", and streams output in append mode to Delta table "bronze_data" with checkpoint path "/checkpoints/bronze".',
+    question: 'Write an Auto Loader stream that reads the CSV files (with a header line) arriving in "/Volumes/main/default/landing/csv/", keeps the inferred schema in "/Volumes/main/default/checkpoints/bronze_data/schema", and appends the rows to the Delta table "bronze_data" with its checkpoint in "/Volumes/main/default/checkpoints/bronze_data".',
     starterCode: `spark.readStream`,
+    requires: [/format\(\s*["']cloudFiles["']\s*\)/, /cloudFiles\.format["']\s*,\s*["']csv/, /header/, /checkpointLocation/, /^(?![\s\S]*outputMode\(\s*["'](?:complete|update)["'])/],
     testCases: [
       {
         input: 'CSV files',
@@ -395,12 +425,18 @@ export const certificationQuestions: Question[] = [
         description: 'Should create full Auto Loader pipeline',
       },
     ],
-    solution: `spark.readStream.format("cloudFiles").option("cloudFiles.format", "csv").option("header", "true").option("cloudFiles.schemaLocation", "/checkpoints/bronze/schema").load("/mnt/landing/").writeStream.format("delta").option("checkpointLocation", "/checkpoints/bronze").outputMode("append").toTable("bronze_data")\n# OR\nspark.readStream.format("cloudFiles").option("cloudFiles.format", "csv").option("header", "true").option("cloudFiles.schemaLocation", "/checkpoints/bronze/schema").load("/mnt/landing/").writeStream.option("checkpointLocation", "/checkpoints/bronze").outputMode("append").toTable("bronze_data")`,
-    explanation: 'A full Auto Loader pipeline: readStream with cloudFiles reads new files incrementally, schemaLocation stores the inferred schema, then writeStream writes to a Delta table. Two separate checkpoints: schemaLocation for the inferred schema, checkpointLocation for stream progress.',
-    hints: ['Chain readStream with cloudFiles options to load("/mnt/landing/")', 'Chain writeStream to append toTable("bronze_data") with checkpointLocation'],
+    solution: `spark.readStream.format("cloudFiles").option("cloudFiles.format", "csv").option("header", "true").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_data/schema").load("/Volumes/main/default/landing/csv/").writeStream.format("delta").option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_data").outputMode("append").toTable("bronze_data")
+# OR
+spark.readStream.format("cloudFiles").option("cloudFiles.format", "csv").option("header", "true").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_data/schema").load("/Volumes/main/default/landing/csv/").writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_data").outputMode("append").toTable("bronze_data")
+# OR
+spark.readStream.format("cloudFiles").option("cloudFiles.format", "csv").option("header", "true").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_data/schema").load("/Volumes/main/default/landing/csv/").writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_data").toTable("bronze_data")
+# OR
+spark.readStream.format("cloudFiles").option("cloudFiles.format", "csv").option("header", True).option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_data/schema").load("/Volumes/main/default/landing/csv/").writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_data").toTable("bronze_data")`,
+    explanation: `A full Auto Loader ingest: readStream with format("cloudFiles") reads only new files, cloudFiles.schemaLocation keeps the inferred schema, "header" is the CSV reader's own option, and writeStream.toTable appends to a Delta table (append is the default output mode). The checkpointLocation records which files are done; the schema and the checkpoint may share one folder or use two.`,
+    hints: ['Chain readStream with the cloudFiles options and load("/Volumes/main/default/landing/csv/")', 'Chain writeStream with checkpointLocation and toTable("bronze_data")'],
     tieredHints: {
       apiSignature: 'DataStreamReader.format("cloudFiles").option(key, value).load(path=None).writeStream -> DataStreamWriter',
-      skeleton: 'spark.____.____("cloudFiles").____("cloudFiles.format", "csv").____("header", "true").____("cloudFiles.schemaLocation", "/checkpoints/bronze/schema").____("/mnt/landing/").____.____("delta").____("checkpointLocation", "/checkpoints/bronze").____("append").____("bronze_data")',
+      skeleton: 'spark.____.____("cloudFiles").____("cloudFiles.format", "csv").____("header", "true").____("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_data/schema").____("/Volumes/main/default/landing/csv/").____.____("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_data").____("append").____("bronze_data")',
     },
     tags: ['autoloader', 'pipeline', 'csv', 'delta'],
     concepts: ['stream-autoloader', 'dlt-pipeline-basics', 'ps-io-csv', 'delta-acid'],
@@ -413,12 +449,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.AUTO_LOADER,
     question: 'What advantage does Auto Loader have over using spark.readStream.format("json") directly for file ingestion?',
     options: [
-      { id: 'a', text: 'Auto Loader tracks processed files, manages schema evolution, and scales efficiently to millions of files', isCorrect: true },
-      { id: 'b', text: 'Auto Loader executes single-file batch reads faster by bypassing Spark execution plan generation', isCorrect: false },
-      { id: 'c', text: 'Auto Loader enables reading non-file streaming sources directly such as Apache Kafka and Event Hubs', isCorrect: false },
-      { id: 'd', text: 'Auto Loader reduces executor RAM footprint by disabling distributed memory caching across nodes', isCorrect: false },
+      { id: 'a', text: 'It infers and evolves the schema, rescues values that do not fit, and can find files by notification at scale', isCorrect: true },
+      { id: 'b', text: 'It remembers which files it loaded, while a plain file stream reads every file again on each run', isCorrect: false },
+      { id: 'c', text: 'It can also read non-file sources such as Apache Kafka and Event Hubs', isCorrect: false },
+      { id: 'd', text: 'It reads each file faster because it skips building a Spark query plan', isCorrect: false },
     ],
-    explanation: 'Auto Loader provides file tracking (no reprocessing), schema inference and evolution, and efficient file discovery via cloud notifications. Regular file streaming re-lists the directory each trigger.',
+    explanation: 'A plain file stream such as readStream.format("json") needs its schema given up front and has no schema inference, evolution or rescued data; it finds files only by listing the folder. Both kinds record the files they have processed in the checkpoint, so neither reads a file twice, but Auto Loader keeps that record in a store that scales to millions of files and can use file notifications. It reads files only, not Kafka.',
     tags: ['autoloader', 'advantages'],
     concepts: ['stream-autoloader'],
   },
@@ -429,21 +465,26 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.AUTO_LOADER,
     language: CodeLanguage.PYTHON,
-    question: 'Configure an Auto Loader stream reading JSON from "/mnt/data/" that includes existing pre-existing files, storing schema at "/checkpoints/schema". Project all record columns plus "_metadata.file_path" and "_metadata.file_modification_time" into "stream_df".',
+    question: 'Write an Auto Loader stream into "stream_df" that reads the JSON files in "/Volumes/main/default/landing/json/", including the files already in the folder when the stream first starts, with its schema kept in "/Volumes/main/default/checkpoints/json/schema". Select every data column plus "_metadata.file_path" and "_metadata.file_modification_time".',
     starterCode: `stream_df = spark.readStream`,
+    requires: [/format\(\s*["']cloudFiles["']\s*\)/, '_metadata.file_path', '_metadata.file_modification_time', /^(?![\s\S]*includeExistingFiles["']\s*,\s*["']?false)/i],
     testCases: [
       {
         input: 'Auto Loader stream',
-        expectedOutput: 'select _metadata.file_path or option includeExistingFiles',
+        expectedOutput: 'select("*", "_metadata.file_path", "_metadata.file_modification_time")',
         description: 'Should include metadata columns',
       },
     ],
-    solution: `stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.includeExistingFiles", "true").option("cloudFiles.schemaLocation", "/checkpoints/schema").load("/mnt/data/").select("*", "_metadata.file_path", "_metadata.file_modification_time")\n# OR\nstream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.includeExistingFiles", True).option("cloudFiles.schemaLocation", "/checkpoints/schema").load("/mnt/data/").select("*", "_metadata.file_path", "_metadata.file_modification_time")`,
-    explanation: '_metadata is a virtual column automatically available in file-based streams. You access its fields with dot notation in select(). includeExistingFiles=true is important for initial loads.',
-    hints: ['Set "cloudFiles.includeExistingFiles" to "true"', 'Use select("*", "_metadata.file_path", "_metadata.file_modification_time")'],
+    solution: `stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.includeExistingFiles", "true").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/json/schema").load("/Volumes/main/default/landing/json/").select("*", "_metadata.file_path", "_metadata.file_modification_time")
+# OR
+stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.includeExistingFiles", True).option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/json/schema").load("/Volumes/main/default/landing/json/").select("*", "_metadata.file_path", "_metadata.file_modification_time")
+# OR
+stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/json/schema").load("/Volumes/main/default/landing/json/").select("*", "_metadata.file_path", "_metadata.file_modification_time")`,
+    explanation: `_metadata is a hidden column of every file source: select its fields by name, such as "_metadata.file_path", next to "*" to keep the data columns and record where each row came from. cloudFiles.includeExistingFiles is true by default and only counts on the stream's first start, so setting it to "true" is optional; set it to "false" to load only files that arrive later.`,
+    hints: ['Existing files are included by default; the option cloudFiles.includeExistingFiles says so explicitly', 'Use select("*", "_metadata.file_path", "_metadata.file_modification_time")'],
     tieredHints: {
       apiSignature: 'DataFrame.select(*cols) -> DataFrame',
-      skeleton: 'stream_df = spark.____.____("cloudFiles").____("cloudFiles.format", "json").____("cloudFiles.includeExistingFiles", ____).____("cloudFiles.schemaLocation", "/checkpoints/schema").____("/mnt/data/").____("*", ____, ____)',
+      skeleton: 'stream_df = spark.____.____("cloudFiles").____("cloudFiles.format", "json").____("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/json/schema").____("/Volumes/main/default/landing/json/").____("*", ____, ____)',
     },
     tags: ['autoloader', 'metadata', 'lineage'],
     concepts: ['stream-autoloader', 'ps-dataframe-create', 'ucat-lineage'],
@@ -529,6 +570,7 @@ export const certificationQuestions: Question[] = [
     language: CodeLanguage.SQL,
     question: 'Create or replace a Silver table named "silver_orders" from "bronze_orders" (columns: order_id, customer_id, amount, order_status, ingestion_time). Exclude records where order_id is null, and deduplicate to retain only the single most recent record per order_id based on ingestion_time descending.',
     starterCode: `-- Create Silver table from bronze_orders\n`,
+    requires: [/CREATE\s+OR\s+REPLACE\s+TABLE/i, /IS\s+NOT\s+NULL/i, /PARTITION\s+BY\s+order_id/i, /ORDER\s+BY\s+ingestion_time\s+DESC/i],
     testCases: [
       {
         input: 'bronze_orders table',
@@ -536,12 +578,34 @@ export const certificationQuestions: Question[] = [
         description: 'Should clean and deduplicate data',
       },
     ],
-    solution: `CREATE OR REPLACE TABLE silver_orders AS\nSELECT * FROM (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC) as rn\n  FROM bronze_orders\n  WHERE order_id IS NOT NULL\n)\nWHERE rn = 1\n-- OR\nCREATE OR REPLACE TABLE silver_orders AS\nSELECT * FROM bronze_orders\nWHERE order_id IS NOT NULL\nQUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC) = 1`,
-    explanation: 'Silver layer transformations typically filter nulls (data quality), deduplicate using ROW_NUMBER() or QUALIFY to keep the latest record, and may cast types or join with reference data.',
-    hints: ['Filter out NULL order_ids with WHERE', 'Use ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC) for deduplication', 'QUALIFY or subquery rn = 1 selects latest record'],
+    solution: `CREATE OR REPLACE TABLE silver_orders AS
+SELECT * FROM bronze_orders
+WHERE order_id IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC) = 1
+-- OR
+CREATE OR REPLACE TABLE silver_orders AS
+SELECT * EXCEPT (rn) FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC) AS rn
+  FROM bronze_orders
+  WHERE order_id IS NOT NULL
+)
+WHERE rn = 1
+-- OR
+CREATE OR REPLACE TABLE silver_orders AS
+SELECT order_id, customer_id, amount, order_status, ingestion_time FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC) AS rn
+  FROM bronze_orders
+  WHERE order_id IS NOT NULL
+)
+WHERE rn = 1`,
+    explanation: `Silver cleans Bronze: WHERE drops the rows with no key, and ROW_NUMBER() numbered newest first within each order_id keeps only the latest record. QUALIFY filters on the window function directly; with a subquery instead, select the table's own columns (or SELECT * EXCEPT (rn)) so the helper rn column does not end up in the Silver table.`,
+    hints: ['Filter out NULL order_ids with WHERE', 'Number the rows with ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ingestion_time DESC)', 'Keep row 1 with QUALIFY, or with WHERE rn = 1 around a subquery'],
     tieredHints: {
       apiSignature: 'ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2 DESC)',
-      skeleton: '____ ____ TABLE ____ AS\nSELECT * FROM (\n  SELECT *, ____() OVER (____ BY ____ ____ BY ____ ____) as ____\n  FROM ____\n  WHERE ____ IS ____\n)\nWHERE ____ = 1',
+      skeleton: `____ ____ ____ TABLE ____ AS
+SELECT * FROM ____
+WHERE ____ IS ____ ____
+____ ____() OVER (____ BY ____ ____ BY ____ ____) = 1`,
     },
     tags: ['medallion', 'silver', 'deduplication'],
     concepts: ['medallion-architecture', 'ps-distinct-drop-dup'],
@@ -555,6 +619,7 @@ export const certificationQuestions: Question[] = [
     language: CodeLanguage.SQL,
     question: 'Create or replace a Gold table named "gold_daily_revenue" from "silver_orders" (columns: order_id, customer_id, amount, order_date, order_status) that calculates total revenue (sum of amount as "total_revenue") and order count (count of records as "order_count") grouped by order_date.',
     starterCode: `-- Create Gold aggregation table\n`,
+    requires: [/CREATE\s+OR\s+REPLACE\s+TABLE/i, /FROM\s+silver_orders/i, /GROUP\s+BY\s+order_date/i, /SUM\(\s*amount\s*\)/i],
     testCases: [
       {
         input: 'silver_orders with order_date and amount columns',
@@ -562,8 +627,16 @@ export const certificationQuestions: Question[] = [
         description: 'Should aggregate revenue by date',
       },
     ],
-    solution: `CREATE OR REPLACE TABLE gold_daily_revenue AS\nSELECT order_date, SUM(amount) as total_revenue, COUNT(*) as order_count\nFROM silver_orders\nGROUP BY order_date\n-- OR\nCREATE TABLE IF NOT EXISTS gold_daily_revenue AS\nSELECT order_date, SUM(amount) as total_revenue, COUNT(order_id) as order_count\nFROM silver_orders\nGROUP BY order_date`,
-    explanation: 'Gold tables contain business-level aggregations. This creates a daily revenue summary that can be consumed by BI dashboards and reporting tools.',
+    solution: `CREATE OR REPLACE TABLE gold_daily_revenue AS
+SELECT order_date, SUM(amount) AS total_revenue, COUNT(*) AS order_count
+FROM silver_orders
+GROUP BY order_date
+-- OR
+CREATE OR REPLACE TABLE gold_daily_revenue AS
+SELECT order_date, SUM(amount) AS total_revenue, COUNT(order_id) AS order_count
+FROM silver_orders
+GROUP BY order_date`,
+    explanation: `A Gold table holds a business-level summary built from Silver: one row per order_date with its revenue and order count, ready for a BI dashboard. CREATE OR REPLACE rebuilds it from the current Silver data each run; CREATE TABLE IF NOT EXISTS would keep the first day's numbers forever. COUNT(order_id) matches COUNT(*) here because Silver has no null order_id.`,
     hints: ['Use GROUP BY order_date', 'SUM(amount) as total_revenue, COUNT(*) as order_count'],
     tieredHints: {
       apiSignature: 'CREATE OR REPLACE TABLE table_name AS SELECT col, SUM(col2), COUNT(*) FROM source GROUP BY col',
@@ -580,12 +653,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.MEDALLION_ARCHITECTURE,
     question: 'Why is the Medallion architecture beneficial for enterprise data governance?',
     options: [
-      { id: 'a', text: 'Each layer provides distinct quality guarantees, allowing fine-grained access control policies per tier', isCorrect: true },
-      { id: 'b', text: 'It encrypts all raw payload files automatically at rest without requiring KMS key configuration', isCorrect: false },
-      { id: 'c', text: 'It completely eliminates the necessity for role-based data access permissions across all databases', isCorrect: false },
-      { id: 'd', text: 'It centralizes all structured and unstructured datasets into a single unpartitioned storage bucket', isCorrect: false },
+      { id: 'a', text: 'Each layer has its own quality level, so access can be granted per layer, such as analysts on Gold only', isCorrect: true },
+      { id: 'b', text: 'Each layer encrypts its data with its own key, so a reader of Gold cannot decrypt Bronze', isCorrect: false },
+      { id: 'c', text: 'Once data reaches Gold it is clean, so Bronze and Silver can be deleted to remove sensitive data', isCorrect: false },
+      { id: 'd', text: 'Every user reads Bronze, so all reports share one source and permissions are not needed', isCorrect: false },
     ],
-    explanation: 'The layered approach enables access control by quality level (analysts see Gold, engineers access Bronze). Each layer has clear quality expectations. Delta Lake provides audit history at each layer.',
+    explanation: 'The layers are usually separate Unity Catalog schemas, such as main.bronze, main.silver and main.gold, so access can follow quality: analysts read Gold, while engineers work in Bronze and Silver. Bronze is kept, since Silver and Gold are rebuilt from it when a rule changes, and Delta keeps the history of each table. Encryption is a storage setting, not a Medallion layer.',
     tags: ['medallion', 'governance'],
     concepts: ['medallion-architecture', 'ucat-grants'],
   },
@@ -597,12 +670,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.MEDALLION_ARCHITECTURE,
     question: 'In a Medallion architecture, which layer is primarily populated using Auto Loader file ingestion?',
     options: [
-      { id: 'a', text: 'Gold tier — to aggregate operational business metrics', isCorrect: false },
-      { id: 'b', text: 'Silver tier — to enforce data validation constraints', isCorrect: false },
-      { id: 'c', text: 'Bronze tier — to ingest raw files from cloud storage', isCorrect: true },
-      { id: 'd', text: 'All tiers — Auto Loader reads Delta tables between tiers', isCorrect: false },
+      { id: 'a', text: 'Gold, to build the business metrics straight from the files', isCorrect: false },
+      { id: 'b', text: 'Silver, to validate the files as they are loaded', isCorrect: false },
+      { id: 'c', text: 'Bronze, to load the raw files from cloud storage', isCorrect: true },
+      { id: 'd', text: 'All three, since Auto Loader reads Delta tables between layers', isCorrect: false },
     ],
-    explanation: 'Auto Loader is typically used at the Bronze layer to ingest raw files from cloud storage (S3, ADLS, GCS). Silver and Gold layers read from the previous layer\'s Delta tables.',
+    explanation: 'Auto Loader loads files, so it usually feeds Bronze with the raw records from cloud storage or a volume. Silver and Gold read the Delta tables of the layer before them, with spark.readStream.table() or a batch query, not with Auto Loader.',
     tags: ['medallion', 'autoloader', 'bronze'],
     concepts: ['medallion-architecture', 'stream-autoloader'],
   },
@@ -613,8 +686,9 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.MEDALLION_ARCHITECTURE,
     language: CodeLanguage.PYTHON,
-    question: 'Configure a Bronze streaming ingestion pipeline using Auto Loader to ingest JSON files from "/mnt/landing/events", store schema at "/checkpoints/bronze_events/schema", append an "ingestion_time" timestamp column with current_timestamp(), and write stream to Delta table "bronze_events" with checkpoint "/checkpoints/bronze_events".',
+    question: 'Write a Bronze ingest with Auto Loader: read the JSON files arriving in "/Volumes/main/default/landing/events", keep the inferred schema in "/Volumes/main/default/checkpoints/bronze_events/schema", add an "ingestion_time" column holding current_timestamp(), and append the rows to the Delta table "bronze_events" with its checkpoint in "/Volumes/main/default/checkpoints/bronze_events".',
     starterCode: `from pyspark.sql.functions import current_timestamp\n`,
+    requires: [/format\(\s*["']cloudFiles["']\s*\)/, /ingestion_time["']\s*,\s*current_timestamp\(\)/, /checkpointLocation/],
     testCases: [
       {
         input: 'JSON files',
@@ -622,12 +696,25 @@ export const certificationQuestions: Question[] = [
         description: 'Should create Bronze pipeline with metadata',
       },
     ],
-    solution: `from pyspark.sql.functions import current_timestamp\n\nspark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/checkpoints/bronze_events/schema").load("/mnt/landing/events").withColumn("ingestion_time", current_timestamp()).writeStream.format("delta").option("checkpointLocation", "/checkpoints/bronze_events").outputMode("append").toTable("bronze_events")\n# OR\nfrom pyspark.sql.functions import current_timestamp\n\nstream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/checkpoints/bronze_events/schema").load("/mnt/landing/events").withColumn("ingestion_time", current_timestamp())\nstream_df.writeStream.format("delta").option("checkpointLocation", "/checkpoints/bronze_events").outputMode("append").toTable("bronze_events")`,
-    explanation: 'This is the standard Bronze pattern: Auto Loader (cloudFiles) incrementally reads new files, current_timestamp() adds when each row was ingested, and writeStream persists to Delta.',
+    solution: `from pyspark.sql.functions import current_timestamp
+
+spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_events/schema").load("/Volumes/main/default/landing/events").withColumn("ingestion_time", current_timestamp()).writeStream.format("delta").option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_events").outputMode("append").toTable("bronze_events")
+# OR
+from pyspark.sql.functions import current_timestamp
+
+stream_df = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_events/schema").load("/Volumes/main/default/landing/events").withColumn("ingestion_time", current_timestamp())
+stream_df.writeStream.format("delta").option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_events").outputMode("append").toTable("bronze_events")
+# OR
+from pyspark.sql.functions import current_timestamp
+
+spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").option("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_events/schema").load("/Volumes/main/default/landing/events").withColumn("ingestion_time", current_timestamp()).writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_events").toTable("bronze_events")`,
+    explanation: 'This is the usual Bronze pattern: Auto Loader (format("cloudFiles")) reads only new files, withColumn("ingestion_time", current_timestamp()) records when each row was loaded, and writeStream.toTable appends to a Delta table (append is the default output mode). The schema location keeps the inferred schema; the checkpoint records which files are done.',
     hints: ['withColumn("ingestion_time", current_timestamp()) adds the timestamp', 'writeStream uses .toTable("bronze_events")', 'schemaLocation is for schema inference, checkpointLocation is for stream progress'],
     tieredHints: {
       apiSignature: 'DataFrame.withColumn(colName, col) -> DataFrame',
-      skeleton: 'from pyspark.sql.functions import current_timestamp\n\nspark.____.____("cloudFiles").____("cloudFiles.format", "json").____("cloudFiles.schemaLocation", "/checkpoints/bronze_events/schema").____("/mnt/landing/events").____("ingestion_time", ____()).____.____("delta").____("checkpointLocation", "/checkpoints/bronze_events").____("append").____("bronze_events")',
+      skeleton: `from pyspark.sql.functions import current_timestamp
+
+spark.____.____("cloudFiles").____("cloudFiles.format", "json").____("cloudFiles.schemaLocation", "/Volumes/main/default/checkpoints/bronze_events/schema").____("/Volumes/main/default/landing/events").____("ingestion_time", ____()).____.____("checkpointLocation", "/Volumes/main/default/checkpoints/bronze_events").____("bronze_events")`,
     },
     tags: ['medallion', 'bronze', 'autoloader', 'pipeline'],
     concepts: ['medallion-architecture', 'stream-autoloader', 'dlt-pipeline-basics'],
@@ -639,8 +726,9 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.MEDALLION_ARCHITECTURE,
     language: CodeLanguage.PYTHON,
-    question: 'Create a streaming Silver pipeline that reads Delta table "bronze_events" (columns: event_id, event_type, amount, user_id, ingestion_time) as a stream, filters out records where event_type is null, casts amount column to double, and writes stream to Delta table "silver_events" in append mode with checkpoint at "/checkpoints/silver_events".',
+    question: 'Write a streaming Silver step: read the Delta table "bronze_events" (columns: event_id, event_type, amount, user_id, ingestion_time) as a stream, drop the rows where event_type is null, cast amount to double, and append the result to the Delta table "silver_events" with its checkpoint in "/Volumes/main/default/checkpoints/silver_events".',
     starterCode: `from pyspark.sql.functions import col\n`,
+    requires: [/readStream/, /isNotNull\(\)|IS\s+NOT\s+NULL/i, /cast\(/, /checkpointLocation/],
     testCases: [
       {
         input: 'bronze_events Delta table',
@@ -648,12 +736,29 @@ export const certificationQuestions: Question[] = [
         description: 'Should create Silver streaming pipeline',
       },
     ],
-    solution: `from pyspark.sql.functions import col\n\nspark.readStream.table("bronze_events").filter(col("event_type").isNotNull()).withColumn("amount", col("amount").cast("double")).writeStream.format("delta").option("checkpointLocation", "/checkpoints/silver_events").outputMode("append").toTable("silver_events")\n# OR\nfrom pyspark.sql.functions import col\n\nsilver_df = spark.readStream.table("bronze_events").filter(col("event_type").isNotNull()).withColumn("amount", col("amount").cast("double"))\nsilver_df.writeStream.format("delta").option("checkpointLocation", "/checkpoints/silver_events").outputMode("append").toTable("silver_events")`,
-    explanation: 'Silver pipelines stream from Bronze Delta tables using readStream.table(). Filtering removes bad data, and withColumn with cast() enforces proper data types before writing to Silver.',
+    solution: `from pyspark.sql.functions import col
+
+spark.readStream.table("bronze_events").filter(col("event_type").isNotNull()).withColumn("amount", col("amount").cast("double")).writeStream.format("delta").option("checkpointLocation", "/Volumes/main/default/checkpoints/silver_events").outputMode("append").toTable("silver_events")
+# OR
+from pyspark.sql.functions import col
+
+silver_df = spark.readStream.table("bronze_events").filter(col("event_type").isNotNull()).withColumn("amount", col("amount").cast("double"))
+silver_df.writeStream.format("delta").option("checkpointLocation", "/Volumes/main/default/checkpoints/silver_events").outputMode("append").toTable("silver_events")
+# OR
+from pyspark.sql.functions import col
+
+spark.readStream.table("bronze_events").filter(col("event_type").isNotNull()).withColumn("amount", col("amount").cast("double")).writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/silver_events").toTable("silver_events")
+# OR
+from pyspark.sql.functions import col
+
+spark.readStream.table("bronze_events").where("event_type IS NOT NULL").withColumn("amount", col("amount").cast("double")).writeStream.option("checkpointLocation", "/Volumes/main/default/checkpoints/silver_events").toTable("silver_events")`,
+    explanation: 'A streaming Silver step reads the Bronze Delta table with spark.readStream.table(), so each run handles only the rows added since the last one. The filter drops rows with no event_type, and cast("double") fixes the type before the rows reach Silver; append is the default output mode.',
     hints: ['Use readStream.table("bronze_events")', 'filter(col("event_type").isNotNull())', 'withColumn("amount", col("amount").cast("double"))'],
     tieredHints: {
       apiSignature: 'Column.cast(dataType) -> Column',
-      skeleton: 'from pyspark.sql.functions import col\n\nspark.____.____("bronze_events").____(col("event_type").____()).____("amount", col("amount").____("double")).____.____("delta").____("checkpointLocation", "/checkpoints/silver_events").____("append").____("silver_events")',
+      skeleton: `from pyspark.sql.functions import col
+
+spark.____.____("bronze_events").____(col("event_type").____()).____("amount", col("amount").____("double")).____.____("checkpointLocation", "/Volumes/main/default/checkpoints/silver_events").____("silver_events")`,
     },
     tags: ['medallion', 'silver', 'streaming', 'pipeline'],
     concepts: ['medallion-architecture', 'stream-readstream-writestream', 'dlt-pipeline-basics'],
@@ -670,12 +775,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.CHANGE_DATA_CAPTURE,
     question: 'What is Change Data Capture (CDC)?',
     options: [
-      { id: 'a', text: 'A method for compressing Delta storage files during routine VACUUM maintenance tasks', isCorrect: false },
-      { id: 'b', text: 'A database index strategy for accelerating join lookups on high-cardinality primary keys', isCorrect: false },
-      { id: 'c', text: 'A pattern that captures row-level inserts, updates, and deletes for downstream replication', isCorrect: true },
-      { id: 'd', text: 'A data encryption protocol that obscures row payloads during streaming socket transport', isCorrect: false },
+      { id: 'a', text: 'A full reload that copies the whole source table to the target on every run', isCorrect: false },
+      { id: 'b', text: 'A time travel query that returns a table as it was at an earlier version', isCorrect: false },
+      { id: 'c', text: 'A pattern that passes on only the rows inserted, updated or deleted in a source', isCorrect: true },
+      { id: 'd', text: 'A log of the SQL statements run against a table, as DESCRIBE HISTORY shows', isCorrect: false },
     ],
-    explanation: 'CDC tracks row-level changes in source systems and propagates them to target systems. This enables efficient incremental updates without full table reloads.',
+    explanation: 'Change Data Capture passes on only the rows that changed in a source (inserts, updates and deletes), so a target stays in step without a full reload. Time travel returns a whole earlier version of a table, and DESCRIBE HISTORY lists one row per commit with its operation, not the changed rows.',
     tags: ['cdc', 'fundamentals'],
     concepts: ['delta-cdf', 'dbx-architecture'],
   },
@@ -687,12 +792,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.CHANGE_DATA_CAPTURE,
     question: 'What is Delta Lake\'s Change Data Feed (CDF)?',
     options: [
-      { id: 'a', text: 'A Delta feature recording row-level inserts, updates, and deletes for batch or streaming consumption', isCorrect: true },
-      { id: 'b', text: 'A real-time cluster health monitoring service tracking executor CPU consumption and memory usage', isCorrect: false },
-      { id: 'c', text: 'A table partitioning strategy optimizing directory layout for multi-dimensional range filters', isCorrect: false },
-      { id: 'd', text: 'An automated cloud storage snapshot system creating point-in-time table recovery backups', isCorrect: false },
+      { id: 'a', text: 'A Delta feature that records the row-level inserts, updates and deletes of each commit, for batch or stream reads', isCorrect: true },
+      { id: 'b', text: 'The table history that DESCRIBE HISTORY shows, one row per commit with its operation and user', isCorrect: false },
+      { id: 'c', text: 'A full copy of the table kept at every version, so time travel can read any of them', isCorrect: false },
+      { id: 'd', text: 'A stream that re-reads the whole table each time a commit changes it', isCorrect: false },
     ],
-    explanation: 'Change Data Feed records changes made to a Delta table, including the type of change (insert, update_preimage, update_postimage, delete). It enables efficient downstream processing of only changed data.',
+    explanation: 'With delta.enableChangeDataFeed = true, Delta records the changed rows of each commit, with _change_type (insert, update_preimage, update_postimage, delete), _commit_version and _commit_timestamp. table_changes() reads them in batch and readChangeFeed reads them as a stream. DESCRIBE HISTORY shows commits, not rows, and time travel reads the data files of an old version, not copies.',
     tags: ['cdc', 'delta', 'change-data-feed'],
     concepts: ['delta-cdf', 'delta-acid'],
   },
@@ -703,7 +808,7 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.CHANGE_DATA_CAPTURE,
     language: CodeLanguage.SQL,
-    requires: [/ALTER\s+TABLE/i],
+    requires: [/ALTER\s+TABLE\s+customers/i, /enableChangeDataFeed["']?\s*=\s*["']?true/i],
     question: 'Enable Change Data Feed on an existing Delta table named "customers".',
     starterCode: `-- Enable CDF on customers table\n`,
     testCases: [
@@ -713,7 +818,9 @@ export const certificationQuestions: Question[] = [
         description: 'Should enable CDF',
       },
     ],
-    solution: `ALTER TABLE customers SET TBLPROPERTIES (delta.enableChangeDataFeed = true)\n-- OR\nALTER TABLE customers SET TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
+    solution: `ALTER TABLE customers SET TBLPROPERTIES (delta.enableChangeDataFeed = true)\n-- OR\nALTER TABLE customers SET TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')
+-- OR
+ALTER TABLE customers SET TBLPROPERTIES (delta.enableChangeDataFeed = 'true')`,
     explanation: 'Setting delta.enableChangeDataFeed = true on a Delta table enables Change Data Feed. After enabling, all changes to the table are recorded and can be read using table_changes().',
     hints: ['Use ALTER TABLE customers SET TBLPROPERTIES', 'Property name is delta.enableChangeDataFeed = true'],
     tieredHints: {
@@ -732,16 +839,19 @@ export const certificationQuestions: Question[] = [
     language: CodeLanguage.SQL,
     question: 'Write a query to read all row-level change records from the "customers" table starting from Delta commit version 5.',
     starterCode: `-- Read change records from version 5\n`,
+    requires: [/table_changes\(\s*["']customers["']\s*,\s*5\s*\)/i],
     testCases: [
       {
         input: 'customers table with CDF enabled',
-        expectedOutput: 'SELECT * FROM table_changes("customers", 5)',
+        expectedOutput: "SELECT * FROM table_changes('customers', 5)",
         description: 'Should read changes from version 5',
       },
     ],
-    solution: `SELECT * FROM table_changes("customers", 5)\n-- OR\nSELECT * FROM table_changes('customers', 5)`,
-    explanation: 'table_changes() returns the row-level changes since the specified version. Each row includes _change_type (insert, update_preimage, update_postimage, delete), _commit_version, and _commit_timestamp.',
-    hints: ['Use table_changes("customers", 5)', 'Starting version parameter specifies the version threshold'],
+    solution: `SELECT * FROM table_changes('customers', 5)
+-- OR
+SELECT * FROM table_changes("customers", 5)`,
+    explanation: `table_changes('customers', 5) returns the changed rows from version 5 to the latest (a third argument sets an end version). Each row has the table's columns plus _change_type (insert, update_preimage, update_postimage, delete), _commit_version and _commit_timestamp.`,
+    hints: [`Use table_changes('customers', 5)`, 'The second argument is the first version to read'],
     tieredHints: {
       apiSignature: 'table_changes(table_name, start_version, [end_version])',
       skeleton: 'SELECT * FROM ____(____, ____)',
@@ -758,6 +868,7 @@ export const certificationQuestions: Question[] = [
     language: CodeLanguage.PYTHON,
     question: 'Read the Change Data Feed from the Delta table "orders" into DataFrame "changes_df" as a stream, beginning from commit version 10.',
     starterCode: `# Read CDF as stream from orders\nchanges_df = spark.readStream`,
+    requires: [/readStream/, /readChangeFeed["']\s*,\s*(?:["']true["']|True)/, /startingVersion["']\s*,\s*["']?10/],
     testCases: [
       {
         input: 'orders table with CDF',
@@ -765,8 +876,14 @@ export const certificationQuestions: Question[] = [
         description: 'Should stream CDF',
       },
     ],
-    solution: `changes_df = spark.readStream.format("delta").option("readChangeFeed", "true").option("startingVersion", 10).table("orders")\n# OR\nchanges_df = spark.readStream.format("delta").option("readChangeFeed", True).option("startingVersion", "10").table("orders")`,
-    explanation: 'Setting readChangeFeed=true on a readStream enables streaming of change records. startingVersion specifies from which Delta version to start reading changes.',
+    solution: `changes_df = spark.readStream.format("delta").option("readChangeFeed", "true").option("startingVersion", 10).table("orders")
+# OR
+changes_df = spark.readStream.option("readChangeFeed", "true").option("startingVersion", 10).table("orders")
+# OR
+changes_df = spark.readStream.format("delta").option("readChangeFeed", True).option("startingVersion", "10").table("orders")
+# OR
+changes_df = spark.readStream.option("readChangeFeed", True).option("startingVersion", "10").table("orders")`,
+    explanation: `option("readChangeFeed", "true") makes a Delta stream read the change rows, with _change_type, _commit_version and _commit_timestamp, instead of the table's rows, and startingVersion sets the first version to read. Delta is the default format, so format("delta") can be left out.`,
     hints: ['Set option("readChangeFeed", "true")', 'Set option("startingVersion", 10)', 'Use .table("orders")'],
     tieredHints: {
       apiSignature: 'DataStreamReader.option("readChangeFeed", value).option("startingVersion", version) -> DataStreamReader',
@@ -783,12 +900,12 @@ export const certificationQuestions: Question[] = [
     topic: Topic.CHANGE_DATA_CAPTURE,
     question: 'Which set of string values does Delta Change Data Feed produce in the _change_type metadata column?',
     options: [
-      { id: 'a', text: 'create, modify, replace, remove — simplified change verbs', isCorrect: false },
+      { id: 'a', text: 'insert, update, delete', isCorrect: false },
       { id: 'b', text: 'insert, update_preimage, update_postimage, delete', isCorrect: true },
-      { id: 'c', text: 'INSERT, UPDATE, DELETE, TRUNCATE — SQL DML statement names', isCorrect: false },
-      { id: 'd', text: 'add, change, drop, soft_delete — legacy storage labels', isCorrect: false },
+      { id: 'c', text: 'WRITE, UPDATE, DELETE, MERGE', isCorrect: false },
+      { id: 'd', text: 'insert, update_before, update_after, delete', isCorrect: false },
     ],
-    explanation: 'CDF uses: "insert" for new rows, "update_preimage" for the old values before update, "update_postimage" for new values after update, and "delete" for removed rows.',
+    explanation: 'The Change Data Feed writes "insert" for a new row, "delete" for a removed row, and two rows for each updated row: "update_preimage" with the old values and "update_postimage" with the new ones. WRITE, UPDATE, DELETE and MERGE are operation names in DESCRIBE HISTORY, not change types.',
     tags: ['cdc', 'change-types'],
     concepts: ['delta-cdf'],
   },
@@ -799,8 +916,8 @@ export const certificationQuestions: Question[] = [
     difficulty: Difficulty.ADVANCED,
     topic: Topic.CHANGE_DATA_CAPTURE,
     language: CodeLanguage.SQL,
-    requires: [/MERGE\s+INTO/i],
-    question: 'Write a MERGE statement to apply CDC changes from "customers_changes" into target table "customers" on matching customer_id. Exclude "update_preimage" rows from the source. Delete rows when _change_type is "delete", update matching rows when _change_type is "update_postimage", and insert unmatched rows when _change_type is "insert".',
+    requires: [/MERGE\s+INTO/i, /update_preimage/i, /["']delete["']\s*THEN\s+DELETE/i, /["']update_postimage["']\s*THEN\s+UPDATE/i, /["']insert["']\s*THEN\s+INSERT/i],
+    question: `The table "customers_changes" holds Change Data Feed rows for "customers": the customer columns plus _change_type. Write a MERGE that applies them to "customers", matching on customer_id: leave out the update_preimage rows, delete the matched rows whose _change_type is 'delete', update the matched rows whose _change_type is 'update_postimage', and insert the unmatched rows whose _change_type is 'insert'.`,
     starterCode: `-- MERGE CDC changes into target table customers\n`,
     testCases: [
       {
@@ -810,8 +927,8 @@ export const certificationQuestions: Question[] = [
       },
     ],
     solution: `MERGE INTO customers t\nUSING (\n  SELECT * FROM customers_changes\n  WHERE _change_type != 'update_preimage'\n) s\nON t.customer_id = s.customer_id\nWHEN MATCHED AND s._change_type = 'delete' THEN DELETE\nWHEN MATCHED AND s._change_type = 'update_postimage' THEN UPDATE SET *\nWHEN NOT MATCHED AND s._change_type = 'insert' THEN INSERT *\n-- OR\nMERGE INTO customers AS t\nUSING (SELECT * FROM customers_changes WHERE _change_type <> 'update_preimage') AS s\nON t.customer_id = s.customer_id\nWHEN MATCHED AND s._change_type = 'delete' THEN DELETE\nWHEN MATCHED AND s._change_type = 'update_postimage' THEN UPDATE SET *\nWHEN NOT MATCHED AND s._change_type = 'insert' THEN INSERT *`,
-    explanation: 'This pattern applies all CDC change types in one MERGE statement. Filter out update_preimage first, then check _change_type in WHEN MATCHED and WHEN NOT MATCHED clauses.',
-    hints: ['Filter out update_preimage in source subquery', 'WHEN MATCHED AND s._change_type = "delete" THEN DELETE', 'WHEN MATCHED AND s._change_type = "update_postimage" THEN UPDATE SET *'],
+    explanation: `Dropping update_preimage in the source keeps the old values out; then each WHEN clause tests _change_type to choose DELETE, UPDATE SET * or INSERT *. The * forms copy the target's columns by name, so the extra _change_type and _commit columns are ignored. This assumes one change per customer_id; a feed covering several commits should first keep each key's latest change by _commit_version.`,
+    hints: ['Filter out update_preimage in a source subquery', `WHEN MATCHED AND s._change_type = 'delete' THEN DELETE`, `WHEN MATCHED AND s._change_type = 'update_postimage' THEN UPDATE SET *`],
     tieredHints: {
       apiSignature: 'MERGE INTO target USING source ON join_expr WHEN MATCHED ... WHEN NOT MATCHED ...',
       skeleton: '____ ____ customers t\n____ (\n  ____ * ____ ____\n  ____ ____ != \'update_preimage\'\n) s\nON t.____ = s.____\nWHEN ____ AND s.____ = \'delete\' THEN ____\nWHEN ____ AND s.____ = \'update_postimage\' THEN ____ ____ *\nWHEN ____ ____ AND s.____ = \'insert\' THEN ____ *',
@@ -828,6 +945,7 @@ export const certificationQuestions: Question[] = [
     language: CodeLanguage.SQL,
     question: 'Create a Delta table named "customers" (columns: customer_id INT, customer_name STRING, email STRING) with Change Data Feed enabled at creation time.',
     starterCode: `-- Create Delta table with CDF enabled\n`,
+    requires: [/enableChangeDataFeed["']?\s*=\s*["']?true/i],
     testCases: [
       {
         input: 'New table',
@@ -835,8 +953,22 @@ export const certificationQuestions: Question[] = [
         description: 'Should create table with CDF',
       },
     ],
-    solution: `CREATE TABLE customers (\n  customer_id INT,\n  customer_name STRING,\n  email STRING\n)\nUSING DELTA\nTBLPROPERTIES (delta.enableChangeDataFeed = true)\n-- OR\nCREATE TABLE customers (customer_id INT, customer_name STRING, email STRING) USING DELTA TBLPROPERTIES (delta.enableChangeDataFeed = true)`,
-    explanation: 'TBLPROPERTIES at creation enables CDF immediately — all INSERT, UPDATE, DELETE operations on this table will be tracked from the first write.',
+    solution: `CREATE TABLE customers (
+  customer_id INT,
+  customer_name STRING,
+  email STRING
+)
+USING DELTA
+TBLPROPERTIES (delta.enableChangeDataFeed = true)
+-- OR
+CREATE TABLE customers (customer_id INT, customer_name STRING, email STRING) USING DELTA TBLPROPERTIES (delta.enableChangeDataFeed = true)
+-- OR
+CREATE TABLE customers (customer_id INT, customer_name STRING, email STRING)
+TBLPROPERTIES (delta.enableChangeDataFeed = true)
+-- OR
+CREATE TABLE customers (customer_id INT, customer_name STRING, email STRING)
+TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
+    explanation: `Setting delta.enableChangeDataFeed = true in TBLPROPERTIES at CREATE TABLE records changes from the table's first commit, so every INSERT, UPDATE and DELETE is in the feed. USING DELTA is optional, since Delta is the default table format.`,
     hints: ['Specify TBLPROPERTIES (delta.enableChangeDataFeed = true)', 'Include columns customer_id, customer_name, email'],
     tieredHints: {
       apiSignature: 'CREATE TABLE table_name (col_def) USING DELTA TBLPROPERTIES (key = val)',
