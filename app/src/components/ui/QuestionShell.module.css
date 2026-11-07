@@ -214,19 +214,9 @@
   color: var(--text-3);
 }
 
-.keyHints {
+/* The key row is the shared KeyHints; on a phone it gives its room to the buttons. */
+.actions .keyHints {
   display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-1) var(--sp-4);
-  font-size: var(--fs-meta);
-  color: var(--text-3);
-}
-
-.keyHint {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
 }
 
 .footMeta {
@@ -286,7 +276,7 @@
     padding: var(--sp-3) var(--sp-4);
   }
 
-  .keyHints {
+  .actions .keyHints {
     display: none;
   }
 }

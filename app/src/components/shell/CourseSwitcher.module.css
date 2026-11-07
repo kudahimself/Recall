@@ -1,0 +1,37 @@
+.switcher {
+  flex: 0 1 auto;
+}
+
+.hue {
+  display: inline-flex;
+  color: var(--course);
+}
+
+.dot {
+  flex: none;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--course);
+}
+
+.full,
+.short {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.short {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .full {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+}

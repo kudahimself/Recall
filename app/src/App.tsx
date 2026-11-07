@@ -22,7 +22,6 @@ import {
   TODAY_REVIEW_SHARE_KEY,
   TODAY_SESSION_KEY,
   TODAY_SIZE_KEY,
-  UNLOCK_ACCURACY_PCT,
   LESSONS_KEY,
 } from './utils/spacedRepetition';
 import { attemptGrade, FsrsStore, loadOrRebuild, recordAttempt, replayHistory } from './utils/familySchedule';
@@ -35,6 +34,7 @@ import {
   familyOf,
   isSessionCurrent,
   isSessionDone,
+  loadSessionSettings,
   parseStoredSessions,
   recordReviewAnswer,
   reviewsLeft,
@@ -42,13 +42,12 @@ import {
   serializeSessions,
   startReviewSession,
 } from './utils/reviewSession';
-import { loadSessionSettings, SessionSummary, TodayCard } from './components/TodayCard';
+import { SessionSummary } from './components/SessionSummary';
 import { LessonSteps, RuleCardOverlay, RuleCardPanel, RuleCardView } from './components/RuleCard';
 import { useMediaQuery } from './utils/useMediaQuery';
 import { QuizBar } from './components/QuizBar';
 import { Button } from './components/ui/Button';
 import { QuestionNav, QuestionNavContext } from './components/ui/QuestionShell';
-import { Logo } from './components/ui/Logo';
 import { ShortcutHelp } from './keyboard/ShortcutHelp';
 import { useShortcut } from './keyboard/shortcuts';
 import { TopicLessons } from './components/TopicLessons';
@@ -62,12 +61,10 @@ import {
   nextLessonExercise,
   parseLessonsDone,
   rampAfterLessonNote,
-  topicSteps,
 } from './utils/lessons';
 import {
   EXERCISES_KEY,
   ExercisesDone,
-  exerciseForTopics,
   getExercise,
   parseExercisesDone,
   toggleExerciseDone,
@@ -104,21 +101,9 @@ import {
   readFileText,
   reloadPage,
 } from './utils/progressStorage';
-import {
-  getCourseForTopic,
-  WEBDEV_PATH_ORDER,
-  BACKEND_PATH_ORDER,
-  DATABRICKS_PATH_ORDER,
-  DATA_ENG_PATH_ORDER,
-  SQL_PATH_ORDER,
-  WEBDEV_SECTIONS,
-  BACKEND_SECTIONS,
-  DATABRICKS_SECTIONS,
-  DATA_ENG_SECTIONS,
-  SQL_SECTIONS,
-  getSectionUnits,
-  getTopicPlace,
-} from './utils/courseConfig';
+import { getCourseForTopic, getTopicPlace } from './utils/courseConfig';
+import { COURSE_META } from './utils/courseMeta';
+import { buildCoursePath, courseTotals, focusAreas } from './utils/coursePath';
 import { MultipleChoiceQuestion } from './components/MultipleChoiceQuestion';
 import { CodingQuestion } from './components/CodingQuestion';
 import { ParsonsQuestion } from './components/ParsonsQuestion';
@@ -133,28 +118,12 @@ import { ProgressTracker } from './components/ProgressTracker';
 import { activityByDay, HeatmapCalendar } from './components/HeatmapCalendar';
 import { allFilters, filterQuestions, FilterOptions, parseFilters, serializeFilters } from './utils/questionFilters';
 import { QuestionFilter } from './components/QuestionFilter';
-import { NavigationRail } from './components/NavigationRail';
-import {
-  Database,
-  Globe,
-  Server,
-  Network,
-  Table2,
-  Activity,
-  ListChecks,
-  Flame,
-  Target,
-  ArrowRight,
-  TrendingUp,
-  Eye,
-  BookOpen,
-  Lock,
-  CheckCircle2,
-  PlayCircle,
-  Download,
-  Upload,
-  LucideIcon,
-} from 'lucide-react';
+import { TopBar } from './components/shell/TopBar';
+import { NavRail, NavView } from './components/shell/NavRail';
+import { HomeView } from './components/home/HomeView';
+import { SettingsView } from './components/settings/SettingsView';
+import { PathSections } from './components/PathList';
+import { Activity, BookOpen, Route, TrendingUp } from 'lucide-react';
 import './App.css';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -168,40 +137,7 @@ const CONCEPT_BETAS: Record<string, number> = (() => {
   return o;
 })();
 
-const COURSE_META: Record<Course, { label: string; Icon: LucideIcon; tagline: string; accent: string }> = {
-  [Course.DATABRICKS]: {
-    label: 'Databricks & PySpark',
-    Icon: Database,
-    tagline: 'Master the lakehouse — Spark SQL, Delta Lake, streaming, governance, dimensional modeling.',
-    accent: '#fb923c',
-  },
-  [Course.WEB_DEV]: {
-    label: 'Web Development',
-    Icon: Globe,
-    tagline: 'Build production Next.js apps — TypeScript, React, Prisma, accessibility, design patterns.',
-    accent: '#06b6d4',
-  },
-  [Course.BACKEND]: {
-    label: 'Backend Engineering',
-    Icon: Server,
-    tagline: 'Engineer Python backends — Django, DRF, Celery, Postgres, deployment, real infrastructure.',
-    accent: '#10b981',
-  },
-  [Course.DATA_ENGINEERING]: {
-    label: 'Data Engineering',
-    Icon: Network,
-    tagline: 'Decision-making across the modern stack — open table formats, streaming, distributed systems.',
-    accent: '#a78bfa',
-  },
-  [Course.SQL]: {
-    label: 'SQL for Data Engineering',
-    Icon: Table2,
-    tagline: 'Write production warehouse T-SQL — DDL, dimensional modelling, MERGE/ELT procedures, performance.',
-    accent: '#38bdf8',
-  },
-};
-
-type ViewMode = 'quiz' | 'progress' | 'home' | 'filter';
+type ViewMode = 'quiz' | 'progress' | 'home' | 'settings' | 'filter';
 
 const STORAGE_KEYS = {
   progress: PROGRESS_KEY,
@@ -516,7 +452,9 @@ function App() {
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
-  const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'topics' | 'heatmap'>('overview');
+  const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'path' | 'topics' | 'heatmap'>('overview');
+  const progressTabsRef = useRef<HTMLDivElement>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // ── Persistence guards ──
   // Unreadable stored progress with no backup copy: study-record writes stay off
@@ -654,16 +592,6 @@ function App() {
     setViewMode('quiz');
   }, [devSample, serveQuestion]);
 
-  // Count only seen questions that still exist (excludes deleted variation IDs from localStorage)
-  const validSeenCount = useMemo(() => {
-    const currentIds = new Set(courseQuestions.map(q => q.id));
-    let count = 0;
-    progress.questionsAttempted.forEach(id => {
-      if (currentIds.has(id)) count++;
-    });
-    return count;
-  }, [courseQuestions, progress.questionsAttempted]);
-
   // Update streak & session count on first load
   useEffect(() => {
     const today = getToday();
@@ -756,17 +684,15 @@ function App() {
     persist(TODAY_REVIEW_SHARE_KEY, String(sessionSettings.reviewShare), 'ui');
   }, [sessionSettings, persist]);
 
-  // New session settings apply at once to a session not yet started (it is
-  // rebuilt); a session already under way keeps its plan until tomorrow.
+  // New session settings apply at once to every session not yet started (it
+  // is rebuilt); a session already under way keeps its plan until tomorrow.
   const changeSessionSettings = useCallback((next: SessionSettings) => {
     setSessionSettings(next);
     setReviewSessions(prev => {
-      const current = prev[activeCourse];
-      if (!current || current.answered > 0) return prev;
-      const { [activeCourse]: _dropped, ...rest } = prev;
-      return rest;
+      const kept = Object.fromEntries(Object.entries(prev).filter(([, sess]) => sess && sess.answered > 0));
+      return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
     });
-  }, [activeCourse]);
+  }, []);
 
   const handleMisconception = useCallback((tag: string, questionId: string) => {
     setMisconceptions(prev => ({
@@ -1504,265 +1430,68 @@ function App() {
     return SpacedRepetitionSystem.getTopicDifficulty(tq, cardDifficulty);
   }, [currentQuestion, cardDifficulty]);
 
-  const overallRecentAccuracy = useMemo(() => {
-    const recent = recentAttempts(progress.attemptHistory, RECENT_WINDOW);
-    const correct = recent.filter(a => a.isCorrect).length;
-    return pct(correct, recent.length).toFixed(1);
-  }, [progress.attemptHistory]);
+  // Every course's totals, for the course switcher and the course card on Home.
+  const totalsByCourse = useMemo(() => courseTotals(questions, progress), [progress]);
 
-  // Per-course aggregate stats for the course-switcher tiles on the home view.
-  const courseStats = useMemo(() => {
-    const out: Record<Course, { seen: number; total: number; coveragePct: number; recentPct: number; recentTotal: number }> = {
-      [Course.DATABRICKS]: { seen: 0, total: 0, coveragePct: 0, recentPct: 0, recentTotal: 0 },
-      [Course.WEB_DEV]: { seen: 0, total: 0, coveragePct: 0, recentPct: 0, recentTotal: 0 },
-      [Course.BACKEND]: { seen: 0, total: 0, coveragePct: 0, recentPct: 0, recentTotal: 0 },
-      [Course.DATA_ENGINEERING]: { seen: 0, total: 0, coveragePct: 0, recentPct: 0, recentTotal: 0 },
-      [Course.SQL]: { seen: 0, total: 0, coveragePct: 0, recentPct: 0, recentTotal: 0 },
-    };
-    const idToCourse = new Map<string, Course>();
-    questions.forEach(q => {
-      const c = getCourseForTopic(q.topic);
-      idToCourse.set(q.id, c);
-      out[c].total += 1;
-    });
-    progress.questionsAttempted.forEach(id => {
-      const c = idToCourse.get(id);
-      if (c) out[c].seen += 1;
-    });
-    const recentByCourse: Record<Course, { correct: number; total: number }> = {
-      [Course.DATABRICKS]: { correct: 0, total: 0 },
-      [Course.WEB_DEV]: { correct: 0, total: 0 },
-      [Course.BACKEND]: { correct: 0, total: 0 },
-      [Course.DATA_ENGINEERING]: { correct: 0, total: 0 },
-      [Course.SQL]: { correct: 0, total: 0 },
-    };
-    for (const a of progress.attemptHistory) {
-      const c = idToCourse.get(a.questionId);
-      if (!c) continue;
-      const bucket = recentByCourse[c];
-      bucket.total += 1;
-      if (a.isCorrect) bucket.correct += 1;
-    }
-    (Object.keys(out) as Course[]).forEach(c => {
-      out[c].coveragePct = Math.round(pct(out[c].seen, out[c].total));
-      const r = recentByCourse[c];
-      const window = Math.min(r.total, RECENT_WINDOW);
-      out[c].recentPct = window > 0 ? Math.round(pct(r.correct, r.total) ) : 0;
-      out[c].recentTotal = r.total;
-    });
-    return out;
-  }, [progress.questionsAttempted, progress.attemptHistory]);
+  // The active course's path (sections, units, the next lesson) for Home and Progress.
+  const coursePath = useMemo(
+    () => buildCoursePath(activeCourse, courseQuestions, progress, fsrsStore, lessonsDone),
+    [activeCourse, courseQuestions, progress, fsrsStore, lessonsDone],
+  );
+  const focus = useMemo(
+    () => focusAreas(coursePath, courseQuestions, misconceptions),
+    [coursePath, courseQuestions, misconceptions],
+  );
+  const activity = useMemo(
+    () => activityByDay(progress.attemptHistory, courseQuestions),
+    [progress.attemptHistory, courseQuestions],
+  );
 
-  // Path overview for the active course — computes section status (mastered /
-  // current / locked) plus current-section topic breakdown so the home view
-  // can show "where you are" and which topics are still locked.
-  const coursePath = useMemo(() => {
-    const pathOrder =
-      activeCourse === Course.WEB_DEV ? WEBDEV_PATH_ORDER
-      : activeCourse === Course.BACKEND ? BACKEND_PATH_ORDER
-      : activeCourse === Course.DATABRICKS ? DATABRICKS_PATH_ORDER
-      : activeCourse === Course.SQL ? SQL_PATH_ORDER
-      : DATA_ENG_PATH_ORDER;
-
-    const sections =
-      activeCourse === Course.WEB_DEV ? WEBDEV_SECTIONS
-      : activeCourse === Course.BACKEND ? BACKEND_SECTIONS
-      : activeCourse === Course.DATABRICKS ? DATABRICKS_SECTIONS
-      : activeCourse === Course.SQL ? SQL_SECTIONS
-      : DATA_ENG_SECTIONS;
-
-    const unlocked = SpacedRepetitionSystem.getUnlockedSections(courseQuestions, progress);
-    const unlockedSet = unlocked?.sections ?? new Set<string>([pathOrder[0]]);
-    const unlockedTopics = SpacedRepetitionSystem.getUnlockedTopics(courseQuestions, progress) ?? new Set<string>();
-
-    type SectionStatus = 'mastered' | 'current' | 'locked';
-    type SectionRow = {
-      name: string;
-      status: SectionStatus;
-      seen: number;
-      total: number;
-      pct: number;
-      recentPct: number;
-      units: Array<{
-        displayName: string;
-        topicKeys: string[];
-        seen: number;
-        total: number;
-        recentPct: number;
-        unlocked: boolean;
-        coveragePct: number;
-        steps: ReturnType<typeof topicSteps>;
-      }>;
-    };
-
-    const rows: SectionRow[] = [];
-    let currentFound = false;
-
-    for (const sectionName of pathOrder) {
-      const section = sections[sectionName];
-      if (!section) continue;
-      const allKeys = new Set(Object.values(section.topics).flat());
-      const sectionQs = courseQuestions.filter(q => allKeys.has(q.topic));
-      const total = sectionQs.length;
-      let seen = 0;
-      sectionQs.forEach(q => { if (progress.questionsAttempted.has(q.id)) seen += 1; });
-      const sectionIds = new Set(sectionQs.map(q => q.id));
-      const sectionAttempts = progress.attemptHistory.filter(a => sectionIds.has(a.questionId));
-      const recent = recentAttempts(sectionAttempts, RECENT_WINDOW);
-      const recentCorrect = recent.filter(a => a.isCorrect).length;
-      const recentPct = recent.length > 0 ? Math.round(pct(recentCorrect, recent.length)) : 0;
-
-      const isUnlocked = unlockedSet.has(sectionName);
-      let status: SectionStatus;
-      if (!isUnlocked) {
-        status = 'locked';
-      } else if (currentFound) {
-        // A later unlocked section after the current one means the current was
-        // mastered — but we want exactly one "current" badge. Treat any further
-        // unlocked sections as current too is wrong; instead the LAST unlocked
-        // section is "current" and earlier unlocked sections are "mastered".
-        status = 'current';
-      } else {
-        status = 'current';
-        currentFound = true;
-      }
-
-      const units = getSectionUnits(sectionName).map(([displayName, topicKeys]) => {
-        const unitQs = courseQuestions.filter(q => topicKeys.includes(q.topic));
-        let unitSeen = 0;
-        unitQs.forEach(q => { if (progress.questionsAttempted.has(q.id)) unitSeen += 1; });
-        const unitIds = new Set(unitQs.map(q => q.id));
-        const unitAttempts = progress.attemptHistory.filter(a => unitIds.has(a.questionId));
-        const unitRecent = recentAttempts(unitAttempts, RECENT_WINDOW);
-        const unitRecentCorrect = unitRecent.filter(a => a.isCorrect).length;
-        const unitRecentPct = unitRecent.length > 0 ? Math.round(pct(unitRecentCorrect, unitRecent.length)) : 0;
-        const unitUnlocked = topicKeys.some(t => unlockedTopics.has(t));
-        const unitCoverage = unitQs.length > 0 ? Math.round(pct(unitSeen, unitQs.length)) : 0;
-        return {
-          displayName,
-          topicKeys,
-          seen: unitSeen,
-          total: unitQs.length,
-          recentPct: unitRecentPct,
-          unlocked: unitUnlocked,
-          coveragePct: unitCoverage,
-          steps: topicSteps(topicKeys, courseQuestions, progress, fsrsStore, lessonsDone),
-        };
-      });
-
-      rows.push({
-        name: sectionName,
-        status,
-        seen,
-        total,
-        pct: total > 0 ? Math.round(pct(seen, total)) : 0,
-        recentPct,
-        units,
-      });
-    }
-
-    // Promote earlier unlocked sections to "mastered" — keep only the last
-    // unlocked section as "current".
-    let lastCurrentIdx = -1;
-    rows.forEach((r, i) => { if (r.status === 'current') lastCurrentIdx = i; });
-    rows.forEach((r, i) => {
-      if (r.status === 'current' && i < lastCurrentIdx) r.status = 'mastered';
-    });
-
-    const currentSection = rows.find(r => r.status === 'current');
-    const nextLocked = rows.find(r => r.status === 'locked');
-    // The next lesson to take: the first open topic whose lesson is not met.
-    const nextLessonUnit = rows.flatMap(r => r.status === 'locked' ? [] : r.units)
-      .find(u => u.unlocked && u.steps.lesson && !u.steps.lessonMet);
-    const nextLesson = nextLessonUnit?.steps.lesson ?? null;
-
-    return { rows, currentSection, nextLocked, nextLesson };
-  }, [activeCourse, courseQuestions, progress, fsrsStore, lessonsDone]);
-
-  const isReturningUser = profile.totalSessions > 1 || progress.questionsAttempted.size > 0;
-
-  // Get theme class based on active course
-  const getThemeClass = () => {
-    switch (activeCourse) {
-      case Course.DATABRICKS:
-        return 'theme-databricks';
-      case Course.WEB_DEV:
-        return 'theme-webdev';
-      case Course.BACKEND:
-        return 'theme-backend';
-      case Course.DATA_ENGINEERING:
-        return 'theme-dataeng';
-      case Course.SQL:
-        return 'theme-sql';
-      default:
-        return 'theme-webdev';
-    }
+  // The rail, the switcher and the G keys all move between screens here.
+  const navigate = (view: NavView) => {
+    if (isNarrowScreen()) setRailCollapsed(true);
+    if (view === 'quiz') startQuiz(activeCourse);
+    else changeView(view);
+  };
+  const changeCourse = (course: Course) => {
+    if (isNarrowScreen()) setRailCollapsed(true);
+    // Mid-question, swap the whole quiz context, so the old course's question does not linger.
+    if (viewMode === 'quiz') startQuiz(course);
+    else switchCourse(course);
+  };
+  useEffect(() => {
+    if (viewMode !== 'progress') return;
+    progressTabsRef.current?.querySelector<HTMLButtonElement>('.progress-tab.active')?.focus({ preventScroll: true });
+  }, [viewMode]);
+  useShortcut('goHome', () => navigate('home'));
+  useShortcut('goLearn', () => navigate('quiz'));
+  useShortcut('goProgress', () => navigate('progress'));
+  useShortcut('goSettings', () => navigate('settings'));
+  const openPathTab = () => {
+    setActiveProgressTab('path');
+    changeView('progress');
   };
 
   return (
-    <div className={`App ${getThemeClass()}`}>
-      <h1 className="sr-only">Recall — multi-course learning platform</h1>
+    <div className={`App ${COURSE_META[activeCourse].theme}`}>
+      <h1 className="sr-only">Recall - multi-course learning platform</h1>
 
-      {/* ── Simplified Header: brand + stats ── */}
-      <header className="app-header">
-        <div className="header-left">
-          <button
-            className="menu-toggle"
-            onClick={() => setRailCollapsed(!railCollapsed)}
-            aria-label="Toggle navigation"
-            title="Toggle navigation"
-          >
-            <ListChecks size={20} />
-          </button>
-          <Logo collapse />
-        </div>
-        <div className="header-right">
-          <span className="header-stat" title="Current streak">
-            <Flame className="stat-icon" size={14} />
-            {profile.currentStreak}
-          </span>
-          <span className="header-stat" title="Questions seen">
-            <Eye className="stat-icon" size={14} />
-            {validSeenCount}
-          </span>
-          <span className="header-stat" title="Recent accuracy">
-            <Target className="stat-icon" size={14} />
-            {overallRecentAccuracy}%
-          </span>
-          {staleTab && (
-            <span className="header-note">Reload this tab to export the latest progress</span>
-          )}
-          <button
-            className="header-action"
-            onClick={exportProgress}
-            disabled={!canExport}
-            title={progressWritesBlocked
-              ? 'Stored progress could not be read, so there is nothing to export yet'
-              : staleTab
-                ? 'Another tab saved newer answers; reload this tab to export the latest'
-                : 'Save all your progress to a file'}
-          >
-            <Download size={14} />
-            <span className="header-action-label">Export</span>
-          </button>
-          <button
-            className="header-action"
-            onClick={() => importInputRef.current?.click()}
-            title="Replace progress in this browser with an exported file"
-          >
-            <Upload size={14} />
-            <span className="header-action-label">Import</span>
-          </button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept="application/json,.json"
-            data-testid="import-progress-input"
-            style={{ display: 'none' }}
-            onChange={e => { void importProgress(e.target.files); }}
-          />
-        </div>
-      </header>
+      <TopBar
+        course={activeCourse}
+        totals={totalsByCourse}
+        onCourseChange={changeCourse}
+        streak={profile.currentStreak}
+        onToggleNav={() => setRailCollapsed(!railCollapsed)}
+        onShowShortcuts={() => setHelpOpen(true)}
+      />
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json,.json"
+        data-testid="import-progress-input"
+        hidden
+        onChange={e => { void importProgress(e.target.files); }}
+      />
 
       <div className="storage-banners">
       {initialLoad.status === 'unreadable' && (
@@ -1850,327 +1579,49 @@ function App() {
 
       {/* ── Main Body: Navigation Rail + Content ── */}
       <div className="app-body">
-        <NavigationRail
-          activeView={viewMode}
-          activeCourse={activeCourse}
-          onViewChange={(view) => {
-            if (isNarrowScreen()) setRailCollapsed(true);
-            if (view === 'quiz') {
-              startQuiz(activeCourse);
-            } else {
-              changeView(view);
-            }
-          }}
-          onCourseChange={(course) => {
-            if (isNarrowScreen()) setRailCollapsed(true);
-            if (viewMode === 'quiz') {
-              // Mid-question course switch: swap the whole quiz context, not
-              // just the theme — otherwise the old course's question lingers.
-              startQuiz(course);
-            } else {
-              switchCourse(course);
-            }
-          }}
-          collapsed={railCollapsed}
-        />
+        <NavRail active={viewMode} onNavigate={navigate} collapsed={railCollapsed} />
 
         {/* Content Area */}
         <main className="content">
           <div className="view-container" key={viewMode}>
           {viewMode === 'home' && (
-            <div className="home-view">
-              {(() => {
-                const meta = COURSE_META[activeCourse];
-                const stats = courseStats[activeCourse];
-                const ActiveIcon = meta.Icon;
-                const current = coursePath.currentSection;
-                const nextLocked = coursePath.nextLocked;
-                const courseSeen = stats.seen;
-                const courseTotal = stats.total;
-                const courseRecent = stats.recentTotal > 0 ? `${stats.recentPct}%` : 'New';
+            <HomeView
+              course={activeCourse}
+              session={reviewSessionNow}
+              reviewsLeft={reviewsLeftToday}
+              settings={sessionSettings}
+              path={coursePath}
+              totals={totalsByCourse[activeCourse]}
+              activity={activity}
+              focus={focus}
+              exercisesDone={exercisesDone}
+              onStart={() => startQuiz(activeCourse)}
+              onKeepGoing={() => startQuiz(activeCourse, true)}
+              onStartLesson={startLesson}
+              onRuleCard={setRuleCardOpen}
+              onDrill={handleReviewWeakTopic}
+              onAllSections={openPathTab}
+              onSettings={() => changeView('settings')}
+            />
+          )}
 
-                // Last topic answered in the active course, for the "Continue Learning" CTA
-                // (Resume starts this course, so the card must not name another course's topic).
-                let lastTopic: string | undefined;
-                for (let i = progress.attemptHistory.length - 1; i >= 0 && !lastTopic; i--) {
-                  const q = QUESTIONS_BY_ID.get(progress.attemptHistory[i].questionId);
-                  if (q && getCourseForTopic(q.topic) === activeCourse) lastTopic = q.topic;
-                }
-                const lastTopicName = lastTopic?.replace(/_/g, ' ') || 'your journey';
-
-                return (
-                  <>
-                    {/* Personalized greeting */}
-                    <section className="welcome-section">
-                      <h2 className="welcome-greeting">
-                        {isReturningUser ? 'Welcome back!' : 'Welcome to Recall!'}
-                      </h2>
-                      <div className="welcome-stats">
-                        <span className="welcome-stat">
-                          <Flame size={16} />
-                          {profile.currentStreak} day streak
-                        </span>
-                        <span className="welcome-stat-divider">·</span>
-                        <span className="welcome-stat">
-                          <Target size={16} />
-                          {progress.questionsAttempted.size}/{questions.length} questions
-                        </span>
-                      </div>
-                    </section>
-
-                    {/* Continue Learning CTA */}
-                    {isReturningUser && lastTopic && (
-                      <section className="continue-learning-cta">
-                        <div className="cta-content">
-                          <div className="cta-header">
-                            <BookOpen size={20} />
-                            <div>
-                              <div className="cta-label">Continue Learning</div>
-                              <div className="cta-topic">{lastTopicName}</div>
-                            </div>
-                          </div>
-                          <button className="cta-button" onClick={() => startQuiz(activeCourse)}>
-                            Resume
-                            <ArrowRight size={16} />
-                          </button>
-                        </div>
-                      </section>
-                    )}
-
-                    <TodayCard
-                      session={reviewSessionNow}
-                      settings={sessionSettings}
-                      courseLabel={meta.label}
-                      nextTopic={(() => {
-                        if (!current) return null;
-                        const unit = getSectionUnits(current.name)
-                          .find(([, keys]) => keys.some(k => !progress.masteredTopics.has(k)));
-                        return unit ? unit[0] : null;
-                      })()}
-                      nextLesson={coursePath.nextLesson
-                        ? { title: coursePath.nextLesson.title, exercises: coursePath.nextLesson.exercises.length }
-                        : null}
-                      onSettingsChange={changeSessionSettings}
-                      onStart={() => startQuiz(activeCourse)}
-                      onKeepGoing={() => startQuiz(activeCourse, true)}
-                    />
-
-                    {/* Course-specific hero */}
-                    <section
-                      className="course-hero"
-                      style={{ ['--course-accent' as string]: meta.accent }}
-                    >
-                      <div className="course-hero-head">
-                        <span className="course-hero-icon">
-                          <ActiveIcon size={26} />
-                        </span>
-                        <div>
-                          <div className="course-hero-eyebrow">
-                            {isReturningUser ? 'Continue your path' : 'Start a new path'}
-                          </div>
-                          <h2 className="course-hero-title">{meta.label}</h2>
-                        </div>
-                      </div>
-                      <p className="course-hero-tagline">{meta.tagline}</p>
-
-                      <div className="course-hero-stats">
-                        <div className="hero-stat">
-                          <span className="hero-stat-value">{courseSeen}<span className="hero-stat-divider">/</span>{courseTotal}</span>
-                          <span className="hero-stat-label">Questions seen</span>
-                        </div>
-                        <div className="hero-stat">
-                          <span className="hero-stat-value">{courseRecent}</span>
-                          <span className="hero-stat-label">Recent accuracy</span>
-                        </div>
-                        <div className="hero-stat">
-                          <span className="hero-stat-value">{profile.currentStreak}</span>
-                          <span className="hero-stat-label">Day streak</span>
-                        </div>
-                        <div className="hero-stat" title="Reviews owed today: missed cards and cards past their review interval. A session serves these first.">
-                          <span className="hero-stat-value hero-reviews-left">{reviewsLeftToday}</span>
-                          <span className="hero-stat-label">Reviews left today</span>
-                        </div>
-                        <div className="hero-stat hero-stat-wide">
-                          <span className="hero-stat-value hero-stat-section">
-                            {current ? current.name : 'All caught up'}
-                          </span>
-                          <span className="hero-stat-label">Currently in</span>
-                        </div>
-                      </div>
-
-                      <div className="course-hero-cta-row">
-                        <button className="start-button" onClick={() => startQuiz(activeCourse)}>
-                          {isReturningUser ? 'Continue learning' : 'Start learning'}
-                          <ArrowRight className="start-button-icon" size={18} />
-                        </button>
-                        <button className="hero-link-btn" onClick={() => changeView('progress')}>
-                          <Activity size={14} />
-                          Detailed progress
-                        </button>
-                      </div>
-
-                      {nextLocked && (
-                        <div className="hero-locked-hint">
-                          <Lock size={13} />
-                          <span>
-                            <strong>{nextLocked.name}</strong> unlocks once each topic of {current ? current.name : 'the current section'} has its ramp done above {UNLOCK_ACCURACY_PCT}% accuracy.
-                          </span>
-                        </div>
-                      )}
-                    </section>
-
-                    {/* Course switcher tiles */}
-                    <section className="course-switcher">
-                      <h3 className="home-section-title">Switch course</h3>
-                      <div className="course-tile-grid">
-                        {(Object.keys(COURSE_META) as Course[]).map(course => {
-                          const m = COURSE_META[course];
-                          const s = courseStats[course];
-                          const Icon = m.Icon;
-                          const isActive = course === activeCourse;
-                          return (
-                            <button
-                              key={course}
-                              className={`course-tile ${isActive ? 'active' : ''}`}
-                              style={{ ['--course-accent' as string]: m.accent }}
-                              onClick={() => switchCourse(course)}
-                            >
-                              <div className="course-tile-head">
-                                <span className="course-tile-icon">
-                                  <Icon size={18} />
-                                </span>
-                                <span className="course-tile-label">{m.label}</span>
-                                {isActive && <span className="course-tile-badge">Active</span>}
-                              </div>
-                              <div className="course-tile-bar">
-                                <div
-                                  className="course-tile-bar-fill"
-                                  style={{ width: `${s.coveragePct}%` }}
-                                />
-                              </div>
-                              <div className="course-tile-meta">
-                                <span>{s.seen}/{s.total}</span>
-                                <span className="course-tile-meta-sep">·</span>
-                                <span>{s.recentTotal > 0 ? `${s.recentPct}% accuracy` : 'Not started'}</span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </section>
-
-                    {/* Path overview — sections + topics with lock status */}
-                    <section className="course-path">
-                      <h3 className="home-section-title">Your learning path</h3>
-                      <ol className="path-list">
-                        {coursePath.rows.map((row, idx) => {
-                          const StatusIcon =
-                            row.status === 'mastered' ? CheckCircle2
-                            : row.status === 'current' ? PlayCircle
-                            : Lock;
-                          return (
-                            <li key={row.name} className={`path-row path-row-${row.status}`}>
-                              <div className="path-row-head">
-                                <span className="path-row-num">{String(idx + 1).padStart(2, '0')}</span>
-                                <span className="path-row-status">
-                                  <StatusIcon size={16} />
-                                </span>
-                                <span className="path-row-name">{row.name}</span>
-                                <span className="path-row-stats">
-                                  {row.total > 0 && (
-                                    <>
-                                      <span>{row.seen}/{row.total}</span>
-                                      {row.status !== 'locked' && row.recentPct > 0 && (
-                                        <>
-                                          <span className="path-row-stats-sep">·</span>
-                                          <span>{row.recentPct}%</span>
-                                        </>
-                                      )}
-                                    </>
-                                  )}
-                                </span>
-                              </div>
-                              {row.status !== 'locked' && row.units.length > 0 && (
-                                <ul className={`path-units${row.units.some(u => u.steps.lesson) ? ' path-units-steps' : ''}`}>
-                                  {row.units.map(u => (
-                                    <li
-                                      key={u.displayName}
-                                      className={`path-unit ${u.unlocked ? '' : 'locked'}`}
-                                    >
-                                      {u.unlocked
-                                        ? (u.coveragePct === 100 && u.recentPct >= 80
-                                          ? <CheckCircle2 size={12} />
-                                          : <PlayCircle size={12} />)
-                                        : <Lock size={12} />
-                                      }
-                                      <span className="path-unit-name">{u.displayName}</span>
-                                      {u.steps.lesson && (() => {
-                                        const st = u.steps;
-                                        const isNext = st.lesson === coursePath.nextLesson;
-                                        const due = st.families.filter(f => f.due).length;
-                                        const met = st.families.filter(f => f.state && f.state.reps > 0).length;
-                                        const missed = st.families.some(f => f.state && f.state.reps > 0 && !f.state.lastCorrect);
-                                        const exercise = exerciseForTopics(u.topicKeys);
-                                        const exerciseDone = !!exercise && exercisesDone[exercise.id] !== undefined;
-                                        return (
-                                          <span className="path-steps" aria-label={`${u.displayName}: lesson, ramp${exercise ? ', review and exercise' : ' and review'}`}>
-                                            <span
-                                              className={`path-step path-step-${st.lessonMet ? 'done' : isNext ? 'next' : 'todo'}`}
-                                              title="Lesson: the rule card and its worked example, then a few exercises"
-                                            >
-                                              Lesson
-                                            </span>
-                                            <span
-                                              className={`path-step path-step-${st.rampAnswered >= st.rampTotal ? 'done' : st.rampAnswered > 0 ? 'part' : 'todo'}`}
-                                              title="Ramp: introduce, combine, apply. The next topic opens when it is answered above the accuracy bar."
-                                            >
-                                              Ramp {st.rampAnswered}/{st.rampTotal}
-                                            </span>
-                                            <span
-                                              className={`path-step path-step-${due > 0 || missed ? 'next' : met > 0 ? 'done' : 'todo'}`}
-                                              title="Review: the topic's card families, scheduled by FSRS"
-                                            >
-                                              {due > 0 ? `Review ${due} due` : missed ? 'Review: missed' : 'Review'}
-                                            </span>
-                                            {exercise && (
-                                              <span
-                                                className={`path-step path-step-${exerciseDone ? 'done' : st.rampAnswered >= st.rampTotal ? 'next' : 'todo'}`}
-                                                title={`Exercise in your own editor: ${exercise.title}, in ${exercise.folder}. Tick it done under Progress, Topics.`}
-                                              >
-                                                Exercise
-                                              </span>
-                                            )}
-                                            {st.lessonMet
-                                              ? <button className="path-step-btn" onClick={() => setRuleCardOpen(st.lesson!.id)}>Rule card</button>
-                                              : isNext && u.unlocked
-                                                ? <button className="path-step-btn path-step-btn-primary" onClick={() => startLesson(st.lesson!.id)}>Start lesson</button>
-                                                : null}
-                                          </span>
-                                        );
-                                      })()}
-                                      {u.total > 0 && (
-                                        <span className="path-unit-meta">
-                                          {u.seen}/{u.total}
-                                        </span>
-                                      )}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                              {row.status === 'locked' && (
-                                <div className="path-locked-note">
-                                  Locked — finish the previous section to unlock {row.units.length} topics.
-                                </div>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    </section>
-                  </>
-                );
-              })()}
-            </div>
+          {viewMode === 'settings' && (
+            <SettingsView
+              course={activeCourse}
+              settings={sessionSettings}
+              sessionStarted={(reviewSessions[activeCourse]?.answered ?? 0) > 0 && isSessionCurrent(reviewSessions[activeCourse])}
+              onSettingsChange={changeSessionSettings}
+              canExport={canExport}
+              exportNote={progressWritesBlocked
+                ? 'Stored progress could not be read, so there is nothing to export yet.'
+                : staleTab
+                  ? 'Reload this tab to export the latest progress: another tab saved newer answers.'
+                  : null}
+              onExport={exportProgress}
+              onImport={() => importInputRef.current?.click()}
+              onReset={resetProgress}
+              onShowShortcuts={() => setHelpOpen(true)}
+            />
           )}
 
           {viewMode === 'quiz' && (() => {
@@ -2261,13 +1712,20 @@ function App() {
           {viewMode === 'progress' && (
             <div className="progress-view">
               {/* Tab Navigation */}
-              <div className="progress-tabs">
+              <div className="progress-tabs" ref={progressTabsRef}>
                 <button
                   className={`progress-tab ${activeProgressTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setActiveProgressTab('overview')}
                 >
                   <TrendingUp size={16} />
                   Overview
+                </button>
+                <button
+                  className={`progress-tab ${activeProgressTab === 'path' ? 'active' : ''}`}
+                  onClick={() => setActiveProgressTab('path')}
+                >
+                  <Route size={16} />
+                  Path
                 </button>
                 <button
                   className={`progress-tab ${activeProgressTab === 'topics' ? 'active' : ''}`}
@@ -2300,6 +1758,19 @@ function App() {
                   </div>
                 )}
 
+                {activeProgressTab === 'path' && (
+                  <div className="tab-panel">
+                    {/* Every section of the course; Home shows the one you are in. */}
+                    <PathSections
+                      path={coursePath}
+                      nextLesson={coursePath.nextLesson}
+                      exercisesDone={exercisesDone}
+                      onStartLesson={startLesson}
+                      onRuleCard={setRuleCardOpen}
+                    />
+                  </div>
+                )}
+
                 {activeProgressTab === 'topics' && (
                   <div className="tab-panel">
                     {/* Every topic: its lesson, ramp and review, with Rule card and Drill */}
@@ -2328,18 +1799,13 @@ function App() {
                 )}
               </div>
 
-              <div className="progress-actions">
-                <button className="reset-button-danger" onClick={resetProgress}>
-                  Reset {COURSE_META[activeCourse]?.label ?? 'Course'} Progress
-                </button>
-              </div>
             </div>
           )}
           </div>
         </main>
       </div>
 
-      <ShortcutHelp />
+      <ShortcutHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
       {ruleCardOpen && (() => {
         const lesson = getLesson(ruleCardOpen);

@@ -67,6 +67,11 @@
   --answer-short-w: 18rem;
   --measure: 36rem;
   --feedback-max-h: 46vh;
+  --home-gap: var(--sp-4);
+  --home-pad: var(--sp-5);
+  --home-pad-y: var(--sp-5);
+  --plan-measure: 44rem;
+  --header-text-min: 14rem;
   --job-min-w: 18rem;
   --table-max-h: 11.5rem;
   --table-min-h: 4.5rem;    /* a grid short of room keeps its header and two rows */
@@ -147,6 +152,16 @@
   --code-com: #9a9ab3;
   --code-fn: #93c5fd;
 
+  /* ---- Activity heatmap: the brand hue in four steps ---- */
+  --heat-cell: 12px;
+  --heat-gap: 3px;
+  --heat-radius: 3px;
+  --heat-0: #1f1f2e;
+  --heat-1: rgba(139, 92, 246, 0.32);
+  --heat-2: rgba(139, 92, 246, 0.55);
+  --heat-3: rgba(139, 92, 246, 0.78);
+  --heat-4: #a78bfa;
+
   /* ---- Course hues: a marker colour (dot, tint), never a button fill ---- */
   --course-databricks: #f87171;
   --course-webdev: #60a5fa;
@@ -216,9 +231,15 @@
   --sql-soft: rgba(56, 189, 248, 0.12);
 }
 
-/* Short laptop screens give the header a little less height. */
+/* Short laptop screens give the header and Home's cards a little less room. */
 @media (max-height: 800px) {
-  :root { --header-h: 44px; }
+  :root {
+    --header-h: 44px;
+    --home-gap: var(--sp-3);
+    --home-pad: var(--sp-4);
+    --home-pad-y: var(--sp-4);
+    --heat-cell: 10px;
+  }
 }
 
 /* A course only tints its markers; buttons keep the brand fill (AA in every course). */

@@ -1,0 +1,24 @@
+.track {
+  position: relative;
+  height: var(--sp-1);
+  overflow: hidden;
+  background: var(--raised);
+  border-radius: var(--radius-pill);
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--value);
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--dur-slow) var(--ease);
+}
+
+.course .fill {
+  background: var(--course);
+}
+
+.success .fill {
+  background: var(--success);
+}

@@ -45,7 +45,11 @@ import {
   rampRank,
   REASK_SPACING,
   TODAY_REVIEW_SHARE,
+  TODAY_REVIEW_SHARE_CHOICES,
+  TODAY_REVIEW_SHARE_KEY,
   TODAY_SESSION_SIZE,
+  TODAY_SESSION_SIZE_CHOICES,
+  TODAY_SIZE_KEY,
 } from './spacedRepetition';
 import { getCourseForTopic, getTopicOrder } from './courseConfig';
 import {
@@ -80,6 +84,28 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
   size: TODAY_SESSION_SIZE,
   reviewShare: TODAY_REVIEW_SHARE,
 };
+
+/**
+ * The stored session settings (TODAY_SIZE_KEY, TODAY_REVIEW_SHARE_KEY, which
+ * travel with Export), falling back to the defaults for anything missing or
+ * not offered.
+ */
+export function loadSessionSettings(): SessionSettings {
+  const read = (key: string): number | null => {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? null : Number(v);
+    } catch {
+      return null;
+    }
+  };
+  const size = read(TODAY_SIZE_KEY);
+  const share = read(TODAY_REVIEW_SHARE_KEY);
+  return {
+    size: size !== null && (TODAY_SESSION_SIZE_CHOICES as readonly number[]).includes(size) ? size : DEFAULT_SESSION_SETTINGS.size,
+    reviewShare: share !== null && (TODAY_REVIEW_SHARE_CHOICES as readonly number[]).includes(share) ? share : DEFAULT_SESSION_SETTINGS.reviewShare,
+  };
+}
 
 export interface SessionTally {
   review: number;

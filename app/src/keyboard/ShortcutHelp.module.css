@@ -1,11 +1,13 @@
+/* Balanced columns (three on a laptop): groups flow down one, then the next. */
 .groups {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-6) var(--sp-8);
+  columns: 3;
+  column-gap: var(--sp-8);
 }
 
 .group {
   min-width: 0;
+  break-inside: avoid;
+  padding-bottom: var(--sp-5);
 }
 
 .groupTitle {
@@ -43,21 +45,20 @@
   color: var(--text-3);
 }
 
-.range {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  color: var(--text-3);
-}
-
 .label {
   margin: 0;
   font-size: var(--fs-small);
   color: var(--text-2);
 }
 
+@media (max-width: 1099px) {
+  .groups {
+    columns: 2;
+  }
+}
+
 @media (max-width: 767px) {
   .groups {
-    grid-template-columns: minmax(0, 1fr);
+    columns: 1;
   }
 }

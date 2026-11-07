@@ -41,7 +41,8 @@ test('progress holding retired Data Engineering ids opens, shows Moving Data, an
   fireEvent.click(screen.getByRole('button', { name: 'Progress' }));
   expect((await screen.findAllByText(/Moving Data/, {}, { timeout: 3000 })).length).toBeGreaterThan(0);
 
-  fireEvent.click(screen.getByRole('button', { name: /Export/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Export' }));
   const check = validateExport(downloads[0]);
   expect(check.ok).toBe(true);
   const exported = JSON.parse(JSON.parse(downloads[0]).keys[PROGRESS_KEY]);

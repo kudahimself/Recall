@@ -24,3 +24,61 @@
   text-transform: uppercase;
   color: var(--text-3);
 }
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  min-width: 0;
+}
+
+.headerIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--control-md);
+  height: var(--control-md);
+  border-radius: var(--radius-m);
+  color: var(--course);
+  background: var(--raised);
+  border: var(--border-w) solid var(--border);
+}
+
+.headerIcon svg {
+  width: var(--icon-l);
+  height: var(--icon-l);
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+  flex: 1 1 auto;
+  min-width: min(100%, var(--header-text-min));
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A title takes focus when its screen opens; it is not a control, so no ring. */
+.title:focus {
+  outline: none;
+}
+
+.aside {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+}

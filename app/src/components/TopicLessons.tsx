@@ -14,6 +14,7 @@ import { FsrsStore, State } from '../utils/familySchedule';
 import { LessonsDone, TopicSteps, topicSteps } from '../utils/lessons';
 import { ExercisesDone, exerciseForTopics } from '../utils/exercises';
 import { ExerciseCard } from './ExerciseCard';
+import { Button } from './ui/Button';
 import './TopicLessons.css';
 
 interface Props {
@@ -178,14 +179,14 @@ export function TopicLessons({
         </div>
         <div className="tl-buttons">
           {s.lesson && (
-            <button className="start-button tl-primary" onClick={() => onRuleCard(s.lesson!.id)}>
-              <BookOpen size={16} /> Reopen the rule card
-            </button>
+            <Button variant="primary" icon={<BookOpen />} onClick={() => onRuleCard(s.lesson!.id)}>
+              Reopen the rule card
+            </Button>
           )}
           {selected.unlocked && (
-            <button className="hero-link-btn" onClick={() => onDrill(selected.keys)}>
-              <Dumbbell size={14} /> Drill this topic
-            </button>
+            <Button icon={<Dumbbell />} onClick={() => onDrill(selected.keys)}>
+              Drill this topic
+            </Button>
           )}
         </div>
         {exercise && (
