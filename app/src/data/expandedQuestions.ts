@@ -3542,17 +3542,22 @@ _rescued_data string`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.MEDALLION_ARCHITECTURE,
     language: CodeLanguage.SQL,
-    question: 'The CTEs stand in for a Bronze and a Silver table. Order 101 arrived twice, in batches 1 and 2, and one record has no order_id. What does the query return? The answer is one row: two whole numbers separated by a comma.',
-    code: `WITH bronze AS (
-  SELECT * FROM VALUES (101, 30, 1), (101, 30, 2), (102, 20, 1), (NULL, 50, 1)
-    AS t(order_id, amount, batch)
-), silver AS (
-  SELECT * FROM (
-    SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY batch DESC) AS rn
-    FROM bronze WHERE order_id IS NOT NULL
-  ) WHERE rn = 1
-)
-SELECT (SELECT SUM(amount) FROM bronze), (SELECT SUM(amount) FROM silver);`,
+    question: 'The Bronze table bronze_orders holds the rows shown: order 101 arrived twice, in batches 1 and 2, and one record has no order_id. The statements build a Silver table from it and then compare the two. What does the last query return? The answer is one row: two whole numbers separated by a comma.',
+    tables: [
+      { name: 'bronze_orders', columns: ['order_id', 'amount', 'batch'], rows: [
+        [101, 30, 1],
+        [101, 30, 2],
+        [102, 20, 1],
+        [null, 50, 1],
+      ] },
+    ],
+    code: `CREATE OR REPLACE TABLE silver_orders AS
+SELECT order_id, amount FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY batch DESC) AS rn
+  FROM bronze_orders WHERE order_id IS NOT NULL
+) WHERE rn = 1;
+
+SELECT (SELECT SUM(amount) FROM bronze_orders), (SELECT SUM(amount) FROM silver_orders);`,
     expectedOutput: `130, 50`,
     explanation: 'Bronze keeps every record as it arrived: the replayed order 101 and the record with no order_id are both there, so its total is 30 + 30 + 20 + 50 = 130. Silver drops the record with no key and keeps one row per order_id, the one from the latest batch, so its total is 30 + 20 = 50. A Gold revenue table must read Silver: built from Bronze, it would report 130, counting the replay and a sale no order can be traced to.',
     hints: ['Which rows does the WHERE remove before ROW_NUMBER runs?', 'How many rows per order_id have rn = 1?'],

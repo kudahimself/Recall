@@ -2279,12 +2279,12 @@ result = df.withColumn("lowest_salary", ____("salary").over(____)).withColumn("h
     topic: Topic.STRUCTURED_STREAMING,
     question: 'What is stateful processing in Structured Streaming?',
     options: [
-      { id: 'a', text: 'Processing execution that relies exclusively on the single current micro-batch payload without tracking history', isCorrect: false },
-      { id: 'b', text: 'Operations maintaining intermediate state across micro-batches (aggregations, dedup, stream joins) using checkpoints and watermarks', isCorrect: true },
-      { id: 'c', text: 'Persisting all incoming stream records in worker node RAM permanently to guarantee zero disk I/O overhead', isCorrect: false },
-      { id: 'd', text: 'Restricting streaming query execution to a single dedicated driver node to simplify state coordination', isCorrect: false },
+      { id: 'a', text: 'Processing where each micro-batch is handled on its own, with nothing kept from earlier batches', isCorrect: false },
+      { id: 'b', text: 'Operations that keep data across micro-batches, such as aggregations, deduplication and stream joins', isCorrect: true },
+      { id: 'c', text: 'Any streaming query, because every query records in its checkpoint how far it has read', isCorrect: false },
+      { id: 'd', text: 'Writing the stream to a Delta table, so the results persist between runs of the query', isCorrect: false },
     ],
-    explanation: 'Stateful operations keep track of data across batches. For example, a running count needs to remember previous counts. Spark stores this state in checkpoints. Watermarks help clean up old state to prevent unbounded growth.',
+    explanation: 'A stateful operation needs data from earlier batches: a running count must remember the counts so far, and dropDuplicates must remember the keys it has seen. Spark keeps that state with the checkpoint, and a watermark lets it drop old state so it does not grow forever. A filter or select is stateless: each batch is handled on its own, even though the query still records its read position in the checkpoint.',
     tags: ['streaming', 'stateful', 'state-management'],
     concepts: ['stream-readstream-writestream', 'stream-stateful-aggs'],
   },
@@ -2294,14 +2294,14 @@ result = df.withColumn("lowest_salary", ____("salary").over(____)).withColumn("h
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
-    question: 'Why are watermarks necessary for streaming aggregations with event-time windows?',
+    question: 'Why does a streaming count over event-time windows need a watermark?',
     options: [
-      { id: 'a', text: 'Watermarks automatically increase socket buffer limits to optimize cross-cluster network transfer speed', isCorrect: false },
-      { id: 'b', text: 'Watermarks enforce strict schema validation rules on all incoming stream records before transformation', isCorrect: false },
-      { id: 'c', text: 'Watermarks are required exclusively for file-based sources to detect directory file movement events', isCorrect: false },
-      { id: 'd', text: 'Watermarks define how long to wait for late data before finalizing a window and dropping its state from memory', isCorrect: true },
+      { id: 'a', text: 'Without one, Spark drops every row that arrives after its window has started', isCorrect: false },
+      { id: 'b', text: 'It makes window() group rows by event time instead of by the time they arrived', isCorrect: false },
+      { id: 'c', text: 'It holds every row back for the threshold, so each window is written in event-time order', isCorrect: false },
+      { id: 'd', text: 'It sets how long to wait for late rows before a window is final and its state can go', isCorrect: true },
     ],
-    explanation: 'Without watermarks, Spark must keep state for ALL windows forever (memory grows unbounded). A watermark of "10 minutes" means: once the max event time advances past window_end + 10 min, that window is finalised and its state is dropped.',
+    explanation: `Without a watermark Spark must keep every window's count forever, since a late row for any old window might still arrive, so state grows without limit, and append mode is not allowed. With withWatermark("event_time", "10 minutes"), once the latest event time seen passes a window's end by 10 minutes, the window is final and its state is dropped. window() groups by event time with or without a watermark, and no row is held back.`,
     tags: ['streaming', 'watermark', 'state', 'event-time'],
     concepts: ['stream-readstream-writestream', 'stream-watermarks', 'stream-stateful-aggs'],
   },
@@ -2309,7 +2309,7 @@ result = df.withColumn("lowest_salary", ____("salary").over(____)).withColumn("h
   {
     id: 'stream-adv-3',
     type: QuestionType.CODING,
-    requires: ['withWatermark'],
+    requires: ['withWatermark', /withWatermark\(\s*["']event_time["']\s*,\s*["']15 minutes["']\s*\)/, /window\(\s*(?:(?:F\.)?col\()?["']event_time["']\)?\s*,\s*["']1 hour["']\s*\)/],
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
@@ -2323,7 +2323,7 @@ result = df.withColumn("lowest_salary", ____("salary").over(____)).withColumn("h
       },
     ],
     solution: `from pyspark.sql.functions import window, col\n\nresult = events_df.withWatermark("event_time", "15 minutes").groupBy(window(col("event_time"), "1 hour"), "user_id").count()\n# OR\nfrom pyspark.sql.functions import window\n\nresult = events_df.withWatermark("event_time", "15 minutes").groupBy(window("event_time", "1 hour"), "user_id").count()`,
-    explanation: 'window(timeColumn, windowDuration) creates tumbling (non-overlapping) time windows. The watermark defines how long to wait for late data. Events arriving more than 15 minutes late are dropped from the aggregation.',
+    explanation: `window(timeColumn, "1 hour") assigns each row to a one-hour tumbling (non-overlapping) window by its event time, and grouping by the window and user_id counts each user's events per hour. The watermark lets Spark finish a window 15 minutes after its end and drop its state; rows later than that may be ignored.`,
     tieredHints: {
       apiSignature: 'DataFrame.withWatermark(timeCol: str, delayThreshold: str).groupBy(window(timeCol, windowDuration), *cols)',
       skeleton: `from pyspark.sql.functions import window, col
@@ -2338,27 +2338,30 @@ result = ____.____("event_time", "15 minutes").____(____(col("____"), "1 hour"),
   {
     id: 'stream-adv-4',
     type: QuestionType.CODING,
-    requires: ['withWatermark'],
+    requires: ['withWatermark', /dropDuplicatesWithinWatermark\(\s*\[|dropDuplicates\(\s*\[[^\]]*event_time/],
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    question: 'Given streaming DataFrame "orders_df" (columns: order_id, event_time, amount), filter out duplicate records using column "order_id" with a 1-hour threshold on "event_time" to limit state retention. Store the result in "result".',
+    question: 'The streaming DataFrame "orders_df" (columns: order_id, event_time, amount) receives some orders more than once, and every resent copy has the same order_id and the same event_time as the first one. Drop the duplicates, using a 1-hour watermark on "event_time" so Spark can forget orders older than that. Store the result in "result".',
     starterCode: `result = orders_df`,
     testCases: [
       {
         input: 'streaming with duplicates',
-        expectedOutput: '.withWatermark().dropDuplicates()',
+        expectedOutput: '.withWatermark("event_time", "1 hour").dropDuplicates(["order_id", "event_time"])',
         description: 'Should deduplicate with watermark',
       },
     ],
-    solution: `result = orders_df.withWatermark("event_time", "1 hour").dropDuplicates(["order_id"])\n# OR\nresult = orders_df.withWatermark("event_time", "1 hour").dropDuplicates("order_id")`,
-    explanation: 'dropDuplicates() in streaming is stateful — Spark remembers seen keys. The watermark limits how long it tracks old keys. Without a watermark, state grows unbounded. Events with the same order_id arriving within the watermark are deduped.',
+    solution: `result = orders_df.withWatermark("event_time", "1 hour").dropDuplicates(["order_id", "event_time"])
+# OR
+result = orders_df.withWatermark("event_time", "1 hour").dropDuplicates(["event_time", "order_id"])
+# OR
+result = orders_df.withWatermark("event_time", "1 hour").dropDuplicatesWithinWatermark(["order_id"])`,
+    explanation: `Streaming dropDuplicates is stateful: Spark remembers every key it has seen. It can only forget a key once the watermark passes the key's event time, so event_time must be one of the dedup columns; dropDuplicates(["order_id"]) alone keeps every order_id forever, even with a watermark. Since each copy repeats the event_time, deduplicating on order_id and event_time removes them. dropDuplicatesWithinWatermark(["order_id"]) (Spark 3.5+) also works, and handles copies whose event_time differs.`,
     tieredHints: {
       apiSignature: 'DataFrame.withWatermark(timeCol: str, delayThreshold: str).dropDuplicates(subset: List[str] = None)',
-      skeleton: `-- ____ deduplication with watermark
-result = ____.____("event_time", "1 hour").____(["order_id"])`,
+      skeleton: 'result = ____.____("event_time", "1 hour").____(["order_id", ____])',
     },
-    hints: ['Configure watermark on "event_time" before deduplicating', 'Pass "order_id" to dropDuplicates'],
+    hints: ['Set the watermark on "event_time" before deduplicating', 'Spark can only drop a remembered key when the watermark column is one of the dedup columns'],
     tags: ['streaming', 'dedup', 'watermark', 'stateful'],
     concepts: ['stream-readstream-writestream', 'ps-distinct-drop-dup', 'stream-watermarks', 'stream-stateful-aggs'],
   },
@@ -2368,14 +2371,14 @@ result = ____.____("event_time", "1 hour").____(["order_id"])`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
-    question: 'What happens to a Structured Streaming job when it encounters corrupted or unparseable records in the source data?',
+    question: 'A plain file stream reads JSON with a given schema, `spark.readStream.schema("id INT, qty INT").json(path)`, and no mode option. One line in a new file is not valid JSON. What happens to that line?',
     options: [
-      { id: 'a', text: 'By default it fails; options like PERMISSIVE mode or badRecordsPath allow handling corrupted rows gracefully', isCorrect: true },
-      { id: 'b', text: 'Corrupted records are always silently skipped without logging warnings or raising runtime exceptions', isCorrect: false },
-      { id: 'c', text: 'The stream automatically retries reading the corrupted payload indefinitely until manually cancelled', isCorrect: false },
-      { id: 'd', text: 'Corrupted records are routed automatically to a default dead letter queue topic in cloud storage', isCorrect: false },
+      { id: 'a', text: 'The query fails on that file and stops until the line is fixed', isCorrect: false },
+      { id: 'b', text: 'It becomes a row whose unparsed fields are null, and the stream carries on', isCorrect: true },
+      { id: 'c', text: 'It is skipped without a trace, and no row is written for it', isCorrect: false },
+      { id: 'd', text: 'Its raw text goes into a _rescued_data column that the reader adds', isCorrect: false },
     ],
-    explanation: 'Spark provides three parse modes: PERMISSIVE (default — puts corrupt data in a special column), DROPMALFORMED (silently drops bad rows), FAILFAST (throws exception). Use option("badRecordsPath", "/path") to redirect bad records for later analysis.',
+    explanation: 'The JSON and CSV readers use the PERMISSIVE mode by default: a line they cannot parse becomes a row with nulls in the fields that failed, and the stream goes on (the raw text is kept only if the schema has a _corrupt_record column). Setting mode to FAILFAST makes the query fail instead, and DROPMALFORMED drops the line. The _rescued_data column belongs to Auto Loader, not to a plain file stream.',
     tags: ['streaming', 'error-handling', 'corrupt-records', 'parse-mode'],
     concepts: ['stream-readstream-writestream', 'ps-io-json'],
   },
@@ -2385,14 +2388,14 @@ result = ____.____("event_time", "1 hour").____(["order_id"])`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
-    question: 'What is a stream-stream join and what are its requirements?',
+    question: 'What is a stream-stream join, and what does an outer stream-stream join need?',
     options: [
-      { id: 'a', text: 'Joining a live streaming DataFrame with a static lookup table stored in Delta Lake format', isCorrect: false },
-      { id: 'b', text: 'Executing any standard relational equi-join between two arbitrary in-memory batch DataFrames', isCorrect: false },
-      { id: 'c', text: 'Joining two live streaming DataFrames requiring watermarks on both sides and time-bound join constraints', isCorrect: true },
-      { id: 'd', text: 'Merging two append-only stream queries without requiring event-time watermarks or checkpointing', isCorrect: false },
+      { id: 'a', text: 'A join of a stream with a static Delta table; an outer join needs a watermark on the static side', isCorrect: false },
+      { id: 'b', text: 'A join of two batch DataFrames read with readStream; an outer join needs nothing more than an inner join', isCorrect: false },
+      { id: 'c', text: 'A join of two streams, where Spark buffers both sides as state; an outer join needs watermarks and a time-range condition', isCorrect: true },
+      { id: 'd', text: 'A join of two streams that keeps no state; an outer join needs the two streams to share one checkpoint', isCorrect: false },
     ],
-    explanation: 'Stream-stream joins match records from two live streams. Watermarks on both sides are required so Spark knows when old state can be cleaned up. Inner joins always work. Outer joins need time constraints (e.g., event time within 1 hour).',
+    explanation: 'In a stream-stream join both sides keep receiving rows, so Spark buffers each side as state in case a matching row arrives later. An inner join runs without watermarks, but its state then grows without limit; an outer join is only allowed with a watermark and a time-range condition, because Spark must know when a row can no longer match before it emits the row with nulls. Every streaming query has its own checkpoint.',
     tags: ['streaming', 'stream-stream-join', 'watermark', 'stateful'],
     concepts: ['stream-readstream-writestream', 'stream-stream-join', 'stream-watermarks', 'stream-stateful-aggs'],
   },
@@ -2400,12 +2403,15 @@ result = ____.____("event_time", "1 hour").____(["order_id"])`,
   {
     id: 'stream-adv-7',
     type: QuestionType.CODING,
-    requires: ['withWatermark'],
+    requires: ['withWatermark', /alias\(\s*["']impressions["']/, /alias\(\s*["']clicks["']/, /interval\s+1\s+hour/i],
     difficulty: Difficulty.ADVANCED,
     topic: Topic.STRUCTURED_STREAMING,
     language: CodeLanguage.PYTHON,
-    question: 'Join streaming DataFrame "impressions_df" (columns: ad_id, impression_time) with streaming DataFrame "clicks_df" (columns: ad_id, click_time) matching on "ad_id" where "click_time" occurs between "impression_time" and 1 hour after "impression_time". Both streams use 2-hour watermarks. Store the result in "result".',
-    starterCode: `from pyspark.sql.functions import expr\n\n# Apply 2-hour watermarks to impressions_df and clicks_df, then join them on ad_id with time constraint\n`,
+    question: 'Join the streaming DataFrame "impressions_df" (columns: ad_id, impression_time) with the streaming DataFrame "clicks_df" (columns: ad_id, click_time) on ad_id, keeping only clicks from impression_time up to 1 hour after it. Give each side a 2-hour watermark on its time column, and alias the two sides "impressions" and "clicks" so the join condition can tell the two ad_id columns apart. Store the result in "result".',
+    starterCode: `from pyspark.sql.functions import expr
+
+# Watermark and alias impressions_df and clicks_df, then join them on ad_id with the time condition
+`,
     testCases: [
       {
         input: 'two streaming DataFrames',
@@ -2413,18 +2419,37 @@ result = ____.____("event_time", "1 hour").____(["order_id"])`,
         description: 'Should do stream-stream join with time constraint',
       },
     ],
-    solution: `from pyspark.sql.functions import expr\n\nimpressions = impressions_df.withWatermark("impression_time", "2 hours")\nclicks = clicks_df.withWatermark("click_time", "2 hours")\n\nresult = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + interval 1 hour"))\n# OR\nfrom pyspark.sql.functions import expr\n\nimpressions = impressions_df.withWatermark("impression_time", "2 hours")\nclicks = clicks_df.withWatermark("click_time", "2 hours")\n\nresult = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + INTERVAL 1 HOUR"))`,
-    explanation: 'Stream-stream joins require watermarks on both sides. The time constraint (click within 1 hour of impression) limits how long Spark must buffer unmatched records. Without time constraints, state grows unbounded.',
+    solution: `from pyspark.sql.functions import expr
+
+impressions = impressions_df.withWatermark("impression_time", "2 hours").alias("impressions")
+clicks = clicks_df.withWatermark("click_time", "2 hours").alias("clicks")
+
+result = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + interval 1 hour"))
+# OR
+from pyspark.sql.functions import expr
+
+impressions = impressions_df.alias("impressions").withWatermark("impression_time", "2 hours")
+clicks = clicks_df.alias("clicks").withWatermark("click_time", "2 hours")
+
+result = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + INTERVAL 1 HOUR"))
+# OR
+from pyspark.sql.functions import expr
+
+impressions = impressions_df.withWatermark("impression_time", "2 hours").alias("impressions")
+clicks = clicks_df.withWatermark("click_time", "2 hours").alias("clicks")
+
+result = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time BETWEEN impression_time AND impression_time + INTERVAL 1 HOUR"))`,
+    explanation: 'Both inputs keep growing, so Spark buffers each side as state; the watermarks and the 1-hour time condition tell it when an impression can no longer get a click, so old state can be dropped. The aliases matter: a DataFrame has no name of its own, so without .alias("impressions") the condition "impressions.ad_id" cannot be resolved and Spark fails with UNRESOLVED_COLUMN.',
     tieredHints: {
       apiSignature: 'DataFrame.withWatermark(timeCol, delay).join(other, expr_condition)',
       skeleton: `from pyspark.sql.functions import expr
 
-impressions = ____.____("____", "2 hours")
-clicks = ____.____("____", "2 hours")
+impressions = ____.____("impression_time", "2 hours").____("impressions")
+clicks = ____.____("click_time", "2 hours").____("clicks")
 
-result = ____.____(____, ____("____.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + interval 1 hour"))`,
+result = ____.____(clicks, ____("impressions.ad_id = clicks.ad_id AND click_time >= ____ AND click_time <= impression_time + interval 1 hour"))`,
     },
-    hints: ['Use expr to build the join condition matching ad_id and time bounds', 'Join impressions with clicks using the time interval condition'],
+    hints: ['Call .alias("impressions") and .alias("clicks") so the condition can name each side', 'Use expr() for a condition on ad_id and the time bounds'],
     tags: ['streaming', 'stream-stream-join', 'time-constraint'],
     concepts: ['stream-readstream-writestream', 'stream-stream-join'],
   },
@@ -2436,12 +2461,12 @@ result = ____.____(____, ____("____.ad_id = clicks.ad_id AND click_time >= impre
     topic: Topic.STRUCTURED_STREAMING,
     question: 'What is the difference between a stream-static join and a stream-stream join?',
     options: [
-      { id: 'a', text: 'Stream-static joins combine two batch DataFrames; stream-stream joins combine a stream with a static lookup table', isCorrect: false },
-      { id: 'b', text: 'Stream-static joins a stream with a static table (no watermarks needed); stream-stream joins two live streams (watermarks required)', isCorrect: true },
-      { id: 'c', text: 'Stream-static joins require complex state management; stream-stream joins require zero checkpointing overhead', isCorrect: false },
-      { id: 'd', text: 'Stream-static and stream-stream joins execute identical physical plans without difference in state retention', isCorrect: false },
+      { id: 'a', text: 'A stream-static join combines two batch DataFrames; a stream-stream join combines a stream with a lookup table', isCorrect: false },
+      { id: 'b', text: 'A stream-static join reads a static table each micro-batch with no state; a stream-stream join buffers both streams as state', isCorrect: true },
+      { id: 'c', text: 'A stream-static join buffers the static table as state; a stream-stream join keeps no state between micro-batches', isCorrect: false },
+      { id: 'd', text: 'Both keep the same state, and the only difference is which side may receive late data', isCorrect: false },
     ],
-    explanation: 'Stream-static joins are simpler: the static DataFrame is like a lookup table that gets joined with each streaming micro-batch. No state management or watermarks needed. Stream-stream is more complex as both sides are continuously changing.',
+    explanation: 'In a stream-static join each micro-batch of the stream is joined with the current version of the static table, such as a Delta lookup table, so Spark keeps no join state and needs no watermark. In a stream-stream join both sides keep growing, so Spark buffers rows from each side as state until they can no longer match, which is what watermarks and a time-range condition bound.',
     tags: ['streaming', 'stream-static', 'stream-stream', 'join'],
     concepts: ['stream-readstream-writestream', 'stream-stream-join', 'sql-joins-inner-outer'],
   },
