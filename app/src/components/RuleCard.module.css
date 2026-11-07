@@ -1,0 +1,243 @@
+/* The rule card (a lesson's first screen and the R dialog) and the column beside a question. */
+
+/* ---- The full rule card ---- */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.where {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--text);
+}
+
+.dots {
+  display: inline-flex;
+  gap: var(--sp-1);
+}
+
+.dot {
+  width: var(--sp-5);
+  height: var(--sp-1);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+
+.dotMet {
+  background: var(--success);
+}
+
+.dotCurrent {
+  background: var(--accent);
+}
+
+.close {
+  margin-left: auto;
+}
+
+.columns {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: var(--sp-4);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.column > * {
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-h1);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  color: var(--text);
+}
+
+.text {
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+}
+
+.label {
+  margin-top: var(--sp-3);
+}
+
+.walk {
+  margin: var(--sp-1) 0 0;
+  padding-left: var(--sp-5);
+  font-family: var(--font-reading);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+}
+
+.walk li + li {
+  margin-top: var(--sp-1);
+}
+
+.checked {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--success);
+}
+
+.checkedIcon {
+  flex: none;
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+.foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: var(--border-w) solid var(--border);
+}
+
+.plan {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+}
+
+/* In the R dialog the card takes the dialog's height and its columns scroll. */
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---- The column beside a question ---- */
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.panelHead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  border-bottom: var(--border-w) solid var(--border);
+}
+
+.panelEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.panelIcon {
+  display: inline-flex;
+}
+
+.panelIcon svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+.panelBody {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+
+.panelBody > * {
+  flex-shrink: 0;
+}
+
+.panelBody > * + :global(figure),
+.panelBody > :global(figure) + * {
+  margin-top: var(--sp-1);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  color: var(--text);
+}
+
+.panelText {
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+}
+
+.muted {
+  color: var(--text-3);
+}
+
+.statsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.stats {
+  gap: var(--sp-2);
+}
+
+.panelFoot {
+  flex: none;
+  padding: var(--sp-3) var(--sp-4);
+  border-top: var(--border-w) solid var(--border);
+}
+
+@media (max-width: 1099px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

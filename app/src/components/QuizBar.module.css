@@ -1,24 +1,33 @@
+/* The quiz header: one quiet row above every question and rule card. */
+
 .bar {
   flex: none;
   display: flex;
   align-items: center;
-  gap: var(--sp-2) var(--sp-3);
+  gap: var(--sp-3);
   min-height: var(--control-sm);
   min-width: 0;
 }
 
+/* The ghost Back sits flush with the card edge under it. */
+.back {
+  margin-left: calc(-1 * var(--sp-3));
+}
+
 .crumb {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--sp-2);
+  flex: 1 1 auto;
   min-width: 0;
   font-size: var(--fs-small);
   color: var(--text-2);
   white-space: nowrap;
 }
 
+/* The section gives way first, then the topic. */
 .section {
-  flex: 0 1 auto;
+  flex: 0 100 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -28,7 +37,6 @@
   flex: none;
   width: var(--icon-s);
   height: var(--icon-s);
-  align-self: center;
   color: var(--text-3);
 }
 
@@ -41,44 +49,30 @@
   font-weight: var(--weight-semibold);
 }
 
-.meta {
+.badge {
   flex: none;
-  font-size: var(--fs-meta);
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
 }
 
-.spacer {
-  flex: 1 1 0;
+.dot {
+  opacity: 0.6;
 }
 
-.status {
+.tools {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  flex: none;
+  gap: var(--sp-1);
+  margin-right: calc(-1 * var(--sp-2));
 }
 
-.again {
-  color: var(--warning);
-  font-weight: var(--weight-semibold);
+.filterCount {
+  height: var(--kbd-h);
+  min-width: var(--kbd-h);
+  justify-content: center;
+  padding: 0 var(--sp-1);
 }
 
-/* Below a wide desktop the topic name keeps the room; the section is one Back away. */
-@media (max-width: 1599px) {
-  .section,
-  .section + .chevron {
-    display: none;
-  }
-}
-
-@media (max-width: 1099px) {
-  .meta {
-    display: none;
-  }
-}
-
-/* Below 1100px the side panel never shows, so its toggle goes too. */
+/* Below 1100px the side column never shows, so its toggle goes too. */
 @media (max-width: 1099px) {
   .panelToggle {
     display: none;
@@ -90,7 +84,8 @@
     flex-wrap: wrap;
   }
 
-  .spacer {
+  .section,
+  .section + .chevron {
     display: none;
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PredictOutcomeQuestion as PredictOutcomeQ } from '../types';
+import { PredictOutcomeQuestion as PredictOutcomeQ, QuestionType } from '../types';
 import { outcomeMatches, temptingMatch } from '../utils/answerCredit';
 import { DataTables } from './DataTables';
 import { CodeBlock, languageLabel } from './ui/CodeBlock';
@@ -7,6 +7,7 @@ import { InlineText, Prose } from './ui/InlineText';
 import { QuestionShell } from './ui/QuestionShell';
 import { TextAnswer } from './ui/TextAnswer';
 import styles from './ReasoningQuestion.module.css';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: PredictOutcomeQ;
@@ -48,7 +49,7 @@ export const PredictOutcomeQuestion: React.FC<Props> = ({ question, onAnswer, sh
       dense
       className="predict-outcome-question"
       question={question}
-      format="Predict the outcome"
+      format={QUESTION_FORMAT[QuestionType.PREDICT_OUTCOME]}
       graded={graded}
       action={{ label: 'Check answer', onAction: check, disabled: typed.trim().length === 0 }}
       hint={showHints ? question.hints?.[0] : null}

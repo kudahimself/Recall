@@ -104,10 +104,12 @@ body {
 
 /* ============================================
    Quiz View
-   One compact bar, the lesson steps, then the stage: the question card and,
-   for a topic with a lesson, the rule card beside it. The stage takes the
-   height that is left and the card scrolls inside itself if it must, so the
-   page never scrolls on a laptop screen.
+   One quiet bar, the lesson's steps, then the stage: the question and, in a
+   course with rule cards, one column beside it (the topic's rule card, or the
+   topic when it has none). The question's width depends only on the screen
+   and the course, never on the topic, so consecutive questions sit in the
+   same place. The stage takes the height that is left and the card scrolls
+   inside itself if it must, so the page never scrolls on a laptop screen.
    ============================================ */
 .view-container {
   height: 100%;
@@ -131,10 +133,9 @@ body {
   padding: var(--sp-2) var(--sp-5);
 }
 
-.quiz-view > .question-filter {
-  flex: none;
-  max-height: 30vh;
-  overflow-y: auto;
+/* The column adds its width, so on a large screen the question keeps the width it has without one. */
+.quiz-view-column {
+  max-width: calc(var(--content-max) + var(--side-panel-w) + var(--sp-4));
 }
 
 .quiz-stage {
@@ -146,7 +147,7 @@ body {
   gap: var(--sp-4);
 }
 
-.quiz-stage-panel {
+.quiz-stage-column {
   grid-template-columns: minmax(0, 1fr) var(--side-panel-w);
 }
 
@@ -156,11 +157,6 @@ body {
   gap: var(--sp-3);
   min-width: 0;
   min-height: 0;
-}
-
-/* The first rule card of a lesson uses the whole width. */
-.quiz-view-card .quiz-main > .rule-card {
-  flex: 1 1 auto;
 }
 
 /* Errors and empty sessions inside the quiz view. */
@@ -187,7 +183,7 @@ body {
 
 /* Narrow screens: the rule card stays one key (R) away instead of beside the question. */
 @media (max-width: 1099px) {
-  .quiz-stage-panel {
+  .quiz-stage-column {
     grid-template-columns: minmax(0, 1fr);
   }
 

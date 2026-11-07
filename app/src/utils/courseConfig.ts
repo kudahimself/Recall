@@ -114,7 +114,7 @@ export function getCourseForTopic(topic: Topic | string): Course {
   return Course.DATABRICKS;
 }
 
-/** Exam sections for each course (used by QuestionFilter) */
+/** Exam sections for each course (used by getCourseSections, which the quiz filters read) */
 export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Record<string, string[]> }> = {
   'Lakehouse Platform': {
     weight: '24%',
@@ -777,6 +777,34 @@ export function getPathOrder(course: Course): string[] {
     : course === Course.DATA_ENGINEERING ? DATA_ENG_PATH_ORDER
     : course === Course.SQL ? SQL_PATH_ORDER
     : [];
+}
+
+export interface CourseSection {
+  name: string;
+  /** e.g. "~10%" of the exam, or "" when the course has no weights. */
+  weight: string;
+  /** Units in declared order: the display name and its topic keys. */
+  units: Array<[string, string[]]>;
+}
+
+/**
+ * A course's sections with their display names, in path order, then any
+ * section the path does not list. The filters and the quiz breadcrumb read
+ * names from here, never from topic keys.
+ */
+export function getCourseSections(course: Course): CourseSection[] {
+  const sections = course === Course.WEB_DEV ? WEBDEV_SECTIONS
+    : course === Course.BACKEND ? BACKEND_SECTIONS
+    : course === Course.DATA_ENGINEERING ? DATA_ENG_SECTIONS
+    : course === Course.SQL ? SQL_SECTIONS
+    : DATABRICKS_SECTIONS;
+  const order = getPathOrder(course).filter(name => name in sections);
+  const rest = Object.keys(sections).filter(name => !order.includes(name));
+  return [...order, ...rest].map(name => ({
+    name,
+    weight: sections[name].weight,
+    units: Object.entries(sections[name].topics),
+  }));
 }
 
 /**

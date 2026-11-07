@@ -20,7 +20,7 @@ import type {
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react';
-import { ParsonsQuestion as ParsonsQ, CodeLanguage, Topic } from '../types';
+import { ParsonsQuestion as ParsonsQ, CodeLanguage, Topic, QuestionType } from '../types';
 import { useShortcut } from '../keyboard/shortcuts';
 import { DataTables } from './DataTables';
 import { Button } from './ui/Button';
@@ -29,6 +29,7 @@ import { Prose } from './ui/InlineText';
 import { AnswerColumns, QuestionRegion, QuestionShell, seededOrder } from './ui/QuestionShell';
 import { LivePreview } from './visual/LivePreview';
 import styles from './ParsonsQuestion.module.css';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: ParsonsQ;
@@ -408,7 +409,7 @@ export const ParsonsQuestion: React.FC<Props> = ({ question, onAnswer, showHints
   return (
     <QuestionShell
       question={question}
-      format="Arrange the lines"
+      format={QUESTION_FORMAT[QuestionType.PARSONS]}
       task={`Put the lines you need in order${hasDistractors ? '; some lines do not belong' : ''}. Click or drag a line, or use the keys.`}
       graded={graded}
       dense

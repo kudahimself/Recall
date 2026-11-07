@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SpotFlawQuestion as SpotFlawQ } from '../types';
+import { SpotFlawQuestion as SpotFlawQ, QuestionType } from '../types';
 import { spotFlawCorrect } from '../utils/answerCredit';
 import { DataTables } from './DataTables';
 import { languageLabel } from './ui/CodeBlock';
@@ -7,6 +7,7 @@ import { Prose } from './ui/InlineText';
 import { OptionList } from './ui/OptionList';
 import { QuestionShell } from './ui/QuestionShell';
 import styles from './ReasoningQuestion.module.css';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: SpotFlawQ;
@@ -44,7 +45,7 @@ export const SpotFlawQuestion: React.FC<Props> = ({ question, onAnswer, showHint
       dense
       className="spot-flaw-question"
       question={question}
-      format="Spot the flaw"
+      format={QUESTION_FORMAT[QuestionType.SPOT_FLAW]}
       graded={graded}
       action={{ label: picked === null ? 'Pick a line' : `Check line ${picked}`, onAction: check, disabled: picked === null }}
       hint={showHints ? question.hints?.[0] : null}

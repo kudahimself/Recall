@@ -38,7 +38,7 @@ test('a new learner gets the rule card first, then the exercises in order, and R
 
   const tryIt = await screen.findByRole('button', { name: /Try the exercises/ }, { timeout: 3000 });
   expect(screen.getByRole('heading', { name: 'SELECT, WHERE, ORDER BY, TOP' })).toBeInTheDocument();
-  expect(screen.getByText(/This example is run by check-lessons.js/)).toBeInTheDocument();
+  expect(screen.getByText(/Checked: this example runs and prints exactly this/)).toBeInTheDocument();
   // The rule card is the gate: no question is on screen yet.
   expect(screen.queryByText(/Check answer/)).toBeNull();
 

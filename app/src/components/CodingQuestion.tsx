@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { RotateCcw } from 'lucide-react';
-import { CodingQuestion as CQQuestion, CodeLanguage, Topic, AnswerMeta } from '../types';
+import { CodingQuestion as CQQuestion, CodeLanguage, Topic, AnswerMeta, QuestionType } from '../types';
 import { gradeCodingSubmission, ValidationResult, ValidationVerdict } from '../utils/codeValidator';
 import { CREDIT_CORRECT_THRESHOLD } from '../utils/spacedRepetition';
 import { validateByComputedStyle } from '../utils/computedStyleValidator';
@@ -16,6 +16,7 @@ import { OptionList } from './ui/OptionList';
 import { AnswerColumns, QuestionRegion, QuestionShell, QuestionShellContext, ShellFeedback, ShellKeyAction } from './ui/QuestionShell';
 import { LivePreview } from './visual/LivePreview';
 import styles from './CodingQuestion.module.css';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 // The retry loop is a small state machine. `editing` is the classic pre-submit
 // state; a failed check on a tiered-hints question goes to `review-fail` (try
@@ -547,7 +548,7 @@ export const CodingQuestion: React.FC<Props> = ({
   return (
     <QuestionShell
       question={question}
-      format="Write code"
+      format={QUESTION_FORMAT[QuestionType.CODING]}
       graded={done}
       typed={phase === 'editing'}
       fill

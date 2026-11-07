@@ -13,10 +13,10 @@
  * stay due; they lead tomorrow's list and are served by "Keep going".
  *
  * Serving order: the review list first (selectSessionQuestion), then fresh
- * slots. The pill shows the list's length (reviewsLeft), so the number drops
+ * slots. The status badge shows the list's length (reviewsLeft), so the number drops
  * by exactly one per answered review. A miss anywhere in the session is asked
  * again once, REASK_SPACING cards later, at most MAX_REASKS_PER_SESSION times
- * per session; the re-ask joins the list ("+1 again"). The session is done
+ * per session; the re-ask joins the list. The session is done
  * (isSessionDone) when the list is empty and every fresh slot is used; the App
  * then shows the summary. "Keep going" (continueSession) lifts the bound: due
  * families left over, then fresh slots, for as long as the learner wants.
@@ -511,8 +511,8 @@ export function selectSessionQuestion(
  * The session after one answer. A list card leaves the list (one fewer
  * review); a new or drill card uses up a fresh slot. A first miss of a card
  * that is not itself a re-ask comes back once, REASK_SPACING cards later,
- * while the session has re-asks left; `requeued` says so, for the "+1 again"
- * on the pill. Practice answers (after Keep going) use up nothing.
+ * while the session has re-asks left; `requeued` says so, for the status
+ * badge's title. Practice answers (after Keep going) use up nothing.
  */
 export function recordReviewAnswer(
   session: ReviewSession,

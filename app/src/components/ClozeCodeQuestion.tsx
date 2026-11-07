@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic } from '../types';
+import { ClozeCodeQuestion as ClozeQ, CodeLanguage, Topic, QuestionType } from '../types';
 import { useShortcut } from '../keyboard/shortcuts';
 import { DataTables } from './DataTables';
 import { CodeBlock, languageLabel } from './ui/CodeBlock';
@@ -7,6 +7,7 @@ import { Prose } from './ui/InlineText';
 import { AnswerColumns, QuestionShell } from './ui/QuestionShell';
 import { Blank } from './ui/TextAnswer';
 import { LivePreview } from './visual/LivePreview';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: ClozeQ;
@@ -171,7 +172,7 @@ export const ClozeCodeQuestion: React.FC<Props> = ({ question, onAnswer, showHin
   return (
     <QuestionShell
       question={question}
-      format="Fill in the blanks"
+      format={QUESTION_FORMAT[QuestionType.CLOZE_CODE]}
       task={count === 1 ? 'The code around the blank is already right; type what is missing.' : 'The code around the blanks is already right; type what is missing.'}
       graded={graded}
       typed
