@@ -2159,14 +2159,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is a broadcast hash join in Apache Spark?',
+    question: 'What does a broadcast hash join do in Spark?',
     options: [
-      { id: 'a', text: 'A join strategy where worker nodes asynchronously stream partition keys over persistent TCP sockets', isCorrect: false },
-      { id: 'b', text: 'A join strategy where the smaller DataFrame is copied to all worker nodes, avoiding a large data shuffle', isCorrect: true },
-      { id: 'c', text: 'A join strategy restricted exclusively to real-time stateful Structured Streaming query pipelines', isCorrect: false },
-      { id: 'd', text: 'A join strategy that forces all DataFrame rows to be collected and processed on the driver node', isCorrect: false },
+      { id: 'a', text: 'Both DataFrames are hashed on the join key and shuffled, so matching keys meet in the same partition', isCorrect: false },
+      { id: 'b', text: 'The large DataFrame is copied to every executor, so each joins it with its own slice of the small one', isCorrect: false },
+      { id: 'c', text: 'The small DataFrame is copied to every executor, so the large one is joined where it sits, with no shuffle', isCorrect: true },
+      { id: 'd', text: 'The small DataFrame is collected to the driver, which looks up every row of the large one there', isCorrect: false },
     ],
-    explanation: 'Broadcast joins copy the smaller table to every worker node. The larger table stays in place, avoiding an expensive shuffle. Spark auto-broadcasts tables under 10MB by default (spark.sql.autoBroadcastJoinThreshold).',
+    explanation: 'A broadcast hash join sends a full copy of the small side to every executor and builds a hash table from it there, so each task joins its own partition of the large side without moving it: no shuffle. Hashing and shuffling both sides is a shuffle join (sort-merge or shuffle hash). Copying the large side would be the most expensive choice, and the join runs on the executors, not the driver. Spark picks a broadcast join by itself when one side is under spark.sql.autoBroadcastJoinThreshold (10 MB by default), and broadcast(df) asks for one.',
     tags: ['broadcast', 'join', 'performance', 'optimization'],
     concepts: ['ps-broadcast-join', 'sql-joins-inner-outer', 'ps-cache-persist', 'ps-execution-plans'],
   },
@@ -2177,17 +2177,27 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "large_df" (millions of rows) and "small_df" (100 rows, columns: id, name), perform a broadcast join on "id" to avoid shuffling the large DataFrame.',
-    starterCode: `# Perform broadcast join on id and assign to result\n`,
+    question: 'DataFrame "large_df" has millions of rows and "small_df" has 100 rows (columns: id, label). Join them on "id", telling Spark to send small_df to every executor so large_df is not shuffled, and store the result in "result".',
+    starterCode: `# Join large_df with small_df on id without shuffling large_df
+`,
+    requires: [/broadcast\(\s*small_df\s*\)|small_df\.hint\(\s*["']broadcast["']\s*\)/, /large_df\.join\(/],
     testCases: [
-      {
-        input: 'large_df and small_df',
-        expectedOutput: 'broadcast(small_df)',
-        description: 'Should use broadcast join',
-      },
+      { input: 'large_df and small_df', expectedOutput: 'large_df.join(broadcast(small_df), "id")', description: 'Should broadcast small_df in the join' },
     ],
-    solution: `from pyspark.sql.functions import broadcast\n\nresult = large_df.join(broadcast(small_df), "id")\n# OR\nfrom pyspark.sql.functions import broadcast\n\nresult = large_df.join(broadcast(small_df), on="id")`,
-    explanation: 'Wrapping the smaller DataFrame in broadcast() forces Spark to broadcast it to all nodes, avoiding a shuffle on the larger DataFrame. Use this when one side is small enough to fit in memory.',
+    solution: `from pyspark.sql.functions import broadcast
+
+result = large_df.join(broadcast(small_df), "id")
+# OR
+from pyspark.sql.functions import broadcast
+
+result = large_df.join(broadcast(small_df), on="id")
+# OR
+from pyspark.sql import functions as F
+
+result = large_df.join(F.broadcast(small_df), "id")
+# OR
+result = large_df.join(small_df.hint("broadcast"), "id")`,
+    explanation: 'broadcast(small_df) marks the small side to be copied to every executor, so Spark plans a BroadcastHashJoin and joins each partition of large_df where it sits, with no shuffle of large_df. small_df.hint("broadcast") asks for the same plan. Spark would broadcast a 100-row table on its own (it is far under the 10 MB spark.sql.autoBroadcastJoinThreshold), but the hint makes the choice explicit, which matters when size estimates are wrong. Never broadcast the large side.',
     hints: ['Use broadcast() on the smaller DataFrame', 'Import from pyspark.sql.functions'],
     tieredHints: {
       apiSignature: 'DataFrame.join(other, on=None, how=None) -> DataFrame',
@@ -2202,14 +2212,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is the primary operational difference between repartition() and coalesce() in PySpark?',
+    question: 'What is the difference between repartition(n) and coalesce(n) on a DataFrame?',
     options: [
-      { id: 'a', text: 'repartition() performs a full shuffle to alter partition counts, whereas coalesce() avoids a full shuffle to decrease partitions', isCorrect: true },
-      { id: 'b', text: 'repartition() operates exclusively on static Delta tables, whereas coalesce() operates only on streaming DataFrames', isCorrect: false },
-      { id: 'c', text: 'repartition() decreases partition counts without shuffling, whereas coalesce() increases partition counts with a full shuffle', isCorrect: false },
-      { id: 'd', text: 'repartition() applies only to RDD data structures, whereas coalesce() applies strictly to Spark SQL DataFrame objects', isCorrect: false },
+      { id: 'a', text: 'coalesce(n) shuffles to give evenly sized partitions, while repartition(n) only merges neighbouring ones', isCorrect: false },
+      { id: 'b', text: 'Both shuffle every row; coalesce(n) just treats n as a maximum and may choose fewer partitions', isCorrect: false },
+      { id: 'c', text: 'repartition(n) can only raise the count and coalesce(n) only lower it, and neither shuffles', isCorrect: false },
+      { id: 'd', text: 'repartition(n) shuffles to any count, while coalesce(n) merges partitions without a shuffle and can only lower it', isCorrect: true },
     ],
-    explanation: 'repartition(n) does a full shuffle and can increase or decrease partitions. coalesce(n) avoids a full shuffle by combining existing partitions — it can only decrease the number of partitions. Use coalesce() when reducing partitions for better performance.',
+    explanation: 'repartition(n) does a full shuffle: it can raise or lower the count and spreads the rows evenly. coalesce(n) merges existing partitions without a shuffle, so it is cheap but can only lower the count (asking for more leaves it as it is), and the merged partitions can be uneven. Use coalesce to cut the number of output files, and repartition to raise the count or spread rows by a column.',
     tags: ['repartition', 'coalesce', 'partitioning', 'performance'],
     concepts: ['ps-partitioning', 'ps-null-handling', 'ps-cache-persist'],
   },
@@ -2220,8 +2230,9 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'DataFrame "df" currently has 200 partitions but you want to write it to 10 output files. Reduce the partitions to 10 without a full shuffle.',
+    question: 'DataFrame "df" has 200 partitions and you want to write it as 10 files. Lower it to 10 partitions without a full shuffle and store the new DataFrame in "result".',
     starterCode: `# Reduce partitions to 10 without a full shuffle\n`,
+    requires: [/\.coalesce\(\s*(numPartitions\s*=\s*)?10\s*\)/],
     testCases: [
       {
         input: 'df with 200 partitions',
@@ -2230,7 +2241,7 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
       },
     ],
     solution: `result = df.coalesce(10)\n# OR\nresult = df.coalesce(numPartitions=10)`,
-    explanation: 'coalesce(n) reduces partitions without a full shuffle by merging existing partitions. Much faster than repartition() when you only need to decrease partition count.',
+    explanation: 'coalesce(10) merges the 200 partitions into 10 without a shuffle, so writing result produces 10 files. repartition(10) would also give 10 partitions, but through a full shuffle of every row.',
     hints: ['Use coalesce() to reduce partitions', 'coalesce avoids a full shuffle unlike repartition'],
     tieredHints: {
       apiSignature: 'DataFrame.coalesce(numPartitions) -> DataFrame',
@@ -2246,8 +2257,9 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Repartition DataFrame "df" into 8 partitions based on the "country" column for optimized downstream joins on country.',
+    question: 'Repartition DataFrame "df" into 8 partitions by its "country" column, so all rows of one country sit in the same partition before a groupBy on country, and store the result in "result".',
     starterCode: `# Repartition into 8 partitions by country\n`,
+    requires: [/repartition\(\s*(numPartitions\s*=\s*)?8\s*,/, 'country'],
     testCases: [
       {
         input: 'df with country column',
@@ -2255,8 +2267,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
         description: 'Should repartition by country',
       },
     ],
-    solution: `result = df.repartition(8, "country")\n# OR\nresult = df.repartition(8, col("country"))\n# OR\nfrom pyspark.sql.functions import col\n\nresult = df.repartition(8, col("country"))`,
-    explanation: 'repartition(n, col) redistributes data so rows with the same column value end up in the same partition. This optimizes subsequent joins or aggregations on that column by avoiding shuffles.',
+    solution: `result = df.repartition(8, "country")
+# OR
+from pyspark.sql.functions import col
+
+result = df.repartition(8, col("country"))
+# OR
+result = df.repartition(8, df["country"])`,
+    explanation: 'repartition(8, "country") hash-partitions the rows on country into 8 partitions, so every row of one country lands in the same partition. A groupBy("country") right after can reuse that layout and skip its own shuffle: explain() then shows a single Exchange. With only a few countries some of the 8 partitions stay empty, and one large country makes its partition much bigger than the rest.',
     hints: ['Use repartition(numPartitions, column)', 'Column-based repartitioning co-locates data'],
     tieredHints: {
       apiSignature: 'DataFrame.repartition(numPartitions, *cols) -> DataFrame',
@@ -2271,14 +2289,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is Adaptive Query Execution (AQE) in Apache Spark 3.x?',
+    question: 'What does Adaptive Query Execution (AQE) do in Spark?',
     options: [
-      { id: 'a', text: 'A feature that dynamically scales cloud cluster worker nodes during high-concurrency SQL execution', isCorrect: false },
-      { id: 'b', text: 'A dynamic optimization framework that modifies query execution plans at runtime based on actual stage statistics', isCorrect: true },
-      { id: 'c', text: 'An automated storage compaction engine that merges small Parquet data files during routine background maintenance', isCorrect: false },
-      { id: 'd', text: 'A client-side query rewriting tool that translates complex SQL queries into optimized PySpark DataFrame code', isCorrect: false },
+      { id: 'a', text: 'It re-plans the rest of a query between stages, from the sizes of the shuffle data it has measured', isCorrect: true },
+      { id: 'b', text: 'It adds or removes worker nodes while a query runs, depending on how busy the executors are', isCorrect: false },
+      { id: 'c', text: 'It compacts the small files of a table in the background, so later queries read fewer files', isCorrect: false },
+      { id: 'd', text: 'It picks the best plan once, before the query starts, from statistics gathered by ANALYZE TABLE', isCorrect: false },
     ],
-    explanation: 'AQE (enabled by default in Spark 3.x/Databricks) re-optimises the query plan during execution using real runtime statistics. It can coalesce small shuffle partitions, convert sort-merge joins to broadcast joins, and optimise skewed joins.',
+    explanation: 'AQE, on by default since Spark 3.2 and on Databricks, waits for each shuffle stage to finish and re-plans what is left from the real sizes it measured: it merges small shuffle partitions, splits skewed partitions in a join, and can switch a sort-merge join to a broadcast join when one side turns out small. Choosing a plan once, before the query runs, from ANALYZE TABLE statistics is the cost-based optimizer. Adding workers is cluster autoscaling, and compacting small files is OPTIMIZE or auto compaction.',
     tags: ['aqe', 'adaptive', 'optimization', 'performance'],
     concepts: ['ps-aqe', 'ps-execution-plans', 'ps-cache-persist'],
   },
@@ -2288,14 +2306,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is data skew in Spark distributed data processing, and why does it impact performance?',
+    question: 'What is data skew in a Spark job, and why does it slow the job down?',
     options: [
-      { id: 'a', text: 'Data skew occurs when column data types mismatch, forcing Spark to perform expensive runtime type casts', isCorrect: false },
-      { id: 'b', text: 'Data skew occurs when raw files contain missing null values, causing executor tasks to abort prematurely', isCorrect: false },
-      { id: 'c', text: 'Data skew occurs when data is unevenly distributed across partitions, causing bottlenecked tasks on overloaded executors', isCorrect: true },
-      { id: 'd', text: 'Data skew occurs when Delta transaction logs become corrupted, forcing full table re-scans on every query', isCorrect: false },
+      { id: 'a', text: 'A table made of thousands of small files, so each task spends more time opening files than reading rows', isCorrect: false },
+      { id: 'b', text: 'A few key values hold most of the rows, so the tasks for their partitions run long while the rest sit idle', isCorrect: true },
+      { id: 'c', text: 'More partitions than executor cores, so tasks wait in a queue and run in several waves instead of at once', isCorrect: false },
+      { id: 'd', text: 'Executors with different amounts of memory, so the smaller ones spill to disk and fall behind the rest', isCorrect: false },
     ],
-    explanation: 'Data skew occurs when some partition keys have far more data than others (e.g., 99% of orders from one country). The tasks processing large partitions become bottlenecks while other executors sit idle. Solutions include salting keys, broadcast joins, or AQE skew join optimization.',
+    explanation: 'Skew means rows are spread unevenly over partitions: if one country has 99% of the orders, the task that gets that country after a shuffle does almost all the work, and the stage waits for it while the other cores sit idle (the Spark UI shows one task far slower than the median). Fixes include AQE skew join handling (on by default), a broadcast join when the other side is small, or salting the hot key. Many small files is a separate problem that OPTIMIZE fixes, running tasks in several waves is normal scheduling, and the executors of a cluster all get the same memory.',
     tags: ['skew', 'partitioning', 'performance'],
     concepts: ['ps-aqe', 'ps-partitioning', 'ps-cache-persist'],
   },
@@ -2305,14 +2323,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is the operational difference between cache() and persist() in PySpark?',
+    question: 'What is the difference between cache() and persist() on a DataFrame?',
     options: [
-      { id: 'a', text: 'cache() stores data in memory only, whereas persist() is a deprecated API replaced by Delta Lake caching', isCorrect: false },
-      { id: 'b', text: 'cache() uses default MEMORY_AND_DISK storage, whereas persist() accepts custom StorageLevel configurations', isCorrect: true },
-      { id: 'c', text: 'cache() forces immediate eager execution, whereas persist() delays evaluation until the SparkSession closes', isCorrect: false },
-      { id: 'd', text: 'cache() applies exclusively to SQL views, whereas persist() applies only to streaming DataFrame objects', isCorrect: false },
+      { id: 'a', text: 'cache() keeps the rows in memory only, while persist() always writes them to disk so they survive a restart', isCorrect: false },
+      { id: 'b', text: 'cache() stores the rows as soon as it is called, while persist() waits for the first action to store them', isCorrect: false },
+      { id: 'c', text: 'cache() always uses the default storage level, while persist() can take a StorageLevel such as DISK_ONLY', isCorrect: true },
+      { id: 'd', text: 'cache() keeps the rows for this session, while persist() saves them as a table other notebooks can read', isCorrect: false },
     ],
-    explanation: 'cache() is shorthand for persist(StorageLevel.MEMORY_AND_DISK). persist() accepts a StorageLevel parameter for more control: MEMORY_ONLY (fast but may spill), MEMORY_AND_DISK (spills to disk), DISK_ONLY, etc.',
+    explanation: 'For a DataFrame, cache() is persist() at the default level, MEMORY_AND_DISK_DESER in PySpark 4 (memory first, spilling to disk), and persist() with no argument does the same; persist(StorageLevel.DISK_ONLY) or another level picks where the rows go. Both are lazy: nothing is stored until an action computes the partitions. Neither outlives the cluster or is visible to other sessions; to share a result, write it to a table.',
     tags: ['cache', 'persist', 'storage-level', 'performance'],
     concepts: ['ps-cache-persist'],
   },
@@ -2323,18 +2341,39 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Cache DataFrame "df" in memory, trigger materialization with count(), then write two separate aggregations: "avg_result" taking the average salary by department, and "max_result" taking the maximum salary by department.',
+    question: 'DataFrame "df" (columns: emp_id, dept, salary) feeds two aggregations. Cache df and run count() so the cache is filled, then compute "avg_result", the average salary per dept, and "max_result", the highest salary per dept, both from the cached data.',
     starterCode: `# Cache DataFrame, trigger materialization, and compute aggregations\n`,
+    requires: [/\.(cache|persist)\(/, /\.count\(\)/, /groupBy\(\s*["']dept["']/, /\b(avg|mean)\(/, /\bmax\(/, 'avg_result', 'max_result'],
     testCases: [
-      {
-        input: 'df to cache',
-        expectedOutput: 'df.cache() and df.count()',
-        description: 'Should cache and materialize',
-      },
+      { input: 'df (emp_id, dept, salary)', expectedOutput: 'df.cache(), df.count(), then groupBy("dept") avg and max of salary', description: 'Should cache, fill the cache and aggregate' },
     ],
-    solution: `df_cached = df.cache()\ndf_cached.count()\n\navg_result = df_cached.groupBy("dept").avg("salary")\nmax_result = df_cached.groupBy("dept").max("salary")\n# OR\ndf.cache()\ndf.count()\n\navg_result = df.groupBy("dept").avg("salary")\nmax_result = df.groupBy("dept").max("salary")`,
-    explanation: 'cache() is lazy — it only marks the DataFrame for caching. You need an action like count() to actually materialize and cache the data. After that, subsequent operations read from the cache instead of recomputing.',
-    hints: ['cache() is lazy — trigger with an action like count()', 'Reuse the cached reference for multiple operations'],
+    solution: `df_cached = df.cache()
+df_cached.count()
+
+avg_result = df_cached.groupBy("dept").avg("salary")
+max_result = df_cached.groupBy("dept").max("salary")
+# OR
+df.cache()
+df.count()
+
+avg_result = df.groupBy("dept").avg("salary")
+max_result = df.groupBy("dept").max("salary")
+# OR
+from pyspark.sql import functions as F
+
+df.cache()
+df.count()
+
+avg_result = df.groupBy("dept").agg(F.avg("salary"))
+max_result = df.groupBy("dept").agg(F.max("salary"))
+# OR
+df.cache()
+df.count()
+
+avg_result = df.groupBy("dept").mean("salary")
+max_result = df.groupBy("dept").max("salary")`,
+    explanation: 'cache() is lazy: it only marks df. count() is an action that computes every partition, so it fills the cache, and both aggregations then read the cached rows instead of recomputing df. groupBy("dept").avg("salary") and groupBy("dept").agg(F.avg("salary")) are the same aggregation. Call unpersist() once both results have been used.',
+    hints: ['cache() is lazy, so an action such as count() is what fills it', 'Group by dept, then take avg and max of salary'],
     tieredHints: {
       apiSignature: 'DataFrame.cache() -> DataFrame',
       skeleton: '____ = ____.____()\n____.____()\n\n____ = ____.____(____).____(____)\n____ = ____.____(____).____(____)',
@@ -2349,8 +2388,9 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Unpersist the cached DataFrame "df_cached" to free up executor memory resources.',
+    question: 'DataFrame "df_cached" was cached for two reports that have now run. Free the executor memory and disk it holds.',
     starterCode: `# Free cached memory\n`,
+    requires: [/df_cached\.unpersist\(/],
     testCases: [
       {
         input: 'cached DataFrame',
@@ -2358,8 +2398,12 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
         description: 'Should unpersist',
       },
     ],
-    solution: `df_cached.unpersist()\n# OR\ndf_cached.unpersist(blocking=True)`,
-    explanation: 'unpersist() removes the DataFrame from the cache and frees memory. Always unpersist when you no longer need the cached data to avoid memory pressure.',
+    solution: `df_cached.unpersist()
+# OR
+df_cached.unpersist(blocking=True)
+# OR
+df_cached.unpersist(True)`,
+    explanation: 'unpersist() drops the cached blocks so their memory and disk go back to the executors. By default it returns at once and the blocks are removed in the background; blocking=True waits until they are gone. A cached DataFrame holds that space until you unpersist it or the session ends.',
     hints: ['Use .unpersist() on the cached DataFrame'],
     tieredHints: {
       apiSignature: 'DataFrame.unpersist(blocking=False) -> DataFrame',
@@ -2392,22 +2436,23 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Write DataFrame "df" (columns: sale_id, product, amount, sale_date, year, month) to a Delta table at path "/data/sales", partitioned by "year" and "month" columns, using overwrite save mode.',
-    starterCode: `# Write partitioned Delta table\n`,
+    question: 'Write DataFrame "df" (columns: sale_id, product, amount, sale_date, year, month) to the Unity Catalog table "main.default.sales" as a Delta table partitioned by "year" and "month", replacing any data already there.',
+    starterCode: `# Write df to main.default.sales, partitioned by year and month
+`,
+    requires: [/partitionBy\s*(\(|=\s*\[)\s*["']year["']\s*,\s*["']month["']/, 'overwrite', 'main.default.sales', 'saveAsTable'],
     testCases: [
-      {
-        input: 'df with year and month columns',
-        expectedOutput: '.partitionBy("year", "month").format("delta")',
-        description: 'Should write partitioned by year and month',
-      },
+      { input: 'df with year and month columns', expectedOutput: '.partitionBy("year", "month").mode("overwrite").saveAsTable("main.default.sales")', description: 'Should write a partitioned table' },
     ],
-    solution: `df.write.format("delta").partitionBy("year", "month").mode("overwrite").save("/data/sales")\n# OR\ndf.write.partitionBy("year", "month").mode("overwrite").format("delta").save("/data/sales")`,
-    explanation: 'partitionBy("year", "month") creates a nested directory structure: /data/sales/year=2024/month=01/. Queries filtering on these columns skip irrelevant directories entirely (partition pruning). mode("overwrite") replaces existing data. Rule of thumb: only partition by columns with fewer than ~1000 distinct values.',
-    hints: ['partitionBy("year", "month") — pass column names as strings', 'mode("overwrite") replaces existing data, "append" adds to it', '.save(path) for path-based tables, .saveAsTable(name) for metastore tables'],
-    tieredHints: {
-      apiSignature: 'DataFrameWriter.partitionBy(*cols).mode(saveMode).save(path=None)',
-      skeleton: 'df.write.format("delta").____("year", "month").____("overwrite").____("/data/sales")',
-    },
+    solution: `df.write.partitionBy("year", "month").mode("overwrite").saveAsTable("main.default.sales")
+# OR
+df.write.format("delta").partitionBy("year", "month").mode("overwrite").saveAsTable("main.default.sales")
+# OR
+df.write.mode("overwrite").partitionBy("year", "month").saveAsTable("main.default.sales")
+# OR
+df.write.saveAsTable("main.default.sales", format="delta", mode="overwrite", partitionBy=["year", "month"])`,
+    explanation: `partitionBy("year", "month") writes each year and month into its own folder of files, so a query that filters on year or month reads only the matching folders (partition pruning). mode("overwrite") replaces the table's data, and saveAsTable writes a Delta table by default on Databricks, so format("delta") is optional. For new tables Databricks recommends liquid clustering over partitioning, and partitioning only tables of about a terabyte or more, on low-cardinality columns such as these.`,
+    hints: ['partitionBy takes the column names as strings', 'mode("overwrite") replaces the data, and saveAsTable(name) writes to a catalog table'],
+    tieredHints: { apiSignature: 'DataFrameWriter.partitionBy(*cols).mode(saveMode).saveAsTable(name)', skeleton: 'df.write.____("year", "month").____("overwrite").____("main.default.sales")' },
     tags: ['partitionBy', 'write', 'delta', 'performance'],
     concepts: ['ps-partitioning', 'ps-write-modes', 'delta-acid', 'ps-cache-persist'],
   },
@@ -2417,14 +2462,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'Why should custom Python UDFs (User-Defined Functions) be avoided in PySpark when built-in functions exist?',
+    question: 'Why should you prefer a built-in function to a Python UDF in PySpark when one exists?',
     options: [
-      { id: 'a', text: 'Python UDFs cannot process complex struct or array columns and throw runtime serialization exceptions', isCorrect: false },
-      { id: 'b', text: 'Python UDFs require row-by-row data serialization between JVM and Python processes, causing major overhead', isCorrect: true },
-      { id: 'c', text: 'Python UDFs bypass Spark execution plans and execute synchronously on single-node driver instances', isCorrect: false },
-      { id: 'd', text: 'Python UDFs are limited to single-threaded batch execution and cannot run on worker node clusters', isCorrect: false },
+      { id: 'a', text: 'Python UDFs cannot take struct or array columns, so they fail at run time on any nested data', isCorrect: false },
+      { id: 'b', text: 'Python UDFs run on the driver, so the whole column is collected there before the function runs', isCorrect: false },
+      { id: 'c', text: 'Python UDFs are compiled to JVM bytecode on every call, so each row pays a fresh compile cost', isCorrect: false },
+      { id: 'd', text: 'Each row goes from the JVM to a Python worker and back, and the optimizer cannot see inside the function', isCorrect: true },
     ],
-    explanation: 'Python UDFs require serialising each row from the JVM to Python and back, which is very slow. Always prefer built-in Spark SQL functions. If you must use a UDF, consider Pandas UDFs (vectorised UDFs) which process data in Arrow batches for much better performance.',
+    explanation: 'A Python UDF runs in Python worker processes on the executors: Spark serializes each row from the JVM to Python, calls your function once per row, and serializes the result back, and the optimizer treats the function as a black box, so it cannot push filters through it. Built-in functions in pyspark.sql.functions run inside the JVM. UDFs can take structs and arrays, they run on the executors rather than the driver, and nothing is compiled per call. If you need Python, a pandas UDF moves rows in Arrow batches and is much faster.',
     tags: ['udf', 'python', 'performance', 'optimization'],
     concepts: ['ps-udf-pandas-udf', 'ps-cache-persist', 'ps-execution-plans'],
   },
@@ -2434,14 +2479,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is the default value of spark.sql.shuffle.partitions in Spark, and how should it be configured for small datasets?',
+    question: 'What is the default of spark.sql.shuffle.partitions, and what should you do with it for a small dataset?',
     options: [
-      { id: 'a', text: 'Default is 200; reducing it for small datasets avoids the scheduling overhead of hundreds of tiny tasks', isCorrect: true },
-      { id: 'b', text: 'Default is 10; increasing it to 200 for small datasets ensures optimal multi-threaded parallel processing', isCorrect: false },
-      { id: 'c', text: 'Default is 1000; reducing it to 500 prevents executor nodes from running out of disk storage space', isCorrect: false },
-      { id: 'd', text: 'Default is 1; increasing it to match total CPU cores avoids single-threaded driver execution bottlenecks', isCorrect: false },
+      { id: 'a', text: 'It defaults to the number of executor cores, so it already fits small data and needs no change', isCorrect: false },
+      { id: 'b', text: 'It defaults to 200; raise it for small data, since more partitions always means more parallel work', isCorrect: false },
+      { id: 'c', text: 'It defaults to 200; lower it for small data, so a shuffle does not create hundreds of tiny tasks', isCorrect: true },
+      { id: 'd', text: 'It defaults to 200, but it only applies to joins, so a groupBy on small data is not affected by it', isCorrect: false },
     ],
-    explanation: 'spark.sql.shuffle.partitions defaults to 200. For small datasets, 200 partitions means 200 tiny tasks with more scheduling overhead than actual work. For very large datasets, you may need more. AQE can auto-coalesce small partitions if enabled.',
+    explanation: 'spark.sql.shuffle.partitions sets how many partitions a join or groupBy shuffles into, 200 by default. On a few megabytes that is 200 tiny tasks with more scheduling overhead than work, so lowering it (for example to 8) helps, while very large data may need more. AQE, on by default, also merges small shuffle partitions after a stage runs, and on Databricks the setting can be auto. The number of cores is spark.default.parallelism, used for RDDs, not for DataFrame shuffles.',
     tags: ['shuffle-partitions', 'configuration', 'performance'],
     concepts: ['ps-shuffle', 'ps-cache-persist'],
   },
@@ -2452,8 +2497,9 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Configure the SparkSession setting "spark.sql.shuffle.partitions" to 8 for processing a small dataset.',
+    question: 'Set the session setting "spark.sql.shuffle.partitions" to 8 before running joins and aggregations on a small dataset.',
     starterCode: `# Set shuffle partitions\n`,
+    requires: [/spark\.sql\.shuffle\.partitions/, /\b8\b/],
     testCases: [
       {
         input: 'spark session',
@@ -2461,8 +2507,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
         description: 'Should set shuffle partitions to 8',
       },
     ],
-    solution: `spark.conf.set("spark.sql.shuffle.partitions", 8)\n# OR\nspark.conf.set("spark.sql.shuffle.partitions", "8")`,
-    explanation: 'Reducing shuffle partitions for small datasets avoids the overhead of 200 tiny tasks. Set this before running operations that trigger shuffles (joins, groupBy, etc.).',
+    solution: `spark.conf.set("spark.sql.shuffle.partitions", 8)
+# OR
+spark.conf.set("spark.sql.shuffle.partitions", "8")
+# OR
+spark.sql("SET spark.sql.shuffle.partitions = 8")
+# OR
+spark.sql("SET spark.sql.shuffle.partitions=8")`,
+    explanation: 'spark.conf.set("spark.sql.shuffle.partitions", 8) changes the setting for this session, and the SQL statement SET spark.sql.shuffle.partitions = 8 does the same. It applies to shuffles that run after it, so set it before the joins and aggregations; on small data, 8 partitions avoid the overhead of 200 tiny tasks.',
     hints: ['Use spark.conf.set()', 'Property is spark.sql.shuffle.partitions'],
     tieredHints: {
       apiSignature: 'RuntimeConfig.set(key, value)',
@@ -2477,14 +2529,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'Which set of PySpark operations requires a wide transformation that shuffles data across worker nodes?',
+    question: 'Which set holds only wide transformations, the ones that shuffle rows across executors?',
     options: [
-      { id: 'a', text: 'Transformation functions such as select(), filter(), withColumn(), and drop()', isCorrect: false },
-      { id: 'b', text: 'State and inspection actions such as cache(), persist(), unpersist(), and show()', isCorrect: false },
-      { id: 'c', text: 'Aggregation and join operations such as join(), groupBy(), repartition(), and distinct()', isCorrect: true },
-      { id: 'd', text: 'Data ingestion and output operations such as read(), write(), load(), and save()', isCorrect: false },
+      { id: 'a', text: 'select(), filter(), withColumn() and coalesce()', isCorrect: false },
+      { id: 'b', text: 'groupBy(), orderBy(), filter() and distinct()', isCorrect: false },
+      { id: 'c', text: 'groupBy(), orderBy(), repartition() and distinct()', isCorrect: true },
+      { id: 'd', text: 'repartition(), distinct(), coalesce() and union()', isCorrect: false },
     ],
-    explanation: 'Shuffles move data across the network between executors. Wide transformations like join, groupBy, repartition, and distinct require data redistribution. Narrow transformations (select, filter, withColumn) operate within existing partitions without shuffling.',
+    explanation: 'groupBy, orderBy, repartition and distinct each need rows with the same key, or the whole sort order, brought together, so each adds a shuffle (an Exchange in explain()). filter, select and withColumn work inside each partition, coalesce merges partitions without a shuffle, and union just places the partitions of both inputs side by side. A join usually shuffles both sides too, unless one side is broadcast.',
     tags: ['shuffle', 'wide-narrow', 'transformations', 'performance'],
     concepts: ['ps-shuffle', 'ps-narrow-vs-wide', 'ps-actions-vs-transforms', 'ps-cache-persist'],
   },
@@ -2494,14 +2546,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What primary diagnostic capability does the Spark UI provide to data engineers during job execution?',
+    question: 'What does the Spark UI show that helps you find why a job is slow?',
     options: [
-      { id: 'a', text: 'Interactive code editing environment for building and testing complex PySpark transformation pipelines', isCorrect: false },
-      { id: 'b', text: 'Visual monitoring of job stages, task durations, shuffle metrics, and physical execution plans', isCorrect: true },
-      { id: 'c', text: 'Web management console for provisioning cloud infrastructure nodes and configuring workspace user permissions', isCorrect: false },
-      { id: 'd', text: 'Automated query optimizer that rewrites slow PySpark DataFrame code into optimized native SQL queries', isCorrect: false },
+      { id: 'a', text: 'Jobs, stages and tasks with their durations, shuffle read and write sizes, spill, and SQL query plans', isCorrect: true },
+      { id: 'b', text: 'The version history of each Delta table the job wrote, with the operation and user behind each commit', isCorrect: false },
+      { id: 'c', text: 'The DBU cost of every job run on the workspace, broken down by cluster and by the user who ran it', isCorrect: false },
+      { id: 'd', text: 'Rewrites of slow PySpark code that the optimizer suggests from the plans it has already executed', isCorrect: false },
     ],
-    explanation: 'The Spark UI (available on port 4040 during execution) shows job/stage/task breakdown, DAG visualisation, shuffle metrics, storage info, and SQL query plans. It\'s essential for diagnosing slow queries, data skew, and spilling.',
+    explanation: 'The Spark UI (on Databricks, from the cluster or the job run; port 4040 on a local Spark) breaks each job into stages and tasks: one task far slower than the rest points to skew, a large shuffle or spill points to too few partitions or too little memory, and the SQL tab shows the plan with its joins and exchanges. Table history is DESCRIBE HISTORY, costs are in the billing system tables, and the UI only shows what ran; it does not rewrite code. Serverless compute has no Spark UI; its query profile shows similar detail.',
     tags: ['spark-ui', 'monitoring', 'debugging', 'performance'],
     concepts: ['ps-execution-plans', 'ps-cache-persist'],
   },
@@ -2512,8 +2564,9 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Print the physical execution plan for a join between DataFrames "orders_df" and "customers_df" on column "customer_id".',
+    question: 'Print the execution plan Spark will use to join DataFrames "orders_df" and "customers_df" on "customer_id", so you can see which join strategy it picked.',
     starterCode: `# Print physical execution plan for joined DataFrames\n`,
+    requires: [/\.explain\(/, /\.join\(/, 'customer_id'],
     testCases: [
       {
         input: 'two DataFrames',
@@ -2521,8 +2574,19 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
         description: 'Should show execution plan',
       },
     ],
-    solution: `orders_df.join(customers_df, "customer_id").explain()\n# OR\norders_df.join(customers_df, on="customer_id").explain()\n# OR\njoined_df = orders_df.join(customers_df, "customer_id")\njoined_df.explain()`,
-    explanation: 'explain() prints the physical execution plan showing how Spark will execute the query. Use explain(True) for extended info (logical + physical plans). Look for BroadcastHashJoin vs SortMergeJoin to understand join strategies.',
+    solution: `orders_df.join(customers_df, "customer_id").explain()
+# OR
+orders_df.join(customers_df, on="customer_id").explain()
+# OR
+joined_df = orders_df.join(customers_df, "customer_id")
+joined_df.explain()
+# OR
+orders_df.join(customers_df, "customer_id").explain("formatted")
+# OR
+orders_df.join(customers_df, "customer_id").explain(mode="formatted")
+# OR
+orders_df.join(customers_df, "customer_id").explain(True)`,
+    explanation: 'explain() prints the physical plan without running the query; look for BroadcastHashJoin or SortMergeJoin to see the join strategy, and Exchange for each shuffle. explain(True) adds the logical plans, and explain("formatted") lists each operator with its details. explain() prints and returns None, so call it on the joined DataFrame rather than wrapping it in print().',
     hints: ['Chain .explain() after your transformation', 'explain(True) shows more detail'],
     tieredHints: {
       apiSignature: 'DataFrame.explain(extended=None) -> None',
@@ -2537,14 +2601,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What is predicate pushdown in Spark data source reading?',
+    question: 'What is predicate pushdown when Spark reads a table?',
     options: [
-      { id: 'a', text: 'An optimization that pushes filter conditions to the underlying file format to skip reading non-matching data', isCorrect: true },
-      { id: 'b', text: 'A data pipeline pattern that defers WHERE clause evaluation until final aggregation steps complete', isCorrect: false },
-      { id: 'c', text: 'A memory management strategy that moves filtered DataFrame partitions from executor RAM to disk storage', isCorrect: false },
-      { id: 'd', text: 'A query execution mode that pushes all filtering operations to be processed on the single driver node', isCorrect: false },
+      { id: 'a', text: 'Spark moves each filter to the end of the plan, so it runs once on the final rows instead of on every input', isCorrect: false },
+      { id: 'b', text: 'Spark hands the filter to the file reader, which skips files and row groups whose min/max stats cannot match', isCorrect: true },
+      { id: 'c', text: 'Spark caches the rows a filter returns, so the next query with the same WHERE clause skips the read', isCorrect: false },
+      { id: 'd', text: `Spark skips whole partition directories, so it only works for filters on the table's partition columns`, isCorrect: false },
     ],
-    explanation: 'Predicate pushdown pushes WHERE filters down to the storage layer (Parquet, Delta). Instead of reading all data and filtering in Spark, the file reader skips row groups/files that don\'t match. This dramatically reduces I/O.',
+    explanation: 'With predicate pushdown, a filter such as WHERE amount > 100 is passed to the Parquet or Delta reader, which uses the min and max values kept for each file (Delta) and each row group (Parquet) to skip data that cannot match, so less is read. It works on any column with statistics, not only partition columns; skipping whole directories on a partition column is partition pruning, a related optimization. Spark moves filters earlier in a plan, not later, and caches rows only when you ask it to.',
     tags: ['predicate-pushdown', 'optimization', 'io', 'performance'],
     concepts: ['ps-execution-plans', 'ps-io-csv', 'ps-cache-persist'],
   },
@@ -2554,14 +2618,14 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.SPARK_OPTIMIZATION,
-    question: 'What performance and operational advantages does Delta Lake format offer over plain Parquet files?',
+    question: 'What does Delta Lake add on top of plain Parquet files that helps performance and reliability?',
     options: [
-      { id: 'a', text: 'Delta files use proprietary binary compression that reduces storage disk footprint by over 50 percent', isCorrect: false },
-      { id: 'b', text: 'Delta adds ACID transactions, data skipping, schema enforcement, and compaction via OPTIMIZE and Z-Ordering', isCorrect: true },
-      { id: 'c', text: 'Delta eliminates cloud object storage costs by storing table data directly in executor JVM heap memory', isCorrect: false },
-      { id: 'd', text: 'Delta forces all DataFrame queries to execute synchronously on single-node driver instances', isCorrect: false },
+      { id: 'a', text: 'A transaction log over the Parquet files: ACID commits, schema enforcement, file stats for data skipping, OPTIMIZE', isCorrect: true },
+      { id: 'b', text: 'Its own columnar file format that replaces Parquet and compresses tables to under half their size', isCorrect: false },
+      { id: 'c', text: 'A B-tree index on every column, updated on each write, so a filter never has to scan a whole file', isCorrect: false },
+      { id: 'd', text: 'A copy of every table held in cluster memory, so queries read rows from RAM instead of cloud storage', isCorrect: false },
     ],
-    explanation: 'Delta Lake builds on Parquet but adds a transaction log, enabling ACID transactions, time travel, schema evolution, and data skipping via file-level statistics. OPTIMIZE compacts small files and ZORDER co-locates data for faster queries.',
+    explanation: 'A Delta table is Parquet data files plus a _delta_log transaction log. The log makes each write an atomic commit (ACID), enforces the table schema, keeps versions for time travel, and stores min and max statistics per file so queries skip files that cannot match (data skipping). OPTIMIZE compacts small files, and liquid clustering (or the older Z-ORDER) keeps related rows in the same files. The data stays in Parquet in cloud storage: Delta adds no other file format and no per-column index, and it does not keep tables in memory.',
     tags: ['delta', 'parquet', 'comparison', 'performance'],
     concepts: ['delta-acid', 'ps-io-parquet', 'ps-cache-persist'],
   },

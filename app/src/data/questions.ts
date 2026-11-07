@@ -591,14 +591,14 @@ ORDER BY ____ DESC`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
-    question: 'Which PySpark DataFrame transformation forces a data shuffle across cluster worker nodes?',
+    question: 'DataFrame df (columns: country, amount) is spread over 8 partitions. Which line makes Spark shuffle rows between executors?',
     options: [
-      { id: 'a', text: 'select() — projects specified columns without altering partition boundaries', isCorrect: false },
-      { id: 'b', text: 'filter() — evaluates boolean row predicates within local partitions', isCorrect: false },
-      { id: 'c', text: 'groupBy() — redistributes row keys across nodes to aggregate partitions', isCorrect: true },
-      { id: 'd', text: 'withColumn() — computes new column expressions within existing partitions', isCorrect: false },
+      { id: 'a', text: 'df.filter(df.amount > 100).select("country")', isCorrect: false },
+      { id: 'b', text: 'df.withColumn("tax", df.amount * 0.2)', isCorrect: false },
+      { id: 'c', text: 'df.groupBy("country").sum("amount")', isCorrect: true },
+      { id: 'd', text: 'df.select("country", "amount").coalesce(2)', isCorrect: false },
     ],
-    explanation: 'groupBy() triggers a shuffle because data needs to be redistributed across partitions to group by keys. select(), filter(), and withColumn() are narrow transformations.',
+    explanation: 'groupBy("country") needs every row of a country in one place, so Spark shuffles rows across the network into new partitions before it finishes the sums (explain() shows an Exchange). filter, select and withColumn work on each partition where it is, and coalesce(2) merges the 8 partitions without a shuffle, which is why it can only lower the count.',
     tags: ['shuffle', 'performance', 'partitioning'],
     concepts: ['ps-shuffle', 'ps-cache-persist', 'ps-partitioning'],
   },
@@ -608,17 +608,30 @@ ORDER BY ____ DESC`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Using DataFrame "df" (columns: id, name, department, salary), write a PySpark statement to add a "rank" column that ranks employees by salary descending within each department.',
+    question: 'Using DataFrame "df" (columns: id, emp_name, department, salary), add a "rank" column that ranks employees by salary, highest first, within each department. Employees with the same salary share a rank and the next rank is skipped (1, 1, 3). Store the result in "result".',
     starterCode: `# Create rank column partitioned by department and ordered by salary desc\n`,
+    requires: [/(?<![\w])rank\(\)\s*\.over\(/, /partitionBy\(\s*((F\.)?col\()?["']department["']/, /desc/, /withColumn\(\s*["']rank["']/],
     testCases: [
-      {
-        input: 'df with department and salary columns',
-        expectedOutput: 'windowSpec = Window.partitionBy("department").orderBy(desc("salary")) result = df.withColumn("rank", rank().over(windowSpec))',
-        description: 'Should rank by salary within department',
-      },
+      { input: 'df with department and salary columns', expectedOutput: 'result = df.withColumn("rank", rank().over(Window.partitionBy("department").orderBy(desc("salary"))))', description: 'Should rank by salary within department' },
     ],
-    solution: `from pyspark.sql.window import Window\nfrom pyspark.sql.functions import rank, desc\n\nwindowSpec = Window.partitionBy("department").orderBy(desc("salary"))\nresult = df.withColumn("rank", rank().over(windowSpec))\n# OR\nfrom pyspark.sql.window import Window\nfrom pyspark.sql.functions import rank, col\n\nwindowSpec = Window.partitionBy("department").orderBy(col("salary").desc())\nresult = df.withColumn("rank", rank().over(windowSpec))`,
-    explanation: 'Window functions operate on a group of rows and return a value for each row. partitionBy() defines the partition, orderBy() defines the order within each partition.',
+    solution: `from pyspark.sql.window import Window
+from pyspark.sql.functions import rank, desc
+
+windowSpec = Window.partitionBy("department").orderBy(desc("salary"))
+result = df.withColumn("rank", rank().over(windowSpec))
+# OR
+from pyspark.sql.window import Window
+from pyspark.sql.functions import rank, col
+
+windowSpec = Window.partitionBy("department").orderBy(col("salary").desc())
+result = df.withColumn("rank", rank().over(windowSpec))
+# OR
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+w = Window.partitionBy("department").orderBy(F.desc("salary"))
+result = df.withColumn("rank", F.rank().over(w))`,
+    explanation: 'Window.partitionBy("department") restarts the ranking in each department, and orderBy(desc("salary")) puts the highest salary first. rank() gives tied rows the same rank and skips the next ones (1, 1, 3); dense_rank() would give 1, 1, 2 and row_number() 1, 2, 3. A window keeps every row and adds a value to each, unlike groupBy.',
     tieredHints: {
       apiSignature: 'rank().over(windowSpec: WindowSpec) -> Column',
       skeleton: `from pyspark.sql.window import Window
@@ -634,11 +647,13 @@ result = ____.____("____", ____().____(windowSpec))`,
   {
     id: 'ps-advanced-3',
     type: QuestionType.CODING,
-    difficulty: Difficulty.ADVANCED,
+    difficulty: Difficulty.BEGINNER,
     topic: Topic.SPARK_OPTIMIZATION,
     language: CodeLanguage.PYTHON,
-    question: 'Persist DataFrame "df" in memory using PySpark DataFrame caching so it can be efficiently reused across multiple actions.',
-    starterCode: `# Cache DataFrame df for reuse\n`,
+    question: 'DataFrame "df" is read by several actions later in the notebook. Mark df to be cached, so the first action stores its rows and the later actions reuse them instead of recomputing df.',
+    starterCode: `# Mark df to be cached for reuse
+`,
+    requires: [/\.(cache|persist)\(/],
     testCases: [
       {
         input: 'df DataFrame',
@@ -646,15 +661,26 @@ result = ____.____("____", ____().____(windowSpec))`,
         description: 'Should cache the DataFrame',
       },
     ],
-    solution: `df_cached = df.cache()\n# OR\ndf.cache()\n# OR\ndf_cached = df.persist()\n# OR\ndf.persist()`,
-    explanation: 'cache() stores the DataFrame in memory for faster access on repeated operations. persist() allows more control over storage levels.',
+    solution: `df.cache()
+# OR
+df_cached = df.cache()
+# OR
+df = df.cache()
+# OR
+df.persist()
+# OR
+df_cached = df.persist()
+# OR
+from pyspark import StorageLevel
+
+df.persist(StorageLevel.MEMORY_AND_DISK)`,
+    explanation: 'cache() marks df to be kept at the default storage level, memory first and spilling to disk (MEMORY_AND_DISK_DESER for a DataFrame in PySpark 4), and persist() with no argument does the same. Nothing is stored yet: the first action that computes every partition, such as count(), fills the cache, and later actions read it. persist(level) picks another level, such as StorageLevel.DISK_ONLY.',
     tieredHints: {
       apiSignature: 'DataFrame.cache() -> DataFrame',
-      skeleton: `-- ____ DataFrame for reuse
-df_cached = df.____()
--- ____`,
+      skeleton: `# mark ____ to be cached for the later actions
+____ = ____.____()`,
     },
-    hints: ['Use cache() method', 'cache() is an alias for persist(StorageLevel.MEMORY_ONLY)'],
+    hints: ['One method call on df marks it for caching', 'cache() uses the default storage level, memory and disk; persist() takes a StorageLevel and with none uses the same default'],
     tags: ['caching', 'performance', 'optimization'],
     concepts: ['ps-cache-persist', 'ps-execution-plans'],
   },
@@ -664,39 +690,58 @@ df_cached = df.____()
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Join streaming DataFrame "impressions_df" (columns: ad_id, impression_time) with streaming DataFrame "clicks_df" (columns: ad_id, click_time) where click_time occurs within 1 hour after impression_time. Apply a 2 hour watermark on both streams.',
-    starterCode: `# Perform stream-stream join with watermarks\n`,
+    question: 'Streaming DataFrames "impressions_df" (columns: ad_id, impression_time) and "clicks_df" (columns: ad_id, click_time) both keep growing. Build "result", a left outer join that keeps every impression and adds its click when one arrives from impression_time up to 1 hour after it, with NULL click columns otherwise. Give each side a 2-hour watermark on its time column, and alias the sides "impressions" and "clicks" so the condition can tell the two ad_id columns apart.',
+    starterCode: `from pyspark.sql.functions import expr
+
+# Watermark and alias both streams, then left outer join them on ad_id and the 1-hour window
+`,
+    requires: ['withWatermark', /alias\(\s*["']impressions["']/, /alias\(\s*["']clicks["']/, /interval\s+1\s+hour/i, /["'](left|left_outer|leftouter)["']/i],
     testCases: [
-      {
-        input: 'impressions_df and clicks_df streaming DataFrames',
-        expectedOutput: 'withWatermark("impression_time", "2 hours") withWatermark("click_time", "2 hours") join with expr ad_id match and click_time between impression_time and impression_time + interval 1 hour',
-        description: 'Should join streams with watermarks and time range condition',
-      },
+      { input: 'impressions_df and clicks_df streaming DataFrames', expectedOutput: 'both watermarked and aliased, joined with ad_id and the 1-hour condition, how "left_outer"', description: 'Should left outer join the streams with watermarks and a time bound' },
     ],
-    solution: `from pyspark.sql.functions import expr\n\nimpressions = impressions_df.withWatermark("impression_time", "2 hours")\nclicks = clicks_df.withWatermark("click_time", "2 hours")\n\nresult = impressions.join(\n    clicks,\n    expr("""\n        impressions.ad_id = clicks.ad_id AND\n        click_time >= impression_time AND\n        click_time <= impression_time + interval 1 hour\n    """),\n    "inner"\n)\n# OR\nfrom pyspark.sql.functions import expr\n\nimpressions = impressions_df.withWatermark("impression_time", "2 hours")\nclicks = clicks_df.withWatermark("click_time", "2 hours")\n\nresult = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + INTERVAL 1 HOUR"), "inner")`,
-    explanation: 'Stream-stream joins require watermarks on both sides and a time range condition so Spark knows how long to buffer state. The watermark tells Spark when data is "too late" to matter, and the interval condition bounds how far apart matching events can be.',
-    tieredHints: {
-      apiSignature: 'DataFrame.withWatermark(timeCol, delay).join(other, expr_condition, how)',
-      skeleton: `from pyspark.sql.functions import expr
+    solution: `from pyspark.sql.functions import expr
 
-impressions = impressions_df.____("____", "2 hours")
-clicks = clicks_df.____("____", "2 hours")
+impressions = impressions_df.withWatermark("impression_time", "2 hours").alias("impressions")
+clicks = clicks_df.withWatermark("click_time", "2 hours").alias("clicks")
 
-result = impressions.____(
+result = impressions.join(
     clicks,
-    ____("""
+    expr("""
         impressions.ad_id = clicks.ad_id AND
         click_time >= impression_time AND
         click_time <= impression_time + interval 1 hour
     """),
+    "left_outer"
+)
+# OR
+from pyspark.sql.functions import expr
+
+impressions = impressions_df.withWatermark("impression_time", "2 hours").alias("impressions")
+clicks = clicks_df.withWatermark("click_time", "2 hours").alias("clicks")
+
+result = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time >= impression_time AND click_time <= impression_time + INTERVAL 1 HOUR"), "left")
+# OR
+from pyspark.sql.functions import expr
+
+impressions = impressions_df.alias("impressions").withWatermark("impression_time", "2 hours")
+clicks = clicks_df.alias("clicks").withWatermark("click_time", "2 hours")
+
+result = impressions.join(clicks, expr("impressions.ad_id = clicks.ad_id AND click_time BETWEEN impression_time AND impression_time + INTERVAL 1 HOUR"), "leftouter")`,
+    explanation: 'A left outer stream-stream join has to decide when an impression can no longer get a click, so it can emit it with NULL click columns. Spark refuses the query unless clicks, the nullable side, has a watermark and the condition bounds click_time; and without the watermark on impressions the query runs but never emits the NULL rows, because an impression is never known to be finished. So an unmatched impression appears only after the watermark has passed its 1-hour window, not at once. The aliases matter too: a DataFrame has no name of its own, so without .alias("impressions") the condition cannot resolve impressions.ad_id and Spark fails with UNRESOLVED_COLUMN.',
+    tieredHints: {
+      apiSignature: 'DataFrame.withWatermark(timeCol, delay).join(other, expr_condition, how)',
+      skeleton: `from pyspark.sql.functions import expr
+
+impressions = impressions_df.____("impression_time", "2 hours").____("impressions")
+clicks = clicks_df.____("click_time", "2 hours").____("clicks")
+
+result = impressions.join(
+    clicks,
+    expr("impressions.ad_id = clicks.ad_id AND ____"),
     "____"
 )`,
     },
-    hints: [
-      'Use withWatermark() on both DataFrames before joining',
-      'The join condition needs both the key match (ad_id) and a time range',
-      'Use expr() with interval syntax to express the time bound',
-    ],
+    hints: ['Watermark each stream on its own time column, then alias it', 'The condition needs the ad_id match and both ends of the 1-hour window', 'The third argument of join() picks the join type'],
     tags: ['streaming', 'join', 'watermark', 'structured-streaming'],
     concepts: ['stream-readstream-writestream', 'sql-joins-inner-outer', 'stream-watermarks'],
   },

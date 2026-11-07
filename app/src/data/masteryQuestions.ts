@@ -728,26 +728,60 @@ SELECT * FROM ____ WHERE ____ > 5000`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Create a Python UDF named "reverse_string" that reverses a string input, and use it to add a "reversed_name" column to DataFrame "df" (columns: id, name).',
+    question: 'DataFrame "df" has columns id and title. Create a Python UDF named "reverse_string" that returns its string input reversed (a NULL title stays NULL), use it to add a "reversed_title" column, and store the result in "result".',
     starterCode: `# Create and apply reverse_string UDF\n`,
+    requires: ['udf', /\[::-1\]|reversed\(/, /withColumn\(\s*["']reversed_title["']/, /reverse_string\(/],
     testCases: [
-      {
-        input: 'df with name column',
-        expectedOutput: 'udf(lambda, StringType) or @udf decorator',
-        description: 'Should create and apply UDF',
-      },
+      { input: 'df with title column', expectedOutput: 'reverse_string UDF applied as reversed_title', description: 'Should create and apply the UDF' },
     ],
-    solution: `from pyspark.sql.functions import udf\nfrom pyspark.sql.types import StringType\n\nreverse_string = udf(lambda s: s[::-1] if s else None, StringType())\nresult = df.withColumn("reversed_name", reverse_string(df.name))\n# OR\nfrom pyspark.sql.functions import udf, col\nfrom pyspark.sql.types import StringType\n\n@udf(returnType=StringType())\ndef reverse_string(s):\n    return s[::-1] if s else None\n\nresult = df.withColumn("reversed_name", reverse_string(col("name")))`,
-    explanation: 'udf(function, return_type) creates a User Defined Function. The function is serialised and sent to executors. Always handle None/null values in your UDF. UDFs are slower than built-in functions due to JVM-Python serialisation.',
+    solution: `from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+reverse_string = udf(lambda s: s[::-1] if s is not None else None, StringType())
+result = df.withColumn("reversed_title", reverse_string(df.title))
+# OR
+from pyspark.sql.functions import udf, col
+from pyspark.sql.types import StringType
+
+@udf(returnType=StringType())
+def reverse_string(s):
+    return s[::-1] if s is not None else None
+
+result = df.withColumn("reversed_title", reverse_string(col("title")))
+# OR
+from pyspark.sql.functions import udf
+
+@udf("string")
+def reverse_string(s):
+    return None if s is None else s[::-1]
+
+result = df.withColumn("reversed_title", reverse_string("title"))
+# OR
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+reverse_string = udf(lambda s: s[::-1] if s else None, StringType())
+result = df.withColumn("reversed_title", reverse_string("title"))
+# OR
+from pyspark.sql.functions import udf
+
+@udf("string")
+def reverse_string(s):
+    if s is None:
+        return None
+    return s[::-1]
+
+result = df.withColumn("reversed_title", reverse_string(df.title))`,
+    explanation: 'udf(f, returnType) or the @udf(returnType) decorator wraps a Python function so it can be called on a column like a built-in. Spark passes a NULL as None, so check for None first, or s[::-1] raises a TypeError on that row and fails the task. A Python UDF runs row by row in a Python worker; the built-in reverse("title") from pyspark.sql.functions does this job without one and is much faster, so in real code prefer it.',
     tieredHints: {
       apiSignature: 'udf(f: Callable, returnType: DataType = StringType()) -> UserDefinedFunction',
       skeleton: `from pyspark.sql.functions import ____
 from pyspark.sql.types import ____
 
-reverse_string = ____(lambda s: ____[::-1] if ____ else ____, ____())
-result = ____.____("____", ____(____.____))`,
+reverse_string = ____(lambda s: ____ if s is not None else None, ____())
+result = df.____("reversed_title", ____(____))`,
     },
-    hints: ['Use udf(function, return_type)', 'Always handle None values', 'Apply with df.withColumn()'],
+    hints: ['Use udf(function, return_type) or the @udf decorator', 'A NULL arrives as None, so check for it before slicing', 'Apply it with df.withColumn()'],
     tags: ['udf', 'python', 'custom-function'],
     concepts: ['ps-udf-pandas-udf'],
   },
@@ -758,25 +792,53 @@ result = ____.____("____", ____(____.____))`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Register a Python function "classify_amount" as a SQL UDF returning "High" for amounts > 1000 and "Low" otherwise, then execute a SQL query on table "transactions" (columns: id, amount) returning id, amount, and the calculated "category" column.',
+    question: 'Table "transactions" has columns id and amount, and every amount is set (no NULLs). Register a Python function as the SQL function "classify_amount", returning "High" when amount is over 1000 and "Low" otherwise. Then run a SQL query that returns id, amount and classify_amount(amount) as "category", and store its result in "result".',
     starterCode: `# Register UDF for SQL use\n`,
+    requires: [/spark\.udf\.register\(\s*["']classify_amount["']/, /spark\.sql\(/, /classify_amount\(\s*amount\s*\)\s+(AS\s+)?category/i, />\s*1000/],
     testCases: [
-      {
-        input: 'transactions table',
-        expectedOutput: 'spark.udf.register() and spark.sql()',
-        description: 'Should register UDF for SQL',
-      },
+      { input: 'transactions table', expectedOutput: 'spark.udf.register("classify_amount", ...) and spark.sql(...)', description: 'Should register the UDF and call it from SQL' },
     ],
-    solution: `def classify_amount(amount):\n    return "High" if amount and amount > 1000 else "Low"\n\nspark.udf.register("classify_amount", classify_amount, StringType())\n\nresult = spark.sql("SELECT id, amount, classify_amount(amount) as category FROM transactions")\n# OR\nfrom pyspark.sql.types import StringType\n\nspark.udf.register("classify_amount", lambda amount: "High" if amount and amount > 1000 else "Low", StringType())\n\nresult = spark.sql("SELECT id, amount, classify_amount(amount) AS category FROM transactions")`,
-    explanation: 'spark.udf.register(name, function, return_type) registers a UDF for use in SQL queries. The registered name can then be called like a built-in function in spark.sql() statements.',
+    solution: `from pyspark.sql.types import StringType
+
+def classify_amount(amount):
+    return "High" if amount > 1000 else "Low"
+
+spark.udf.register("classify_amount", classify_amount, StringType())
+
+result = spark.sql("SELECT id, amount, classify_amount(amount) AS category FROM transactions")
+# OR
+from pyspark.sql.types import StringType
+
+spark.udf.register("classify_amount", lambda amount: "High" if amount > 1000 else "Low", StringType())
+
+result = spark.sql("SELECT id, amount, classify_amount(amount) AS category FROM transactions")
+# OR
+def classify_amount(amount):
+    return "High" if amount > 1000 else "Low"
+
+spark.udf.register("classify_amount", classify_amount, "string")
+
+result = spark.sql("SELECT id, amount, classify_amount(amount) AS category FROM transactions")
+# OR
+def classify_amount(amount):
+    return "High" if amount > 1000 else "Low"
+
+spark.udf.register("classify_amount", classify_amount)
+
+result = spark.sql("SELECT id, amount, classify_amount(amount) AS category FROM transactions")
+# OR
+spark.udf.register("classify_amount", lambda amount: "High" if amount > 1000 else "Low")
+
+result = spark.sql("SELECT id, amount, classify_amount(amount) AS category FROM transactions")`,
+    explanation: 'spark.udf.register(name, f, returnType) makes f callable by that name in SQL for this session; the return type defaults to string, so StringType() is optional here. The SQL calls the registered name, which need not match the Python variable. To store a function in Unity Catalog so other users and sessions can call it, use CREATE FUNCTION instead.',
     tieredHints: {
       apiSignature: 'UDFRegistration.register(name: str, f: Callable, returnType: DataType = StringType()) -> UserDefinedFunction',
       skeleton: `def classify_amount(amount):
-    return "High" if ____ and ____ > 1000 else "Low"
+    return "High" if ____ else "Low"
 
-____.____.____("____", ____, ____())
+____.____.____("____", classify_amount)
 
-result = ____.____("SELECT ____, ____, ____(____) as ____ FROM ____")`,
+result = ____.____("SELECT id, amount, ____ AS category FROM transactions")`,
     },
     hints: ['Use spark.udf.register(name, func, type)', 'Then use the name in SQL queries'],
     tags: ['udf', 'register', 'sql', 'custom-function'],
@@ -788,14 +850,14 @@ result = ____.____("SELECT ____, ____, ____(____) as ____ FROM ____")`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
-    question: 'What is a Pandas UDF (vectorised UDF) in PySpark, and why does it outperform standard Python UDFs?',
+    question: 'What is a pandas UDF, and why is it usually faster than a plain Python UDF?',
     options: [
-      { id: 'a', text: 'It executes calculations on physical GPU hardware accelerators rather than CPU cores', isCorrect: false },
-      { id: 'b', text: 'It completely bypasses null value checks and type assertions during runtime evaluation', isCorrect: false },
-      { id: 'c', text: 'It operates strictly on primitive integer and float types by casting all inputs to 64-bit arrays', isCorrect: false },
-      { id: 'd', text: 'It processes data in Apache Arrow batches as pandas Series, avoiding per-row serialization between JVM and Python', isCorrect: true },
+      { id: 'a', text: 'Spark translates its pandas code into Spark SQL expressions, so it runs in the JVM with no Python process', isCorrect: false },
+      { id: 'b', text: 'It runs on the driver, where pandas is installed, so no rows have to be sent over the network to executors', isCorrect: false },
+      { id: 'c', text: 'It runs on the GPUs when the cluster has them, and becomes a plain Python UDF on clusters without GPUs', isCorrect: false },
+      { id: 'd', text: 'It gets rows in Apache Arrow batches as pandas Series, so Python works on a whole batch instead of row by row', isCorrect: true },
     ],
-    explanation: 'Regular UDFs serialise one row at a time between JVM and Python. Pandas UDFs use Apache Arrow to transfer data in batches as pandas Series/DataFrames, which is 10-100x faster. Use @pandas_udf decorator.',
+    explanation: 'A pandas UDF, @pandas_udf("double") on a function from pd.Series to pd.Series, still runs in Python workers on the executors, but Spark sends it rows in Arrow batches (up to 10,000 rows by default) and calls it once per batch, so the per-row serialization and call overhead of a plain UDF is gone and pandas does vectorized work. It is not translated to JVM code, it does not run on the driver, and it needs no GPU.',
     tags: ['pandas-udf', 'vectorized', 'performance', 'arrow'],
     concepts: ['ps-udf-pandas-udf', 'ps-cache-persist'],
   },
@@ -806,17 +868,51 @@ result = ____.____("SELECT ____, ____, ____(____) as ____ FROM ____")`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.ADVANCED_TOPICS,
     language: CodeLanguage.PYTHON,
-    question: 'Define a Pandas UDF named "double_price" that multiplies a pandas Series input by 2, returning DoubleType, and apply it to create a "double_price" column in DataFrame "df" (columns: id, product, price).',
+    question: 'DataFrame "df" has columns id, product and price (a double). Define a pandas UDF named "double_price" that takes the prices as a pandas Series and returns them multiplied by 2 as doubles, then use it to add a "double_price" column and store the result in "result".',
     starterCode: `import pandas as pd\nfrom pyspark.sql.functions import pandas_udf\nfrom pyspark.sql.types import DoubleType\n\n# Define and apply Pandas UDF\n`,
+    requires: ['pandas_udf', /pd\.Series/, /\*\s*2\b|\b2\s*\*/, /withColumn\(\s*["']double_price["']/],
     testCases: [
-      {
-        input: 'df with price column',
-        expectedOutput: '@pandas_udf decorator with Series input/output',
-        description: 'Should create and apply Pandas UDF',
-      },
+      { input: 'df with price column', expectedOutput: '@pandas_udf returning a Series, applied as double_price', description: 'Should create and apply the pandas UDF' },
     ],
-    solution: `import pandas as pd\nfrom pyspark.sql.functions import pandas_udf\nfrom pyspark.sql.types import DoubleType\n\n@pandas_udf(DoubleType())\ndef double_price(price: pd.Series) -> pd.Series:\n    return price * 2\n\nresult = df.withColumn("double_price", double_price(df.price))\n# OR\nimport pandas as pd\nfrom pyspark.sql.functions import pandas_udf, col\nfrom pyspark.sql.types import DoubleType\n\n@pandas_udf(DoubleType())\ndef double_price(p: pd.Series) -> pd.Series:\n    return p * 2\n\nresult = df.withColumn("double_price", double_price(col("price")))`,
-    explanation: 'The @pandas_udf decorator creates a vectorised UDF. Input and output are pandas Series (for scalar UDFs). Operations on Series are vectorised and much faster than row-by-row processing.',
+    solution: `import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import DoubleType
+
+@pandas_udf(DoubleType())
+def double_price(price: pd.Series) -> pd.Series:
+    return price * 2
+
+result = df.withColumn("double_price", double_price(df.price))
+# OR
+import pandas as pd
+from pyspark.sql.functions import pandas_udf, col
+from pyspark.sql.types import DoubleType
+
+@pandas_udf(DoubleType())
+def double_price(p: pd.Series) -> pd.Series:
+    return p * 2
+
+result = df.withColumn("double_price", double_price(col("price")))
+# OR
+import pandas as pd
+from pyspark.sql.functions import pandas_udf
+
+@pandas_udf("double")
+def double_price(price: pd.Series) -> pd.Series:
+    return price * 2
+
+result = df.withColumn("double_price", double_price("price"))
+# OR
+import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import DoubleType
+
+@pandas_udf(returnType=DoubleType())
+def double_price(price: pd.Series) -> pd.Series:
+    return price * 2
+
+result = df.withColumn("double_price", double_price(df["price"]))`,
+    explanation: '@pandas_udf with a return type ("double" or DoubleType()) and pd.Series type hints makes a scalar pandas UDF: Spark passes the price column in Arrow batches as a Series, price * 2 doubles the whole batch in one vectorized step, and the returned Series must have the same length. The type hints are how Spark knows it is a Series-to-Series UDF. For this job the built-in df.price * 2 needs no UDF at all; the exercise shows the pattern for logic no built-in covers.',
     tieredHints: {
       apiSignature: 'pandas_udf(f: Callable, returnType: DataType) -> UserDefinedFunction',
       skeleton: `import pandas as pd
