@@ -1685,12 +1685,12 @@ print(region, rows)`,
     topic: Topic.DATA_GOVERNANCE,
     question: 'What is Unity Catalog in Databricks?',
     options: [
-      { id: 'a', text: 'A specialized Delta Lake table format optimized for ACID transactional writes', isCorrect: false },
-      { id: 'b', text: 'An interactive web-based notebook editor supporting multi-language kernels', isCorrect: false },
-      { id: 'c', text: 'A unified governance solution for data assets across workspaces in an account', isCorrect: true },
-      { id: 'd', text: 'A cluster infrastructure management service for automated cluster provisioning', isCorrect: false },
+      { id: 'a', text: 'The Hive metastore of one workspace under a new name, so each workspace still keeps its own tables and grants', isCorrect: false },
+      { id: 'b', text: 'A table format like Delta Lake that encrypts the files of each table so only users with a grant can open them', isCorrect: false },
+      { id: 'c', text: 'One governance layer for the account: access control, auditing, lineage and discovery across all workspaces', isCorrect: true },
+      { id: 'd', text: 'A search page for finding tables across workspaces, while who may read them is still set on each cluster', isCorrect: false },
     ],
-    explanation: 'Unity Catalog provides centralized access control, auditing, lineage, and data discovery across all Databricks workspaces in an account.',
+    explanation: 'Unity Catalog is the account-level governance layer: a metastore holds the catalogs, schemas, tables, views, volumes and functions for every workspace attached to it, and grants, the audit log, lineage and search all live there. The per-workspace Hive metastore it replaces kept tables and table ACLs separately in each workspace. It is not a file format (tables are still Delta or another format underneath), and who may read a table is set with GRANT on the table or its parents, not on clusters.',
     tags: ['unity-catalog', 'governance'],
     concepts: ['ucat-namespaces', 'ucat-grants'],
   },
@@ -1700,14 +1700,14 @@ print(region, rows)`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
-    question: 'What is the three-level namespace hierarchy used to reference objects in Unity Catalog?',
+    question: 'Unity Catalog names a table with three levels. In what order are they written?',
     options: [
-      { id: 'a', text: 'database.table.column (legacy metastore structure)', isCorrect: false },
-      { id: 'b', text: 'workspace.folder.notebook (workspace directory structure)', isCorrect: false },
-      { id: 'c', text: 'cluster.database.table (compute resource reference structure)', isCorrect: false },
-      { id: 'd', text: 'catalog.schema.table (e.g., prod.sales.orders object structure)', isCorrect: true },
+      { id: 'a', text: 'metastore.catalog.table', isCorrect: false },
+      { id: 'b', text: 'workspace.schema.table', isCorrect: false },
+      { id: 'c', text: 'schema.catalog.table', isCorrect: false },
+      { id: 'd', text: 'catalog.schema.table', isCorrect: true },
     ],
-    explanation: 'Unity Catalog uses a three-level namespace: catalog (top level, like an environment), schema (like a database), and table/view. Example: SELECT * FROM prod_catalog.sales_schema.orders.',
+    explanation: `A table's full name is catalog.schema.table, for example prod.sales.orders. The catalog is the top level (often an environment or a business unit), the schema (also called a database) groups tables, views, volumes and functions, and the table is the object itself. The metastore sits above the catalogs but is not part of the name, and neither is the workspace: one name means the same table in every workspace attached to the metastore.`,
     tags: ['unity-catalog', 'namespace'],
     concepts: ['ucat-namespaces'],
   },
@@ -1718,22 +1718,25 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/GRANT/i],
-    question: 'Grant SELECT privilege on table "sales.orders" to principal group "analysts".',
-    starterCode: `-- Grant table access\n`,
+    requires: [/GRANT\s+SELECT\s+ON\s+(TABLE\s+)?main\.sales\.orders\s+TO\s+`?analysts`?/i],
+    question: 'Group "analysts" already holds USE CATALOG on catalog "main" and USE SCHEMA on schema "main.sales". Write the statement that lets them read table "main.sales.orders", and no other table.',
+    starterCode: `-- Let analysts read main.sales.orders
+`,
     testCases: [
-      {
-        input: 'sales.orders table',
-        expectedOutput: 'GRANT SELECT ON TABLE sales.orders TO analysts',
-        description: 'Should grant SELECT to analysts',
-      },
+      { input: 'main.sales.orders', expectedOutput: 'GRANT SELECT ON TABLE main.sales.orders TO analysts', description: 'Should grant SELECT on the one table to analysts' },
     ],
-    solution: `GRANT SELECT ON TABLE sales.orders TO analysts\n-- OR\nGRANT SELECT ON sales.orders TO analysts`,
-    explanation: 'GRANT SELECT allows the specified principal (user/group) to read data from the table. In Unity Catalog, you can grant permissions at catalog, schema, or table level.',
-    hints: ['Use GRANT permission ON object TO principal', 'SELECT allows reading data'],
+    solution: `GRANT SELECT ON TABLE main.sales.orders TO analysts
+-- OR
+GRANT SELECT ON main.sales.orders TO analysts
+-- OR
+GRANT SELECT ON TABLE main.sales.orders TO \`analysts\`
+-- OR
+GRANT SELECT ON main.sales.orders TO \`analysts\``,
+    explanation: 'GRANT SELECT ON TABLE main.sales.orders TO analysts lets the group read that one table; the TABLE keyword is optional, since a name with no object kind is read as a table. Reading also needs USE CATALOG on main and USE SCHEMA on main.sales, which the group already has. GRANT SELECT ON SCHEMA main.sales would instead cover every table in the schema, those created later included, which the prompt rules out.',
+    hints: ['GRANT privilege ON object TO principal', 'SELECT is the privilege that reads a table'],
     tieredHints: {
-      apiSignature: 'GRANT privilege ON TABLE table_name TO principal',
-      skeleton: 'GRANT ____ ON TABLE sales.orders ____ ____',
+      apiSignature: 'GRANT privilege ON TABLE catalog.schema.table TO principal',
+      skeleton: 'GRANT ____ ON TABLE ____ TO ____',
     },
     tags: ['governance', 'grant', 'permissions'],
     concepts: ['ucat-grants'],
@@ -1745,22 +1748,20 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/GRANT/i],
-    question: 'Grant ALL PRIVILEGES on schema "analytics" to principal group "data_engineers".',
+    requires: [/GRANT\s+ALL\s+PRIVILEGES\s+ON\s+SCHEMA\s+main\.analytics\s+TO\s+`?data_engineers`?/i],
+    question: 'Grant group "data_engineers" all privileges on schema "main.analytics" in a single GRANT, without listing the privileges one by one.',
     starterCode: `-- Grant schema access\n`,
     testCases: [
-      {
-        input: 'analytics schema',
-        expectedOutput: 'GRANT ALL PRIVILEGES ON SCHEMA analytics TO data_engineers',
-        description: 'Should grant all on schema',
-      },
+      { input: 'main.analytics schema', expectedOutput: 'GRANT ALL PRIVILEGES ON SCHEMA main.analytics TO data_engineers', description: 'Should grant all privileges on the schema' },
     ],
-    solution: `GRANT ALL PRIVILEGES ON SCHEMA analytics TO data_engineers\n-- OR\nGRANT ALL ON SCHEMA analytics TO data_engineers`,
-    explanation: 'GRANT ALL PRIVILEGES gives full access (CREATE, SELECT, MODIFY, etc.) on the schema and its objects. Be careful - this is a broad permission. Prefer granting specific privileges in production.',
-    hints: ['Use GRANT ALL PRIVILEGES ON SCHEMA', 'Grants apply to schema and contained objects'],
+    solution: `GRANT ALL PRIVILEGES ON SCHEMA main.analytics TO data_engineers
+-- OR
+GRANT ALL PRIVILEGES ON SCHEMA main.analytics TO \`data_engineers\``,
+    explanation: 'ALL PRIVILEGES stands for every privilege that applies to the schema and the objects in it (USE SCHEMA, SELECT, MODIFY, CREATE TABLE and the rest, except MANAGE), and like any schema grant it covers tables created later too. It does not make the group the owner, and the group still needs USE CATALOG on main. It is a broad grant: in production prefer naming the privileges a group needs.',
+    hints: ['GRANT ... ON SCHEMA schema TO principal', 'The keyword for every privilege at once is two words'],
     tieredHints: {
-      apiSignature: 'GRANT ALL PRIVILEGES ON SCHEMA schema_name TO principal',
-      skeleton: 'GRANT ____ PRIVILEGES ON ____ analytics TO ____',
+      apiSignature: 'GRANT ALL PRIVILEGES ON SCHEMA catalog.schema TO principal',
+      skeleton: 'GRANT ____ ____ ON ____ main.analytics TO ____',
     },
     tags: ['governance', 'grant', 'schema', 'all-privileges'],
     concepts: ['ucat-grants', 'ps-dataframe-create'],
@@ -1772,22 +1773,22 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/REVOKE/i],
-    question: 'Revoke INSERT privilege on table "production.customers" from principal group "interns".',
+    requires: [/REVOKE\s+MODIFY\s+ON\s+(TABLE\s+)?production\.crm\.customers\s+FROM\s+`?interns`?/i],
+    question: 'Group "interns" was granted MODIFY on table "production.crm.customers" and must no longer write to it. Write the statement that takes that grant away.',
     starterCode: `-- Revoke permissions\n`,
     testCases: [
-      {
-        input: 'production.customers table',
-        expectedOutput: 'REVOKE INSERT ON TABLE production.customers FROM interns',
-        description: 'Should revoke INSERT from interns',
-      },
+      { input: 'production.crm.customers table', expectedOutput: 'REVOKE MODIFY ON TABLE production.crm.customers FROM interns', description: 'Should revoke MODIFY from interns' },
     ],
-    solution: `REVOKE INSERT ON TABLE production.customers FROM interns\n-- OR\nREVOKE INSERT ON production.customers FROM interns`,
-    explanation: 'REVOKE removes previously granted permissions. Use the same syntax as GRANT but with REVOKE...FROM instead of GRANT...TO.',
-    hints: ['Use REVOKE permission ON object FROM principal', 'Opposite of GRANT...TO'],
+    solution: `REVOKE MODIFY ON TABLE production.crm.customers FROM interns
+-- OR
+REVOKE MODIFY ON production.crm.customers FROM interns
+-- OR
+REVOKE MODIFY ON TABLE production.crm.customers FROM \`interns\``,
+    explanation: `REVOKE privilege ON object FROM principal mirrors GRANT ... TO. MODIFY is Unity Catalog's privilege for writing rows (insert, update and delete), so revoking it on the table stops the inserts. A REVOKE removes only the grant made at that level: had interns also been granted MODIFY on schema production.crm, they could still write, because Unity Catalog has no DENY.`,
+    hints: ['REVOKE privilege ON object FROM principal', 'Revoke the same privilege, on the same object, that was granted'],
     tieredHints: {
-      apiSignature: 'REVOKE privilege ON TABLE table_name FROM principal',
-      skeleton: 'REVOKE ____ ON TABLE production.customers ____ ____',
+      apiSignature: 'REVOKE privilege ON TABLE catalog.schema.table FROM principal',
+      skeleton: 'REVOKE ____ ON TABLE production.crm.customers ____ ____',
     },
     tags: ['governance', 'revoke', 'permissions'],
     concepts: ['ucat-grants'],
@@ -1799,21 +1800,19 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/SHOW\s+GRANTS/i],
-    question: 'Write a SQL query to list all privilege grants applied to schema "sales".',
+    requires: [/SHOW\s+GRANTS?\s+ON\s+SCHEMA\s+main\.sales/i],
+    question: 'Write the statement that lists every privilege granted on schema "main.sales" and who holds it.',
     starterCode: `-- View permissions\n`,
     testCases: [
-      {
-        input: 'sales schema',
-        expectedOutput: 'SHOW GRANTS ON SCHEMA sales',
-        description: 'Should show grants on schema',
-      },
+      { input: 'main.sales schema', expectedOutput: 'SHOW GRANTS ON SCHEMA main.sales', description: 'Should show grants on the schema' },
     ],
-    solution: `SHOW GRANTS ON SCHEMA sales`,
-    explanation: 'SHOW GRANTS displays all permissions granted on an object. You can also use SHOW GRANTS ON TABLE, SHOW GRANTS ON CATALOG, or SHOW GRANTS TO principal to see a user\'s permissions.',
-    hints: ['Use SHOW GRANTS ON SCHEMA', 'Works for tables, schemas, and catalogs'],
+    solution: `SHOW GRANTS ON SCHEMA main.sales
+-- OR
+SHOW GRANT ON SCHEMA main.sales`,
+    explanation: 'SHOW GRANTS ON SCHEMA main.sales returns one row per grant on the schema: the principal, the privilege and the object. Naming a principal narrows it to that one, as in SHOW GRANTS `analysts` ON SCHEMA main.sales, and the same form works ON TABLE, ON CATALOG and on the other securable objects. SHOW GRANT is accepted as a synonym.',
+    hints: ['SHOW ____ ON object', 'Name the object kind, then the schema'],
     tieredHints: {
-      apiSignature: 'SHOW GRANTS ON SCHEMA schema_name',
+      apiSignature: 'SHOW GRANTS ON SCHEMA catalog.schema',
       skeleton: '____ GRANTS ON ____ ____',
     },
     tags: ['governance', 'show-grants', 'audit'],
@@ -1826,22 +1825,29 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/CREATE\s+CATALOG/i],
-    question: 'Write a SQL statement to create a new top-level catalog named "development" in Unity Catalog.',
-    starterCode: `-- Create catalog\n`,
+    requires: [/CREATE\s+CATALOG\s+(IF\s+NOT\s+EXISTS\s+)?development/i, /GRANT\s+USE\s+CATALOG\s+ON\s+CATALOG\s+development\s+TO\s+`?data_engineers`?/i],
+    question: 'Create a catalog named "development", then let group "data_engineers" enter it. Grant only the catalog-level usage privilege; schema and table grants come later.',
+    starterCode: `-- Create the catalog, then grant entry to it
+`,
     testCases: [
-      {
-        input: 'new catalog',
-        expectedOutput: 'CREATE CATALOG development',
-        description: 'Should create catalog',
-      },
+      { input: 'new catalog', expectedOutput: 'CREATE CATALOG development; GRANT USE CATALOG ON CATALOG development TO data_engineers', description: 'Should create the catalog and grant USE CATALOG' },
     ],
-    solution: `CREATE CATALOG development\n-- OR\nCREATE CATALOG IF NOT EXISTS development`,
-    explanation: 'CREATE CATALOG creates a new top-level container in Unity Catalog. Catalogs typically represent environments (dev, staging, prod) or business units.',
-    hints: ['Use CREATE CATALOG'],
+    solution: `CREATE CATALOG development;
+GRANT USE CATALOG ON CATALOG development TO data_engineers;
+-- OR
+CREATE CATALOG IF NOT EXISTS development;
+GRANT USE CATALOG ON CATALOG development TO data_engineers;
+-- OR
+CREATE CATALOG development;
+GRANT USE CATALOG ON CATALOG development TO \`data_engineers\`;
+-- OR
+CREATE CATALOG IF NOT EXISTS development;
+GRANT USE CATALOG ON CATALOG development TO \`data_engineers\`;`,
+    explanation: 'CREATE CATALOG development makes a new top-level container, and you, its creator, become its owner. GRANT USE CATALOG ON CATALOG development TO data_engineers lets the group enter it: USE CATALOG gives no access to data by itself, but nothing in the catalog can be used without it. The group will also need USE SCHEMA on a schema and SELECT or another privilege on its objects.',
+    hints: ['Two statements: create, then grant', 'The catalog-level usage privilege is USE CATALOG'],
     tieredHints: {
-      apiSignature: 'CREATE CATALOG catalog_name',
-      skeleton: '____ ____ ____',
+      apiSignature: 'CREATE CATALOG name; GRANT privilege ON CATALOG name TO principal',
+      skeleton: '____ ____ development;\nGRANT ____ ____ ON CATALOG development TO ____;',
     },
     tags: ['governance', 'catalog', 'create'],
     concepts: ['ucat-grants', 'ucat-namespaces', 'ps-dataframe-create'],
@@ -1853,22 +1859,38 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/CREATE\s+SCHEMA/i],
-    question: 'Write a SQL statement to create a new schema named "raw_data" within catalog "production".',
-    starterCode: `-- Create schema in catalog\n`,
+    requires: [/CREATE\s+(SCHEMA|DATABASE)\s+(IF\s+NOT\s+EXISTS\s+)?production\.raw_data/i, /ALTER\s+(SCHEMA|DATABASE)\s+production\.raw_data\s+(SET\s+)?OWNER\s+TO\s+`?data_engineers`?/i],
+    question: 'Create schema "raw_data" in catalog "production", then make group "data_engineers" its owner.',
+    starterCode: `-- Create the schema, then hand it to the group
+`,
     testCases: [
-      {
-        input: 'production catalog',
-        expectedOutput: 'CREATE SCHEMA production.raw_data',
-        description: 'Should create schema in catalog',
-      },
+      { input: 'production catalog', expectedOutput: 'CREATE SCHEMA production.raw_data; ALTER SCHEMA production.raw_data OWNER TO data_engineers', description: 'Should create the schema and change its owner' },
     ],
-    solution: `CREATE SCHEMA production.raw_data\n-- OR\nCREATE SCHEMA IF NOT EXISTS production.raw_data`,
-    explanation: 'CREATE SCHEMA creates a namespace within a catalog. Tables created inside will have the full path: production.raw_data.table_name.',
-    hints: ['Use CREATE SCHEMA catalog.schema_name', 'Fully qualify with catalog name'],
+    solution: `CREATE SCHEMA production.raw_data;
+ALTER SCHEMA production.raw_data OWNER TO data_engineers;
+-- OR
+CREATE SCHEMA production.raw_data;
+ALTER SCHEMA production.raw_data SET OWNER TO data_engineers;
+-- OR
+CREATE SCHEMA production.raw_data;
+ALTER SCHEMA production.raw_data OWNER TO \`data_engineers\`;
+-- OR
+CREATE SCHEMA IF NOT EXISTS production.raw_data;
+ALTER SCHEMA production.raw_data OWNER TO data_engineers;
+-- OR
+CREATE SCHEMA IF NOT EXISTS production.raw_data;
+ALTER SCHEMA production.raw_data SET OWNER TO data_engineers;
+-- OR
+CREATE SCHEMA IF NOT EXISTS production.raw_data;
+ALTER SCHEMA production.raw_data OWNER TO \`data_engineers\`;
+-- OR
+CREATE DATABASE production.raw_data;
+ALTER DATABASE production.raw_data OWNER TO data_engineers;`,
+    explanation: 'CREATE SCHEMA production.raw_data makes the schema, and its creator becomes its owner. ALTER SCHEMA production.raw_data OWNER TO data_engineers (SET is optional) hands it to the group: an owner holds every privilege on the schema and can grant them to others, and owning it as a group means it does not depend on one person staying on the team. DATABASE is a synonym for SCHEMA in both statements.',
+    hints: ['Two statements: create the schema, then change its owner', 'ALTER SCHEMA ... OWNER TO principal'],
     tieredHints: {
-      apiSignature: 'CREATE SCHEMA catalog_name.schema_name',
-      skeleton: '____ SCHEMA ____.____',
+      apiSignature: 'CREATE SCHEMA catalog.schema; ALTER SCHEMA catalog.schema OWNER TO principal',
+      skeleton: '____ SCHEMA ____.raw_data;\n____ SCHEMA production.raw_data ____ TO ____;',
     },
     tags: ['governance', 'schema', 'create'],
     concepts: ['ucat-grants', 'ps-dataframe-create'],
@@ -1879,14 +1901,14 @@ print(region, rows)`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
-    question: 'What is the primary difference between a managed table and an external table in Unity Catalog?',
+    question: 'What is the main difference between a managed table and an external table in Unity Catalog?',
     options: [
-      { id: 'a', text: 'Managed tables have underlying data lifecycle managed by Unity Catalog; external tables reference user-managed storage locations', isCorrect: true },
-      { id: 'b', text: 'Managed tables execute queries on specialized compute engines, whereas external tables run on standard open-source Apache Spark clusters', isCorrect: false },
-      { id: 'c', text: 'External tables require strict schema definition upon creation, whereas managed tables automatically infer column data types on load', isCorrect: false },
-      { id: 'd', text: 'Managed tables store transactional Delta log entries, whereas external tables retain data strictly in plain unindexed CSV text files', isCorrect: false },
+      { id: 'a', text: `Unity Catalog owns a managed table's files and deletes them on DROP; an external table's files stay on your own path`, isCorrect: true },
+      { id: 'b', text: 'External tables sit outside Unity Catalog grants, so anyone allowed into their storage path can query them as tables', isCorrect: false },
+      { id: 'c', text: 'Managed tables must be Delta tables, while external tables must be in another format, such as CSV or Parquet files', isCorrect: false },
+      { id: 'd', text: 'A managed table is stored inside the metastore database itself, and only an external table lives in cloud storage', isCorrect: false },
     ],
-    explanation: 'Managed tables store data in the catalog\'s managed storage. Dropping a managed table deletes the data. External tables reference data at a user-specified LOCATION; dropping them only removes the metadata.',
+    explanation: `For a managed table Unity Catalog decides where the files go (the managed storage of its schema, catalog or metastore) and owns their lifecycle: DROP TABLE removes the table and its data. An external table is created with a LOCATION on a path under an external location, and DROP TABLE removes only the table's entry, leaving the files. Both kinds are governed by the same GRANTs, both live in cloud object storage, and an external table can be Delta too.`,
     tags: ['governance', 'managed-table', 'external-table'],
     concepts: ['ucat-grants', 'ucat-managed-vs-external'],
   },
@@ -1894,16 +1916,16 @@ print(region, rows)`,
   {
     id: 'governance-10',
     type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
+    difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
-    question: 'What capability does automated data lineage provide within Databricks Unity Catalog?',
+    question: `What does Unity Catalog's data lineage give you?`,
     options: [
-      { id: 'a', text: 'Automated row-level data encryption at rest using customer-managed cryptographic keys', isCorrect: false },
-      { id: 'b', text: 'Real-time tracking of data flow across tables, notebooks, jobs, and dashboards', isCorrect: true },
-      { id: 'c', text: 'Automated disaster recovery replication across secondary cloud provider regions', isCorrect: false },
-      { id: 'd', text: 'Dynamic memory compression for high-throughput streaming ingestion pipelines', isCorrect: false },
+      { id: 'a', text: 'Every past version of each table, so a table can be restored to how it looked before a bad write', isCorrect: false },
+      { id: 'b', text: 'An automatic record of which tables and columns each table, notebook, job and dashboard reads and writes', isCorrect: true },
+      { id: 'c', text: 'A log of every grant, revoke and refused query, so admins can see who tried to read which table and when', isCorrect: false },
+      { id: 'd', text: 'The foreign keys between tables, which Unity Catalog enforces so that no orphan rows can ever be written', isCorrect: false },
     ],
-    explanation: 'Unity Catalog automatically captures lineage - which tables read from which sources, which notebooks/jobs produce or consume data. This is crucial for impact analysis and compliance.',
+    explanation: 'Unity Catalog captures lineage by itself from the queries that run: which tables a table was built from, down to the column, and which notebooks, jobs and dashboards read or write it. It shows in Catalog Explorer and in the system tables system.access.table_lineage and system.access.column_lineage, and it answers questions such as what breaks downstream if this column changes. Past versions are Delta time travel, the record of grants and access is the audit log (system.access.audit), and Unity Catalog does not enforce foreign keys.',
     tags: ['governance', 'lineage', 'audit'],
     concepts: ['ucat-grants', 'ucat-lineage'],
   },
@@ -1914,22 +1936,22 @@ print(region, rows)`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
     language: CodeLanguage.SQL,
-    requires: [/GRANT/i],
-    question: 'Grant permissions to group "data_engineers" allowing them to navigate to schema "analytics" and create tables within it.',
+    requires: [/GRANT\s+[\w\s,]*USE\s+SCHEMA[\w\s,]*ON\s+SCHEMA\s+main\.analytics\s+TO\s+`?data_engineers`?/i, /GRANT\s+[\w\s,]*CREATE\s+TABLE[\w\s,]*ON\s+SCHEMA/i],
+    question: 'Group "data_engineers" already holds USE CATALOG on catalog "main". In one GRANT statement, let them enter schema "main.analytics" and create tables in it.',
     starterCode: `-- Grant schema access and table creation\n`,
     testCases: [
-      {
-        input: 'analytics schema',
-        expectedOutput: 'GRANT USE SCHEMA, CREATE TABLE ON SCHEMA analytics TO data_engineers',
-        description: 'Should grant USE and CREATE TABLE',
-      },
+      { input: 'main.analytics schema', expectedOutput: 'GRANT USE SCHEMA, CREATE TABLE ON SCHEMA main.analytics TO data_engineers', description: 'Should grant USE SCHEMA and CREATE TABLE' },
     ],
-    solution: `GRANT USE SCHEMA, CREATE TABLE ON SCHEMA analytics TO data_engineers\n-- OR\nGRANT CREATE TABLE, USE SCHEMA ON SCHEMA analytics TO data_engineers`,
-    explanation: 'USE SCHEMA allows navigating to the schema. CREATE TABLE allows creating tables within it. Both are needed - without USE SCHEMA, the group cannot access the schema even with CREATE TABLE permission.',
-    hints: ['Grant multiple permissions with comma separation', 'USE SCHEMA is needed to access the schema'],
+    solution: `GRANT USE SCHEMA, CREATE TABLE ON SCHEMA main.analytics TO data_engineers
+-- OR
+GRANT CREATE TABLE, USE SCHEMA ON SCHEMA main.analytics TO data_engineers
+-- OR
+GRANT USE SCHEMA, CREATE TABLE ON SCHEMA main.analytics TO \`data_engineers\``,
+    explanation: 'One GRANT can list several privileges separated by commas. USE SCHEMA lets the group enter main.analytics, and CREATE TABLE on the schema lets it create tables there. Both are needed: without USE SCHEMA the group cannot use anything in the schema, CREATE TABLE included, just as it could not without USE CATALOG on main, which it already holds. The group owns the tables it creates.',
+    hints: ['List several privileges in one GRANT, separated by commas', 'Entering a schema needs USE SCHEMA'],
     tieredHints: {
-      apiSignature: 'GRANT privilege1, privilege2 ON SCHEMA schema_name TO principal',
-      skeleton: 'GRANT ____ SCHEMA, ____ TABLE ON SCHEMA analytics TO ____',
+      apiSignature: 'GRANT privilege1, privilege2 ON SCHEMA catalog.schema TO principal',
+      skeleton: 'GRANT ____ SCHEMA, ____ TABLE ON SCHEMA main.analytics TO ____',
     },
     tags: ['governance', 'grant', 'create-table', 'use-schema'],
     concepts: ['ucat-grants', 'ps-dataframe-create', 'ucat-namespaces'],
@@ -1940,14 +1962,14 @@ print(region, rows)`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATA_GOVERNANCE,
-    question: 'In Unity Catalog, what capability is granted to a principal holding the USE CATALOG privilege?',
+    question: 'In Unity Catalog, what does the USE CATALOG privilege on a catalog give a group?',
     options: [
-      { id: 'a', text: 'Full read and write privileges across all schemas and tables contained within the catalog', isCorrect: false },
-      { id: 'b', text: 'Administrative privilege to drop or modify catalog properties and owner assignments', isCorrect: false },
-      { id: 'c', text: 'Privilege to browse catalog metadata and list child schemas without granting data access', isCorrect: true },
-      { id: 'd', text: 'Permission to execute external data sharing contracts using Delta Sharing protocols', isCorrect: false },
+      { id: 'a', text: 'Read access to every table in the catalog, since privileges on a catalog flow down to its tables', isCorrect: false },
+      { id: 'b', text: 'The right to enter the catalog, needed to use any object in it, but no access to data by itself', isCorrect: true },
+      { id: 'c', text: 'Everything needed to query a table in the catalog whose SELECT privilege the group already holds', isCorrect: false },
+      { id: 'd', text: 'The right to create new schemas in the catalog and to grant privileges on it to other groups', isCorrect: false },
     ],
-    explanation: 'USE CATALOG grants access to browse a catalog\'s schemas. It\'s a prerequisite for accessing objects within the catalog but doesn\'t grant data access. You still need USE SCHEMA and SELECT/MODIFY on specific tables.',
+    explanation: `USE CATALOG is a usage privilege: nothing in the catalog can be used without it, but it gives no access to any data on its own. It does flow down, but what flows down is only the right to enter. To query a table the group also needs USE SCHEMA on the table's schema and SELECT on the table or a parent. Creating schemas takes CREATE SCHEMA, and granting privileges on the catalog belongs to its owner or a holder of MANAGE.`,
     tags: ['governance', 'use-catalog', 'permissions'],
     concepts: ['ucat-grants', 'ucat-namespaces'],
   },

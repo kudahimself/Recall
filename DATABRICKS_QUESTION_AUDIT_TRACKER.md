@@ -621,42 +621,6 @@ Agents must refer to the following skill instruction files when working on quest
 | `ps-advanced-4` | CODING | ADVANCED | `src/data/questions.ts` | 🟢 Completed | Cleaned starter code, added single-line `expr()` solution alternate |
 
 
-## Data Governance
-
-### Access Controls & Privileges (`DATA_GOVERNANCE`)
-
-| ID | Type | Difficulty | Source File | Status | Notes |
-|---|---|---|---|---|---|
-| `governance-1` | MULTIPLE_CHOICE | BEGINNER | `src/data/certificationQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `c` |
-| `governance-2` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `d` |
-| `governance-3` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Cleaned starter code, added un-prefixed `sales.orders` solution alternate |
-| `governance-4` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Cleaned starter code, added `GRANT ALL` solution alternate |
-| `governance-5` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Cleaned starter code, added un-prefixed `production.customers` solution alternate |
-| `governance-6` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Rephrased prompt to state schema query cleanly |
-| `governance-7` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Cleaned starter code, added `IF NOT EXISTS` solution alternate |
-| `governance-8` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Cleaned starter code, added `IF NOT EXISTS` solution alternate |
-| `governance-9` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `a` |
-| `governance-10` | MULTIPLE_CHOICE | ADVANCED | `src/data/certificationQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `b` |
-| `governance-11` | CODING | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Cleaned starter code, added permission order solution alternate |
-| `governance-12` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/certificationQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `c` |
-
-
-### Unity Catalog Governance (`UNITY_CATALOG_GOVERNANCE`)
-
-| ID | Type | Difficulty | Source File | Status | Notes |
-|---|---|---|---|---|---|
-| `uc-gov-1` | MULTIPLE_CHOICE | BEGINNER | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `a` |
-| `uc-gov-2` | CODING | BEGINNER | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Cleaned starter code, added un-prefixed `main.gold.metrics` solution alternate |
-| `uc-gov-3` | CODING | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Cleaned starter code, added un-prefixed `main.gold` solution alternate |
-| `uc-gov-4` | CODING | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Cleaned starter code, added un-prefixed `main.raw.landing` solution alternate |
-| `uc-gov-5` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `a` |
-| `uc-gov-6` | CODING | ADVANCED | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Cleaned starter code, verified syntax |
-| `uc-gov-7` | MULTIPLE_CHOICE | ADVANCED | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `b` |
-| `uc-gov-8` | PARSONS | ADVANCED | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Cleaned Parsons distractors & order |
-| `uc-gov-9` | MULTIPLE_CHOICE | INTERMEDIATE | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `a` |
-| `uc-gov-10` | MULTIPLE_CHOICE | ADVANCED | `src/data/unityCatalogQuestions.ts` | 🟢 Completed | Equalized option length parity & rotated option to `a` |
-
-
 ## Data Modeling & Warehousing Design
 
 ### Dimensional Modeling (`DATA_MODELING`)
