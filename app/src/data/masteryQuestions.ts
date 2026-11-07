@@ -834,6 +834,29 @@ result = ____.____("____", ____(____.____))`,
     concepts: ['ps-udf-pandas-udf'],
   },
 
+  {
+    id: 'udf-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.ADVANCED_TOPICS,
+    language: CodeLanguage.PYTHON,
+    question: 'In a Databricks notebook, df holds the ids 0 to 5 in 2 partitions of 3 rows each, and Arrow batches keep their default size of 10,000 rows. What does the cell print? The answer is one Python list of whole numbers.',
+    code: `import pandas as pd
+from pyspark.sql.functions import pandas_udf
+
+@pandas_udf("long")
+def from_min(s: pd.Series) -> pd.Series:
+    return s - s.min()
+
+df = spark.range(0, 6, numPartitions=2)
+print([r.x for r in df.select(from_min("id").alias("x")).collect()])`,
+    expectedOutput: `[0, 1, 2, 0, 1, 2]`,
+    explanation: 'A scalar pandas UDF is called once per Arrow batch, not once for the whole column, and a batch never spans two partitions. Here each partition is one batch: ids 0, 1, 2 give 0, 1, 2, and ids 3, 4, 5 have their own minimum, 3, so they give 0, 1, 2 too. A whole-column statistic such as min, mean or rank computed inside a scalar pandas UDF is a per-batch one; compute it with a Spark aggregate or a window instead, and keep scalar pandas UDFs to row-by-row logic on a whole Series.',
+    hints: ['How much of the column does one call of the UDF see?', 'What is the minimum of the second partition?'],
+    tags: ['pandas-udf', 'vectorized', 'arrow', 'predict'],
+    concepts: ['ps-udf-pandas-udf'],
+  },
+
   // =====================================================================
   // SQL SET OPERATIONS (6 questions)
   // =====================================================================

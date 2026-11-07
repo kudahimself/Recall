@@ -5,6 +5,7 @@
  * Section 2, ELT with Spark SQL & Python: every topic.
  * Section 3, Incremental Data Processing: every topic.
  * Section 4, Production Pipelines: every topic.
+ * Section 5, Optimization & Advanced: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). Most worked examples
  * here are Databricks notebook cells: they need a workspace to run, so they
@@ -18,7 +19,9 @@
  * docs. The section 4 examples need a workspace too: the pipeline source
  * file's output is its published table after one update, following the
  * Lakeflow pipeline expectations docs, and the job's is what its last task
- * prints, following the Databricks utilities docs. SQL in a cell runs
+ * prints, following the Databricks utilities docs. The section 5 cells
+ * (a broadcast join with cache and coalesce, a Python and a pandas UDF) were
+ * run on Spark 4.0. SQL in a cell runs
  * through `spark.sql`, as it would in a Python notebook. A plain SQL
  * example (joins, aggregations, subqueries, set operations) uses only SQL
  * that Spark and the checker's engine agree on, so check-lessons.js runs it.
@@ -2157,6 +2160,167 @@ print(dbutils.widgets.get("run_date"),
       'workflow-4',
       'workflow-predict-1',
       'workflow-7',
+    ],
+  },
+  // ===== Section 5, Optimization & Advanced =====
+  {
+    id: 'spark_optimization/1',
+    topicKeys: [Topic.SPARK_OPTIMIZATION],
+    step: 1,
+    title: 'Spark Optimization (caching, broadcast, partitioning)',
+    idea: [
+      lines(
+        "Most of a slow job's time goes to the shuffle: a `join` or `groupBy` sends rows across the network into `spark.sql.shuffle.partitions` partitions, 200 by default.",
+        "Adaptive Query Execution (AQE), on by default, re-plans each stage from the sizes it measured: it merges small shuffle partitions, splits skewed ones and can switch a join to a broadcast join.",
+      ),
+      lines(
+        "A broadcast join copies the small side to every executor, so the large side is joined where it sits, with no shuffle.",
+        "Spark chooses it below `spark.sql.autoBroadcastJoinThreshold`, 10 MB by default, `broadcast(small)` asks for it, and `explain()` shows `BroadcastHashJoin` or `SortMergeJoin`.",
+      ),
+      lines(
+        "`cache()` keeps a DataFrame you reuse in memory and on disk, `persist(level)` picks where, and `unpersist()` frees it.",
+        "Serverless compute supports `cache()` only in recent environment versions; where it does not, write a reused result to a table.",
+      ),
+      lines(
+        "`repartition(n, col)` shuffles into n partitions, while `coalesce(n)` merges partitions without a shuffle and can only lower the count.",
+        "A filter on a `partitionBy` column skips whole directories (partition pruning), and on Databricks, liquid clustering and Photon do much of this tuning for you.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `from pyspark import StorageLevel
+from pyspark.sql.functions import broadcast
+# shuffle partitions: 200 unless you set them
+spark.conf.set("spark.sql.shuffle.partitions", 64)
+big.join(broadcast(small), "k")   # big is not shuffled
+big.join(small, "k").explain()    # which join? see plan
+df.cache(); df.count()            # the action fills it
+df.persist(StorageLevel.DISK_ONLY)  # choose where
+df.unpersist()                    # free it when done
+df.repartition(16, "k")           # shuffle: any count
+df.coalesce(4)                    # merge: fewer only
+df.write.partitionBy("d").saveAsTable("cat.sch.t")
+# a filter on d then reads only its directories`,
+    },
+    pitfall: lines(
+      "`cache()` stores nothing when it runs: it only marks the DataFrame, and the first action that computes every partition, such as `count()`, fills the cache.",
+      "Cache a DataFrame only when two or more actions reuse it, and `unpersist()` it once they are done, since it holds executor memory until then.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook on classic compute; no tables needed
+from pyspark.sql import functions as F
+sales = spark.range(0, 1_200_000).select(
+    (F.col("id") % 4).alias("shop_id"),
+    (F.col("id") % 3 + 1).alias("qty"))
+shops = spark.createDataFrame(
+    [(0, "leeds"), (1, "york"), (2, "leeds"), (3, "hull")],
+    ["shop_id", "city"])
+sold = sales.join(F.broadcast(shops), "shop_id").cache()
+print(sold.count())
+by_city = sold.groupBy("city").agg(F.sum("qty").alias("qty"))
+for r in by_city.orderBy("city").collect():
+    print(r.city, r.qty)
+sold.unpersist()`,
+      steps: [
+        "Lines 3-8: 1.2 million sales over 4 shops, each sale of 1, 2 or 3 books in turn, and a 4-row table of shops.",
+        "Line 9: `broadcast` sends the 4 shops to every executor, so the sales are joined where they sit; `cache()` only marks the result.",
+        "Line 10: `count` computes every partition of the join, so it fills the cache and prints 1200000.",
+        "Lines 11-13: the aggregation reads the cached join instead of joining again, and `by_city.explain()` would show `InMemoryTableScan`; each shop has 300,000 sales of 2 books on average, so 600,000 books, and Leeds has two shops.",
+        "Line 14: `unpersist` frees the cached rows once no later action needs them.",
+      ],
+      output: `1200000
+hull 600000
+leeds 1200000
+york 600000`,
+    },
+    exercises: [
+      'perf-1',
+      'perf-6',
+      'perf-11',
+      'perf-predict-1',
+      'perf-9',
+    ],
+  },
+  {
+    id: 'advanced_topics/1',
+    topicKeys: [Topic.ADVANCED_TOPICS],
+    step: 1,
+    title: 'Advanced Concepts',
+    idea: [
+      lines(
+        "A user-defined function (UDF) runs your own Python on a column, for logic no function in `pyspark.sql.functions` covers.",
+        "`@udf(\"string\")` on a function, or `udf(f, returnType)`, gives something you call on columns like a built-in, and it gets `None` for a NULL.",
+      ),
+      lines(
+        "A Python UDF is slow: each row travels from the JVM to a Python process and back, and the optimizer cannot see inside it, so check the built-ins first.",
+        "A pandas UDF, `@pandas_udf(\"double\")` on a function from `pd.Series` to `pd.Series`, gets its rows in Apache Arrow batches and works on a whole batch at once, which is many times faster.",
+      ),
+      lines(
+        "`spark.udf.register(\"name\", f, returnType)` makes a Python UDF callable from SQL in this session.",
+        "In Unity Catalog, `CREATE FUNCTION cat.sch.f(x INT) RETURNS INT RETURN ...` stores a SQL UDF that is governed and shared like a table.",
+      ),
+      lines(
+        "The topic's other exercises, window ranking and stream-stream joins, build on the Window Functions and Structured Streaming lessons.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `import pandas as pd
+from pyspark.sql.functions import udf, pandas_udf
+@udf("string")                  # one row at a time
+def f(x):                       # a NULL arrives as None
+    return None if x is None else x.strip().title()
+@pandas_udf("double")           # one Arrow batch at a time
+def g(s: pd.Series) -> pd.Series:
+    return s.clip(lower=0)      # same length out
+df.withColumn("c2", f("c")).withColumn("d2", g("d"))
+spark.udf.register("f_sql", f)  # SELECT f_sql(c) FROM t
+# Unity Catalog SQL UDF, stored with the data:
+# CREATE FUNCTION cat.sch.h(x INT)
+#   RETURNS INT RETURN x + 1`,
+    },
+    pitfall: lines(
+      "A scalar pandas UDF is called once per Arrow batch, at most 10,000 rows of one partition by default, not once for the whole column.",
+      "So a min, mean or rank computed inside it is a per-batch one: compute column-wide values with a Spark aggregate or window, and keep pandas UDFs to logic for each row.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; no tables needed
+import pandas as pd
+from pyspark.sql import functions as F
+@F.udf("string")
+def shelf(title):
+    return None if title is None else title[:2].upper()
+@F.pandas_udf("double")
+def late_fee(days: pd.Series) -> pd.Series:
+    return (days - 14).clip(lower=0) * 0.5
+loans = spark.createDataFrame(
+    [("Dune", 20), ("Emma", 9), (None, 16)],
+    "title string, days int")
+out = loans.select(
+    shelf("title").alias("a"),
+    F.upper(F.substring("title", 1, 2)).alias("b"),
+    late_fee("days").alias("fee"))
+for r in out.collect():
+    print(r.a, r.b, r.fee)`,
+      steps: [
+        "Lines 4-6: shelf is a Python UDF, called once per row; the third loan has no title, so it gets `None` and returns it rather than failing on `None[:2]`.",
+        "Lines 7-9: late_fee is a pandas UDF that gets the days as a Series and returns one fee per loan: half a pound per day past 14, never below 0.",
+        "Line 15: the built-ins `upper` and `substring` give the same codes as shelf without leaving the JVM, so they are the better choice here.",
+        "Lines 17-18: Dune is 6 days late and Emma is not, and the untitled loan is 2 days late; its NULL title prints as None in both code columns.",
+      ],
+      output: `DU DU 3.0
+EM EM 0.0
+None None 1.0`,
+    },
+    exercises: [
+      'udf-3',
+      'udf-predict-1',
+      'udf-2',
+      'udf-4',
     ],
   },
 ];
