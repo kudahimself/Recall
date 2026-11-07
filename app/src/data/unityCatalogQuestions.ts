@@ -435,6 +435,27 @@ SELECT COUNT(*) FROM delta.\`abfss://lake@acme.dfs.core.windows.net/orders\`;`,
   },
 
   {
+    id: 'uc-gov-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.UNITY_CATALOG_GOVERNANCE,
+    language: CodeLanguage.SQL,
+    question: 'corp.hr.staff holds three rows (region, pay): (EU, 100), (EU, 200) and (US, 300). Its owner runs the first four statements. Then a member of the group analysts, who is not in hr_admins and holds USE CATALOG, USE SCHEMA and SELECT on the table, runs the last query. What does it return? The answer is one row of two numbers.',
+    code: `CREATE FUNCTION corp.hr.eu_only(region STRING) RETURNS BOOLEAN
+  RETURN is_account_group_member('hr_admins') OR region = 'EU';
+CREATE FUNCTION corp.hr.hide_pay(pay INT) RETURNS INT
+  RETURN CASE WHEN is_account_group_member('hr_admins') THEN pay END;
+ALTER TABLE corp.hr.staff SET ROW FILTER corp.hr.eu_only ON (region);
+ALTER TABLE corp.hr.staff ALTER COLUMN pay SET MASK corp.hr.hide_pay;
+SELECT COUNT(*), COUNT(pay) FROM corp.hr.staff;`,
+    expectedOutput: `2, 0`,
+    explanation: 'Unity Catalog runs the row filter and the column mask inside every query of the table, so the analyst never sees the stored values. The row filter keeps a row only when its function returns true: the analyst is not in hr_admins, so only the two EU rows remain, and COUNT(*) is 2. The column mask replaces each pay value with what its function returns, and for someone outside hr_admins the CASE has no ELSE, so it returns NULL. COUNT(pay) counts non-NULL values, so it is 0. A member of hr_admins running the same query gets 3, 3.',
+    hints: ['Which rows does eu_only keep for someone outside hr_admins?', 'What does a CASE with no matching WHEN and no ELSE return, and what does COUNT(col) skip?'],
+    tags: ['security', 'row-filter', 'column-mask', 'unity-catalog', 'predict'],
+    concepts: ['ucat-row-column-security'],
+  },
+
+  {
     id: 'uc-gov-9',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,

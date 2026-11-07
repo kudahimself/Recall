@@ -1952,6 +1952,31 @@ print(region, rows)`,
     concepts: ['ucat-grants', 'ucat-namespaces'],
   },
 
+  {
+    id: 'governance-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATA_GOVERNANCE,
+    language: CodeLanguage.PYTHON,
+    question: 'In a Databricks notebook on Unity Catalog, you are a member of the group analysts and nothing else: you own nothing, are not an admin, and hold no grants other than the three in the comment, which the owner of catalog corp ran first. All three tables exist. What does the cell print? The answer is three lines, each a table name, a space, and ok or denied.',
+    code: `# GRANT USE CATALOG ON CATALOG corp TO analysts;
+# GRANT USE SCHEMA, SELECT ON SCHEMA corp.sales TO analysts;
+# GRANT SELECT ON TABLE corp.hr.salaries TO analysts;
+for t in ["corp.sales.orders", "corp.sales.refunds", "corp.hr.salaries"]:
+    try:
+        spark.sql(f"SELECT * FROM {t} LIMIT 1").collect()
+        print(t, "ok")
+    except Exception:
+        print(t, "denied")`,
+    expectedOutput: `corp.sales.orders ok
+corp.sales.refunds ok
+corp.hr.salaries denied`,
+    explanation: 'Reading a table needs three privileges at once: USE CATALOG on its catalog, USE SCHEMA on its schema and SELECT on the table. SELECT granted on the schema corp.sales is inherited by every table in it, those created later included, and USE SCHEMA lets analysts into it, so orders and refunds both read. SELECT on corp.hr.salaries is granted directly, but analysts hold no USE SCHEMA on corp.hr, so the query fails with a permission error and the cell prints denied. GRANT USE SCHEMA ON SCHEMA corp.hr TO analysts would make it read.',
+    hints: ['Which privileges does reading one table need, at each of the three levels?', 'What does SELECT granted on a schema cover?'],
+    tags: ['governance', 'unity-catalog', 'grant', 'use-schema', 'inheritance', 'predict'],
+    concepts: ['ucat-grants', 'ucat-namespaces'],
+  },
+
   // =====================================================================
   // DATABRICKS PLATFORM - REPOS / GIT / CLUSTERS (10 questions)
   // =====================================================================
