@@ -86,12 +86,14 @@ result = `,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PYSPARK_DATAFRAMES,
     language: CodeLanguage.PYTHON,
-    question: 'What does this print?',
-    code: `# df rows, as (item, price, qty):
-#   ("pen",   2.5, 4)
-#   ("book", 10.0, 2)
-
-result = df.selectExpr("item", "CAST(price * qty AS INT) AS total")
+    question: 'DataFrame "df" holds the rows shown. What does this print? The answer is two lines: the list of column names, then the list of totals.',
+    tables: [
+      { name: 'df', columns: ['item', 'price', 'qty'], rows: [
+        ['pen', 2.5, 4],
+        ['book', 10.0, 2],
+      ] },
+    ],
+    code: `result = df.selectExpr("item", "CAST(price * qty AS INT) AS total")
 print(result.columns)
 print([row.total for row in result.collect()])`,
     expectedOutput: `['item', 'total']
@@ -135,7 +137,9 @@ result = `,
         description: 'Should return all four columns',
       },
     ],
-    solution: `result = df.selectExpr("*", "price * qty AS total")`,
+    solution: `result = df.selectExpr("*", "price * qty AS total")
+# OR
+result = df.selectExpr("item", "price", "qty", "price * qty AS total")`,
     explanation: 'Because selectExpr replaces the projection rather than adding to it, keeping the existing columns means listing them - and "*" is how SQL says "all of them". This is the selectExpr counterpart to withColumn("total", ...), and it is the form you want when the derived column is easier to express in SQL than with Column objects.',
     tieredHints: {
       apiSignature: 'DataFrame.selectExpr(*expr: str) -> DataFrame',

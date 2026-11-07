@@ -248,7 +248,6 @@ Agents must refer to the following skill instruction files when working on quest
 
 | ID | Type | Difficulty | Source File | Status | Notes |
 |---|---|---|---|---|---|
-| `io-1` | CODING | BEGINNER | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt to state header/inferSchema requirement cleanly, added shorthand .csv() alternate |
 | `io-2` | CODING | BEGINNER | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt to state overwrite requirement, added shorthand .parquet() alternate |
 | `io-3` | CODING | BEGINNER | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt to state JSON load requirement, added format("json").load() alternate |
 | `io-4` | CODING | INTERMEDIATE | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt to state catalog table requirement, added spark.table() alternate |
@@ -266,7 +265,6 @@ Agents must refer to the following skill instruction files when working on quest
 | `ps-basic-3` | CODING | BEGINNER | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for tuple list creation, added inline createDataFrame alternate |
 | `ps-basic-4` | CODING | BEGINNER | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for CSV loading with header, added format("csv").load() alternate |
 | `casewhen-1` | CODING | INTERMEDIATE | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt for salary band logic, added df.salary attribute notation alternate |
-| `casewhen-3` | CODING | INTERMEDIATE | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt for age categorization, added df.age attribute notation alternate |
 | `pivot-1` | CODING | ADVANCED | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt for quarterly revenue pivoting, added .agg({"revenue": "sum"}) alternate |
 | `pivot-4` | CODING | ADVANCED | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt for explicit value pivot performance, added .agg() alternate |
 | `cast-1` | CODING | BEGINNER | `src/data/masteryQuestions.ts` | 🟢 Completed | Rephrased prompt for price column double casting, added DoubleType() object alternate |
@@ -276,7 +274,6 @@ Agents must refer to the following skill instruction files when working on quest
 | `ps-df-3` | CODING | BEGINNER | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for row filtering, added .where() and string predicate alternates |
 | `ps-df-4` | CODING | INTERMEDIATE | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for conditional column creation, added col("age") alternate |
 | `ps-df-5` | CODING | INTERMEDIATE | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for department grouping count |
-| `ps-df-6` | CODING | BEGINNER | `src/data/questions.ts` | 🟢 Completed | Added visual console tree schema output preview display to prompt |
 | `ps-df-7` | CODING | BEGINNER | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for row count calculation |
 | `ps-df-8` | CODING | INTERMEDIATE | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for column renaming |
 | `ps-df-9` | CODING | INTERMEDIATE | `src/data/questions.ts` | 🟢 Completed | Rephrased prompt for dropping column |

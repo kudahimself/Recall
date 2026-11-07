@@ -206,7 +206,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 
 | ID | Difficulty | Topic | Source File | Status | Notes |
 |---|---|---|---|---|---|
-| `io-1` | BEGINNER | `PYSPARK_BASICS` | `masteryQuestions.ts` | 🟢 Completed | |
 | `io-2` | BEGINNER | `PYSPARK_BASICS` | `masteryQuestions.ts` | 🟢 Completed | |
 | `io-3` | BEGINNER | `PYSPARK_BASICS` | `masteryQuestions.ts` | 🟢 Completed | |
 | `io-4` | INTERMEDIATE | `PYSPARK_BASICS` | `masteryQuestions.ts` | 🟢 Completed | |
@@ -219,7 +218,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `schema-4` | BEGINNER | `PYSPARK_BASICS` | `masteryQuestions.ts` | 🟢 Completed | |
 | `casewhen-1` | INTERMEDIATE | `PYSPARK_DATAFRAMES` | `masteryQuestions.ts` | 🟢 Completed | |
 | `casewhen-2` | INTERMEDIATE | `SPARK_SQL` | `masteryQuestions.ts` | 🟢 Completed | |
-| `casewhen-3` | INTERMEDIATE | `PYSPARK_DATAFRAMES` | `masteryQuestions.ts` | 🟢 Completed | |
 | `casewhen-4` | ADVANCED | `SPARK_SQL` | `masteryQuestions.ts` | 🟢 Completed | |
 | `cte-1` | INTERMEDIATE | `SPARK_SQL` | `masteryQuestions.ts` | 🟢 Completed | |
 | `cte-2` | ADVANCED | `SPARK_SQL` | `masteryQuestions.ts` | 🟢 Completed | |
@@ -290,7 +288,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `ps-advanced-3` | ADVANCED | `SPARK_OPTIMIZATION` | `questions.ts` | 🟢 Completed | |
 | `ps-advanced-4` | ADVANCED | `ADVANCED_TOPICS` | `questions.ts` | 🟢 Completed | |
 | `ps-basic-4` | BEGINNER | `PYSPARK_BASICS` | `questions.ts` | 🟢 Completed | |
-| `ps-df-6` | BEGINNER | `PYSPARK_DATAFRAMES` | `questions.ts` | 🟢 Completed | |
 | `ps-df-7` | BEGINNER | `PYSPARK_DATAFRAMES` | `questions.ts` | 🟢 Completed | |
 | `ps-df-8` | INTERMEDIATE | `PYSPARK_DATAFRAMES` | `questions.ts` | 🟢 Completed | |
 | `ps-df-9` | INTERMEDIATE | `PYSPARK_DATAFRAMES` | `questions.ts` | 🟢 Completed | |

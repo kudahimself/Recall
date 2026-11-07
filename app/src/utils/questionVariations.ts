@@ -1,4 +1,4 @@
-import { CodingQuestion, Difficulty, Topic, QuestionType, CodeLanguage } from '../types';
+import { CodingQuestion } from '../types';
 
 interface VariationTemplate {
   conceptId: string; // Unique identifier for the concept being tested
@@ -106,79 +106,9 @@ export const variationTemplates: VariationTemplate[] = [
   // select, filter, groupBy+count, and when/otherwise. Variations just repeated the same
   // pattern with different column names.
 
-  // JOIN DATAFRAMES
-  {
-    conceptId: 'pyspark-join-inner',
-    baseQuestion: {
-      id: 'ps-transform-2',
-      // Spread onto every generated variation, so all five var* questions inherit it.
-      // The variation engine rewrites column and entity names in `solution` only,
-      // which is why this gate names no columns. No "inner" literal either: it is
-      // the default `how`, so omitting it is still a correct answer.
-      requires: [/\.join\s*\(/],
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.SQL_JOINS,
-      language: CodeLanguage.PYTHON,
-      question: 'Join DataFrames "df1" and "df2" on their shared "id" column using an inner join.\n\nPySpark join() takes three arguments: the other DataFrame, the join column (as a string when the column name is the same in both), and the join type ("inner", "left", "right", "outer"). An inner join returns only rows where the key exists in both DataFrames.',
-      starterCode: `# Inner join df1 and df2 on shared 'id' column\nresult = df1.`,
-      testCases: [
-        {
-          input: 'df1 and df2 with id columns',
-          expectedOutput: 'df1.join(df2, "id", "inner") or df1.join(df2, on="id", how="inner")',
-          description: 'Should perform inner join on id column',
-        },
-      ],
-      solution: `result = df1.join(df2, "id", "inner")\n# OR\nresult = df1.join(df2, on="id", how="inner")`,
-      explanation: 'When both DataFrames share the same column name, pass it as a string — PySpark automatically deduplicates the column. For different column names, use a condition: df1.col1 == df2.col2.',
-      hints: ['Use df1.join(df2, "id", "inner")', 'When column names match, pass a string — it deduplicates automatically', 'Use on= and how= for named arguments'],
-      tags: ['dataframe', 'join', 'transformation'],
-    },
-    variations: {
-      // Each array has `count` post-original entries (5 here) so variation
-      // index 0..4 maps to a distinct substitution — without this, count=5
-      // against 4-entry arrays produces var0 and var4 with identical content.
-      columns: [
-        ['id', 'customer_id', 'product_id', 'user_id', 'order_id', 'account_id'],
-      ],
-      entities: [
-        ['df1', 'employees', 'customers', 'orders', 'users', 'accounts'],
-        ['df2', 'departments', 'products', 'items', 'profiles', 'plans'],
-      ],
-    },
-  },
-
-  // ORDER BY
-  {
-    conceptId: 'pyspark-orderby',
-    baseQuestion: {
-      id: 'ps-transform-4',
-      type: QuestionType.CODING,
-      difficulty: Difficulty.INTERMEDIATE,
-      topic: Topic.PYSPARK_TRANSFORMATIONS,
-      language: CodeLanguage.PYTHON,
-      question: 'Sort a DataFrame by "salary" in descending order.',
-      starterCode: `# Sort by salary descending\nresult = df.`,
-      testCases: [
-        {
-          input: 'df with salary column',
-          expectedOutput: 'df.orderBy(df.salary.desc()) or df.sort(df.salary.desc())',
-          description: 'Should sort by salary in descending order',
-        },
-      ],
-      solution: `from pyspark.sql.functions import desc\n\nresult = df.orderBy(desc("salary"))\n# OR\nresult = df.orderBy(df.salary.desc())\n# OR\nresult = df.sort(desc("salary"))`,
-      explanation: 'orderBy() and sort() are aliases. Use desc() function or .desc() method on columns for descending order.',
-      hints: ['Use orderBy() or sort()', 'Use desc() for descending order'],
-      tags: ['dataframe', 'orderBy', 'sort'],
-    },
-    variations: {
-      // 5 post-original entries to match count=5 — see note on the join
-      // template above for why this matters.
-      columns: [
-        ['salary', 'price', 'revenue', 'score', 'age', 'rating'],
-      ],
-    },
-  },
+  // Join and orderBy variations removed - their five copies each duplicated
+  // ps-transform-2 (inner join on a shared key) and ps-transform-4 (sort
+  // descending) in questions.ts.
 
   // SQL variations removed — base questions in questions.ts already cover SELECT WHERE
   // and GROUP BY with aggregates. Variations just repeated the same pattern with different
