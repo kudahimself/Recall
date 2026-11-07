@@ -72,20 +72,38 @@
   padding: 0 var(--sp-1);
 }
 
-/* Below 1100px the side column never shows, so its toggle goes too. */
+/* Below 1100px the side column never shows, so its toggle goes too, and the
+   topic keeps the room the section would squeeze it into. */
 @media (max-width: 1099px) {
-  .panelToggle {
+  .panelToggle,
+  .section,
+  .section + .chevron {
     display: none;
   }
 }
 
+/* Phones: two rows. Back and the topic, then how the session stands with the
+   tools as icons (their words stay in their names for a screen reader). */
 @media (max-width: 767px) {
   .bar {
     flex-wrap: wrap;
+    row-gap: var(--sp-1);
   }
 
-  .section,
-  .section + .chevron {
-    display: none;
+  .crumb {
+    flex-basis: calc(100% - var(--action-min-w));
+  }
+
+  .tools {
+    margin-left: auto;
+  }
+
+  .toolLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }

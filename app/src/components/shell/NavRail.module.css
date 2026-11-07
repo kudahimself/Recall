@@ -57,30 +57,27 @@
   white-space: nowrap;
 }
 
-/* Phones: a drawer over the content, closed until the menu button opens it. */
+/* Phones: a tab bar under the screen, the four buttons side by side. */
 @media (max-width: 767px) {
   .rail {
-    position: fixed;
-    top: var(--header-h);
-    bottom: 0;
-    left: 0;
-    z-index: 30;
-    width: min(var(--job-min-w), 80vw);
+    flex-direction: row;
+    gap: var(--sp-1);
+    width: 100%;
     height: auto;
-    padding: var(--sp-3);
-    box-shadow: var(--shadow-3);
-    transition: transform var(--dur) var(--ease), visibility var(--dur) var(--ease);
-  }
-
-  .collapsed {
-    transform: translateX(-100%);
-    visibility: hidden;
+    min-height: var(--tabbar-h);
+    padding: var(--sp-1) var(--sp-2);
+    border-right: 0;
+    border-top: var(--border-w) solid var(--border);
   }
 
   .item {
-    flex-direction: row;
-    gap: var(--sp-3);
-    padding: var(--sp-3);
-    font-size: var(--fs-body);
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    min-height: var(--control-lg);
+  }
+
+  .bottom {
+    margin-top: 0;
   }
 }

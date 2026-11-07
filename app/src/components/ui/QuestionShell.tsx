@@ -114,6 +114,21 @@ export function focusAnswerStart(card: HTMLElement | null) {
 }
 
 /**
+ * Scroll the screen (<main>) just enough to show the verdict banner and the
+ * footer under it, or the verdict's top when both do not fit. Where the card
+ * fits the screen (a laptop) both are already in view and nothing moves.
+ */
+function revealBelow(banner: HTMLElement | null, footer: HTMLElement | null) {
+  const main = banner?.closest('main');
+  if (!banner || !footer || !main) return;
+  const view = main.getBoundingClientRect();
+  const top = banner.getBoundingClientRect().top;
+  const bottom = footer.getBoundingClientRect().bottom;
+  if (top >= view.top && bottom <= view.bottom) return;
+  main.scrollTop += bottom - top <= view.height ? bottom - view.bottom : top - view.top;
+}
+
+/**
  * The frame every question type renders its answer area in: badges and the
  * prompt, the answer, the hint, the banner in a live region, and one footer
  * with the step's action, which becomes Next once graded.
@@ -131,6 +146,7 @@ export function QuestionShell({
   const promptId = useId();
   const cardRef = useRef<HTMLElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLElement>(null);
   const [hintsShown, setHintsShown] = useState(0);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -160,6 +176,11 @@ export function QuestionShell({
     bannerRef.current?.focus({ preventScroll: true });
     return () => cancelAnimationFrame(frame);
   }, [hasFeedback, graded]);
+
+  // Where the screen scrolls (a phone), bring the verdict and Next into view once the banner is open.
+  useEffect(() => {
+    if (revealed) revealBelow(bannerRef.current, footerRef.current);
+  }, [revealed]);
 
   const inQuestion = (target: EventTarget | null) =>
     !(target instanceof Node) || target === document.body || !!cardRef.current?.contains(target);
@@ -318,7 +339,7 @@ export function QuestionShell({
         </div>
       </div>
 
-      <footer className={styles.actions}>
+      <footer className={styles.actions} ref={footerRef}>
         {graded
           ? nav && (
             <Button variant="primary" shortcut="Enter" onClick={nav.onNext} className={styles.primary}>

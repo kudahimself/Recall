@@ -18,7 +18,7 @@ Pre-commit quality checks for Recall. Run before committing question changes.
    - `check-starter-leaks-webdev.js` - webdev-specific
    - `check-hint-leaks.js` - tieredHints skeletons that leak the solution
    - `check-lessons.js` - lessons: exercise ids and ramp order, worked examples run and print their output, no repeated solution, prose rules (also run by `npm test`)
-   - `check-css-tokens.js` - CSS Modules use design tokens only (no colour literals, no px/rem besides 1px hairlines)
+   - `check-css-tokens.js` - every stylesheet uses design tokens only (no colour literals, no px/rem besides 1px hairlines, no undefined `var(--x)`); global CSS only in `src/styles`
 
 ## Execution
 

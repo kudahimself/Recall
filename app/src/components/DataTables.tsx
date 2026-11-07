@@ -1,6 +1,6 @@
 import React from 'react';
 import { SqlTable } from '../types';
-import './DataTables.css';
+import styles from './DataTables.module.css';
 
 interface Props {
   tables?: SqlTable[];
@@ -25,11 +25,11 @@ function columnDecimals(t: SqlTable): number[] {
 export const DataTables: React.FC<Props> = ({ tables }) => {
   if (!tables || tables.length === 0) return null;
   return (
-    <div className="data-tables" aria-label="Sample data">
+    <div className={styles.tables} aria-label="Sample data" data-shrink>
       {tables.map(t => { const decimals = columnDecimals(t); return (
-        <figure className="data-table" key={t.name}>
-          <figcaption className="data-table-name">{t.name}</figcaption>
-          <div className="data-table-scroll">
+        <figure className={styles.table} key={t.name}>
+          <figcaption className={styles.name}>{t.name}</figcaption>
+          <div className={styles.scroll}>
             <table>
               <thead>
                 <tr>
@@ -41,16 +41,16 @@ export const DataTables: React.FC<Props> = ({ tables }) => {
               <tbody>
                 {t.rows.length === 0 ? (
                   <tr>
-                    <td className="data-table-empty" colSpan={t.columns.length}>(no rows)</td>
+                    <td className={styles.empty} colSpan={t.columns.length}>(no rows)</td>
                   </tr>
                 ) : (
                   t.rows.map((row, r) => (
                     <tr key={r}>
                       {row.map((cell, c) =>
                         cell === null ? (
-                          <td key={c} className="data-table-null">NULL</td>
+                          <td key={c} className={styles.null}>NULL</td>
                         ) : (
-                          <td key={c} className={typeof cell === 'number' ? 'data-table-num' : undefined}>
+                          <td key={c} className={typeof cell === 'number' ? styles.num : undefined}>
                             {typeof cell === 'number' && decimals[c] > 0 ? cell.toFixed(decimals[c]) : String(cell)}
                           </td>
                         ),

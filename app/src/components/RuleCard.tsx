@@ -115,7 +115,7 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
           {mode === 'lesson'
             ? <>Next: the {plan.length} exercises above, then the rest of the topic in your sessions{context ? ` (${context.rampSize} questions in all)` : ''}.</>
             : <>Its exercises: {plan.map(q => QUESTION_FORMAT[q.type]).join(', ')}.</>}
-          {' '}Press <KeyCombo combo="R" /> at any time to {mode === 'lesson' ? 'reopen' : 'close'} this card.
+          <span className={styles.keyNote}>{' '}Press <KeyCombo combo="R" /> at any time to {mode === 'lesson' ? 'reopen' : 'close'} this card.</span>
         </p>
         {mode === 'lesson' && onStart && (
           <Button ref={startRef} variant="primary" size="lg" onClick={onStart} shortcut="Enter" data-primary-action>

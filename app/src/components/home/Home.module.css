@@ -3,17 +3,12 @@
 .home {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--home-gap);
-  width: 100%;
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--sp-4);
 }
 
 .col {
   display: flex;
   flex-direction: column;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
   min-width: 0;
   min-height: 0;
 }
@@ -21,9 +16,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
   min-height: 0;
-  padding: var(--home-pad);
 }
 
 /* Fits one screen: the columns take the height left under the top bar, and
@@ -32,7 +26,6 @@
   grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
-  padding: var(--home-pad-y) var(--sp-6) var(--sp-3);
 }
 
 .fits .grow {

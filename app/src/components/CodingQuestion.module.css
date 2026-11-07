@@ -11,6 +11,7 @@
 .editor {
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
   min-width: 0;
   min-height: var(--editor-min-h);
   border: var(--border-w) solid var(--border);
@@ -46,12 +47,31 @@
 .bar {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-1) var(--sp-4);
   min-height: var(--control-sm);
   padding: var(--sp-0) var(--sp-2) var(--sp-0) var(--sp-3);
   border-top: var(--border-w) solid var(--border);
   background: var(--sunken);
+}
+
+/* The editor's keys sit in the bar like the rest of it; a phone has no keyboard for them. */
+.barKeys {
+  display: contents;
+}
+
+.barAlt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* A narrow editor (beside sample data or a preview on a tablet) keeps one way to check and drops the rest. */
+@container (max-width: 36rem) {
+  .bar .barAlt {
+    display: none;
+  }
 }
 
 .barHint {
@@ -78,18 +98,28 @@
   color: var(--text-3);
 }
 
+/* A phone's card grows with its content, so the editor gets a height of its own. */
+@media (max-width: 767px) {
+  .editor {
+    height: var(--editor-phone-h);
+  }
+
+  .barKeys {
+    display: none;
+  }
+
+  .fillPanel {
+    flex: none;
+    height: var(--editor-phone-h);
+  }
+}
+
 /* ---- Beside the editor ---- */
 .side {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
   min-width: 0;
-  min-height: 0;
-}
-
-/* Sample data beside the editor: it gives up height (its rows scroll) before the solution does. */
-.side > :global(.data-tables) {
-  flex: 0 1 auto;
   min-height: 0;
 }
 

@@ -434,7 +434,7 @@ export const ParsonsQuestion: React.FC<Props> = ({ question, onAnswer, showHints
           onDragEnd={handleDragEnd}
           onDragCancel={() => setDragId(null)}
         >
-          <AnswerColumns columns={columns} className={styles.board}>
+          <AnswerColumns columns={columns} className={[styles.board, preview ? styles.withPreview : ''].filter(Boolean).join(' ')}>
             {graded && !right ? (
               <section className={styles.column} aria-label="Correct order">
                 <h3 className={styles.heading}>Correct order</h3>
@@ -505,7 +505,7 @@ export const ParsonsQuestion: React.FC<Props> = ({ question, onAnswer, showHints
             </section>
 
             {preview && (
-              <section className={styles.column} aria-label="Preview">
+              <section className={`${styles.column} ${styles.previewColumn}`} aria-label="Preview">
                 <h3 className={styles.heading}>Preview</h3>
                 <LivePreview
                   html={isHtml ? assembled : question.previewHtml ?? ''}

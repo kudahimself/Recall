@@ -241,3 +241,26 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Phones: "topic 1 of 8" says what the dots show, so the dots give their room
+   to the close button; the plan reads across the card and the button takes the
+   full width under it; there is no keyboard for the R note. */
+@media (max-width: 767px) {
+  .where {
+    min-width: 0;
+  }
+
+  .dots {
+    display: none;
+  }
+
+  .foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-3);
+  }
+
+  .keyNote {
+    display: none;
+  }
+}

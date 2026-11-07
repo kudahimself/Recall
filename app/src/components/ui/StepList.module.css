@@ -58,12 +58,27 @@
   font-weight: var(--weight-semibold);
 }
 
-@media (max-width: 767px) {
-  .label {
-    display: none;
+/* Narrower screens: the current step keeps its name and the others give way
+   to their number, rather than every name being cut short. */
+@media (max-width: 1099px) {
+  .steps {
+    display: flex;
   }
 
   .step {
+    flex: 1 1 0;
     justify-content: center;
+  }
+
+  .step .label {
+    display: none;
+  }
+
+  .current {
+    flex: 0 1 auto;
+  }
+
+  .current .label {
+    display: inline;
   }
 }

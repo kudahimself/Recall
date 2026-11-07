@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { ListFilter, TriangleAlert } from 'lucide-react';
 import {
   Question,
   QuestionType,
@@ -47,6 +48,9 @@ import { LessonSteps, RuleCardOverlay, RuleCardPanel, RuleCardView, TopicPanel, 
 import { useMediaQuery } from './utils/useMediaQuery';
 import { QuizBar, SessionStatus } from './components/QuizBar';
 import { Button } from './components/ui/Button';
+import { MessageCard } from './components/ui/MessageCard';
+import { Notice } from './components/ui/Notice';
+import { QuizLayout } from './components/QuizLayout';
 import { focusAnswerStart, QuestionNav, QuestionNavContext } from './components/ui/QuestionShell';
 import { ShortcutHelp } from './keyboard/ShortcutHelp';
 import { useShortcut } from './keyboard/shortcuts';
@@ -117,12 +121,12 @@ import { activityByDay } from './components/ui/Heatmap';
 import { activeFilterCount, allFilters, filterQuestions, FilterOptions, parseFilters, serializeFilters } from './utils/questionFilters';
 import { FilterDialog } from './components/FilterDialog';
 import { LESSONS } from './data/lessons';
+import { AppShell } from './components/shell/AppShell';
 import { TopBar } from './components/shell/TopBar';
 import { NavRail, NavView } from './components/shell/NavRail';
 import { HomeView } from './components/home/HomeView';
 import { SettingsView } from './components/settings/SettingsView';
 import { ProgressTab, ProgressView } from './components/progress/ProgressView';
-import './App.css';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -237,11 +241,6 @@ function loadActiveCourse(): Course {
     return saved as Course;
   }
   return Course.DATABRICKS;
-}
-
-/** Below 768 px the rail is an overlay drawer (NavigationRail.css), closed until asked for. */
-function isNarrowScreen(): boolean {
-  return !!window.matchMedia?.('(max-width: 767px)').matches;
 }
 
 function loadProgress(): ProgressLoad {
@@ -383,13 +382,19 @@ class QuestionErrorBoundary extends React.Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="quiz-message">
-          <h3>This question hit a snag.</h3>
-          <p>We couldn't render it. Skip to the next one: your progress is safe.</p>
-          <Button variant="primary" onClick={() => { this.setState({ error: null }); this.props.onSkip(); }}>
-            Skip question
-          </Button>
-        </div>
+        <MessageCard
+          id="question-error"
+          role="alert"
+          tone="warning"
+          icon={<TriangleAlert />}
+          title="This question hit a snag."
+          lede="We couldn't render it. Skip to the next one: your progress is safe."
+          actions={
+            <Button variant="primary" onClick={() => { this.setState({ error: null }); this.props.onSkip(); }} data-primary-action>
+              Skip question
+            </Button>
+          }
+        />
       );
     }
     return this.props.children;
@@ -450,7 +455,6 @@ function App() {
   // True after a miss put the card back in today's list, until the next card.
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
   const [activeProgressTab, setActiveProgressTab] = useState<ProgressTab>('overview');
   // The topic selected on Progress → Topics, kept while the learner drills it and comes back.
   const [progressTopic, setProgressTopic] = useState<string | null>(null);
@@ -1119,27 +1123,25 @@ function App() {
     // 2. The session is not over, but the filters have nothing left today.
     if (!currentQuestion && matching > 0 && !unfiltered) {
       return (
-        <div className="quiz-message empty-pool-message">
-          <h3>Nothing left today for these filters.</h3>
-          <p>
-            Today's session still has questions outside your current filters.
-            Reset filters to carry on with them.
-          </p>
-          <Button variant="primary" onClick={resetFilters} data-primary-action>Reset filters</Button>
-        </div>
+        <MessageCard
+          id="filters-empty"
+          icon={<ListFilter />}
+          title="Nothing left today for these filters."
+          lede="Today's session still has questions outside your current filters. Reset filters to carry on with them."
+          actions={<Button variant="primary" onClick={resetFilters} data-primary-action>Reset filters</Button>}
+        />
       );
     }
     // 3. The filters match no question in this course at all.
     if (!currentQuestion) {
       return (
-        <div className="quiz-message empty-pool-message">
-          <h3>You're all caught up.</h3>
-          <p>
-            No questions match your current filters in this course's unlocked sections.
-            Try resetting filters or switching courses.
-          </p>
-          <Button variant="primary" onClick={resetFilters} data-primary-action>Reset filters</Button>
-        </div>
+        <MessageCard
+          id="filters-none"
+          icon={<ListFilter />}
+          title="You're all caught up."
+          lede="No questions match your current filters in this course's unlocked sections. Try resetting filters or switching courses."
+          actions={<Button variant="primary" onClick={resetFilters} data-primary-action>Reset filters</Button>}
+        />
       );
     }
 
@@ -1468,14 +1470,12 @@ function App() {
     [progress.attemptHistory, courseQuestions],
   );
 
-  // The rail, the switcher and the G keys all move between screens here.
+  // The rail (a tab bar on a phone), the switcher and the G keys all move between screens here.
   const navigate = (view: NavView) => {
-    if (isNarrowScreen()) setRailCollapsed(true);
     if (view === 'quiz') startQuiz(activeCourse);
     else changeView(view);
   };
   const changeCourse = (course: Course) => {
-    if (isNarrowScreen()) setRailCollapsed(true);
     // Mid-question, swap the whole quiz context, so the old course's question does not linger.
     if (viewMode === 'quiz') startQuiz(course);
     else switchCourse(course);
@@ -1490,30 +1490,18 @@ function App() {
     changeView('progress');
   };
 
-  return (
-    <div className={`App ${COURSE_META[activeCourse].theme}`}>
-      <h1 className="sr-only">Recall - multi-course learning platform</h1>
-
-      <TopBar
-        course={activeCourse}
-        totals={totalsByCourse}
-        onCourseChange={changeCourse}
-        streak={profile.currentStreak}
-        onToggleNav={() => setRailCollapsed(!railCollapsed)}
-        onShowShortcuts={() => setHelpOpen(true)}
-      />
-      <input
-        ref={importInputRef}
-        type="file"
-        accept="application/json,.json"
-        data-testid="import-progress-input"
-        hidden
-        onChange={e => { void importProgress(e.target.files); }}
-      />
-
-      <div className="storage-banners">
+  // Storage notices under the top bar: what happened to the learner's data, and the buttons that act on it.
+  const notices = (
+    <>
       {initialLoad.status === 'unreadable' && (
-        <div className="storage-banner storage-banner-error" role="alert">
+        <Notice
+          tone="danger"
+          actions={initialLoad.raw !== null && (
+            <Button size="sm" onClick={() => downloadTextFile(`recall-progress-unreadable-${getToday()}.json`, initialLoad.raw as string)}>
+              Download unreadable data
+            </Button>
+          )}
+        >
           <strong>Your saved progress could not be read</strong> ({initialLoad.error}).
           {initialLoad.backupKey
             ? <>
@@ -1528,20 +1516,26 @@ function App() {
                   : <>{' '}There is no earlier backup.</>}
               </>}
           {' '}Use Import to restore from an export file.
-          {initialLoad.raw !== null && (
-            <>
-              {' '}<button
-                className="storage-banner-button"
-                onClick={() => downloadTextFile(`recall-progress-unreadable-${getToday()}.json`, initialLoad.raw as string)}
-              >
-                Download unreadable data
-              </button>
-            </>
-          )}
-        </div>
+        </Notice>
       )}
       {backupKeys.length > 0 && !backupNoticeDismissed && (
-        <div className="storage-banner storage-banner-warning" role="status">
+        <Notice
+          tone="warning"
+          role="status"
+          actions={<>
+            {backupKeys.map(k => (
+              <Button
+                key={k}
+                size="sm"
+                onClick={() => downloadTextFile(`${k.replace(/[:.]/g, '-')}.json`, localStorage.getItem(k) ?? '')}
+                title={k === PRE_IMPORT_BACKUP_KEY ? 'Import the downloaded file to restore this progress' : undefined}
+              >
+                {k === PRE_IMPORT_BACKUP_KEY ? 'Download backup from before the last import' : `Download backup ${k.slice(PROGRESS_BACKUP_PREFIX.length)}`}
+              </Button>
+            ))}
+            <Button size="sm" variant="ghost" onClick={() => setBackupNoticeDismissed(true)}>Dismiss</Button>
+          </>}
+        >
           {unreadableBackupCount > 0 && (
             <>
               Recall keeps {unreadableBackupCount === 1 ? 'a backup' : `${unreadableBackupCount} backups`} of progress it could not read.
@@ -1553,234 +1547,229 @@ function App() {
               {unreadableBackupCount > 0 && ' '}Recall keeps a backup of the progress the last import replaced.
             </>
           )}
-          {backupKeys.map(k => (
-            <React.Fragment key={k}>
-              {' '}<button
-                className="storage-banner-button"
-                onClick={() => downloadTextFile(`${k.replace(/[:.]/g, '-')}.json`, localStorage.getItem(k) ?? '')}
-                title={k === PRE_IMPORT_BACKUP_KEY ? 'Import the downloaded file to restore this progress' : undefined}
-              >
-                {k === PRE_IMPORT_BACKUP_KEY ? 'Download backup from before the last import' : `Download backup ${k.slice(PROGRESS_BACKUP_PREFIX.length)}`}
-              </button>
-            </React.Fragment>
-          ))}
-          {' '}<button className="storage-banner-button" onClick={() => setBackupNoticeDismissed(true)}>Dismiss</button>
-        </div>
+        </Notice>
       )}
       {staleTab && (
-        <div className="storage-banner storage-banner-warning" role="alert">
+        <Notice tone="warning" actions={<Button size="sm" onClick={reloadPage}>Reload to continue here</Button>}>
           <strong>Recall is open in another tab, and it saved answers.</strong>
           {' '}This tab has stopped saving so it cannot overwrite them. Answers you give here are not being saved.
-          {' '}<button className="storage-banner-button" onClick={reloadPage}>Reload to continue here</button>
-        </div>
+        </Notice>
       )}
       {Object.keys(writeErrors).length > 0 && (
-        <div className="storage-banner storage-banner-error" role="alert">
+        <Notice tone="danger" actions={canExport && <Button size="sm" onClick={exportProgress}>Export now</Button>}>
           <strong>Your progress is not being saved</strong>
           {' '}({Object.entries(writeErrors).map(([k, msg]) => `${k}: ${msg}`).join('; ')}).
           {' '}Your answers are kept in this tab until you close it.
-          {canExport && (
-            <>
-              {' '}Export now to keep them.
-              {' '}<button className="storage-banner-button" onClick={exportProgress}>Export now</button>
-            </>
-          )}
-        </div>
+          {canExport && <>{' '}Export now to keep them.</>}
+        </Notice>
       )}
       {importError && (
-        <div className="storage-banner storage-banner-error" role="alert">
+        <Notice tone="danger" actions={<Button size="sm" variant="ghost" onClick={() => setImportError(null)}>Dismiss</Button>}>
           {importError}
-          {' '}<button className="storage-banner-button" onClick={() => setImportError(null)}>Dismiss</button>
-        </div>
+        </Notice>
       )}
-      </div>
+    </>
+  );
 
-      {/* ── Main Body: Navigation Rail + Content ── */}
-      <div className="app-body">
-        <NavRail active={viewMode} onNavigate={navigate} collapsed={railCollapsed} />
-
-        {/* Content Area */}
-        <main className="content">
-          <div className="view-container" key={viewMode}>
-          {viewMode === 'home' && (
-            <HomeView
-              course={activeCourse}
-              session={reviewSessionNow}
-              reviewsLeft={reviewsLeftToday}
-              settings={sessionSettings}
-              path={coursePath}
-              totals={totalsByCourse[activeCourse]}
-              activity={activity}
-              focus={focus}
-              exercisesDone={exercisesDone}
-              onStart={() => startQuiz(activeCourse)}
-              onKeepGoing={() => startQuiz(activeCourse, true)}
-              onStartLesson={startLesson}
-              onRuleCard={setRuleCardOpen}
-              onDrill={handleReviewWeakTopic}
-              onAllSections={openPathTab}
-              onSettings={() => changeView('settings')}
-            />
-          )}
-
-          {viewMode === 'settings' && (
-            <SettingsView
-              course={activeCourse}
-              settings={sessionSettings}
-              sessionStarted={(reviewSessions[activeCourse]?.answered ?? 0) > 0 && isSessionCurrent(reviewSessions[activeCourse])}
-              onSettingsChange={changeSessionSettings}
-              canExport={canExport}
-              exportNote={progressWritesBlocked
-                ? 'Stored progress could not be read, so there is nothing to export yet.'
-                : staleTab
-                  ? 'Reload this tab to export the latest progress: another tab saved newer answers.'
-                  : null}
-              onExport={exportProgress}
-              onImport={() => importInputRef.current?.click()}
-              onReset={resetProgress}
-              onShowShortcuts={() => setHelpOpen(true)}
-            />
-          )}
-
-          {viewMode === 'quiz' && (() => {
-            // The lesson's rule card before its exercises, or the card on screen.
-            const lessonCard = !currentQuestion && lessonFlow?.stage === 'card' ? flowLesson : undefined;
-            const placeTopic = currentQuestion ? currentQuestion.topic : lessonCard?.topicKeys[0];
-            const place = placeTopic ? getTopicPlace(placeTopic) : null;
-            const lastExercise = inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, QUESTIONS_BY_ID);
-            const nav: QuestionNav = {
-              label: lastExercise ? 'Finish the lesson' : inLessonExercise ? 'Next exercise' : 'Next question',
-              onNext: loadNextQuestion,
-              missNote: reaskShown ? 'It comes back once more, a few cards later.' : undefined,
-            };
-            const status: SessionStatus = {
-              kind: inLessonExercise || lessonCard ? 'lesson'
-                : !currentQuestion ? undefined
-                : servedKind === 'review' ? 'review'
-                : servedKind === 'new' ? 'new'
-                : 'practice',
-              answered: reviewSessionNow.answered,
-              size: reviewSessionNow.size,
-              keepGoing: !!reviewSessionNow.keepGoing,
-              reviewsLeft: reviewsLeftToday,
-              again: reaskShown,
-            };
-            const topicStats: TopicStats = {
-              seen: topicAccuracy.seen,
-              total: topicAccuracy.topicTotal,
-              recent: topicAccuracy.pct === 'New' ? null : Number(topicAccuracy.pct),
-              level: topicDifficulty?.label ?? null,
-            };
-            // Hide unmounts its own button: focus goes to the header's toggle, which brings the column back.
-            const hideColumn = () => {
-              setRulePanelPref('hidden');
-              requestAnimationFrame(() => {
-                if (document.activeElement === document.body) document.querySelector<HTMLElement>('[data-panel-toggle]')?.focus({ preventScroll: true });
-              });
-            };
-            return (
-            <div className={`quiz-view${columnLayout ? ' quiz-view-column' : ''}`}>
-              <QuizBar
-                onBack={() => changeView('home')}
-                section={place?.section}
-                topic={place?.unit}
-                status={status}
-                onRuleCard={currentQuestion && screenLesson ? () => setRuleCardOpen(screenLesson.id) : undefined}
-                panel={currentQuestion && courseHasLessons
-                  ? { shown: sideColumn, onToggle: () => setRulePanelPref(sideColumn ? 'hidden' : 'shown') }
-                  : undefined}
-                filters={{ active: filtersActive, onOpen: () => setShowFilters(true) }}
-              />
-
-              {flowLesson && (inLessonExercise || lessonCard) && (
-                <LessonSteps
-                  lesson={flowLesson}
-                  byId={QUESTIONS_BY_ID}
-                  latest={latestAnswers}
-                  currentId={currentQuestion ? currentQuestion.id : null}
-                />
-              )}
-
-              <div className={`quiz-stage${sideColumn ? ' quiz-stage-column' : ''}`}>
-                <div className="quiz-main">
-                  <QuestionNavContext.Provider value={nav}>
-                    <QuestionErrorBoundary onSkip={loadNextQuestion}>
-                      {renderQuestion()}
-                    </QuestionErrorBoundary>
-                  </QuestionNavContext.Provider>
-                </div>
-                {sideColumn && currentQuestion && (screenLesson ? (
-                  <RuleCardPanel
-                    className="quiz-side-panel"
-                    lesson={screenLesson}
-                    rampNote={rampAfterLessonNote(screenLesson, courseQuestions, progress.questionsAttempted)}
-                    stats={topicStats}
-                    onOpen={() => setRuleCardOpen(screenLesson.id)}
-                    onHide={hideColumn}
-                  />
-                ) : (
-                  <TopicPanel
-                    className="quiz-side-panel"
-                    topic={place?.unit ?? currentQuestion.topic}
-                    section={place?.section}
-                    stats={topicStats}
-                    onHide={hideColumn}
-                  />
-                ))}
-              </div>
-            </div>
-            );
-          })()}
-
-          {viewMode === 'progress' && (
-            <ProgressView
-              course={activeCourse}
-              questions={courseQuestions}
-              progress={progress}
-              path={coursePath}
-              misconceptions={misconceptions}
-              activity={activity}
-              exercisesDone={exercisesDone}
-              longestStreak={profile.longestStreak}
-              tab={activeProgressTab}
-              onTabChange={setActiveProgressTab}
-              topic={progressTopic}
-              onTopicChange={setProgressTopic}
-              onDrill={handleReviewWeakTopic}
-              onRuleCard={setRuleCardOpen}
-              onStartLesson={startLesson}
-              onToggleExercise={toggleExercise}
-            />
-          )}
-          </div>
-        </main>
-      </div>
-
-      <ShortcutHelp open={helpOpen} onOpenChange={setHelpOpen} />
-
-      {showFilters && viewMode === 'quiz' && (
-        <FilterDialog
-          filters={filters}
+  return (
+    <AppShell
+      className={COURSE_META[activeCourse].theme}
+      topBar={<>
+        <h1 className="sr-only">Recall - multi-course learning platform</h1>
+        <TopBar
           course={activeCourse}
-          onChange={handleFilterChange}
-          onReset={resetFilters}
-          onClose={closeFilters}
+          totals={totalsByCourse}
+          onCourseChange={changeCourse}
+          streak={profile.currentStreak}
+          onShowShortcuts={() => setHelpOpen(true)}
+        />
+      </>}
+      notices={notices}
+      nav={<NavRail active={viewMode} onNavigate={navigate} />}
+      viewKey={viewMode}
+      overlays={<>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          data-testid="import-progress-input"
+          hidden
+          onChange={e => { void importProgress(e.target.files); }}
+        />
+
+        <ShortcutHelp open={helpOpen} onOpenChange={setHelpOpen} />
+
+        {showFilters && viewMode === 'quiz' && (
+          <FilterDialog
+            filters={filters}
+            course={activeCourse}
+            onChange={handleFilterChange}
+            onReset={resetFilters}
+            onClose={closeFilters}
+          />
+        )}
+
+        {ruleCardOpen && (() => {
+          const lesson = getLesson(ruleCardOpen);
+          if (!lesson) return null;
+          return (
+            <RuleCardOverlay
+              lesson={lesson}
+              byId={QUESTIONS_BY_ID}
+              context={lessonContext(lesson, courseQuestions, lessonsDone, progress.questionsAttempted)}
+              onClose={() => setRuleCardOpen(null)}
+            />
+          );
+        })()}
+      </>}
+    >
+      {viewMode === 'home' && (
+        <HomeView
+          course={activeCourse}
+          session={reviewSessionNow}
+          reviewsLeft={reviewsLeftToday}
+          settings={sessionSettings}
+          path={coursePath}
+          totals={totalsByCourse[activeCourse]}
+          activity={activity}
+          focus={focus}
+          exercisesDone={exercisesDone}
+          onStart={() => startQuiz(activeCourse)}
+          onKeepGoing={() => startQuiz(activeCourse, true)}
+          onStartLesson={startLesson}
+          onRuleCard={setRuleCardOpen}
+          onDrill={handleReviewWeakTopic}
+          onAllSections={openPathTab}
+          onSettings={() => changeView('settings')}
         />
       )}
 
-      {ruleCardOpen && (() => {
-        const lesson = getLesson(ruleCardOpen);
-        if (!lesson) return null;
+      {viewMode === 'settings' && (
+        <SettingsView
+          course={activeCourse}
+          settings={sessionSettings}
+          sessionStarted={(reviewSessions[activeCourse]?.answered ?? 0) > 0 && isSessionCurrent(reviewSessions[activeCourse])}
+          onSettingsChange={changeSessionSettings}
+          canExport={canExport}
+          exportNote={progressWritesBlocked
+            ? 'Stored progress could not be read, so there is nothing to export yet.'
+            : staleTab
+              ? 'Reload this tab to export the latest progress: another tab saved newer answers.'
+              : null}
+          onExport={exportProgress}
+          onImport={() => importInputRef.current?.click()}
+          onReset={resetProgress}
+          onShowShortcuts={() => setHelpOpen(true)}
+        />
+      )}
+
+      {viewMode === 'quiz' && (() => {
+        // The lesson's rule card before its exercises, or the card on screen.
+        const lessonCard = !currentQuestion && lessonFlow?.stage === 'card' ? flowLesson : undefined;
+        const placeTopic = currentQuestion ? currentQuestion.topic : lessonCard?.topicKeys[0];
+        const place = placeTopic ? getTopicPlace(placeTopic) : null;
+        const lastExercise = inLessonExercise && flowLesson && !nextLessonExercise(flowLesson, progress.questionsAttempted, QUESTIONS_BY_ID);
+        const nav: QuestionNav = {
+          label: lastExercise ? 'Finish the lesson' : inLessonExercise ? 'Next exercise' : 'Next question',
+          onNext: loadNextQuestion,
+          missNote: reaskShown ? 'It comes back once more, a few cards later.' : undefined,
+        };
+        const status: SessionStatus = {
+          kind: inLessonExercise || lessonCard ? 'lesson'
+            : !currentQuestion ? undefined
+            : servedKind === 'review' ? 'review'
+            : servedKind === 'new' ? 'new'
+            : 'practice',
+          answered: reviewSessionNow.answered,
+          size: reviewSessionNow.size,
+          keepGoing: !!reviewSessionNow.keepGoing,
+          reviewsLeft: reviewsLeftToday,
+          again: reaskShown,
+        };
+        const topicStats: TopicStats = {
+          seen: topicAccuracy.seen,
+          total: topicAccuracy.topicTotal,
+          recent: topicAccuracy.pct === 'New' ? null : Number(topicAccuracy.pct),
+          level: topicDifficulty?.label ?? null,
+        };
+        // Hide unmounts its own button: focus goes to the header's toggle, which brings the column back.
+        const hideColumn = () => {
+          setRulePanelPref('hidden');
+          requestAnimationFrame(() => {
+            if (document.activeElement === document.body) document.querySelector<HTMLElement>('[data-panel-toggle]')?.focus({ preventScroll: true });
+          });
+        };
         return (
-          <RuleCardOverlay
-            lesson={lesson}
-            byId={QUESTIONS_BY_ID}
-            context={lessonContext(lesson, courseQuestions, lessonsDone, progress.questionsAttempted)}
-            onClose={() => setRuleCardOpen(null)}
-          />
+        <QuizLayout
+          column={columnLayout}
+          bar={
+            <QuizBar
+              onBack={() => changeView('home')}
+              section={place?.section}
+              topic={place?.unit}
+              status={status}
+              onRuleCard={currentQuestion && screenLesson ? () => setRuleCardOpen(screenLesson.id) : undefined}
+              panel={currentQuestion && courseHasLessons
+                ? { shown: sideColumn, onToggle: () => setRulePanelPref(sideColumn ? 'hidden' : 'shown') }
+                : undefined}
+              filters={{ active: filtersActive, onOpen: () => setShowFilters(true) }}
+            />
+          }
+          steps={flowLesson && (inLessonExercise || lessonCard) && (
+            <LessonSteps
+              lesson={flowLesson}
+              byId={QUESTIONS_BY_ID}
+              latest={latestAnswers}
+              currentId={currentQuestion ? currentQuestion.id : null}
+            />
+          )}
+          side={sideColumn && currentQuestion ? (screenLesson ? (
+            <RuleCardPanel
+              lesson={screenLesson}
+              rampNote={rampAfterLessonNote(screenLesson, courseQuestions, progress.questionsAttempted)}
+              stats={topicStats}
+              onOpen={() => setRuleCardOpen(screenLesson.id)}
+              onHide={hideColumn}
+            />
+          ) : (
+            <TopicPanel
+              topic={place?.unit ?? currentQuestion.topic}
+              section={place?.section}
+              stats={topicStats}
+              onHide={hideColumn}
+            />
+          )) : null}
+        >
+          <QuestionNavContext.Provider value={nav}>
+            <QuestionErrorBoundary onSkip={loadNextQuestion}>
+              {renderQuestion()}
+            </QuestionErrorBoundary>
+          </QuestionNavContext.Provider>
+        </QuizLayout>
         );
       })()}
-    </div>
+
+      {viewMode === 'progress' && (
+        <ProgressView
+          course={activeCourse}
+          questions={courseQuestions}
+          progress={progress}
+          path={coursePath}
+          misconceptions={misconceptions}
+          activity={activity}
+          exercisesDone={exercisesDone}
+          longestStreak={profile.longestStreak}
+          tab={activeProgressTab}
+          onTabChange={setActiveProgressTab}
+          topic={progressTopic}
+          onTopicChange={setProgressTopic}
+          onDrill={handleReviewWeakTopic}
+          onRuleCard={setRuleCardOpen}
+          onStartLesson={startLesson}
+          onToggleExercise={toggleExercise}
+        />
+      )}
+    </AppShell>
   );
 }
 

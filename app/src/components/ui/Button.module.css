@@ -46,6 +46,13 @@
   margin-left: var(--sp-1);
 }
 
+/* Phones have no keyboard to press it with. */
+@media (max-width: 767px) {
+  .shortcut {
+    display: none;
+  }
+}
+
 .primary {
   background: var(--accent);
   color: var(--on-accent);

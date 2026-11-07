@@ -13,6 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { CalendarClock, LayoutDashboard, ListTree } from 'lucide-react';
 import { reviewSchedule } from '../../utils/progressStats';
 import { useShortcut } from '../../keyboard/shortcuts';
+import { Screen } from '../ui/Screen';
 import { TabItem, TabPanel, Tabs, stepTab, tabId } from '../ui/Tabs';
 import { OverviewTab } from './OverviewTab';
 import { ScheduleTab } from './ScheduleTab';
@@ -76,9 +77,10 @@ export function ProgressView(props: ProgressViewProps) {
   };
 
   return (
-    <div className={styles.progress}>
-      <div className={styles.head}>
-        <h2 className={styles.title}>Progress</h2>
+    <Screen
+      className={styles.progress}
+      title="Progress"
+      head={
         <Tabs
           label="Progress views"
           idBase={ID}
@@ -88,7 +90,8 @@ export function ProgressView(props: ProgressViewProps) {
           selectedRef={selectedTabRef}
           className={styles.tabs}
         />
-      </div>
+      }
+    >
 
       <TabPanel idBase={ID} id={tab} className={styles.panel}>
         {tab === 'overview' && (
@@ -109,6 +112,6 @@ export function ProgressView(props: ProgressViewProps) {
           />
         )}
       </TabPanel>
-    </div>
+    </Screen>
   );
 }

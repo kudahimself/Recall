@@ -15,14 +15,15 @@ const ITEMS: Array<{ id: NavView; label: string; Icon: LucideIcon; key: Shortcut
 interface NavRailProps {
   active: NavView | 'filter';
   onNavigate: (view: NavView) => void;
-  /** Phones: the rail is a drawer, closed until the menu button opens it. */
-  collapsed: boolean;
 }
 
-/** The main navigation: Home, Learn and Progress, with Settings at the foot. */
-export function NavRail({ active, onNavigate, collapsed }: NavRailProps) {
+/**
+ * The main navigation: Home, Learn and Progress, with Settings at the foot of
+ * the rail. On a phone the same four buttons are a tab bar under the screen.
+ */
+export function NavRail({ active, onNavigate }: NavRailProps) {
   return (
-    <nav className={[styles.rail, collapsed ? styles.collapsed : ''].filter(Boolean).join(' ')} aria-label="Main navigation">
+    <nav className={styles.rail} aria-label="Main navigation">
       {ITEMS.map(({ id, label, Icon, key, bottom }) => {
         const keys = sequenceKeys(SHORTCUTS[key].keys[0]);
         return (

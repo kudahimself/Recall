@@ -1,0 +1,47 @@
+/* The app frame: top bar, notices, then the navigation beside the screen.
+   The screen scrolls inside <main>; the page itself never scrolls. */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* The screen takes exactly the height under the top bar and notices: a zero
+   basis, so a tall screen never squeezes the bar above it. */
+.body {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.view {
+  height: 100%;
+  animation: view-in var(--dur) var(--ease) both;
+}
+
+@keyframes view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Phones: the screen takes the full width and the navigation sits under it as a tab bar. */
+@media (max-width: 767px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .main {
+    order: -1;
+  }
+}

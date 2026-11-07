@@ -86,41 +86,15 @@ beforeEach(() => {
 });
 
 describe('F1: phone layout', () => {
-  const original = window.matchMedia;
-  afterEach(() => {
-    window.matchMedia = original;
-  });
-
-  const mockWidth = (narrow: boolean) => {
-    window.matchMedia = ((query: string) => ({
-      matches: narrow && query === '(max-width: 767px)',
-      media: query,
-      onchange: null,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => false,
-    })) as typeof window.matchMedia;
-  };
-
-  test('under 768 px the drawer starts closed, opens from the menu, and closes after a choice', async () => {
-    mockWidth(true);
+  test('the main navigation is always in reach: four buttons, no drawer to open', async () => {
     render(<App />);
     const rail = screen.getByRole('navigation', { name: 'Main navigation' });
-    expect(rail).toHaveClass('collapsed');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle navigation' }));
-    expect(rail).not.toHaveClass('collapsed');
+    expect(within(rail).getAllByRole('button').map(b => b.textContent)).toEqual(['Home', 'Learn', 'Progress', 'Settings']);
+    expect(screen.queryByRole('button', { name: 'Toggle navigation' })).toBeNull();
 
     fireEvent.click(nav('Progress'));
-    expect(rail).toHaveClass('collapsed');
-  });
-
-  test('on a desktop the rail starts open', () => {
-    mockWidth(false);
-    render(<App />);
-    expect(screen.getByRole('navigation', { name: 'Main navigation' })).not.toHaveClass('collapsed');
+    expect(nav('Progress')).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('tab', { name: /Overview/ })).toBeInTheDocument();
   });
 });
 

@@ -1,0 +1,71 @@
+.notice {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-5);
+  border-bottom: var(--border-w) solid var(--tone-line);
+  background: var(--tone-soft);
+  color: var(--text);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+}
+
+.danger {
+  --tone: var(--danger);
+  --tone-soft: var(--danger-soft);
+  --tone-line: var(--danger-line);
+}
+
+.warning {
+  --tone: var(--warning);
+  --tone-soft: var(--warning-soft);
+  --tone-line: var(--warning-line);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  padding-top: var(--sp-0);
+  color: var(--tone);
+}
+
+.icon svg {
+  width: var(--icon-m);
+  height: var(--icon-m);
+}
+
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.text code {
+  font-size: var(--fs-meta);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  flex: 0 1 auto;
+}
+
+/* A phone puts the buttons on their own line under the words. */
+@media (max-width: 767px) {
+  .notice {
+    flex-wrap: wrap;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .text {
+    flex-basis: calc(100% - var(--icon-m) - var(--sp-3));
+  }
+
+  .actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
