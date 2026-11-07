@@ -950,7 +950,7 @@ function App() {
 
     // Today's session: an answered list card leaves the list (one fewer
     // review), a new card or drill uses a slot, and a first miss comes back
-    // once, a few cards later ("+1 again").
+    // once, a few cards later (the status badge says so on hover).
     const answeredCourse = getCourseForTopic(currentQuestion.topic);
     const session = reviewSessions[answeredCourse];
     if (session) {
@@ -1383,7 +1383,7 @@ function App() {
 
   // Reviews left today in the active course: the live session's list, or on
   // Home before a session starts, the list Start would build right now (the
-  // same builder, so Home and the first card's pill show the same number).
+  // same builder, so Home and the first card's status badge show the same number).
   // viewMode is a dependency so coming back to Home rebuilds a preview.
   const reviewSessionNow = useMemo(
     () => reviewSessionFor(activeCourse),

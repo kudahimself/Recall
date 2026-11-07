@@ -180,7 +180,7 @@ in every row. Per-primitive matrices are produced when each topic is authored.
 - [ ] `src/utils/spacedRepetition.ts` — `getUnlockedSections` pathOrder branch.
 - [ ] `src/utils/courseMeta.ts` - `COURSE_META` entry (label "SQL for Data Engineering", icon, theme)
       and `COURSE_ORDER` (the top-bar course switcher).
-- [ ] `src/components/QuestionFilter.tsx` — sections ternary.
+- [ ] `src/utils/courseConfig.ts` - `getCourseSections` sections ternary (the quiz filters read it).
 - [ ] `src/components/ProgressTracker.tsx` — resolves SQL sections/path.
 - [ ] `src/styles/tokens.css` - `--course-sql` marker hue + `.theme-sql` (no raw colours or px sizes).
 - [ ] `src/data/topic_tsql_*.ts` files; aggregate into `src/data/questions.ts`.
