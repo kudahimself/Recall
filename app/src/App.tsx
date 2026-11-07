@@ -453,6 +453,7 @@ function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
   const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'path' | 'topics' | 'heatmap'>('overview');
+  const progressTabsRef = useRef<HTMLDivElement>(null);
   const [helpOpen, setHelpOpen] = useState(false);
 
   // ── Persistence guards ──
@@ -1458,6 +1459,10 @@ function App() {
     if (viewMode === 'quiz') startQuiz(course);
     else switchCourse(course);
   };
+  useEffect(() => {
+    if (viewMode !== 'progress') return;
+    progressTabsRef.current?.querySelector<HTMLButtonElement>('.progress-tab.active')?.focus({ preventScroll: true });
+  }, [viewMode]);
   useShortcut('goHome', () => navigate('home'));
   useShortcut('goLearn', () => navigate('quiz'));
   useShortcut('goProgress', () => navigate('progress'));
@@ -1707,7 +1712,7 @@ function App() {
           {viewMode === 'progress' && (
             <div className="progress-view">
               {/* Tab Navigation */}
-              <div className="progress-tabs">
+              <div className="progress-tabs" ref={progressTabsRef}>
                 <button
                   className={`progress-tab ${activeProgressTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setActiveProgressTab('overview')}

@@ -95,6 +95,8 @@ describe('G sequences', () => {
     render(<App />);
     press('gp');
     expect(rail().getByRole('button', { name: 'Progress' })).toHaveAttribute('aria-current', 'page');
+    expect(focused()).toHaveAccessibleName('Overview');
+    expect(focused()).toHaveClass('progress-tab', 'active');
     press('gs');
     expect(rail().getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(focused()).toHaveAccessibleName('Settings');
