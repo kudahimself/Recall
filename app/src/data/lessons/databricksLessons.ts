@@ -6,6 +6,7 @@
  * Section 3, Incremental Data Processing: every topic.
  * Section 4, Production Pipelines: every topic.
  * Section 5, Optimization & Advanced: every topic.
+ * Section 6, Data Governance: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). Most worked examples
  * here are Databricks notebook cells: they need a workspace to run, so they
@@ -21,7 +22,9 @@
  * Lakeflow pipeline expectations docs, and the job's is what its last task
  * prints, following the Databricks utilities docs. The section 5 cells
  * (a broadcast join with cache and coalesce, a Python and a pandas UDF) were
- * run on Spark 4.0. SQL in a cell runs
+ * run on Spark 4.0. The section 6 cells need a Unity Catalog workspace
+ * and other principals' grants, so their output follows the Databricks
+ * privileges and row filter / column mask docs. SQL in a cell runs
  * through `spark.sql`, as it would in a Python notebook. A plain SQL
  * example (joins, aggregations, subqueries, set operations) uses only SQL
  * that Spark and the checker's engine agree on, so check-lessons.js runs it.
@@ -2321,6 +2324,166 @@ None None 1.0`,
       'udf-predict-1',
       'udf-2',
       'udf-4',
+    ],
+  },
+  // ===== Section 6, Data Governance =====
+  {
+    id: 'data_governance/1',
+    topicKeys: [Topic.DATA_GOVERNANCE],
+    step: 1,
+    title: 'Access Controls & Privileges (GRANT, REVOKE, permissions)',
+    idea: [
+      lines(
+        "Unity Catalog keeps access to the data of every workspace in one place: a principal, which is a user, a group or a service principal, holds privileges on securable objects such as catalogs, schemas, tables, views, volumes and functions.",
+        "Grant to groups rather than to people.",
+      ),
+      lines(
+        "`GRANT privileges ON kind name TO principal` adds privileges, `REVOKE privileges ON kind name FROM principal` removes them, and `SHOW GRANTS ON kind name` lists them.",
+        "A privilege granted on a catalog or a schema is inherited by every object inside it, those created later included, so `SELECT` on a schema reads all of its tables.",
+      ),
+      lines(
+        "Reading a table takes three privileges at once: `USE CATALOG` on its catalog, `USE SCHEMA` on its schema and `SELECT` on the table or a parent.",
+        "`MODIFY` adds writing rows, `CREATE TABLE` on a schema creates tables in it, and an object's owner, its creator by default, can grant privileges on it.",
+      ),
+      lines(
+        "Unity Catalog has no `DENY`: a `REVOKE` removes a grant made at that level only, so it cannot take away what a grant on the schema gives.",
+        "The legacy Hive metastore's table ACLs had `USAGE` and `DENY`; Unity Catalog uses `USE CATALOG`, `USE SCHEMA` and narrower grants.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- to read a table: enter its catalog and schema too
+GRANT USE CATALOG ON CATALOG cat TO \`grp\`;
+GRANT USE SCHEMA ON SCHEMA cat.sch TO \`grp\`;
+GRANT SELECT ON TABLE cat.sch.t TO \`grp\`;   -- one table
+GRANT SELECT ON SCHEMA cat.sch TO \`grp\`;    -- all, and later
+GRANT MODIFY ON TABLE cat.sch.t TO \`grp\`;   -- write rows
+GRANT CREATE TABLE ON SCHEMA cat.sch TO \`grp\`;
+REVOKE MODIFY ON TABLE cat.sch.t FROM \`grp\`;  -- same level
+SHOW GRANTS ON SCHEMA cat.sch;              -- who holds what
+SHOW GRANTS \`grp\` ON SCHEMA cat.sch;        -- one principal
+ALTER TABLE cat.sch.t OWNER TO \`grp\`;       -- new owner`,
+    },
+    pitfall: lines(
+      "`SELECT` on a table is not enough to read it: without `USE CATALOG` on its catalog and `USE SCHEMA` on its schema, the query fails with a permission error.",
+      "Grant the two usage privileges along with the data privilege, usually once to the group on the catalog and on the schema.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# UC notebook; you are only in group library_staff, own nothing
+# and are not an admin. The owner of catalog lib granted it:
+#   USE CATALOG on catalog lib
+#   USE SCHEMA and SELECT on schema lib.loans
+#   MODIFY on table lib.loans.fines
+def attempt(label, stmt):
+    try:
+        spark.sql(stmt).collect()
+        print(label, "ok")
+    except Exception:
+        print(label, "denied")
+attempt("read loans", "SELECT * FROM lib.loans.loans LIMIT 1")
+attempt("read fines", "SELECT * FROM lib.loans.fines LIMIT 1")
+attempt("add fine", "INSERT INTO lib.loans.fines VALUES (7, 2)")
+attempt("add loan", "INSERT INTO lib.loans.loans VALUES (8, 'Dune')")
+attempt("new table", "CREATE TABLE lib.loans.notes (id INT)")`,
+      steps: [
+        "Lines 1-5: the group may enter catalog lib and schema lib.loans, reads every table of the schema, and may write to fines only.",
+        "Lines 6-11: `attempt` runs one statement and prints ok, or denied when Unity Catalog refuses it with a permission error.",
+        "Lines 12-13: `SELECT` on the schema is inherited by both tables, so both reads succeed although no table was granted anything for reading.",
+        "Lines 14-15: `MODIFY` on fines lets the group add a fine, but loans has no `MODIFY`, so that insert is refused; `REVOKE MODIFY ON TABLE lib.loans.fines FROM library_staff` would refuse the first insert too.",
+        "Line 16: creating a table needs `CREATE TABLE` on the schema, which nobody granted, so it is denied.",
+      ],
+      output: `read loans ok
+read fines ok
+add fine ok
+add loan denied
+new table denied`,
+    },
+    exercises: [
+      'governance-1',
+      'governance-2',
+      'governance-12',
+      'governance-predict-1',
+      'governance-11',
+    ],
+  },
+  {
+    id: 'unity_catalog_governance/1',
+    topicKeys: [Topic.UNITY_CATALOG_GOVERNANCE],
+    step: 1,
+    title: 'Unity Catalog Governance (credentials, locations, row filters, column masks)',
+    idea: [
+      lines(
+        "Unity Catalog reaches cloud storage through two objects an admin creates: a storage credential wraps an IAM role, an Azure managed identity or a Google service account, and an external location pairs one credential with one storage path.",
+        "Privileges on the location, such as `READ FILES`, `CREATE EXTERNAL TABLE` and `CREATE EXTERNAL VOLUME`, decide who may use the path, so nobody handles a cloud key, and they replace DBFS mounts.",
+      ),
+      lines(
+        "A row filter is a SQL function that returns `BOOLEAN`, bound with `ALTER TABLE t SET ROW FILTER f ON (col)`: every query of the table keeps only the rows for which it returns true.",
+        "A column mask is a function that takes the column's value and returns one of the same type, bound with `ALTER TABLE t ALTER COLUMN c SET MASK f`: every query sees what it returns instead.",
+      ),
+      lines(
+        "Inside the function, `is_account_group_member('grp')` and `current_user()` describe whoever runs the query, so one table shows each group its own rows and values.",
+        "Privileges flow down the namespace from catalog to schema to table, and every grant and query is recorded in the system table `system.access.audit`, with lineage in `system.access.table_lineage`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- admin: a location on one path, through a credential
+CREATE EXTERNAL LOCATION loc URL 's3://bucket/path'
+  WITH (STORAGE CREDENTIAL cred);
+GRANT READ FILES, CREATE EXTERNAL TABLE
+  ON EXTERNAL LOCATION loc TO \`grp\`;
+-- row filter: BOOLEAN, true keeps the row
+CREATE FUNCTION cat.sch.f(c STRING) RETURNS BOOLEAN
+  RETURN is_account_group_member('admins') OR c = 'x';
+ALTER TABLE cat.sch.t SET ROW FILTER cat.sch.f ON (c);
+-- column mask: the column's type in and out
+CREATE FUNCTION cat.sch.m(v STRING) RETURNS STRING
+  RETURN IF(is_account_group_member('admins'), v, '***');
+ALTER TABLE cat.sch.t ALTER COLUMN v SET MASK cat.sch.m;
+ALTER TABLE cat.sch.t DROP ROW FILTER;  -- ALTER COLUMN v DROP MASK
+SELECT * FROM system.access.audit;      -- who did what, when`,
+    },
+    pitfall: lines(
+      "A storage account key, SAS token or AWS access key typed into a notebook is readable by everyone who can open the notebook or its history, and reads made with it skip Unity Catalog's grants and audit log.",
+      "Ask an admin for an external location on the path, or a volume over it, and a grant on that, and read through Unity Catalog instead.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# UC notebook; you are in group front_desk, not in managers,
+# and hold SELECT on lib.people.members. Its owner already ran:
+#   SET ROW FILTER lib.people.leeds_only ON (branch)
+#     (true for managers, else only when branch = 'leeds')
+#   ALTER COLUMN email SET MASK lib.people.hide_email
+#     (the email for managers, else '***@' and its domain)
+# stored rows: (1, leeds, ann@mail.com), (2, york, bo@post.net),
+#   (3, leeds, cy@post.net)
+q = "SELECT is_account_group_member('managers')"
+print(spark.sql(q).first()[0])
+members = spark.sql("""SELECT member_id, branch, email
+    FROM lib.people.members ORDER BY member_id""")
+for r in members.collect():
+    print(r.member_id, r.branch, r.email)
+print(members.where("branch = 'york'").count())`,
+      steps: [
+        "Lines 1-8: the table holds three members, and its owner bound a row filter to branch and a mask to email, both testing membership of managers.",
+        "Lines 9-10: `is_account_group_member` describes whoever runs the query, and you are not in managers, so it prints False.",
+        "Lines 11-14: the query names neither function, yet the filter keeps only the Leeds rows for you and the mask replaces each email before you see it.",
+        "Line 15: the York member is removed by the filter before any `WHERE` of yours runs, so the count is 0; a member of managers would see all three rows with full emails.",
+      ],
+      output: `False
+1 leeds ***@mail.com
+3 leeds ***@post.net
+0`,
+    },
+    exercises: [
+      'uc-gov-1',
+      'uc-gov-5',
+      'uc-gov-7',
+      'uc-gov-predict-1',
+      'uc-gov-8',
     ],
   },
 ];
