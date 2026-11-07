@@ -17,7 +17,10 @@
   overflow: hidden;
 }
 
+/* Positioned so absolutely placed children (sr-only labels) stay inside the
+   scrolling screen instead of stretching the page. */
 .main {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow-x: hidden;
