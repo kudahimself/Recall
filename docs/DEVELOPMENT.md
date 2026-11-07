@@ -377,18 +377,22 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 
 **Progress/filters:**
 - `ProgressTracker.tsx` - hierarchical course → section → topic progress view
+- `PathList.tsx` - a section's learning path (lesson, ramp, review steps), on Home for one section and on Progress -> Path for all
 - `QuestionFilter.tsx` - topic / difficulty / type filters, persisted to `localStorage`
 
 **Shared UI components** (`src/components/ui/`, each styled by its own CSS Module on the design tokens):
-- `Button`, `Kbd` / `KeyCombo`, `Badge`, `Card` / `Panel` / `Eyebrow`, `Dialog`
+- `Button`, `Kbd` / `KeyCombo` / `KeyHints` (the key hint row under every screen), `Badge`, `Card` / `Panel` / `Eyebrow`, `Dialog`, `MenuButton`
+- `StatTile`, `ProgressBar`, `SegmentedControl`, `EmptyState` - the one stat tile, bar, choice row and empty screen
 - `InlineText` / `Prose` - the one prose renderer, in every course: `code`, **bold** and fenced code blocks
 - `CodeBlock` - read-only code with line numbers and comments, and with `slots` the fields of a cloze; `TextAnswer` / `AnswerCompare` / `Blank` - typed answers, before and after grading
 - `QuestionShell` - the frame of a question: prompt, answer area, hints (`H`, one at a time), the banner (`FeedbackBanner`, with `ResultList` for a coding question's checks) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus. `QuestionRegion` and `AnswerColumns` lay out the answer area: a region gives up height and scrolls inside itself before the card would, and `fill` lets the code editor take the height left.
 - `OptionList` - options (multiple choice, choose and justify), code lines (spot the flaw) or checkboxes (explain's key points), with 1-9 keys and word-and-icon marks after grading
 - Every question type renders on `QuestionShell`: cloze is a `CodeBlock` with a `Blank` in each slot; Parsons is two listboxes (the lines and your solution) over dnd-kit pointer drag; coding puts Monaco in a `fill` shell, with spent hints, the solution or the live preview beside it.
-- `Logo` - the header's elephant tile (`public/icon.svg`) and "Recall" wordmark
+- `Logo` - the top bar's elephant tile (`public/icon.svg`) and "Recall" wordmark
 - `visual/LivePreview.tsx` - the live preview of HTML and CSS answers (cloze, Parsons, coding), with preview widths, `@media` rules and a layout overlay
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
+
+**App shell and screens:** `shell/TopBar.tsx` (logo, `CourseSwitcher` on `C`), `shell/NavRail.tsx` (Home, Learn, Progress, Settings), `home/HomeView.tsx` (the one-screen dashboard) and `settings/SettingsView.tsx` (session size, review share, Export, Import, Reset).
 
 **Keyboard:** `src/keyboard/shortcuts.ts` is the one shortcut registry; `useShortcut` binds a key from it, and the `?` overlay (`ShortcutHelp.tsx`) is generated from it.
 Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from inside a text box, a blank or the code editor; an open `Dialog` takes the keys.
