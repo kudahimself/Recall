@@ -2453,7 +2453,7 @@ SELECT * FROM system.access.audit;      -- who did what, when`,
       language: CodeLanguage.PYTHON,
       runs: false,
       code: `# UC notebook; you are in group front_desk, not in managers,
-# and hold SELECT on lib.people.members. Its owner already ran:
+# and may read lib.people.members. Its owner already ran:
 #   SET ROW FILTER lib.people.leeds_only ON (branch)
 #     (true for managers, else only when branch = 'leeds')
 #   ALTER COLUMN email SET MASK lib.people.hide_email
