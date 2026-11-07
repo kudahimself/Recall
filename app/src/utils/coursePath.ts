@@ -9,10 +9,10 @@
  * session is allowed to serve.
  */
 import { Course, MisconceptionStore, Question, TopicLesson, UserProgress } from '../types';
-import { MISCONCEPTIONS } from '../data/misconceptions';
 import { getCourseForTopic, getPathOrder, getSectionUnits, getTopicKeysForSection } from './courseConfig';
 import { FsrsStore } from './familySchedule';
 import { LessonsDone, TopicSteps, isLessonMet, lessonsForTopic, topicSteps } from './lessons';
+import { topMisconceptions } from './progressStats';
 import {
   MIN_ATTEMPTS_FOR_STATS,
   RECENT_WINDOW,
@@ -180,6 +180,16 @@ export interface FocusMisconception {
   count: number;
 }
 
+/** Open units answered below the unlock bar, worst first. */
+export function weakTopics(path: CoursePath): FocusArea[] {
+  return path.sections
+    .filter(s => s.status !== 'locked')
+    .flatMap(s => s.units)
+    .filter(u => u.unlocked && u.recentTotal >= MIN_ATTEMPTS_FOR_STATS && u.recentPct < UNLOCK_ACCURACY_PCT)
+    .sort((a, b) => a.recentPct - b.recentPct)
+    .map(u => ({ kind: 'topic' as const, name: u.displayName, topicKeys: u.topicKeys, recentPct: u.recentPct, missed: u.missed }));
+}
+
 /**
  * What is worth another look in a course: open units answered below the
  * unlock bar (worst first), then the misconception hit most often on the
@@ -191,23 +201,10 @@ export function focusAreas(
   misconceptions: MisconceptionStore,
   max = 3,
 ): Array<FocusArea | FocusMisconception> {
-  const weak: FocusArea[] = path.sections
-    .filter(s => s.status !== 'locked')
-    .flatMap(s => s.units)
-    .filter(u => u.unlocked && u.recentTotal >= MIN_ATTEMPTS_FOR_STATS && u.recentPct < UNLOCK_ACCURACY_PCT)
-    .sort((a, b) => a.recentPct - b.recentPct)
-    .map(u => ({ kind: 'topic' as const, name: u.displayName, topicKeys: u.topicKeys, recentPct: u.recentPct, missed: u.missed }));
+  const weak = weakTopics(path);
 
-  const ids = new Set(courseQuestions.map(q => q.id));
-  const counts = new Map<string, number>();
-  for (const ev of misconceptions.events) {
-    if (!ids.has(ev.questionId) || !MISCONCEPTIONS[ev.tag]) continue;
-    counts.set(ev.tag, (counts.get(ev.tag) ?? 0) + 1);
-  }
-  const top = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
-  const misconception: FocusMisconception[] = top
-    ? [{ kind: 'misconception', tag: top[0], name: MISCONCEPTIONS[top[0]].name, description: MISCONCEPTIONS[top[0]].description, count: top[1] }]
-    : [];
+  const misconception: FocusMisconception[] = topMisconceptions(courseQuestions, misconceptions, 1)
+    .map(m => ({ kind: 'misconception', ...m }));
 
   // Keep a slot for the misconception when there is one.
   return [...weak.slice(0, max - misconception.length), ...misconception];

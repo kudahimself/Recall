@@ -61,7 +61,7 @@ This file maps every `Topic` to its `Course` and defines:
 1. Add new `Course` enum value in `src/types/index.ts`
 2. Update `getCourseForTopic` in `courseConfig.ts`
 3. Update `getTopicOrder` in `courseConfig.ts`
-4. Update switches in `App.tsx` / `ProgressTracker.tsx` / `spacedRepetition.getUnlockedSections`
+4. Update switches in `App.tsx` / `spacedRepetition.getUnlockedSections`
 
 **Question organization:**
 - Questions grouped into per-topic files in `src/data/`
@@ -242,7 +242,7 @@ The gate lives in the App, not the selector: when the session serves an unseen c
 After the lesson the session goes on with the rest of the topic's ramp.
 Answering the last exercise records the lesson under `recall-lessons`; new filters end a lesson in progress.
 Beside every card of a topic with a lesson, the rule card stays in a side panel, and `R` reopens it in full (Esc closes it).
-The learning path (`components/PathList.tsx`) shows each topic's lesson, ramp and review steps with "Start lesson" or the rule card: Home shows the section holding the next lesson (else the current section), Progress -> Path every section, and Progress -> Topics lists every topic with "Rule card" and "Drill" and the review schedule of its card families.
+The learning path (`components/PathList.tsx`) shows each topic's lesson, ramp and review steps with "Start lesson" or the rule card: Home shows the section holding the next lesson (else the current section); Progress -> Topics lists every section's topics, and the selected topic has its "Rule card" (R), "Drill" (D) and the review dates of its card families; Progress -> Review schedule lists every card family met, by the day it comes due.
 `scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, procedural T-SQL through `scripts/tsql-batch.js`, Python on python3) and prints its `output`, except an example that cannot run here (one of `NON_RUNNABLE_KINDS` in `utils/workedKinds.ts`) marked `worked.runs: false`, whose output is checked by hand; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
 
 **Exercises (`utils/exercises.ts`, `data/exercises/`, repo `exercises/`):**
@@ -376,8 +376,8 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 - `PredictOutcomeQuestion.tsx`, `ChooseJustifyQuestion.tsx`, `SpotFlawQuestion.tsx`, `ExplainQuestion.tsx` (the decision and design types, see Question Types 6-9)
 
 **Progress/filters:**
-- `ProgressTracker.tsx` - hierarchical course → section → topic progress view
-- `PathList.tsx` - a section's learning path (lesson, ramp, review steps), on Home for one section and on Progress -> Path for all
+- `progress/ProgressView.tsx` - the Progress screen: ARIA tabs for Overview (the course's numbers, every section, activity, what is worth another look), Topics (every section's topics beside the selected one: lesson, ramp, review, its `ExerciseCard` and card families) and Review schedule (every card family met, by the day it comes due); built on `utils/coursePath.ts` and `utils/progressStats.ts`
+- `PathList.tsx` - a section's learning path (lesson, ramp, review steps) on Home; its step badges (`UnitSteps`) and status icons are shared with Progress → Topics
 - `QuestionFilter.tsx` - topic / difficulty / type filters, persisted to `localStorage`
 
 **Shared UI components** (`src/components/ui/`, each styled by its own CSS Module on the design tokens):
@@ -389,6 +389,8 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 - `OptionList` - options (multiple choice, choose and justify), code lines (spot the flaw) or checkboxes (explain's key points), with 1-9 keys and word-and-icon marks after grading
 - Every question type renders on `QuestionShell`: cloze is a `CodeBlock` with a `Blank` in each slot; Parsons is two listboxes (the lines and your solution) over dnd-kit pointer drag; coding puts Monaco in a `fill` shell, with spent hints, the solution or the live preview beside it.
 - `Logo` - the top bar's elephant tile (`public/icon.svg`) and "Recall" wordmark
+- `Tabs` / `TabPanel` - ARIA tabs (Left/Right, Home/End); `ListBox` - a grouped single-choice list, one Tab stop, Up/Down/Home/End/Page keys
+- `Heatmap` - answers per day, weekday rows and month labels, ending today; it draws as many weeks as fit its width
 - `visual/LivePreview.tsx` - the live preview of HTML and CSS answers (cloze, Parsons, coding), with preview widths, `@media` rules and a layout overlay
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
 
@@ -476,7 +478,7 @@ Examples: `py-off-by-one-range`, `py-list-aliasing`
 
 When user picks tagged distractor:
 - Platform records event to localStorage (`recall-misconceptions`)
-- Surfaces top hits in ProgressTracker
+- Surfaces top hits under "Worth another look" on Home and on Progress → Overview
 
 **Authoring rule:** Only tag distractor when wrong answer corresponds to SPECIFIC named misconception in registry.
 Generic "obviously wrong" options stay untagged.

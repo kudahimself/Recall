@@ -1,7 +1,7 @@
 /**
  * Regression tests for the frontend hotfixes, against the real <App/>:
  * the phone drawer starts closed (F1), one Next after an answer (F3), the
- * Activity tab shows activity only (F4), Home names topics of the active
+ * activity calendar shows today, once (F4), Home names topics of the active
  * course only (F6), and filters mean what they say and survive a new start in
  * the same course (F7).
  */
@@ -67,14 +67,15 @@ const sessionStored = () => JSON.parse(localStorage.getItem(TODAY_SESSION_KEY)!)
 /** The topic's display name, as the quiz breadcrumb shows it. */
 const topicBadge = (topic: Topic) => getTopicPlace(topic)!.unit;
 
-/** Drill on Progress > Topics for the row holding `topic` (every row unlocked). */
+/** Drill on Progress > Topics: select the row holding `topic` (every row unlocked), then Drill. */
 async function drillTopic(course: Course, topic: Topic) {
-  const units = getPathOrder(course).flatMap(section => getSectionUnits(section))
-    .filter(([, keys]) => questions.some(q => keys.includes(q.topic)));
+  const [unitName] = getPathOrder(course).flatMap(section => getSectionUnits(section))
+    .find(([, keys]) => keys.includes(topic))!;
   fireEvent.click(nav('Progress'));
-  fireEvent.click(await screen.findByRole('button', { name: /Topics/ }, { timeout: 3000 }));
-  const drills = await screen.findAllByRole('button', { name: 'Drill' });
-  fireEvent.click(drills[units.findIndex(([, keys]) => keys.includes(topic))]);
+  fireEvent.click(await screen.findByRole('tab', { name: /Topics/ }, { timeout: 3000 }));
+  const row = screen.getAllByRole('option').find(o => within(o).queryByTitle(unitName));
+  fireEvent.click(row!);
+  fireEvent.click(screen.getByRole('button', { name: 'Drill this topic' }));
 }
 
 const nav = (name: string) =>
@@ -138,17 +139,16 @@ describe('F3: one Next per answer', () => {
   });
 });
 
-describe('F4: the Activity tab', () => {
-  test('shows the activity calendar, not the Overview again', async () => {
+describe('F4: activity on Progress', () => {
+  test('the Overview shows one activity calendar, ending on today', async () => {
     localStorage.setItem('recall-active-course', 'sql');
     localStorage.setItem(PROGRESS_KEY, progressWith(['tsql-select-mcq-1']));
     render(<App />);
     fireEvent.click(nav('Progress'));
-    fireEvent.click(await screen.findByRole('button', { name: /Activity/ }));
 
-    expect(screen.getByRole('heading', { name: 'Learning Activity' })).toBeInTheDocument();
-    expect(screen.queryByText('Your Learning Progress')).toBeNull();
-    expect(screen.queryByText('Activity Over Time')).toBeNull();
+    expect(await screen.findByRole('tab', { name: /Overview/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Activity' })).toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: /Questions answered per day/ })).toHaveLength(1);
     // The calendar ends on today, with today's answer on it.
     const today = new Date(`${new Date().toISOString().split('T')[0]}T00:00:00Z`)
       .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });

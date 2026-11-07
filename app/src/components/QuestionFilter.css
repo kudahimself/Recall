@@ -81,7 +81,7 @@
   background: var(--primary-soft);
 }
 
-/* Exam section groups — mirrors ProgressTracker */
+/* Exam section groups */
 .filter-exam-sections {
   display: flex;
   flex-direction: column;

@@ -9,8 +9,8 @@ interface Props {
   question: MCQuestion;
   onAnswer: (isCorrect: boolean) => void;
   // Fired when the user selects an INCORRECT option that has a misconceptionTag.
-  // The handler in App records the event for telemetry and surfacing in
-  // ProgressTracker. Optional: components without telemetry just don't pass it.
+  // The handler in App records the event for telemetry and surfacing under
+  // "Worth another look" (Home, Progress). Optional: components without telemetry just don't pass it.
   onMisconception?: (tag: string, questionId: string) => void;
   showHints: boolean;
 }

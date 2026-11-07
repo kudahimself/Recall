@@ -135,8 +135,7 @@ touch-list (verified against the Data Engineering course):
    `COURSE_ORDER`, the order the top-bar course switcher lists courses in (its number keys).
 5. `src/App.tsx` - the course's concept registry in `resetProgress`, if it has one.
 6. `src/components/QuestionFilter.tsx` — add the course to its sections ternary.
-7. `src/components/ProgressTracker.tsx` — confirm it resolves the new course's sections/path.
-8. `src/styles/tokens.css` - add the course's marker hue (`--course-<course>`) and its
+7. `src/styles/tokens.css` - add the course's marker hue (`--course-<course>`) and its
    `.theme-<course>` class; the hue tints dots and icons only, never a button. No raw colours or px
    sizes in component CSS (`scripts/check-css-tokens.js`).
 

@@ -11,7 +11,7 @@ import { EXERCISES_KEY } from './utils/spacedRepetition';
 
 async function openTopics() {
   fireEvent.click(screen.getByRole('button', { name: 'Progress' }));
-  fireEvent.click(await screen.findByRole('button', { name: /^Topics$/ }, { timeout: 3000 }));
+  fireEvent.click(await screen.findByRole('tab', { name: /^Topics$/ }, { timeout: 3000 }));
   return screen.findByRole('region', { name: 'Exercise: Shelf labels' }, { timeout: 3000 });
 }
 
@@ -36,7 +36,9 @@ test('the first Python topic shows its exercise, and the done tick is stored and
   expect(within(card).getByText('Done today')).toBeInTheDocument();
   const stored = JSON.parse(localStorage.getItem(EXERCISES_KEY) as string);
   expect(Object.keys(stored)).toEqual(['py_basics']);
-  expect(screen.getByText(/· exercise done/)).toBeInTheDocument();
+  // The topic's row in the list now carries a done Exercise badge.
+  const list = screen.getByRole('listbox', { name: 'Topics, by section' });
+  expect(within(list).getByTitle(/^Exercise in your own editor: Shelf labels/)).toBeInTheDocument();
 
   unmount();
   render(<App />);

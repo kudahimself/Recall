@@ -27,7 +27,7 @@ Question construction workflow and question writing quality standards live in sk
 - **`courseConfig.ts` is the single source of truth** for Topic→Course mapping, section structure,
   and path order.
   Adding a course requires touching `getCourseForTopic`, `getTopicOrder`, `COURSE_META` /
-  `COURSE_ORDER` in `utils/courseMeta.ts`, and the switches in `ProgressTracker.tsx` /
+  `COURSE_ORDER` in `utils/courseMeta.ts`, and the switch in
   `spacedRepetition.getUnlockedSections` - full touch-list in `HOW_TO_CONSTRUCT_SUBJECT.md`.
 - **Spaced-repetition tuning constants live ONLY in `spacedRepetition.ts`** - unlock thresholds,
   rolling windows, priority weights, selection knobs.

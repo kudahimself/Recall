@@ -54,14 +54,14 @@
   height: var(--icon-l);
 }
 
-.row[data-state="done"] .status,
-.section[data-status="mastered"] .status {
+.status[data-state="done"],
+.status[data-section="mastered"] {
   color: var(--success);
 }
 
-.row[data-state="now"] .status,
-.row[data-state="open"] .status,
-.section[data-status="current"] .status {
+.status[data-state="now"],
+.status[data-state="open"],
+.status[data-section="current"] {
   color: var(--accent-text);
 }
 
@@ -102,56 +102,6 @@
   padding-left: var(--sp-3);
   font-size: var(--fs-small);
   color: var(--text-3);
-}
-
-/* ---- Every section (Progress) ---- */
-.sections {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  padding: var(--sp-4);
-  background: var(--surface);
-  border: var(--border-w) solid var(--border);
-  border-radius: var(--radius-l);
-}
-
-.section[data-status="current"] {
-  border-color: var(--accent-line);
-}
-
-.sectionHead {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-}
-
-.sectionNum {
-  font-family: var(--font-mono);
-  font-size: var(--fs-small);
-  color: var(--text-3);
-}
-
-.sectionName {
-  flex: 1 1 auto;
-  margin: 0;
-  font-size: var(--fs-body);
-  font-weight: var(--weight-semibold);
-  color: var(--text);
-}
-
-.lockedNote {
-  margin: 0;
-  font-size: var(--fs-small);
-  color: var(--text-2);
 }
 
 @media (max-width: 767px) {
