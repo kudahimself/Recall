@@ -4,6 +4,7 @@
  * Section 1, Lakehouse Platform: every topic.
  * Section 2, ELT with Spark SQL & Python: every topic.
  * Section 3, Incremental Data Processing: every topic.
+ * Section 4, Production Pipelines: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). Most worked examples
  * here are Databricks notebook cells: they need a workspace to run, so they
@@ -14,10 +15,13 @@
  * on Spark 4.0 with Delta 4.0 (the medallion cell with QUALIFY written as a
  * subquery, which open-source Spark lacks). The Auto Loader cell needs a
  * workspace, so its output follows the Databricks Auto Loader schema
- * docs. SQL in a cell runs through `spark.sql`, as it would in a Python
- * notebook. A plain SQL example (joins, aggregations, subqueries, set
- * operations) uses only SQL that Spark and the checker's engine agree on, so
- * check-lessons.js runs it.
+ * docs. The section 4 examples need a workspace too: the pipeline source
+ * file's output is its published table after one update, following the
+ * Lakeflow pipeline expectations docs, and the job's is what its last task
+ * prints, following the Databricks utilities docs. SQL in a cell runs
+ * through `spark.sql`, as it would in a Python notebook. A plain SQL
+ * example (joins, aggregations, subqueries, set operations) uses only SQL
+ * that Spark and the checker's engine agree on, so check-lessons.js runs it.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -1986,6 +1990,173 @@ for r in changes.collect():
       'cdc-6',
       'cdc-predict-1',
       'cdc-3',
+    ],
+  },
+
+  // ===== Section 4, Production Pipelines =====
+  {
+    id: 'delta_live_tables/1',
+    topicKeys: [Topic.DELTA_LIVE_TABLES],
+    step: 1,
+    title: 'Delta Live Tables (DLT, expectations)',
+    idea: [
+      lines(
+        "Delta Live Tables, now Lakeflow Declarative Pipelines, is declarative: you write one query per dataset, and the pipeline creates the tables, keeps them up to date and retries failures.",
+        "A query that reads another dataset of the pipeline depends on it, so the pipeline builds its graph (DAG) from those references and needs no run order from you.",
+      ),
+      lines(
+        "A streaming table reads its source with `STREAM(...)` and processes only the rows added since the last update, which suits append-only sources such as files.",
+        "A materialized view holds a query's whole result, kept correct on each update, which suits joins and aggregations, and a temporary view is computed inside the pipeline but not published.",
+      ),
+      lines(
+        "An expectation, `CONSTRAINT name EXPECT (cond)`, checks every row: with no clause it only warns, `ON VIOLATION DROP ROW` drops failing rows, and `ON VIOLATION FAIL UPDATE` stops the update.",
+        "In Python, after `from pyspark import pipelines as dp`, they are `@dp.expect`, `@dp.expect_or_drop` and `@dp.expect_or_fail`, and a triggered pipeline processes what is waiting and stops where a continuous one keeps running.",
+      ),
+      lines(
+        "The exercises use the older forms, which still run: `STREAMING LIVE TABLE` and `LIVE TABLE`, the `LIVE.` prefix on references, `cloud_files()`, `import dlt` and `dlt.read_stream()`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- one source file, one statement per dataset
+CREATE OR REFRESH STREAMING TABLE bronze_t  -- new rows only
+AS SELECT * FROM STREAM read_files(         -- not /mnt
+  '/Volumes/cat/sch/vol/in/', format => 'json');
+CREATE OR REFRESH STREAMING TABLE silver_t (
+  CONSTRAINT has_k EXPECT (k IS NOT NULL)
+    ON VIOLATION DROP ROW,                  -- or FAIL UPDATE
+  CONSTRAINT pos_v EXPECT (v > 0)           -- warn: kept
+) AS SELECT * FROM STREAM(bronze_t);        -- dependency
+CREATE OR REFRESH MATERIALIZED VIEW gold_t  -- full result
+AS SELECT k, SUM(v) AS total FROM silver_t GROUP BY k;
+-- older: STREAMING LIVE TABLE, LIVE TABLE,
+--        STREAM(LIVE.t), cloud_files()`,
+    },
+    pitfall: lines(
+      "An expectation with no `ON VIOLATION` clause never removes a row: failing rows are still written and only counted in the pipeline's data quality metrics.",
+      "Add `ON VIOLATION DROP ROW` (`expect_or_drop`) to keep them out, or `ON VIOLATION FAIL UPDATE` (`expect_or_fail`) when one bad row must stop the update.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Lakeflow pipeline source; target schema main.library
+# main.library.loan_events: (L1, leeds, 2), (L2, york, -1),
+#   (NULL, york, 4), (L3, leeds, 3)
+# output: fees_by_branch, ordered by branch, after one update
+from pyspark import pipelines as dp
+from pyspark.sql import functions as F
+
+@dp.table
+@dp.expect_or_drop("has_loan_id", "loan_id IS NOT NULL")
+@dp.expect("fee_not_negative", "fee >= 0")
+def loans_silver():
+    return spark.readStream.table("main.library.loan_events")
+
+@dp.materialized_view
+def fees_by_branch():
+    return (spark.read.table("loans_silver").groupBy("branch")
+            .agg(F.count("*").alias("loans"),
+                 F.sum("fee").alias("fees")))`,
+      steps: [
+        "Lines 1-4: the source holds four loan events, one with no loan_id and one with a negative fee.",
+        "Lines 8-12: `@dp.table` over a streaming read makes loans_silver a streaming table, so each later update reads only the events added since.",
+        "Lines 9-10: `expect_or_drop` keeps the event with no loan_id out of Silver, while `expect` only counts L2's negative fee as a failure and writes the row.",
+        "Lines 14-18: reading loans_silver makes fees_by_branch depend on it, so the pipeline builds Silver first, and the materialized view keeps its totals correct on every update.",
+        "Output: Leeds has L1 and L3, and York keeps L2 with its fee of -1, which `expect_or_drop` on fee_not_negative would have removed.",
+      ],
+      output: `branch | loans | fees
+leeds | 2 | 5
+york | 1 | -1`,
+    },
+    exercises: [
+      'dlt-1',
+      'dlt-7',
+      'dlt-9',
+      'dlt-predict-1',
+      'dlt-6',
+    ],
+  },
+  {
+    id: 'databricks_workflows/1',
+    topicKeys: [Topic.DATABRICKS_WORKFLOWS],
+    step: 1,
+    title: 'Workflows & Job Orchestration',
+    idea: [
+      lines(
+        "A Databricks Workflow, now a Lakeflow Job, runs work without anyone at a notebook: each task is a notebook, a Python script or wheel, a JAR, a SQL query, a dbt project or a pipeline update.",
+        "A task lists the tasks it `depends_on`, so the job is a graph (DAG): a task starts once its upstream tasks succeed, and independent tasks run in parallel.",
+      ),
+      lines(
+        "A job starts on a cron schedule, by hand or through the API, when files arrive in a storage location, or continuously, starting a new run as each one ends.",
+        "It runs on serverless compute or a job cluster, which lives only for the run, rather than an all-purpose cluster, which stays up for development and costs more.",
+      ),
+      lines(
+        "When a task fails, the tasks after it are skipped as Upstream failed while other branches run on; a task can retry on its own, and a repair run reruns only the failed and skipped tasks.",
+      ),
+      lines(
+        "Job parameters reach a notebook as widgets: `dbutils.widgets.text(\"env\", \"dev\")` declares one with a default for runs by hand, and `dbutils.widgets.get(\"env\")` returns its value as a string.",
+        "`dbutils.jobs.taskValues.set(key, value)` hands a small value to later tasks, which read it with `taskValues.get(taskKey=..., key=...)`; run by hand, `get` returns its `debugValue`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# databricks.yml: a Lakeflow Job in an asset bundle
+resources:
+  jobs:
+    nightly:
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"   # 02:00
+        timezone_id: UTC
+      parameters: [{name: env, default: prod}]  # all tasks
+      tasks:
+        - task_key: extract
+          notebook_task: {notebook_path: ./extract.py}
+          max_retries: 2
+        - task_key: report
+          depends_on: [{task_key: extract}]     # DAG edge
+          notebook_task: {notebook_path: ./report.py}
+# extract.py: dbutils.jobs.taskValues.set(key="n", value=n)
+# report.py:  dbutils.widgets.get("env")   # a string
+#   dbutils.jobs.taskValues.get(taskKey="extract", key="n")`,
+    },
+    pitfall: lines(
+      "A Python variable, global or environment variable set in one task is gone in the next: each task is its own run, often on its own compute.",
+      "Pass a small value with `dbutils.jobs.taskValues` and a large result through a table the next task reads.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Lakeflow Job nightly_loans, parameter run_date = 2026-11-06;
+# task count_loans, then task notify (depends_on count_loans);
+# main.library.loans holds 12 loans dated 2026-11-06
+# --- notebook of task count_loans ---
+dbutils.widgets.text("run_date", "2000-01-01")
+run_date = dbutils.widgets.get("run_date")
+n = (spark.table("main.library.loans")
+     .where(f"loan_date = '{run_date}'").count())
+dbutils.jobs.taskValues.set(key="loan_count", value=n)
+# --- notebook of task notify ---
+dbutils.widgets.text("run_date", "2000-01-01")
+dbutils.widgets.text("channel", "#library-ops")
+loans = dbutils.jobs.taskValues.get(
+    taskKey="count_loans", key="loan_count", default=0)
+print(dbutils.widgets.get("run_date"),
+      dbutils.widgets.get("channel"), loans)`,
+      steps: [
+        "Lines 1-3: the job passes one parameter, run_date, to every task, and notify starts only after count_loans succeeds.",
+        "Lines 5-6: the job parameter overrides the widget's default, so run_date is the string \"2026-11-06\"; the default shows only when someone runs the notebook by hand.",
+        "Lines 7-9: count_loans counts that day's loans and stores 12 as a task value, since its variable `n` ends with the task.",
+        "Lines 11-14: no job parameter sets channel, so it keeps its default, and `taskValues.get` reads 12 from count_loans; `default` would apply only if that key had never been set.",
+        "Lines 15-16: the cell prints the date, the channel and the count; had count_loans failed, notify would be skipped as Upstream failed, and a repair run would rerun both once the cause was fixed.",
+      ],
+      output: `2026-11-06 #library-ops 12`,
+    },
+    exercises: [
+      'workflow-1',
+      'workflow-3',
+      'workflow-4',
+      'workflow-predict-1',
+      'workflow-7',
     ],
   },
 ];
