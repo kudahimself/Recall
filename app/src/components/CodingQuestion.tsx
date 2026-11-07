@@ -267,11 +267,11 @@ function CodeEditor({ questionId, language, value, onChange, readOnly, onCheck, 
         {readOnly ? (
           <span className={styles.barHint}>Answered: the code is read only</span>
         ) : (
-          <>
+          <span className={styles.barKeys}>
             <span className={styles.barHint}><KeyCombo combo="Escape" />leave</span>
-            <span className={styles.barHint}><KeyCombo combo="Shift+Enter" />or<KeyCombo combo="Mod+Enter" />check</span>
-            <span className={styles.barHint}><KeyCombo combo="Tab" />indent</span>
-          </>
+            <span className={styles.barHint}><KeyCombo combo="Shift+Enter" /><span className={styles.barAlt}>or<KeyCombo combo="Mod+Enter" /></span>check</span>
+            <span className={`${styles.barHint} ${styles.barAlt}`}><KeyCombo combo="Tab" />indent</span>
+          </span>
         )}
         <span className={styles.barSpacer} />
         {label && <span className={styles.barLang}>{label}</span>}

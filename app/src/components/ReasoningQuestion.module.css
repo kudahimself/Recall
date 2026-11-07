@@ -30,21 +30,12 @@
   min-width: 0;
 }
 
-.withTables > :global(.data-tables) {
-  flex: 0 1 auto;
-}
-
 /* Choose and justify: reasons run longer than decisions, so they get more width. */
 .decideJustify {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: var(--sp-4);
   align-items: start;
-}
-
-.work {
-  display: grid;
-  gap: var(--sp-3);
 }
 
 .step {
@@ -93,10 +84,6 @@
   flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--sp-3) var(--sp-4);
-}
-
-.flow > :global(.data-tables) {
-  flex: 0 1 auto;
 }
 
 .job {
@@ -151,10 +138,6 @@
 .tempting {
   margin: var(--sp-2) 0 0;
   color: var(--text-2);
-}
-
-.temptingMine {
-  color: var(--text);
 }
 
 .temptingLabel {

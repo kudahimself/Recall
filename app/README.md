@@ -64,7 +64,7 @@ Builds the app for production to the `build` folder.
 
 ```
 src/
-├── components/          # React components
+├── components/          # React components (each styled by its own CSS Module)
 │   ├── MultipleChoiceQuestion.tsx
 │   ├── CodingQuestion.tsx
 │   └── progress/ProgressView.tsx
@@ -74,8 +74,8 @@ src/
 │   └── index.ts
 ├── utils/              # Utility functions
 │   └── spacedRepetition.ts
-├── App.tsx             # Main application component
-└── App.css             # Application styles
+├── styles/             # Design tokens (tokens.css) and base element rules (base.css)
+└── App.tsx             # Main application component
 ```
 
 ## Technologies

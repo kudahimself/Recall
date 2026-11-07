@@ -383,7 +383,8 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 
 **Shared UI components** (`src/components/ui/`, each styled by its own CSS Module on the design tokens):
 - `Button`, `Kbd` / `KeyCombo` / `KeyHints` (the key hint row under every screen), `Badge`, `Card` / `Panel` / `Eyebrow`, `Dialog`, `MenuButton`
-- `StatTile`, `ProgressBar`, `SegmentedControl`, `Checkbox`, `StepList`, `EmptyState` - the one stat tile, bar, choice row, checkbox (with a mixed state), numbered step row and empty screen
+- `StatTile`, `ProgressBar`, `SegmentedControl`, `Checkbox`, `StepList`, `EmptyState` - the one stat tile, bar, choice row, checkbox (with a mixed state), numbered step row and empty list
+- `Screen` - the frame and title row of Home, Progress and Settings; `MessageCard` - a screen-sized message in the quiz (the session summary, a filter with nothing left, a question that failed to render); `Notice` - the storage notices under the top bar
 - `InlineText` / `Prose` - the one prose renderer, in every course: `code`, **bold** and fenced code blocks
 - `CodeBlock` - read-only code with line numbers and comments, and with `slots` the fields of a cloze; `TextAnswer` / `AnswerCompare` / `Blank` - typed answers, before and after grading
 - `QuestionShell` - the frame of a question: prompt, answer area, hints (`H`, one at a time), the banner (`FeedbackBanner`, with `ResultList` for a coding question's checks) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus. `QuestionRegion` and `AnswerColumns` lay out the answer area: a region gives up height and scrolls inside itself before the card would, and `fill` lets the code editor take the height left.
@@ -395,7 +396,7 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 - `visual/LivePreview.tsx` - the live preview of HTML and CSS answers (cloze, Parsons, coding), with preview widths, `@media` rules and a layout overlay
 - `DataTables.tsx` - read-only sample-data grids for a question's `tables`
 
-**App shell and screens:** `shell/TopBar.tsx` (logo, `CourseSwitcher` on `C`), `shell/NavRail.tsx` (Home, Learn, Progress, Settings), `home/HomeView.tsx` (the one-screen dashboard) and `settings/SettingsView.tsx` (session size, review share, Export, Import, Reset).
+**App shell and screens:** `shell/AppShell.tsx` (the frame: top bar, notices, navigation, the screen scrolling inside `<main>`), `shell/TopBar.tsx` (logo, `CourseSwitcher` on `C`), `shell/NavRail.tsx` (Home, Learn, Progress, Settings; a tab bar under the screen below 768px), `QuizLayout.tsx` (the quiz bar, lesson steps, the question and the column beside it), `home/HomeView.tsx` (the one-screen dashboard) and `settings/SettingsView.tsx` (session size, review share, Export, Import, Reset).
 
 **Keyboard:** `src/keyboard/shortcuts.ts` is the one shortcut registry; `useShortcut` binds a key from it, and the `?` overlay (`ShortcutHelp.tsx`) is generated from it.
 Single keys never fire while typing; Shift+Enter and Ctrl/Cmd+Enter check from inside a text box, a blank or the code editor; an open `Dialog` takes the keys.
@@ -403,10 +404,10 @@ In a cloze, Enter goes to the next blank and checks on the last; in Parsons, up 
 
 **UI theme:**
 Direction A "Night": dark purple, one brand fill for primary buttons in every course (a course's hue is only a marker).
-Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css`; component CSS uses tokens only (`app/scripts/check-css-tokens.js`), and old variable names are aliased there for the screens not yet moved.
+Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css` and the few element rules in `src/styles/base.css`; every other stylesheet is a CSS Module beside its component, on tokens only (`app/scripts/check-css-tokens.js` checks every stylesheet).
 Fonts are IBM Plex Sans and Mono, self-hosted through `@fontsource`.
 The logo is the yellow elephant tile (`--brand` / `--on-brand` in `tokens.css`, never a button or text colour); `src/brand/recall-mark.svg` is its one source and `npm run build:icons` (`scripts/build-icons.js`) regenerates every icon in `public/` from it.
-Layouts target a desktop or laptop viewport without page scrolling.
+Layouts target a desktop or laptop viewport without page scrolling; below 768px a screen is one column that scrolls, the question card grows with its content, and key hints give way (a phone has no keyboard).
 
 **Monaco Editor config:**
 - Theme: `recall-night`, `vs-dark` with its colours read from the design tokens

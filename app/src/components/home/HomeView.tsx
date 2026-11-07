@@ -24,6 +24,7 @@ import { Card, CardHeader } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
 import { KeyHints } from '../ui/Kbd';
 import { ProgressBar } from '../ui/ProgressBar';
+import { Screen } from '../ui/Screen';
 import { StatGroup, StatTile } from '../ui/StatTile';
 import styles from './Home.module.css';
 
@@ -67,7 +68,7 @@ export function HomeView(props: HomeViewProps) {
   });
 
   return (
-    <div className={[styles.home, fits ? styles.fits : ''].filter(Boolean).join(' ')}>
+    <Screen className={[styles.home, fits ? styles.fits : ''].filter(Boolean).join(' ')}>
       <div className={styles.col}>
         <TodayCard {...props} done={done} titleRef={titleRef} />
         <PathCard {...props} fit={fits} />
@@ -81,7 +82,7 @@ export function HomeView(props: HomeViewProps) {
         className={styles.keys}
         hints={[['startSession', done ? 'keep going' : 'start'], ['goLearn', 'learn'], ['goProgress', 'progress'], ['switchCourse', 'course'], ['goSettings', 'settings'], ['help', 'all keys']]}
       />
-    </div>
+    </Screen>
   );
 }
 
@@ -103,7 +104,7 @@ function TodayCard({
     </>;
 
   return (
-    <Card as="section" padded={false} className={styles.card} aria-labelledby="home-today">
+    <Card as="section" className={styles.card} aria-labelledby="home-today">
       <CardHeader
         eyebrow={date}
         title={done ? <span className={styles.doneTitle}><CheckCircle2 aria-hidden="true" />Done for today</span> : "Today's session"}
@@ -154,7 +155,7 @@ function PathCard({ path, exercisesDone, onStartLesson, onRuleCard, onAllSection
   const section = path.focus;
   const index = section ? path.sections.indexOf(section) : -1;
   return (
-    <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="home-path">
+    <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="home-path">
       <CardHeader
         eyebrow={section ? `Your path · section ${index + 1} of ${path.sections.length}` : 'Your path'}
         title={section ? section.name : 'All caught up'}
@@ -190,7 +191,7 @@ function CourseCard({ course, path, totals }: HomeViewProps) {
   const passed = path.sections.filter(s => s.status === 'mastered').length;
   const units = path.sections.flatMap(s => s.units);
   return (
-    <Card as="section" padded={false} className={styles.card} aria-labelledby="home-course">
+    <Card as="section" className={styles.card} aria-labelledby="home-course">
       <CardHeader icon={<meta.Icon />} eyebrow="Course" title={meta.label} titleId="home-course" />
       <div className={styles.courseLine}>
         <span>{passed} of {path.sections.length} sections passed</span>
@@ -225,7 +226,7 @@ function ActivityCard({ activity }: { activity: HeatmapDay[] }) {
   const weekAgo = new Date(Date.now() - 6 * DAY_MS).toISOString().split('T')[0];
   const week = activity.filter(d => d.date >= weekAgo).reduce((n, d) => n + d.count, 0);
   return (
-    <Card as="section" padded={false} className={styles.card} aria-labelledby="home-activity">
+    <Card as="section" className={styles.card} aria-labelledby="home-activity">
       <CardHeader title="Activity" titleId="home-activity" as="h2" aside="last 24 weeks" />
       <Heatmap data={activity} weeks={24} summary={<><strong>{week}</strong> answered in 7 days</>} />
     </Card>
@@ -236,7 +237,7 @@ function FocusCard({ focus, onDrill, fit }: { focus: Array<FocusArea | FocusMisc
   const listRef = useRef<HTMLUListElement>(null);
   const shown = useFitRows(listRef, focus.length, fit);
   return (
-    <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="home-focus">
+    <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="home-focus">
       <CardHeader title="Worth another look" titleId="home-focus" />
       {focus.length === 0
         ? (

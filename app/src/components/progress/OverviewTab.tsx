@@ -75,8 +75,9 @@ export function OverviewTab({
         </StatGroup>
 
         <div className={styles.split}>
-          <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-sections">
+          <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-sections">
             <CardHeader
+              as="h3"
               title="Sections"
               titleId="progress-sections"
               aside={<span>{passed} of {path.sections.length} passed</span>}
@@ -130,8 +131,9 @@ export function OverviewTab({
           </Card>
 
           <div className={styles.col}>
-            <Card as="section" padded={false} className={styles.card} aria-labelledby="progress-activity">
+            <Card as="section" className={styles.card} aria-labelledby="progress-activity">
               <CardHeader
+                as="h3"
                 title="Activity"
                 titleId="progress-activity"
                 aside={longestStreak > 0
@@ -145,8 +147,9 @@ export function OverviewTab({
               />
             </Card>
 
-            <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-focus">
+            <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-focus">
               <CardHeader
+                as="h3"
                 title="Worth another look"
                 titleId="progress-focus"
                 aside={weak.length > 0 && (

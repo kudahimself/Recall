@@ -84,7 +84,7 @@ export function QuizBar({ onBack, section, topic, status, onRuleCard, panel, fil
       <div className={styles.tools}>
         {onRuleCard && (
           <Button variant="ghost" size="sm" icon={<BookOpen />} shortcut="R" onClick={onRuleCard} title="Open this topic's rule card">
-            Rule card
+            <span className={styles.toolLabel}>Rule card</span>
           </Button>
         )}
         <Button
@@ -95,7 +95,7 @@ export function QuizBar({ onBack, section, topic, status, onRuleCard, panel, fil
           onClick={filters.onOpen}
           title={filters.active ? `Filters: ${filters.active} of 3 groups leave something out` : 'Filters: everything is in'}
         >
-          Filters
+          <span className={styles.toolLabel}>Filters</span>
           {filters.active > 0 && (
             <Badge tone="accent" className={styles.filterCount}>
               {filters.active}<span className="sr-only"> on</span>

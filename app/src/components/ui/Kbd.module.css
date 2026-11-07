@@ -53,3 +53,10 @@
   gap: var(--sp-1);
   white-space: nowrap;
 }
+
+/* Phones have no keyboard: rows of key hints give their room back. */
+@media (max-width: 767px) {
+  .hints {
+    display: none;
+  }
+}

@@ -1,4 +1,4 @@
-.summary {
+.message {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
@@ -11,16 +11,25 @@
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  color: var(--success);
 }
 
-.title svg {
+.success { color: var(--success); }
+.neutral { color: var(--text); }
+.warning { color: var(--warning); }
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon svg {
   width: var(--icon-l);
   height: var(--icon-l);
 }
 
 .lede {
   margin: 0;
+  max-width: var(--plan-measure);
   font-size: var(--fs-body);
   color: var(--text-2);
 }
@@ -30,4 +39,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-3);
+}
+
+@media (max-width: 767px) {
+  .message {
+    margin-top: var(--sp-2);
+  }
 }

@@ -11,6 +11,7 @@ import { SessionSettings } from '../../utils/reviewSession';
 import { TODAY_REVIEW_SHARE_CHOICES, TODAY_SESSION_SIZE_CHOICES, todayReviewCap } from '../../utils/spacedRepetition';
 import { Button } from '../ui/Button';
 import { Card, CardHeader } from '../ui/Card';
+import { Screen } from '../ui/Screen';
 import { KeyHints } from '../ui/Kbd';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './Settings.module.css';
@@ -40,13 +41,12 @@ export function SettingsView({
   useEffect(() => { titleRef.current?.focus({ preventScroll: true }); }, []);
 
   return (
-    <div className={styles.settings}>
-      <h2 className={styles.title} ref={titleRef} tabIndex={-1}>Settings</h2>
+    <Screen title="Settings" titleRef={titleRef}>
 
       <div className={styles.grid}>
         <div className={styles.stack}>
           <Card as="section" className={styles.card} aria-labelledby="settings-session">
-            <CardHeader eyebrow="Study" title="Today's session" titleId="settings-session" />
+            <CardHeader as="h3" eyebrow="Study" title="Today's session" titleId="settings-session" />
             <SegmentedControl
               label="Questions per session"
               description="How many questions make one day's session. Keep going serves more whenever you like."
@@ -70,7 +70,7 @@ export function SettingsView({
           </Card>
 
           <Card as="section" className={`${styles.card} ${styles.keysCard}`} aria-labelledby="settings-keys">
-            <CardHeader eyebrow="Keyboard" title="Shortcuts" titleId="settings-keys" />
+            <CardHeader as="h3" eyebrow="Keyboard" title="Shortcuts" titleId="settings-keys" />
             <div className={styles.row}>
               <div className={styles.rowText}>
                 <KeyHints hints={[['goHome', 'home'], ['goLearn', 'learn'], ['goProgress', 'progress'], ['switchCourse', 'course']]} />
@@ -82,7 +82,7 @@ export function SettingsView({
 
         <div className={styles.stack}>
           <Card as="section" className={styles.card} aria-labelledby="settings-data">
-            <CardHeader eyebrow="Your data" title="Progress file" titleId="settings-data" />
+            <CardHeader as="h3" eyebrow="Your data" title="Progress file" titleId="settings-data" />
             <div className={styles.row}>
               <div className={styles.rowText}>
                 <p className={styles.rowTitle}>Export</p>
@@ -110,7 +110,7 @@ export function SettingsView({
           </Card>
 
           <Card as="section" className={styles.card} aria-labelledby="settings-reset">
-            <CardHeader eyebrow="Start over" title="Reset a course" titleId="settings-reset" />
+            <CardHeader as="h3" eyebrow="Start over" title="Reset a course" titleId="settings-reset" />
             <p className={styles.rowBody}>
               Clears {label}'s answers, lessons, exercises and schedules; other courses keep theirs.
               You are asked first, and it cannot be undone.
@@ -123,6 +123,6 @@ export function SettingsView({
           </Card>
         </div>
       </div>
-    </div>
+    </Screen>
   );
 }

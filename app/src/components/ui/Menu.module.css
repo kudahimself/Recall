@@ -43,22 +43,6 @@
   display: inline-flex;
 }
 
-/* Phones have no keyboard to press it with, and the list spans the screen. */
-@media (max-width: 767px) {
-  .triggerKey {
-    display: none;
-  }
-
-  .popover {
-    position: fixed;
-    top: var(--header-h);
-    left: var(--sp-3);
-    right: var(--sp-3);
-    width: auto;
-    max-width: none;
-  }
-}
-
 .popover {
   position: absolute;
   top: calc(100% + var(--sp-2));
@@ -167,6 +151,32 @@
   margin-top: var(--sp-2);
   padding: var(--sp-2) var(--sp-3) var(--sp-1);
   border-top: var(--border-w) solid var(--border);
+}
+
+/* Phones: no keyboard to press the keys with; the list spans the screen under
+   the top bar and each choice is a full-size touch target. */
+@media (max-width: 767px) {
+  .triggerKey,
+  .itemKey,
+  .footer {
+    display: none;
+  }
+
+  .popover {
+    position: fixed;
+    top: calc(var(--header-h) + var(--sp-1));
+    left: var(--sp-3);
+    right: var(--sp-3);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: calc(100% - var(--header-h) - var(--sp-6));
+    overflow-y: auto;
+  }
+
+  .item {
+    min-height: var(--control-lg);
+  }
 }
 
 @keyframes menu-in {

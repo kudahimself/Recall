@@ -1,7 +1,7 @@
 /* Recall design tokens, direction A "Night".
-   Every component stylesheet reads these variables and nothing else: no raw
-   colours, sizes or spacing in component CSS. The legacy names at the end keep
-   the screens that have not moved to the shared components yet working. */
+   Every stylesheet reads these variables and nothing else: no raw colours,
+   sizes or spacing anywhere but here (scripts/check-css-tokens.js). Element
+   rules live in base.css; everything else is a CSS Module beside its component. */
 
 :root {
   color-scheme: dark;
@@ -58,6 +58,8 @@
   /* ---- Layout ---- */
   --header-h: 48px;
   --rail-w: 76px;
+  --tabbar-h: 56px;        /* the bottom tab bar on a phone */
+  --scrollbar-w: 10px;
   --content-max: 1240px;
   --side-panel-w: 300px;
   --action-min-w: 9.5rem;
@@ -67,9 +69,9 @@
   --answer-short-w: 18rem;
   --measure: 36rem;
   --feedback-max-h: 46vh;
-  --home-gap: var(--sp-4);
-  --home-pad: var(--sp-5);
-  --home-pad-y: var(--sp-5);
+  --screen-gap: var(--sp-4);   /* between the cards of a screen */
+  --card-pad: var(--sp-5);     /* inside a card */
+  --screen-pad-y: var(--sp-5); /* above a screen's first card */
   --plan-measure: 44rem;
   --header-text-min: 14rem;
   --job-min-w: 18rem;
@@ -77,6 +79,7 @@
   --table-min-h: 4.5rem;    /* a grid short of room keeps its header and two rows */
   --region-min-h: 7.5rem;   /* a list or editor never shrinks below about four lines */
   --editor-min-h: 7rem;    /* three lines and the editor's key bar */
+  --editor-phone-h: 50vh;  /* a phone's editor: half the screen, the page scrolls past it */
   --preview-min-h: 11rem;
   --num-col-w: 4.5rem;     /* a column of short numbers: Recent, Due */
   --seen-col-w: 10rem;     /* a "139/347" count with its bar */
@@ -175,76 +178,23 @@
   --course-dataeng: #34d399;
   --course-sql: #38bdf8;
   --course: var(--accent-text);
-
-  /* =====================================================================
-     Legacy names, aliased to the tokens above. Screens not yet on the
-     shared components read these; new CSS must not.
-     ===================================================================== */
-  --bg-base: var(--bg);
-  --bg-surface: var(--surface);
-  --bg-elevated: var(--raised);
-  --bg-input: var(--kbd-bg);
-  --text-dim: var(--text-2);
-  --text-muted: var(--text-3);
-  --primary: var(--accent);
-  --primary-hover: var(--accent-hover);
-  --primary-soft: var(--accent-soft);
-  --primary-ring: var(--accent-line);
-  --primary-glow: var(--selection);
-  --error: var(--danger);
-  --error-soft: var(--danger-soft);
-  /* The old amber "secondary accent" is the warning hue now. */
-  --highlight: var(--warning);
-  --highlight-soft: var(--warning-soft);
-  --shadow-sm: var(--shadow-1);
-  --shadow-md: var(--shadow-2);
-  --shadow-lg: var(--shadow-3);
-  --shadow-float: var(--shadow-2);
-  --shadow-glow: var(--shadow-1);
-  --space-xs: var(--sp-1);
-  --space-sm: var(--sp-2);
-  --space-md: var(--sp-3);
-  --space-lg: var(--sp-4);
-  --space-xl: var(--sp-6);
-  --space-2xl: var(--sp-8);
-  --space-3xl: var(--sp-12);
-  --radius-sm: var(--radius-s);
-  --radius-md: var(--radius-m);
-  --radius-lg: var(--radius-l);
-  --radius-xl: var(--radius-l);
-  --font-display: var(--font-ui);
-  /* Old type scale, floored at 12px. */
-  --fs-2xs: var(--fs-meta);
-  --fs-xs: var(--fs-meta);
-  --fs-sm: 0.8125rem;
-  --fs-base: var(--fs-small);
-  --fs-md: 0.9375rem;
-  --fs-lg: var(--fs-body);
-  --fs-xl: var(--fs-lead);
-  --fs-2xl: var(--fs-h3);
-  --fs-3xl: 1.5rem;
-  --fs-4xl: var(--fs-h1);
-  /* Old per-course palettes: markers only. */
-  --databricks-solid: var(--course-databricks);
-  --databricks-soft: rgba(248, 113, 113, 0.12);
-  --webdev-solid: var(--course-webdev);
-  --webdev-soft: rgba(96, 165, 250, 0.12);
-  --backend-solid: var(--course-backend);
-  --backend-soft: rgba(167, 139, 250, 0.12);
-  --dataeng-solid: var(--course-dataeng);
-  --dataeng-soft: rgba(52, 211, 153, 0.12);
-  --sql-solid: var(--course-sql);
-  --sql-soft: rgba(56, 189, 248, 0.12);
 }
 
-/* Short laptop screens give the header and Home's cards a little less room. */
+/* Short laptop screens give the header and the cards a little less room. */
 @media (max-height: 800px) {
   :root {
     --header-h: 44px;
-    --home-gap: var(--sp-3);
-    --home-pad: var(--sp-4);
-    --home-pad-y: var(--sp-4);
+    --screen-gap: var(--sp-3);
+    --card-pad: var(--sp-4);
+    --screen-pad-y: var(--sp-4);
     --heat-cell: 10px;
+  }
+}
+
+/* Phones: cards keep a little more of the narrow width for their content. */
+@media (max-width: 767px) {
+  :root {
+    --card-pad: var(--sp-4);
   }
 }
 
@@ -255,35 +205,5 @@
 .theme-dataeng { --course: var(--course-dataeng); }
 .theme-sql { --course: var(--course-sql); }
 
-/* ---- Base ---- */
+/* The root of the type scale: 16px, whatever the viewport. */
 html { font-size: 16px; }
-
-body {
-  margin: 0;
-  font-family: var(--font-ui);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  color: var(--text);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code, pre, kbd, samp { font-family: var(--font-mono); }
-
-::selection { background: var(--selection); color: var(--text); }
-
-/* One visible focus ring for every control; never removed. */
-:focus-visible {
-  outline: var(--focus-w) solid var(--focus);
-  outline-offset: var(--focus-w);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
-    scroll-behavior: auto !important;
-  }
-}

@@ -1,4 +1,8 @@
-.data-tables {
+/* A question's sample data: grids side by side. Short of room, the grids give
+   up height (their rows scroll) before the solution or the card would scroll;
+   in a question card the root's data-shrink lets QuestionShell shrink it. */
+.tables {
+  flex: 0 1 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -7,7 +11,7 @@
   min-height: 0;
 }
 
-.data-table {
+.table {
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -21,7 +25,7 @@
   overflow: hidden;
 }
 
-.data-table-name {
+.name {
   padding: var(--sp-1) var(--sp-3);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
@@ -31,14 +35,14 @@
 }
 
 /* About six rows tall; longer tables scroll inside the grid. */
-.data-table-scroll {
+.scroll {
   flex: 0 1 auto;
   min-height: var(--table-min-h);
   max-height: var(--table-max-h);
   overflow: auto;
 }
 
-.data-table table {
+.table table {
   border-collapse: collapse;
   font-family: var(--font-mono);
   font-size: var(--fs-small);
@@ -46,15 +50,15 @@
   color: var(--text);
 }
 
-.data-table th,
-.data-table td {
+.table th,
+.table td {
   padding: var(--sp-1) var(--sp-3);
   text-align: left;
   white-space: nowrap;
   border-bottom: var(--border-w) solid var(--border);
 }
 
-.data-table th {
+.table th {
   position: sticky;
   top: 0;
   background: var(--surface);
@@ -62,16 +66,16 @@
   font-weight: var(--weight-semibold);
 }
 
-.data-table tbody tr:last-child td {
+.table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.data-table .data-table-num {
+.table .num {
   text-align: right;
 }
 
-.data-table .data-table-null,
-.data-table .data-table-empty {
+.table .null,
+.table .empty {
   color: var(--text-3);
   font-style: italic;
 }

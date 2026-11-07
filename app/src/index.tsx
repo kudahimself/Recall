@@ -10,9 +10,9 @@ import '@fontsource/ibm-plex-sans/700.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '@fontsource/ibm-plex-mono/600.css';
-// Design tokens and base styles first, so every stylesheet after them can read them.
+// Design tokens, then the base element rules, before every component stylesheet.
 import './styles/tokens.css';
-import './index.css';
+import './styles/base.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 

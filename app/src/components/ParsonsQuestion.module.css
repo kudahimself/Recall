@@ -6,6 +6,18 @@
   min-height: 0;
 }
 
+/* Under 1100px three columns leave the preview too narrow to read: the two
+   lists stay side by side and the preview takes the full width under them. */
+@media (max-width: 1099px) {
+  .withPreview {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .previewColumn {
+    grid-column: 1 / -1;
+  }
+}
+
 .column {
   display: flex;
   flex-direction: column;

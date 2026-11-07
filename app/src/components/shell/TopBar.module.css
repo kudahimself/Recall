@@ -1,6 +1,7 @@
 .bar {
   position: relative;
   z-index: 20;
+  flex: none;
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -8,10 +9,6 @@
   padding: 0 var(--sp-4) 0 var(--sp-5);
   background: var(--surface);
   border-bottom: var(--border-w) solid var(--border);
-}
-
-.menu {
-  display: none;
 }
 
 .divider {
@@ -48,10 +45,6 @@
   .bar {
     gap: var(--sp-2);
     padding: 0 var(--sp-3);
-  }
-
-  .menu {
-    display: inline-flex;
   }
 
   .divider,

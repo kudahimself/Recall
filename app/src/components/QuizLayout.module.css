@@ -1,0 +1,61 @@
+.quiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+  max-width: var(--content-max);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: var(--sp-2) var(--sp-5);
+}
+
+/* The column adds its width, so on a large screen the question keeps the width it has without one. */
+.withColumn {
+  max-width: calc(var(--content-max) + var(--side-panel-w) + var(--sp-4));
+}
+
+.stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--sp-4);
+}
+
+.stageColumn {
+  grid-template-columns: minmax(0, 1fr) var(--side-panel-w);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Narrow screens: the rule card stays one key (R) away instead of beside the question. */
+@media (max-width: 1099px) {
+  .stageColumn {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stage > .side {
+    display: none;
+  }
+}
+
+/* Phones: the screen scrolls, so the stage is as tall as what is on it. */
+@media (max-width: 767px) {
+  .quiz {
+    height: auto;
+    padding: var(--sp-2) var(--sp-3) var(--sp-4);
+  }
+
+  .stage {
+    flex: none;
+    grid-template-rows: auto;
+  }
+}

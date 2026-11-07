@@ -3,32 +3,11 @@
    top bar and long lists scroll inside their card; on a phone it is one
    column and the page scrolls. */
 .progress {
-  display: flex;
-  flex-direction: column;
-  gap: var(--home-gap);
-  width: 100%;
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--home-pad-y) var(--sp-6) var(--sp-3);
+  min-width: 0;
 }
 
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  column-gap: var(--sp-6);
-  border-bottom: var(--border-w) solid var(--border);
-}
-
-.title {
-  margin: 0;
-  padding-bottom: var(--sp-2);
-  font-size: var(--fs-h2);
-  font-weight: var(--weight-semibold);
-  line-height: var(--lh-tight);
-}
-
-.head .tabs {
+/* The tabs sit on the title row's hairline. */
+.progress .tabs {
   border-bottom: 0;
   margin-bottom: calc(-1 * var(--border-w));
 }
@@ -36,27 +15,27 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
   min-height: 0;
 }
 
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
   min-height: 0;
 }
 
 .col {
   display: flex;
   flex-direction: column;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
   min-width: 0;
   min-height: 0;
 }
@@ -67,7 +46,6 @@
   gap: var(--sp-3);
   min-width: 0;
   min-height: 0;
-  padding: var(--home-pad);
 }
 
 .keys {
@@ -560,14 +538,6 @@
 
 /* ---- Phone ---- */
 @media (max-width: 767px) {
-  .progress {
-    padding: var(--sp-4);
-  }
-
-  .card {
-    padding: var(--sp-4);
-  }
-
   /* A long list keeps to most of the screen, so the topic it selects is a short scroll away. */
   .list {
     max-height: 70vh;
@@ -577,7 +547,7 @@
     display: none;
   }
 
-  .head .tabs {
+  .progress .tabs {
     width: 100%;
     overflow-x: auto;
     scrollbar-width: none;

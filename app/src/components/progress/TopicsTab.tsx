@@ -82,8 +82,9 @@ export function TopicsTab({
   return (
     <>
       <div className={`${styles.split} ${styles.splitEven}`}>
-        <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-topics">
+        <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-topics">
           <CardHeader
+            as="h3"
             title="Topics"
             titleId="progress-topics"
             aside={<span>{rows.filter(r => r.unit.unlocked).length} of {rows.length} open</span>}
@@ -186,8 +187,9 @@ function TopicDetail({
   const state = unitState(u, false);
 
   return (
-    <Card as="section" padded={false} className={`${styles.card} ${styles.grow} ${styles.detail}`} aria-labelledby="progress-topic">
+    <Card as="section" className={`${styles.card} ${styles.grow} ${styles.detail}`} aria-labelledby="progress-topic">
       <CardHeader
+        as="h3"
         eyebrow={`${row.section.name} · topic ${row.index} of ${sectionSize}`}
         title={u.displayName}
         titleId="progress-topic"

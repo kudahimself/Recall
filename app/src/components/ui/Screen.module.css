@@ -1,0 +1,38 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--screen-gap);
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--screen-pad-y) var(--sp-6) var(--sp-3);
+}
+
+/* The title, and any controls that belong to it, over a hairline. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: var(--sp-6);
+  min-width: 0;
+  border-bottom: var(--border-w) solid var(--border);
+}
+
+.title {
+  margin: 0;
+  padding-bottom: var(--sp-2);
+  font-size: var(--fs-h2);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+}
+
+/* Focus lands on the title so Tab starts at the top; the ring would only be noise. */
+.title:focus {
+  outline: none;
+}
+
+@media (max-width: 899px) {
+  .screen {
+    padding: var(--sp-4);
+  }
+}

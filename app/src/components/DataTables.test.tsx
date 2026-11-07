@@ -63,8 +63,8 @@ describe('DataTables', () => {
       />,
     );
     const [realNull, textNull] = within(table('dbo.T')).getAllByRole('cell');
-    expect(realNull).toHaveClass('data-table-null');
-    expect(textNull).not.toHaveClass('data-table-null');
+    expect(realNull).toHaveClass('null');
+    expect(textNull).not.toHaveClass('null');
     expect(within(table('dbo.Empty')).getByText('(no rows)')).toBeInTheDocument();
   });
 });

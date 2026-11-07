@@ -91,8 +91,9 @@ export function ScheduleTab({
   return (
     <>
       <div className={styles.split}>
-        <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-schedule">
+        <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-schedule">
           <CardHeader
+            as="h3"
             title="Card families"
             titleId="progress-schedule"
             aside={filterName
@@ -124,8 +125,8 @@ export function ScheduleTab({
         </Card>
 
         <div className={styles.col}>
-          <Card as="section" padded={false} className={styles.card} aria-labelledby="progress-forecast">
-            <CardHeader title="Next two weeks" titleId="progress-forecast" aside={<span>card families coming due</span>} />
+          <Card as="section" className={styles.card} aria-labelledby="progress-forecast">
+            <CardHeader as="h3" title="Next two weeks" titleId="progress-forecast" aside={<span>card families coming due</span>} />
             <StatGroup>
               <StatTile value={dueToday} label="due today" tone={dueToday > 0 ? 'warning' : 'neutral'} />
               <StatTile value={nextWeek} label="next 7 days" />
@@ -135,8 +136,8 @@ export function ScheduleTab({
           </Card>
 
           {selected && (
-            <Card as="section" padded={false} className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-family">
-              <CardHeader eyebrow={selected.unit.displayName} title={selected.label} titleId="progress-family" />
+            <Card as="section" className={`${styles.card} ${styles.grow}`} aria-labelledby="progress-family">
+              <CardHeader as="h3" eyebrow={selected.unit.displayName} title={selected.label} titleId="progress-family" />
               <dl className={styles.facts}>
                 <div>
                   <dt>Last review</dt>

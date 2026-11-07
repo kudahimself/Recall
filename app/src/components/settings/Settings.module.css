@@ -1,35 +1,14 @@
-.settings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--home-gap);
-  width: 100%;
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--home-pad-y) var(--sp-6);
-}
-
-.title {
-  margin: 0;
-  font-size: var(--fs-h1);
-  font-weight: var(--weight-semibold);
-  line-height: var(--lh-tight);
-}
-
-.title:focus {
-  outline: none;
-}
-
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: var(--home-gap);
+  gap: var(--screen-gap);
   min-width: 0;
 }
 
@@ -92,10 +71,6 @@
 }
 
 @media (max-width: 899px) {
-  .settings {
-    padding: var(--sp-4);
-  }
-
   .grid {
     grid-template-columns: minmax(0, 1fr);
   }
