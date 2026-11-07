@@ -187,9 +187,10 @@ describe('F7: filters', () => {
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
     await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
-    const topics = screen.getAllByRole('button', { name: 'Deselect All' })[0];
+    fireEvent.click(screen.getByRole('button', { name: /^Filters/ }));
+    const topics = within(screen.getByRole('region', { name: 'Topics' })).getByRole('button', { name: 'Deselect all' });
     fireEvent.click(topics);
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(await screen.findByText(/You're all caught up/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
     expect(screen.queryByText('Done for today')).toBeNull();
@@ -208,17 +209,17 @@ describe('F7: filters', () => {
     const { unmount } = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
     await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
-    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Filters/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
-    expect(screen.getByRole('button', { name: 'Advanced' })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: 'Advanced' })).toHaveAttribute('aria-pressed', 'false');
     unmount();
 
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Start today's session/ }));
     await screen.findByRole('button', { name: /Check answer/ }, { timeout: 3000 });
-    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
-    expect(screen.getByRole('button', { name: 'Advanced' })).not.toHaveClass('active');
-    expect(screen.getByRole('button', { name: 'Beginner' })).toHaveClass('active');
+    fireEvent.click(screen.getByRole('button', { name: /^Filters/ }));
+    expect(screen.getByRole('button', { name: 'Advanced' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Beginner' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('a lesson reached under a topic filter serves and completes against its full exercise list', async () => {

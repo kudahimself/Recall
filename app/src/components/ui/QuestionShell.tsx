@@ -7,6 +7,7 @@ import { FeedbackBanner, Verdict } from './FeedbackBanner';
 import { InlineText } from './InlineText';
 import { KeyHints } from './Kbd';
 import styles from './QuestionShell.module.css';
+import { dialogIsOpen } from './Dialog';
 
 /** Where Next goes and what it is called ("Next exercise", "Finish the lesson"), from the quiz view. */
 export interface QuestionNav {
@@ -99,6 +100,20 @@ const DIFFICULTY_LABEL: Record<string, string> = { beginner: 'Beginner', interme
 const FIRST_CONTROL = 'input:not([disabled]):not([type="hidden"]):not([type="radio"]), textarea:not([disabled]), select:not([disabled]), [role="listbox"]:not([aria-disabled="true"])';
 
 /**
+ * Focus where answering starts in a question card: the chosen or first
+ * option, else the first answer control, else the card itself. On mount, and
+ * when a dialog closes over a question that changed while it was open.
+ */
+export function focusAnswerStart(card: HTMLElement | null) {
+  const body = card?.querySelector<HTMLElement>('[data-answer-area]');
+  if (!card || !body) return;
+  const radio = body.querySelector<HTMLInputElement>('input[type="radio"]:checked:not([disabled])')
+    ?? body.querySelector<HTMLInputElement>('input[type="radio"]:not([disabled])');
+  const target = radio ?? body.querySelector<HTMLElement>(FIRST_CONTROL) ?? card;
+  target.focus({ preventScroll: true });
+}
+
+/**
  * The frame every question type renders its answer area in: badges and the
  * prompt, the answer, the hint, the banner in a live region, and one footer
  * with the step's action, which becomes Next once graded.
@@ -115,7 +130,6 @@ export function QuestionShell({
   const nav = useContext(QuestionNavContext);
   const promptId = useId();
   const cardRef = useRef<HTMLElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
   const [hintsShown, setHintsShown] = useState(0);
   const [solutionOpen, setSolutionOpen] = useState(false);
@@ -133,12 +147,9 @@ export function QuestionShell({
   // Focus the first answer control when the question (or its step) appears.
   useEffect(() => {
     if (graded || hasFeedback) return;
-    const body = bodyRef.current;
-    if (!body) return;
-    const radio = body.querySelector<HTMLInputElement>('input[type="radio"]:checked:not([disabled])')
-      ?? body.querySelector<HTMLInputElement>('input[type="radio"]:not([disabled])');
-    const target = radio ?? body.querySelector<HTMLElement>(FIRST_CONTROL) ?? cardRef.current;
-    target?.focus({ preventScroll: true });
+    // A question served under an open dialog (a filter change) leaves focus in the dialog.
+    if (dialogIsOpen()) return;
+    focusAnswerStart(cardRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
@@ -265,7 +276,7 @@ export function QuestionShell({
         {task && <p className={styles.task}>{task}</p>}
       </header>
 
-      <div className={styles.body} ref={bodyRef}>
+      <div className={styles.body} data-answer-area>
         <QuestionShellContext.Provider value={api}>
           {children}
         </QuestionShellContext.Provider>

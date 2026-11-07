@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { PredictOutputQuestion as PredictQ } from '../types';
+import { PredictOutputQuestion as PredictQ, QuestionType } from '../types';
 import { outputInstruction, outputMatches } from '../utils/predictOutput';
 import { DataTables } from './DataTables';
 import { CodeBlock, languageLabel } from './ui/CodeBlock';
 import { Prose } from './ui/InlineText';
 import { AnswerColumns, QuestionShell } from './ui/QuestionShell';
 import { AnswerCompare, TextAnswer } from './ui/TextAnswer';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: PredictQ;
@@ -39,7 +40,7 @@ export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, sho
     <QuestionShell
       className="predict-output-question"
       question={question}
-      format="Predict output"
+      format={QUESTION_FORMAT[QuestionType.PREDICT_OUTPUT]}
       task={outputInstruction(question.code, question.language)}
       graded={graded}
       typed

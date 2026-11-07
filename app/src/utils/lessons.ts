@@ -18,7 +18,7 @@
  *
  * Pure functions only: no React, no localStorage.
  */
-import { Difficulty, Question, QuestionType, TopicLesson, UserProgress } from '../types';
+import { Difficulty, Question, TopicLesson, UserProgress } from '../types';
 import { LESSONS } from '../data/lessons';
 import { LESSONS_KEY, RAMP_DIFFICULTY_ORDER, familyOf, topicRamp } from './spacedRepetition';
 import { FamilyState, FsrsStore, isFamilyDue, State } from './familySchedule';
@@ -110,26 +110,6 @@ export function nextLessonExercise(
 /** The lesson containing this question as an exercise, if any. */
 export function lessonOfExercise(questionId: string): TopicLesson | undefined {
   return LESSONS.find(l => l.exercises.includes(questionId));
-}
-
-export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
-  [QuestionType.MULTIPLE_CHOICE]: 'multiple choice',
-  [QuestionType.PREDICT_OUTPUT]: 'predict output',
-  [QuestionType.PARSONS]: 'parsons',
-  [QuestionType.CLOZE_CODE]: 'cloze',
-  [QuestionType.CODING]: 'cold write',
-  [QuestionType.PREDICT_OUTCOME]: 'predict the outcome',
-  [QuestionType.CHOOSE_JUSTIFY]: 'choose & justify',
-  [QuestionType.SPOT_FLAW]: 'spot the flaw',
-  [QuestionType.EXPLAIN]: 'explain',
-};
-
-/** "multiple choice -> predict output -> cloze", for the rule card's footer. */
-export function exercisePlan(lesson: TopicLesson, byId: ReadonlyMap<string, Question>): string[] {
-  return lesson.exercises.map(id => {
-    const q = byId.get(id);
-    return q ? QUESTION_TYPE_LABEL[q.type] : id;
-  });
 }
 
 /** Join the source lines of a paragraph (one sentence per line) into display text. */

@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { MultipleChoiceQuestion as MCQuestion } from '../types';
+import { MultipleChoiceQuestion as MCQuestion, QuestionType } from '../types';
 import { DataTables } from './DataTables';
 import { InlineText, Prose } from './ui/InlineText';
 import { OptionList } from './ui/OptionList';
 import { QuestionShell, seededOrder } from './ui/QuestionShell';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: MCQuestion;
@@ -42,7 +43,7 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({ question, onAnswer, on
     <QuestionShell
       className="multiple-choice-question"
       question={question}
-      format="Multiple choice"
+      format={QUESTION_FORMAT[QuestionType.MULTIPLE_CHOICE]}
       graded={graded}
       action={{ label: 'Check answer', onAction: check, disabled: !chosen }}
       hint={showHints ? question.hints?.[0] : null}

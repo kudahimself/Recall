@@ -28,6 +28,7 @@ export type ShortcutId =
   | 'solution'
   | 'leaveTyping'
   | 'ruleCard'
+  | 'filters'
   | 'startExercises'
   | 'help'
   | 'close'
@@ -73,6 +74,7 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
   listToggle: { keys: ['Space'], label: 'Add the line to your solution, or take it back', group: 'Arranging lines' },
   listReorder: { keys: ['Alt+ArrowUp', 'Alt+ArrowDown'], label: 'Move the line up or down in your solution', group: 'Arranging lines' },
   listSwitch: { keys: ['ArrowLeft', 'ArrowRight'], label: 'Switch between the lines and your solution', group: 'Arranging lines' },
+  filters: { keys: ['F'], label: 'Open or close the filters', group: 'Answering' },
   ruleCard: { keys: ['R'], label: 'Open or close the rule card', group: 'Lessons' },
   startExercises: { keys: ['Enter'], label: 'Start the exercises from a rule card', group: 'Lessons' },
   help: { keys: ['?'], label: 'Show or hide these shortcuts', group: 'Anywhere' },

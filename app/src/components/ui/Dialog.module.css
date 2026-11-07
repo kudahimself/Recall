@@ -52,6 +52,15 @@
   padding: var(--sp-5);
 }
 
+.foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  border-top: var(--border-w) solid var(--border);
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }

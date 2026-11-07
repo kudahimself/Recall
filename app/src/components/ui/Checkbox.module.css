@@ -1,0 +1,78 @@
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-s);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.row:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* The input stays in the page for keys and screen readers; the box is what shows. */
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--icon-l);
+  height: var(--icon-l);
+  border: var(--border-w) solid var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--sunken);
+  color: var(--on-accent);
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.box svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+  stroke-width: 3;
+}
+
+.row[data-state="on"],
+.row[data-state="mixed"] {
+  color: var(--text);
+}
+
+.row[data-state="on"] .box,
+.row[data-state="mixed"] .box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.input:focus-visible + .box {
+  outline: var(--focus-w) solid var(--focus);
+  outline-offset: var(--focus-w);
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aside {
+  flex: none;
+  margin-left: auto;
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}

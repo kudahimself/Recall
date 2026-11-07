@@ -209,8 +209,8 @@ When the session starts one fixed review list is built: due card families in unl
 Inside the list the old pickers' rules are ordering rules (`reviewListRank`): relearn families (missed last time) first, then drain cards (coding or advanced in a mastered topic), then the card's concept bucket in `REVIEW_LIST_BUCKET_ORDER`, each most overdue first.
 The rest of the session is fresh slots: the next unanswered card of the current topic's ramp, with a drill of a family already met after every `NEW_PER_DRILL` new cards.
 When the ramp is held by its difficulty gate, or finished but below the unlock bar, drills go to that topic (missed cards first) so the bar can be reached.
-The session serves the list first, and the "Reviews left N" pill and the Today card show its length, so the number drops by exactly one per answered review.
-A first miss anywhere in the session comes back `REASK_SPACING` cards later ("+1 again"), at most `MAX_REASKS_PER_SESSION` times per session.
+The session serves the list first, and the Today card on Home shows its length (the quiz header's status badge says it on hover), so the number drops by exactly one per answered review.
+A first miss anywhere in the session comes back `REASK_SPACING` cards later (the banner says "It comes back once more, a few cards later."), at most `MAX_REASKS_PER_SESSION` times per session.
 Families due beyond the cap stay due and lead the next days' lists; "Keep going" lifts the bound and serves them, then fresh slots, for as long as the learner wants.
 Under topic, difficulty or type filters the plan serves what it can inside them, and the session still ends at its size with "Done for today".
 When the filters have nothing left of the plan while cards outside them are still waiting, the quiz says "Nothing left today for these filters" and offers Reset filters.
@@ -241,7 +241,8 @@ A lesson is met when it was completed, or when any of its exercises was already 
 The gate lives in the App, not the selector: when the session serves an unseen card whose topic's lesson is not met (`lessonGateFor`), the App shows the rule card instead; "Try the exercises" (or Enter) then serves the exercises in order as new cards through the normal `handleAnswer`, so they count for coverage, the session's slots and the schedule exactly as other cards do, and a miss is asked again like any other.
 After the lesson the session goes on with the rest of the topic's ramp.
 Answering the last exercise records the lesson under `recall-lessons`; new filters end a lesson in progress.
-Beside every card of a topic with a lesson, the rule card stays in a side panel, and `R` reopens it in full (Esc closes it).
+In a course with rule cards, on a wide screen, one column stays beside every card: the topic's rule card, or for a topic without one the topic and how it stands, so the question keeps one width and place; `R` reopens the rule card in full (Esc closes it).
+Above every card one header row (`components/QuizBar.tsx`) shows Back, the section and topic by their courseConfig names, one session-status badge (the card's kind and today's count), Rule card (`R`) and Filters (`F`); a lesson adds its exercise steps under it.
 The learning path (`components/PathList.tsx`) shows each topic's lesson, ramp and review steps with "Start lesson" or the rule card: Home shows the section holding the next lesson (else the current section); Progress -> Topics lists every section's topics, and the selected topic has its "Rule card" (R), "Drill" (D) and the review dates of its card families; Progress -> Review schedule lists every card family met, by the day it comes due.
 `scripts/check-lessons.js`, run by `npm test` (`data/lessons/checkLessons.test.ts`), checks every lesson: exercise ids exist, belong to the topic and are in ramp order with an MCQ and a predict and no cold write first; the worked example runs (SQL on sql.js through a small T-SQL layer, procedural T-SQL through `scripts/tsql-batch.js`, Python on python3) and prints its `output`, except an example that cannot run here (one of `NON_RUNNABLE_KINDS` in `utils/workedKinds.ts`) marked `worked.runs: false`, whose output is checked by hand; it does not repeat an exercise's solution (check-leaks.js token recall); and the prose keeps one sentence per line with no em dashes.
 
@@ -259,7 +260,7 @@ The Django exercises need Django, pytest-django, Django REST Framework, drf-spec
 
 **Drain queue definition:**
 `countPendingDrain` - single source of truth behind both the `hasPendingDrain` gate and `getReviewStatus.drainQueueCount`, so gate and count can't disagree.
-It is not the number the learner sees: the breadcrumb and Home show "reviews left today" (above).
+It is not the number the learner sees: Home and the quiz header's status badge show "reviews left today" (above).
 
 A covered-topic drain card is in queue iff:
 - **(Its topic `isTopicMastered` AND it is due)** - the servable backlog
@@ -327,7 +328,7 @@ Used by every due-check:
 - **Pass it to BOTH gate and count or they desync**
 
 **Topic difficulty:**
-`getTopicDifficulty(topicQuestions, cardDifficulty)` rolls topic's drain-card difficulties up to `easy`/`medium`/`hard` label shown as breadcrumb pill (`.topic-diff-pill`)
+`getTopicDifficulty(topicQuestions, cardDifficulty)` rolls topic's drain-card difficulties up to `easy`/`medium`/`hard` label shown in the topic column beside the question
 
 **Coding response-time envelopes widened:**
 `conceptSRS.ts`: coding `easy 240k / hard 600k` so long coding answers aren't auto-graded "hard" for length.
@@ -378,11 +379,11 @@ On `uncertain`, `CodingQuestion` shows reference solution and asks user to self-
 **Progress/filters:**
 - `progress/ProgressView.tsx` - the Progress screen: ARIA tabs for Overview (the course's numbers, every section, activity, what is worth another look), Topics (every section's topics beside the selected one: lesson, ramp, review, its `ExerciseCard` and card families) and Review schedule (every card family met, by the day it comes due); built on `utils/coursePath.ts` and `utils/progressStats.ts`
 - `PathList.tsx` - a section's learning path (lesson, ramp, review steps) on Home; its step badges (`UnitSteps`) and status icons are shared with Progress → Topics
-- `QuestionFilter.tsx` - topic / difficulty / type filters, persisted to `localStorage`
+- `FilterDialog.tsx` - the topic / difficulty / type filters as a dialog (`F`), persisted to `localStorage`
 
 **Shared UI components** (`src/components/ui/`, each styled by its own CSS Module on the design tokens):
 - `Button`, `Kbd` / `KeyCombo` / `KeyHints` (the key hint row under every screen), `Badge`, `Card` / `Panel` / `Eyebrow`, `Dialog`, `MenuButton`
-- `StatTile`, `ProgressBar`, `SegmentedControl`, `EmptyState` - the one stat tile, bar, choice row and empty screen
+- `StatTile`, `ProgressBar`, `SegmentedControl`, `Checkbox`, `StepList`, `EmptyState` - the one stat tile, bar, choice row, checkbox (with a mixed state), numbered step row and empty screen
 - `InlineText` / `Prose` - the one prose renderer, in every course: `code`, **bold** and fenced code blocks
 - `CodeBlock` - read-only code with line numbers and comments, and with `slots` the fields of a cloze; `TextAnswer` / `AnswerCompare` / `Blank` - typed answers, before and after grading
 - `QuestionShell` - the frame of a question: prompt, answer area, hints (`H`, one at a time), the banner (`FeedbackBanner`, with `ResultList` for a coding question's checks) in a live region, and one footer whose action becomes Next. It owns the question's keys and focus. `QuestionRegion` and `AnswerColumns` lay out the answer area: a region gives up height and scrolls inside itself before the card would, and `fill` lets the code editor take the height left.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AnswerMeta, ExplainQuestion as ExplainQ } from '../types';
+import { AnswerMeta, ExplainQuestion as ExplainQ, QuestionType } from '../types';
 import { explainCredit } from '../utils/answerCredit';
 import { CREDIT_CORRECT_THRESHOLD } from '../utils/spacedRepetition';
 import { Eyebrow, Panel } from './ui/Card';
@@ -8,6 +8,7 @@ import { OptionList } from './ui/OptionList';
 import { QuestionShell } from './ui/QuestionShell';
 import { TextAnswer } from './ui/TextAnswer';
 import styles from './ReasoningQuestion.module.css';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: ExplainQ;
@@ -58,7 +59,7 @@ export const ExplainQuestion: React.FC<Props> = ({ question, onAnswer }) => {
       dense
       className="explain-question"
       question={question}
-      format="Explain in your own words"
+      format={QUESTION_FORMAT[QuestionType.EXPLAIN]}
       graded={stage === 'graded'}
       stage={stage}
       typed={stage !== 'graded'}

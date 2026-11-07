@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AnswerMeta, ChoiceOption, ChooseJustifyQuestion as ChooseJustifyQ } from '../types';
+import { AnswerMeta, ChoiceOption, ChooseJustifyQuestion as ChooseJustifyQ, QuestionType } from '../types';
 import { chooseJustifyCredit } from '../utils/answerCredit';
 import { isPassingCredit } from '../utils/spacedRepetition';
 import { Eyebrow } from './ui/Card';
@@ -7,6 +7,7 @@ import { InlineText, Prose } from './ui/InlineText';
 import { OptionList, OptionItem } from './ui/OptionList';
 import { QuestionShell, seededOrder } from './ui/QuestionShell';
 import styles from './ReasoningQuestion.module.css';
+import { QUESTION_FORMAT } from '../utils/questionFormat';
 
 interface Props {
   question: ChooseJustifyQ;
@@ -58,7 +59,7 @@ export const ChooseJustifyQuestion: React.FC<Props> = ({ question, onAnswer, sho
       dense
       className="choose-justify-question"
       question={question}
-      format="Choose & justify"
+      format={QUESTION_FORMAT[QuestionType.CHOOSE_JUSTIFY]}
       graded={graded}
       stage={stage}
       action={action}

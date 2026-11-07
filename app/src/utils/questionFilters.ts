@@ -16,6 +16,20 @@ export function allFilters(): FilterOptions {
 }
 
 /**
+ * How many of the three lists leave out something the course has: 0 when
+ * nothing is filtered, up to 3. The quiz header's Filters button shows it.
+ */
+export function activeFilterCount(filters: FilterOptions, coursePool: Question[]): number {
+  const topics = Array.from(new Set(coursePool.map(q => q.topic)));
+  const types = Array.from(new Set(coursePool.map(q => q.type)));
+  return [
+    topics.some(t => !filters.topics.includes(t)),
+    Object.values(Difficulty).some(d => !filters.difficulties.includes(d)),
+    types.some(t => !filters.questionTypes.includes(t)),
+  ].filter(Boolean).length;
+}
+
+/**
  * The questions the filters select. A list selects exactly what it holds, so
  * an empty list ("Deselect All") selects nothing rather than everything.
  */

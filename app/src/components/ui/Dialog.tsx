@@ -4,6 +4,11 @@ import { ShortcutLayerContext, useShortcut, useShortcutLayer } from '../../keybo
 import { Button } from './Button';
 import styles from './Dialog.module.css';
 
+/** True while a modal dialog is open: a screen that mounts under it must not take focus from it. */
+export function dialogIsOpen(): boolean {
+  return !!document.querySelector('[role="dialog"][aria-modal="true"]');
+}
+
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface DialogProps {
@@ -16,6 +21,8 @@ interface DialogProps {
   size?: 'normal' | 'wide';
   /** A class for the scrolling body. */
   bodyClassName?: string;
+  /** Actions under the body that stay in view while it scrolls (Reset, Done). */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -32,7 +39,7 @@ export function Dialog(props: DialogProps) {
   );
 }
 
-function DialogFrame({ title, hideTitle, onClose, children, size = 'normal', bodyClassName }: DialogProps) {
+function DialogFrame({ title, hideTitle, onClose, children, size = 'normal', bodyClassName, footer }: DialogProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useShortcut('close', () => onClose());
@@ -76,6 +83,7 @@ function DialogFrame({ title, hideTitle, onClose, children, size = 'normal', bod
           </div>
         )}
         <div className={[styles.body, bodyClassName].filter(Boolean).join(' ')}>{children}</div>
+        {footer && <div className={styles.foot}>{footer}</div>}
       </div>
     </div>
   );
