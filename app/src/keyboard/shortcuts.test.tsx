@@ -136,6 +136,31 @@ describe('useShortcut', () => {
   });
 });
 
+describe('arrow keys', () => {
+  it('match either key of a pair, never with a modifier or while typing, and show as arrow caps', () => {
+    const onTab = jest.fn();
+    function Arrows() {
+      useShortcut('switchTab', e => onTab(e.key));
+      return <input aria-label="text box" />;
+    }
+    render(<Arrows />);
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    fireEvent.keyDown(window, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true });
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    fireEvent.keyDown(screen.getByLabelText('text box'), { key: 'ArrowLeft' });
+    expect(onTab.mock.calls).toEqual([['ArrowLeft'], ['ArrowRight']]);
+  });
+
+  it('lists the Progress keys in the ? overlay with arrow caps', () => {
+    render(<ShortcutHelp />);
+    fireEvent.keyDown(window, { key: '?', shiftKey: true });
+    const progress = within(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).getByRole('region', { name: 'Progress' });
+    ['←', '→', '↑', '↓', 'D'].forEach(k => expect(within(progress).getByText(k)).toBeInTheDocument());
+  });
+});
+
 describe('Dialog', () => {
   it('is labelled, takes focus, keeps Tab inside, closes on Esc and gives focus back', () => {
     function Opener() {

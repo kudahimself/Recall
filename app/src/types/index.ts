@@ -381,7 +381,7 @@ export interface MultipleChoiceOption {
   isCorrect: boolean;
   // Optional: tags this distractor as encoding a documented student misconception.
   // Used for telemetry (we record selections of tagged distractors and surface
-  // top hits in ProgressTracker). Only meaningful on incorrect options.
+  // top hits under "Worth another look" on Home and Progress). Only meaningful on incorrect options.
   // Tag values must come from the registry in src/data/misconceptions.ts.
   misconceptionTag?: string;
 }

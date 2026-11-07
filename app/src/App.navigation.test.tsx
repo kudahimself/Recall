@@ -2,8 +2,9 @@
  * Moving around the app with the keyboard only, against the real <App/>:
  * the course switcher in the top bar (C, arrows, numbers, Enter, Esc), the
  * G sequences to Home, Learn, Progress and Settings, Enter on Home to start
- * today's session, and every Settings control reachable with Tab and working
- * from the keys.
+ * today's session, Home's All sections opening Progress → Topics, the
+ * Progress tabs from the keys, and every Settings control reachable with Tab
+ * and working from the keys.
  *
  * Run: npm test -- --testPathPattern=App.navigation --watchAll=false
  */
@@ -96,7 +97,8 @@ describe('G sequences', () => {
     press('gp');
     expect(rail().getByRole('button', { name: 'Progress' })).toHaveAttribute('aria-current', 'page');
     expect(focused()).toHaveAccessibleName('Overview');
-    expect(focused()).toHaveClass('progress-tab', 'active');
+    expect(focused()).toHaveAttribute('role', 'tab');
+    expect(focused()).toHaveAttribute('aria-selected', 'true');
     press('gs');
     expect(rail().getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(focused()).toHaveAccessibleName('Settings');
@@ -155,6 +157,31 @@ describe('Home', () => {
     userEvent.tab({ shift: true });
     press('{enter}');
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+  });
+
+  test('All sections opens every section on Progress → Topics', () => {
+    render(<App />);
+    userEvent.click(screen.getByRole('button', { name: 'All sections, on Progress' }));
+    expect(screen.getByRole('tab', { name: /Topics/ })).toHaveAttribute('aria-selected', 'true');
+    expect(focused()).toBe(screen.getByRole('tab', { name: /Topics/ }));
+    expect(within(screen.getByRole('listbox', { name: 'Topics, by section' })).getAllByRole('group').length).toBeGreaterThan(1);
+  });
+});
+
+describe('Progress, keys only', () => {
+  test('G then P lands on the Overview tab; Right moves to Topics, Down into its list, Left back', () => {
+    render(<App />);
+    press('gp');
+    expect(focused()).toBe(screen.getByRole('tab', { name: /Overview/ }));
+    press('{arrowright}');
+    expect(screen.getByRole('tab', { name: /Topics/ })).toHaveAttribute('aria-selected', 'true');
+    press('{arrowdown}');
+    const list = screen.getByRole('listbox', { name: 'Topics, by section' });
+    expect(focused()).toBe(list);
+    expect(list).toHaveAttribute('aria-activedescendant');
+    press('{arrowleft}');
+    expect(screen.getByRole('tab', { name: /Overview/ })).toHaveAttribute('aria-selected', 'true');
+    expect(focused()).toBe(screen.getByRole('tab', { name: /Overview/ }));
   });
 });
 

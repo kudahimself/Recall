@@ -50,7 +50,6 @@ import { Button } from './components/ui/Button';
 import { QuestionNav, QuestionNavContext } from './components/ui/QuestionShell';
 import { ShortcutHelp } from './keyboard/ShortcutHelp';
 import { useShortcut } from './keyboard/shortcuts';
-import { TopicLessons } from './components/TopicLessons';
 import {
   LessonsDone,
   getLesson,
@@ -114,16 +113,14 @@ import { ChooseJustifyQuestion } from './components/ChooseJustifyQuestion';
 import { SpotFlawQuestion } from './components/SpotFlawQuestion';
 import { ExplainQuestion } from './components/ExplainQuestion';
 import { sampleFromSearch } from './dev/sampleQuestions';
-import { ProgressTracker } from './components/ProgressTracker';
-import { activityByDay, HeatmapCalendar } from './components/HeatmapCalendar';
+import { activityByDay } from './components/ui/Heatmap';
 import { allFilters, filterQuestions, FilterOptions, parseFilters, serializeFilters } from './utils/questionFilters';
 import { QuestionFilter } from './components/QuestionFilter';
 import { TopBar } from './components/shell/TopBar';
 import { NavRail, NavView } from './components/shell/NavRail';
 import { HomeView } from './components/home/HomeView';
 import { SettingsView } from './components/settings/SettingsView';
-import { PathSections } from './components/PathList';
-import { Activity, BookOpen, Route, TrendingUp } from 'lucide-react';
+import { ProgressTab, ProgressView } from './components/progress/ProgressView';
 import './App.css';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -452,8 +449,9 @@ function App() {
   const [reaskShown, setReaskShown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(isNarrowScreen);
-  const [activeProgressTab, setActiveProgressTab] = useState<'overview' | 'path' | 'topics' | 'heatmap'>('overview');
-  const progressTabsRef = useRef<HTMLDivElement>(null);
+  const [activeProgressTab, setActiveProgressTab] = useState<ProgressTab>('overview');
+  // The topic selected on Progress → Topics, kept while the learner drills it and comes back.
+  const [progressTopic, setProgressTopic] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
 
   // ── Persistence guards ──
@@ -1459,16 +1457,13 @@ function App() {
     if (viewMode === 'quiz') startQuiz(course);
     else switchCourse(course);
   };
-  useEffect(() => {
-    if (viewMode !== 'progress') return;
-    progressTabsRef.current?.querySelector<HTMLButtonElement>('.progress-tab.active')?.focus({ preventScroll: true });
-  }, [viewMode]);
   useShortcut('goHome', () => navigate('home'));
   useShortcut('goLearn', () => navigate('quiz'));
   useShortcut('goProgress', () => navigate('progress'));
   useShortcut('goSettings', () => navigate('settings'));
+  // Home's "All sections": every section's topics, on Progress → Topics.
   const openPathTab = () => {
-    setActiveProgressTab('path');
+    setActiveProgressTab('topics');
     changeView('progress');
   };
 
@@ -1710,96 +1705,24 @@ function App() {
           })()}
 
           {viewMode === 'progress' && (
-            <div className="progress-view">
-              {/* Tab Navigation */}
-              <div className="progress-tabs" ref={progressTabsRef}>
-                <button
-                  className={`progress-tab ${activeProgressTab === 'overview' ? 'active' : ''}`}
-                  onClick={() => setActiveProgressTab('overview')}
-                >
-                  <TrendingUp size={16} />
-                  Overview
-                </button>
-                <button
-                  className={`progress-tab ${activeProgressTab === 'path' ? 'active' : ''}`}
-                  onClick={() => setActiveProgressTab('path')}
-                >
-                  <Route size={16} />
-                  Path
-                </button>
-                <button
-                  className={`progress-tab ${activeProgressTab === 'topics' ? 'active' : ''}`}
-                  onClick={() => setActiveProgressTab('topics')}
-                >
-                  <BookOpen size={16} />
-                  Topics
-                </button>
-                <button
-                  className={`progress-tab ${activeProgressTab === 'heatmap' ? 'active' : ''}`}
-                  onClick={() => setActiveProgressTab('heatmap')}
-                >
-                  <Activity size={16} />
-                  Activity
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="progress-tab-content">
-                {activeProgressTab === 'overview' && (
-                  <div className="tab-panel">
-                    {/* The dashboard that's already in ProgressTracker */}
-                    <ProgressTracker
-                      progress={progress}
-                      questions={courseQuestions}
-                      course={activeCourse}
-                      misconceptions={misconceptions}
-                      onReviewTopic={handleReviewWeakTopic}
-                    />
-                  </div>
-                )}
-
-                {activeProgressTab === 'path' && (
-                  <div className="tab-panel">
-                    {/* Every section of the course; Home shows the one you are in. */}
-                    <PathSections
-                      path={coursePath}
-                      nextLesson={coursePath.nextLesson}
-                      exercisesDone={exercisesDone}
-                      onStartLesson={startLesson}
-                      onRuleCard={setRuleCardOpen}
-                    />
-                  </div>
-                )}
-
-                {activeProgressTab === 'topics' && (
-                  <div className="tab-panel">
-                    {/* Every topic: its lesson, ramp and review, with Rule card and Drill */}
-                    <TopicLessons
-                      course={activeCourse}
-                      questions={courseQuestions}
-                      progress={progress}
-                      store={fsrsStore}
-                      lessonsDone={lessonsDone}
-                      exercisesDone={exercisesDone}
-                      onRuleCard={setRuleCardOpen}
-                      onDrill={handleReviewWeakTopic}
-                      onToggleExercise={toggleExercise}
-                    />
-                  </div>
-                )}
-
-                {activeProgressTab === 'heatmap' && (
-                  <div className="tab-panel">
-                    <h3 style={{ marginBottom: 'var(--space-lg)', color: 'var(--text)' }}>Learning Activity</h3>
-                    {/* Activity only; the Overview tab has the rest of the dashboard. */}
-                    <div className="heatmap-card">
-                      <HeatmapCalendar data={activityByDay(progress.attemptHistory, courseQuestions)} weeks={26} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-            </div>
+            <ProgressView
+              course={activeCourse}
+              questions={courseQuestions}
+              progress={progress}
+              path={coursePath}
+              misconceptions={misconceptions}
+              activity={activity}
+              exercisesDone={exercisesDone}
+              longestStreak={profile.longestStreak}
+              tab={activeProgressTab}
+              onTabChange={setActiveProgressTab}
+              topic={progressTopic}
+              onTopicChange={setProgressTopic}
+              onDrill={handleReviewWeakTopic}
+              onRuleCard={setRuleCardOpen}
+              onStartLesson={startLesson}
+              onToggleExercise={toggleExercise}
+            />
           )}
           </div>
         </main>

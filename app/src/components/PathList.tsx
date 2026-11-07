@@ -1,12 +1,13 @@
 /**
  * A course's path: each unit with its lesson, ramp, review and exercise
  * steps, and the lesson to start next. Home shows the section the learner is
- * in, fitted to the height it is given; Progress shows every section.
+ * in, fitted to the height it is given. The step badges (UnitSteps) and the
+ * status icons are shared with Progress, whose Topics tab lists every section.
  */
 import React, { useRef } from 'react';
 import { BookOpen, CheckCircle2, Lock, PlayCircle } from 'lucide-react';
 import { TopicLesson } from '../types';
-import { CoursePath, PathSection, PathUnit } from '../utils/coursePath';
+import { PathUnit, SectionStatus } from '../utils/coursePath';
 import { ExercisesDone, exerciseForTopics } from '../utils/exercises';
 import { UNLOCK_ACCURACY_PCT } from '../utils/spacedRepetition';
 import { useFitRows } from '../utils/useFitRows';
@@ -32,17 +33,89 @@ interface PathListProps extends PathActions {
   className?: string;
 }
 
-type UnitState = 'done' | 'now' | 'open' | 'locked';
+export type UnitState = 'done' | 'now' | 'open' | 'locked';
 
-function unitState(u: PathUnit, isCurrent: boolean): UnitState {
+export function unitState(u: PathUnit, isCurrent: boolean): UnitState {
   if (!u.unlocked) return 'locked';
   if (isCurrent) return 'now';
   if (u.coveragePct === 100 && u.recentPct >= UNLOCK_ACCURACY_PCT) return 'done';
   return 'open';
 }
 
-const STATE_ICON = { done: CheckCircle2, now: PlayCircle, open: PlayCircle, locked: Lock };
-const STATE_LABEL = { done: 'Done', now: 'You are here', open: 'Open', locked: 'Locked' };
+export const UNIT_STATE_ICON = { done: CheckCircle2, now: PlayCircle, open: PlayCircle, locked: Lock };
+export const UNIT_STATE_LABEL = { done: 'Done', now: 'You are here', open: 'Open', locked: 'Locked' };
+
+/** A unit's status as an icon in its state's colour, with the state for screen readers. */
+export function UnitStatus({ state }: { state: UnitState }) {
+  const Icon = UNIT_STATE_ICON[state];
+  return (
+    <span className={styles.status} data-state={state} title={UNIT_STATE_LABEL[state]}>
+      <Icon aria-hidden="true" />
+      <span className="sr-only">{UNIT_STATE_LABEL[state]}: </span>
+    </span>
+  );
+}
+
+const SECTION_ICON = { mastered: CheckCircle2, current: PlayCircle, locked: Lock };
+export const SECTION_LABEL = { mastered: 'Passed', current: 'Current section', locked: 'Locked' };
+
+/** A section's status as an icon in its state's colour. */
+export function SectionStatusIcon({ status }: { status: SectionStatus }) {
+  const Icon = SECTION_ICON[status];
+  return (
+    <span className={styles.status} data-section={status} title={SECTION_LABEL[status]}>
+      <Icon aria-hidden="true" />
+      <span className="sr-only">{SECTION_LABEL[status]}: </span>
+    </span>
+  );
+}
+
+/**
+ * A unit's steps as badges: lesson, ramp, review (due, missed or met) and the
+ * exercise. `hideLesson` drops the lesson badge where a Start lesson button
+ * stands for it; `compact` keeps the ramp, the review and a done exercise,
+ * for a list whose selected row shows the rest beside it.
+ */
+export function UnitSteps({ unit: u, exercisesDone, hideLesson = false, compact = false, className }: {
+  unit: PathUnit;
+  exercisesDone: ExercisesDone;
+  hideLesson?: boolean;
+  compact?: boolean;
+  className?: string;
+}) {
+  const st = u.steps;
+  const due = st.families.filter(f => f.due).length;
+  const met = st.families.some(f => f.state && f.state.reps > 0);
+  const missed = st.families.some(f => f.state && f.state.reps > 0 && !f.state.lastCorrect);
+  const rampDone = st.rampTotal > 0 && st.rampAnswered >= st.rampTotal;
+  const exercise = exerciseForTopics(u.topicKeys);
+  const exerciseDone = !!exercise && exercisesDone[exercise.id] !== undefined;
+
+  const review: [BadgeTone, React.ReactNode] = due > 0 ? ['warning', <>Review <BadgeCount>{due}</BadgeCount> due</>]
+    : missed ? ['danger', 'Review: missed']
+    : met ? ['success', 'Review']
+    : ['neutral', 'Review'];
+
+  return (
+    <span className={[styles.steps, className].filter(Boolean).join(' ')}>
+      {st.lesson && !hideLesson && !compact && (
+        <Badge tone={st.lessonMet ? 'success' : 'neutral'} title="Lesson: the rule card and its worked example, then a few exercises">Lesson</Badge>
+      )}
+      <Badge tone={rampDone ? 'success' : 'neutral'} title="Ramp: introduce, combine, apply. The next topic opens when it is answered above the accuracy bar.">
+        Ramp <BadgeCount>{st.rampAnswered}/{st.rampTotal}</BadgeCount>
+      </Badge>
+      <Badge tone={review[0]} title="Review: the topic's card families, scheduled by FSRS">{review[1]}</Badge>
+      {exercise && (!compact || exerciseDone) && (
+        <Badge
+          tone={exerciseDone ? 'success' : rampDone ? 'accent' : 'neutral'}
+          title={`Exercise in your own editor: ${exercise.title}, in ${exercise.folder}. Tick it done under Progress, Topics.`}
+        >
+          Exercise
+        </Badge>
+      )}
+    </span>
+  );
+}
 
 export function PathList({ units, label, current = -1, fit = false, className, ...actions }: PathListProps) {
   const listRef = useRef<HTMLOListElement>(null);
@@ -67,45 +140,14 @@ export function PathList({ units, label, current = -1, fit = false, className, .
 
 function UnitRow({ unit: u, isCurrent, nextLesson, exercisesDone, onStartLesson, onRuleCard }: PathActions & { unit: PathUnit; isCurrent: boolean }) {
   const state = unitState(u, isCurrent);
-  const Icon = STATE_ICON[state];
   const st = u.steps;
   const isNext = !!st.lesson && st.lesson === nextLesson && u.unlocked;
-  const due = st.families.filter(f => f.due).length;
-  const met = st.families.some(f => f.state && f.state.reps > 0);
-  const missed = st.families.some(f => f.state && f.state.reps > 0 && !f.state.lastCorrect);
-  const rampDone = st.rampTotal > 0 && st.rampAnswered >= st.rampTotal;
-  const exercise = exerciseForTopics(u.topicKeys);
-  const exerciseDone = !!exercise && exercisesDone[exercise.id] !== undefined;
-
-  const review: [BadgeTone, React.ReactNode] = due > 0 ? ['warning', <>Review <BadgeCount>{due}</BadgeCount> due</>]
-    : missed ? ['danger', 'Review: missed']
-    : met ? ['success', 'Review']
-    : ['neutral', 'Review'];
 
   return (
     <li className={styles.row} data-state={state} aria-current={isCurrent ? 'step' : undefined}>
-      <span className={styles.status} title={STATE_LABEL[state]}>
-        <Icon aria-hidden="true" />
-        <span className="sr-only">{STATE_LABEL[state]}: </span>
-      </span>
+      <UnitStatus state={state} />
       <span className={styles.name} title={u.displayName}>{u.displayName}</span>
-      <span className={styles.steps}>
-        {st.lesson && !isNext && (
-          <Badge tone={st.lessonMet ? 'success' : 'neutral'} title="Lesson: the rule card and its worked example, then a few exercises">Lesson</Badge>
-        )}
-        <Badge tone={rampDone ? 'success' : 'neutral'} title="Ramp: introduce, combine, apply. The next topic opens when it is answered above the accuracy bar.">
-          Ramp <BadgeCount>{st.rampAnswered}/{st.rampTotal}</BadgeCount>
-        </Badge>
-        <Badge tone={review[0]} title="Review: the topic's card families, scheduled by FSRS">{review[1]}</Badge>
-        {exercise && (
-          <Badge
-            tone={exerciseDone ? 'success' : rampDone ? 'accent' : 'neutral'}
-            title={`Exercise in your own editor: ${exercise.title}, in ${exercise.folder}. Tick it done under Progress, Topics.`}
-          >
-            Exercise
-          </Badge>
-        )}
-      </span>
+      <UnitSteps unit={u} exercisesDone={exercisesDone} hideLesson={isNext} />
       <span className={styles.count} title="Questions seen">{u.seen}/{u.total}</span>
       <span className={styles.action}>
         {isNext
@@ -115,41 +157,5 @@ function UnitRow({ unit: u, isCurrent, nextLesson, exercisesDone, onStartLesson,
             : null}
       </span>
     </li>
-  );
-}
-
-const SECTION_ICON = { mastered: CheckCircle2, current: PlayCircle, locked: Lock };
-const SECTION_LABEL = { mastered: 'Passed', current: 'Current section', locked: 'Locked' };
-
-/** Every section of the course, for Progress. */
-export function PathSections({ path, ...actions }: PathActions & { path: CoursePath }) {
-  return (
-    <ol className={styles.sections} aria-label="Every section of the course">
-      {path.sections.map((s: PathSection, i) => {
-        const Icon = SECTION_ICON[s.status];
-        return (
-          <li key={s.name} className={styles.section} data-status={s.status}>
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionNum}>{String(i + 1).padStart(2, '0')}</span>
-              <span className={styles.status} title={SECTION_LABEL[s.status]}><Icon aria-hidden="true" /></span>
-              <h3 className={styles.sectionName}>{s.name}</h3>
-              <span className={styles.count}>
-                {s.seen}/{s.total}{s.status !== 'locked' && s.recentPct > 0 ? ` · ${s.recentPct}% recent` : ''}
-              </span>
-            </div>
-            {s.status === 'locked'
-              ? <p className={styles.lockedNote}>Locked: finish the section before it to open its {s.units.length} topics.</p>
-              : (
-                <PathList
-                  units={s.units}
-                  label={s.name}
-                  current={s.units.findIndex(u => u.steps.lesson === actions.nextLesson && !!actions.nextLesson)}
-                  {...actions}
-                />
-              )}
-          </li>
-        );
-      })}
-    </ol>
   );
 }

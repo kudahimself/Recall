@@ -78,6 +78,12 @@
   --region-min-h: 7.5rem;   /* a list or editor never shrinks below about four lines */
   --editor-min-h: 7rem;    /* three lines and the editor's key bar */
   --preview-min-h: 11rem;
+  --num-col-w: 4.5rem;     /* a column of short numbers: Recent, Due */
+  --seen-col-w: 10rem;     /* a "139/347" count with its bar */
+  --seen-count-w: 3.5rem;  /* a "79/89" count on its own */
+  --chart-h: 5.5rem;       /* the review forecast's columns */
+  --chart-bar-w: 1.25rem;  /* a column is at most 20px wide */
+  --chart-radius: 4px;     /* a column's rounded top */
 
   /* ---- Motion: two durations, one easing; all off under reduced motion ---- */
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);

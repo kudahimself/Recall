@@ -9,8 +9,11 @@ import { CheckCircle2, Copy, FolderOpen } from 'lucide-react';
 import { TopicExercise } from '../types';
 import { proseText } from '../utils/lessons';
 import { exerciseCommand } from '../utils/exercises';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { Panel } from './ui/Card';
 import { InlineText } from './ui/InlineText';
-import './ExerciseCard.css';
+import styles from './ExerciseCard.module.css';
 
 interface Props {
   exercise: TopicExercise;
@@ -23,6 +26,7 @@ interface Props {
   /** "today", "2 days ago". */
   dayLabel: (ms: number) => string;
   onToggle: (id: string) => void;
+  className?: string;
 }
 
 /** Copy text to the clipboard; false when the browser refuses (the path stays selectable). */
@@ -36,7 +40,13 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function ExerciseCard({ exercise, doneAt, rampDone, rampAnswered, rampTotal, dayLabel, onToggle }: Props) {
+/** "a.py", "a.py and b.py", "a.py, b.py and c.py", each in backticks for InlineText. */
+function fileList(files: string[]): string {
+  const code = files.map(f => `\`${f}\``);
+  return code.length < 2 ? code.join('') : `${code.slice(0, -1).join(', ')} and ${code[code.length - 1]}`;
+}
+
+export function ExerciseCard({ exercise, doneAt, rampDone, rampAnswered, rampTotal, dayLabel, onToggle, className }: Props) {
   const done = doneAt !== undefined;
   const [copied, setCopied] = useState<'ok' | 'failed' | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,45 +59,41 @@ export function ExerciseCard({ exercise, doneAt, rampDone, rampAnswered, rampTot
     timer.current = setTimeout(() => setCopied(null), 2000);
   };
 
+  const how = `In your own editor, fill in ${fileList(exercise.starter)}, then run \`${exerciseCommand(exercise)}\` `
+    + `until \`${exercise.tests}\` passes; \`README.md\` has the whole task.`;
+
   return (
-    <section className={`ex-card${done ? ' ex-card-done' : ''}`} aria-label={`Exercise: ${exercise.title}`}>
-      <div className="ex-head">
-        <span className="ex-eyebrow">Exercise · in your own editor</span>
-        <span className="ex-time">about {exercise.minutes} min</span>
+    <Panel as="section" className={[styles.card, done ? styles.done : '', className].filter(Boolean).join(' ')} aria-label={`Exercise: ${exercise.title}`}>
+      <div className={styles.head}>
+        <h3 className={styles.title}>
+          <Badge tone="accent" className={styles.kind}>Exercise</Badge>
+          {done && <CheckCircle2 className={styles.doneIcon} aria-hidden="true" />}
+          {exercise.title}
+        </h3>
+        <Badge>about {exercise.minutes} min</Badge>
       </div>
-      <h3 className="ex-title">
-        {done && <CheckCircle2 size={18} className="ex-done-icon" aria-hidden="true" />}
-        {exercise.title}
-      </h3>
-      <p className="ex-task"><InlineText text={proseText(exercise.task)} /></p>
-      <div className="ex-folder">
-        <FolderOpen size={14} aria-hidden="true" />
-        <code className="ex-path">{exercise.folder}</code>
-        <button
-          className="tl-btn ex-copy"
+      <p className={styles.task}><InlineText text={proseText(exercise.task)} /></p>
+      <div className={styles.folder}>
+        <FolderOpen className={styles.folderIcon} aria-hidden="true" />
+        <code className={styles.path}>{exercise.folder}</code>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={<Copy />}
           onClick={copy}
           title="Copy the folder path"
           aria-label={`Copy the folder path ${exercise.folder}`}
         >
-          <Copy size={12} /> {copied === 'ok' ? 'Copied' : copied === 'failed' ? 'Select it' : 'Copy'}
-        </button>
+          {copied === 'ok' ? 'Copied' : copied === 'failed' ? 'Select it' : 'Copy'}
+        </Button>
       </div>
-      <p className="ex-how">
-        Open the folder, read its <code className="rc-inline-code">README.md</code>, fill in{' '}
-        {exercise.starter.map((f, i) => (
-          <React.Fragment key={f}>
-            {i > 0 && (i === exercise.starter.length - 1 ? ' and ' : ', ')}
-            <code className="rc-inline-code">{f}</code>
-          </React.Fragment>
-        ))}
-        , then run <code className="rc-inline-code">{exerciseCommand(exercise)}</code> from the repo root until <code className="rc-inline-code">{exercise.tests}</code> passes.
-      </p>
-      <div className="ex-foot">
-        <label className="ex-check">
+      <p className={styles.how}><InlineText text={how} /></p>
+      <div className={styles.foot}>
+        <label className={styles.check}>
           <input type="checkbox" checked={done} onChange={() => onToggle(exercise.id)} />
           <span>{done ? `Done ${dayLabel(doneAt!)}` : 'Done: its tests pass'}</span>
         </label>
-        <span className="ex-when">
+        <span className={styles.when}>
           {done
             ? 'Untick it to do the exercise again.'
             : rampDone
@@ -95,6 +101,6 @@ export function ExerciseCard({ exercise, doneAt, rampDone, rampAnswered, rampTot
               : `Best after the ramp (${rampAnswered}/${rampTotal} answered).`}
         </span>
       </div>
-    </section>
+    </Panel>
   );
 }

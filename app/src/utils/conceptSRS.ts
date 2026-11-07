@@ -145,7 +145,7 @@ export function getMasteryProbability(
   return sigmoid(total / conceptIds.length);
 }
 
-/** Mastery probability for a single concept. Used for spot-check eligibility and ProgressTracker. */
+/** Mastery probability for a single concept. Used for spot-check eligibility. */
 export function getConceptMasteryProbability(
   conceptId: ConceptId,
   progress: ConceptProgress,

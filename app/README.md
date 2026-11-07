@@ -67,7 +67,7 @@ src/
 ├── components/          # React components
 │   ├── MultipleChoiceQuestion.tsx
 │   ├── CodingQuestion.tsx
-│   └── ProgressTracker.tsx
+│   └── progress/ProgressView.tsx
 ├── data/               # Question bank
 │   └── questions.ts
 ├── types/              # TypeScript type definitions

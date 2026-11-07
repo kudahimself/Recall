@@ -16,7 +16,7 @@ import { todayReviewCap, UNLOCK_ACCURACY_PCT } from '../../utils/spacedRepetitio
 import { useMediaQuery } from '../../utils/useMediaQuery';
 import { useFitRows } from '../../utils/useFitRows';
 import { useShortcut } from '../../keyboard/shortcuts';
-import { HeatmapCalendar, HeatmapDay } from '../HeatmapCalendar';
+import { Heatmap, HeatmapDay } from '../ui/Heatmap';
 import { PathList } from '../PathList';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -227,7 +227,7 @@ function ActivityCard({ activity }: { activity: HeatmapDay[] }) {
   return (
     <Card as="section" padded={false} className={styles.card} aria-labelledby="home-activity">
       <CardHeader title="Activity" titleId="home-activity" as="h2" aside="last 24 weeks" />
-      <HeatmapCalendar data={activity} weeks={24} summary={<><strong>{week}</strong> answered in 7 days</>} />
+      <Heatmap data={activity} weeks={24} summary={<><strong>{week}</strong> answered in 7 days</>} />
     </Card>
   );
 }

@@ -1,0 +1,59 @@
+/* The list scrolls inside its card; the card gives it the height. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+}
+
+/* Each group's heading stays at the top while its rows scroll under it. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--sp-2) var(--sp-2) var(--sp-1);
+  background: var(--surface);
+}
+
+.option {
+  /* Holds its visually hidden text, so that text cannot stretch the page. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--control-md);
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--border-w) solid transparent;
+  border-radius: var(--radius-m);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.option:hover {
+  background: var(--raised);
+}
+
+.option[aria-selected='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+/* Focus sits on the list; the selected row carries the ring. */
+.list:focus-visible .option[aria-selected='true'] {
+  outline: var(--focus-w) solid var(--focus);
+  outline-offset: calc(-1 * var(--focus-w));
+}
+
+.muted {
+  color: var(--text-2);
+}

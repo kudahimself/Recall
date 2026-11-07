@@ -1,4 +1,4 @@
-import { activityByDay, buildHeatmapGrid } from './HeatmapCalendar';
+import { activityByDay, buildHeatmapGrid, monthLabels } from './Heatmap';
 
 // Friday 6 November 2026, mid-afternoon UTC.
 const TODAY = new Date(Date.UTC(2026, 10, 6, 15, 0, 0));
@@ -30,6 +30,22 @@ describe('buildHeatmapGrid', () => {
     const saturday = buildHeatmapGrid([], 4, new Date(Date.UTC(2026, 10, 7, 23, 0, 0)));
     expect(saturday[3]).toHaveLength(7);
     expect(saturday[3][6].date).toBe('2026-11-07');
+  });
+});
+
+describe('monthLabels', () => {
+  it('names each month over the first week whose Sunday falls in it, and drops labels with no room', () => {
+    // 26 weeks from Sunday 10 May 2026: four May columns, then June to October.
+    // November's first Sunday is the last column, too close to the edge for its name.
+    const labels = monthLabels(buildHeatmapGrid([], 26, TODAY));
+    expect(labels.map(l => l.label)).toEqual(['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']);
+    expect(labels[1]).toEqual({ column: 4, label: 'Jun' });
+    // A month with fewer than three columns before the next label loses its name.
+    const short = monthLabels(buildHeatmapGrid([], 6, TODAY));
+    expect(short.map(l => l.label)).toEqual(['Oct']);
+    // A week later November has two columns, room enough.
+    const later = monthLabels(buildHeatmapGrid([], 6, new Date(Date.UTC(2026, 10, 13))));
+    expect(later.map(l => l.label)).toEqual(['Oct', 'Nov']);
   });
 });
 

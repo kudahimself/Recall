@@ -41,9 +41,12 @@ export type ShortcutId =
   | 'goProgress'
   | 'goSettings'
   | 'switchCourse'
-  | 'startSession';
+  | 'startSession'
+  | 'switchTab'
+  | 'moveInList'
+  | 'drill';
 
-export type ShortcutGroup = 'Answering' | 'While typing' | 'Arranging lines' | 'Lessons' | 'Anywhere' | 'Home';
+export type ShortcutGroup = 'Answering' | 'While typing' | 'Arranging lines' | 'Lessons' | 'Anywhere' | 'Home' | 'Progress';
 
 export interface ShortcutDef {
   /**
@@ -80,9 +83,12 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
   goSettings: { keys: ['G S'], label: 'Go to Settings', group: 'Anywhere' },
   switchCourse: { keys: ['C'], label: 'Switch course, then 1-5 to pick', group: 'Anywhere' },
   startSession: { keys: ['Enter'], label: "Start today's session", group: 'Home' },
+  switchTab: { keys: ['ArrowLeft', 'ArrowRight'], label: 'Previous or next tab', group: 'Progress' },
+  moveInList: { keys: ['ArrowUp', 'ArrowDown'], label: 'Move through the topics or the schedule', group: 'Progress' },
+  drill: { keys: ['D'], label: 'Drill the selected topic (on Overview, every weak one)', group: 'Progress' },
 };
 
-export const SHORTCUT_GROUPS: ShortcutGroup[] = ['Answering', 'While typing', 'Arranging lines', 'Lessons', 'Anywhere', 'Home'];
+export const SHORTCUT_GROUPS: ShortcutGroup[] = ['Answering', 'While typing', 'Arranging lines', 'Lessons', 'Anywhere', 'Home', 'Progress'];
 
 /** How long the second key of a sequence ("G H") may wait after the first. */
 export const SEQUENCE_MS = 1500;
@@ -151,7 +157,7 @@ let layerCounter = 0;
 let listening = false;
 
 // Esc, and the arrows of a list (holding one walks or carries a line along).
-const REPEATABLE = new Set<ShortcutId>(['leaveTyping', 'close', 'listMove', 'listReorder']);
+const REPEATABLE = new Set<ShortcutId>(['leaveTyping', 'close', 'listMove', 'listReorder', 'moveInList']);
 
 /** The first key of a sequence just pressed ("G"), until the next key or SEQUENCE_MS. */
 let pendingPrefix: string | null = null;

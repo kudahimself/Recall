@@ -114,7 +114,7 @@ export function getCourseForTopic(topic: Topic | string): Course {
   return Course.DATABRICKS;
 }
 
-/** Exam sections for each course (used by ProgressTracker) */
+/** Exam sections for each course (used by QuestionFilter) */
 export const DATABRICKS_SECTIONS: Record<string, { weight: string; topics: Record<string, string[]> }> = {
   'Lakehouse Platform': {
     weight: '24%',

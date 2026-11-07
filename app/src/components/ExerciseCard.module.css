@@ -1,0 +1,117 @@
+/* A topic's exercise (ExerciseCard.tsx), on a sunken Panel inside Progress → Topics. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-left: var(--focus-w) solid var(--accent-text);
+}
+
+.done {
+  border-left-color: var(--success);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  color: var(--text);
+}
+
+.kind {
+  flex: none;
+}
+
+.doneIcon {
+  flex: none;
+  width: var(--icon-l);
+  height: var(--icon-l);
+  color: var(--success);
+}
+
+.task,
+.how {
+  margin: 0;
+  line-height: var(--lh-body);
+}
+
+.task {
+  font-size: var(--fs-body);
+  color: var(--text-2);
+}
+
+.how {
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+
+.folder {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-3);
+  background: var(--code-bg);
+  border: var(--border-w) solid var(--border-strong);
+  border-radius: var(--radius-s);
+}
+
+.folderIcon {
+  flex: none;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  color: var(--text-3);
+}
+
+.path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-small);
+  color: var(--text);
+  user-select: all;
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.check input {
+  width: var(--icon-m);
+  height: var(--icon-m);
+  margin: 0;
+  accent-color: var(--success);
+  cursor: pointer;
+}
+
+.done .check {
+  color: var(--success);
+}
+
+.when {
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+}
