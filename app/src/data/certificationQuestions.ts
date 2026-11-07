@@ -2392,4 +2392,25 @@ CREATE OR REPLACE TEMPORARY VIEW active_users AS\nSELECT * FROM users WHERE acco
     tags: ['delta', 'parquet', 'comparison', 'performance'],
     concepts: ['delta-acid', 'ps-io-parquet', 'ps-cache-persist'],
   },
+
+  {
+    id: 'perf-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.SPARK_OPTIMIZATION,
+    language: CodeLanguage.PYTHON,
+    question: 'In a Databricks notebook, df starts with 8 partitions, and parts() counts the partitions of a DataFrame that hold rows. What does the cell print? The answer is one line: three whole numbers separated by spaces.',
+    code: `from pyspark.sql import functions as F
+def parts(d):
+    return d.select(F.spark_partition_id()).distinct().count()
+
+df = spark.range(0, 1000, numPartitions=8)
+print(parts(df.coalesce(20)), parts(df.repartition(20)),
+      parts(df.coalesce(2)))`,
+    expectedOutput: `8 20 2`,
+    explanation: 'coalesce(n) only merges existing partitions, without a shuffle, so it can lower the count but never raise it: asking for 20 leaves the 8 partitions as they are. repartition(20) does a full shuffle and spreads the 1000 rows round-robin over 20 partitions, all of which hold rows. coalesce(2) merges the 8 partitions into 2. Use coalesce to cut the number of output files cheaply, and repartition to raise the count or to spread rows by a column.',
+    hints: ['Can merging partitions ever make more of them?', 'Which of the two shuffles the rows?'],
+    tags: ['partitioning', 'coalesce', 'repartition', 'predict'],
+    concepts: ['ps-partitioning', 'ps-shuffle'],
+  },
 ];
