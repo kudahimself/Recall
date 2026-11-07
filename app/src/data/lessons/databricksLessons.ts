@@ -7,6 +7,7 @@
  * Section 4, Production Pipelines: every topic.
  * Section 5, Optimization & Advanced: every topic.
  * Section 6, Data Governance: every topic.
+ * Section 7, Data Modeling & Warehousing Design: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). Most worked examples
  * here are Databricks notebook cells: they need a workspace to run, so they
@@ -24,8 +25,11 @@
  * (a broadcast join with cache and coalesce, a Python and a pandas UDF) were
  * run on Spark 4.0. The section 6 cells need a Unity Catalog workspace
  * and other principals' grants, so their output follows the Databricks
- * privileges and row filter / column mask docs. SQL in a cell runs
- * through `spark.sql`, as it would in a Python notebook. A plain SQL
+ * privileges and row filter / column mask docs. The section 7 cells (a star
+ * join, an SCD Type 2 load, a day-by-day rebuild with REPLACE WHERE) were
+ * run on Spark 4.0 with Delta 4.0, the SCD cell with a plain member_sk
+ * column for the identity column, which open-source Delta's SQL lacks. SQL
+ * in a cell runs through `spark.sql`, as it would in a Python notebook. A plain SQL
  * example (joins, aggregations, subqueries, set operations) uses only SQL
  * that Spark and the checker's engine agree on, so check-lessons.js runs it.
  */
@@ -2484,6 +2488,247 @@ print(members.where("branch = 'york'").count())`,
       'uc-gov-7',
       'uc-gov-predict-1',
       'uc-gov-8',
+    ],
+  },
+  // ===== Section 7, Data Modeling & Warehousing Design =====
+  {
+    id: 'data_modeling/1',
+    topicKeys: [Topic.DATA_MODELING],
+    step: 1,
+    title: 'Dimensional Modeling (star schema, fact/dim, grain, surrogate keys)',
+    idea: [
+      lines(
+        "A dimensional model splits a warehouse into fact tables, which record events as keys and numeric measures, and dimension tables, which hold the descriptive columns that facts are filtered and grouped by.",
+        "A star schema joins every dimension straight to the fact; a snowflake schema normalizes dimensions into sub-tables, adding joins to save little on columnar Delta files.",
+      ),
+      lines(
+        "Declare the grain before any column: the business meaning of one fact row, such as one row per order line.",
+        "Only keys and measures true at that grain belong in the fact, and a measure is additive (sums across every dimension, like quantity), semi-additive (not across time, like a balance) or non-additive (a ratio, recomputed from its parts).",
+      ),
+      lines(
+        "Each dimension gets a surrogate key, a meaningless integer such as an identity column, beside the source's natural key: it survives changes to source keys and gives each version of an SCD Type 2 row a key of its own.",
+        "A conformed dimension, one `dim_date` or `dim_customer` shared by several facts, lets their measures be compared side by side.",
+        "Unity Catalog's `PRIMARY KEY` and `FOREIGN KEY` constraints document the star but are not enforced.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- dimension: surrogate key, natural key, attributes
+CREATE TABLE dim_x (
+  x_sk BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY,
+  x_id STRING,                        -- natural key
+  attr STRING,
+  CONSTRAINT dim_x_pk PRIMARY KEY (x_sk));
+-- fact: grain = one row per event; keys + measures
+CREATE TABLE fact_e (
+  x_sk BIGINT REFERENCES dim_x,       -- not enforced
+  date_key INT,                       -- conformed dim_date
+  qty INT, amount DECIMAL(10,2));     -- true at the grain
+-- star query: join on surrogate keys, group by attributes
+SELECT d.attr, SUM(f.amount) FROM fact_e f
+JOIN dim_x d ON f.x_sk = d.x_sk GROUP BY d.attr;`,
+    },
+    pitfall: lines(
+      "Mixing grains in one fact: a value of the whole order, such as its shipping charge, copied onto each of its lines is summed once per line, so the total comes out too large.",
+      "Keep each measure at the grain it describes: give it a fact table of that grain, or allocate it across the lines so they add up to it.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Databricks notebook; current schema main.shop, for scratch
+spark.sql("""CREATE OR REPLACE TABLE dim_book AS
+    SELECT * FROM VALUES (1, 'B-01', 'Dune', 'scifi'),
+    (2, 'B-02', 'Emma', 'classic'), (3, 'B-03', 'Ubik', 'scifi')
+    AS b(book_sk, book_code, title, genre)""")
+spark.sql("""CREATE OR REPLACE TABLE fact_book_sale AS
+    SELECT * FROM VALUES (100, 1, 2, 9), (100, 2, 1, 7),
+    (101, 3, 1, 12), (102, 1, 1, 9)
+    AS s(receipt_id, book_sk, qty, price)""")
+by_genre = spark.sql("""SELECT b.genre, SUM(s.qty) AS copies,
+    SUM(s.qty * s.price) AS revenue FROM fact_book_sale s
+    JOIN dim_book b ON s.book_sk = b.book_sk
+    GROUP BY b.genre ORDER BY b.genre""")
+for r in by_genre.collect():
+    print(r.genre, r.copies, r.revenue)`,
+      steps: [
+        "Lines 2-5: the dimension has one row per book, keyed by the surrogate `book_sk` and keeping the natural key `book_code` beside the title and genre.",
+        "Lines 6-9: the fact's grain is one row per book on a receipt, so receipt 100, which sold two copies of Dune and one Emma, is two rows; it stores only `book_sk` and the measures.",
+        "Lines 10-13: the star join on `book_sk` brings each sale its genre, and `qty` and `qty * price` are additive, so summing them by genre is safe.",
+        "Lines 14-15: Emma's one copy at 7 makes classic 1 7, and scifi adds 2 + 1 + 1 copies for 18 + 12 + 9 = 39.",
+      ],
+      output: `classic 1 7
+scifi 4 39`,
+    },
+    exercises: [
+      'dm-mcq-1',
+      'dm-mcq-3',
+      'dm-mcq-4',
+      'dm-predict-1',
+      'dm-coding-1',
+    ],
+  },
+  {
+    id: 'scd_patterns/1',
+    topicKeys: [Topic.SCD_PATTERNS],
+    step: 1,
+    title: 'Slowly Changing Dimensions (SCD Type 1 / 2 / 3, MERGE patterns)',
+    idea: [
+      lines(
+        "A slowly changing dimension is one whose attributes change now and then, such as a customer's city, and its type says what happens to the old value.",
+        "Type 1 overwrites it, so history is lost and past facts read the new value: right for fixing a typo.",
+        "Type 2 closes the current row and inserts a new version, so past facts keep the value of their time.",
+        "Type 3 keeps one earlier value in an extra column such as `prev_city`.",
+      ),
+      lines(
+        "A Type 2 row holds the natural key, its own surrogate key, `valid_from`, `valid_to` and `is_current`, so a natural key has many rows but one current.",
+      ),
+      lines(
+        "On Delta, Type 1 is one `MERGE` on the natural key: update when matched, insert when not.",
+        "Type 2 is two steps, since a plain `MERGE` cannot both update a matched row and insert its replacement: a `MERGE` closes the current rows whose tracked columns changed, then an `INSERT` adds a current row for every key that has none, changed and new keys alike.",
+        "In a Lakeflow pipeline, `AUTO CDC ... STORED AS SCD TYPE 2`, which replaces `APPLY CHANGES INTO`, does both steps.",
+      ),
+      lines(
+        "A fact stores the surrogate key of the version current when its event happened, and joins to the dimension on that key.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- Type 1: overwrite in place, keyed on the natural key
+MERGE INTO dim d USING stg s ON d.nk = s.nk
+WHEN MATCHED THEN UPDATE SET d.attr = s.attr
+WHEN NOT MATCHED THEN INSERT (nk, attr)
+  VALUES (s.nk, s.attr);
+-- Type 2, step 1: close the current row of changed keys
+MERGE INTO dim d USING stg s
+  ON d.nk = s.nk AND d.is_current AND d.attr <> s.attr
+WHEN MATCHED THEN
+  UPDATE SET valid_to = load_day, is_current = false;
+-- Type 2, step 2: a current row for each key without one
+INSERT INTO dim (nk, attr, valid_from, valid_to,
+  is_current)
+SELECT s.nk, s.attr, load_day, NULL, true
+FROM stg s LEFT JOIN dim d ON d.nk = s.nk AND d.is_current
+WHERE d.nk IS NULL;  -- surrogate key: an identity column`,
+    },
+    pitfall: lines(
+      "Joining a fact to a Type 2 dimension on the natural key matches every version of that key, so each change multiplies the fact's rows and its sums.",
+      "Join on the surrogate key stored when the fact was loaded, or on the natural key with `is_current = true` when you want only today's attributes.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# UC notebook, schema main.lib; dim_member: SCD Type 2, identity
+# member_sk, current rows m1 leeds and m2 york from 2026-01-01;
+# stg_member, today's snapshot: m1 hull, m2 york, m3 leeds
+spark.sql("""MERGE INTO dim_member d USING stg_member s
+    ON d.member_id = s.member_id AND d.is_current
+    AND d.branch <> s.branch WHEN MATCHED THEN UPDATE
+    SET valid_to = DATE'2026-03-01', is_current = false""")
+spark.sql("""INSERT INTO dim_member
+    (member_id, branch, valid_from, valid_to, is_current)
+    SELECT s.member_id, s.branch, DATE'2026-03-01', NULL, true
+    FROM stg_member s LEFT JOIN dim_member d
+    ON d.member_id = s.member_id AND d.is_current
+    WHERE d.member_id IS NULL""")
+q = "SELECT * FROM dim_member ORDER BY member_id, valid_from"
+for r in spark.sql(q).collect():
+    print(r.member_id, r.branch, r.valid_to, r.is_current)`,
+      steps: [
+        "Lines 1-3: two members are current; today m1 moved to hull, m2 stayed in york and m3 is new.",
+        "Lines 4-7: only m1 has a current row whose branch differs, so step 1 closes it with `valid_to` set and `is_current` false; m2 matches no row and is left alone.",
+        "Lines 8-13: after step 1, m1 and m3 have no current row, so the `LEFT JOIN` finds no partner for them and `IS NULL` inserts a current row for each, while m2 still has one and gets nothing.",
+        "Lines 14-16: m1 now has two rows, its Leeds history closed and its Hull row current, and the identity column gave each new row its own `member_sk`; running the cell again changes nothing.",
+      ],
+      output: `m1 leeds 2026-03-01 False
+m1 hull None True
+m2 york None True
+m3 leeds None True`,
+    },
+    exercises: [
+      'scd-mcq-1',
+      'scd-mcq-2',
+      'scd-predict-1',
+      'scd-parsons-1',
+      'scd-coding-1',
+    ],
+  },
+  {
+    id: 'pipeline_design/1',
+    topicKeys: [Topic.PIPELINE_DESIGN],
+    step: 1,
+    title: 'Pipeline Design (idempotency, late arrivals, backfill, contracts)',
+    idea: [
+      lines(
+        "A pipeline is idempotent when running it again on the same input leaves the target exactly as one run did.",
+        "Jobs are retried after failures and re-run by hand, so every write should take an idempotent form: a `MERGE` on a unique key, a replace of the slice the run owns with `INSERT INTO t REPLACE WHERE`, or a full rebuild.",
+      ),
+      lines(
+        "At-most-once delivery may lose records and at-least-once may repeat them; an exactly-once result is at-least-once delivery into an idempotent write.",
+        "Structured Streaming gets it from its checkpoint and Delta's transactional sink; a `foreachBatch` write should be a `MERGE`.",
+      ),
+      lines(
+        "Late data arrives after its day was processed.",
+        "A streaming watermark, `withWatermark(\"ts\", \"2 hours\")`, says how late an event may be and still update its window; later ones are dropped.",
+        "In batch, rebuild a trailing window of days on each run, and backfill a range by rebuilding each of its days with the same write.",
+      ),
+      lines(
+        "A data contract is the producer's promise to consumers: columns, types, meaning, freshness and notice of breaking changes.",
+        "Delta's schema enforcement rejects writes that break the schema, and `CHECK` constraints or pipeline expectations test the rows.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- idempotent append: insert only keys not yet present
+MERGE INTO t USING stg s ON t.k = s.k
+WHEN NOT MATCHED THEN INSERT *;
+-- idempotent slice: atomically replace the run's own day
+INSERT INTO t REPLACE WHERE d = DATE'2026-01-01'
+SELECT * FROM src WHERE d = DATE'2026-01-01';
+-- backfill or late data: rerun that slice for each day
+-- stream: withWatermark("ts", "2 hours") bounds lateness
+-- contract: a schema change fails the write; rows checked
+ALTER TABLE t ADD CONSTRAINT amount_ok CHECK (amount >= 0);`,
+    },
+    pitfall: lines(
+      "A blind `INSERT INTO t SELECT ... FROM staging` appends the whole batch again every time a job is retried or re-run, so the target fills with duplicates.",
+      "Write through a `MERGE` on the unique key, or replace exactly the slice the run owns with `REPLACE WHERE`, so a second run leaves the same table.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# UC notebook, schema main.lib; loans_raw (loan_id, loan_day,
+# branch) holds loans 1-2 leeds and 3 york on 2026-03-01 and
+# 4 leeds on 2026-03-02; daily_loans starts empty
+def rebuild(day):  # one run owns one day of daily_loans
+    spark.sql(f"""INSERT INTO daily_loans
+        REPLACE WHERE loan_day = DATE'{day}'
+        SELECT loan_day, branch, COUNT(*) AS loans
+        FROM loans_raw WHERE loan_day = DATE'{day}'
+        GROUP BY loan_day, branch""")
+rebuild("2026-03-01"); rebuild("2026-03-02")
+spark.sql("""INSERT INTO loans_raw
+    VALUES (5, DATE'2026-03-01', 'york')""")  # arrives late
+rebuild("2026-03-01"); rebuild("2026-03-01")  # backfill, retry
+for r in spark.sql("""SELECT * FROM daily_loans
+        ORDER BY loan_day, branch""").collect():
+    print(r.loan_day, r.branch, r.loans)`,
+      steps: [
+        "Lines 4-9: each run deletes and rewrites only its own day in one atomic commit, so a run is safe to repeat.",
+        "Line 10: the two daily runs write leeds 2 and york 1 for March 1, and leeds 1 for March 2.",
+        "Lines 11-12: a York loan for March 1 lands after that day was built, so the summary is now one short.",
+        "Line 13: the backfill rebuilds March 1 from all its raw rows, making york 2, and the retry replaces the day with the same rows instead of adding them again; March 2 is never touched.",
+        "Lines 14-16: three summary rows, no duplicates.",
+      ],
+      output: `2026-03-01 leeds 2
+2026-03-01 york 2
+2026-03-02 leeds 1`,
+    },
+    exercises: [
+      'pd-mcq-1',
+      'pd-mcq-3',
+      'pd-mcq-4',
+      'pd-predict-1',
+      'pd-coding-1',
     ],
   },
 ];

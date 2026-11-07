@@ -20,22 +20,23 @@ import {
 // playbook (Schreiber, Z. Shapira et al.).
 //
 // Coverage:
-//   DATA_MODELING (8): star vs snowflake, fact vs dim, grain, surrogate
+//   DATA_MODELING (9): star vs snowflake, fact vs dim, grain, surrogate
 //     keys, lakehouse vs DW vs lake, additivity, conformed dims, plus a
-//     coding question building a small star schema in Spark SQL.
-//   SCD_PATTERNS (6): when to use Type 1 vs 2 vs 3, MERGE for SCD1, MERGE
+//     coding question building a small star schema in Spark SQL and a
+//     predict on summing a measure of a coarser grain.
+//   SCD_PATTERNS (7): when to use Type 1 vs 2 vs 3, MERGE for SCD1, MERGE
 //     for SCD2 with effective dating, plus a Parsons assembly of the
-//     SCD2 MERGE.
-//   PIPELINE_DESIGN (6): idempotency, exactly-once vs at-least-once,
+//     SCD2 MERGE and a predict on joining facts by natural key.
+//   PIPELINE_DESIGN (7): idempotency, exactly-once vs at-least-once,
 //     late-arriving data, backfill, idempotent insert via MERGE, data
-//     contracts.
+//     contracts, plus a predict on re-running INSERT vs MERGE.
 
 export const dataModelingQuestions: Question[] = [
   // ────────────────────────────────────────────────────────────────────
-  // DATA_MODELING (8)
+  // DATA_MODELING (9)
   // ────────────────────────────────────────────────────────────────────
   // ────────────────────────────────────────────────────────────────────
-  // DATA_MODELING (8)
+  // DATA_MODELING (9)
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'dm-mcq-1',
@@ -304,10 +305,34 @@ CREATE TABLE fact_sales (
     tags: ['star-schema', 'ddl', 'delta', 'dimensional-modeling'],
     concepts: ['dim-star-schema', 'ps-dataframe-create'],
   },
+  {
+    id: 'dm-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATA_MODELING,
+    course: Course.DATABRICKS,
+    language: CodeLanguage.PYTHON,
+    question:
+      'In a Databricks notebook, the Delta table fact_order_line has one row per order line and holds exactly the three rows in the comment. amount is the price of the line; shipping is the shipping charge of the whole order, which the load copied onto every line of that order. What does the cell print? The answer is one line: three integers separated by single spaces.',
+    code: `# fact_order_line (order_id, line_no, amount, shipping):
+#   (1, 1, 30, 5), (1, 2, 20, 5), (2, 1, 40, 8)
+r = spark.sql("""SELECT COUNT(*) AS n, SUM(amount) AS sales,
+    SUM(shipping) AS ship FROM fact_order_line""").first()
+print(r.n, r.sales, r.ship)`,
+    expectedOutput: '3 90 18',
+    explanation:
+      'The grain is one row per order line, so COUNT(*) counts 3 lines and SUM(amount), a measure of the line, adds 30 + 20 + 40 = 90 correctly. shipping belongs to the coarser order grain: copied onto both lines of order 1, its 5 is summed twice, so the query returns 5 + 5 + 8 = 18 although the two orders were charged 13. Keep a measure at the grain it describes: put shipping in a fact with one row per order, or allocate it across the lines so they add up to the order\'s charge.',
+    hints: [
+      'Which column describes a line, and which describes the whole order?',
+      'How many times does order 1\'s shipping charge appear in the table?',
+    ],
+    tags: ['grain', 'additivity', 'fact', 'predict'],
+    concepts: ['dim-grain', 'dim-additivity'],
+  },
 
 
   // ────────────────────────────────────────────────────────────────────
-  // SCD_PATTERNS (6)
+  // SCD_PATTERNS (7)
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'scd-mcq-1',
@@ -550,12 +575,40 @@ WHERE dim.customer_id IS ____
     tags: ['scd-2', 'merge', 'parsons'],
     concepts: ['dim-scd-type2', 'delta-merge'],
   },
+  {
+    id: 'scd-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.SCD_PATTERNS,
+    course: Course.DATABRICKS,
+    language: CodeLanguage.PYTHON,
+    question:
+      'In a Databricks notebook, dim_customer is an SCD Type 2 dimension: customer c1 moved from London to Dublin, so it has a closed row and a current one. fact_orders stores, for each order, the surrogate key of the version current at the time and also the natural key. Both tables hold exactly the rows in the comment. What does the cell print? The answer is two lines, each the join key, the row count and the total, separated by single spaces.',
+    code: `# dim_customer (customer_sk, customer_id, city, is_current):
+#   (1, c1, London, false), (2, c1, Dublin, true), (3, c2, Leeds, true)
+# fact_orders (order_id, customer_sk, customer_id, amount):
+#   (10, 1, c1, 50), (11, 2, c1, 30), (12, 3, c2, 20)
+for k in ["customer_sk", "customer_id"]:
+    r = spark.sql(f"""SELECT COUNT(*) AS n, SUM(f.amount) AS total
+        FROM fact_orders f JOIN dim_customer d ON f.{k} = d.{k}""").first()
+    print(k, r.n, r.total)`,
+    expectedOutput: `customer_sk 3 100
+customer_id 5 180`,
+    explanation:
+      'The surrogate key is unique per version, so each order matches exactly one dimension row: 3 rows totalling 50 + 30 + 20 = 100. The natural key is not unique in a Type 2 dimension: c1 has two rows, so orders 10 and 11 each match both of them and are counted twice, giving 5 rows and 50 + 50 + 30 + 30 + 20 = 180. Join facts to a Type 2 dimension on the surrogate key stored at load time, or on the natural key with is_current = true when you want only the current attributes.',
+    hints: [
+      'How many dim_customer rows share customer_id c1?',
+      'Each order row is repeated once for every dimension row its key matches.',
+    ],
+    tags: ['scd-2', 'surrogate-key', 'natural-key', 'join', 'predict'],
+    concepts: ['dim-scd-type2', 'dim-surrogate-key'],
+  },
 
   // ────────────────────────────────────────────────────────────────────
-  // PIPELINE_DESIGN (6)
+  // PIPELINE_DESIGN (7)
   // ────────────────────────────────────────────────────────────────────
   // ────────────────────────────────────────────────────────────────────
-  // PIPELINE_DESIGN (6)
+  // PIPELINE_DESIGN (7)
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'pd-mcq-1',
@@ -708,5 +761,32 @@ WHEN NOT MATCHED THEN INSERT (
       'In the lakehouse era, data contracts are increasingly first-class. Patterns: schemas defined in a registry (Avro, JSON Schema, Protobuf), DLT expectations enforced on bronze→silver, breaking-change CI that fails the producer\'s deploy if a column is dropped/retyped without a migration. The point is to stop "the table changed and three downstream dashboards silently broke" from being how you find out.',
     tags: ['data-contracts', 'schema', 'governance'],
     concepts: ['dim-data-contracts', 'ps-dataframe-create', 'ucat-grants'],
+  },
+  {
+    id: 'pd-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PIPELINE_DESIGN,
+    course: Course.DATABRICKS,
+    language: CodeLanguage.PYTHON,
+    question:
+      'In a Databricks notebook, the loop stands for one task that succeeds and is then re-run twice on the same staging data. stg_orders holds the two rows in the comment; fct_append and fct_merge are Delta tables with the same columns and start empty. What does the cell print? The answer is two lines, each a table name, a space, and its row count.',
+    code: `# stg_orders (order_id, amount): (1, 10), (2, 20)
+for attempt in range(3):
+    spark.sql("INSERT INTO fct_append SELECT * FROM stg_orders")
+    spark.sql("""MERGE INTO fct_merge t USING stg_orders s
+        ON t.order_id = s.order_id WHEN NOT MATCHED THEN INSERT *""")
+for t in ["fct_append", "fct_merge"]:
+    print(t, spark.table(t).count())`,
+    expectedOutput: `fct_append 6
+fct_merge 2`,
+    explanation:
+      'A blind INSERT INTO ... SELECT appends the whole batch on every run, so three runs leave both orders three times in fct_append: 6 rows. The MERGE inserts only order ids not already in fct_merge: the first run adds both, and the two re-runs find every id matched and, with no WHEN MATCHED clause, change nothing, so fct_merge keeps 2 rows. That is idempotency: running the write again on the same input leaves the target as one run did, which is what makes retries and re-runs safe.',
+    hints: [
+      'What does INSERT INTO ... SELECT do to rows that are already in the target?',
+      'On the second run, which order ids in stg_orders find a match in fct_merge?',
+    ],
+    tags: ['idempotency', 'merge', 'retry', 'predict'],
+    concepts: ['dim-idempotency', 'delta-merge'],
   },
 ];
