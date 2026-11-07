@@ -17,7 +17,7 @@ import { TabItem, TabPanel, Tabs, stepTab, tabId } from '../ui/Tabs';
 import { OverviewTab } from './OverviewTab';
 import { ScheduleTab } from './ScheduleTab';
 import { TopicsTab } from './TopicsTab';
-import { ProgressTab, ProgressViewProps } from './progressTypes';
+import { ProgressTab, ProgressViewProps, unitKey } from './progressTypes';
 import styles from './Progress.module.css';
 
 export type { ProgressTab, ProgressViewProps } from './progressTypes';
@@ -31,14 +31,22 @@ const TABS: ReadonlyArray<TabItem<ProgressTab>> = [
 const ID = 'progress';
 
 export function ProgressView(props: ProgressViewProps) {
-  const { tab, onTabChange, path } = props;
+  const { tab, onTabChange, path, course } = props;
   const selectedTabRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Set when another tab sends the learner to a list, so it takes focus once shown.
   const focusList = useRef(false);
   const now = Date.now();
   const schedule = useMemo(() => reviewSchedule(path, Date.now()), [path]);
-  const [scheduleTopic, setScheduleTopic] = React.useState<string | null>(null);
+  const [scheduleFilter, setScheduleFilter] = React.useState<string | null>(null);
+  const [filterCourse, setFilterCourse] = React.useState(course);
+  if (filterCourse !== course) {
+    setFilterCourse(course);
+    setScheduleFilter(null);
+  }
+  const scheduleTopic = scheduleFilter && schedule.rows.some(r => unitKey(r.unit.topicKeys) === scheduleFilter)
+    ? scheduleFilter
+    : null;
 
   // Arriving on Progress puts focus on the selected tab: Left and Right move from there, Tab goes into the panel.
   useEffect(() => { selectedTabRef.current?.focus({ preventScroll: true }); }, []);
@@ -62,7 +70,7 @@ export function ProgressView(props: ProgressViewProps) {
   };
 
   const openSchedule = (key: string) => {
-    setScheduleTopic(key);
+    setScheduleFilter(key);
     focusList.current = true;
     onTabChange('schedule');
   };
@@ -96,7 +104,7 @@ export function ProgressView(props: ProgressViewProps) {
             listRef={listRef}
             schedule={schedule}
             topicFilter={scheduleTopic}
-            onClearFilter={() => setScheduleTopic(null)}
+            onClearFilter={() => setScheduleFilter(null)}
             onOpenTopic={openTopic}
           />
         )}

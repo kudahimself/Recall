@@ -55,7 +55,7 @@ function fixture() {
   return { progress, path };
 }
 
-function Harness(props: { onDrill?: (keys: string[]) => void; onRuleCard?: (id: string) => void; start?: ProgressTab }) {
+function Harness(props: { onDrill?: (keys: string[]) => void; onRuleCard?: (id: string) => void; start?: ProgressTab; course?: Course }) {
   const [{ progress, path }] = useState(fixture);
   const [tab, setTab] = useState<ProgressTab>(props.start ?? 'overview');
   const [topic, setTopic] = useState<string | null>(null);
@@ -63,7 +63,7 @@ function Harness(props: { onDrill?: (keys: string[]) => void; onRuleCard?: (id: 
     <>
       <input aria-label="a text box" />
       <ProgressView
-        course={Course.SQL}
+        course={props.course ?? Course.SQL}
         questions={sql}
         progress={progress}
         path={path}
@@ -196,6 +196,19 @@ describe('Progress → Topics', () => {
 
     fireEvent.click(screen.getByRole('button', { name: `Only ${firstName}: show every topic` }));
     expect(screen.getByText(/met · \d+ not met yet/)).toBeInTheDocument();
+  });
+
+  test('switching course clears the Review schedule topic filter', () => {
+    const { rerender } = render(<Harness start="topics" course={Course.SQL} />);
+    fireEvent.click(screen.getByRole('button', { name: `Review schedule of ${firstName}` }));
+    expect(screen.getByRole('button', { name: `Only ${firstName}: show every topic` })).toBeInTheDocument();
+
+    rerender(<Harness start="topics" course={Course.BACKEND} />);
+    rerender(<Harness start="topics" course={Course.SQL} />);
+    expect(screen.queryByRole('button', { name: /^Only / })).toBeNull();
+    expect(screen.getByText(/met · \d+ not met yet/)).toBeInTheDocument();
+    const options = within(screen.getByRole('listbox', { name: /Card families/ })).getAllByRole('option');
+    expect(options.some(o => o.textContent!.includes(secondName))).toBe(true);
   });
 });
 
