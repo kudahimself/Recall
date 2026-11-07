@@ -41,13 +41,6 @@ When spawned to backfill or audit `requires` on Databricks CODING questions, fol
 | `streaming-10` | ADVANCED | `STRUCTURED_STREAMING` | `['withWatermark']` | `certificationQuestions.ts` | 🟢 Completed | Requires watermark keyword |
 | `cdc-3` | INTERMEDIATE | `CHANGE_DATA_CAPTURE` | `['ALTER TABLE']` | `certificationQuestions.ts` | 🟢 Completed | Requires DDL keyword |
 | `cdc-7` | ADVANCED | `CHANGE_DATA_CAPTURE` | `['MERGE INTO']` | `certificationQuestions.ts` | 🟢 Completed | Requires MERGE DML |
-| `governance-3` | INTERMEDIATE | `DATA_GOVERNANCE` | `['GRANT']` | `certificationQuestions.ts` | 🟢 Completed | Requires GRANT security DDL |
-| `governance-4` | INTERMEDIATE | `DATA_GOVERNANCE` | `['GRANT']` | `certificationQuestions.ts` | 🟢 Completed | Requires GRANT security DDL |
-| `governance-5` | INTERMEDIATE | `DATA_GOVERNANCE` | `['REVOKE']` | `certificationQuestions.ts` | 🟢 Completed | Requires REVOKE security DDL |
-| `governance-6` | INTERMEDIATE | `DATA_GOVERNANCE` | `['SHOW GRANTS']` | `certificationQuestions.ts` | 🟢 Completed | Requires SHOW GRANTS |
-| `governance-7` | INTERMEDIATE | `DATA_GOVERNANCE` | `['CREATE CATALOG']` | `certificationQuestions.ts` | 🟢 Completed | Requires UC catalog DDL |
-| `governance-8` | INTERMEDIATE | `DATA_GOVERNANCE` | `['CREATE SCHEMA']` | `certificationQuestions.ts` | 🟢 Completed | Requires UC schema DDL |
-| `governance-11` | INTERMEDIATE | `DATA_GOVERNANCE` | `['GRANT']` | `certificationQuestions.ts` | 🟢 Completed | Requires GRANT permissions |
 
 ---
 
@@ -93,10 +86,6 @@ When spawned to backfill or audit `requires` on Databricks CODING questions, fol
 |---|---|---|---|---|---|---|
 | `uc-basics-2` | BEGINNER | `UNITY_CATALOG_BASICS` | `['CREATE CATALOG']` | `unityCatalogQuestions.ts` | 🟢 Completed | Added explicit CREATE CATALOG keyword requirement |
 | `uc-basics-4` | INTERMEDIATE | `UNITY_CATALOG_BASICS` | `['CREATE VOLUME']` | `unityCatalogQuestions.ts` | 🟢 Completed | Added explicit CREATE VOLUME keyword requirement |
-| `uc-gov-2` | BEGINNER | `UNITY_CATALOG_GOVERNANCE` | `['GRANT']` | `unityCatalogQuestions.ts` | 🟢 Completed | Added explicit GRANT keyword requirement |
-| `uc-gov-3` | INTERMEDIATE | `UNITY_CATALOG_GOVERNANCE` | `['GRANT']` | `unityCatalogQuestions.ts` | 🟢 Completed | Added explicit GRANT keyword requirement |
-| `uc-gov-4` | INTERMEDIATE | `UNITY_CATALOG_GOVERNANCE` | `['GRANT']` | `unityCatalogQuestions.ts` | 🟢 Completed | Added explicit GRANT keyword requirement |
-| `uc-gov-6` | ADVANCED | `UNITY_CATALOG_GOVERNANCE` | `['GRANT']` | `unityCatalogQuestions.ts` | 🟢 Completed | Added explicit GRANT keyword requirement |
 
 ---
 

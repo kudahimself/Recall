@@ -73,13 +73,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `workflow-7` | INTERMEDIATE | `DATABRICKS_WORKFLOWS` | `certificationQuestions.ts` | 🟢 Completed | |
 | `workflow-8` | INTERMEDIATE | `DATABRICKS_WORKFLOWS` | `certificationQuestions.ts` | 🟢 Completed | |
 | `workflow-10` | ADVANCED | `DATABRICKS_WORKFLOWS` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-3` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-4` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-5` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-6` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-7` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-8` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
-| `governance-11` | INTERMEDIATE | `DATA_GOVERNANCE` | `certificationQuestions.ts` | 🟢 Completed | |
 | `platform-sql-1` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `certificationQuestions.ts` | 🟢 Completed | |
 | `platform-sql-2` | BEGINNER | `DATABRICKS_PLATFORM` | `certificationQuestions.ts` | 🟢 Completed | |
 | `platform-sql-3` | INTERMEDIATE | `DATABRICKS_PLATFORM` | `certificationQuestions.ts` | 🟢 Completed | |
@@ -392,10 +385,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `uc-basics-4` | INTERMEDIATE | `UNITY_CATALOG_BASICS` | `unityCatalogQuestions.ts` | 🟢 Completed | |
 | `uc-basics-6` | INTERMEDIATE | `UNITY_CATALOG_BASICS` | `unityCatalogQuestions.ts` | 🟢 Completed | |
 | `uc-basics-7` | BEGINNER | `UNITY_CATALOG_BASICS` | `unityCatalogQuestions.ts` | 🟢 Completed | |
-| `uc-gov-2` | BEGINNER | `UNITY_CATALOG_GOVERNANCE` | `unityCatalogQuestions.ts` | 🟢 Completed | |
-| `uc-gov-3` | INTERMEDIATE | `UNITY_CATALOG_GOVERNANCE` | `unityCatalogQuestions.ts` | 🟢 Completed | |
-| `uc-gov-4` | INTERMEDIATE | `UNITY_CATALOG_GOVERNANCE` | `unityCatalogQuestions.ts` | 🟢 Completed | |
-| `uc-gov-6` | ADVANCED | `UNITY_CATALOG_GOVERNANCE` | `unityCatalogQuestions.ts` | 🟢 Completed | |
 
 
 ## Django & Web Backend
