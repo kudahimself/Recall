@@ -1108,6 +1108,30 @@ export const certificationQuestions: Question[] = [
     concepts: ['dlt-pipeline-basics', 'dbx-workflows'],
   },
 
+  {
+    id: 'dlt-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DELTA_LIVE_TABLES,
+    language: CodeLanguage.SQL,
+    question: 'This is the whole source of a Lakeflow Declarative Pipeline (formerly Delta Live Tables), and the pipeline runs its first update. How many rows does clean_orders hold after the update? The answer is one whole number.',
+    code: `CREATE OR REFRESH MATERIALIZED VIEW raw_orders AS
+SELECT * FROM VALUES
+  (1, 10, 'ana@shop.com'), (2, -5, 'ben@shop.com'),
+  (3, 20, NULL), (4, 0, 'dee@shop.com')
+  AS t(id, amount, email);
+
+CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
+  CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW,
+  CONSTRAINT has_email EXPECT (email IS NOT NULL)
+) AS SELECT * FROM raw_orders;`,
+    expectedOutput: `2`,
+    explanation: 'valid_amount drops the rows that fail it: order 2 (-5) and order 4 (0, which is not greater than 0). has_email has no ON VIOLATION clause, so it only warns: order 3 fails it but is still written, and the failure is counted in the pipeline\'s data quality metrics. That leaves orders 1 and 3, so 2 rows. An expectation without ON VIOLATION never removes a row; add ON VIOLATION DROP ROW (expect_or_drop in Python) to keep failing rows out, or ON VIOLATION FAIL UPDATE (expect_or_fail) to stop the update.',
+    hints: ['Which of the two constraints has an ON VIOLATION clause?', 'Is 0 greater than 0?'],
+    tags: ['dlt', 'expectations', 'lakeflow', 'predict'],
+    concepts: ['dlt-pipeline-basics', 'dlt-expectations'],
+  },
+
   // =====================================================================
   // DATABRICKS WORKFLOWS / JOBS (15 questions)
   // =====================================================================
@@ -1324,6 +1348,25 @@ export const certificationQuestions: Question[] = [
     explanation: 'Repair runs let you retry just the failed and skipped tasks from a previous job run. Successfully completed tasks are skipped, saving time and compute resources.',
     tags: ['workflows', 'repair-run', 'failure-recovery'],
     concepts: ['dbx-workflows'],
+  },
+
+  {
+    id: 'workflow-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DATABRICKS_WORKFLOWS,
+    language: CodeLanguage.PYTHON,
+    question: 'In a Lakeflow Job (formerly a Workflow), this notebook is the task "report", which runs after the task "extract". You open the notebook and run it by hand, outside the job, without changing any widget. What does the cell print? The answer is one line: two values separated by a space.',
+    code: `dbutils.widgets.text("region", "eu")
+region = dbutils.widgets.get("region")
+rows = dbutils.jobs.taskValues.get(
+    taskKey="extract", key="rows", default=0, debugValue=7)
+print(region, rows)`,
+    expectedOutput: `eu 7`,
+    explanation: 'Outside a job no job parameter sets the widget, so `dbutils.widgets.get` returns its default, "eu". There is no job run either, so there is no extract task to read from: `taskValues.get` returns its `debugValue`, 7, not `default`, which applies only in a job run where the extract task set no "rows" value. Without a debugValue the call would raise a TypeError here. Run in the job, the same cell would print the job\'s region parameter, if it has one, and the number the extract task set.',
+    hints: ['Who sets the widget when no job runs the notebook?', 'default and debugValue answer different situations: which one is this?'],
+    tags: ['workflows', 'task-values', 'widgets', 'predict'],
+    concepts: ['dbx-workflows', 'dbx-widgets', 'dbx-utilities'],
   },
 
   // =====================================================================
