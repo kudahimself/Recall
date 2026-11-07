@@ -987,14 +987,14 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DELTA_LIVE_TABLES,
-    question: 'What is Delta Live Tables (DLT) in the Databricks Lakehouse Platform?',
+    question: 'What is Delta Live Tables (DLT), now called Lakeflow Declarative Pipelines?',
     options: [
-      { id: 'a', text: 'A low-latency query engine designed specifically for serving real-time SQL dashboards', isCorrect: false },
-      { id: 'b', text: 'A declarative framework for building reliable, maintainable, and testable data processing pipelines', isCorrect: true },
-      { id: 'c', text: 'An automated storage compression utility that optimizes Delta Lake transaction log retention', isCorrect: false },
-      { id: 'd', text: 'A distributed message queuing broker designed to replace external streaming systems like Kafka', isCorrect: false },
+      { id: 'a', text: 'A job scheduler that runs your notebooks in the order you list them, on a cron schedule', isCorrect: false },
+      { id: 'b', text: 'A declarative framework: you write one query per table, and it orders, builds and updates them', isCorrect: true },
+      { id: 'c', text: 'A Delta Lake table feature that copies each change of a source table into a live replica', isCorrect: false },
+      { id: 'd', text: 'A streaming-only engine that reads from Kafka and cannot build batch tables or aggregates', isCorrect: false },
     ],
-    explanation: 'DLT lets you define your pipeline as a series of table declarations. Databricks handles the orchestration, dependency management, error handling, and monitoring automatically.',
+    explanation: 'Delta Live Tables, renamed Lakeflow Declarative Pipelines, is declarative: you declare each dataset as a query (a streaming table, a materialized view or a temporary view), and the pipeline reads the references between them to build its graph, creates and updates the tables, retries failures and records data quality. Scheduling notebooks in an order you set is the job of a Workflow (Lakeflow Job), which can run a pipeline as one of its tasks. A pipeline handles batch sources and aggregates through materialized views as well as streams.',
     tags: ['dlt', 'fundamentals'],
     concepts: ['dlt-pipeline-basics', 'dbx-architecture'],
   },
@@ -1004,14 +1004,14 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
-    question: 'What is the functional difference between a DLT "table" and a DLT "view" in Delta Live Tables?',
+    question: 'In a Delta Live Tables pipeline, how does a table (a streaming table or a materialized view) differ from a temporary view?',
     options: [
-      { id: 'a', text: 'DLT tables are limited to read-only queries, whereas DLT views support direct streaming writes and mutations', isCorrect: false },
-      { id: 'b', text: 'DLT tables process incoming batches synchronously, whereas DLT views execute asynchronous streaming micro-batches', isCorrect: false },
-      { id: 'c', text: 'DLT tables are materialized and stored in Delta Lake format, whereas DLT views are intermediate computations that are not persisted', isCorrect: true },
-      { id: 'd', text: 'DLT tables enforce strict data quality expectations, whereas DLT views bypass all runtime constraint validations', isCorrect: false },
+      { id: 'a', text: 'A table can carry expectations, while a temporary view cannot, so quality checks must sit on a table', isCorrect: false },
+      { id: 'b', text: 'A table can be read by later datasets, while a temporary view cannot be referenced by another dataset', isCorrect: false },
+      { id: 'c', text: 'A table is written to storage and published, while a temporary view is computed but not stored or published', isCorrect: true },
+      { id: 'd', text: 'A table is recomputed in full on every update, while a temporary view keeps its earlier rows and adds new ones', isCorrect: false },
     ],
-    explanation: 'DLT tables (LIVE TABLE) are materialized as Delta tables. DLT views (LIVE VIEW) are computed on demand and not stored, useful for intermediate transformations you don\'t need to persist.',
+    explanation: 'Streaming tables and materialized views are written as Delta tables and published to the target schema, so people and jobs outside the pipeline can query them. A temporary view (`CREATE TEMPORARY VIEW` or `@dp.temporary_view`; `LIVE VIEW` and `@dlt.view` in older code) is computed for the datasets that read it and is never stored or published, which suits an intermediate step. Temporary views can still carry expectations, and other datasets in the pipeline read them like any table.',
     tags: ['dlt', 'table', 'view'],
     concepts: ['dlt-pipeline-basics', 'sql-temp-views'],
   },
@@ -1022,21 +1022,43 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
     language: CodeLanguage.SQL,
-    question: 'Create a DLT streaming live table called "bronze_events" that ingests raw JSON files from cloud storage at "/mnt/data/raw/events/".',
-    starterCode: `-- Create streaming live table for bronze events\n`,
+    question: 'In a Delta Live Tables pipeline (Lakeflow Declarative Pipelines), declare a streaming table "bronze_events" that uses Auto Loader to ingest the JSON files landing in the volume folder "/Volumes/main/default/landing/events/".',
+    starterCode: `-- Declare the bronze_events streaming table
+`,
+    requires: [/STREAMING\s+(LIVE\s+)?TABLE\s+bronze_events/i, /cloud_files\s*\(|STREAM\s*\(?\s*read_files\s*\(/i, /\/Volumes\/main\/default\/landing\/events/i, /json/i],
     testCases: [
       {
         input: 'JSON files',
-        expectedOutput: 'CREATE OR REFRESH STREAMING LIVE TABLE',
-        description: 'Should create streaming live table',
+        expectedOutput: 'CREATE OR REFRESH STREAMING TABLE bronze_events AS SELECT * FROM STREAM read_files(...)',
+        description: 'Should create a streaming table that ingests the JSON files',
       },
     ],
-    solution: `CREATE OR REFRESH STREAMING LIVE TABLE bronze_events\nAS SELECT * FROM cloud_files("/mnt/data/raw/events/", "json")\n-- OR\nCREATE OR REFRESH STREAMING LIVE TABLE bronze_events\nAS SELECT * FROM cloud_files('/mnt/data/raw/events/', 'json')\n-- OR\nCREATE STREAMING LIVE TABLE bronze_events\nAS SELECT * FROM cloud_files("/mnt/data/raw/events/", "json")`,
-    explanation: 'In DLT SQL, CREATE OR REFRESH STREAMING LIVE TABLE creates a streaming table. cloud_files() is the DLT equivalent of Auto Loader for ingesting files.',
-    hints: ['Use CREATE OR REFRESH STREAMING LIVE TABLE', 'Use cloud_files() for file ingestion in DLT'],
+    solution: `CREATE OR REFRESH STREAMING TABLE bronze_events
+AS SELECT * FROM STREAM read_files('/Volumes/main/default/landing/events/', format => 'json')
+-- OR
+CREATE OR REFRESH STREAMING TABLE bronze_events
+AS SELECT * FROM STREAM(read_files('/Volumes/main/default/landing/events/', format => 'json'))
+-- OR
+CREATE OR REFRESH STREAMING LIVE TABLE bronze_events
+AS SELECT * FROM cloud_files("/Volumes/main/default/landing/events/", "json")
+-- OR
+CREATE OR REFRESH STREAMING LIVE TABLE bronze_events
+AS SELECT * FROM cloud_files('/Volumes/main/default/landing/events/', 'json')
+-- OR
+CREATE OR REFRESH STREAMING TABLE bronze_events
+AS SELECT * FROM cloud_files('/Volumes/main/default/landing/events/', 'json')
+-- OR
+CREATE STREAMING TABLE bronze_events
+AS SELECT * FROM STREAM read_files('/Volumes/main/default/landing/events/', format => 'json')
+-- OR
+CREATE STREAMING TABLE bronze_events
+AS SELECT * FROM cloud_files("/Volumes/main/default/landing/events/", "json")`,
+    explanation: `A streaming table reads only the files that arrived since the last update. \`STREAM read_files(path, format => 'json')\` is Auto Loader in SQL; the older \`cloud_files(path, 'json')\` does the same and still runs. Without STREAM, read_files is a batch read, which a streaming table's query does not accept. \`CREATE OR REFRESH\` creates the table on the first update and updates it on later ones, and \`STREAMING LIVE TABLE\` is the older spelling of \`STREAMING TABLE\`. The files sit in a Unity Catalog volume rather than a /mnt mount.`,
+    hints: ['Start with CREATE OR REFRESH STREAMING TABLE (older code: STREAMING LIVE TABLE)', `Read the folder with Auto Loader: STREAM read_files(path, format => 'json'), or the older cloud_files(path, 'json')`],
     tieredHints: {
-      apiSignature: 'cloud_files(path, format, [options])',
-      skeleton: '____ ____ ____ LIVE TABLE bronze_events\nAS SELECT * FROM ____("/mnt/data/raw/events/", ____)',
+      apiSignature: "STREAM read_files(path, format => 'json')  |  older: cloud_files(path, 'json')",
+      skeleton: `CREATE OR REFRESH ____ ____ bronze_events
+AS SELECT * FROM ____ ____('/Volumes/main/default/landing/events/', format => ____)`,
     },
     tags: ['dlt', 'bronze', 'streaming', 'cloud_files'],
     concepts: ['dlt-pipeline-basics', 'medallion-architecture', 'stream-readstream-writestream', 'stream-autoloader'],
@@ -1048,21 +1070,64 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
     language: CodeLanguage.PYTHON,
-    question: 'Define a DLT streaming table called "bronze_events" using Python that ingests JSON files from cloud storage path "/mnt/data/raw/".',
-    starterCode: `import dlt\n\n# Define DLT table\n`,
+    question: 'In a Delta Live Tables pipeline written in Python, define a streaming table "bronze_events" that uses Auto Loader to ingest the JSON files landing in the volume folder "/Volumes/main/default/landing/events/". You may use `import dlt` or `from pyspark import pipelines as dp`.',
+    starterCode: `# Import the pipelines module, then define bronze_events
+`,
+    requires: [/@(dlt|dp)\.table/, /bronze_events/, /readStream/, /["']cloudFiles["']/, /["']cloudFiles\.format["']\s*,\s*["']json["']/, /\/Volumes\/main\/default\/landing\/events/i],
     testCases: [
       {
         input: 'JSON files',
-        expectedOutput: '@dlt.table decorator with spark.readStream.format("cloudFiles")',
-        description: 'Should create DLT table with decorator',
+        expectedOutput: '@dlt.table over spark.readStream.format("cloudFiles")',
+        description: 'Should define a streaming table that reads the files with Auto Loader',
       },
     ],
-    solution: `import dlt\nfrom pyspark.sql.functions import *\n\n@dlt.table\ndef bronze_events():\n  return (\n    spark.readStream\n      .format("cloudFiles")\n      .option("cloudFiles.format", "json")\n      .load("/mnt/data/raw/")\n  )\n# OR\nimport dlt\n\n@dlt.table\ndef bronze_events():\n  return spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").load("/mnt/data/raw/")`,
-    explanation: 'In Python DLT, the @dlt.table decorator defines a live table. The function name becomes the table name. Return a DataFrame or streaming DataFrame.',
-    hints: ['Use @dlt.table decorator', 'Function name = table name', 'Return the DataFrame'],
+    solution: `import dlt
+
+@dlt.table
+def bronze_events():
+    return (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .load("/Volumes/main/default/landing/events/")
+    )
+# OR
+import dlt
+
+@dlt.table
+def bronze_events():
+    return spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").load("/Volumes/main/default/landing/events/")
+# OR
+from pyspark import pipelines as dp
+
+@dp.table
+def bronze_events():
+    return (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .load("/Volumes/main/default/landing/events/")
+    )
+# OR
+from pyspark import pipelines as dp
+
+@dp.table
+def bronze_events():
+    return spark.readStream.format("cloudFiles").option("cloudFiles.format", "json").load("/Volumes/main/default/landing/events/")`,
+    explanation: '`@dlt.table` (or `@dp.table` after `from pyspark import pipelines as dp`) turns the function into a pipeline dataset named after the function, here bronze_events. The function returns a streaming DataFrame, `spark.readStream.format("cloudFiles")`, so the dataset is a streaming table that reads only new files on each update; a batch read would make it a materialized view instead. The `cloudFiles.format` option tells Auto Loader the files are JSON.',
+    hints: ['Decorate a function with @dlt.table (or @dp.table); the function name becomes the table name', 'Return an Auto Loader stream: spark.readStream.format("cloudFiles") with the cloudFiles.format option', 'Load the volume folder with .load(path)'],
     tieredHints: {
-      apiSignature: '@dlt.table(name=None, comment=None)',
-      skeleton: 'import dlt\nfrom pyspark.sql.functions import *\n\n@dlt.____\ndef ____():\n  return (\n    ____.____\n      .____("cloudFiles")\n      .____(____, ____)\n      .____("/mnt/data/raw/")\n  )',
+      apiSignature: '@dlt.table / @dp.table over spark.readStream.format("cloudFiles").option("cloudFiles.format", fmt).load(path)',
+      skeleton: `import dlt
+
+@dlt.____
+def ____():
+    return (
+        spark.____
+        .format(____)
+        .option("cloudFiles.format", ____)
+        .load("/Volumes/main/default/landing/events/")
+    )`,
     },
     tags: ['dlt', 'python', 'decorator', 'bronze'],
     concepts: ['dlt-pipeline-basics', 'medallion-architecture'],
@@ -1074,21 +1139,38 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
     language: CodeLanguage.SQL,
-    question: 'Create a DLT streaming live table called "silver_orders" that reads incrementally from the upstream DLT table "bronze_orders", filtering out records where "order_id" is null.',
-    starterCode: `-- Create Silver DLT streaming table\n`,
+    question: `In a Delta Live Tables pipeline, declare a streaming table "silver_orders" that reads the pipeline's "bronze_orders" table incrementally and keeps only the rows whose "order_id" is not null.`,
+    starterCode: `-- Declare the silver_orders streaming table
+`,
+    requires: [/STREAMING\s+(LIVE\s+)?TABLE\s+silver_orders/i, /STREAM\s*\(?\s*(LIVE\.)?bronze_orders/i, /order_id\s+IS\s+NOT\s+NULL/i],
     testCases: [
       {
-        input: 'bronze_orders live table',
-        expectedOutput: 'CREATE OR REFRESH STREAMING LIVE TABLE with LIVE.bronze_orders',
-        description: 'Should create Silver DLT table',
+        input: 'bronze_orders table in the pipeline',
+        expectedOutput: 'CREATE OR REFRESH STREAMING TABLE silver_orders AS SELECT * FROM STREAM(bronze_orders) WHERE order_id IS NOT NULL',
+        description: 'Should create the Silver streaming table',
       },
     ],
-    solution: `CREATE OR REFRESH STREAMING LIVE TABLE silver_orders\nAS SELECT *\nFROM STREAM(LIVE.bronze_orders)\nWHERE order_id IS NOT NULL\n-- OR\nCREATE OR REFRESH STREAMING LIVE TABLE silver_orders\nAS SELECT * FROM STREAM(LIVE.bronze_orders) WHERE order_id IS NOT NULL\n-- OR\nCREATE STREAMING LIVE TABLE silver_orders\nAS SELECT * FROM STREAM(LIVE.bronze_orders) WHERE order_id IS NOT NULL`,
-    explanation: 'In DLT, reference other live tables using LIVE.table_name. For streaming tables, wrap in STREAM() to read as a stream. DLT handles dependency ordering automatically.',
-    hints: ['Reference upstream tables with LIVE.table_name', 'Wrap in STREAM() for streaming reads', 'DLT manages pipeline ordering'],
+    solution: `CREATE OR REFRESH STREAMING TABLE silver_orders
+AS SELECT *
+FROM STREAM(bronze_orders)
+WHERE order_id IS NOT NULL
+-- OR
+CREATE OR REFRESH STREAMING TABLE silver_orders AS SELECT * FROM STREAM bronze_orders WHERE order_id IS NOT NULL
+-- OR
+CREATE OR REFRESH STREAMING LIVE TABLE silver_orders
+AS SELECT *
+FROM STREAM(LIVE.bronze_orders)
+WHERE order_id IS NOT NULL
+-- OR
+CREATE STREAMING LIVE TABLE silver_orders AS SELECT * FROM STREAM(LIVE.bronze_orders) WHERE order_id IS NOT NULL`,
+    explanation: `STREAM(bronze_orders) reads the upstream table as a stream, so each update reads only the rows Bronze gained since the last one; without STREAM it is a batch read, which a streaming table's query does not accept. Naming bronze_orders makes silver_orders depend on it, so the pipeline updates Bronze first. Older code writes the reference as LIVE.bronze_orders and the table as STREAMING LIVE TABLE: the LIVE prefix is deprecated and ignored under the default publishing mode, so both forms run.`,
+    hints: ['CREATE OR REFRESH STREAMING TABLE (older code: STREAMING LIVE TABLE)', 'Read the upstream table as a stream: STREAM(bronze_orders), or STREAM(LIVE.bronze_orders) in older code', 'Filter with WHERE order_id IS NOT NULL'],
     tieredHints: {
-      apiSignature: 'STREAM(LIVE.table_name)',
-      skeleton: '____ ____ ____ LIVE TABLE silver_orders\nAS SELECT *\nFROM ____(____.bronze_orders)\nWHERE order_id IS ____',
+      apiSignature: 'STREAM(table_name)',
+      skeleton: `CREATE OR REFRESH ____ ____ silver_orders
+AS SELECT *
+FROM ____(bronze_orders)
+WHERE order_id ____ ____ ____`,
     },
     tags: ['dlt', 'silver', 'streaming', 'dependencies'],
     concepts: ['dlt-pipeline-basics', 'medallion-architecture', 'stream-readstream-writestream', 'dbx-workflows'],
@@ -1100,8 +1182,10 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
     language: CodeLanguage.SQL,
-    question: 'Create a DLT streaming table called "clean_orders" from the upstream table "bronze_orders" with a named quality constraint "valid_amount" requiring "amount" to be strictly positive (> 0). Drop violating rows automatically.',
-    starterCode: `-- Create clean_orders streaming table with quality constraint\n`,
+    question: `In a Delta Live Tables pipeline, declare a streaming table "clean_orders" that reads the pipeline's "bronze_orders" table incrementally, with an expectation named "valid_amount" requiring "amount" to be greater than 0. Rows that fail it must be dropped, not written.`,
+    starterCode: `-- Declare clean_orders with its expectation
+`,
+    requires: [/STREAMING\s+(LIVE\s+)?TABLE\s+clean_orders/i, /CONSTRAINT\s+valid_amount\s+EXPECT\s*\(\s*amount\s*>\s*0\s*\)\s*ON\s+VIOLATION\s+DROP\s+ROW/i, /STREAM\s*\(?\s*(LIVE\.)?bronze_orders/i],
     testCases: [
       {
         input: 'orders data',
@@ -1109,12 +1193,30 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
         description: 'Should add quality constraint',
       },
     ],
-    solution: `CREATE OR REFRESH STREAMING LIVE TABLE clean_orders (\n  CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW\n)\nAS SELECT *\nFROM STREAM(LIVE.bronze_orders)\n-- OR\nCREATE OR REFRESH STREAMING LIVE TABLE clean_orders (CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW) AS SELECT * FROM STREAM(LIVE.bronze_orders)\n-- OR\nCREATE STREAMING LIVE TABLE clean_orders (\n  CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW\n)\nAS SELECT * FROM STREAM(LIVE.bronze_orders)`,
-    explanation: 'DLT expectations define data quality constraints. ON VIOLATION DROP ROW silently drops failing rows. ON VIOLATION FAIL UPDATE stops the pipeline. Without ON VIOLATION, rows are kept but tracked in metrics.',
-    hints: ['Use CONSTRAINT name EXPECT (condition)', 'ON VIOLATION DROP ROW removes bad rows', 'Define constraints in the table definition'],
+    solution: `CREATE OR REFRESH STREAMING TABLE clean_orders (
+  CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW
+)
+AS SELECT *
+FROM STREAM(bronze_orders)
+-- OR
+CREATE OR REFRESH STREAMING TABLE clean_orders (CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW) AS SELECT * FROM STREAM bronze_orders
+-- OR
+CREATE OR REFRESH STREAMING LIVE TABLE clean_orders (
+  CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW
+)
+AS SELECT *
+FROM STREAM(LIVE.bronze_orders)
+-- OR
+CREATE STREAMING LIVE TABLE clean_orders (CONSTRAINT valid_amount EXPECT (amount > 0) ON VIOLATION DROP ROW) AS SELECT * FROM STREAM(LIVE.bronze_orders)`,
+    explanation: 'An expectation is declared inside the table definition as `CONSTRAINT name EXPECT (condition)`. `ON VIOLATION DROP ROW` keeps the failing rows out of the table and counts them in the data quality metrics, `ON VIOLATION FAIL UPDATE` stops the update, and with no ON VIOLATION clause the rows are written and only counted. Note `amount > 0`: an amount of 0 fails it. STREAM(bronze_orders) makes the table read Bronze incrementally (STREAM(LIVE.bronze_orders) in older code).',
+    hints: ['Put CONSTRAINT name EXPECT (condition) in brackets after the table name', 'ON VIOLATION DROP ROW keeps failing rows out', 'Read Bronze with STREAM(bronze_orders)'],
     tieredHints: {
-      apiSignature: 'CONSTRAINT name EXPECT (condition) ON VIOLATION [FAIL UPDATE | DROP ROW | DROP]',
-      skeleton: '____ ____ ____ LIVE TABLE clean_orders (\n  ____ valid_amount ____ (amount > 0) ON VIOLATION ____ ____\n)\nAS SELECT *\nFROM ____(____.bronze_orders)',
+      apiSignature: 'CONSTRAINT name EXPECT (condition) [ON VIOLATION { DROP ROW | FAIL UPDATE }]',
+      skeleton: `CREATE OR REFRESH ____ ____ clean_orders (
+  ____ valid_amount ____ (amount > 0) ON VIOLATION ____ ____
+)
+AS SELECT *
+FROM ____(bronze_orders)`,
     },
     tags: ['dlt', 'expectations', 'data-quality'],
     concepts: ['dlt-pipeline-basics', 'dlt-expectations'],
@@ -1125,14 +1227,14 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
-    question: 'Which three actions can be configured on a Delta Live Tables expectation when a data quality constraint is violated?',
+    question: 'Which list gives the three things a Delta Live Tables expectation can do with a row that fails it?',
     options: [
-      { id: 'a', text: 'Track metrics while keeping rows (warn), drop violating rows silently, or fail the pipeline update entirely', isCorrect: true },
-      { id: 'b', text: 'Quarantine bad rows to a separate database, reprocess the batch automatically, or alert system administrators', isCorrect: false },
-      { id: 'c', text: 'Ignore the invalid payload fields, replace failing values with default nulls, or trigger a full cluster reboot', isCorrect: false },
-      { id: 'd', text: 'Retry the micro-batch transaction, archive the corrupted file partition, or suspend downstream job triggers', isCorrect: false },
+      { id: 'a', text: 'Keep the row and count the failure (warn), drop the row, or fail the whole update', isCorrect: true },
+      { id: 'b', text: 'Keep the row and count the failure, drop the row, or move it to a quarantine table it creates', isCorrect: false },
+      { id: 'c', text: 'Drop the row, fail the whole update, or set the failing column to NULL and keep the row', isCorrect: false },
+      { id: 'd', text: 'Keep the row and count the failure, drop the row, or pause the pipeline until someone approves it', isCorrect: false },
     ],
-    explanation: 'Without ON VIOLATION: rows are kept but violations are tracked in metrics (warn). ON VIOLATION DROP ROW: failing rows are silently removed. ON VIOLATION FAIL UPDATE: the pipeline stops with an error.',
+    explanation: 'With no ON VIOLATION clause (`@dp.expect`, `@dlt.expect`) a failing row is written and only counted in the data quality metrics; `ON VIOLATION DROP ROW` (`expect_or_drop`) keeps it out of the target, and `ON VIOLATION FAIL UPDATE` (`expect_or_fail`) stops the update. There is no built-in quarantine action: to keep bad rows you declare a second dataset with the opposite condition yourself. An expectation never rewrites a value, and nothing holds rows back for approval.',
     tags: ['dlt', 'expectations', 'violation-actions'],
     concepts: ['dlt-pipeline-basics', 'dlt-expectations'],
   },
@@ -1143,21 +1245,47 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_LIVE_TABLES,
     language: CodeLanguage.PYTHON,
-    question: 'Define a DLT table "silver_users" in Python that reads streaming data from the upstream table "bronze_users". Enforce a data quality expectation named "valid_email" that drops any records where the "email" column is null.',
-    starterCode: `import dlt\n\n# Define silver_users DLT table with expectation\n`,
+    question: `In a Delta Live Tables pipeline written in Python, define a streaming table "silver_users" that reads the pipeline's "bronze_users" table as a stream, with an expectation named "valid_email" that drops every row whose "email" is null. You may use \`import dlt\` or \`from pyspark import pipelines as dp\`.`,
+    starterCode: `# Import the pipelines module, then define silver_users with its expectation
+`,
+    requires: [/@(dlt|dp)\.table/, /def\s+silver_users\s*\(/, /@(dlt|dp)\.expect_or_drop\(\s*["']valid_email["']\s*,\s*["']email\s+IS\s+NOT\s+NULL["']\s*\)/i, /read_stream\(\s*["']bronze_users["']|readStream\.table\(\s*["']bronze_users["']/],
     testCases: [
       {
-        input: 'bronze_users live table',
-        expectedOutput: '@dlt.table with @dlt.expect_or_drop',
-        description: 'Should create DLT table with expectations',
+        input: 'bronze_users table in the pipeline',
+        expectedOutput: '@dlt.table with @dlt.expect_or_drop("valid_email", "email IS NOT NULL")',
+        description: 'Should define a streaming table with a drop expectation',
       },
     ],
-    solution: `import dlt\n\n@dlt.table\n@dlt.expect_or_drop("valid_email", "email IS NOT NULL")\ndef silver_users():\n  return dlt.read_stream("bronze_users")\n# OR\nimport dlt\n\n@dlt.expect_or_drop("valid_email", "email IS NOT NULL")\n@dlt.table\ndef silver_users():\n  return dlt.read_stream("bronze_users").select("*")`,
-    explanation: '@dlt.expect_or_drop drops rows that violate the constraint. Other decorators: @dlt.expect (warn only), @dlt.expect_or_fail (stop pipeline). Use dlt.read_stream() to read from upstream streaming tables.',
-    hints: ['Use @dlt.expect_or_drop decorator', 'First arg is constraint name, second is SQL expression', 'Use dlt.read_stream() for streaming reads'],
+    solution: `import dlt
+
+@dlt.table
+@dlt.expect_or_drop("valid_email", "email IS NOT NULL")
+def silver_users():
+    return dlt.read_stream("bronze_users")
+# OR
+import dlt
+
+@dlt.table
+@dlt.expect_or_drop("valid_email", "email IS NOT NULL")
+def silver_users():
+    return spark.readStream.table("bronze_users")
+# OR
+from pyspark import pipelines as dp
+
+@dp.table
+@dp.expect_or_drop("valid_email", "email IS NOT NULL")
+def silver_users():
+    return spark.readStream.table("bronze_users")`,
+    explanation: '`@dlt.expect_or_drop(name, condition)` (`@dp.expect_or_drop` in the newer module) keeps the rows that fail the SQL condition out of the table and counts them in the data quality metrics; `expect` would only warn and `expect_or_fail` would stop the update. The condition is a SQL expression string, so it reads "email IS NOT NULL". `dlt.read_stream("bronze_users")`, or `spark.readStream.table("bronze_users")` in current code, reads the upstream table as a stream, which makes silver_users a streaming table that the pipeline updates after bronze_users.',
+    hints: ['Stack @dlt.table and an expectation decorator on the function', 'expect_or_drop takes the expectation name, then a SQL condition string', 'Read Bronze as a stream with dlt.read_stream("bronze_users") or spark.readStream.table("bronze_users")'],
     tieredHints: {
-      apiSignature: '@dlt.expect_or_drop(name, expression)',
-      skeleton: 'import dlt\n\n@dlt.____\n@dlt.____(____, ____)\ndef ____():\n  return dlt.____(____)',
+      apiSignature: '@dlt.expect_or_drop(name, sql_condition)',
+      skeleton: `import dlt
+
+@dlt.____
+@dlt.____(____, ____)
+def ____():
+    return dlt.____(____)`,
     },
     tags: ['dlt', 'python', 'expectations', 'expect_or_drop'],
     concepts: ['dlt-pipeline-basics', 'dlt-expectations'],
@@ -1168,14 +1296,14 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
-    question: 'What is the primary operational difference between a DLT "streaming table" and a DLT "materialized view"?',
+    question: 'In a Delta Live Tables pipeline, what is the main difference between a streaming table and a materialized view?',
     options: [
-      { id: 'a', text: 'Streaming tables process queries using single-node clusters, whereas materialized views require multi-node worker nodes', isCorrect: false },
-      { id: 'b', text: 'Streaming tables are restricted to SQL syntax declarations, whereas materialized views can only be written in Python code', isCorrect: false },
-      { id: 'c', text: 'Streaming tables execute only on scheduled batch intervals, whereas materialized views maintain real-time socket connections', isCorrect: false },
-      { id: 'd', text: 'Streaming tables process data incrementally from append-only sources, whereas materialized views recompute results from full inputs', isCorrect: true },
+      { id: 'a', text: 'A streaming table must run in a continuous pipeline, while a materialized view only runs in a triggered one', isCorrect: false },
+      { id: 'b', text: 'A streaming table keeps every version of each row, while a materialized view keeps only the latest version of each key', isCorrect: false },
+      { id: 'c', text: 'A streaming table suits joins and aggregates over a whole table, while a materialized view only suits append-only sources', isCorrect: false },
+      { id: 'd', text: 'A streaming table reads only rows added to its source since the last update, while a materialized view keeps its whole result correct', isCorrect: true },
     ],
-    explanation: 'Streaming live tables (STREAMING LIVE TABLE) process only new data incrementally. Live tables without STREAMING are materialized views that recompute from scratch each time, useful for aggregations that need the full dataset.',
+    explanation: 'A streaming table reads its source with STREAM, so each update processes only the rows added since the last one, which suits append-only sources such as files landing in a folder. A materialized view holds the full result of its query, and the pipeline keeps it correct on every update, recomputing it or, where it can, refreshing it incrementally; that suits joins and aggregations whose result changes as new rows arrive. Either kind can run in a triggered or a continuous pipeline. `STREAMING LIVE TABLE` and `LIVE TABLE` are the older names.',
     tags: ['dlt', 'streaming-table', 'materialized-view'],
     concepts: ['dlt-pipeline-basics'],
   },
@@ -1186,8 +1314,9 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
     language: CodeLanguage.SQL,
-    question: 'Create a DLT Gold table named "gold_daily_sales" reading from upstream table "silver_sales" (columns: sale_id, sale_date, product_id, total_amount, customer_id). Calculate "daily_revenue" as the total sum of total_amount and "num_sales" as total record count, grouped by sale_date.',
+    question: `In a Delta Live Tables pipeline, declare a Gold materialized view "gold_daily_sales" over the pipeline's "silver_sales" table (columns: sale_id, sale_date, product_id, total_amount, customer_id). For each sale_date it holds "daily_revenue", the sum of total_amount, and "num_sales", the number of sales.`,
     starterCode: `-- Declare Gold materialized view gold_daily_sales\n`,
+    requires: [/(MATERIALIZED\s+VIEW|LIVE\s+TABLE)\s+gold_daily_sales/i, /^(?![\s\S]*\bSTREAM(ING)?\b)/i, /SUM\s*\(\s*total_amount\s*\)\s+(AS\s+)?daily_revenue/i, /COUNT\s*\(\s*(\*|sale_id)\s*\)\s+(AS\s+)?num_sales/i, /GROUP\s+BY\s+sale_date/i],
     testCases: [
       {
         input: 'silver_sales live table',
@@ -1195,12 +1324,38 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
         description: 'Should create materialized view',
       },
     ],
-    solution: `CREATE OR REFRESH LIVE TABLE gold_daily_sales\nAS SELECT\n  sale_date,\n  SUM(total_amount) as daily_revenue,\n  COUNT(*) as num_sales\nFROM LIVE.silver_sales\nGROUP BY sale_date\n-- OR\nCREATE OR REFRESH LIVE TABLE gold_daily_sales AS SELECT sale_date, SUM(total_amount) AS daily_revenue, COUNT(sale_id) AS num_sales FROM LIVE.silver_sales GROUP BY sale_date\n-- OR\nCREATE LIVE TABLE gold_daily_sales AS SELECT sale_date, SUM(total_amount) as daily_revenue, COUNT(*) as num_sales FROM LIVE.silver_sales GROUP BY sale_date`,
-    explanation: 'Gold uses LIVE TABLE (not STREAMING) because GROUP BY aggregations require the full dataset to produce correct results — you can\'t incrementally aggregate without knowing all the data. The LIVE. prefix tells DLT this table depends on silver_sales, so DLT automatically runs silver first.',
-    hints: ['No STREAMING keyword — Gold recomputes from the full dataset', 'FROM LIVE.silver_sales — the LIVE. prefix is required for DLT table references', 'GROUP BY sale_date with SUM and COUNT for the aggregations'],
+    solution: `CREATE OR REFRESH MATERIALIZED VIEW gold_daily_sales
+AS SELECT
+  sale_date,
+  SUM(total_amount) AS daily_revenue,
+  COUNT(*) AS num_sales
+FROM silver_sales
+GROUP BY sale_date
+-- OR
+CREATE OR REFRESH MATERIALIZED VIEW gold_daily_sales AS SELECT sale_date, SUM(total_amount) AS daily_revenue, COUNT(sale_id) AS num_sales FROM silver_sales GROUP BY sale_date
+-- OR
+CREATE OR REFRESH LIVE TABLE gold_daily_sales
+AS SELECT
+  sale_date,
+  SUM(total_amount) AS daily_revenue,
+  COUNT(*) AS num_sales
+FROM LIVE.silver_sales
+GROUP BY sale_date
+-- OR
+CREATE LIVE TABLE gold_daily_sales AS SELECT sale_date, SUM(total_amount) AS daily_revenue, COUNT(*) AS num_sales FROM LIVE.silver_sales GROUP BY sale_date
+-- OR
+CREATE MATERIALIZED VIEW gold_daily_sales AS SELECT sale_date, SUM(total_amount) AS daily_revenue, COUNT(sale_id) AS num_sales FROM silver_sales GROUP BY sale_date`,
+    explanation: `A materialized view holds the full result of its query, and the pipeline keeps it correct on each update, so a day's totals cover every sale for that day, including sales that arrived in earlier updates. That suits a GROUP BY aggregate, whose rows change as new sales arrive, while a streaming table only appends results for its new input rows. Naming silver_sales makes the view depend on it, so the pipeline updates Silver first. \`LIVE TABLE\` and \`LIVE.silver_sales\` are the older spellings of \`MATERIALIZED VIEW\` and \`silver_sales\`.`,
+    hints: ['Declare it with CREATE OR REFRESH MATERIALIZED VIEW (older code: LIVE TABLE), not as a streaming table', 'Read the upstream table by name: FROM silver_sales (older code: LIVE.silver_sales)', 'GROUP BY sale_date with SUM(total_amount) and COUNT(*)'],
     tieredHints: {
-      apiSignature: 'CREATE OR REFRESH LIVE TABLE table_name AS SELECT ... FROM LIVE.source_table GROUP BY col',
-      skeleton: '____ ____ LIVE TABLE ____\nAS SELECT\n  sale_date,\n  ____(total_amount) as ____,\n  ____(*) as ____\nFROM ____.____\n____ ____ sale_date',
+      apiSignature: 'CREATE OR REFRESH MATERIALIZED VIEW name AS SELECT ... FROM source GROUP BY col',
+      skeleton: `CREATE OR REFRESH ____ ____ gold_daily_sales
+AS SELECT
+  sale_date,
+  ____(total_amount) AS ____,
+  ____(*) AS ____
+FROM ____
+____ ____ sale_date`,
     },
     tags: ['dlt', 'gold', 'materialized-view', 'aggregation'],
     concepts: ['dlt-pipeline-basics', 'medallion-architecture', 'ps-groupby-agg'],
@@ -1211,14 +1366,14 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DELTA_LIVE_TABLES,
-    question: 'Which pipeline mode should be selected for a production Delta Live Tables pipeline requiring continuous real-time data processing?',
+    question: 'A Delta Live Tables pipeline must process new events within seconds of their arrival, all day long. Which pipeline setting gives that?',
     options: [
-      { id: 'a', text: 'Triggered mode — execution runs once to process current data, then shuts down cluster resources', isCorrect: false },
-      { id: 'b', text: 'Batch mode — execution runs on a scheduled cron interval to process accumulated file updates', isCorrect: false },
-      { id: 'c', text: 'Continuous mode — execution runs perpetually to process incoming events with minimum latency', isCorrect: true },
-      { id: 'd', text: 'Manual mode — execution requires explicit administrator confirmation before processing each batch', isCorrect: false },
+      { id: 'a', text: 'Triggered mode, which processes all the data waiting when an update starts and then stops', isCorrect: false },
+      { id: 'b', text: 'Development mode, which keeps the compute running between updates so the next one starts at once', isCorrect: false },
+      { id: 'c', text: 'Continuous mode, which keeps the pipeline running and processes new data as it arrives', isCorrect: true },
+      { id: 'd', text: 'Production mode, which runs each update on fresh compute and retries the update when it fails', isCorrect: false },
     ],
-    explanation: 'DLT supports two pipeline modes: "Triggered" (runs once and stops, good for scheduled batch) and "Continuous" (runs continuously, good for low-latency streaming). Choose based on latency requirements.',
+    explanation: 'A triggered pipeline processes all the data waiting when an update starts and then stops, so its latency is at least the gap between updates. A continuous pipeline keeps running and processes new data as it arrives, at the cost of compute that never stops. Development and production modes are a separate setting: development mode keeps the compute up between updates and does not retry, production mode restarts compute and retries failures, and neither makes a pipeline continuous.',
     tags: ['dlt', 'pipeline-mode', 'continuous', 'triggered'],
     concepts: ['dlt-pipeline-basics', 'dlt-pipeline-modes'],
   },
@@ -1228,14 +1383,14 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')`,
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DELTA_LIVE_TABLES,
-    question: 'How does Delta Live Tables determine execution order and pipeline dependencies between defined tables?',
+    question: 'How does a Delta Live Tables pipeline decide the order in which to update its tables?',
     options: [
-      { id: 'a', text: 'DLT automatically constructs a DAG and execution plan by analyzing table references like LIVE.table_name', isCorrect: true },
-      { id: 'b', text: 'DLT requires developers to manually specify numerical execution priorities for every declared table', isCorrect: false },
-      { id: 'c', text: 'DLT processes declared pipeline tables sequentially based on alphabetical ordering of function names', isCorrect: false },
-      { id: 'd', text: 'DLT executes all declared pipeline tables simultaneously without tracking inter-table dependencies', isCorrect: false },
+      { id: 'a', text: 'It reads which datasets each query refers to and builds a graph, so each table updates after those it reads', isCorrect: true },
+      { id: 'b', text: 'It runs the statements in the order they appear in the source file, so upstream tables must come first', isCorrect: false },
+      { id: 'c', text: 'It reads a depends_on list that each table declares, the same way the tasks of a job declare theirs', isCorrect: false },
+      { id: 'd', text: 'It updates every table at the same time and retries any table whose upstream table is not ready yet', isCorrect: false },
     ],
-    explanation: 'DLT builds a DAG (Directed Acyclic Graph) from the LIVE.table_name references. It automatically determines which tables depend on others and executes them in the correct order.',
+    explanation: 'A pipeline is declarative: each dataset is one query, and the tables and views that query reads (LIVE.name in older code) are its dependencies. The pipeline builds its graph (DAG) from those references, so the order of statements and files in the source does not matter and there is no depends_on to write; depends_on belongs to the tasks of a job. Datasets that do not depend on each other can update in parallel.',
     tags: ['dlt', 'dependencies', 'dag'],
     concepts: ['dlt-pipeline-basics', 'dbx-workflows'],
   },
@@ -1273,14 +1428,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'What is a Databricks Workflow (Job) in the Databricks Lakehouse Platform?',
+    question: 'What is a Databricks Workflow, now called a Lakeflow Job?',
     options: [
-      { id: 'a', text: 'A dedicated hardware cluster configuration for running real-time stream processing engines', isCorrect: false },
-      { id: 'b', text: 'A workspace access control mechanism for restricting user privileges across database schemas', isCorrect: false },
-      { id: 'c', text: 'An orchestration service to schedule and run non-interactive tasks like notebooks and pipelines in a DAG', isCorrect: true },
-      { id: 'd', text: 'A version control integration tool that synchronizes workspace notebooks with remote Git repositories', isCorrect: false },
+      { id: 'a', text: 'A declarative pipeline in which you write one query per table and it works out the run order', isCorrect: false },
+      { id: 'b', text: 'An all-purpose cluster kept running so that scheduled notebooks start without waiting for compute', isCorrect: false },
+      { id: 'c', text: 'An orchestrator that runs tasks such as notebooks, scripts and pipelines as a DAG, on a schedule or trigger', isCorrect: true },
+      { id: 'd', text: 'A notebook setting that runs every cell from top to bottom each time the notebook is opened', isCorrect: false },
     ],
-    explanation: 'Databricks Workflows lets you define multi-task jobs where each task can be a notebook, Python script, JAR, SQL, or DLT pipeline. Tasks can have dependencies forming a DAG.',
+    explanation: 'A Workflow, renamed Lakeflow Job, runs work with no one at a notebook: each task is a notebook, a Python script or wheel, a JAR, a SQL query, a dbt project or a pipeline update, and tasks list the tasks they depend on, which makes the job a DAG. It starts on a schedule, by hand or through the API, when files arrive, or continuously, and runs on serverless compute or a job cluster rather than an all-purpose cluster. A declarative pipeline (formerly Delta Live Tables) is a different product, which a job can run as one of its tasks.',
     tags: ['workflows', 'jobs', 'orchestration'],
     concepts: ['dbx-workflows'],
   },
@@ -1290,14 +1445,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'Which set of task types can be orchestrated within a single Databricks Workflow?',
+    question: 'Which list holds only task types that a Databricks Workflow (Lakeflow Job) can run?',
     options: [
-      { id: 'a', text: 'Notebooks, Python scripts, JARs, SQL queries, Delta Live Tables pipelines, and dbt tasks', isCorrect: true },
-      { id: 'b', text: 'Only Python interactive notebooks and pre-compiled Java JAR application binaries', isCorrect: false },
-      { id: 'c', text: 'Only SQL queries and declarative Delta Live Tables data processing pipelines', isCorrect: false },
-      { id: 'd', text: 'Only shell scripts and containerized Docker applications deployed via Kubernetes', isCorrect: false },
+      { id: 'a', text: 'Notebooks, Python scripts, JARs, SQL queries, pipeline updates and dbt projects', isCorrect: true },
+      { id: 'b', text: 'Notebooks, Python scripts, SQL queries and shell scripts run on the driver', isCorrect: false },
+      { id: 'c', text: 'Notebooks, SQL queries, pipeline updates and Airflow DAGs uploaded to the workspace', isCorrect: false },
+      { id: 'd', text: 'Notebooks and Python scripts, with SQL queries and dbt left to a SQL warehouse scheduler', isCorrect: false },
     ],
-    explanation: 'Workflows support multiple task types: Notebook, Python script, Python wheel, JAR, Spark submit, SQL, DLT pipeline, dbt, and more. This flexibility lets you build complex multi-step pipelines.',
+    explanation: 'A job task can be a notebook, a Python script, a Python wheel, a JAR, a SQL query, dashboard or alert, a dbt project, a pipeline update (Lakeflow Declarative Pipelines, formerly Delta Live Tables) or another job, and one job can mix them. There is no shell script task type (a notebook can run shell commands with %sh), Airflow starts Databricks jobs from outside rather than running inside one, and SQL and dbt tasks sit in the same job as notebooks.',
     tags: ['workflows', 'task-types'],
     concepts: ['dbx-workflows'],
   },
@@ -1307,14 +1462,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'How are task execution dependencies defined within a Databricks Workflow?',
+    question: 'How do you make a task of a Databricks Workflow (Lakeflow Job) wait for other tasks?',
     options: [
-      { id: 'a', text: 'Tasks run sequentially in strict alphabetical order based on their assigned task name strings', isCorrect: false },
-      { id: 'b', text: 'Tasks specify upstream dependencies to form a Directed Acyclic Graph (DAG) for parallel execution', isCorrect: true },
-      { id: 'c', text: 'Tasks cannot define inter-dependencies and are forced to execute concurrently on shared clusters', isCorrect: false },
-      { id: 'd', text: 'Tasks run according to strict numerical priority numbers configured in cluster settings', isCorrect: false },
+      { id: 'a', text: 'Tasks run one after another in the order they are listed, so a task waits for every task above it', isCorrect: false },
+      { id: 'b', text: 'Each task lists the tasks it depends on, making the job a DAG in which unrelated tasks run in parallel', isCorrect: true },
+      { id: 'c', text: 'A task waits for any task whose task values it reads, and that read is what creates the dependency', isCorrect: false },
+      { id: 'd', text: 'Each task gets its own schedule, set to start after the task before it usually finishes', isCorrect: false },
     ],
-    explanation: 'Each task can specify one or more tasks it depends on. Databricks uses this to build a DAG and execute tasks in the correct order, running independent tasks in parallel when possible.',
+    explanation: 'Each task names its upstream tasks in depends_on, and it starts only once they have finished (by default, once they all succeed). The job is therefore a DAG, and tasks with no dependency between them run in parallel; the order the tasks are listed in does not matter. Reading a task value does not create a dependency (the reading task must already depend on the task that set it), and separate schedules guess at timing instead of waiting for success.',
     tags: ['workflows', 'dependencies', 'dag'],
     concepts: ['dbx-workflows'],
   },
@@ -1324,14 +1479,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'What occurs when a single task fails during a Databricks Workflow execution?',
+    question: 'In a run of a Databricks Workflow (Lakeflow Job), one task fails and has no retries left. Every task keeps the default Run if setting, All succeeded. What happens to the other tasks?',
     options: [
-      { id: 'a', text: 'The entire workflow execution halts immediately and cancels all independent parallel task branches', isCorrect: false },
-      { id: 'b', text: 'The failed task is ignored and downstream dependent tasks proceed using default null parameter values', isCorrect: false },
-      { id: 'c', text: 'Downstream dependent tasks are skipped, while independent parallel branches continue to completion', isCorrect: true },
-      { id: 'd', text: 'The cluster automatically restarts and re-executes the failed task indefinitely until it succeeds', isCorrect: false },
+      { id: 'a', text: 'The whole run stops at once, and every task still running on another branch is cancelled', isCorrect: false },
+      { id: 'b', text: 'The tasks after it run anyway, reading null for anything the failed task should have produced', isCorrect: false },
+      { id: 'c', text: 'The tasks that depend on it are skipped as Upstream failed, while other branches run to the end', isCorrect: true },
+      { id: 'd', text: 'The tasks after it wait, and start on their own once someone reruns the failed task by hand', isCorrect: false },
     ],
-    explanation: 'When a task fails, its downstream dependents are skipped (they cannot run without the dependency). Independent tasks on other branches continue. You can configure retry policies with max retries and intervals.',
+    explanation: 'With Run if set to All succeeded, a task runs only when all its upstream tasks succeed, so the tasks after a failed one are marked Upstream failed and skipped, while tasks on independent branches carry on. A task retries on its own only if you give it retries, and once the cause is fixed a repair run reruns just the failed and skipped tasks. Another Run if setting, such as All done, lets a task run after a failure, which is how a cleanup or alert task is built.',
     tags: ['workflows', 'failure-handling', 'retry'],
     concepts: ['dbx-workflows'],
   },
@@ -1341,14 +1496,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'Which trigger mechanisms are supported for executing Databricks Workflows?',
+    question: 'Which list holds only real ways to start a run of a Databricks Workflow (Lakeflow Job)?',
     options: [
-      { id: 'a', text: 'Cron schedules, manual triggers, continuous loops, and file arrival events in cloud storage', isCorrect: true },
-      { id: 'b', text: 'Only manual user triggers initiated through the Databricks REST API or workspace web interface', isCorrect: false },
-      { id: 'c', text: 'Only cron-based time schedules configured using standard UNIX crontab interval expressions', isCorrect: false },
-      { id: 'd', text: 'Only automatic triggers initiated whenever a Git commit is pushed to the primary branch', isCorrect: false },
+      { id: 'a', text: 'A cron schedule, a manual run or API call, new files arriving in a storage location, and continuous mode', isCorrect: true },
+      { id: 'b', text: `A cron schedule, a manual run or API call, and a push to the main branch of the job's Git repository`, isCorrect: false },
+      { id: 'c', text: 'A cron schedule, a manual run or API call, and a message landing on a Kafka topic the job subscribes to', isCorrect: false },
+      { id: 'd', text: 'A cron schedule or a manual run only; reacting to new files needs an Auto Loader stream left running', isCorrect: false },
     ],
-    explanation: 'Workflows can be triggered on a cron schedule (e.g., daily at 2 AM), manually on demand, continuously (restart after completion), or on file arrival in cloud storage.',
+    explanation: 'A job can run on a cron schedule, when someone starts it by hand or through the Jobs API, when new files arrive in a storage location (a file arrival trigger), when tables it watches are updated (a table update trigger), or continuously, starting a new run as soon as the last one ends. It has no Git push or Kafka trigger: a CI tool starts a job through the API, and a streaming query reads Kafka. A file arrival trigger starts a run without any stream left running.',
     tags: ['workflows', 'scheduling', 'triggers'],
     concepts: ['dbx-workflows', 'stream-triggers'],
   },
@@ -1358,14 +1513,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'What is the operational difference between a job cluster and an all-purpose cluster for Databricks Workflows?',
+    question: 'How does a job cluster differ from an all-purpose cluster for running a Databricks Workflow (Lakeflow Job)?',
     options: [
-      { id: 'a', text: 'Job clusters are ephemeral and created specifically for a job run, while all-purpose clusters persist and cost more', isCorrect: true },
-      { id: 'b', text: 'Job clusters support interactive notebook execution, while all-purpose clusters are restricted to batch scripts', isCorrect: false },
-      { id: 'c', text: 'Job clusters run exclusively on single-node instances, while all-purpose clusters require multi-node workers', isCorrect: false },
-      { id: 'd', text: 'Job clusters persist continuously across job runs, while all-purpose clusters terminate after each task finishes', isCorrect: false },
+      { id: 'a', text: 'A job cluster starts for one run and ends with it, at a lower rate; an all-purpose cluster stays up and costs more', isCorrect: true },
+      { id: 'b', text: 'A job cluster supports interactive notebooks, while an all-purpose cluster can only run scheduled batch tasks', isCorrect: false },
+      { id: 'c', text: 'A job cluster is shared by every job in the workspace, while an all-purpose cluster belongs to one user', isCorrect: false },
+      { id: 'd', text: 'A job cluster stays up between runs so the next run starts fast, while an all-purpose cluster ends after each task', isCorrect: false },
     ],
-    explanation: 'Job clusters are ephemeral: created when the job starts, terminated when it ends. They cost less than all-purpose clusters. All-purpose (interactive) clusters persist and are meant for development.',
+    explanation: 'A job cluster is created when the run starts and terminated when it ends, and job compute is billed at a lower rate than all-purpose compute, which stays up for interactive development until someone stops it or it auto-terminates. A job cluster can be shared by the tasks of one job, not by other jobs. Serverless compute for jobs is the other choice, with no cluster to configure.',
     tags: ['workflows', 'clusters', 'job-cluster'],
     concepts: ['dbx-workflows', 'dbx-cluster-config'],
   },
@@ -1376,21 +1531,36 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
     language: CodeLanguage.PYTHON,
-    question: 'Inside a notebook executing as a Workflow task, declare notebook widgets for parameters "env" (defaulting to "dev") and "date" (defaulting to "2024-01-01"), then retrieve their current parameter values into variables named "env" and "date".',
+    question: 'This notebook runs as a task of a Databricks Workflow (Lakeflow Job). Declare text widgets for the parameters "env" (default "dev") and "batch_date" (default "2024-01-01"), then read their values into variables named "env" and "batch_date".',
     starterCode: `# Declare widgets and retrieve parameter values\n`,
+    requires: [/widgets\.text\(\s*(name\s*=\s*)?["']env["']\s*,\s*(defaultValue\s*=\s*)?["']dev["']/, /widgets\.text\(\s*(name\s*=\s*)?["']batch_date["']\s*,\s*(defaultValue\s*=\s*)?["']2024-01-01["']/, /\benv\s*=\s*dbutils\.widgets\.get\(\s*["']env["']\s*\)/, /\bbatch_date\s*=\s*dbutils\.widgets\.get\(\s*["']batch_date["']\s*\)/],
     testCases: [
       {
-        input: 'Job parameters',
-        expectedOutput: 'dbutils.widgets.text and dbutils.widgets.get',
-        description: 'Should get job parameters with defaults',
+        input: 'Job parameters env and batch_date',
+        expectedOutput: 'dbutils.widgets.text(...) for each, then dbutils.widgets.get(...) into env and batch_date',
+        description: 'Should declare both widgets with defaults and read them',
       },
     ],
-    solution: `dbutils.widgets.text("env", "dev")\ndbutils.widgets.text("date", "2024-01-01")\n\nenv = dbutils.widgets.get("env")\ndate = dbutils.widgets.get("date")\n# OR\ndbutils.widgets.text('env', 'dev')\ndbutils.widgets.text('date', '2024-01-01')\n\nenv = dbutils.widgets.get('env')\ndate = dbutils.widgets.get('date')`,
-    explanation: 'Workflows pass parameters to notebooks via widgets. text() declares the parameter — the default is used when running interactively (not from a Workflow). get() reads the actual value. When a Workflow triggers the notebook, it overrides the defaults with the job parameters.',
-    hints: ['Declare first with dbutils.widgets.text("env", "dev")', 'Then read with dbutils.widgets.get("env")', 'The default is only used when running the notebook manually — Workflows override it'],
+    solution: `dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("batch_date", "2024-01-01")
+
+env = dbutils.widgets.get("env")
+batch_date = dbutils.widgets.get("batch_date")
+# OR
+dbutils.widgets.text('env', 'dev')
+dbutils.widgets.text('batch_date', '2024-01-01')
+
+env = dbutils.widgets.get('env')
+batch_date = dbutils.widgets.get('batch_date')`,
+    explanation: 'Job parameters reach a notebook task as widgets. `dbutils.widgets.text(name, default)` declares a widget, and its default is used only when someone runs the notebook by hand; in a job run, the job parameter of the same name sets it. `dbutils.widgets.get(name)` returns the value as a string, so batch_date is the string "2024-01-01" unless the job passes another date.',
+    hints: ['Declare each widget first, e.g. dbutils.widgets.text("env", "dev")', 'Then read it with dbutils.widgets.get("env")', 'The default is used only when the notebook runs by hand; a job parameter overrides it'],
     tieredHints: {
-      apiSignature: 'dbutils.widgets.text(name, defaultValue) -> None',
-      skeleton: '____.____.____(____, ____)\n____.____.____(____, ____)\n\nenv = ____.____.____("env")\ndate = ____.____.____("date")',
+      apiSignature: 'dbutils.widgets.text(name, defaultValue) -> None; dbutils.widgets.get(name) -> str',
+      skeleton: `____.____.____("env", ____)
+____.____.____("batch_date", ____)
+
+env = ____.____.____("env")
+batch_date = ____.____.____("batch_date")`,
     },
     tags: ['workflows', 'parameters', 'widgets'],
     concepts: ['dbx-workflows', 'dbx-widgets'],
@@ -1402,18 +1572,20 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
     language: CodeLanguage.PYTHON,
-    question: 'Compute the record count from DataFrame "df" into variable "record_count", then exit the notebook task returning the count formatted as a string value for downstream Workflow task orchestration.',
-    starterCode: `# Compute record count and exit notebook with string value\n`,
+    question: 'A parent notebook runs this notebook as a child and uses the value the child hands back when it ends. Count the rows of the DataFrame "df" into "record_count", then end this notebook so that the parent receives the count as a string.',
+    starterCode: `# Count the rows, then end the notebook with the count as a string
+`,
+    requires: [/record_count\s*=\s*df\.count\(\s*\)/, /dbutils\.notebook\.exit\(\s*(str\(\s*record_count\s*\)|f["']\{record_count\}["'])\s*\)/],
     testCases: [
       {
-        input: 'notebook processing result',
-        expectedOutput: 'dbutils.notebook.exit()',
-        description: 'Should exit with result',
+        input: 'DataFrame df',
+        expectedOutput: 'record_count = df.count(); dbutils.notebook.exit(str(record_count))',
+        description: 'Should exit the notebook with the count as a string',
       },
     ],
     solution: `record_count = df.count()\ndbutils.notebook.exit(str(record_count))\n# OR\nrecord_count = df.count()\ndbutils.notebook.exit(f"{record_count}")`,
-    explanation: 'notebook.exit() returns a string to the Workflow orchestrator. The value must be a string — passing an int causes an error. Downstream tasks reference it with {{tasks.task_name.result}} in their parameters, enabling task-to-task communication.',
-    hints: ['Use dbutils.notebook.exit()', 'Value must be a string', 'Downstream tasks access via task references'],
+    explanation: `\`dbutils.notebook.exit(value)\` ends the notebook and hands value back to whatever ran it: \`dbutils.notebook.run\` returns it to the parent notebook, and a job run shows it as the task's output. The value is a string, so convert the count with str() first. This is not how one job task hands a value to the next: no \`{{tasks...}}\` reference reads an exit value, so between tasks use \`dbutils.jobs.taskValues.set\` and \`get\`.`,
+    hints: ['Count the rows with df.count()', 'dbutils.notebook.exit(value) ends the notebook and returns value to the caller', 'The value is a string: wrap the count in str()'],
     tieredHints: {
       apiSignature: 'dbutils.notebook.exit(value) -> None',
       skeleton: '____ = ____.____()\n____.____.____(____(____))',
@@ -1427,14 +1599,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'How can values be passed between tasks within a Databricks Workflow?',
+    question: 'Which is the built-in way for one task of a Databricks Workflow (Lakeflow Job) to hand a small value, such as a row count, to a later task?',
     options: [
-      { id: 'a', text: 'By exporting global environment variables in Python scripts that persist across distinct cluster nodes', isCorrect: false },
-      { id: 'b', text: 'By writing temporary JSON files to DBFS storage and reading them in subsequent task executions', isCorrect: false },
-      { id: 'c', text: 'By setting task values with dbutils.jobs.taskValues.set() and referencing them in downstream parameters', isCorrect: true },
-      { id: 'd', text: 'Inter-task value passing is not supported; tasks must operate as completely isolated state units', isCorrect: false },
+      { id: 'a', text: 'Export it as an environment variable, which every later task of the same run can read', isCorrect: false },
+      { id: 'b', text: 'Return it with dbutils.notebook.exit(), which later tasks read as {{tasks.<task>.result}}', isCorrect: false },
+      { id: 'c', text: 'Set it with dbutils.jobs.taskValues.set() and read it later with taskValues.get() or a reference', isCorrect: true },
+      { id: 'd', text: 'Store it in a Python global variable, since all tasks of one run share the same Python process', isCorrect: false },
     ],
-    explanation: 'dbutils.jobs.taskValues.set(key, value) stores a value in the upstream task. Downstream tasks reference it using {{tasks.upstream_task_name.values.key}} in their parameters.',
+    explanation: `\`dbutils.jobs.taskValues.set(key, value)\` stores a small JSON-serializable value (up to 48 KiB) with the task's run, and a later task that depends on it reads it with \`dbutils.jobs.taskValues.get(taskKey=..., key=...)\` or receives it as a parameter through \`{{tasks.<task>.values.<key>}}\`. Each task is its own run, often on its own compute, so environment and Python variables are gone when the next task starts. A notebook's exit value goes back to a caller of \`dbutils.notebook.run\`, and no \`{{tasks...}}\` reference reads it. A large result belongs in a table that the next task reads.`,
     tags: ['workflows', 'task-values', 'inter-task'],
     concepts: ['dbx-workflows'],
   },
@@ -1445,21 +1617,22 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DATABRICKS_WORKFLOWS,
     language: CodeLanguage.PYTHON,
-    question: 'Use the Databricks utilities job task values API to set a task value with key "row_count" and integer value 1000 so downstream Workflow tasks can read it.',
+    question: 'In the notebook of a job task, store the integer 1000 as a task value with the key "row_count" so that later tasks in the job can read it.',
     starterCode: `# Set task value row_count to 1000\n`,
+    requires: [/dbutils\.jobs\.taskValues\.set\(/, /set\(\s*(key\s*=\s*)?["']row_count["']\s*,\s*(value\s*=\s*)?1000\s*\)|set\(\s*value\s*=\s*1000\s*,\s*key\s*=\s*["']row_count["']\s*\)/],
     testCases: [
       {
         input: 'task output',
-        expectedOutput: 'dbutils.jobs.taskValues.set("row_count", 1000)',
-        description: 'Should set task value',
+        expectedOutput: 'dbutils.jobs.taskValues.set(key="row_count", value=1000)',
+        description: 'Should set the row_count task value',
       },
     ],
     solution: `dbutils.jobs.taskValues.set(key="row_count", value=1000)\n# OR\ndbutils.jobs.taskValues.set("row_count", 1000)`,
-    explanation: 'dbutils.jobs.taskValues.set() stores key-value pairs that downstream tasks can read. Values can be strings, numbers, or booleans. Downstream tasks reference them with {{tasks.task_name.values.row_count}}.',
-    hints: ['Use dbutils.jobs.taskValues.set(key, value)', 'Key is a string, value can be string/number/bool'],
+    explanation: `\`dbutils.jobs.taskValues.set(key, value)\` stores a value with this task's run; the value must be JSON-serializable (a number, string, boolean, list or dict) and no larger than 48 KiB. A later task that depends on this one reads it with \`dbutils.jobs.taskValues.get(taskKey="<this task>", key="row_count")\` or a \`{{tasks.<this task>.values.row_count}}\` parameter. Run outside a job, set does nothing.`,
+    hints: ['Task values live under dbutils.jobs.taskValues', 'set takes the key, then the value'],
     tieredHints: {
       apiSignature: 'dbutils.jobs.taskValues.set(key, value)',
-      skeleton: 'dbutils.jobs.____.____(key=____, value=1000)',
+      skeleton: 'dbutils.jobs.____.____(key=____, value=____)',
     },
     tags: ['workflows', 'taskValues', 'set'],
     concepts: ['dbx-workflows'],
@@ -1470,14 +1643,14 @@ CREATE OR REFRESH MATERIALIZED VIEW clean_orders (
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DATABRICKS_WORKFLOWS,
-    question: 'What is the purpose of the repair run feature in Databricks Workflows?',
+    question: 'What does a repair run do for a run of a Databricks Workflow (Lakeflow Job) that failed?',
     options: [
-      { id: 'a', text: 'To clean up corrupted Delta table data files caused by unexpected worker node hardware failures', isCorrect: false },
-      { id: 'b', text: 'To re-execute only failed and skipped tasks from a previous run without re-running successful tasks', isCorrect: true },
-      { id: 'c', text: 'To automatically tune Spark cluster memory settings and optimize shuffle partition counts', isCorrect: false },
-      { id: 'd', text: 'To repair broken workspace Git repository connections and re-synchronize local code commits', isCorrect: false },
+      { id: 'a', text: 'It reruns the whole job from its first task, with the same parameters as the failed run', isCorrect: false },
+      { id: 'b', text: 'It reruns only the failed tasks and those skipped because of them, keeping the tasks that succeeded', isCorrect: true },
+      { id: 'c', text: 'It retries a failing task a set number of times while the run is still going, before marking it failed', isCorrect: false },
+      { id: 'd', text: 'It rolls back the tables the failed run wrote, restoring the versions from before the run began', isCorrect: false },
     ],
-    explanation: 'Repair runs let you retry just the failed and skipped tasks from a previous job run. Successfully completed tasks are skipped, saving time and compute resources.',
+    explanation: 'A repair run reruns, within the original run, only the tasks that failed and the tasks skipped as Upstream failed, so the tasks that succeeded do not run again; you can change parameters for it. Retries are a separate task setting that reruns a failing task automatically while the run is going. Neither rolls back tables: a task that wrote data before failing has written it, so tasks should be safe to rerun.',
     tags: ['workflows', 'repair-run', 'failure-recovery'],
     concepts: ['dbx-workflows'],
   },
