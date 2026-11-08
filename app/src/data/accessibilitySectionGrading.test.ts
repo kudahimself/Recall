@@ -114,6 +114,14 @@ describe('Web Dev Accessibility section grading', () => {
     expect(passes(q, swap(ref, '<div ref={detailsRef} tabIndex={-1}>', '<div tabIndex={-1} ref={detailsRef}>'))).toBe(true);
   });
 
+  it('a11y-tabindex-coding-1 steps over arrow-function attributes inside the opening tag', () => {
+    const q = coding('a11y-tabindex-coding-1');
+    const ref = branches(q)[0];
+    expect(hardFails(q, swap(ref, '<div tabIndex={0}>', '<div tabIndex={0} onKeyDown={(e) => handleKey(e)}>'))).toBe(false);
+    expect(hardFails(q, swap(ref, '<div ref={detailsRef} tabIndex={-1}>', '<div ref={detailsRef} onBlur={() => setOpen(false)} tabIndex={-1}>'))).toBe(false);
+    expect(hardFails(q, swap(ref, '<div ref={detailsRef} tabIndex={-1}>', '<div tabIndex={-1} onFocus={() => track()} ref={detailsRef}>'))).toBe(false);
+  });
+
   it('a11y-modal-1 rejects no Escape, no Tab trap, a listener never removed, no name, no aria-modal and a non-modal show()', () => {
     const q = coding('a11y-modal-1');
     const [ref, native] = branches(q);

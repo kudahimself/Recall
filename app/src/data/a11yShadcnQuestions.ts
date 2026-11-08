@@ -1130,8 +1130,8 @@ function CardDetails({ detailsRef, children }) {
   return <div ref={detailsRef} tabIndex="-1">{children}</div>;
 }`,
     requires: [
-      /tabIndex\s*=\s*(\{\s*0\s*\}|["']0["'])[^>]*>[^{}]*\{\s*title\s*\}/,
-      /ref\s*=\s*\{\s*detailsRef\s*\}[^>]*tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])|tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])[^>]*ref\s*=\s*\{\s*detailsRef\s*\}/,
+      /tabIndex\s*=\s*(\{\s*0\s*\}|["']0["'])(?:=>|[^>])*>[^{}]*\{\s*title\s*\}/,
+      /ref\s*=\s*\{\s*detailsRef\s*\}(?:=>|[^>])*tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])|tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])(?:=>|[^>])*ref\s*=\s*\{\s*detailsRef\s*\}/,
     ],
     explanation:
       'tabIndex={0} puts an element that is not focusable by nature into the Tab order at its place in the document, the same place a <button> there would take. tabIndex={-1} makes an element focusable from script, with .focus(), while Tab skips it: right for a panel you move focus into when it opens, a dialog\'s container or a skip link\'s target. A positive value such as tabIndex={1} is never used, because every positive tabindex is visited first, in order of value, before the rest of the page, wherever it sits, so the keyboard order stops matching the order the page reads in and breaks again whenever the page changes. A div that must also act like a button still needs a role and key handlers, which is why a real <button> is the better choice when it does something.',
