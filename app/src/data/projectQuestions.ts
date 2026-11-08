@@ -324,7 +324,7 @@ renderProducts(products);`,
   },
 
   // =====================================================================
-  // CHECKPOINT 2: After TypeScript + React (Topic.TS_PROJECT) — 3 questions
+  // CHECKPOINT 2: After TypeScript + React (Topic.TS_PROJECT) - 2 questions
   // =====================================================================
 
   {
@@ -334,62 +334,8 @@ renderProducts(products);`,
     topic: Topic.TS_PROJECT,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build a Generic DataTable<T> Component
-
-Create a fully-typed, reusable DataTable component that works with ANY data shape using TypeScript generics. It should accept:
-- data: T[] — the array of objects to display
-- columns: Column<T>[] — column definitions with key, header text, and optional custom render function
-- onRowClick?: (item: T) => void — optional row click handler
-
-The component should render an HTML table with proper headers and rows. The Column type's "key" should be constrained to actual keys of T.`,
-    starterCode: `import React from 'react';
-
-// Define the Column type with generics
-// - key: must be a key of T (use keyof T)
-// - header: string label for the column header
-// - render: optional custom render function that receives the item
-interface Column<T> {
-  // TODO: Define the interface
-}
-
-// Define the props for DataTable
-interface DataTableProps<T> {
-  // TODO: Define the props
-}
-
-// Build the DataTable component
-// Use a generic function syntax: function DataTable<T>(...) or
-// const DataTable = <T extends Record<string, unknown>>(...) => ...
-function DataTable<T extends { id: string | number }>({
-  data,
-  columns,
-  onRowClick,
-}: DataTableProps<T>) {
-  return (
-    // TODO: Render a <table> with:
-    // - <thead> with a <tr> containing <th> for each column header
-    // - <tbody> with a <tr> for each data item
-    //   - Each <tr> should have onClick={onRowClick} if provided
-    //   - Each <td> should use column.render(item) if render exists,
-    //     otherwise display String(item[column.key])
-    //   - Use item.id as the key for each row
-    <table></table>
-  );
-}
-
-export default DataTable;
-
-// Example usage (for reference):
-// <DataTable<User>
-//   data={users}
-//   columns={[
-//     { key: 'name', header: 'Name' },
-//     { key: 'email', header: 'Email' },
-//     { key: 'role', header: 'Role', render: (user) => <Badge>{user.role}</Badge> },
-//   ]}
-//   onRowClick={(user) => navigate(\`/users/\${user.id}\`)}
-// />
-`,
+    question: `Build a Generic DataTable<T> Component\n\nCreate a fully typed, reusable DataTable component that works with any row type using TypeScript generics. The starter gives the component's signature: T is constrained to { id: string | number }, so every row has an id.\n\nDefine Column<T> with:\n- key: keyof T, so a column can only name a real property of T\n- header: string, the column's header text\n- render?: (item: T) => React.ReactNode, an optional custom cell renderer\n\nDefine DataTableProps<T> with:\n- data: T[], the rows to display\n- columns: Column<T>[]\n- onRowClick?: (item: T) => void, an optional row click handler\n\nThe component renders a <table>: a <thead> row with a <th> per column showing its header, and a <tbody> with a <tr> per item, keyed by item.id. Each <td> shows column.render(item) when the column has a render function, otherwise String(item[column.key]). Clicking a row calls onRowClick with that row's item, when onRowClick was given.`,
+    starterCode: `import React from 'react';\n\n// Column<T>: key, header, optional render\ninterface Column<T> {\n  // TODO\n}\n\n// DataTableProps<T>: data, columns, optional onRowClick\ninterface DataTableProps<T> {\n  // TODO\n}\n\nfunction DataTable<T extends { id: string | number }>({\n  data,\n  columns,\n  onRowClick,\n}: DataTableProps<T>) {\n  return (\n    // TODO: the <table>\n    <table></table>\n  );\n}\n\nexport default DataTable;\n\n// Example usage (for reference):\n// <DataTable<User>\n//   data={users}\n//   columns={[\n//     { key: 'name', header: 'Name' },\n//     { key: 'role', header: 'Role', render: (user) => <Badge>{user.role}</Badge> },\n//   ]}\n//   onRowClick={(user) => navigate(\`/users/\${user.id}\`)}\n// />\n`,
     testCases: [
       {
         input: 'Column interface',
@@ -407,73 +353,13 @@ export default DataTable;
         description: 'Uses custom render function or falls back to displaying the value',
       },
     ],
-    solution: `import React from 'react';
-
-interface Column<T> {
-  key: keyof T;
-  header: string;
-  render?: (item: T) => React.ReactNode;
-}
-
-interface DataTableProps<T> {
-  data: T[];
-  columns: Column<T>[];
-  onRowClick?: (item: T) => void;
-}
-
-function DataTable<T extends { id: string | number }>({
-  data,
-  columns,
-  onRowClick,
-}: DataTableProps<T>) {
-  return (
-    <table>
-      <thead>
-        <tr>
-          {columns.map((col) => (
-            <th key={String(col.key)}>{col.header}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((item) => (
-          <tr
-            key={item.id}
-            onClick={() => onRowClick?.(item)}
-            style={{ cursor: onRowClick ? 'pointer' : 'default' }}
-          >
-            {columns.map((col) => (
-              <td key={String(col.key)}>
-                {col.render ? col.render(item) : String(item[col.key])}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-export default DataTable;`,
-    explanation: `Architectural decisions:
-
-1. **keyof T constraint** — Column's key property is typed as \`keyof T\`, so TypeScript will error if you try to use a column key that doesn't exist on the data type. This catches bugs at compile time.
-
-2. **Generic function syntax** — \`function DataTable<T>(...)\` lets the component work with any data type. When you write \`<DataTable<User> data={users} ...>\`, T becomes User and all the types flow through.
-
-3. **T extends { id: string | number }** — We constrain T to require an id field because React needs a stable key for each row. This is a practical constraint that makes the component usable.
-
-4. **Optional render function** — The fallback \`String(item[col.key])\` handles simple values, while custom render functions handle complex cells (badges, links, formatted dates). This is the "renderless component" pattern — the component handles structure, the consumer handles presentation.
-
-5. **Optional chaining for onRowClick** — \`onRowClick?.(item)\` safely handles the case where no click handler is provided.`,
-    hints: [
-      'keyof T gives you a union of all property names of T as string literal types',
-      'You need to use String(col.key) when using keyof T as a React key prop',
-      'The render function should return React.ReactNode for maximum flexibility',
-    ],
+    solution: `import React from 'react';\n\ninterface Column<T> {\n  key: keyof T;\n  header: string;\n  render?: (item: T) => React.ReactNode;\n}\n\ninterface DataTableProps<T> {\n  data: T[];\n  columns: Column<T>[];\n  onRowClick?: (item: T) => void;\n}\n\nfunction DataTable<T extends { id: string | number }>({\n  data,\n  columns,\n  onRowClick,\n}: DataTableProps<T>) {\n  return (\n    <table>\n      <thead>\n        <tr>\n          {columns.map((col) => (\n            <th key={String(col.key)}>{col.header}</th>\n          ))}\n        </tr>\n      </thead>\n      <tbody>\n        {data.map((item) => (\n          <tr key={item.id} onClick={() => onRowClick?.(item)}>\n            {columns.map((col) => (\n              <td key={String(col.key)}>\n                {col.render ? col.render(item) : String(item[col.key])}\n              </td>\n            ))}\n          </tr>\n        ))}\n      </tbody>\n    </table>\n  );\n}\n\nexport default DataTable;\n# OR\nimport React from 'react';\n\ninterface Column<T> {\n  key: keyof T;\n  header: string;\n  render?: (item: T) => React.ReactNode;\n}\n\ninterface DataTableProps<T> {\n  data: T[];\n  columns: Column<T>[];\n  onRowClick?: (item: T) => void;\n}\n\nfunction DataTable<T extends { id: string | number }>({\n  data,\n  columns,\n  onRowClick,\n}: DataTableProps<T>) {\n  return (\n    <table>\n      <thead>\n        <tr>\n          {columns.map((col) => (\n            <th key={String(col.key)}>{col.header}</th>\n          ))}\n        </tr>\n      </thead>\n      <tbody>\n        {data.map((item) => (\n          <tr key={item.id} onClick={onRowClick ? () => onRowClick(item) : undefined}>\n            {columns.map((col) => (\n              <td key={String(col.key)}>\n                {col.render ? col.render(item) : String(item[col.key])}\n              </td>\n            ))}\n          </tr>\n        ))}\n      </tbody>\n    </table>\n  );\n}\n\nexport default DataTable;`,
+    requires: [/\bkey\s*:\s*keyof\s+T\b/, /\bheader\s*:\s*string/, /\brender\s*\?\s*:\s*\(\s*\w+\s*:\s*T\s*\)\s*=>/, /\bdata\s*:\s*(T\[\]|Array<T>)/, /\bcolumns\s*:\s*(Column<\s*T\s*>\[\]|Array<Column<\s*T\s*>>)/, /\bonRowClick\s*\?\s*:\s*\(\s*\w+\s*:\s*T\s*\)\s*=>\s*void/, /\.render\s*\(\s*\w+\s*\)/, /String\(\s*\w+\[\s*\w+\.key\s*\]\s*\)/, /key=\{\s*\w+\.id\s*\}/, /onRowClick\s*(\?\.)?\s*\(\s*\w+\s*\)/],
+    explanation: 'Design decisions:\n\n1. **keyof T for the column key**: `key: keyof T` makes TypeScript reject a column that names a property the row type does not have, so `{ key: \'nmae\' }` is a compile error.\n\n2. **A generic component**: `function DataTable<T>(...)` works with any row type. Writing `<DataTable<User> ...>` (or letting TypeScript infer T from data) makes every column key and render function check against User.\n\n3. **T extends { id: string | number }**: React needs a stable key for each row, so the constraint guarantees `item.id` exists.\n\n4. **An optional render function**: the fallback `String(item[col.key])` handles plain values, while a render prop handles cells that need markup (badges, links, formatted dates); the table owns the structure and the caller owns the cell content.\n\n5. **Passing the item, not the event**: `onClick={onRowClick}` would hand the handler a mouse event; `() => onRowClick?.(item)` calls it with the row, and `?.` skips the call when no handler was given.',
+    hints: ['keyof T is the union of T\'s property names', 'keyof T can include number and symbol keys, so wrap col.key in String() for the React key', 'Call onRowClick with the item, not the click event'],
     tieredHints: {
       apiSignature: 'interface Column<T> { key: keyof T; header: string; render?: (item: T) => React.ReactNode; }',
-      skeleton: 'function DataTable<T extends { id: string | number }>({\n  data,\n  columns,\n  onRowClick,\n}: DataTableProps<T>) {\n  return (\n    <table>\n      <thead>\n        <tr>\n          {columns.map((col) => (\n            <th key={String(col.key)}>{col.header}</th>\n          ))}\n        </tr>\n      </thead>\n      <tbody>\n        {data.map((item) => (\n          <tr\n            key={item.id}\n            onClick={() => ____}\n            style={{ cursor: onRowClick ? "pointer" : "default" }}\n          >\n            {columns.map((col) => (\n              <td key={String(col.key)}>\n                {col.render ? ____ : ____}\n              </td>\n            ))}\n          </tr>\n        ))}\n      </tbody>\n    </table>\n  );\n}',
+      skeleton: '<table>\n  <thead>\n    <tr>\n      {columns.map((col) => (\n        <th key={____}>{____}</th>\n      ))}\n    </tr>\n  </thead>\n  <tbody>\n    {data.map((item) => (\n      <tr key={____} onClick={____}>\n        {columns.map((col) => (\n          <td key={String(col.key)}>{____}</td>\n        ))}\n      </tr>\n    ))}\n  </tbody>\n</table>',
     },
     tags: ['generics', 'react', 'typescript', 'components', 'project'],
     concepts: ['ts-generics'],
@@ -486,22 +372,8 @@ export default DataTable;`,
     topic: Topic.TS_PROJECT,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build a useLocalStorage<T> Custom Hook
-
-Create a typed React hook that works like useState but automatically syncs with localStorage. Requirements:
-1. Generic type T for the stored value
-2. Reads initial value from localStorage on mount (falls back to initialValue param)
-3. Writes to localStorage whenever the value changes
-4. Handles JSON parse/stringify
-5. Handles SSR safety (window might not exist)
-6. Returns [value, setValue] tuple just like useState`,
-    starterCode: `// Import useState and useEffect from react
-// Export default a generic useLocalStorage<T>(key, initialValue) returning [T, Dispatch<SetStateAction<T>>]
-// Use a lazy useState initializer that checks typeof window !== 'undefined',
-// reads localStorage.getItem(key), JSON.parses it (try/catch around parse), falls back to initialValue
-// useEffect([key, value]) writes JSON.stringify(value) back to localStorage when window exists
-// Return the [value, setValue] tuple
-`,
+    question: `Build a useLocalStorage<T> Custom Hook\n\nWrite a typed React hook, exported as the default export, that works like useState but keeps its value in localStorage:\n\n1. Signature: useLocalStorage<T>(key: string, initialValue: T), returning [T, React.Dispatch<React.SetStateAction<T>>], the same tuple useState returns.\n2. Read the stored value once, in a lazy useState initializer: return initialValue when typeof window is "undefined" (on the server) or nothing is stored under key; otherwise JSON.parse the stored string, and fall back to initialValue if parsing throws.\n3. In a useEffect that depends on [key, value], write JSON.stringify(value) to localStorage under key, skipping it when window does not exist.\n4. Return [value, setValue].`,
+    starterCode: `import { useState, useEffect } from 'react';\n\n// useLocalStorage<T>(key, initialValue)\n`,
     testCases: [
       {
         input: 'Lazy initializer',
@@ -519,103 +391,18 @@ Create a typed React hook that works like useState but automatically syncs with 
         description: 'Checks for window existence for SSR compatibility',
       },
     ],
-    solution: `import { useState, useEffect } from 'react';
-
-function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [value, setValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
-    try {
-      const stored = localStorage.getItem(key);
-      return stored ? (JSON.parse(stored) as T) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      console.warn(\`Failed to save \${key} to localStorage\`);
-    }
-  }, [key, value]);
-
-  return [value, setValue];
-}
-
-export default useLocalStorage;`,
-    explanation: `Key design decisions:
-
-1. **Lazy initializer** — useState accepts a function that runs only on the first render. This is critical because reading from localStorage is synchronous I/O — you don't want it running on every re-render. The function form \`useState(() => ...)\` ensures it runs once.
-
-2. **SSR safety** — \`typeof window === 'undefined'\` is the standard check for server-side rendering environments (Next.js SSR, etc.) where localStorage doesn't exist. We fall back to initialValue in that case.
-
-3. **Try-catch around JSON.parse** — Corrupted localStorage data shouldn't crash the app. If parsing fails, we silently fall back to initialValue. This defensive coding prevents runtime errors from breaking the entire component tree.
-
-4. **Generic return type** — The return type \`[T, React.Dispatch<React.SetStateAction<T>>]\` matches useState's signature exactly, so the hook is a drop-in replacement. The SetStateAction type allows both direct values and updater functions: \`setValue('new')\` or \`setValue(prev => ...)\`.
-
-5. **Effect dependencies** — \`[key, value]\` ensures we re-sync whenever the stored value changes OR when the storage key changes (useful if the key is dynamic).`,
-    hints: [
-      'useState can take a function as initial value — it will only run on first render',
-      'typeof window === "undefined" is the standard SSR check',
-      'Wrap JSON.parse in try-catch — corrupted localStorage data shouldn\'t crash the app',
-    ],
+    solution: `import { useState, useEffect } from 'react';\n\nfunction useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {\n  const [value, setValue] = useState<T>(() => {\n    if (typeof window === 'undefined') {\n      return initialValue;\n    }\n    try {\n      const stored = localStorage.getItem(key);\n      return stored ? (JSON.parse(stored) as T) : initialValue;\n    } catch {\n      return initialValue;\n    }\n  });\n\n  useEffect(() => {\n    if (typeof window === 'undefined') return;\n    localStorage.setItem(key, JSON.stringify(value));\n  }, [key, value]);\n\n  return [value, setValue];\n}\n\nexport default useLocalStorage;\n# OR\nimport { useState, useEffect, type Dispatch, type SetStateAction } from 'react';\n\nexport default function useLocalStorage<T>(key: string, initialValue: T): [T, Dispatch<SetStateAction<T>>] {\n  const [value, setValue] = useState<T>(() => {\n    if (typeof window === 'undefined') return initialValue;\n    try {\n      const stored = localStorage.getItem(key);\n      return stored === null ? initialValue : JSON.parse(stored);\n    } catch {\n      return initialValue;\n    }\n  });\n\n  useEffect(() => {\n    if (typeof window !== 'undefined') {\n      localStorage.setItem(key, JSON.stringify(value));\n    }\n  }, [key, value]);\n\n  return [value, setValue];\n}`,
+    requires: [/useLocalStorage\s*<\s*T\s*,?\s*>/, /\bkey\s*:\s*string\b/, /\binitialValue\s*:\s*T\b/, /useState\s*(<\s*T\s*>)?\s*\(\s*\(\s*\)\s*=>/, /typeof\s+window\s*[!=]==?\s*["\x27]undefined["\x27]/, /localStorage\.getItem\s*\(\s*key\s*\)/, /JSON\.parse/, /\bcatch\b/, /localStorage\.setItem\s*\(\s*key\s*,\s*JSON\.stringify\s*\(\s*value\s*\)\s*\)/, /\[\s*key\s*,\s*value\s*\]|\[\s*value\s*,\s*key\s*\]/, /export\s+default/],
+    explanation: 'Key design decisions:\n\n1. **A lazy initializer**: `useState(() => ...)` runs its function only on the first render, so the synchronous localStorage read and the JSON.parse do not run again on every re-render.\n\n2. **The server check**: `typeof window === \'undefined\'` is true while a framework such as Next.js renders the component on the server, where localStorage does not exist, so the hook falls back to initialValue there. On a server-rendered page this means the server HTML shows initialValue while the browser\'s first render may read a stored value, which React reports as a hydration mismatch; when that matters, start from initialValue and read storage in an effect, or render the component only on the client.\n\n3. **try/catch around JSON.parse**: corrupted or hand-edited storage should not crash the app, so a parse error falls back to initialValue.\n\n4. **The return type**: `[T, React.Dispatch<React.SetStateAction<T>>]` is exactly what useState returns, so the hook is a drop-in replacement, and SetStateAction lets callers pass a value or an updater, `setValue(prev => ...)`.\n\n5. **The dependencies**: `[key, value]` writes again whenever the value changes, and also when the key changes, for a hook whose key is dynamic.',
+    hints: ['useState can take a function as its initial value; it runs only on the first render', 'typeof window === "undefined" is the standard check for running on the server', 'Wrap JSON.parse in try/catch, so corrupted storage cannot crash the app'],
     tieredHints: {
       apiSignature: 'useState<T>(initialState: T | (() => T)): [T, Dispatch<SetStateAction<T>>]; useEffect(effect: EffectCallback, deps?: DependencyList): void',
-      skeleton: 'function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {\n  const [value, setValue] = useState<T>(() => {\n    if (____) return initialValue;\n    try {\n      const stored = ____;\n      return stored ? ____ : initialValue;\n    } catch {\n      return ____;\n    }\n  });\n\n  useEffect(() => {\n    if (____) return;\n    try {\n      ____;\n    } catch {\n      ____;\n    }\n  }, [____]);\n\n  return [value, setValue];\n}',
+      skeleton: 'function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {\n  const [value, setValue] = useState<T>(() => {\n    if (____) return initialValue;\n    try {\n      const stored = ____;\n      return ____;\n    } catch {\n      return ____;\n    }\n  });\n\n  useEffect(() => {\n    ____\n  }, [____]);\n\n  return [value, setValue];\n}',
     },
     tags: ['hooks', 'localstorage', 'generics', 'typescript', 'project'],
     concepts: ['js-dom-events', 'ts-generics'],
   },
 
-  {
-    id: 'proj-ts-3',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.TS_PROJECT,
-    course: Course.WEB_DEV,
-    question: `You have a list of 10,000 items rendered in React. The user can type into a search input to filter the list, but the filtering logic takes about 50ms. Users report the input feels laggy — keystrokes are delayed. What's the correct React optimization?`,
-    options: [
-      {
-        id: 'a',
-        text: 'Wrap the filter computation in useMemo — it will memoize the filtered results and skip recomputation when the input hasn\'t changed.',
-        isCorrect: false,
-      },
-      {
-        id: 'b',
-        text: 'Debounce the input with a 300ms delay using setTimeout — this reduces how often the filter runs.',
-        isCorrect: false,
-      },
-      {
-        id: 'c',
-        text: 'Use useDeferredValue on the search query — the input stays responsive at high priority while the filtered list re-renders at lower priority in the background.',
-        isCorrect: true,
-      },
-      {
-        id: 'd',
-        text: 'Use React.memo on the list component so it only re-renders when the filtered data actually changes.',
-        isCorrect: false,
-      },
-    ],
-    explanation: `useDeferredValue is the right answer because it solves the core problem: the input and the list are competing for the same render cycle.
-
-**Why useDeferredValue?** It lets React render the input update at high priority (so keystrokes feel instant) and defer the expensive list re-render to a lower-priority update. If new keystrokes come in while the list is re-rendering, React can abandon the stale render and start fresh. The UI stays responsive.
-
-**Why NOT useMemo?** useMemo memoizes the result, but the filter still runs synchronously when the input changes — it still blocks the render. useMemo helps when data hasn't changed, but here it changes on every keystroke.
-
-**Why NOT debounce?** Debounce adds artificial latency to the input itself. The user types and nothing happens for 300ms. useDeferredValue keeps the input instant and only defers the expensive part.
-
-**Why NOT React.memo?** The filtered data DOES change on every keystroke, so memo won't prevent re-renders. The problem isn't unnecessary renders — it's that the necessary render is too expensive to do synchronously.`,
-    hints: [
-      'The problem is that filtering blocks the input — the input and list compete for the same render',
-      'Think about what React 18 concurrent features were designed to solve',
-    ],
-    tags: ['performance', 'react', 'useDeferredValue', 'optimization', 'project'],
-    concepts: ['react-memoization'],
-  },
 
   // =====================================================================
   // CHECKPOINT 3: After Next.js Basics (Topic.NEXT_DEPLOYMENT) — 3 questions
