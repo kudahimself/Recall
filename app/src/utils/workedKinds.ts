@@ -59,6 +59,23 @@ export const NON_RUNNABLE_KINDS: NonRunnableKind[] = [
       || /^[^{}\n;]+\{\s*[a-z-]+\s*:[^{}]+\}/im.test(code),
   },
   {
+    // TSX or TypeScript that imports from Next.js (`next` or `next/<module>`, such as
+    // next/server, next/navigation, next/headers, next/cache or next/image), on one
+    // line or as a multi-line import, or that holds a "use client" / "use server"
+    // directive line, which only a Server Components framework such as Next.js
+    // reads. A page, layout, route handler, Server Action or middleware needs a
+    // Next.js project and its server to run, and what it shows is what that server
+    // renders or answers, which no runner here reproduces.
+    // It comes before the React kind, so a Next.js page that also imports React
+    // says it needs a Next.js project.
+    kind: 'a Next.js file (TSX or TypeScript that imports from next or says "use client" / "use server")',
+    needs: 'a Next.js project',
+    languages: ['jsx', 'typescript'],
+    test: code =>
+      /^\s*import\s[^;]*?\bfrom\s+['"]next(\/[\w-]+)*['"]/m.test(code)
+      || /^\s*['"]use (client|server)['"];?\s*$/m.test(code),
+  },
+  {
     // JSX that imports React (or react-dom / react-router), on one line or as a
     // multi-line `import {\n  a,\n} from "react"`, and holds a JSX element:
     // a paired `<p>...</p>`, a self-closing `<Card />` or a fragment `<>...</>`.
