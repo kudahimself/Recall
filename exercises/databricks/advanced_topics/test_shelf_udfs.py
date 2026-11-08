@@ -2,7 +2,6 @@ import contextlib
 import io
 
 import pytest
-from pyspark.sql import functions as F
 
 import shelf_udfs as su
 
