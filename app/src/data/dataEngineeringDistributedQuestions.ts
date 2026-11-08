@@ -1,755 +1,1125 @@
-import {
-  Question,
-  QuestionType,
-  Difficulty,
-  Topic,
-  Course,
-} from '../types';
+import { CodeLanguage, Course, Difficulty, Question, QuestionType, SqlTable, Topic } from '../types';
 
-// Data Engineering Concepts — Section 5: Distributed Systems & Storage
-// REBUILT as a true beginner ramp. Small topics: plain vocabulary (BEGINNER)
-// → applied choice (INTERMEDIATE) → deeper tradeoff (ADVANCED). Define every
-// term; spell out acronyms; short options; correct option never the longest;
-// correct letter varies. Fresh ids.
+/**
+ * Data Engineering, section "Distributed Data": the sixth section of the
+ * course rewrite (decisions and designs). Three topics, each taught by a
+ * lesson (src/data/lessons/dataEngineeringLessons.ts) and then practised with
+ * cards that make the learner produce the answer:
+ *
+ *   introduce: one term-check MCQ, predict the outcome over small tables;
+ *   combine:   choose and justify, order the steps (Parsons with prose lines);
+ *   apply:     spot the flaw, predict or choose under three or more constraints;
+ *   review:    explain in your own words (review-only, never a new card).
+ *
+ * Authoring rules for this file (the same as the sections before it):
+ *   - MCQ distractors are real misconceptions with their (wrong) reasoning,
+ *     options length-matched, no absolute-word giveaways;
+ *   - every predict-the-outcome answer is checked by running it:
+ *     dataEngineeringDistributedChecks.ts holds the check,
+ *     scripts/check-outcomes.js runs it (part of npm test);
+ *   - tool-agnostic: tables, SQL and a few lines of pseudo-config are the
+ *     notation, never one vendor's API. "Partition", "leader", "follower",
+ *     "quorum", "memtable" and "bloom filter" are the general terms; every
+ *     distributed engine and database has them under some name.
+ *
+ * It replaces the old MCQ-only Distributed Systems & Storage section
+ * (de-dist-, de-part-, de-repl-, de-lsm-, de-comp-); those ids are not reused.
+ */
 
-export const dataEngineeringDistributedQuestions: Question[] = [
-  // ===================================================================
-  // de_why_distribute — Why Distribute?
-  // ===================================================================
-  {
-    id: 'de-dist-1',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is a "distributed system"?',
-    options: [
-      { id: 'a', text: 'Many computers working together as one system', isCorrect: true },
-      { id: 'b', text: 'One very large computer in a locked room', isCorrect: false },
-      { id: 'c', text: 'A spreadsheet shared by email', isCorrect: false },
-      { id: 'd', text: 'A backup kept on a single disk', isCorrect: false },
-    ],
-    explanation: 'A distributed system spreads work and data across many computers (nodes) that coordinate to act like one system. It is how data platforms handle scale beyond a single machine.',
-    tags: ['distributed', 'vocabulary'],
-  },
-  {
-    id: 'de-dist-2',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why spread data across multiple machines?',
-    options: [
-      { id: 'a', text: 'Because the law requires at least two machines', isCorrect: false },
-      { id: 'b', text: 'The data or work is too big for one machine', isCorrect: true },
-      { id: 'c', text: 'To make every query slower on purpose', isCorrect: false },
-      { id: 'd', text: 'To hide the data from the people who own it', isCorrect: false },
-    ],
-    explanation: 'When data or processing exceeds what one machine can hold or handle, you distribute it across many machines so the combined capacity is large enough.',
-    tags: ['distributed', 'motivation'],
-  },
-  {
-    id: 'de-dist-3',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Besides capacity, what is a key benefit of distributing data?',
-    options: [
-      { id: 'a', text: 'It guarantees the data is always correct', isCorrect: false },
-      { id: 'b', text: 'It removes the need for any network', isCorrect: false },
-      { id: 'c', text: 'It can keep working even if one machine fails', isCorrect: true },
-      { id: 'd', text: 'It makes the data impossible to query', isCorrect: false },
-    ],
-    explanation: 'With copies across machines, a distributed system can tolerate failures: if one node goes down, others carry on. This fault tolerance is a major reason to distribute, alongside scale.',
-    tags: ['distributed', 'fault-tolerance'],
-  },
-  {
-    id: 'de-dist-4',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'In a cluster, what is a "node"?',
-    options: [
-      { id: 'a', text: 'A single row in a table', isCorrect: false },
-      { id: 'b', text: 'The password for the cluster', isCorrect: false },
-      { id: 'c', text: 'A chart on the dashboard', isCorrect: false },
-      { id: 'd', text: 'One machine in the system', isCorrect: true },
-    ],
-    explanation: 'A node is one machine (server) that is part of the distributed system. A cluster is a group of nodes working together.',
-    tags: ['distributed', 'node', 'vocabulary'],
-  },
-  {
-    id: 'de-dist-5',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is a downside of distributing data across machines?',
-    options: [
-      { id: 'a', text: 'Coordination over a network adds complexity', isCorrect: true },
-      { id: 'b', text: 'It permanently deletes half the data', isCorrect: false },
-      { id: 'c', text: 'It makes the data physically smaller', isCorrect: false },
-      { id: 'd', text: 'It stops the system from ever scaling', isCorrect: false },
-    ],
-    explanation: 'Distributing introduces network communication, partial failures, and coordination problems that a single machine never faces. That complexity is the price of scale and fault tolerance.',
-    tags: ['distributed', 'tradeoff'],
-  },
-  {
-    id: 'de-dist-6',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is the difference between scaling "horizontally" and "vertically"?',
-    options: [
-      { id: 'a', text: 'Horizontal is for text and vertical is only for images', isCorrect: false },
-      { id: 'b', text: 'Horizontal adds more machines; vertical makes one machine bigger', isCorrect: true },
-      { id: 'c', text: 'Horizontal deletes data while vertical restores it', isCorrect: false },
-      { id: 'd', text: 'They are two names for the very same thing', isCorrect: false },
-    ],
-    explanation: 'Vertical scaling means upgrading a single machine (more CPU/RAM) — simple but capped. Horizontal scaling means adding more machines — the basis of distributed systems and effectively unbounded.',
-    tags: ['distributed', 'scaling'],
-  },
-  {
-    id: 'de-dist-7',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'A dataset is 100TB and growing — far past one machine. What is the natural approach?',
-    options: [
-      { id: 'a', text: 'Delete data until it fits one machine', isCorrect: false },
-      { id: 'b', text: 'Print the data to free up disk space', isCorrect: false },
-      { id: 'c', text: 'Scale horizontally across many machines', isCorrect: true },
-      { id: 'd', text: 'Keep buying ever-bigger single machines forever', isCorrect: false },
-    ],
-    explanation: 'A single machine has a ceiling, and 100TB-and-growing exceeds it. Horizontal scaling — distributing the data across many machines — is the standard answer for data at this scale.',
-    tags: ['distributed', 'scenario'],
-  },
-  {
-    id: 'de-dist-8',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'The CAP theorem says that during a network partition a distributed system must choose between…',
-    options: [
-      { id: 'a', text: 'speed and storage cost', isCorrect: false },
-      { id: 'b', text: 'rows and columns', isCorrect: false },
-      { id: 'c', text: 'batch and streaming', isCorrect: false },
-      { id: 'd', text: 'consistency and availability', isCorrect: true },
-    ],
-    explanation: 'CAP (Consistency, Availability, Partition tolerance) says that when the network splits (a partition), a system can keep every reader perfectly consistent OR stay fully available, but not both. Real systems must tolerate partitions, so they pick where to land on that spectrum.',
-    tags: ['distributed', 'cap'],
-  },
-  {
-    id: 'de-dist-9',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_WHY_DISTRIBUTE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why are "partial failures" a defining challenge of distributed systems?',
-    options: [
-      { id: 'a', text: 'Some nodes fail while others keep running, so state can diverge', isCorrect: true },
-      { id: 'b', text: 'Every machine always fails at exactly the same moment', isCorrect: false },
-      { id: 'c', text: 'Failures never happen in a distributed system', isCorrect: false },
-      { id: 'd', text: 'A failure instantly stops the entire network', isCorrect: false },
-    ],
-    explanation: 'On a single machine, things either work or crash together. In a distributed system one node can fail or become unreachable while others continue, so different parts may hold different views of the data — which is exactly what makes consistency and coordination hard.',
-    tags: ['distributed', 'partial-failure'],
-  },
+const DE = Course.DATA_ENGINEERING;
 
-  // ===================================================================
-  // de_partitioning — Partitioning & Sharding
-  // ===================================================================
-  {
-    id: 'de-part-1',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'What does "partitioning" (sharding) mean?',
-    options: [
-      { id: 'a', text: 'Making a backup copy of the whole dataset', isCorrect: false },
-      { id: 'b', text: 'Splitting data across machines by some key', isCorrect: true },
-      { id: 'c', text: 'Compressing the data to save space', isCorrect: false },
-      { id: 'd', text: 'Encrypting the data with a password', isCorrect: false },
-    ],
-    explanation: 'Partitioning (also called sharding) divides a dataset into pieces spread across machines, usually based on a key. Each machine holds and serves its slice.',
-    tags: ['partitioning', 'vocabulary'],
-  },
-  {
-    id: 'de-part-2',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why partition data across machines?',
-    options: [
-      { id: 'a', text: 'To make sure only one machine is ever used', isCorrect: false },
-      { id: 'b', text: 'To guarantee data is never duplicated', isCorrect: false },
-      { id: 'c', text: 'To spread load so machines work in parallel', isCorrect: true },
-      { id: 'd', text: 'To stop the data from being queried', isCorrect: false },
-    ],
-    explanation: 'Partitioning spreads both storage and query load across machines, so they can process different slices in parallel — the key to scaling reads and writes horizontally.',
-    tags: ['partitioning', 'motivation'],
-  },
-  {
-    id: 'de-part-3',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'What does the "partition key" decide?',
-    options: [
-      { id: 'a', text: 'What colour the row appears in', isCorrect: false },
-      { id: 'b', text: 'How long the data is kept for', isCorrect: false },
-      { id: 'c', text: 'Who is allowed to read the row', isCorrect: false },
-      { id: 'd', text: 'Which machine a given row lands on', isCorrect: true },
-    ],
-    explanation: 'The partition key is the column whose value determines which partition (machine) a row belongs to — for example partitioning orders by customer_id.',
-    tags: ['partitioning', 'partition-key'],
-  },
-  {
-    id: 'de-part-4',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'Partitioning a users table "by user_id" means…',
-    options: [
-      { id: 'a', text: 'each user\'s rows are placed by their id', isCorrect: true },
-      { id: 'b', text: 'the user_id column is deleted', isCorrect: false },
-      { id: 'c', text: 'all rows go to a single machine', isCorrect: false },
-      { id: 'd', text: 'user_id becomes a password', isCorrect: false },
-    ],
-    explanation: 'Partitioning by user_id uses that column to assign rows to machines, so a given user\'s data consistently lands on the same partition — handy for per-user queries.',
-    tags: ['partitioning', 'example'],
-  },
-  {
-    id: 'de-part-5',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'What goes wrong if one partition gets far more data or traffic than the others?',
-    options: [
-      { id: 'a', text: 'All partitions instantly become faster', isCorrect: false },
-      { id: 'b', text: 'A "hot" partition becomes a bottleneck', isCorrect: true },
-      { id: 'c', text: 'The data automatically deletes itself', isCorrect: false },
-      { id: 'd', text: 'The other partitions take over its key', isCorrect: false },
-    ],
-    explanation: 'Uneven distribution creates a "hot" partition that does most of the work while others sit idle — a bottleneck that defeats the point of partitioning. This is called data skew.',
-    tags: ['partitioning', 'skew'],
-  },
-  {
-    id: 'de-part-6',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is the difference between hash partitioning and range partitioning?',
-    options: [
-      { id: 'a', text: 'Hash is for numbers and range is only for images', isCorrect: false },
-      { id: 'b', text: 'Hash deletes data while range keeps it', isCorrect: false },
-      { id: 'c', text: 'Hash scatters keys evenly; range groups nearby keys together', isCorrect: true },
-      { id: 'd', text: 'They both place every row on the same node', isCorrect: false },
-    ],
-    explanation: 'Hash partitioning runs the key through a hash to scatter rows evenly (good for balance, bad for range scans). Range partitioning groups consecutive key values together (good for range scans, but can create hotspots).',
-    tags: ['partitioning', 'hash-vs-range'],
-  },
-  {
-    id: 'de-part-7',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is "data skew" in a partitioned system?',
-    options: [
-      { id: 'a', text: 'Data is tilted at an angle on the disk', isCorrect: false },
-      { id: 'b', text: 'Data is perfectly balanced across all nodes', isCorrect: false },
-      { id: 'c', text: 'Data is encrypted on half of the nodes', isCorrect: false },
-      { id: 'd', text: 'Data is unevenly distributed, overloading some partitions', isCorrect: true },
-    ],
-    explanation: 'Skew is when some partitions hold far more data or get far more traffic than others — often because the partition key has a few very common values. The overloaded partitions limit overall throughput.',
-    tags: ['partitioning', 'skew'],
-  },
-  {
-    id: 'de-part-8',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'What makes a good partition key?',
-    options: [
-      { id: 'a', text: 'High cardinality that spreads rows evenly', isCorrect: true },
-      { id: 'b', text: 'A column with only two possible values', isCorrect: false },
-      { id: 'c', text: 'A column that is almost always null', isCorrect: false },
-      { id: 'd', text: 'The same constant value for every row', isCorrect: false },
-    ],
-    explanation: 'A good key has high cardinality (many distinct values) and spreads rows evenly across partitions, avoiding hotspots. Low-cardinality keys (like a boolean or a constant) crowd rows onto a few partitions and cause skew.',
-    tags: ['partitioning', 'key-choice'],
-  },
-  {
-    id: 'de-part-9',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_PARTITIONING,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why is changing the partition key of a large existing dataset expensive?',
-    options: [
-      { id: 'a', text: 'The partition key cannot legally be changed', isCorrect: false },
-      { id: 'b', text: 'Rows must be relocated to new partitions across the cluster', isCorrect: true },
-      { id: 'c', text: 'It instantly deletes all of the data', isCorrect: false },
-      { id: 'd', text: 'It only affects a single row at a time for free', isCorrect: false },
-    ],
-    explanation: 'The partition key decides where each row lives, so changing it means recomputing placement and physically moving large amounts of data between machines — a costly, network-heavy operation. That is why the key is chosen carefully up front.',
-    tags: ['partitioning', 'repartitioning'],
-  },
+const table = (name: string, columns: string[], rows: (string | number | null)[][]): SqlTable => ({ name, columns, rows });
 
-  // ===================================================================
-  // de_replication — Replication & Consistency
-  // ===================================================================
-  {
-    id: 'de-repl-1',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is "replication"?',
-    options: [
-      { id: 'a', text: 'Splitting data into different slices by key', isCorrect: false },
-      { id: 'b', text: 'Compressing data to take less space', isCorrect: false },
-      { id: 'c', text: 'Keeping copies of the same data on multiple machines', isCorrect: true },
-      { id: 'd', text: 'Deleting old copies of the data', isCorrect: false },
-    ],
-    explanation: 'Replication stores copies of the same data on several machines. If one fails, a copy remains — the basis of durability and high availability.',
-    tags: ['replication', 'vocabulary'],
-  },
-  {
-    id: 'de-repl-2',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why replicate data?',
-    options: [
-      { id: 'a', text: 'So the data takes up more disk space', isCorrect: false },
-      { id: 'b', text: 'So only one user can read it', isCorrect: false },
-      { id: 'c', text: 'So queries are guaranteed to be wrong', isCorrect: false },
-      { id: 'd', text: 'So the system survives a machine failure', isCorrect: true },
-    ],
-    explanation: 'Replication provides durability and availability: if a machine holding the data dies, a replica still has it, so the system keeps serving reads and does not lose data.',
-    tags: ['replication', 'motivation'],
-  },
-  {
-    id: 'de-repl-3',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'In a leader/follower setup, what does the "leader" do?',
-    options: [
-      { id: 'a', text: 'Accepts writes and passes changes to followers', isCorrect: true },
-      { id: 'b', text: 'Only ever reads, never writes', isCorrect: false },
-      { id: 'c', text: 'Deletes the followers each night', isCorrect: false },
-      { id: 'd', text: 'Stores absolutely none of its own data whatsoever at all', isCorrect: false },
-    ],
-    explanation: 'In leader/follower replication, the leader receives writes and then replicates those changes to the followers, which keep copies and can serve reads.',
-    tags: ['replication', 'leader-follower'],
-  },
-  {
-    id: 'de-repl-4',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'How is replication different from partitioning?',
-    options: [
-      { id: 'a', text: 'Replication splits data; partitioning copies it', isCorrect: false },
-      { id: 'b', text: 'Replication copies data; partitioning splits it', isCorrect: true },
-      { id: 'c', text: 'They are two words for the same thing', isCorrect: false },
-      { id: 'd', text: 'Neither has anything to do with multiple machines', isCorrect: false },
-    ],
-    explanation: 'Replication makes copies of the same data on several machines (for safety and read scaling). Partitioning splits different data across machines (for capacity and parallelism). Big systems use both together.',
-    tags: ['replication', 'vs-partitioning'],
-  },
-  {
-    id: 'de-repl-5',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'How can replicas help with read-heavy workloads?',
-    options: [
-      { id: 'a', text: 'Reads become impossible with replicas', isCorrect: false },
-      { id: 'b', text: 'Replicas can only ever be written to', isCorrect: false },
-      { id: 'c', text: 'Reads can be spread across the copies', isCorrect: true },
-      { id: 'd', text: 'Replicas delete the data after each read', isCorrect: false },
-    ],
-    explanation: 'Because each replica holds a full copy, read queries can be served by any of them. Spreading reads across replicas increases total read throughput.',
-    tags: ['replication', 'read-scaling'],
-  },
-  {
-    id: 'de-repl-6',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is the tradeoff between synchronous and asynchronous replication?',
-    options: [
-      { id: 'a', text: 'Sync is for images while async is only for text', isCorrect: false },
-      { id: 'b', text: 'Async always guarantees zero data loss', isCorrect: false },
-      { id: 'c', text: 'They behave in completely identical ways in every single possible situation', isCorrect: false },
-      { id: 'd', text: 'Sync is safer but slower; async is faster but can lose recent writes', isCorrect: true },
-    ],
-    explanation: 'Synchronous replication waits for replicas to confirm before acking a write — durable but slower. Asynchronous acks immediately and replicates in the background — faster, but a crash before replication can lose the most recent writes.',
-    tags: ['replication', 'sync-vs-async'],
-  },
-  {
-    id: 'de-repl-7',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why might a read from a follower replica return slightly stale data?',
-    options: [
-      { id: 'a', text: 'The follower may lag a little behind the leader', isCorrect: true },
-      { id: 'b', text: 'Followers always store last year\'s data only', isCorrect: false },
-      { id: 'c', text: 'Followers cannot store any recent writes ever', isCorrect: false },
-      { id: 'd', text: 'Reads from followers are always blocked', isCorrect: false },
-    ],
-    explanation: 'With asynchronous replication, a follower applies the leader\'s changes a moment later, so a read there can briefly miss the newest write. This is "eventual consistency" — replicas converge, but not instantly.',
-    tags: ['replication', 'eventual-consistency'],
-  },
-  {
-    id: 'de-repl-8',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'During a network partition, what does choosing "availability" over "consistency" mean?',
-    options: [
-      { id: 'a', text: 'Nodes refuse all requests until fully in sync', isCorrect: false },
-      { id: 'b', text: 'Nodes keep serving, even if some return slightly stale data', isCorrect: true },
-      { id: 'c', text: 'The whole system shuts down completely', isCorrect: false },
-      { id: 'd', text: 'Every read is guaranteed perfectly up to date', isCorrect: false },
-    ],
-    explanation: 'Choosing availability means each side of the partition keeps answering requests, accepting that some replicas may return stale data until the partition heals. Choosing consistency instead would mean refusing requests it cannot serve correctly — the core CAP tradeoff.',
-    tags: ['replication', 'cap', 'availability'],
-  },
-  {
-    id: 'de-repl-9',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_REPLICATION,
-    course: Course.DATA_ENGINEERING,
-    question: 'How does a "quorum" help balance consistency and availability across replicas?',
-    options: [
-      { id: 'a', text: 'Letting any single replica decide everything alone', isCorrect: false },
-      { id: 'b', text: 'Forbidding replicas from ever talking to each other', isCorrect: false },
-      { id: 'c', text: 'Requiring a majority of replicas to agree on reads and writes', isCorrect: true },
-      { id: 'd', text: 'Deleting replicas until only one remains', isCorrect: false },
-    ],
-    explanation: 'A quorum requires a majority of replicas to acknowledge a write and to be consulted on a read. If the read and write quorums overlap, reads see the latest write — giving strong consistency while still tolerating some replica failures.',
-    tags: ['replication', 'quorum'],
-  },
+/** Prose lines for a Parsons card: its solution is the lines in order. */
+const steps = (lines: string[]) => lines.join('\n');
 
-  // ===================================================================
-  // de_lsm_vs_btree — LSM Trees vs B-Trees
-  // ===================================================================
-  {
-    id: 'de-lsm-1',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is a B-tree, in database terms?',
-    options: [
-      { id: 'a', text: 'A type of physical tree near the data centre', isCorrect: false },
-      { id: 'b', text: 'A file format for storing images', isCorrect: false },
-      { id: 'c', text: 'A chart shape used on dashboards', isCorrect: false },
-      { id: 'd', text: 'A classic index structure good for lookups', isCorrect: true },
-    ],
-    explanation: 'A B-tree is the traditional index structure used by relational databases. It keeps data sorted and balanced so point lookups and range scans are fast.',
-    tags: ['btree', 'vocabulary'],
-  },
-  {
-    id: 'de-lsm-2',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is an LSM tree (Log-Structured Merge tree) optimised for?',
-    options: [
-      { id: 'a', text: 'Fast writes', isCorrect: true },
-      { id: 'b', text: 'Drawing charts', isCorrect: false },
-      { id: 'c', text: 'Encrypting data', isCorrect: false },
-      { id: 'd', text: 'Deleting tables', isCorrect: false },
-    ],
-    explanation: 'An LSM tree is designed for high write throughput. It buffers writes in memory and flushes them to disk in sorted batches, avoiding slow random writes.',
-    tags: ['lsm', 'vocabulary'],
-  },
-  {
-    id: 'de-lsm-3',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'In an LSM tree, where do new writes go first?',
-    options: [
-      { id: 'a', text: 'Directly onto a printed page', isCorrect: false },
-      { id: 'b', text: 'Into an in-memory buffer', isCorrect: true },
-      { id: 'c', text: 'Into the oldest file on disk', isCorrect: false },
-      { id: 'd', text: 'Nowhere; writes are discarded', isCorrect: false },
-    ],
-    explanation: 'LSM writes land first in an in-memory structure (a memtable). When it fills up, it is flushed to disk as a sorted file. Buffering in memory is what makes writes fast.',
-    tags: ['lsm', 'memtable'],
-  },
-  {
-    id: 'de-lsm-4',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Which structure is the more write-optimised of the two?',
-    options: [
-      { id: 'a', text: 'B-tree', isCorrect: false },
-      { id: 'b', text: 'They are identical for writes', isCorrect: false },
-      { id: 'c', text: 'LSM tree', isCorrect: true },
-      { id: 'd', text: 'Neither can handle writes', isCorrect: false },
-    ],
-    explanation: 'LSM trees are write-optimised: they turn many small random writes into sequential batch writes. B-trees update in place, which involves more random I/O per write.',
-    tags: ['lsm', 'comparison'],
-  },
-  {
-    id: 'de-lsm-5',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Which structure do traditional relational databases (like PostgreSQL) typically use?',
-    options: [
-      { id: 'a', text: 'LSM trees', isCorrect: false },
-      { id: 'b', text: 'Neither structure', isCorrect: false },
-      { id: 'c', text: 'Only flat text files', isCorrect: false },
-      { id: 'd', text: 'B-trees', isCorrect: true },
-    ],
-    explanation: 'Classic relational databases lean on B-tree indexes, which give balanced, predictable read performance. LSM trees are common in write-heavy stores like Cassandra and RocksDB.',
-    tags: ['btree', 'comparison'],
-  },
-  {
-    id: 'de-lsm-6',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why are LSM-tree writes fast?',
-    options: [
-      { id: 'a', text: 'They batch writes in memory, then write sequentially to disk', isCorrect: true },
-      { id: 'b', text: 'They write each row to a random spot on disk', isCorrect: false },
-      { id: 'c', text: 'They never actually write anything to disk', isCorrect: false },
-      { id: 'd', text: 'They compress every write into a single byte', isCorrect: false },
-    ],
-    explanation: 'Sequential disk writes are far faster than scattered random writes. LSM buffers updates in memory and flushes them as large sorted files in one sequential pass, which is why write throughput is high.',
-    tags: ['lsm', 'write-performance'],
-  },
-  {
-    id: 'de-lsm-7',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is a downside of LSM trees for reads?',
-    options: [
-      { id: 'a', text: 'Reads always corrupt the data they touch', isCorrect: false },
-      { id: 'b', text: 'A lookup may have to check several files on disk', isCorrect: true },
-      { id: 'c', text: 'Reads can only be done once per day', isCorrect: false },
-      { id: 'd', text: 'Reads require the data to be printed first', isCorrect: false },
-    ],
-    explanation: 'Because LSM data is spread across the memtable plus multiple sorted files (from successive flushes), a read may need to look in several places to find the latest value — so reads can be slower than a single B-tree lookup. Bloom filters and compaction reduce this cost.',
-    tags: ['lsm', 'read-cost'],
-  },
-  {
-    id: 'de-lsm-8',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'A workload is extremely write-heavy with mostly recent-key reads. Which structure tends to fit better?',
-    options: [
-      { id: 'a', text: 'A B-tree, always, in every case', isCorrect: false },
-      { id: 'b', text: 'Neither can handle heavy writes', isCorrect: false },
-      { id: 'c', text: 'An LSM tree', isCorrect: true },
-      { id: 'd', text: 'Only a plain CSV file will work', isCorrect: false },
-    ],
-    explanation: 'Very high write rates favour the LSM design, which absorbs writes cheaply. Its read penalty is softened when reads target recent data (likely still in memory or recent files). B-trees can struggle to keep up with sustained heavy random writes.',
-    tags: ['lsm', 'workload-fit'],
-  },
-  {
-    id: 'de-lsm-9',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_LSM_VS_BTREE,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why does an LSM tree need a background "compaction" process but a B-tree does not?',
-    options: [
-      { id: 'a', text: 'B-trees grow new files with every single write', isCorrect: false },
-      { id: 'b', text: 'LSM trees never write anything to disk', isCorrect: false },
-      { id: 'c', text: 'Compaction is purely decorative in LSM', isCorrect: false },
-      { id: 'd', text: 'LSM accumulates many sorted files that must be merged', isCorrect: true },
-    ],
-    explanation: 'Each LSM flush creates another sorted file, so over time many files pile up and reads slow down. Compaction merges them into fewer, larger files and drops superseded/deleted entries. A B-tree updates in place, so it has no equivalent file pile-up.',
-    tags: ['lsm', 'compaction'],
-  },
+// ════════════════════════════════════════════════════════════════════════
+// Partitioning, Skew & Hot Keys
+// ════════════════════════════════════════════════════════════════════════
 
-  // ===================================================================
-  // de_compaction_bloom — Compaction & Bloom Filters
-  // ===================================================================
+const skew: Question[] = [
   {
-    id: 'de-comp-1',
+    id: 'de-skew-1',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'What does "compaction" do in a storage engine?',
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A nightly group-by runs as 8 parallel tasks, one per partition. Seven finish in 6 minutes and the eighth runs for 50, and its input is about 9 times the size of each of the others. What is going on?',
     options: [
-      { id: 'a', text: 'Merges many small files into fewer larger ones', isCorrect: true },
-      { id: 'b', text: 'Splits one file into many tiny pieces', isCorrect: false },
-      { id: 'c', text: 'Encrypts every file with a password', isCorrect: false },
-      { id: 'd', text: 'Renames files to random new names', isCorrect: false },
+      { id: 'a', text: 'A slow machine: the eighth task landed on older hardware, so it works through its rows more slowly', isCorrect: false },
+      { id: 'b', text: 'Data skew: a few keys hold so many of the rows that the partition they go to gets most of the work', isCorrect: true },
+      { id: 'c', text: 'Too many distinct keys: with so many values, one partition is left holding the keys that do not divide', isCorrect: false },
+      { id: 'd', text: 'Too few tasks: with 8 tasks for the whole table, the last one waits for the other seven to hand over rows', isCorrect: false },
     ],
-    explanation: 'Compaction merges accumulated small sorted files into fewer larger ones, and drops deleted or superseded entries along the way. It keeps reads efficient and reclaims space.',
-    tags: ['compaction', 'vocabulary'],
+    explanation:
+      'Rows go to a partition by their key, so every row of one key lands in the same partition. When a few keys hold a big share of the rows, their partition is far bigger than the rest, and the step waits for it: that is skew, and the hot key behind it is often a NULL, a default such as \'unknown\', or one huge customer.\n' +
+      'The 9-times input rules out a slow machine; many distinct keys spread rows evenly, the opposite of skew; and the tasks run side by side rather than handing rows to each other.',
   },
   {
-    id: 'de-comp-2',
-    type: QuestionType.MULTIPLE_CHOICE,
+    id: 'de-skew-2',
+    type: QuestionType.PREDICT_OUTCOME,
     difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'Why is compaction needed?',
-    options: [
-      { id: 'a', text: 'Files become illegal after one day', isCorrect: false },
-      { id: 'b', text: 'Reads slow down as small files pile up', isCorrect: true },
-      { id: 'c', text: 'The data must be reprinted weekly', isCorrect: false },
-      { id: 'd', text: 'Compaction makes writes permanently stop', isCorrect: false },
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A job spreads these sales over 3 partitions by store_id: a row\'s partition is store_id % 3.\n' +
+      'How many rows land in the busiest partition?',
+    tables: [
+      table('sales', ['sale_id', 'store_id'], [
+        [1, 4],
+        [2, 4],
+        [3, 2],
+        [4, 4],
+        [5, 9],
+        [6, 4],
+        [7, 3],
+        [8, 4],
+        [9, 5],
+        [10, 4],
+        [11, 6],
+        [12, 7],
+      ]),
     ],
-    explanation: 'Without compaction, many small files accumulate, so a read has to consult more and more of them. Compaction merges them so reads touch fewer files, and reclaims space from deleted rows.',
-    tags: ['compaction', 'motivation'],
+    answer: '7',
+    unit: 'rows',
+    tempting: [
+      { answer: '4', why: '4 is an even split of 12 rows over 3 partitions. A hash spreads keys, not rows: every sale of store 4 goes to one partition.' },
+      { answer: '6', why: '6 is store 4 alone. Store 7 also lands in partition 1, since 7 % 3 is 1.' },
+    ],
+    explanation:
+      'Stores 4 and 7 map to partition 1 (4 % 3 = 7 % 3 = 1): store 4\'s six sales plus store 7\'s one make 7 rows. Partition 0 gets stores 9, 3 and 6 (3 rows) and partition 2 stores 2 and 5 (2 rows).\n' +
+      'Hashing balances the number of keys per partition; the rows follow their key, so one busy store makes one busy partition.',
   },
   {
-    id: 'de-comp-3',
-    type: QuestionType.MULTIPLE_CHOICE,
+    id: 'de-skew-3',
+    type: QuestionType.PREDICT_OUTCOME,
     difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'What does a "bloom filter" tell you?',
-    options: [
-      { id: 'a', text: 'Exactly how many rows in total will match a particular query', isCorrect: false },
-      { id: 'b', text: 'The colour a chart should use', isCorrect: false },
-      { id: 'c', text: 'Whether a key is definitely absent or possibly present', isCorrect: true },
-      { id: 'd', text: 'Who last edited a given row', isCorrect: false },
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A stage runs one task per partition, all four at the same time, and each task works through 1,000 rows a second.\n' +
+      'How many seconds does the stage take?',
+    tables: [
+      table('partitions', ['partition_id', 'row_count'], [
+        [0, 40000],
+        [1, 38000],
+        [2, 240000],
+        [3, 42000],
+      ]),
     ],
-    explanation: 'A bloom filter is a small structure that quickly answers "is this key here?" with either "definitely not" or "maybe". It can rule a file out without reading it — saving disk I/O on lookups.',
-    tags: ['bloom-filter', 'vocabulary'],
+    answer: '240',
+    unit: 'seconds',
+    tempting: [
+      { answer: '90', why: '90 is the total of 360,000 rows shared evenly over 4 tasks. The rows are not shared: each task has its own partition, and the stage waits for the biggest.' },
+      { answer: '360', why: '360 would be one task doing all the partitions in turn. The four run side by side.' },
+    ],
+    explanation:
+      'The tasks run in parallel, so the stage ends when the last one ends: partition 2\'s 240,000 rows take 240 seconds, while the other three are done in about 40 and then sit idle.\n' +
+      'The time of a parallel step is the time of its largest partition, not the total rows over the number of machines. That is why skew, not data size, is what makes a distributed job slow.',
   },
   {
-    id: 'de-comp-4',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'How does a bloom filter speed up lookups?',
-    options: [
-      { id: 'a', text: 'It makes the disk physically spin faster', isCorrect: false },
-      { id: 'b', text: 'It deletes files that are rarely read', isCorrect: false },
-      { id: 'c', text: 'It compresses the key into a single bit', isCorrect: false },
-      { id: 'd', text: 'It lets the engine skip files that cannot hold the key', isCorrect: true },
-    ],
-    explanation: 'Before reading a file, the engine checks its bloom filter. If the filter says "definitely not here", the engine skips that file entirely — avoiding a wasted disk read. This is especially valuable for LSM reads spread across many files.',
-    tags: ['bloom-filter', 'io-savings'],
-  },
-  {
-    id: 'de-comp-5',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'What kind of mistake can a bloom filter make?',
-    options: [
-      { id: 'a', text: 'A false positive — "maybe present" when it is actually absent', isCorrect: true },
-      { id: 'b', text: 'A false negative — missing a key that is present', isCorrect: false },
-      { id: 'c', text: 'It deletes the key it was asked about', isCorrect: false },
-      { id: 'd', text: 'It can never make any mistake at all', isCorrect: false },
-    ],
-    explanation: 'A bloom filter can say "maybe" for a key that is not actually there (a false positive), costing one needless file read. It never gives a false negative — if it says "definitely not", the key is truly absent. That one-sided guarantee is what makes it safe to use.',
-    tags: ['bloom-filter', 'false-positive'],
-  },
-  {
-    id: 'de-comp-6',
-    type: QuestionType.MULTIPLE_CHOICE,
+    id: 'de-skew-4',
+    type: QuestionType.PREDICT_OUTCOME,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is the cost of running compaction more aggressively?',
-    options: [
-      { id: 'a', text: 'It makes reads permanently impossible', isCorrect: false },
-      { id: 'b', text: 'It rewrites data repeatedly, using extra disk I/O', isCorrect: true },
-      { id: 'c', text: 'It deletes data that users still need', isCorrect: false },
-      { id: 'd', text: 'It has no cost whatsoever', isCorrect: false },
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A job partitions rows by customer_id % 4, and its largest partition holds 1,010 rows. To speed it up, the team doubles the partitions and the machines: a row\'s partition is now customer_id % 8.\n' +
+      'How many rows does the largest partition hold now?',
+    tables: [
+      table('key_counts', ['customer_id', 'row_count'], [
+        [16, 900],
+        [3, 100],
+        [5, 120],
+        [10, 80],
+        [12, 110],
+        [21, 90],
+        [7, 100],
+      ]),
     ],
-    explanation: 'Compaction reads and rewrites data to merge files — extra background I/O known as "write amplification". More aggressive compaction speeds up reads but spends more disk and CPU, so engines tune the balance.',
-    tags: ['compaction', 'write-amplification'],
+    answer: '900',
+    unit: 'rows',
+    tempting: [
+      { answer: '505', why: '505 assumes doubling the partitions halves each one. Customer 16\'s 900 rows share one key, and one key goes to one partition however many there are.' },
+      { answer: '1010', why: '1,010 was customers 16 and 12 together under % 4. Under % 8, 12 moves to partition 4 and 16 stays alone in partition 0.' },
+    ],
+    explanation:
+      'Under % 8, customer 16 goes to partition 0 by itself with 900 rows; the next biggest is partition 5 (customers 5 and 21, 210 rows). The doubled job is barely faster: 900 rows against 1,010.\n' +
+      'More partitions split the keys more finely, but never one key. A hot key needs its rows spread on purpose, by salting it.',
   },
   {
-    id: 'de-comp-7',
-    type: QuestionType.MULTIPLE_CHOICE,
+    id: 'de-skew-5',
+    type: QuestionType.PREDICT_OUTCOME,
     difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'For which kind of query are bloom filters most helpful?',
-    options: [
-      { id: 'a', text: 'Full scans that read every single row', isCorrect: false },
-      { id: 'b', text: 'Queries that ignore the data entirely', isCorrect: false },
-      { id: 'c', text: 'Point lookups for a specific key', isCorrect: true },
-      { id: 'd', text: 'Drawing a pie chart on a dashboard', isCorrect: false },
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A join of orders to customers is slow because customer 8 has most of the orders. The team salts that one key: on the orders side, customer 8\'s rows get salt = order_id % 4 and every other row gets salt 0, and the join matches on customer_id and salt.\n' +
+      'To keep every match, how many rows must the customers side hold going into the join?',
+    code:
+      'orders:    salt = order_id % 4 for customer 8\n' +
+      '           salt = 0 for the other customers\n' +
+      'customers: a copy per salt its orders can have\n' +
+      'join on:   customer_id and salt',
+    tables: [
+      table('customers', ['customer_id', 'region'], [
+        [3, 'north'],
+        [5, 'south'],
+        [6, 'south'],
+        [8, 'east'],
+        [11, 'west'],
+        [14, 'north'],
+      ]),
     ],
-    explanation: 'Bloom filters help point lookups ("find key X") by ruling out files that cannot contain X. For a full scan you read everything anyway, so a bloom filter gives no benefit there.',
-    tags: ['bloom-filter', 'point-lookup'],
+    answer: '9',
+    unit: 'rows',
+    tempting: [
+      { answer: '6', why: '6 keeps one row per customer, with salt 0. Customer 8\'s orders with salt 1, 2 and 3 would then find no customer and drop out of the join.' },
+      { answer: '24', why: '24 copies every customer 4 times. Only customer 8 was salted; the others\' orders all carry salt 0, so one copy each is enough.' },
+    ],
+    explanation:
+      'Customer 8\'s orders now carry salts 0 to 3, so the customers side needs customer 8 four times, once per salt, and the other five customers once each with salt 0: 4 + 5 = 9 rows.\n' +
+      'Salting a join key spreads the hot key over 4 partitions, and the price is copying the other side\'s matching row to each of them. Salt only the hot keys, so the copies stay few.',
   },
   {
-    id: 'de-comp-8',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'How does a bloom filter\'s size relate to its false-positive rate?',
-    options: [
-      { id: 'a', text: 'A bigger filter raises false positives and saves memory', isCorrect: false },
-      { id: 'b', text: 'Size has no effect on the false-positive rate', isCorrect: false },
-      { id: 'c', text: 'A smaller filter eliminates false positives entirely', isCorrect: false },
-      { id: 'd', text: 'A bigger filter lowers false positives but uses more memory', isCorrect: true },
+    id: 'de-skew-6',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A clickstream of 2 billion rows a day is written into 64 partitions, and the main job groups each user\'s clicks into sessions. About 40% of clicks come from one country, and event_type has 5 values.\n' +
+      'Which partition key should the table use, and why?',
+    decisions: [
+      { id: 'user', text: 'Hash on user_id, so each user\'s clicks sit together in one partition', isCorrect: true },
+      { id: 'country', text: 'Hash on country, since the reports are filtered and split by country', isCorrect: false },
+      { id: 'type', text: 'Hash on event_type, so a job reads just the type of event it needs', isCorrect: false },
+      { id: 'time', text: 'Range on event_time, so each hour of a day gets a partition of its own', isCorrect: false },
     ],
-    explanation: 'A larger bloom filter (more bits per key) makes collisions rarer, lowering the false-positive rate — at the cost of more memory. Engineers size the filter to trade memory against how often a needless file read happens.',
-    tags: ['bloom-filter', 'sizing'],
+    reasons: [
+      { id: 'cardinality', text: 'It has millions of values with none dominant, and it is the key the sessions job needs kept together', isCorrect: true },
+      { id: 'few-values', text: 'A key with fewer values makes fewer and larger partitions, and large partitions are read the fastest', isCorrect: false },
+      { id: 'hash-evens', text: 'Once a key is hashed the rows spread evenly whatever it is, so pick the key the reports filter on', isCorrect: false },
+      { id: 'newest', text: 'Keeping the newest rows together lets the writers fill one partition at a time, at full speed', isCorrect: false },
+    ],
+    explanation:
+      'A good partition key has many values, no value with a big share of the rows, and matches what the main job needs together. user_id has millions of values, and sessions are built per user, so each user\'s clicks are already in one place.\n' +
+      'country puts 40% of the rows in one partition, event_type keeps at most 5 of the 64 busy, and a range on time sends all of the current hour\'s writes to one partition. Hashing spreads keys, not rows, so a key with a hot value stays hot.',
   },
   {
-    id: 'de-comp-9',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_COMPACTION_BLOOM,
-    course: Course.DATA_ENGINEERING,
-    question: 'How do "tiered" and "leveled" compaction strategies differ in their tradeoffs?',
-    options: [
-      { id: 'a', text: 'Tiered favours write throughput; leveled favours read efficiency', isCorrect: true },
-      { id: 'b', text: 'Tiered is for text and leveled is only for images', isCorrect: false },
-      { id: 'c', text: 'Leveled never reads any files during compaction', isCorrect: false },
-      { id: 'd', text: 'They produce exactly identical results and costs', isCorrect: false },
+    id: 'de-skew-7',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A daily job joins a 2 TB orders table to a 5 MB currency_rates table on currency. There are 30 currencies, and 60% of orders are in one of them.\n' +
+      'How should the join run, and why?',
+    decisions: [
+      { id: 'broadcast', text: 'Broadcast currency_rates: send a full copy of it to every task reading orders', isCorrect: true },
+      { id: 'shuffle', text: 'Shuffle both tables by currency, so that each currency meets in one partition', isCorrect: false },
+      { id: 'salt', text: 'Salt the busiest currency into 30 sub-keys and shuffle both tables by those', isCorrect: false },
+      { id: 'sort', text: 'Sort both tables by currency first, then merge them in a single ordered pass', isCorrect: false },
     ],
-    explanation: 'Tiered compaction merges similarly-sized files less often, reducing write amplification (good for write-heavy loads) but leaving more files to read. Leveled compaction keeps data in tightly organised levels, so reads touch fewer files (good for read-heavy loads) at the cost of more rewriting.',
-    tags: ['compaction', 'tiered-vs-leveled'],
+    reasons: [
+      { id: 'cheap-copy', text: 'A 5 MB copy per task costs far less than moving 2 TB over the network, and no orders change place', isCorrect: true },
+      { id: 'few-even', text: 'With just 30 currencies the shuffle stays small, and the keys spread evenly over the 30 partitions', isCorrect: false },
+      { id: 'exact', text: 'A shuffle join can drop rows whose keys land on two machines, while a broadcast join keeps each row', isCorrect: false },
+      { id: 'salt-fix', text: 'Salting makes the busy currency as small as the others, and the copies of its rate cost nothing', isCorrect: false },
+    ],
+    explanation:
+      'When one side of a join fits easily in each task\'s memory, copy it to every task: each task joins its own slice of orders locally, so the 2 TB never crosses the network and the hot currency never piles up in one partition.\n' +
+      'A shuffle by currency would move every order and send 60% of them to one task. Salting would work, but it fixes a skew the broadcast avoids for free. Shuffle joins do not lose rows; they are just slow here.',
+  },
+  {
+    id: 'de-skew-8',
+    type: QuestionType.PARSONS,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    language: CodeLanguage.SQL,
+    question:
+      'A total per merchant runs for hours because one merchant holds a third of the rows. The totals must stay exact.\n' +
+      'Put the steps of fixing it by salting in order. Two steps do not belong.',
+    correctOrder: [
+      'Count rows per merchant to find the keys that hold the most rows',
+      'Give the hot merchant\'s rows a salt from 0 to 7, taken from order_id % 8',
+      'Sum by merchant and salt, so the hot merchant is summed in 8 tasks at once',
+      'Sum those partial totals by merchant alone, adding up the hot merchant\'s 8 parts',
+      'Compare the totals per merchant with the old job\'s on one day before switching',
+    ],
+    distractorLines: [
+      'Add 8 times the machines, so the hot merchant\'s partition is split between them',
+      'Take the average of the hot merchant\'s 8 partial totals as its final total',
+    ],
+    solution: steps([
+      'Count rows per merchant to find the keys that hold the most rows',
+      'Give the hot merchant\'s rows a salt from 0 to 7, taken from order_id % 8',
+      'Sum by merchant and salt, so the hot merchant is summed in 8 tasks at once',
+      'Sum those partial totals by merchant alone, adding up the hot merchant\'s 8 parts',
+      'Compare the totals per merchant with the old job\'s on one day before switching',
+    ]),
+    explanation:
+      'Salting splits one key into several, so its rows are spread over several tasks, and a second step puts the parts back together. A sum, a count or a max can be computed in parts this way; an average is combined from the parts\' sums and counts, never by averaging averages.\n' +
+      'More machines do not help: a key\'s rows all go to one partition, which runs on one machine.',
+  },
+  {
+    id: 'de-skew-9',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A join of orders to customers on customer_id shuffles both sides into 4 partitions by customer_id % 4, and the engine sends every NULL key to partition 0. Guest checkouts have no customer_id.\n' +
+      'How many orders rows does partition 0 receive?',
+    tables: [
+      table('orders', ['order_id', 'customer_id'], [
+        [1, null],
+        [2, 4],
+        [3, null],
+        [4, 1],
+        [5, null],
+        [6, 2],
+        [7, 8],
+        [8, null],
+        [9, 3],
+        [10, 5],
+        [11, null],
+        [12, 6],
+      ]),
+    ],
+    answer: '7',
+    unit: 'rows',
+    tempting: [
+      { answer: '2', why: '2 counts customers 4 and 8 only. The five guest orders have a NULL key, and every NULL goes to partition 0.' },
+      { answer: '3', why: '3 is an even split of 12 orders over 4 partitions. The NULLs all share one partition.' },
+    ],
+    explanation:
+      'Partition 0 gets customers 4 and 8 (4 % 4 = 8 % 4 = 0) and all five NULLs: 7 of the 12 rows. And a NULL never equals anything, so the five guest orders cannot join to any customer: partition 0 does most of the work for rows that produce nothing.\n' +
+      'In real data NULLs and defaults such as \'unknown\' or 0 are the most common hot keys. Filter them out before the shuffle when they cannot match, or give them a spread-out key when they must be kept.',
+  },
+  {
+    id: 'de-skew-10',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'A daily total per merchant runs on 32 tasks. One marketplace merchant holds 35% of the rows, so one task runs for 3 hours while the rest finish in 10 minutes. Finance needs every total exact, and the job must finish by 06:00.\n' +
+      'What should you change, and why?',
+    decisions: [
+      { id: 'salt', text: 'Salt the marketplace\'s rows into 16 parts, then add up its 16 partial totals', isCorrect: true },
+      { id: 'more-tasks', text: 'Raise the task count from 32 to 128, so each partition gets a smaller share', isCorrect: false },
+      { id: 'range', text: 'Partition merchants by range of id, so the marketplace gets a range of its own', isCorrect: false },
+      { id: 'sample', text: 'Sum a 10% sample of the marketplace\'s rows and multiply its total by ten', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'parts', text: 'One key\'s rows go to one task however many there are, and a sum can be taken in parts and added up', isCorrect: true },
+      { id: 'smaller', text: 'More tasks make each partition smaller, the hot one too, until it finishes in time with the rest', isCorrect: false },
+      { id: 'own-range', text: 'A range of its own gives the big merchant a partition that nobody else uses, so it stops being the slow one', isCorrect: false },
+      { id: 'close', text: 'A sample of millions of rows is within a fraction of a percent, which is as good as exact for a total', isCorrect: false },
+    ],
+    explanation:
+      'The hot task is one key, and a key goes to one partition: 128 tasks or a range of its own still leave 35% of the rows on one machine. Salting splits that key into 16 sub-keys, the 16 parts run in parallel, and a second, tiny step adds them up, so the total stays exact.\n' +
+      'A sample is fast but breaks the constraint that every total is exact.',
+  },
+  {
+    id: 'de-skew-11',
+    type: QuestionType.SPOT_FLAW,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      '399 of 400 tasks finish in 2 minutes and one runs for 3 hours. The sessions it writes for that key are also nonsense: one "visit" lasting all day.\n' +
+      'Click the line that causes it.',
+    lines: [
+      'source: page_views',
+      'filter: viewed_at on run_date',
+      'key: user_id = COALESCE(login_id, \'anonymous\')',
+      'shuffle: 400 partitions by hash(key)',
+      'aggregate: sessions per key, a new session after a 30-minute gap',
+      'write: sessions, partitioned by run_date',
+    ],
+    flawLines: [3],
+    note: 'About 30% of page views are from visitors who are not logged in. Each browser has its own device_id cookie.',
+    explanation:
+      'Every logged-out view gets the same key, \'anonymous\', so 30% of the rows hash to one partition, and every logged-out visitor\'s views are glued into one long session.\n' +
+      'Key logged-out views on something that tells visitors apart, COALESCE(login_id, device_id): the rows spread over the 400 partitions and each visitor gets sessions of their own.',
+  },
+  {
+    id: 'de-skew-12',
+    type: QuestionType.SPOT_FLAW,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question:
+      'Inserts into events slow down at busy times: one node runs at full load while the other 15 are nearly idle.\n' +
+      'Click the line that causes it.',
+    lines: [
+      'table: events',
+      'event_id: the next value of a counter, 1, 2, 3, ...',
+      'partition by: range(event_id), 16 ranges of 10 million ids',
+      'nodes: 16, one range each',
+      'writers: 32 processes, 50,000 inserts a second in all',
+    ],
+    flawLines: [3],
+    note: 'Reads look events up by event_id; nobody reads a range of ids.',
+    explanation:
+      'Ids only grow, so every new event falls in the newest range, and the node that holds it takes all 50,000 inserts a second while the old ranges only answer reads.\n' +
+      'A range key that follows time (a counter, a timestamp) always has a hot newest range. Since nobody reads ranges of ids, hash the id: new events then spread over all 16 nodes.',
+  },
+  {
+    id: 'de-skew-13',
+    type: QuestionType.EXPLAIN,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question: 'In two or three sentences: why does adding machines not speed up a job held back by one hot key, and what does?',
+    keyPoints: [
+      'Rows go to a partition by key, so every row of the hot key goes to one partition on one machine',
+      'A parallel step lasts as long as its largest partition, so the extra machines sit idle',
+      'Salting splits the hot key into sub-keys spread over many tasks, then a second step combines the parts',
+      'For a join, broadcasting a small side, or dropping NULL keys that cannot match, avoids the hot partition',
+    ],
+    modelAnswer:
+      'A key decides the partition, so all of a hot key\'s rows land in one partition that one machine has to work through, and the step waits for it however many other machines finish early. ' +
+      'The fix is to spread that key on purpose: salt it into sub-keys, work on the parts in parallel and combine them, or for a join, broadcast the small table or filter out keys such as NULL that never match.',
+    explanation: 'The time of a parallel step is the time of its largest partition, so balance matters more than total size.',
+  },
+  {
+    id: 'de-skew-14',
+    type: QuestionType.EXPLAIN,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_PARTITION_SKEW,
+    course: DE,
+    question: 'In two or three sentences: how do you choose the partition key for a big table, and why is it worth getting right the first time?',
+    keyPoints: [
+      'Many distinct values, with no single value (a NULL, a default, one huge customer) holding a big share',
+      'The key the main jobs group or join by, so their rows are already together',
+      'A range key that grows with time puts all new writes in the newest range; hash it unless ranges are read',
+      'Changing the key later means moving every row to a new partition across the cluster',
+    ],
+    modelAnswer:
+      'Pick a key with many values and no dominant one, checking for NULLs and defaults, that matches what the main jobs group or join by; avoid a range on a growing key such as a timestamp unless ranges are what is read, since the newest range takes every write. ' +
+      'It is worth getting right up front because the key decides where every row lives, so changing it means rewriting and moving the whole table.',
+    explanation: 'The same rule holds for a stored table, a shuffle inside a job and a streaming topic: the key decides where the work goes.',
   },
 ];
+
+// ════════════════════════════════════════════════════════════════════════
+// Replication & Consistency
+// ════════════════════════════════════════════════════════════════════════
+
+const replication: Question[] = [
+  {
+    id: 'de-replica-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A leader replicates to two followers asynchronously. It acknowledges a write to the client, crashes a moment later, and a follower is promoted to leader. What can happen to that write?',
+    options: [
+      { id: 'a', text: 'It is kept: once a write is acknowledged it is durable, so each replica holds it when the crash is over', isCorrect: false },
+      { id: 'b', text: 'It is applied twice: the client retries after the crash, and the follower already had the first copy', isCorrect: false },
+      { id: 'c', text: 'It can be lost: the leader said done before a follower had it, so the new leader may never get it', isCorrect: true },
+      { id: 'd', text: 'It is held back: the followers wait for the old leader to come back before they take new writes', isCorrect: false },
+    ],
+    explanation:
+      'Asynchronous replication acknowledges a write as soon as the leader has it and sends it to the followers afterwards. If the leader dies in between, the promoted follower never received the write, and the client was already told it succeeded.\n' +
+      'That is the trade: async keeps writes fast and loses the last moments on failover; synchronous replication to at least one follower closes the gap, at the cost of waiting for it on every write.',
+  },
+  {
+    id: 'de-replica-2',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'writes is the leader\'s replication log: each write has a log position (lsn) and sets an account\'s balance. A follower answers reads with the writes it has applied, up to its applied_lsn.\n' +
+      'A dashboard reads account 3 from follower f2. What balance does it show?',
+    tables: [
+      table('writes', ['lsn', 'account_id', 'balance'], [
+        [201, 3, 100],
+        [202, 3, 140],
+        [203, 5, 60],
+        [204, 3, 90],
+        [205, 5, 75],
+        [206, 3, 30],
+      ]),
+      table('replicas', ['replica_name', 'applied_lsn'], [
+        ['leader', 206],
+        ['f1', 206],
+        ['f2', 204],
+      ]),
+    ],
+    answer: '90',
+    tempting: [
+      { answer: '30', why: '30 is the latest balance, which the leader and f1 show. f2 has applied the log only up to 204, so it has not seen write 206.' },
+      { answer: '100', why: '100 is the first balance. A follower applies the log in order, so by 204 it has also applied 202 and 204.' },
+    ],
+    explanation:
+      'f2 has applied writes 201 to 204, and the last of those for account 3 is lsn 204, balance 90. The balance has since become 30 on the leader, so the dashboard shows a stale value until f2 applies 206.\n' +
+      'A follower is the leader as it was a moment ago: right, but late. How late is its replication lag.',
+  },
+  {
+    id: 'de-replica-3',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'The leader replicates asynchronously and has acknowledged every write up to lsn 2040, one log position per write. It crashes, and the follower with the most of the log is promoted.\n' +
+      'How many acknowledged writes are lost?',
+    tables: [
+      table('replicas', ['replica_name', 'applied_lsn'], [
+        ['leader', 2040],
+        ['f1', 2031],
+        ['f2', 2036],
+        ['f3', 2010],
+      ]),
+    ],
+    answer: '4',
+    unit: 'writes',
+    tempting: [
+      { answer: '0', why: '0 assumes an acknowledged write is on every replica. With async replication the leader acknowledges first and sends later.' },
+      { answer: '30', why: '30 is how far f3 is behind. The promoted follower is f2, the one with the most of the log.' },
+    ],
+    explanation:
+      'f2 is promoted with the log up to 2036, so writes 2037 to 2040, which clients were told had succeeded, are gone: 4 writes.\n' +
+      'Promote the follower with the highest applied position to lose the least, and if no acknowledged write may be lost at all, wait for at least one follower before acknowledging.',
+  },
+  {
+    id: 'de-replica-4',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A key is stored on 5 replicas with no leader. A write succeeds once 3 replicas have it (W = 3), so after writing version 12, two replicas may still hold version 11, as now. A read asks R replicas and keeps the highest version it gets.\n' +
+      'What is the smallest R for which every read returns version 12, whichever replicas it asks?',
+    tables: [
+      table('replicas', ['replica_name', 'version'], [
+        ['r1', 12],
+        ['r2', 12],
+        ['r3', 12],
+        ['r4', 11],
+        ['r5', 11],
+      ]),
+    ],
+    answer: '3',
+    unit: 'replicas',
+    tempting: [
+      { answer: '2', why: 'A read of 2 can ask r4 and r5, which both hold 11. With W + R = 5 = N the two sets need not meet.' },
+      { answer: '5', why: '5 works but is more than needed: any 3 replicas include at least one of the 3 that took the write.' },
+    ],
+    explanation:
+      'Two replicas can be stale, so a read must ask one more than that: 3. In general a read set and a write set must share a replica, which holds when W + R > N: 3 + 3 > 5.\n' +
+      'The quorum is a dial: W = 5, R = 1 makes reads cheap and writes stall when any replica is down; W = 3, R = 3 tolerates two replicas down for both.',
+  },
+  {
+    id: 'de-replica-5',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A user changes their email; the write commits on the leader at lsn 812. The profile page then reloads every second, always reading from follower f2.\n' +
+      'At which second does the page first show the new email?',
+    tables: [
+      table('f2_positions', ['at_second', 'applied_lsn'], [
+        [0, 790],
+        [1, 801],
+        [2, 809],
+        [3, 815],
+        [4, 822],
+      ]),
+    ],
+    answer: '3',
+    tempting: [
+      { answer: '0', why: '0 assumes a committed write can be read at once everywhere. It can on the leader; f2 shows it only once it has applied lsn 812.' },
+      { answer: '2', why: 'At second 2 f2 has applied up to 809, three writes short of 812.' },
+    ],
+    explanation:
+      'The new email is visible on f2 from the first second its applied_lsn reaches 812: at second 3 it is 815. For three seconds the user sees their old email and may well save it again.\n' +
+      'Read-your-writes: read a user\'s own data from the leader for a short while after they write, or have the read wait until the replica has reached the position of their last write.',
+  },
+  {
+    id: 'de-replica-6',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A payments ledger runs on a leader with 3 followers in the same region. Losing a payment the client was told had succeeded is not acceptable; a few extra milliseconds per write are fine; and payments must still be taken while a follower is being patched.\n' +
+      'How should writes be replicated, and why?',
+    decisions: [
+      { id: 'one-sync', text: 'Wait for one follower before acknowledging, and send to the other two asynchronously', isCorrect: true },
+      { id: 'all-sync', text: 'Wait for the three followers before acknowledging, so that each copy is current', isCorrect: false },
+      { id: 'async-backup', text: 'Replicate asynchronously to the three, and take a backup of the leader every 5 minutes', isCorrect: false },
+      { id: 'async-retry', text: 'Replicate asynchronously, and have clients send a payment again when they get no reply', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'second-copy', text: 'An acknowledged write is then on two machines, and one follower down leaves two others to wait on', isCorrect: true },
+      { id: 'every-copy', text: 'A write is safe once each replica has it, since a failover can promote whichever follower it picks', isCorrect: false },
+      { id: 'backup-window', text: 'A backup every 5 minutes caps the loss at 5 minutes of payments, which can be entered again later', isCorrect: false },
+      { id: 'retry-covers', text: 'Clients retry what was lost, so a failover costs a short delay rather than lost payments for them', isCorrect: false },
+    ],
+    explanation:
+      'Waiting for one follower means every acknowledged payment exists on a second machine, so a leader crash loses nothing as long as that follower is promoted, and the wait is one round trip in the region. With three followers, one being patched still leaves another to wait for.\n' +
+      'Waiting for all three stalls every payment when any one is down. A backup still loses up to 5 minutes, and a client that got an acknowledgement has no reason to retry.',
+  },
+  {
+    id: 'de-replica-7',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A shop\'s database has a leader and 4 read replicas that lag by up to 2 seconds. Product pages make 95% of reads. Right after checkout the customer lands on "My orders", and if the new order is missing, many order again.\n' +
+      'How should reads be routed, and why?',
+    decisions: [
+      { id: 'split', text: 'Product pages read from replicas; "My orders" reads from the leader after a write', isCorrect: true },
+      { id: 'all-leader', text: 'Reads go to the leader as well as writes, and the replicas stand by for failover', isCorrect: false },
+      { id: 'all-replica', text: 'Reads go to the replicas, which the leader\'s log keeps up to date with each write', isCorrect: false },
+      { id: 'one-replica', text: 'Each customer\'s reads go to one replica, picked by a hash of the customer\'s id', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'own-write', text: 'A replica can be seconds behind, which is fine for a product page but hides a customer\'s new order', isCorrect: true },
+      { id: 'consistent', text: 'Replicas apply the log as it arrives, so they hold the same data as the leader once a write commits', isCorrect: false },
+      { id: 'leader-safe', text: 'A read from a replica can be stale, so reads are safe when they are served by the leader itself', isCorrect: false },
+      { id: 'sticky', text: 'A customer who reads from one replica each time sees each of their own writes as soon as they make it', isCorrect: false },
+    ],
+    explanation:
+      'Most reads can be a little late: a price a second old does no harm, so product pages go to the replicas and the leader keeps its capacity for writes. A customer\'s own new order cannot be late, so for a short time after they write, their reads go to the leader (or wait until a replica has their write\'s position).\n' +
+      'Sending every read to the leader wastes the replicas; one replica per customer keeps their reads in order but still behind their own writes.',
+  },
+  {
+    id: 'de-replica-8',
+    type: QuestionType.PARSONS,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    language: CodeLanguage.SQL,
+    question:
+      'The leader of an asynchronously replicated database has stopped answering. Put the steps of failing over to a follower in order. Two steps do not belong.',
+    correctOrder: [
+      'Confirm the leader is down from more than one place, not just slow or cut off from you',
+      'Fence the old leader so it can take no more writes, even if it comes back',
+      'Promote the follower with the highest applied position to be the new leader',
+      'Point the writers and the other followers at the new leader',
+      'List the writes in the old leader\'s log past the new leader\'s position as lost, and recover them from their source',
+    ],
+    distractorLines: [
+      'Promote whichever follower answers first, since every follower holds the same data',
+      'Let the old and new leaders both take writes until the old one has caught up',
+    ],
+    solution: steps([
+      'Confirm the leader is down from more than one place, not just slow or cut off from you',
+      'Fence the old leader so it can take no more writes, even if it comes back',
+      'Promote the follower with the highest applied position to be the new leader',
+      'Point the writers and the other followers at the new leader',
+      'List the writes in the old leader\'s log past the new leader\'s position as lost, and recover them from their source',
+    ]),
+    explanation:
+      'A leader that is only slow, or cut off from the checker, may still be taking writes, so confirm first and fence it: two leaders taking writes at once (split brain) leave two histories that cannot both be kept. The follower with the highest position loses the fewest writes.\n' +
+      'Followers do not all hold the same data: each is at its own position in the log.',
+  },
+  {
+    id: 'de-replica-9',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A key is stored on 5 replicas over two sites, and a write succeeds only when 3 replicas take it (W = 3). The link between the sites fails, and each client can reach only the replicas on its own site. During the split, a client on site A sends 4 writes and a client on site B sends 3.\n' +
+      'How many of the 7 writes succeed?',
+    tables: [
+      table('replicas', ['replica_name', 'site'], [
+        ['r1', 'A'],
+        ['r2', 'A'],
+        ['r3', 'A'],
+        ['r4', 'B'],
+        ['r5', 'B'],
+      ]),
+      table('clients', ['client_site', 'writes_sent'], [
+        ['A', 4],
+        ['B', 3],
+      ]),
+    ],
+    answer: '4',
+    unit: 'writes',
+    tempting: [
+      { answer: '7', why: '7 assumes each site keeps taking writes on its own replicas. Site B reaches only 2, fewer than the 3 a write needs.' },
+      { answer: '0', why: '0 assumes a split stops all writes. Site A still reaches 3 replicas, a majority, so its writes succeed.' },
+    ],
+    explanation:
+      'Site A reaches r1 to r3, enough for W = 3, so its 4 writes succeed; site B reaches 2 and its 3 writes are refused. Only one side can hold a majority, so the two sides can never accept conflicting writes.\n' +
+      'This is the choice CAP describes: during a network split, the minority side gives up availability (it refuses) to keep the data consistent. A system that let both sides write would stay available and have to reconcile two versions later.',
+  },
+  {
+    id: 'de-replica-10',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'An app runs in two regions, with the usernames table replicated between them, and the link between the regions sometimes fails for minutes. Usernames must be unique, sign-up is rare, and a user told their name is theirs must keep it.\n' +
+      'What should a region cut off from the majority do with sign-ups, and why?',
+    decisions: [
+      { id: 'refuse', text: 'Refuse new sign-ups with "try again shortly" until the link is back', isCorrect: true },
+      { id: 'first-wins', text: 'Accept them in both regions, and keep the earliest name of a clash later', isCorrect: false },
+      { id: 'suffix', text: 'Accept them in both regions, and add a number to clashing names later', isCorrect: false },
+      { id: 'local-check', text: 'Check the name against the region\'s own copy, then accept the sign-up', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'cannot-see', text: 'A cut-off region cannot see names taken on the other side, and refusing beats a broken promise', isCorrect: true },
+      { id: 'clocks', text: 'Timestamps settle a clash fairly, since each region\'s clock gives each sign-up its true order', isCorrect: false },
+      { id: 'rename', text: 'A short number on the end keeps names unique, and users seldom notice a name change after sign-up', isCorrect: false },
+      { id: 'local-copy', text: 'The local copy holds the names taken up to the split, which is enough to check a new name against', isCorrect: false },
+    ],
+    explanation:
+      'During a split a replica must choose: answer with what it can see (available, maybe wrong) or refuse (consistent). Uniqueness depends on names taken on the other side, which the cut-off region cannot see, so accepting risks promising one name to two people. Sign-up is rare and can wait a few minutes.\n' +
+      'Keeping the earliest or adding a number both break the promise to a user who was told the name was theirs. The choice is per kind of data: a like count could keep counting on both sides and be added up later.',
+  },
+  {
+    id: 'de-replica-11',
+    type: QuestionType.SPOT_FLAW,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'A few customers a day are charged twice for one order.\n' +
+      'Click the line that causes it.',
+    lines: [
+      'step 1: write the payment row for :order_id to payments on the leader',
+      'step 2: wait for step 1 to commit',
+      'step 3: read payments where order_id = :order_id from a read replica',
+      'step 4: if step 3 finds no paid row, charge the card again',
+      'step 5: mark the order as paid',
+    ],
+    flawLines: [3],
+    note: 'The read replicas apply the leader\'s log asynchronously and lag by up to 5 seconds at busy times.',
+    explanation:
+      'Step 3 reads a payment that was committed on the leader a moment ago from a replica that may not have it yet, so at busy times it finds no paid row and step 4 charges the card a second time.\n' +
+      'A check of your own write must read from the leader, or from a replica that has reached the write\'s position. Read replicas are for reads that can be a little late.',
+  },
+  {
+    id: 'de-replica-12',
+    type: QuestionType.SPOT_FLAW,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question:
+      'When one follower\'s disk failed, no writes succeeded for 20 minutes, until it was replaced.\n' +
+      'Click the line that causes it.',
+    lines: [
+      'replicas: 1 leader, 4 followers',
+      'replication: synchronous to every follower',
+      'write timeout: none, a write waits until it is replicated',
+      'reads: leader for writers, followers for reports',
+      'failover: promote the follower with the highest position',
+    ],
+    flawLines: [2],
+    note: 'Nothing else was wrong: the leader and the other three followers were healthy.',
+    explanation:
+      'Synchronous to every follower means a write waits for all four, so one broken follower stops every write: the system is only as available as its least healthy replica.\n' +
+      'Wait for one follower, or a majority, and replicate to the rest asynchronously: an acknowledged write is still on two machines, and one follower down does not stop the writes.',
+  },
+  {
+    id: 'de-replica-13',
+    type: QuestionType.EXPLAIN,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question: 'In two or three sentences: why can a read from a follower return an old value, and how do you make sure a user sees their own write?',
+    keyPoints: [
+      'The leader takes the writes and sends them to the followers in order through its log',
+      'A follower applies the log a little later, so its values can be behind the leader\'s (replication lag)',
+      'Read a user\'s own recent writes from the leader, or from a replica that has reached the write\'s log position',
+      'Reads that can be a little late, such as reports and product pages, can still go to the followers',
+    ],
+    modelAnswer:
+      'Writes go to the leader, which sends them through its log to the followers, and each follower applies that log a little behind, so a read there can miss the latest writes. ' +
+      'To let users see their own writes, read their data from the leader for a short time after they write, or make the read wait until the replica has reached the position of their write, and keep the followers for reads that can lag.',
+    explanation: 'A follower is right but late; the design question is which reads can afford late.',
+  },
+  {
+    id: 'de-replica-14',
+    type: QuestionType.EXPLAIN,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_REPLICATION_CONSISTENCY,
+    course: DE,
+    question: 'In two or three sentences: what do synchronous and asynchronous replication trade, and what must a system choose during a network split?',
+    keyPoints: [
+      'Synchronous waits for a follower before acknowledging: no acknowledged write is lost, but each write is slower',
+      'Asynchronous acknowledges at once: fast, but followers lag and a failover can lose the last writes',
+      'During a split a cut-off replica either refuses requests (consistent) or answers with what it has (available)',
+      'The choice is per kind of data: uniqueness and money favour refusing, counts and catalogs favour answering',
+    ],
+    modelAnswer:
+      'Synchronous replication waits for a follower before telling the client a write succeeded, so failover loses nothing but every write waits; asynchronous replies at once, so writes are fast but followers lag and the newest writes can be lost if the leader dies. ' +
+      'When the network splits, a replica that cannot reach the others must either refuse, keeping the data consistent, or keep answering with possibly stale data, staying available, and the right choice depends on the data: a unique username or a balance should refuse, a like count can keep counting.',
+    explanation: 'A quorum (W + R > N) is the same trade made with numbers: how many replicas a write and a read must reach.',
+  },
+];
+
+// ════════════════════════════════════════════════════════════════════════
+// Storage Engines: B-Trees, LSM Trees & Bloom Filters
+// ════════════════════════════════════════════════════════════════════════
+
+const engines: Question[] = [
+  {
+    id: 'de-engine-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question: 'An LSM tree is looking up key 42. One file\'s bloom filter answers "maybe" for 42. What does the engine now know about that file?',
+    options: [
+      { id: 'a', text: 'It may or may not hold 42, so it has to be read; a "no" would have let the engine skip it', isCorrect: true },
+      { id: 'b', text: 'It holds 42: the filter set a bit for each key written to the file, and the bits for 42 are set', isCorrect: false },
+      { id: 'c', text: 'It holds 42 unless it was deleted, and a delete would have cleared the bits that 42 had set', isCorrect: false },
+      { id: 'd', text: '42 is in the file\'s key range, between its smallest and largest key, so it is likely to be there', isCorrect: false },
+    ],
+    explanation:
+      'A bloom filter is a small set of bits per file. A "no" is certain: the key was never written to the file, so the engine skips it without a disk read. A "maybe" can be wrong, because other keys can set the same bits: a false positive, which costs one wasted read.\n' +
+      'It never gives a false negative, which is what makes skipping safe. Bits are never cleared, so a delete is a new entry (a tombstone), not a change to an old file\'s filter; and min/max key ranges are a different, coarser kind of file statistic.',
+  },
+  {
+    id: 'de-engine-2',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'An LSM tree holds these entries for a points table: the in-memory table and three files flushed from it, written_seq 1 being the oldest. A read checks the memtable, then the files newest first, and returns the first entry it finds for the key.\n' +
+      'What does a read of user 3 return?',
+    tables: [
+      table('entries', ['source', 'written_seq', 'user_id', 'points'], [
+        ['file1', 1, 1, 10],
+        ['file1', 1, 3, 40],
+        ['file2', 2, 3, 55],
+        ['file2', 2, 7, 12],
+        ['file3', 3, 1, 18],
+        ['memtable', 4, 7, 20],
+      ]),
+    ],
+    answer: '55',
+    unit: 'points',
+    tempting: [
+      { answer: '40', why: '40 is user 3\'s first entry, in the oldest file. An update in an LSM tree is a newer entry, and the newest one wins.' },
+      { answer: '95', why: '95 adds user 3\'s two entries. Each entry is the whole value at that time, not a change to add.' },
+    ],
+    explanation:
+      'The memtable and file3 have nothing for user 3; file2 has 55, so the read stops there. file1\'s 40 is an older version, still on disk until compaction drops it.\n' +
+      'An LSM tree never changes a file once written: an update or a delete is a newer entry, and a read takes the newest one it finds.',
+  },
+  {
+    id: 'de-engine-3',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'A sign-up form checks whether the username "kestrel" is free. It is in none of the table\'s 8 files. The engine asks each file\'s bloom filter first and reads only the files whose filter says maybe.\n' +
+      'How many files does the lookup read?',
+    tables: [
+      table('filters', ['file_name', 'filter_says'], [
+        ['f1', 'no'],
+        ['f2', 'maybe'],
+        ['f3', 'no'],
+        ['f4', 'no'],
+        ['f5', 'maybe'],
+        ['f6', 'no'],
+        ['f7', 'maybe'],
+        ['f8', 'no'],
+      ]),
+    ],
+    answer: '3',
+    unit: 'files',
+    tempting: [
+      { answer: '0', why: '0 assumes a filter is right about an absent key. A "maybe" can be a false positive, and the engine has to read the file to find out.' },
+      { answer: '8', why: '8 is every file, the read without filters. The five that say no are skipped.' },
+    ],
+    explanation:
+      'The five "no" files are skipped for certain; the three "maybe" files are read, and all three turn out not to hold "kestrel": three false positives.\n' +
+      'Lookups of keys that do not exist are where bloom filters matter most: without them, a miss has to read every file.',
+  },
+  {
+    id: 'de-engine-4',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'Compaction merges these three files, the oldest of the table, into one: it keeps the newest entry for each key and drops a key whose newest entry is a tombstone (a delete, shown as a NULL value).\n' +
+      'How many entries does the new file hold?',
+    tables: [
+      table('entries', ['file_name', 'written_seq', 'item_key', 'item_value'], [
+        ['f1', 1, 'a', 1],
+        ['f1', 1, 'b', 2],
+        ['f1', 1, 'c', 3],
+        ['f1', 1, 'd', 4],
+        ['f2', 2, 'a', 5],
+        ['f2', 2, 'c', null],
+        ['f2', 2, 'e', 6],
+        ['f3', 3, 'b', 7],
+        ['f3', 3, 'd', null],
+        ['f3', 3, 'f', 8],
+      ]),
+    ],
+    answer: '4',
+    unit: 'entries',
+    tempting: [
+      { answer: '6', why: '6 is the number of distinct keys. c and d end in a tombstone, and since these are the oldest files, no older copy is left for the tombstone to hide.' },
+      { answer: '8', why: '8 drops the two tombstones but keeps every value. Compaction also drops the older versions of a and b.' },
+    ],
+    explanation:
+      'The newest entries are a = 5, b = 7, c deleted, d deleted, e = 6 and f = 8, so the new file holds a, b, e and f: 4 entries in place of 10.\n' +
+      'Compaction is where an LSM tree gets its space back and its reads get cheaper: fewer files, one entry per key. A tombstone can only be dropped when no older file outside the merge could still hold the key.',
+  },
+  {
+    id: 'de-engine-5',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'A B-tree index holds keys in pages: each leaf page holds 100 keys, and each page above holds pointers to 100 pages below it, up to a single root page.\n' +
+      'How many pages does a lookup of one key read, from the root down to its leaf?',
+    tables: [
+      table('index_stats', ['keys_in_index', 'keys_per_leaf_page', 'pointers_per_inner_page'], [
+        [1000000, 100, 100],
+      ]),
+    ],
+    answer: '3',
+    unit: 'pages',
+    tempting: [
+      { answer: '20', why: '20 is a binary search over a million keys, one comparison at a time. Each page read narrows the search 100 ways, not 2.' },
+      { answer: '10000', why: '10,000 is the number of leaf pages. A lookup reads one page at each level, not every leaf.' },
+    ],
+    explanation:
+      'A million keys fill 10,000 leaf pages; 100 inner pages point to those; one root points to the 100. A lookup reads the root, one inner page and one leaf: 3 pages, and the top levels are usually in memory.\n' +
+      'That short, fixed path is why B-trees give steady reads and range scans. The price is on writes: changing a key rewrites its page in place, a random write.',
+  },
+  {
+    id: 'de-engine-6',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'A store for sensor readings takes 200,000 new readings a second, and a reading is never changed once written. Almost all reads ask for one sensor\'s readings from the last hour.\n' +
+      'Which storage engine fits, and why?',
+    decisions: [
+      { id: 'lsm', text: 'An LSM tree, which writes sorted files in batches and merges them later', isCorrect: true },
+      { id: 'btree', text: 'A B-tree, which keeps the keys in sorted pages that are updated in place', isCorrect: false },
+      { id: 'btree-ram', text: 'A B-tree on a machine with more memory, so that its pages are cached', isCorrect: false },
+      { id: 'heap', text: 'An unsorted heap file, with the readings appended in the order they came', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'sequential', text: 'Writes turn into memory inserts and sequential flushes, and recent readings sit in the newest files', isCorrect: true },
+      { id: 'one-file', text: 'An LSM read checks a single file, so it is faster than walking a B-tree\'s path of three or four pages', isCorrect: false },
+      { id: 'cache', text: 'With enough memory each page is cached, and a cached B-tree page takes writes as fast as anything can', isCorrect: false },
+      { id: 'append', text: 'Appending in arrival order is the fastest possible write, and the sensor\'s rows are easy to find after', isCorrect: false },
+    ],
+    explanation:
+      'An LSM tree takes each write into memory and later writes whole sorted files in one sequential pass, so a heavy, steady write rate costs little. Its reads can need several files, but reads of recent data hit the memtable and the newest files first.\n' +
+      'A B-tree rewrites a page per insert, random writes that fall behind at this rate once the index outgrows memory. An unsorted heap appends fast but has to scan to find one sensor\'s rows.',
+  },
+  {
+    id: 'de-engine-7',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'In an LSM table, 80% of lookups are for keys that do not exist (checking that an id is free). Each such lookup still reads about 3 files, because the bloom filters are small, at 2 bits per key. The disks are already busy with compaction, and there is spare memory.\n' +
+      'What should you change, and why?',
+    decisions: [
+      { id: 'bigger-filter', text: 'Give the bloom filters more bits per key, 10 in place of 2', isCorrect: true },
+      { id: 'compact', text: 'Compact more often, so each lookup has fewer files to check', isCorrect: false },
+      { id: 'no-filter', text: 'Turn the bloom filters off, so that they stop using memory', isCorrect: false },
+      { id: 'cache-hits', text: 'Cache the values of the keys that were found most recently', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'fewer-false', text: 'More bits per key make false "maybe"s rarer, and each is a wasted read for a missing key', isCorrect: true },
+      { id: 'fewer-files', text: 'Fewer, larger files make each filter more accurate, which cuts the false "maybe"s for free', isCorrect: false },
+      { id: 'useless', text: 'Most of the lookups are misses, which a filter does not help with, so its memory goes to waste', isCorrect: false },
+      { id: 'hot-keys', text: 'Most lookups repeat a few recent keys, so a cache answers them without touching a disk', isCorrect: false },
+    ],
+    explanation:
+      'A bloom filter\'s false-positive rate falls as it gets more bits per key: about 1% at 10 bits, against roughly 40% at 2. For a key that exists nowhere, every "maybe" is a disk read for nothing, so the spare memory buys back most of those reads.\n' +
+      'More compaction would cut the files, but the disks are already busy with it. Misses are where filters help most, and a cache of found keys does nothing for keys that are not there.',
+  },
+  {
+    id: 'de-engine-8',
+    type: QuestionType.PARSONS,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    language: CodeLanguage.SQL,
+    question: 'Put the steps of an LSM tree taking a write, until it is merged into older data, in order. Two steps do not belong.',
+    correctOrder: [
+      'Append the write to the write-ahead log on disk, so a crash cannot lose it',
+      'Insert the key and value into the sorted in-memory table',
+      'When the in-memory table is full, write it out in key order as a new file',
+      'Build the new file\'s bloom filter and key index from the keys it holds',
+      'Later, compaction merges the file with older ones, keeping the newest entry per key',
+    ],
+    distractorLines: [
+      'Find the page on disk that holds the key and overwrite the old value in place',
+      'Remove the key\'s older entries from the older files as soon as the new one is written',
+    ],
+    solution: steps([
+      'Append the write to the write-ahead log on disk, so a crash cannot lose it',
+      'Insert the key and value into the sorted in-memory table',
+      'When the in-memory table is full, write it out in key order as a new file',
+      'Build the new file\'s bloom filter and key index from the keys it holds',
+      'Later, compaction merges the file with older ones, keeping the newest entry per key',
+    ]),
+    explanation:
+      'The log makes the write durable with one sequential append, the memtable keeps keys sorted in memory, and a flush writes a whole sorted, immutable file at once; its filter and index are built as it is written. Old versions stay in old files until compaction.\n' +
+      'Overwriting a page in place is what a B-tree does, and an LSM tree never edits a file it has written.',
+  },
+  {
+    id: 'de-engine-9',
+    type: QuestionType.PREDICT_OUTCOME,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'A table is stored in 8 files, f8 the newest. Query A looks up key k42: it asks the bloom filters, reads the "maybe" files newest first, and stops at the first file that holds k42. Query B counts every key in the table.\n' +
+      'How many file reads do the two queries make in total?',
+    tables: [
+      table('files', ['file_name', 'filter_says_k42', 'holds_k42'], [
+        ['f8', 'no', 'no'],
+        ['f7', 'no', 'no'],
+        ['f6', 'maybe', 'yes'],
+        ['f5', 'no', 'no'],
+        ['f4', 'no', 'no'],
+        ['f3', 'maybe', 'no'],
+        ['f2', 'no', 'no'],
+        ['f1', 'maybe', 'yes'],
+      ]),
+    ],
+    answer: '9',
+    unit: 'reads',
+    tempting: [
+      { answer: '11', why: '11 has query A read all three "maybe" files. It reads newest first and stops at f6, the newest file that holds k42.' },
+      { answer: '4', why: '4 lets query B use the filters too. A filter answers "is this key here?"; a count of every key has to read every file.' },
+    ],
+    explanation:
+      'Query A skips f8 and f7, reads f6, finds k42 and stops: 1 read, and f1\'s copy is an older version it never needs. Query B reads all 8 files, since a scan wants every key and a filter can only rule out one key at a time: 9 reads in all.\n' +
+      'Bloom filters speed up point lookups, and misses most of all; scans gain nothing from them.',
+  },
+  {
+    id: 'de-engine-10',
+    type: QuestionType.CHOOSE_JUSTIFY,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'A privacy request means deleting 40% of the rows of a busy LSM table by Friday. The disk is 85% full, reads must stay fast throughout, and the table cannot be taken offline.\n' +
+      'How should you delete them, and why?',
+    decisions: [
+      { id: 'batches', text: 'Delete in batches by key range, compacting each range before the next', isCorrect: true },
+      { id: 'all-at-once', text: 'Delete the rows in one statement and let compaction catch up later', isCorrect: false },
+      { id: 'copy', text: 'Copy the 60% that stays into a new table, then switch over and drop the old', isCorrect: false },
+      { id: 'flag', text: 'Update the rows to set a deleted flag, and filter on the flag in reads', isCorrect: false },
+    ],
+    reasons: [
+      { id: 'tombstones', text: 'A delete adds a tombstone, and space comes back as compaction rewrites the files that hold the keys', isCorrect: true },
+      { id: 'frees', text: 'A delete frees the deleted rows\' space at once, so a single large delete is the quickest way through', isCorrect: false },
+      { id: 'room', text: 'A fresh copy is written once and compacts nothing, so it needs no more disk than the table has now', isCorrect: false },
+      { id: 'cheap', text: 'An update rewrites each row in its place, so the table stays the same size and the reads stay fast', isCorrect: false },
+    ],
+    explanation:
+      'In an LSM tree a delete is a new entry: a sudden 40% of tombstones makes the table bigger and every read step over them, until compaction rewrites the files that hold those keys, and compaction itself needs free space for the files it writes. Batches by key range, each compacted before the next, keep both the extra entries and the extra space small.\n' +
+      'A copy needs room for 60% of the table on a disk that is 85% full, and a flag is just an update: another entry per row, with the data still there.',
+  },
+  {
+    id: 'de-engine-11',
+    type: QuestionType.SPOT_FLAW,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'Lookups on a key-value table get a little slower every day, and its disk use keeps growing, though the number of live keys has been flat for months.\n' +
+      'Click the line that causes it.',
+    lines: [
+      'engine: lsm',
+      'memtable: flush to a new file at 64 MB',
+      'bloom filter: 10 bits per key',
+      'compaction: off, run by hand at month end',
+      'workload: 5,000 updates a second to existing keys',
+    ],
+    flawLines: [4],
+    note: 'The month-end compaction was skipped for the last three months.',
+    explanation:
+      'Every update is a new entry, and every flush adds a file. With compaction off, the old versions pile up on disk and a lookup has more files to check each day: the live data is flat, but the entries are not.\n' +
+      'Compaction is part of running an LSM tree, not a cleanup to do by hand: it keeps the file count and the old versions bounded, at the cost of rewriting data in the background.',
+  },
+  {
+    id: 'de-engine-12',
+    type: QuestionType.SPOT_FLAW,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question:
+      'The insert rate of an events table falls steadily as the table grows past the size of memory, and the disk shows a stream of small random writes.\n' +
+      'Click the line that causes it.',
+    lines: [
+      'table: events',
+      'engine: b-tree, primary key index',
+      'primary key: event_uuid, a random 128-bit id',
+      'inserts: 30,000 a second, never updated',
+      'reads: events by time range for a dashboard',
+    ],
+    flawLines: [3],
+    note: 'The engine cannot be changed this quarter; the table\'s columns can.',
+    explanation:
+      'A random key sends each insert to a random leaf page of the B-tree. Once the index is bigger than memory, most of those pages are not cached, so each insert reads a page and writes it back: random I/O that grows with the table.\n' +
+      'With the engine fixed, key the table on something that grows, such as (event_time, event_uuid): inserts then land on the newest leaf pages, which stay in memory, and the dashboard\'s time-range reads become one range scan.',
+  },
+  {
+    id: 'de-engine-13',
+    type: QuestionType.EXPLAIN,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question: 'In two or three sentences: why are writes cheap in an LSM tree, and what does it pay for that on reads?',
+    keyPoints: [
+      'A write is a log append plus an insert into a sorted in-memory table, which is flushed as a whole sorted file',
+      'Files are never edited: an update or delete is a newer entry, so there are no random writes',
+      'A read may have to check the memtable and several files, newest first',
+      'Bloom filters and compaction keep that read cost down',
+    ],
+    modelAnswer:
+      'An LSM tree appends each write to a log and puts it in a sorted table in memory, then writes that table out as one sorted file, so writes are sequential and no file is ever changed in place. ' +
+      'The cost is on reads: a key\'s newest entry could be in memory or in any of several files, so a read checks them newest first, which bloom filters (to skip files) and compaction (to keep files few) make affordable.',
+    explanation: 'A B-tree makes the opposite trade: one short path of pages per read, and a random page write per change.',
+  },
+  {
+    id: 'de-engine-14',
+    type: QuestionType.EXPLAIN,
+    difficulty: Difficulty.ADVANCED,
+    topic: Topic.DE_STORAGE_ENGINES,
+    course: DE,
+    question: 'In two or three sentences: what does compaction do in an LSM tree, what does it cost, and what can a bloom filter tell a read?',
+    keyPoints: [
+      'Compaction merges files, keeping the newest entry per key and dropping old versions and tombstones',
+      'That makes reads touch fewer files and gives back disk space',
+      'It rewrites the same data again and again (write amplification), using disk and CPU in the background',
+      'A bloom filter says a key is definitely not in a file, or maybe in it; a "maybe" can be wrong, a "no" cannot',
+    ],
+    modelAnswer:
+      'Compaction merges an LSM tree\'s files into fewer, keeping only the newest entry of each key and dropping deleted keys, so reads check fewer files and disk space comes back, but it rewrites the same data many times, costing background I/O. ' +
+      'A bloom filter per file lets a lookup skip any file whose filter says the key is definitely not there; a "maybe" can be a false positive, so the file is read, and more bits per key make those rarer.',
+    explanation: 'Compaction trades write work for read speed and space; the bloom filter trades a little memory for skipped reads.',
+  },
+];
+
+export const dataEngineeringDistributedQuestions: Question[] = [...skew, ...replication, ...engines];

@@ -129,6 +129,8 @@ export enum Topic {
   DE_STREAMING_GUARANTEES = 'de_streaming_guarantees',
   DE_STREAMING_SQL = 'de_streaming_sql',
   // Distributed Systems & Storage (small beginner-first topics)
+  // Retired into Distributed Data (no questions; kept so stored progress keeps
+  // its course): every topic below.
   DE_WHY_DISTRIBUTE = 'de_why_distribute',
   DE_PARTITIONING = 'de_partitioning',
   DE_REPLICATION = 'de_replication',
@@ -185,6 +187,13 @@ export enum Topic {
   DE_EVENT_TIME_WINDOWS = 'de_event_time_windows',
   DE_DELIVERY_GUARANTEES = 'de_delivery_guarantees',
   DE_STREAM_STATE_JOINS = 'de_stream_state_joins',
+  // Distributed Data - the sixth rewritten section. It absorbs the old
+  // DE_WHY_DISTRIBUTE, DE_PARTITIONING, DE_REPLICATION, DE_LSM_VS_BTREE and
+  // DE_COMPACTION_BLOOM, which keep no questions and stay here so stored
+  // progress keeps its course.
+  DE_PARTITION_SKEW = 'de_partition_skew',
+  DE_REPLICATION_CONSISTENCY = 'de_replication_consistency',
+  DE_STORAGE_ENGINES = 'de_storage_engines',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).

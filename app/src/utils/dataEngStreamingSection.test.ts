@@ -50,10 +50,10 @@ function emptyProgress(): UserProgress {
 const dePool = allQuestions.filter(q => getCourseForTopic(q.topic) === Course.DATA_ENGINEERING);
 
 describe('section wiring', () => {
-  it('is Step 6, after Modeling for Analytics and before Distributed Systems & Storage', () => {
+  it('is Step 6, after Modeling for Analytics and before Distributed Data', () => {
     expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(5);
     expect(DATA_ENG_PATH_ORDER[4]).toBe('Modeling for Analytics');
-    expect(DATA_ENG_PATH_ORDER[6]).toBe('Distributed Systems & Storage');
+    expect(DATA_ENG_PATH_ORDER[6]).toBe('Distributed Data');
     expect(DATA_ENG_SECTIONS[SECTION].weight).toBe('Step 6');
   });
 
@@ -78,7 +78,7 @@ describe('section wiring', () => {
     progress.masteredTopics = new Set(DATA_ENG_PATH_ORDER.slice(0, 5).flatMap(getTopicKeysForSection));
     const unlocked = SpacedRepetitionSystem.getUnlockedSections(dePool, progress);
     expect(unlocked!.sections).toContain(SECTION);
-    expect(unlocked!.sections).not.toContain('Distributed Systems & Storage');
+    expect(unlocked!.sections).not.toContain('Distributed Data');
     expect(SpacedRepetitionSystem.getUnlockedTopics(dePool, progress)).toContain(TOPICS[0]);
   });
 
@@ -193,11 +193,11 @@ describe('a learner who was working through the old Streaming section', () => {
     expect(topics.has(TOPICS[1])).toBe(false);
   });
 
-  it('keeps Distributed Systems & Storage open if it had already reached it', () => {
+  it('keeps Distributed Data open if it had already reached it', () => {
     const p = midStreaming();
-    answer(p, dePool.find(q => getTopicKeysForSection('Distributed Systems & Storage').includes(q.topic))!.id);
+    answer(p, dePool.find(q => getTopicKeysForSection('Distributed Data').includes(q.topic))!.id);
     const sections = SpacedRepetitionSystem.getUnlockedSections(dePool, p)!.sections;
     expect(sections).toContain(SECTION);
-    expect(sections).toContain('Distributed Systems & Storage');
+    expect(sections).toContain('Distributed Data');
   });
 });
