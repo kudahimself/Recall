@@ -15,7 +15,9 @@
  * Files, Warehouses, Lakes & Table Formats, Moving Data, Modeling for Analytics,
  * Streaming, Distributed Data and Running Pipelines.
  * Then Web Dev, in JavaScript with Vitest and jsdom (HTML and CSS checked on the
- * page jsdom builds): HTML, CSS & Tailwind and JavaScript Fundamentals.
+ * page jsdom builds): HTML, CSS & Tailwind and JavaScript Fundamentals, then
+ * React (components rendered with React Testing Library) and TypeScript (types
+ * checked by the compiler in the tests).
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -1800,6 +1802,188 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Write the logic of a small reading-list app, apart from the page so it can be tested.',
       'Add, toggle and remove books by returning new arrays, count the unread ones, save and load the list as JSON in storage, and rebuild a `<ul>` from it; then read its Vitest tests and add one of your own.',
+    ),
+  },
+  {
+    id: 'react_components',
+    topicKeys: [Topic.REACT_COMPONENTS],
+    title: 'Book cards',
+    folder: 'exercises/web_dev/react_components',
+    starter: ['BookCards.jsx'],
+    tests: 'BookCards.test.jsx',
+    minutes: 20,
+    task: lines(
+      'Write the bookshop\'s shelf as three React components, props in and JSX out.',
+      'A stock note chosen with a ternary, a card with `className` and a disabled button, and a shelf that shows its `children`, a badge with `&&` that never prints 0, and a list from `map` keyed by id, inside a fragment.',
+    ),
+  },
+  {
+    id: 'react_state',
+    topicKeys: [Topic.REACT_STATE],
+    title: 'Basket',
+    folder: 'exercises/web_dev/react_state',
+    starter: ['Basket.jsx'],
+    tests: 'Basket.test.jsx',
+    minutes: 20,
+    task: lines(
+      'Keep a bookshop basket\'s lines in `useState`.',
+      'Add a line or a copy with a spread and `map`, remove with `filter`, add two copies in one click with the updater form, and work the count and the total out during render.',
+    ),
+  },
+  {
+    id: 'react_effects',
+    topicKeys: [Topic.REACT_EFFECTS],
+    title: 'Reading page',
+    folder: 'exercises/web_dev/react_effects',
+    starter: ['ReadingPage.jsx'],
+    tests: 'ReadingPage.test.jsx',
+    minutes: 25,
+    task: lines(
+      'Keep two components in step with the world outside React using `useEffect`.',
+      'A once-started interval that counts with an updater and is cleared on unmount, under `StrictMode` too, a tab title that follows a prop and is put back, and a fetch that ignores a late answer for an old id.',
+    ),
+  },
+  {
+    id: 'react_hooks',
+    topicKeys: [Topic.REACT_HOOKS],
+    title: 'Search box',
+    folder: 'exercises/web_dev/react_hooks',
+    starter: ['SearchBox.jsx'],
+    tests: 'SearchBox.test.jsx',
+    minutes: 20,
+    task: lines(
+      'Build a title search from two custom hooks and `useRef`.',
+      'A `useFilter` hook that memoizes its result with `useMemo` and keeps its hooks unconditional, a `usePrevious` hook kept in a ref, and a controlled search box focused through a ref on mount and after Clear.',
+    ),
+  },
+  {
+    id: 'react_context',
+    topicKeys: [Topic.REACT_CONTEXT],
+    title: 'Currency',
+    folder: 'exercises/web_dev/react_context',
+    starter: ['Currency.jsx'],
+    tests: 'Currency.test.jsx',
+    minutes: 20,
+    task: lines(
+      'Share the shop\'s currency through a context instead of props.',
+      'Create the context with a default, provide state from a provider whose value is memoized, read it with a `useCurrency` hook in prices several components down, and switch it from a picker.',
+    ),
+  },
+  {
+    id: 'react_forms',
+    topicKeys: [Topic.REACT_FORMS],
+    title: 'Join form',
+    folder: 'exercises/web_dev/react_forms',
+    starter: ['JoinForm.jsx'],
+    tests: 'JoinForm.test.jsx',
+    minutes: 25,
+    task: lines(
+      'Write the reading club\'s sign-up form with controlled inputs.',
+      'One object in state and one `onChange` handler with a computed key for a text box, an email, a select and a checkbox, then a submit on the form that calls `preventDefault`, checks the fields and hands the entry up.',
+    ),
+  },
+  {
+    id: 'react_patterns',
+    topicKeys: [Topic.REACT_PATTERNS],
+    title: 'Book routes',
+    folder: 'exercises/web_dev/react_patterns',
+    starter: ['BookRoutes.jsx'],
+    tests: 'BookRoutes.test.jsx',
+    minutes: 25,
+    task: lines(
+      'Turn the bookshop into a routed app with React Router 7.',
+      'A layout with an `<Outlet />`, an index route, a `books/:id` page read with `useParams`, a catch-all route, `<Link>` and `navigate()` instead of page loads, and a `key` that gives each book a fresh note box.',
+    ),
+  },
+  {
+    id: 'react_project',
+    topicKeys: [Topic.REACT_PROJECT],
+    title: 'Wishlist',
+    folder: 'exercises/web_dev/react_project',
+    starter: ['Wishlist.jsx'],
+    tests: 'Wishlist.test.jsx',
+    minutes: 30,
+    task: lines(
+      'Build a small wishlist app from the section\'s pieces, tested the way a user uses it.',
+      'A reducer for every change, a form that hands titles up, a filter and counts worked out during render, and an effect that saves to storage; then read its React Testing Library tests and add one of your own.',
+    ),
+  },
+  {
+    id: 'ts_basic_types',
+    topicKeys: [Topic.TS_BASIC_TYPES],
+    title: 'Price tags',
+    folder: 'exercises/web_dev/ts_basic_types',
+    starter: ['priceTags.ts'],
+    tests: 'priceTags.test.ts',
+    minutes: 20,
+    task: lines(
+      'Type the shop\'s label functions in TypeScript.',
+      'A literal union for the formats, typed parameters with an optional one and a default, a value from outside taken as `unknown` and narrowed with `typeof`, a `string | number` parameter, and a function that returns `never`.',
+    ),
+  },
+  {
+    id: 'ts_interfaces',
+    topicKeys: [Topic.TS_INTERFACES],
+    title: 'Book shapes',
+    folder: 'exercises/web_dev/ts_interfaces',
+    starter: ['bookShapes.ts'],
+    tests: 'bookShapes.test.ts',
+    minutes: 20,
+    task: lines(
+      'Name the catalogue\'s objects with interfaces and type aliases.',
+      'A `readonly` and an optional property, an interface that `extends` another, an index signature, a method signature, and a function that copies only a book\'s own fields, since an `Ebook` passed as a `Book` keeps its extras.',
+    ),
+  },
+  {
+    id: 'ts_generics',
+    topicKeys: [Topic.TS_GENERICS],
+    title: 'Paged lists',
+    folder: 'exercises/web_dev/ts_generics',
+    starter: ['pagedLists.ts'],
+    tests: 'pagedLists.test.ts',
+    minutes: 25,
+    task: lines(
+      'Write list helpers that work for any element type with generics.',
+      'A generic `Page<T>` and an interface with a default type parameter, `paginate` that keeps its type, a `length` constraint, `K extends keyof T` with `T[K][]`, and rows constrained to have a numeric id.',
+    ),
+  },
+  {
+    id: 'ts_advanced_types',
+    topicKeys: [Topic.TS_ADVANCED_TYPES],
+    title: 'Delivery options',
+    folder: 'exercises/web_dev/ts_advanced_types',
+    starter: ['delivery.ts'],
+    tests: 'delivery.test.ts',
+    minutes: 25,
+    task: lines(
+      'Model delivery options as a discriminated union and narrow them.',
+      'A `switch` on `kind` made exhaustive with `assertNever`, a type guard that checks fields at runtime, `instanceof` and `typeof` on something thrown, an intersection, and an object checked with `satisfies`.',
+    ),
+  },
+  {
+    id: 'ts_utility_types',
+    topicKeys: [Topic.TS_UTILITY_TYPES],
+    title: 'Book records',
+    folder: 'exercises/web_dev/ts_utility_types',
+    starter: ['bookRecords.ts'],
+    tests: 'bookRecords.test.ts',
+    minutes: 20,
+    task: lines(
+      'Make a book\'s other shapes from `Book` with utility types.',
+      '`Omit`, `Pick`, `Partial` of an `Omit`, a `Record` over a literal union, `ReturnType` and `Readonly`, and functions that copy only the picked fields and patch a book without letting an `undefined` through.',
+    ),
+  },
+  {
+    id: 'ts_project',
+    topicKeys: [Topic.TS_PROJECT],
+    title: 'Order loader',
+    folder: 'exercises/web_dev/ts_project',
+    starter: ['orderLoader.ts'],
+    tests: 'orderLoader.test.ts',
+    minutes: 30,
+    task: lines(
+      'Load orders from outside into a typed result envelope that is true at runtime.',
+      'A generic `Result<T>` union and `Guard<T>`, guards for an order and for an array of anything, `parseJson` and `fetchJson` that return every failure as an error, including a response that is not ok, and never cast with `as`.',
     ),
   },
 ];

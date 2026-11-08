@@ -1,6 +1,6 @@
 # Exercises
 
-Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks, Python with DuckDB for Data Engineering, and HTML, CSS and JavaScript for Web Dev.
+Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks, Python with DuckDB for Data Engineering, and HTML, CSS, JavaScript, React and TypeScript for Web Dev.
 Each one follows a topic's lesson and questions in Recall: the app shows the task and the folder to open, and you tick it done yourself.
 Nothing runs in the browser.
 
@@ -34,9 +34,9 @@ Not every topic has one: the course outline gives an exercise to the topics wher
 
 ## Web Dev exercises
 
-The exercises under `exercises/web_dev/` are HTML, CSS and JavaScript, tested with Vitest on Node, with jsdom standing in for the browser.
+The exercises under `exercises/web_dev/` are HTML, CSS, JavaScript, React components and TypeScript, tested with Vitest on Node, with jsdom standing in for the browser, React Testing Library rendering the components, and the TypeScript compiler checking the types.
 Each one runs with `npm test` from its folder instead of `pytest`.
-See `exercises/web_dev/README.md` for the setup and for how the tests read a page.
+See `exercises/web_dev/README.md` for the setup and for how the tests read a page, a component and your types.
 
 ## Django exercises
 
@@ -70,11 +70,13 @@ exercises/
     README.md                task, examples, how to run
     <module>.py              the starter you fill in
     test_<module>.py         the pytest tests
-    <module>.test.js         or, for Web Dev, the Vitest tests
+    <module>.test.js         or, for Web Dev, the Vitest tests (.test.jsx for React, .test.ts for TypeScript)
   backend/exercise_settings.py  the Django settings every Django exercise shares
   databricks/spark_setup.py  the local Spark session every Databricks exercise shares
   web_dev/package.json       the Node packages the Web Dev exercises need, with their lock file
   web_dev/page.js            loads a Web Dev exercise's page into jsdom for its tests
+  web_dev/typecheck.js       runs the TypeScript compiler over a TypeScript exercise for its tests
+  web_dev/tsconfig.json      the strict TypeScript settings, shared by VS Code and typecheck.js
   solutions/<course>/<topic>/  reference solutions, laid over the starter files
   check_exercises.py         checks every exercise (see below)
   requirements.txt           the packages to install, pinned

@@ -12,7 +12,9 @@ const dir = from.startsWith(here + path.sep) ? from : here;
 export default defineConfig({
   test: {
     dir,
-    include: ['**/*.test.js'],
+    include: ['**/*.test.{js,jsx,ts}'],
     environment: 'node',
+    // A TypeScript exercise's first type check reads the compiler and its library, a few seconds on a busy machine.
+    testTimeout: 30000,
   },
 });
