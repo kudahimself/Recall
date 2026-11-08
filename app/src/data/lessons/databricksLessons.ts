@@ -8,6 +8,7 @@
  * Section 5, Optimization & Advanced: every topic.
  * Section 6, Data Governance: every topic.
  * Section 7, Data Modeling & Warehousing Design: every topic.
+ * Section 8, Lakehouse Architecture & Engineering Practice: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). Most worked examples
  * here are Databricks notebook cells: they need a workspace to run, so they
@@ -28,7 +29,10 @@
  * privileges and row filter / column mask docs. The section 7 cells (a star
  * join, an SCD Type 2 load, a day-by-day rebuild with REPLACE WHERE) were
  * run on Spark 4.0 with Delta 4.0, the SCD cell with a plain member_sk
- * column for the identity column, which open-source Delta's SQL lacks. SQL
+ * column for the identity column, which open-source Delta's SQL lacks. The
+ * section 8 gold rebuild and CDC MERGE cells were run on Spark 4.0 with
+ * Delta 4.0 (QUALIFY written as a subquery); its pipeline source needs a
+ * workspace, so its output follows the Lakeflow expectations docs. SQL
  * in a cell runs through `spark.sql`, as it would in a Python notebook. A plain SQL
  * example (joins, aggregations, subqueries, set operations) uses only SQL
  * that Spark and the checker's engine agree on, so check-lessons.js runs it.
@@ -2729,6 +2733,272 @@ for r in spark.sql("""SELECT * FROM daily_loans
       'pd-mcq-4',
       'pd-predict-1',
       'pd-coding-1',
+    ],
+  },
+  // ===== Section 8, Lakehouse Architecture & Engineering Practice =====
+  {
+    id: 'gold_layer_design/1',
+    topicKeys: [Topic.GOLD_LAYER_DESIGN],
+    step: 1,
+    title: 'Gold Layer & Multi-Hop Pipeline Design (OBT vs star, grain, marts, reprocessing)',
+    idea: [
+      lines(
+        "Gold holds the tables people query, so each is shaped for its consumers.",
+        "One Big Table (OBT) pre-joins facts and dimensions once at load time, which suits DirectQuery and embedded dashboards that filter interactively.",
+        "A star schema keeps facts and conformed dimensions apart, which suits Import Mode BI and SCD Type 2 history; a new kind of consumer gets a table of its own, not a migration of the layer.",
+      ),
+      lines(
+        "Declare each table's grain, one row per what, and keep the finest grain as the source of truth.",
+        "A rollup is added beside it and never replaces it, since a weekly total cannot be split back into its days.",
+      ),
+      lines(
+        "Silver fixes what every consumer needs, such as removing duplicates and casting types; gold holds one consumer's business rules, such as leaving test accounts out of a revenue figure.",
+        "One shared gold catalog suits one small team, and per-domain catalogs such as `finance_gold` suit many teams or a compliance boundary, granted per catalog in Unity Catalog.",
+      ),
+      lines(
+        "After a bug, reprocess the cheapest way that covers it: replay only the damaged slice with `REPLACE WHERE`, or rebuild the whole table when the damage has no bound.",
+        "Blue/green builds `t_v2` beside `t`, checks it, then repoints the view consumers read, so they never see a half-built table.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- grain: one row per order line; rollups go beside it
+CREATE OR REPLACE TABLE gold_line AS
+  SELECT ... FROM silver_line;
+-- one-to-many: bring the many side to the parent's grain
+WITH per_p AS (SELECT p_id, COUNT(*) AS n
+               FROM child GROUP BY p_id)
+SELECT p.p_id, p.amount, per_p.n
+FROM parent p LEFT JOIN per_p ON p.p_id = per_p.p_id;
+-- selective replay: rewrite only the damaged slice
+INSERT INTO gold_t REPLACE WHERE d >= DATE'2026-01-05'
+SELECT ... FROM silver_t WHERE d >= DATE'2026-01-05';
+-- blue/green: build and check gold_t_v2, then repoint
+CREATE OR REPLACE VIEW gold_v AS SELECT * FROM gold_t_v2;`,
+    },
+    pitfall: lines(
+      "The Fan-Out Bug: joining a parent to a many-side table before aggregating repeats the parent row once per child, so `SUM(order_amount)` counts an order of 100 with three lines as 300.",
+      "Aggregate the many side to the parent's grain first, then join.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# UC notebook, schema main.shop. receipts: 1 and 2 on 03-01
+# (totals 30, 12), 3 on 03-02 (9); receipt_lines: 3 books on
+# receipt 1, 1 on each other; view daily_sales reads v1
+spark.sql("""CREATE OR REPLACE TABLE daily_sales_v2 AS
+    WITH per_receipt AS (SELECT receipt_id, COUNT(*) AS books
+        FROM receipt_lines GROUP BY receipt_id)
+    SELECT r.sale_day, SUM(r.total) AS revenue,
+        SUM(p.books) AS books
+    FROM receipts r LEFT JOIN per_receipt p
+    USING (receipt_id) GROUP BY r.sale_day""")
+want = spark.sql("SELECT SUM(total) FROM receipts")
+got = spark.sql("SELECT SUM(revenue) FROM daily_sales_v2")
+if got.first()[0] == want.first()[0]:  # check v2 before use
+    spark.sql("""CREATE OR REPLACE VIEW daily_sales
+        AS SELECT * FROM daily_sales_v2""")
+q = "SELECT * FROM daily_sales ORDER BY sale_day"
+for r in spark.sql(q).collect():
+    print(r.sale_day, r.revenue, r.books)`,
+      steps: [
+        "Lines 1-3: v1 joined receipts straight to their lines, so receipt 1's 30 was counted once per book and March 1 showed 102 instead of 42.",
+        "Lines 5-6: `per_receipt` brings the lines to the receipts' grain first, one row per receipt with its book count.",
+        "Lines 7-10: each receipt now meets one row, so its total is summed once while its books are still counted.",
+        "Lines 11-15: blue/green: v2 is checked against the total of all receipts, 51, and only then does the view switch to it in one step, with v1 kept as a fallback.",
+        "Lines 16-18: readers of `daily_sales` now see 30 + 12 = 42 and four books for March 1, and 9 and one book for March 2.",
+      ],
+      output: `2026-03-01 42 4
+2026-03-02 9 1`,
+    },
+    exercises: [
+      'gld-mcq-b1',
+      'gld-mcq-b4',
+      'gld-predict-1',
+      'gld-parsons-1',
+      'gld-coding-1',
+    ],
+  },
+  {
+    id: 'ingestion_architecture/1',
+    topicKeys: [Topic.INGESTION_ARCHITECTURE],
+    step: 1,
+    title: 'Ingestion & Partitioning Architecture (batch vs streaming, formats, Liquid Clustering, CDC)',
+    idea: [
+      lines(
+        "Pick the mode from the freshness consumers need and how the source delivers: a push source with a target of seconds, such as Kafka, needs a continuous stream.",
+        "Anything looser is incremental batch: the same stream code with `trigger(availableNow=True)`, run on a schedule, loads what is new exactly once and stops, so no compute idles.",
+      ),
+      lines(
+        "Land files as the source sent them, even JSON, in a Unity Catalog volume laid out per source, entity and version, and keep them immutable until bronze's history covers the retention need.",
+        "Auto Loader parses them into bronze, with values that do not fit in `_rescued_data`, and `cloudFiles.useNotifications` replaces listing a bucket of millions of files.",
+      ),
+      lines(
+        "Lay out a new table with Liquid Clustering, `CLUSTER BY (cols)`: it makes no directories, takes high-cardinality keys such as `customer_id`, and `ALTER TABLE ... CLUSTER BY` changes its keys without a rewrite.",
+        "`PARTITIONED BY` makes a directory per value; Databricks advises it only for tables over about 1 TB, on a low-cardinality column with at least 1 GB per partition.",
+      ),
+      lines(
+        "To stay in step with a source, read its change log (CDC) when it has one, the cheapest way; without one, diff snapshots, and reload in full only a small table.",
+        "Apply changes with `MERGE` or `AUTO CDC`, never by overwriting a large table for a few rows.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# incremental batch: on a schedule, load what is new, stop
+(spark.readStream.format("cloudFiles")
+    .option("cloudFiles.format", "json")       # as sent
+    .option("cloudFiles.schemaLocation", sch)  # schema kept
+    .load("/Volumes/cat/sch/landing/src/entity/v1/")
+    .writeStream.option("checkpointLocation", chk)
+    .trigger(availableNow=True)  # streaming: processingTime
+    .toTable("cat.sch.bronze_t"))
+# layout: cluster; do not partition a small table by hour
+spark.sql("""CREATE TABLE t (k INT, d DATE, v INT)
+    CLUSTER BY (k)""")
+spark.sql("ALTER TABLE t CLUSTER BY (k, d)")  # no rewrite
+# sync: apply the latest change per key from the change log
+spark.sql("""MERGE INTO t USING changes c ON t.k = c.k
+  WHEN MATCHED AND c.op = 'D' THEN DELETE
+  WHEN MATCHED THEN UPDATE SET t.v = c.v
+  WHEN NOT MATCHED AND c.op <> 'D' THEN INSERT (k, d, v)
+    VALUES (c.k, c.d, c.v)""")`,
+    },
+    pitfall: lines(
+      "Partitioning a small table by `year/month/day/hour`: one year makes 8,760 directories of tiny files, so query planning slows and every query opens thousands of files.",
+      "Leave a table under about 1 TB unpartitioned and cluster it on the columns queries filter by, such as `CLUSTER BY (event_time)`.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# UC notebook, schema main.lib. loans (loan_id, branch, due),
+# CLUSTER BY (branch): 1 leeds 03-10, 2 york 03-12. Today's
+# rows from the source's change log loan_changes, by seq:
+# 2 U hull 03-12, 3 I leeds 03-15, 1 D, 3 U leeds 03-20
+spark.sql("""MERGE INTO loans t USING (
+    SELECT * FROM loan_changes QUALIFY ROW_NUMBER()
+    OVER (PARTITION BY loan_id ORDER BY seq DESC) = 1) c
+    ON t.loan_id = c.loan_id
+    WHEN MATCHED AND c.op = 'D' THEN DELETE
+    WHEN MATCHED THEN
+      UPDATE SET branch = c.branch, due = c.due
+    WHEN NOT MATCHED AND c.op <> 'D' THEN INSERT (loan_id,
+        branch, due) VALUES (c.loan_id, c.branch, c.due)""")
+spark.sql("ALTER TABLE loans CLUSTER BY (branch, due)")
+for r in spark.table("loans").orderBy("loan_id").collect():
+    print(r.loan_id, r.branch, r.due)
+detail = spark.sql("DESCRIBE DETAIL loans").first()
+print(detail.clusteringColumns)`,
+      steps: [
+        "Lines 1-4: the change log holds only today's four changes, not the whole source table a full reload would read again.",
+        "Lines 5-7: loan 3 changed twice, so `QUALIFY` keeps each loan's latest change by `seq`; applying both would insert loan 3 twice.",
+        "Lines 8-13: loan 1's delete removes it, loan 2's update moves it to hull, and loan 3, new to the table, is inserted with its later due date.",
+        "Line 14: queries now filter on the due date too, so the clustering keys change in place; existing files are not rewritten, and new writes and the next `OPTIMIZE` cluster by the new keys.",
+        "Lines 15-18: two loans remain, and the table reports its new clustering keys.",
+      ],
+      output: `2 hull 2026-03-12
+3 leeds 2026-03-20
+['branch', 'due']`,
+    },
+    exercises: [
+      'ing-mcq-b1',
+      'ing-mcq-b4',
+      'ing-mcq-b5',
+      'ing-predict-1',
+      'ing-parsons-1',
+    ],
+  },
+  {
+    id: 'orchestration_design/1',
+    topicKeys: [Topic.ORCHESTRATION_DESIGN],
+    step: 1,
+    title: 'Orchestration & Data-Quality Design (run_if, backfill, DLT expectations)',
+    idea: [
+      lines(
+        "Run one logical pipeline as one Lakeflow Job with `depends_on` edges, not as separate jobs on staggered cron times, so a late or failed step holds back the next instead of letting it read yesterday's data.",
+        "For another team's table, start on its signal, a table update trigger, not a time picked to land after it usually finishes.",
+      ),
+      lines(
+        "A fan-out runs one branch per slice, often from a list a first task sets with `taskValues`, and a fan-in task depends on every branch.",
+        "`run_if` decides when a task runs, given its upstream tasks: `ALL_SUCCESS`, the default, needs all to succeed, `NONE_FAILED` also accepts skipped ones, `AT_LEAST_ONE_SUCCESS` needs one, and `ALL_DONE` runs regardless.",
+      ),
+      lines(
+        "A backfill is a `for_each_task` over the dates with a modest `concurrency`, such as 4, so runs neither exhaust the cluster nor fight over the Delta log.",
+        "Each iteration rewrites only its own day, with `replaceWhere` or a `MERGE`, so a failed date can run again.",
+      ),
+      lines(
+        "Each hop checks its own kind of quality: bronze that a record parses, silver the table's invariants, gold that the business number makes sense.",
+        "In a Lakeflow pipeline, `expect` keeps a failing row and counts it, `expect_or_drop` drops it, and `expect_or_fail` stops the update; send dropped rows to a quarantine table too, or they vanish unseen.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.PYTHON,
+      code: `# databricks.yml (each task's notebook_task left out)
+resources:
+  jobs:
+    gold_sales:            # one job, not staggered crons
+      trigger:             # when the upstream commits
+        table_update: {table_names: [cat.sch.silver_sales]}
+      tasks:
+        - task_key: split    # sets taskValues "regions"
+        - task_key: tax      # an If/Else task may skip it
+          depends_on: [{task_key: split}]
+        - task_key: gold     # fan-in
+          depends_on: [{task_key: split}, {task_key: tax}]
+          run_if: NONE_FAILED  # skips pass, failures stop
+    backfill_sales:
+      tasks:
+        - task_key: days
+          for_each_task:     # one idempotent run per day
+            inputs: '["2026-01-01", "2026-01-02"]'
+            concurrency: 4   # bounded, not all at once
+            task: {task_key: one_day}   # reads {{input}}`,
+    },
+    pitfall: lines(
+      "The Ghost Sink Failure: a fan-in task left on the default `ALL_SUCCESS` after an If/Else branch was skipped on purpose is skipped too, so gold is not built for that run although no task failed.",
+      "Set the fan-in's `run_if` to `NONE_FAILED`, which accepts skipped branches and still stops on a real failure.",
+    ),
+    worked: {
+      language: CodeLanguage.PYTHON,
+      runs: false,
+      code: `# Lakeflow pipeline source; target schema main.library.
+# loan_events (loan_id, branch, fee): (L1, leeds, 2),
+# (NULL, york, 4), (L2, york, -1), (L3, leeds, 3)
+from pyspark import pipelines as dp
+src = "main.library.loan_events"
+rules = {"has_id": "loan_id IS NOT NULL", "fee": "fee >= 0"}
+bad = " OR ".join(f"NOT ({r})" for r in rules.values())
+
+@dp.table  # silver: only rows that pass every rule
+@dp.expect_all_or_drop(rules)
+def loans_silver():
+    return spark.readStream.table(src)
+
+@dp.table  # the rows silver dropped, kept for someone to fix
+def loans_quarantine():
+    return spark.readStream.table(src).where(bad)`,
+      steps: [
+        "Lines 1-3: four loan events, one with no loan_id and one with a negative fee; the output shows both tables after one update, ordered by fee.",
+        "Lines 5-7: the silver rules live in one dict, and `bad` joins their negations with OR, so it is true for a row that breaks any rule.",
+        "Lines 9-12: `expect_all_or_drop` keeps only the rows that pass both rules, and the pipeline's event log counts each rule's failures.",
+        "Lines 14-16: the quarantine table reads the same source through `bad`, so every dropped row lands where it can be watched and replayed instead of vanishing.",
+        "Output: silver holds L1 and L3, and quarantine holds the two York rows; with `expect_all_or_fail` instead, the silver flow would fail and commit none of the batch.",
+      ],
+      output: `loans_silver
+loan_id | branch | fee
+L1 | leeds | 2
+L3 | leeds | 3
+
+loans_quarantine
+loan_id | branch | fee
+L2 | york | -1
+NULL | york | 4`,
+    },
+    exercises: [
+      'orc-mcq-b2',
+      'orc-mcq-b3',
+      'orc-predict-1',
+      'orc-predict-2',
+      'orc-coding-1',
     ],
   },
 ];
