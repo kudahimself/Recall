@@ -376,11 +376,11 @@ describe('selection strategies — user\'s stuck state', () => {
     const progress = emptyProgress();
     const q = SpacedRepetitionSystem.selectNextQuestion(backendQuestions, progress);
     expect(q).not.toBeNull();
+    // Within the first topic of the path, the very first new pick must be BEGINNER.
+    // If a topic has no BEGINNER questions (rare), INTERMEDIATE is acceptable,
+    // but never ADVANCED as the first touch.
+    expect(q?.difficulty).not.toBe('advanced');
     if (q) {
-      // Within the first topic of the path, the very first new pick must be BEGINNER.
-      // If a topic has no BEGINNER questions (rare), INTERMEDIATE is acceptable,
-      // but never ADVANCED as the first touch.
-      expect(q.difficulty).not.toBe('advanced');
       console.log(`\n=== First pick for fresh user ===`);
       console.log(`  id: ${q.id}`);
       console.log(`  topic: ${q.topic}`);
