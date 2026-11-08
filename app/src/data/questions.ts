@@ -41,12 +41,11 @@ import { DATABRICKS_PLATFORM_EXPANSION_QUESTIONS } from './databricksPlatformQue
 import { UNITY_CATALOG_QUESTIONS } from './unityCatalogQuestions';
 // Data Engineering Concepts course (tool-agnostic, MCQ-only)
 import { dataEngineeringFoundationsQuestions } from './dataEngineeringFoundationsQuestions';
-import { dataEngineeringArchitectureQuestions } from './dataEngineeringArchitectureQuestions';
-import { dataEngineeringModelingQuestions } from './dataEngineeringModelingQuestions';
 import { dataEngineeringStreamingQuestions } from './dataEngineeringStreamingQuestions';
 import { dataEngineeringDistributedQuestions } from './dataEngineeringDistributedQuestions';
 import { dataEngineeringOpsQuestions } from './dataEngineeringOpsQuestions';
 import { dataEngineeringMovingDataQuestions } from './dataEngineeringMovingDataQuestions';
+import { dataEngineeringModelingAnalyticsQuestions } from './dataEngineeringModelingAnalyticsQuestions';
 import { dataEngineeringStorageFilesQuestions } from './dataEngineeringStorageFilesQuestions';
 import { dataEngineeringWarehousesLakesQuestions } from './dataEngineeringWarehousesLakesQuestions';
 import { dataEngineeringSystemsQuestions } from './dataEngineeringSystemsQuestions';
@@ -1125,9 +1124,8 @@ export const questions: Question[] = dedupeById([
   ...dataEngineeringFoundationsQuestions,
   ...dataEngineeringStorageFilesQuestions,
   ...dataEngineeringWarehousesLakesQuestions,
-  ...dataEngineeringArchitectureQuestions,
   ...dataEngineeringMovingDataQuestions,
-  ...dataEngineeringModelingQuestions,
+  ...dataEngineeringModelingAnalyticsQuestions,
   ...dataEngineeringStreamingQuestions,
   ...dataEngineeringDistributedQuestions,
   ...dataEngineeringOpsQuestions,

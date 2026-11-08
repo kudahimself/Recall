@@ -79,6 +79,9 @@ const DATA_ENG_TOPICS = new Set<string>([
   // Warehouses, Lakes & Table Formats
   Topic.DE_WORKLOADS_SYSTEMS, Topic.DE_TABLE_FORMAT_LOG, Topic.DE_UPDATING_FILES,
   Topic.DE_SCHEMA_EVOLUTION,
+  // Modeling for Analytics
+  Topic.DE_GRAIN_DOUBLE_COUNTING, Topic.DE_FACTS_DIMS_STAR, Topic.DE_NATURAL_SURROGATE_KEYS,
+  Topic.DE_SCD_POINT_IN_TIME, Topic.DE_METRICS_OWNERSHIP,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -489,8 +492,9 @@ export const DATABRICKS_PATH_ORDER = [
  * Data Engineering Concepts course — tool-agnostic.
  * Being rewritten section by section as decisions and designs (a lesson per
  * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
- * explain cards in review); Moving Data, Storage & Files and Warehouses, Lakes
- * & Table Formats are rewritten. The older sections are MCQ-only, built as
+ * explain cards in review); Moving Data, Storage & Files, Warehouses, Lakes
+ * & Table Formats and Modeling for Analytics are rewritten. The older sections
+ * are MCQ-only, built as
  * many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
@@ -532,21 +536,13 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Schema Enforcement & Evolution': ['de_schema_evolution'],
     },
   },
-  // What is left of the old Architecture section until Modeling for Analytics
-  // is rewritten and absorbs its transformation tools topic.
-  'Architecture & Open Table Formats': {
-    weight: 'Step 4',
-    topics: {
-      'Transformation Tools (dbt / SQLMesh)': ['de_transformation_tools'],
-    },
-  },
   // The first rewritten section (decisions and designs). It absorbs the old
   // ETL / ELT, CDC and retries topics, whose keys stay in DATA_ENG_TOPICS so
   // stored scores still map to this course. Placed by owner decision after
-  // the sections before it (Step 5 now): a learner past them meets it before
+  // the sections before it (Step 4 now): a learner past them meets it before
   // the old later steps.
   'Moving Data': {
-    weight: 'Step 5',
+    weight: 'Step 4',
     topics: {
       'ETL, ELT & Staging': ['de_etl_elt_staging'],
       'Full vs Incremental Loads': ['de_full_vs_incremental'],
@@ -556,19 +552,24 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Backfills & Reprocessing': ['de_backfills'],
     },
   },
-  'Modeling Concepts': {
-    weight: 'Step 6',
+  // The fourth rewritten section. It absorbs the whole old Modeling Concepts
+  // section (why model, facts and dimensions, star schema, keys and grain,
+  // SCDs, data mesh) and the transformation tools topic, the last of the old
+  // Architecture section; their keys stay in DATA_ENG_TOPICS so stored scores
+  // still map to this course. It follows Moving Data, as in the course outline:
+  // loads come before the models they feed.
+  'Modeling for Analytics': {
+    weight: 'Step 5',
     topics: {
-      'Why Model Data?': ['de_why_model'],
-      'Facts & Dimensions': ['de_tables_facts_dims'],
-      'Star Schema': ['de_star_schema'],
-      'Keys & Grain': ['de_keys_grain'],
-      'Slowly Changing Dimensions': ['de_scd'],
-      'Data Mesh': ['de_data_mesh'],
+      'Grain & Double Counting': ['de_grain_double_counting'],
+      'Facts, Dimensions & the Star Schema': ['de_facts_dims_star'],
+      'Keys: Natural & Surrogate': ['de_natural_surrogate_keys'],
+      'Slowly Changing Dimensions & Point-in-Time Joins': ['de_scd_point_in_time'],
+      'Metrics & Ownership: Semantic Layer & Data Mesh': ['de_metrics_ownership'],
     },
   },
   'Streaming': {
-    weight: 'Step 7',
+    weight: 'Step 6',
     topics: {
       'What Is a Stream?': ['de_what_is_a_stream'],
       'Event Time vs Processing Time': ['de_event_vs_processing_time'],
@@ -579,7 +580,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Distributed Systems & Storage': {
-    weight: 'Step 8',
+    weight: 'Step 7',
     topics: {
       'Why Distribute?': ['de_why_distribute'],
       'Partitioning & Sharding': ['de_partitioning'],
@@ -589,7 +590,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Operations, Quality & Modern DE': {
-    weight: 'Step 9',
+    weight: 'Step 8',
     topics: {
       'What Is Orchestration?': ['de_what_is_orchestration'],
       'Airflow, Dagster & Prefect': ['de_airflow_dagster'],
@@ -606,7 +607,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   // (lastReachedIndex); the cost of the late place is that the hardware layer
   // arrives as a deepening pass over material already seen.
   'Machines, Memory & Disks': {
-    weight: 'Step 10',
+    weight: 'Step 9',
     topics: {
       'The Memory Hierarchy': ['de_memory_hierarchy'],
       'RAM vs Disk': ['de_ram_vs_disk'],
@@ -624,9 +625,8 @@ export const DATA_ENG_PATH_ORDER = [
   'Foundations',
   'Storage & Files',
   'Warehouses, Lakes & Table Formats',
-  'Architecture & Open Table Formats',
   'Moving Data',
-  'Modeling Concepts',
+  'Modeling for Analytics',
   'Streaming',
   'Distributed Systems & Storage',
   'Operations, Quality & Modern DE',

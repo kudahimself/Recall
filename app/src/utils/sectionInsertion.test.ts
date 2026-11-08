@@ -35,9 +35,9 @@ const knownIds = new Set(allQuestions.map(q => q.id));
 const noSeed = () => new Set<string>();
 
 const STORAGE = 'Storage & Files';
-const ARCHITECTURE = 'Architecture & Open Table Formats';
+const WAREHOUSES = 'Warehouses, Lakes & Table Formats';
 const MOVING = 'Moving Data';
-const MODELING = 'Modeling Concepts';
+const MODELING = 'Modeling for Analytics';
 const STREAMING = 'Streaming';
 
 function emptyProgress(): UserProgress {
@@ -64,14 +64,15 @@ function answer(p: UserProgress, id: string, at: number) {
 }
 
 /**
- * A learner who got past Moving Data before Storage & Files was inserted at
- * Step 2: Foundations, Architecture and Moving Data mastered, two Modeling
- * Concepts units started (the first and the third), and nothing of Storage &
- * Files. Every answer is three weeks old, so its family is due.
+ * A learner who got past Moving Data before Storage & Files and Warehouses,
+ * Lakes & Table Formats were inserted ahead of it: Foundations and Moving
+ * Data mastered, two units of the section after Moving Data started (the
+ * first and the third), and nothing of the two inserted sections. Every
+ * answer is three weeks old, so its family is due.
  */
 function pastMovingData(): UserProgress {
   const p = emptyProgress();
-  p.masteredTopics = new Set(['Foundations', ARCHITECTURE, MOVING].flatMap(getTopicKeysForSection));
+  p.masteredTopics = new Set(['Foundations', MOVING].flatMap(getTopicKeysForSection));
   const modelingUnits = getSectionUnits(MODELING);
   const started = [...getTopicKeysForSection(MOVING), modelingUnits[0][1][0], modelingUnits[2][1][0]];
   started.forEach((t, i) => answer(p, firstOf(t).id, NOW - 21 * DAY + i));
@@ -83,7 +84,7 @@ const unlockedSections = (p: UserProgress) => Array.from(SRS.getUnlockedSections
 describe('a learner past Moving Data when a section is inserted before it', () => {
   test('keeps Moving Data and the later section it reached unlocked, and opens the inserted one', () => {
     expect(DATA_ENG_PATH_ORDER.indexOf(STORAGE)).toBeLessThan(DATA_ENG_PATH_ORDER.indexOf(MOVING));
-    expect(unlockedSections(pastMovingData())).toEqual(['Foundations', STORAGE, ARCHITECTURE, MOVING, MODELING]);
+    expect(unlockedSections(pastMovingData())).toEqual(['Foundations', STORAGE, WAREHOUSES, MOVING, MODELING]);
   });
 
   test('the section after the last one reached still waits for its own unlock', () => {
@@ -98,7 +99,7 @@ describe('a learner past Moving Data when a section is inserted before it', () =
     getTopicKeysForSection(MOVING).forEach(t => expect(topics.has(t)).toBe(true));
   });
 
-  test('its due reviews in Moving Data and Modeling Concepts are still served', () => {
+  test('its due reviews in Moving Data and the section after it are still served', () => {
     const p = pastMovingData();
     const store = replayHistory(p.attemptHistory, byId);
     const { entries } = buildReviewList(dePool, p, store, {}, NOW, 50);
@@ -113,7 +114,7 @@ describe('a learner past Moving Data when a section is inserted before it', () =
     expect(status).toMatchObject({
       Foundations: 'mastered',
       [STORAGE]: 'open',
-      [ARCHITECTURE]: 'mastered',
+      [WAREHOUSES]: 'open',
       [MOVING]: 'mastered',
       [MODELING]: 'current',
       [STREAMING]: 'locked',
@@ -130,7 +131,7 @@ describe('a learner past Moving Data when a section is inserted before it', () =
     DATA_ENG_PATH_ORDER.splice(1, 0, moved);
     try {
       const unlocked = unlockedSections(pastMovingData());
-      [moved, STORAGE, ARCHITECTURE, MOVING, MODELING].forEach(s => expect(unlocked).toContain(s));
+      [moved, STORAGE, WAREHOUSES, MOVING, MODELING].forEach(s => expect(unlocked).toContain(s));
       expect(unlocked).not.toContain(STREAMING);
     } finally {
       DATA_ENG_PATH_ORDER.splice(0, DATA_ENG_PATH_ORDER.length, ...original);
@@ -183,6 +184,6 @@ describe('Export/Import', () => {
     const load = loadProgressFrom(localStorage, knownIds, noSeed);
     if (load.status !== 'ok') throw new Error(load.status);
     expect(load.progress.masteredTopics.size).toBe(0);
-    expect(unlockedSections(load.progress)).toEqual(['Foundations', STORAGE, ARCHITECTURE, MOVING, MODELING]);
+    expect(unlockedSections(load.progress)).toEqual(['Foundations', STORAGE, WAREHOUSES, MOVING, MODELING]);
   });
 });
