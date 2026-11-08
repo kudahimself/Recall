@@ -27,15 +27,16 @@ def test_constraint_rejects_an_unknown_action():
 
 
 @pytest.mark.parametrize(
-    "append_only, aggregates, expected",
+    "append_only, aggregates, joins_changing, expected",
     [
-        (True, False, "STREAMING TABLE"),
-        (True, True, "MATERIALIZED VIEW"),
-        (False, False, "MATERIALIZED VIEW"),
+        (True, False, False, "STREAMING TABLE"),
+        (True, True, False, "MATERIALIZED VIEW"),
+        (True, False, True, "MATERIALIZED VIEW"),
+        (False, False, False, "MATERIALIZED VIEW"),
     ],
 )
-def test_pick_dataset(append_only, aggregates, expected):
-    assert pick_dataset(append_only, aggregates) == expected
+def test_pick_dataset(append_only, aggregates, joins_changing, expected):
+    assert pick_dataset(append_only, aggregates, joins_changing) == expected
 
 
 def test_drop_removes_rows_and_warn_only_counts_them(events):

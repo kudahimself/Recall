@@ -9,7 +9,8 @@ A declarative pipeline (Delta Live Tables, now Lakeflow Declarative Pipelines) d
 Those pipelines only run on Databricks, so you make the same decisions yourself in `pipeline_rules.py`, on loan events in a local Spark DataFrame:
 
 - `constraint_sql(name, condition, on_violation=None)` writes one expectation as SQL, with the `ON VIOLATION` clause for `"drop"` or `"fail"`.
-- `pick_dataset(append_only_source, aggregates_or_joins)` returns `"STREAMING TABLE"` or `"MATERIALIZED VIEW"`.
+- `pick_dataset(append_only_source, aggregates, joins_changing_table)` returns `"STREAMING TABLE"` or `"MATERIALIZED VIEW"`.
+  A streaming table can join its stream to a static reference table, as in `SELECT * FROM STREAM(bronze_loans) JOIN branches_ref USING (branch)`; aggregates and joins where both sides change need a materialized view.
 - `check_rows(df, expectations)` applies `warn`, `drop` and `fail` expectations to a DataFrame and counts each one's failing rows.
 - `update_order(datasets)` reads which datasets each query refers to and returns an order to build them in.
 

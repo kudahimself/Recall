@@ -17,8 +17,8 @@ def constraint_sql(name, condition, on_violation=None):
     return f"CONSTRAINT {name} EXPECT ({condition}){_CLAUSES[on_violation]}"
 
 
-def pick_dataset(append_only_source, aggregates_or_joins):
-    if append_only_source and not aggregates_or_joins:
+def pick_dataset(append_only_source, aggregates, joins_changing_table):
+    if append_only_source and not aggregates and not joins_changing_table:
         return "STREAMING TABLE"
     return "MATERIALIZED VIEW"
 

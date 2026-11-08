@@ -15,11 +15,12 @@ def constraint_sql(name, condition, on_violation=None):
     raise NotImplementedError
 
 
-def pick_dataset(append_only_source, aggregates_or_joins):
+def pick_dataset(append_only_source, aggregates, joins_changing_table):
     """Return "STREAMING TABLE" or "MATERIALIZED VIEW" for a dataset.
 
-    A dataset that reads an append-only source and neither aggregates nor joins processes
-    only its new rows; anything else needs its whole result kept correct.
+    A dataset that reads an append-only source processes only its new rows, and it may still
+    join them to a static reference table (a stream-static join). One that aggregates, or joins
+    a table whose rows also change (both sides change), needs its whole result kept correct.
     """
     # TODO: decide from the two flags
     raise NotImplementedError
