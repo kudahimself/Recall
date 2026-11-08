@@ -1,6 +1,6 @@
 # Exercises
 
-Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks.
+Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks, and Python with DuckDB for Data Engineering.
 Each one follows a topic's lesson and questions in Recall: the app shows the task and the folder to open, and you tick it done yourself.
 Nothing runs in the browser.
 
@@ -14,14 +14,21 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r exercises/requirements.txt
 ```
 
-`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need, and pyspark and delta-spark, which only the Databricks exercises need, with pandas and pyarrow for their pandas UDFs.
-Python 3.10 or newer runs the Backend ones, and 3.10 to 3.12 is the safe range for the Spark ones.
+`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need, pyspark and delta-spark, which only the Databricks exercises need, with pandas and pyarrow for their pandas UDFs, and DuckDB, which the Data Engineering exercises that run SQL need.
+Python 3.10 or newer runs the Backend and Data Engineering ones, and 3.10 to 3.12 is the safe range for the Spark ones.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
 
 ## Databricks exercises
 
 The exercises under `exercises/databricks/` run PySpark and Delta Lake locally, so they also need Java 17 or newer.
 See `exercises/databricks/README.md` for the setup and for what differs from a Databricks workspace.
+
+## Data Engineering exercises
+
+The exercises under `exercises/data_engineering/` practise the decisions of the Data Engineering course's lessons on small tables.
+Some are plain Python; the rest run SQL on DuckDB, an in-process database the tests open in memory, so there is no server or warehouse to start.
+DuckDB's SQL is close to the lessons' T-SQL: parameters are written `?`, and a transaction is `BEGIN TRANSACTION` then `COMMIT` or `ROLLBACK`.
+Not every topic has one: the course outline gives an exercise to the topics where writing the load or the plan yourself teaches more than another card.
 
 ## Django exercises
 
@@ -73,6 +80,6 @@ python exercises/check_exercises.py
 
 For every exercise it runs the tests on a copy of the starter, where each test must fail, and on a copy with the reference solution laid over it, where each test must pass.
 It works on copies, so your own answers are left alone, and it skips the starter check for an exercise you have already edited.
-Name a course or an exercise to check just that: `python exercises/check_exercises.py databricks` or `databricks/delta_lake_basics`.
+Name a course or an exercise to check just that: `python exercises/check_exercises.py databricks`, `data_engineering` or `databricks/delta_lake_basics`.
 The Databricks exercises are checked together in one Spark session, all starters and then all solutions, because starting Spark is slow.
 The app's `npm test` runs it too (`src/data/exercises/exercises.test.ts`), so an exercise cannot drift from its solution unnoticed.
