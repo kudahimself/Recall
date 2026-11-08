@@ -10,7 +10,7 @@ import {
 export const designPatternQuestions: Question[] = [
 
   // =====================================================================
-  // PATTERNS_CREATIONAL (4 questions)
+  // PATTERNS_CREATIONAL (9 questions)
   // =====================================================================
 
   {
@@ -263,8 +263,47 @@ Example desired API:
     concepts: ['pattern-creational'],
   },
 
+  // -- Predict: a Singleton keeps its first instance (BEGINNER Predict) --
+
+  {
+    id: 'dp-create-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.PATTERNS_CREATIONAL,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'AppConfig is a Singleton. What do the three console.log calls print? Type each printed value on its own line, in order.',
+    code: `class AppConfig {
+  private static instance: AppConfig | undefined;
+  static builds = 0;
+  private constructor(public env: string) { AppConfig.builds++; }
+  static getInstance(env: string): AppConfig {
+    if (!AppConfig.instance) AppConfig.instance = new AppConfig(env);
+    return AppConfig.instance;
+  }
+}
+
+const a = AppConfig.getInstance("dev");
+const b = AppConfig.getInstance("prod");
+console.log(a === b);
+console.log(b.env);
+console.log(AppConfig.builds);`,
+    expectedOutput: `true
+dev
+1`,
+    explanation:
+      'getInstance() builds an AppConfig only when the static instance field is still empty. The first call, with "dev", finds it empty, runs the private constructor once (builds becomes 1) and stores that object. The second call finds the stored object and returns it, so its "prod" argument is never used: a and b are the same object (a === b is true), b.env is still "dev", and builds stays 1. This is the Singleton promise, one instance for the whole program, and also its trap: any argument after the first call is silently ignored, and the stored instance carries state from one caller (or one test) to the next. Passing the config in where it is needed (dependency injection) avoids both.',
+    hints: [
+      'getInstance() only calls the constructor when instance is still undefined',
+      'What happens to the "prod" argument when an instance already exists?',
+    ],
+    tags: ['singleton', 'creational', 'static', 'predict'],
+    concepts: ['pattern-creational'],
+  },
+
   // =====================================================================
-  // PATTERNS_STRUCTURAL (4 questions)
+  // PATTERNS_STRUCTURAL (10 questions)
   // =====================================================================
 
   {
@@ -521,8 +560,46 @@ def ____(func):
     concepts: ['pattern-structural'],
   },
 
+  // -- Predict: the order of stacked decorators (INTERMEDIATE Predict) --
+
+  {
+    id: 'dp-struct-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PATTERNS_STRUCTURAL,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'logged() is a decorator: it takes a function and returns a wrapped function with the same signature. price wraps addTax twice. What does price(10) print? Type each printed line exactly, one per line, in order.',
+    code: `type PriceFn = (n: number) => number;
+
+const logged = (label: string, fn: PriceFn): PriceFn => (n) => {
+  console.log(label + " in " + n);
+  const out = fn(n);
+  console.log(label + " out " + out);
+  return out;
+};
+
+const addTax: PriceFn = (n) => n + 2;
+const price = logged("outer", logged("inner", addTax));
+console.log(price(10));`,
+    expectedOutput: `outer in 10
+inner in 10
+inner out 12
+outer out 12
+12`,
+    explanation:
+      'Each call to logged() returns a new function that does its own work before and after calling the function it wraps, and has the same (n: number) => number shape, so a wrapper can wrap another wrapper. price is the outer wrapper around the inner wrapper around addTax. Calling price(10) enters the outer layer first ("outer in 10"), which calls the inner layer ("inner in 10"), which calls addTax and gets 12 ("inner out 12"). Control then unwinds outward ("outer out 12"), and the last line logs the returned 12. Stacked decorators run like nested function calls: the outermost runs its "before" code first and its "after" code last. The same holds for stacked @decorator lines in Python, where the one written on top is the outermost.',
+    hints: [
+      'logged("inner", addTax) is itself a PriceFn, so it can be wrapped again',
+      'The outer wrapper prints its first line before calling the inner one, and its second line after the inner one returns',
+    ],
+    tags: ['decorator', 'structural', 'higher-order-function', 'predict'],
+    concepts: ['pattern-structural'],
+  },
+
   // =====================================================================
-  // PATTERNS_BEHAVIORAL (4 questions)
+  // PATTERNS_BEHAVIORAL (9 questions)
   // =====================================================================
 
   {
@@ -776,8 +853,53 @@ The class should support multiple listeners per event.`,
     concepts: ['pattern-behavioral'],
   },
 
+  // -- Predict: subscribe and unsubscribe an observer (BEGINNER Predict) --
+
+  {
+    id: 'dp-behav-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.PATTERNS_BEHAVIORAL,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'createCounter() is a small observable store: subscribe() registers a listener and returns a function that removes it. What does this code print? Type each printed line exactly, one per line, in order.',
+    code: `function createCounter() {
+  let count = 0;
+  const listeners = new Set<(n: number) => void>();
+  return {
+    subscribe(fn: (n: number) => void) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    increment() {
+      count++;
+      listeners.forEach((fn) => fn(count));
+    },
+  };
+}
+
+const counter = createCounter();
+const stopA = counter.subscribe((n) => console.log("A sees " + n));
+counter.subscribe((n) => console.log("B sees " + n));
+counter.increment();
+stopA();
+counter.increment();`,
+    expectedOutput: `A sees 1
+B sees 1
+B sees 2`,
+    explanation:
+      'This is the Observer pattern: the counter (the subject) keeps a set of listeners and calls every one of them when its state changes, without knowing what they do. The first increment() sets count to 1 and notifies both listeners in the order they subscribed, so A and then B print 1. subscribe() returned a function that deletes that exact listener from the set, and stopA() calls it, so the second increment() reaches only B, which prints 2. Removing a listener needs the same function reference that was added, which is why subscribe() hands back an unsubscribe function rather than asking the caller to pass the listener again. React\'s useSyncExternalStore, Redux\'s store.subscribe() and addEventListener / removeEventListener work this way.',
+    hints: [
+      'increment() calls every listener still in the set, in the order they were added',
+      'stopA() deletes listener A from the set before the second increment()',
+    ],
+    tags: ['observer', 'behavioral', 'subscribe', 'predict'],
+    concepts: ['pattern-behavioral'],
+  },
+
   // =====================================================================
-  // PATTERNS_ARCHITECTURAL (5 questions)
+  // PATTERNS_ARCHITECTURAL (10 questions)
   // =====================================================================
 
   {
@@ -1073,8 +1195,51 @@ class InMemoryUserRepository(UserRepository):
     concepts: ['pattern-architectural'],
   },
 
+  // -- Predict: a service that depends on a repository interface (INTERMEDIATE Predict) --
+
+  {
+    id: 'dp-arch-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.PATTERNS_ARCHITECTURAL,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'WelcomeService depends only on the UserRepo interface, and each instance is given a repository when it is built. What do the three console.log calls print? Type each printed line exactly, one per line, in order.',
+    code: `interface UserRepo {
+  findEmail(id: number): string | undefined;
+}
+
+class WelcomeService {
+  constructor(private repo: UserRepo) {}
+  welcome(id: number): string {
+    const email = this.repo.findEmail(id);
+    return email ? "Mail sent to " + email : "No such user";
+  }
+}
+
+const rows = new Map([[1, "ada@shop.io"]]);
+const live = new WelcomeService({ findEmail: (id) => rows.get(id) });
+const test = new WelcomeService({ findEmail: () => "fake@test" });
+
+console.log(live.welcome(1));
+console.log(live.welcome(2));
+console.log(test.welcome(2));`,
+    expectedOutput: `Mail sent to ada@shop.io
+No such user
+Mail sent to fake@test`,
+    explanation:
+      'WelcomeService holds the business rule (send to the stored email, or report a missing user) and never says where users are stored: it only knows the UserRepo interface, and the repository is passed into its constructor. live gets one backed by the rows map, so user 1 is found and user 2 is not (Map.get returns undefined, so the "No such user" branch runs). test gets a fake that answers "fake@test" for any id, so the same welcome(2) now sends mail. The service code did not change between the two; only what was plugged in did. That is the dependency rule of layered and Clean Architecture: the core depends on an abstraction it owns, and the database, the API or a test double is an adapter supplied from outside.',
+    hints: [
+      'Each WelcomeService uses only the repository it was constructed with',
+      'Map.get returns undefined for a key it does not hold',
+    ],
+    tags: ['clean-architecture', 'repository', 'dependency-injection', 'predict'],
+    concepts: ['pattern-architectural'],
+  },
+
   // =====================================================================
-  // API_DESIGN (4 questions)
+  // API_DESIGN (11 questions)
   // =====================================================================
 
   {
@@ -1418,8 +1583,42 @@ function createNotFoundError(resource: string, id: string): ApiError {
     concepts: ['api-rest-conventions'],
   },
 
+  // -- Predict: offset vs cursor pages when a new row arrives (INTERMEDIATE Predict) --
+
+  {
+    id: 'dp-api-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.API_DESIGN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'A feed API returns pages of 2 post ids, newest first. byOffset(offset) skips a number of posts; byCursor(before) returns the posts older than the last id the client saw. What do the three console.log calls print? Type each page as its ids joined by commas, one page per line, in order.',
+    code: `const feed = [50, 40, 30, 20, 10]; // post ids, newest first
+
+const byOffset = (offset: number) => feed.slice(offset, offset + 2);
+const byCursor = (before: number) =>
+  feed.filter((id) => id < before).slice(0, 2);
+
+console.log(byOffset(0).join(","));
+feed.unshift(60); // a new post arrives before page 2 is requested
+console.log(byOffset(2).join(","));
+console.log(byCursor(40).join(","));`,
+    expectedOutput: `50,40
+40,30
+30,20`,
+    explanation:
+      'Page 1 is the first two posts, 50 and 40. Then post 60 is added at the front of the feed, which pushes every older post one place down. Offset pagination asks for "skip 2, take 2" and has no idea the list moved, so slice(2, 4) of [60, 50, 40, 30, 20, 10] returns 40,30: the client sees 40 a second time (and a deletion would make it skip a post instead). Cursor pagination asks for "the 2 posts older than 40", the last id the client already has, which is still 30,20 however many posts arrived in front. That stability, plus the database seeking straight to the cursor through an index (WHERE id < 40 ORDER BY id DESC LIMIT 2) instead of reading and discarding OFFSET rows, is why feeds and large lists use cursors, while offset stays fine for small lists where users jump to page numbers.',
+    hints: [
+      'After unshift(60), which post sits at index 2?',
+      'The cursor version filters by the id value 40, not by a position',
+    ],
+    tags: ['pagination', 'cursor', 'offset', 'rest', 'predict'],
+    concepts: ['api-pagination'],
+  },
+
   // =====================================================================
-  // DB_DESIGN (4 questions)
+  // DB_DESIGN (12 questions)
   // =====================================================================
 
   {
@@ -1727,5 +1926,48 @@ def get_books_right():
     ],
     tags: ['soft-delete', 'hard-delete', 'database-design', 'audit-trail'],
     concepts: ['db-normalization'],
+  },
+
+  // -- Predict: counting the queries of an N+1 loop (BEGINNER Predict) --
+
+  {
+    id: 'dp-db-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.DB_DESIGN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'db stands in for a database client, and every one of its methods is one query, counted in queries. What do the two console.log calls print? Type each printed line exactly, one per line, in order.',
+    code: `let queries = 0;
+const authorOf = new Map([[1, "Le Guin"], [2, "Herbert"]]);
+const bookRows = [
+  { title: "Dune", authorId: 2 },
+  { title: "Earthsea", authorId: 1 },
+  { title: "Dune Messiah", authorId: 2 },
+];
+const db = {
+  books() { queries++; return bookRows; },
+  author(id: number) { queries++; return authorOf.get(id); },
+  authors(ids: number[]) { queries++; return ids.map((id) => authorOf.get(id)); },
+};
+
+db.books().forEach((b) => db.author(b.authorId));
+console.log("loop: " + queries);
+
+queries = 0;
+const books = db.books();
+db.authors([...new Set(books.map((b) => b.authorId))]);
+console.log("batched: " + queries);`,
+    expectedOutput: `loop: 4
+batched: 2`,
+    explanation:
+      'The loop is the N+1 query problem: one query for the list of books, then one more query per book to fetch its author. With 3 books that is 1 + 3 = 4 queries, even though Herbert is fetched twice, because the loop asks per row and never checks what it already has. The batched version runs one query for the books and one for all the authors they need (WHERE id IN (2, 1)), so it costs 2 queries whether there are 3 books or 3,000. An ORM hides the per-row query inside a property access such as book.author, which is why N+1 is easy to miss; the fixes are a JOIN (Prisma include, Django select_related) or one IN query per relation (Django prefetch_related), and a query log or counter shows which one you have.',
+    hints: [
+      'db.author() runs once for every book, not once for every distinct author',
+      'Count the db method calls in each half: every call adds 1 to queries',
+    ],
+    tags: ['n-plus-one', 'orm', 'query-count', 'predict'],
+    concepts: ['db-indexing'],
   },
 ];

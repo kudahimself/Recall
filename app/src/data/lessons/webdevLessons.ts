@@ -14,6 +14,7 @@
  * Depth as one lesson, as its course topic pairs them.
  * Section 10, Accessibility: its one topic.
  * Section 11, UI Libraries & Advanced Styling: its one topic.
+ * Section 12, Design Patterns & Architecture: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -45,6 +46,8 @@
  *
  * A TypeScript worked example is type-checked in strict mode under
  * check-lessons.js and then runs on node, printing its `output`.
+ * The Database Design one is T-SQL on a library's tables, run on sql.js
+ * under check-lessons.js like the SQL course's examples.
  *
  * A Next.js worked example needs a Next.js project and its server, so it
  * sets `runs: false` (the "Next.js file" kind): it imports from next or
@@ -3813,5 +3816,555 @@ New in, one <a href="/new">:
   rounded-full text-xs bg-muted py-0.5 px-4`,
     },
     exercises: ['shadcn-what-is-1', 'shadcn-cn-predict-1', 'shadcn-aschild-mcq-1', 'shadcn-variantprops-coding-1'],
+  },
+  // ===== Section 12, Design Patterns & Architecture =====
+  {
+    id: 'patterns_creational/1',
+    topicKeys: [Topic.PATTERNS_CREATIONAL],
+    step: 1,
+    title: 'Creational Patterns (Factory, Singleton, Builder)',
+    idea: [
+      lines(
+        "Creational patterns decide how objects get built, so the code that uses an object does not have to name its class or know how it is put together.",
+        "Each one answers a different construction problem.",
+      ),
+      lines(
+        "A Factory is a function or method that picks and builds the right class from an argument, such as `createShipping(\"courier\")`, and returns it as a shared interface; adding a new kind changes the factory, not every caller.",
+        "An Abstract Factory goes one step further and returns a matching family, such as a theme's button, input and modal.",
+      ),
+      lines(
+        "A Builder assembles an object with many optional parts one call at a time: each method stores a part and returns `this`, and `build()` hands back the finished object.",
+        "Prototype clones a configured object instead of rebuilding it; `structuredClone` copies nested fields, while a spread shares them.",
+      ),
+      lines(
+        "A Singleton keeps one instance for the whole program: a private constructor and a static `getInstance()` that builds it on the first call and returns the same object after.",
+        "Today the usual alternative is dependency injection: build the one instance at startup and pass it in to the code that needs it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// Factory: the caller names a kind, gets an interface back
+function create(kind: Kind): Product {
+  if (kind === "a") return new A();
+  return new B();
+}
+
+// Builder: one part per call, each returns this
+const thing = new ThingBuilder().part(x).option(y).build();
+
+// Singleton: one instance behind a private constructor
+class One {
+  private static instance?: One;
+  private constructor() {}
+  static getInstance(): One {
+    return (One.instance ??= new One());
+  }
+}
+
+// Dependency injection: pass the instance in instead
+function useCase(dep: Dep) { /* dep.method() */ }`,
+    },
+    pitfall: lines(
+      "Calling `Something.getInstance()` deep inside functions makes it a hidden global: the signature does not show the dependency, a test cannot swap in a fake, and state left by one test leaks into the next.",
+      "Arguments passed to later `getInstance()` calls are silently ignored, too.",
+      "Create the instance once at the edge of the app and pass it in as a parameter or constructor argument.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `interface Shipping { quote(kg: number): number }
+const shippers: Record<string, () => Shipping> = {
+  post: () => ({ quote: (kg) => 3 + kg }),
+  courier: () => ({ quote: (kg) => 8 + 2 * kg }),
+};
+function createShipping(kind: string): Shipping {
+  const make = shippers[kind];
+  if (!make) throw new Error("no shipping called " + kind);
+  return make();
+}
+class OrderBuilder {
+  private items: string[] = [];
+  private gift = false;
+  add(title: string) { this.items.push(title); return this; }
+  asGift() { this.gift = true; return this; }
+  build() { return { items: [...this.items], gift: this.gift }; }
+}
+const order = new OrderBuilder()
+  .add("Dune").add("Emma").asGift().build();
+console.log(order.items.join(", "), order.gift);
+console.log(createShipping("courier").quote(2));
+try {
+  createShipping("drone");
+} catch (e) {
+  console.log((e as Error).message);
+}`,
+      steps: [
+        "Lines 1-10: `createShipping` is a factory: it looks the kind up in a table of constructors and returns a `Shipping`, so a caller never names a concrete shipper, and a new kind is one more row in the table.",
+        "Lines 11-17: each `OrderBuilder` method stores one part and returns `this`, so the calls chain; `build()` copies the parts into a plain object.",
+        "Lines 18-20: the order is built in one readable chain, two titles and the gift option, with no long constructor argument list.",
+        "Line 21: the courier quote for 2 kg is 8 + 2 * 2 = 12.",
+        "Lines 22-26: an unknown kind fails loudly in the one place that builds shippers, instead of returning `undefined` to the caller.",
+      ],
+      output: `Dune, Emma true
+12
+no shipping called drone`,
+    },
+    exercises: ['dp-create-5', 'dp-create-predict-1', 'dp-create-2', 'dp-create-1', 'dp-create-3'],
+  },
+  {
+    id: 'patterns_structural/1',
+    topicKeys: [Topic.PATTERNS_STRUCTURAL],
+    step: 1,
+    title: 'Structural Patterns (Adapter, Decorator, Facade)',
+    idea: [
+      lines(
+        "Structural patterns put objects together, usually by wrapping one object in another that the rest of the code talks to instead.",
+        "What tells them apart is the interface the wrapper offers.",
+      ),
+      lines(
+        "An Adapter offers your interface on top of one you cannot change: `StripeAdapter implements PaymentProcessor` turns `charge(amount)` into the SDK's own calls, so swapping providers means writing another adapter.",
+        "A Decorator offers the same interface as the object it wraps and adds behaviour before or after the call, such as logging, timing or retries; decorators stack, and Python's `@decorator` lines are this pattern.",
+      ),
+      lines(
+        "A Proxy also keeps the interface but controls access: it loads lazily, caches or checks permissions.",
+        "A Facade offers one simple call, such as `checkout.complete(order)`, over several subsystems that would otherwise be called in the right order at every call site.",
+      ),
+      lines(
+        "Composite treats one item and a group alike (a folder's `totalSize()` sums its children); Bridge keeps two growing hierarchies, such as message kind and channel, separate; Flyweight shares the state that many objects have in common.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// Adapter: our interface, their implementation
+const adapter: Ours = {
+  method: (x) => theirs.otherMethod(convert(x)),
+};
+
+// Decorator: same interface, extra behaviour around the call
+const decorate = (inner: Ours): Ours => ({
+  method: (x) => {
+    before();
+    const r = inner.method(x);
+    after();
+    return r;
+  },
+});
+
+// Facade: one simple call over several subsystems
+function doTheThing(input: In) {
+  subsystemA.step(input);
+  subsystemB.step(input);
+  return subsystemC.step(input);
+}`,
+    },
+    pitfall: lines(
+      "Adapter, Decorator, Proxy and Facade all wrap something, so naming them by shape alone mixes them up.",
+      "Ask what the wrapper's interface is: a different one that matches yours is an Adapter, the same one plus behaviour is a Decorator, the same one with access control is a Proxy, and a new, simpler one over several objects is a Facade.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `interface Payments { charge(pence: number): string }
+// a payment SDK with its own shape, which we cannot change
+const sdk = {
+  makePayment: (amt: { value: number; currency: string }) =>
+    "paid " + amt.value + " " + amt.currency,
+};
+const adapted: Payments = {
+  charge: (pence) =>
+    sdk.makePayment({ value: pence / 100, currency: "GBP" }),
+};
+const withLog = (inner: Payments): Payments => ({
+  charge: (pence) => {
+    console.log("charging " + pence);
+    return inner.charge(pence);
+  },
+});
+const stock = {
+  reserve: (titles: string[]) =>
+    console.log("reserved " + titles.join(", ")),
+};
+function checkout(pay: Payments, list: string[], p: number) {
+  stock.reserve(list);
+  return list.length + " books, " + pay.charge(p);
+}
+console.log(checkout(withLog(adapted), ["Dune", "Emma"], 1850));`,
+      steps: [
+        "Lines 1-6: the shop's code expects `charge(pence)`, but the SDK offers `makePayment` with an amount in pounds and a currency.",
+        "Lines 7-10: the adapter is a `Payments` whose `charge` converts pence to pounds and calls the SDK, so nothing else in the shop knows the SDK's shape.",
+        "Lines 11-16: `withLog` takes a `Payments` and returns a `Payments`, logging before it calls the one it wraps; it could wrap the adapter, a fake, or another decorator.",
+        "Lines 21-24: `checkout` is the facade: one call that reserves the stock and then charges, in that order.",
+        "Line 25: the stock line prints first, then the decorator's line, and the adapter's receipt comes back inside the facade's summary.",
+      ],
+      output: `reserved Dune, Emma
+charging 1850
+2 books, paid 18.5 GBP`,
+    },
+    exercises: ['dp-struct-3', 'dp-struct-1', 'dp-struct-4', 'dp-struct-predict-1'],
+  },
+  {
+    id: 'patterns_behavioral/1',
+    topicKeys: [Topic.PATTERNS_BEHAVIORAL],
+    step: 1,
+    title: 'Behavioral Patterns (Observer, Strategy, Command)',
+    idea: [
+      lines(
+        "Behavioral patterns are about how objects hand work and news to each other at run time.",
+      ),
+      lines(
+        "Observer: a subject keeps a list of listeners and calls each of them when something changes, without knowing what they do.",
+        "`subscribe(fn)` adds a listener and usually returns a function that removes it; `addEventListener`, Node's `EventEmitter`, Redux's `store.subscribe` and React re-rendering on state changes all work this way.",
+      ),
+      lines(
+        "Strategy: interchangeable algorithms behind one signature, chosen at run time, such as one pricing rule per customer kind or the comparator passed to `Array.sort`.",
+        "The caller swaps the function or object instead of growing a `switch`; State looks the same, but the object switches its own state as actions arrive.",
+      ),
+      lines(
+        "Command: an action stored as an object with `execute()` and `undo()`, so actions can be queued, logged, replayed as a macro or undone from a history stack.",
+        "Chain of Responsibility passes a request along handlers that each act or call `next()`, the way Express middleware does.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// Observer: notify every listener, hand back an unsubscribe
+const listeners = new Set<(v: V) => void>();
+function subscribe(fn: (v: V) => void) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+function notify(v: V) { listeners.forEach((fn) => fn(v)); }
+
+// Strategy: one signature, the algorithm picked at run time
+const strategies: Record<Key, (x: In) => Out> = { /* ... */ };
+const out = strategies[key](x);
+
+// Command: the action as an object, kept for undo
+interface Command { execute(): void; undo(): void }
+cmd.execute(); history.push(cmd);
+history.pop()?.undo();`,
+    },
+    pitfall: lines(
+      "A listener that is never removed keeps running, and keeps whatever it closes over alive, after its component or page is gone.",
+      "Removing it needs the same function reference that was added: `off(\"sale\", () => show())` with a fresh arrow removes nothing.",
+      "Keep the unsubscribe function `subscribe` returns and call it when you are done, in React from the `useEffect` cleanup.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `const price: Record<string, number> = { Dune: 1200, Emma: 800 };
+const rules: Record<string, (pence: number) => number> = {
+  standard: (p) => p,
+  member: (p) => Math.round(p * 0.9),
+};
+interface Command { run(): void; undo(): void }
+const cart: string[] = [];
+const history: Command[] = [];
+const addBook = (title: string): Command => ({
+  run: () => cart.push(title),
+  undo: () => cart.splice(cart.lastIndexOf(title), 1),
+});
+function exec(cmd: Command) { cmd.run(); history.push(cmd); }
+exec(addBook("Dune"));
+exec(addBook("Emma"));
+history.pop()?.undo();
+const total = cart.reduce((sum, t) => sum + price[t], 0);
+const rule = rules["member"];
+console.log(cart.join(", "), total, rule(total));`,
+      steps: [
+        "Lines 2-5: two pricing strategies share one signature, pence in and pence out, so any code that prices a cart can take either.",
+        "Lines 9-12: `addBook` returns a command object that knows how to do its action and how to undo it.",
+        "Lines 13-15: `exec` runs each command and pushes it onto the history, so the cart holds Dune and Emma.",
+        "Line 16: undo pops the last command, adding Emma, and calls its `undo`, which leaves only Dune.",
+        "Lines 17-19: the member strategy is picked by its key at run time and takes 10% off the 1200 total, giving 1080.",
+      ],
+      output: `Dune 1200 1080`,
+    },
+    exercises: ['dp-behav-2', 'dp-behav-predict-1', 'dp-behav-1', 'dp-behav-3', 'dp-behav-4'],
+  },
+  {
+    id: 'patterns_architectural/1',
+    topicKeys: [Topic.PATTERNS_ARCHITECTURAL],
+    step: 1,
+    title: 'Architectural Patterns (MVC, MVVM, Clean Architecture)',
+    idea: [
+      lines(
+        "Architectural patterns decide which parts of an app may depend on which, so that a change to one part does not ripple through all of them.",
+        "A layered app splits into presentation (routes, controllers, pages), business logic (services, use cases) and data access (repositories, the ORM), and each layer calls only the one below it.",
+      ),
+      lines(
+        "MVC splits a screen into the Model (data and rules), the View (what is shown) and the Controller (which turns input into calls on the model); Django calls the same split MVT.",
+        "MVVM puts a ViewModel between the model and the view, and the view binds to its state, as Angular does; React instead keeps a component's state and markup together.",
+      ),
+      lines(
+        "Clean Architecture (also Hexagonal, or Ports & Adapters) points every dependency inward: the core holds the business rules and the interfaces it needs, such as a `LoanRepo`, and imports no framework.",
+        "The database, the web framework and test fakes are adapters that implement those interfaces and are passed in from outside, so any of them can be swapped without touching the rules.",
+      ),
+      lines(
+        "Start with one well-organised app, a modular monolith; split out services, events or CQRS only when a real scaling or team problem asks for them.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// core: rules and the ports they need, no framework imports
+interface Repo {
+  find(id: Id): Entity | undefined;
+  save(e: Entity): void;
+}
+function useCase(repo: Repo, input: In): Out {
+  // business rules only, through repo
+}
+
+// adapters: implement the ports at the edge
+class PrismaRepo implements Repo { /* ... */ }
+class MemoryRepo implements Repo { /* ... for tests */ }
+
+// controller: request in, use case called, response out
+function handler(req: Req) {
+  return toResponse(useCase(new PrismaRepo(), parse(req)));
+}`,
+    },
+    pitfall: lines(
+      "Business logic that imports the ORM or the framework directly, such as a pricing rule calling `prisma.order.findMany` or reading `req.body`, points its dependency outward.",
+      "It can then only be tested with a database and a request, and a change of either rewrites the rule.",
+      "Give the rule an interface it owns, and let a repository adapter and a controller at the edge supply the data.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// core: the rule and the port it needs, no framework imports
+interface Loan { bookId: number; member: string }
+interface LoanRepo {
+  activeFor(member: string): Loan[];
+  save(loan: Loan): void;
+}
+function borrow(repo: LoanRepo, member: string, book: number) {
+  if (repo.activeFor(member).length >= 2) return "at limit";
+  repo.save({ bookId: book, member });
+  return "ok";
+}
+// adapter: in memory here, Prisma or SQL in production
+class MemoryLoans implements LoanRepo {
+  private rows: Loan[] = [];
+  activeFor(member: string) {
+    return this.rows.filter((l) => l.member === member);
+  }
+  save(loan: Loan) { this.rows.push(loan); }
+}
+// controller: request in, status code and body out
+function postLoan(repo: LoanRepo, who: string, book: number) {
+  const result = borrow(repo, who, book);
+  return (result === "ok" ? 201 : 409) + " " + result;
+}
+const repo = new MemoryLoans();
+for (const id of [10, 11, 12]) {
+  console.log(postLoan(repo, "ada", id));
+}`,
+      steps: [
+        "Lines 1-11: the core is the two-loan limit and the `LoanRepo` interface it needs; it says nothing about databases or HTTP.",
+        "Lines 13-19: `MemoryLoans` is one adapter for that interface; a Prisma one would implement the same two methods.",
+        "Lines 21-24: the controller only translates: it calls the use case and turns its answer into a status code, 201 Created or 409 Conflict.",
+        "Line 25: the adapter is chosen once, at the edge, and passed in.",
+        "Lines 26-28: Ada's first two loans succeed, and the third would break the limit, so it is refused with 409.",
+      ],
+      output: `201 ok
+201 ok
+409 at limit`,
+    },
+    exercises: ['dp-arch-6', 'dp-arch-1', 'dp-arch-2', 'dp-arch-predict-1', 'dp-arch-3'],
+  },
+  {
+    id: 'api_design/1',
+    topicKeys: [Topic.API_DESIGN],
+    step: 1,
+    title: 'API Design (REST, status codes, pagination)',
+    idea: [
+      lines(
+        "A REST API names resources with nouns in the URL, `/books` for the collection and `/books/42` for one book, and the HTTP method says what to do.",
+        "`GET` reads, `POST` creates, `PUT` replaces the whole resource, `PATCH` changes only the fields sent, and `DELETE` removes it.",
+        "`GET`, `PUT` and `DELETE` are idempotent, so repeating one leaves the same state; `POST` is not, which is why payment APIs take an `Idempotency-Key` header for safe retries.",
+      ),
+      lines(
+        "The status code tells the client what happened before it reads the body: `200` OK, `201` Created (with the new URL), `204` No Content.",
+        "`400` is a malformed request, `422` valid JSON that breaks a rule, `401` no or bad credentials, `403` known but not allowed, `404` not found, `409` a conflict such as a duplicate, `429` too many requests (with `Retry-After`), and `5xx` the server's own fault.",
+      ),
+      lines(
+        "Long lists come in pages.",
+        "Offset pages (`?offset=40&limit=20`) let users jump to a page but repeat or skip rows when data changes, and get slower deep in the list; cursor pages (`?after=<last id>&limit=20`) stay stable and fast.",
+      ),
+      lines(
+        "The server validates every request itself, since anyone can call it without your form, and answers errors in one shape, such as `{ code, message, details }`.",
+        "A breaking change ships as a new version, such as `/v2/books`, while old clients keep the old one.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// route         method  success  common failures
+// /things       GET     200      (one page of the list)
+// /things       POST    201      400, 422, 409
+// /things/:id   GET     200      404
+// /things/:id   PUT     200      404, 422 (whole thing)
+// /things/:id   PATCH   200      404, 422 (fields sent)
+// /things/:id   DELETE  204      404
+// any route:    401 not logged in, 403 not allowed,
+//               429 too many requests, 500 server fault
+
+// cursor page: the rows after the last one the client has
+// GET /things?after=<last id>&limit=20
+// -> { items: [...], nextCursor: "<id of the last item>" }`,
+    },
+    pitfall: lines(
+      "Putting the verb in the URL and sending everything as `POST`, such as `POST /getBooks` or `POST /deleteBook`, with every answer a `200` whose body says `{ \"error\": ... }`, throws away what HTTP already provides.",
+      "Clients, caches and monitoring can no longer tell a read from a write or a success from a failure.",
+      "Use noun URLs, the method that matches the action, and the status code that matches the outcome.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type Reply = { code: number; body?: string };
+type Input = { title?: string };
+const books = new Map([[1, "Dune"], [2, "Emma"]]);
+let nextId = 3;
+// /books: the collection
+function onList(verb: string, input?: Input): Reply {
+  if (verb === "GET") {
+    return { code: 200, body: [...books.values()].join(", ") };
+  }
+  if (verb !== "POST") return { code: 405 };
+  if (!input?.title) return { code: 422, body: "no title" };
+  books.set(nextId, input.title);
+  return { code: 201, body: "/books/" + nextId++ };
+}
+// /books/:id: one book
+function onItem(verb: string, id: number): Reply {
+  if (!books.has(id)) return { code: 404 };
+  if (verb === "GET") return { code: 200, body: books.get(id) };
+  if (verb !== "DELETE") return { code: 405 };
+  books.delete(id);
+  return { code: 204 };
+}
+const show = (r: Reply) =>
+  console.log(r.body ? r.code + " " + r.body : r.code);
+show(onList("POST", {}));
+show(onList("POST", { title: "Ulysses" }));
+show(onItem("DELETE", 1));
+show(onItem("DELETE", 1));
+show(onList("GET"));`,
+      steps: [
+        "Line 25: a `POST` with no title is well-formed but breaks a rule, so it gets `422` and a body that names the problem.",
+        "Line 26: a valid `POST` creates the book and answers `201` with the new resource's URL.",
+        "Line 27: the `DELETE` succeeds with `204` and no body.",
+        "Line 28: deleting the same book again finds nothing, so it is `404`, but the state is the same as after the first call, which is what idempotent means.",
+        "Line 29: `GET` on the collection lists what is left; a long list would come back one cursor page at a time.",
+      ],
+      output: `422 no title
+201 /books/3
+204
+404
+200 Emma, Ulysses`,
+    },
+    exercises: ['dp-api-1', 'dp-api-2', 'dp-api-6', 'dp-api-3', 'dp-api-predict-1'],
+  },
+  {
+    id: 'db_design/1',
+    topicKeys: [Topic.DB_DESIGN],
+    step: 1,
+    title: 'Database Design (normalization, indexes, relations)',
+    idea: [
+      lines(
+        "Normalization stores each fact once.",
+        "First normal form: one value per column and no repeating groups such as `phone1`, `phone2`, `phone3`, which become rows of their own table.",
+        "Third normal form: every column depends on the key alone, so a city that follows from a zip code lives with the zip code, not on every user.",
+        "Denormalizing, copying data for faster reads, is a deliberate trade made later, with writes that keep the copies in step.",
+      ),
+      lines(
+        "Relations are foreign keys.",
+        "In one-to-many, the many side holds the key (`loans.member_id`); many-to-many needs a junction table with one row per pair, and that row can carry data of its own, such as a loan date or an order line's quantity; a self-reference such as `manager_id` points to the same table.",
+      ),
+      lines(
+        "An index lets the database find rows without reading the whole table.",
+        "A composite index on `(a, b)` serves filters on `a`, or `a` and `b`, but not `b` alone, and every index slows writes and takes space, so index the columns your queries filter, join and sort on.",
+      ),
+      lines(
+        "A transaction makes several writes all or nothing: `BEGIN`, the writes, then `COMMIT`, or `ROLLBACK` to undo them all.",
+        "Fetching a list and then one more query per row is the N+1 problem; a join or one `IN` query per relation fixes it.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- one-to-many: the many side holds the foreign key
+CREATE TABLE child (
+  id INT PRIMARY KEY,
+  parent_id INT NOT NULL REFERENCES parent (id)
+);
+-- many-to-many: a junction table, one row per pair
+CREATE TABLE a_b (
+  a_id INT REFERENCES a (id),
+  b_id INT REFERENCES b (id),
+  extra_col DATE,               -- data about the pair
+  PRIMARY KEY (a_id, b_id)
+);
+-- self-reference: a row points to a row of its own table
+--   manager_id INT NULL REFERENCES t (id)
+-- composite index: serves WHERE a = ?, and a = ? AND b > ?
+CREATE INDEX ix_t_a_b ON t (a, b);
+-- all or nothing
+BEGIN TRAN; UPDATE ...; UPDATE ...; COMMIT;  -- or ROLLBACK`,
+    },
+    pitfall: lines(
+      "Storing a list in one row, as numbered columns (`book1`, `book2`, `book3`) or a comma-separated string of ids, caps how many items fit or hides them in text, and no foreign key, index or join can see inside it.",
+      "Give the list its own table, or a junction table for a many-to-many, with one row per item.",
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'Member',
+          columns: ['MemberId', 'FullName'],
+          rows: [
+            [1, 'Ada'],
+            [2, 'Ben'],
+          ],
+        },
+        {
+          name: 'Book',
+          columns: ['BookId', 'Title'],
+          rows: [
+            [10, 'Dune'],
+            [11, 'Emma'],
+            [12, 'Ulysses'],
+          ],
+        },
+        {
+          name: 'Loan',
+          columns: ['MemberId', 'BookId', 'LoanedOn'],
+          rows: [
+            [1, 10, '2026-03-01'],
+            [1, 11, '2026-03-04'],
+            [2, 10, '2026-03-05'],
+          ],
+        },
+      ],
+      code: `CREATE INDEX IX_Loan_Book ON Loan (BookId, LoanedOn);
+SELECT m.FullName, b.Title, l.LoanedOn
+FROM Loan l
+JOIN Member m ON m.MemberId = l.MemberId
+JOIN Book b ON b.BookId = l.BookId
+ORDER BY m.FullName, b.Title;
+SELECT b.Title, COUNT(l.BookId) AS Loans
+FROM Book b
+LEFT JOIN Loan l ON l.BookId = b.BookId
+GROUP BY b.Title
+ORDER BY b.Title;`,
+      steps: [
+        "Line 1: an index that leads with `BookId` finds a book's loans, in date order, without reading the whole table; it serves `WHERE BookId = ?` and `WHERE BookId = ? AND LoanedOn > ?`, but not a filter on `LoanedOn` alone.",
+        "Lines 2-6: a member borrows many books and a book has many borrowers, so `Loan` is the junction table, one row per pair with that loan's date, and two joins through it turn the id pairs back into names and titles.",
+        "Lines 7-11: starting from `Book` with a `LEFT JOIN` keeps Ulysses, which nobody has borrowed, and `COUNT(l.BookId)` counts it as 0.",
+      ],
+      output: `FullName | Title | LoanedOn
+Ada | Dune | 2026-03-01
+Ada | Emma | 2026-03-04
+Ben | Dune | 2026-03-05
+
+Title | Loans
+Dune | 2
+Emma | 1
+Ulysses | 0`,
+    },
+    exercises: ['dp-db-5', 'dp-db-predict-1', 'dp-db-1', 'dp-db-3', 'dp-db-2'],
   },
 ];
