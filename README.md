@@ -58,7 +58,7 @@ Recall/
 │   │   ├── data/          # question banks (one file per topic/course)
 │   │   └── utils/         # spaced-repetition + answer validation logic
 │   └── scripts/          # authoring/quality/audit scripts
-├── exercises/            # Python exercises done in your own editor with pytest (see exercises/README.md)
+├── exercises/            # exercises done in your own editor, pytest or Vitest (see exercises/README.md)
 ├── docs/DEVELOPMENT.md   # architecture, question schemas, SRS mechanics
 └── CLAUDE.md             # repo conventions and load-bearing rules
 ```

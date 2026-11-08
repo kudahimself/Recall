@@ -1,0 +1,24 @@
+/* Price tags: reference solution. */
+
+:root {
+  --accent: crimson;
+  --ink: #222;
+}
+
+body {
+  color: var(--ink);
+}
+
+.tag {
+  box-sizing: border-box;
+  width: 200px;
+  padding: 12px;
+  border: 2px solid var(--accent);
+  margin: 0 0 16px;
+}
+
+/* #featured .price is more specific than .sale, whatever the order, so match it and add a class. */
+.price.sale,
+#featured .price.sale {
+  color: var(--accent);
+}

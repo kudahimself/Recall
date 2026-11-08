@@ -1,0 +1,13 @@
+/* The shop's own stylesheet. Leave it as it is: tags.css comes after it. */
+p {
+  color: #555;
+  margin: 0 0 8px;
+}
+
+.price {
+  font-weight: bold;
+}
+
+#featured .price {
+  color: navy;
+}

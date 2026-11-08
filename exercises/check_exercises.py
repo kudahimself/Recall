@@ -18,12 +18,19 @@ A course in BATCHED (databricks) is checked in one pytest run per step instead o
 because every run starts a Spark JVM that takes 10 to 20 seconds: all the starters run together,
 then all the reference solutions, and each test result is matched back to its exercise folder.
 
+A course in NODE (web_dev) is JavaScript: its exercises have *.test.js Vitest tests, run with node
+from the course folder's own package.json, whose packages `npm ci` installs in exercises/<course>/node_modules.
+It is checked the same batched way, in one Vitest run for the starters and one for the solutions,
+each copy taking the course folder's shared files (package.json, vitest.config.js, page.js) and its node_modules along.
+
 Usage, from anywhere: python exercises/check_exercises.py [course or course/topic ...]
 With no argument it checks every course; with names (backend, databricks) or course/topic
 folders (databricks/delta_lake_basics) only those.
-Needs Python 3 and the packages in exercises/requirements.txt (the databricks exercises also need Java 17+).
+Needs Python 3 and the packages in exercises/requirements.txt (the databricks exercises also need Java 17+);
+the web_dev exercises need Node 24.15+ (or 22.22+) and `npm ci` run once in exercises/web_dev.
 Exits 0 when every exercise checks out, 1 otherwise.
 """
+import json
 import os
 import re
 import shutil
@@ -34,9 +41,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOLUTIONS = ROOT / "solutions"
-IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc")
+IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc", "node_modules")
 # Courses whose exercises share one slow-to-start process (a Spark JVM), checked together.
 BATCHED = {"databricks"}
+# JavaScript courses, tested with Vitest from the course folder's package.json, also checked together.
+NODE = {"web_dev"}
 
 
 def exercise_dirs(courses=()):
@@ -45,7 +54,7 @@ def exercise_dirs(courses=()):
     for course in sorted(p for p in ROOT.iterdir() if p.is_dir() and p != SOLUTIONS):
         if courses and course.name not in courses and not any(c.startswith(course.name + "/") for c in courses):
             continue
-        for topic in sorted(p for p in course.iterdir() if p.is_dir()):
+        for topic in sorted(p for p in course.iterdir() if p.is_dir() and p.name != "node_modules"):
             wanted = not courses or course.name in courses or f"{course.name}/{topic.name}" in courses
             if wanted and (topic / "README.md").exists():
                 found.append(topic)
@@ -138,6 +147,11 @@ def run_pytest_batch(course_dir):
 
 def output_for(out, course, folder):
     """The failure sections and result lines of a batched run's output that name this exercise folder."""
+    if course in NODE:
+        # Vitest names test files from the course folder and separates its failures with rules of ⎯.
+        marker = f"{folder.name}/"
+        kept = [s.strip() for s in re.split(r"^⎯{3,}.*$", out, flags=re.M) if marker in s]
+        return "\n".join(kept)[-3000:] if kept else out[-3000:]
     marker = f"{course}/{folder.name}/"
     sections = re.split(r"^(?=_{3,} .* _{3,}$|={3,} .* ={3,}$)", out, flags=re.M)
     kept = [s.strip() for s in sections if marker in s and not s.startswith("=")]
@@ -147,8 +161,36 @@ def output_for(out, course, folder):
     return "\n".join(kept)[-3000:]
 
 
+def run_vitest_batch(course_dir):
+    """Run every *.test.js under `course_dir` in one Vitest run; return {topic: (passed, failed)} and the output."""
+    report = course_dir / "vitest-report.json"
+    env = {k: v for k, v in os.environ.items() if k != "INIT_CWD"}
+    result = subprocess.run(
+        ["node", str(course_dir / "node_modules" / "vitest" / "vitest.mjs"), "run", "--reporter=default", "--reporter=json", f"--outputFile.json={report}"],
+        cwd=course_dir, capture_output=True, text=True, env=dict(env, NO_COLOR="1", FORCE_COLOR="0"), timeout=900,
+    )
+    out = result.stdout + result.stderr
+    counts = {}
+    if report.exists():
+        for file in json.loads(report.read_text()).get("testResults", []):
+            parts = Path(file["name"]).relative_to(course_dir.resolve()).parts
+            if len(parts) < 2:
+                continue
+            passed, failed = counts.get(parts[0], (0, 0))
+            for test in file.get("assertionResults", []):
+                if test["status"] == "passed":
+                    passed += 1
+                elif test["status"] == "failed":
+                    failed += 1
+            if not file.get("assertionResults") and file.get("status") == "failed":
+                failed += 1  # the file failed to load, so none of its tests ran
+            counts[parts[0]] = (passed, failed)
+    return counts, out
+
+
 def check_batch(course, folders):
     """Problems found with each exercise of a batched course: {folder: [problems]}."""
+    node = course in NODE
     problems = {folder: [] for folder in folders}
     runnable = []
     for folder in folders:
@@ -156,39 +198,48 @@ def check_batch(course, folders):
         solution = SOLUTIONS / rel
         if not solution.is_dir():
             problems[folder].append(f"no reference solution at {solution.relative_to(ROOT.parent)}")
-        elif not list(folder.glob("test_*.py")):
-            problems[folder].append("no test_*.py file")
+        elif not list(folder.glob("*.test.js" if node else "test_*.py")):
+            problems[folder].append("no *.test.js file" if node else "no test_*.py file")
         else:
             runnable.append(folder)
-            for path in (p for p in solution.rglob("*.py") if "__pycache__" not in p.parts):
+            files = solution.rglob("*") if node else solution.rglob("*.py")
+            for path in (p for p in files if p.is_file() and "__pycache__" not in p.parts):
                 if not (folder / path.relative_to(solution)).exists():
                     problems[folder].append(f"solution file {path.relative_to(solution)} has no starter file to replace")
+    if node and not (ROOT / course / "node_modules" / "vitest").is_dir():
+        for folder in runnable:
+            problems[folder].append(f"Vitest is not installed: run npm ci in exercises/{course}")
+        return problems
 
     def stage(tmp, with_solutions, only):
         course_dir = Path(tmp) / course
         course_dir.mkdir()
-        for shared in (ROOT / course).glob("*.py"):
-            shutil.copy2(shared, course_dir)
+        for shared in (p for p in (ROOT / course).iterdir() if p.is_file()):
+            if node or shared.suffix == ".py":
+                shutil.copy2(shared, course_dir)
+        if node:
+            (course_dir / "node_modules").symlink_to(ROOT / course / "node_modules", target_is_directory=True)
         for folder in only:
             shutil.copytree(folder, course_dir / folder.name, ignore=IGNORE)
             if with_solutions:
                 shutil.copytree(SOLUTIONS / folder.relative_to(ROOT), course_dir / folder.name, ignore=IGNORE, dirs_exist_ok=True)
         return course_dir
 
+    run_batch = run_vitest_batch if node else run_pytest_batch
     fresh = [f for f in runnable if not edited_locally(f)]
     for folder in runnable:
         if folder not in fresh:
             print(f"  {folder.relative_to(ROOT)}: starter edited locally, skipping the starter check")
     if fresh:
         with tempfile.TemporaryDirectory() as tmp:
-            counts, out = run_pytest_batch(stage(tmp, False, fresh))
+            counts, out = run_batch(stage(tmp, False, fresh))
         for folder in fresh:
             passed, failed = counts.get(folder.name, (0, 0))
             if passed > 0 or failed == 0:
                 problems[folder].append(f"on the starter every test should fail, got {passed} passed, {failed} failed\n{output_for(out, course, folder)}")
     if runnable:
         with tempfile.TemporaryDirectory() as tmp:
-            counts, out = run_pytest_batch(stage(tmp, True, runnable))
+            counts, out = run_batch(stage(tmp, True, runnable))
         for folder in runnable:
             passed, failed = counts.get(folder.name, (0, 0))
             if failed > 0 or passed == 0:
@@ -206,7 +257,7 @@ def main():
     folders = exercise_dirs(courses)
     failures = 0
     results = {}
-    for course in sorted({f.parent.name for f in folders} & BATCHED):
+    for course in sorted({f.parent.name for f in folders} & (BATCHED | NODE)):
         results.update(check_batch(course, [f for f in folders if f.parent.name == course]))
     for folder in folders:
         problems = results[folder] if folder in results else check(folder)

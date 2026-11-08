@@ -1,0 +1,45 @@
+/* Shop layout: reference solution. */
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.menu {
+  display: flex;
+  gap: 16px;
+}
+
+.page {
+  display: flex;
+  gap: 32px;
+}
+
+.filters {
+  flex: 0 0 240px;
+}
+
+.results {
+  flex: 1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+/* The badge is placed against its nearest positioned ancestor, so make that the card. */
+.card {
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}

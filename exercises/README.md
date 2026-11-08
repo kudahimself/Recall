@@ -1,6 +1,6 @@
 # Exercises
 
-Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks, and Python with DuckDB for Data Engineering.
+Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks, Python with DuckDB for Data Engineering, and HTML, CSS and JavaScript for Web Dev.
 Each one follows a topic's lesson and questions in Recall: the app shows the task and the folder to open, and you tick it done yourself.
 Nothing runs in the browser.
 
@@ -18,6 +18,8 @@ pip install -r exercises/requirements.txt
 Python 3.10 or newer runs the Backend and Data Engineering ones, and 3.10 to 3.12 is the safe range for the Spark ones.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
 
+The Web Dev exercises need Node instead (24.15 or newer, or 22.22 or newer) and are set up on their own: `cd exercises/web_dev && npm ci`.
+
 ## Databricks exercises
 
 The exercises under `exercises/databricks/` run PySpark and Delta Lake locally, so they also need Java 17 or newer.
@@ -29,6 +31,12 @@ The exercises under `exercises/data_engineering/` practise the decisions of the 
 Some are plain Python; the rest run SQL on DuckDB, an in-process database the tests open in memory, so there is no server or warehouse to start.
 DuckDB's SQL is close to the lessons' T-SQL: parameters are written `?`, and a transaction is `BEGIN TRANSACTION` then `COMMIT` or `ROLLBACK`.
 Not every topic has one: the course outline gives an exercise to the topics where writing the load or the plan yourself teaches more than another card.
+
+## Web Dev exercises
+
+The exercises under `exercises/web_dev/` are HTML, CSS and JavaScript, tested with Vitest on Node, with jsdom standing in for the browser.
+Each one runs with `npm test` from its folder instead of `pytest`.
+See `exercises/web_dev/README.md` for the setup and for how the tests read a page.
 
 ## Django exercises
 
@@ -48,7 +56,7 @@ pytest
 
 1. Read the folder's `README.md` for the task and examples.
 2. Fill in the starter file: it has the function signatures, docstrings and `TODO`s.
-3. Run `pytest` from that folder.
+3. Run `pytest` from that folder (`npm test` for a Web Dev exercise).
    Every test fails on the untouched starter, and they all pass once your answer is right.
 4. Tick the exercise done in Recall, under Progress, Topics.
 
@@ -62,8 +70,11 @@ exercises/
     README.md                task, examples, how to run
     <module>.py              the starter you fill in
     test_<module>.py         the pytest tests
+    <module>.test.js         or, for Web Dev, the Vitest tests
   backend/exercise_settings.py  the Django settings every Django exercise shares
   databricks/spark_setup.py  the local Spark session every Databricks exercise shares
+  web_dev/package.json       the Node packages the Web Dev exercises need, with their lock file
+  web_dev/page.js            loads a Web Dev exercise's page into jsdom for its tests
   solutions/<course>/<topic>/  reference solutions, laid over the starter files
   check_exercises.py         checks every exercise (see below)
   requirements.txt           the packages to install, pinned
@@ -82,4 +93,5 @@ For every exercise it runs the tests on a copy of the starter, where each test m
 It works on copies, so your own answers are left alone, and it skips the starter check for an exercise you have already edited.
 Name a course or an exercise to check just that: `python exercises/check_exercises.py databricks`, `data_engineering` or `databricks/delta_lake_basics`.
 The Databricks exercises are checked together in one Spark session, all starters and then all solutions, because starting Spark is slow.
+The Web Dev exercises are checked together the same way, in one Vitest run each, which needs Node and `npm ci` done in `exercises/web_dev`.
 The app's `npm test` runs it too (`src/data/exercises/exercises.test.ts`), so an exercise cannot drift from its solution unnoticed.

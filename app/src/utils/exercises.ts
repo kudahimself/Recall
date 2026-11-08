@@ -44,7 +44,8 @@ export function toggleExerciseDone(done: ExercisesDone, id: string, now: number 
   return { ...done, [id]: now };
 }
 
-/** The shell line that runs an exercise's tests from the repo root. */
+/** The shell line that runs an exercise's tests from the repo root: Vitest for Web Dev, pytest otherwise. */
 export function exerciseCommand(exercise: TopicExercise): string {
-  return `cd ${exercise.folder} && pytest`;
+  const runner = exercise.folder.startsWith('exercises/web_dev/') ? 'npm test' : 'pytest';
+  return `cd ${exercise.folder} && ${runner}`;
 }
