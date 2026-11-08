@@ -523,7 +523,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('a11y-accessible-name-mcq-1'),
 
   // =====================================================================
-  // 17. NEXT_SHADCN (12 questions)
+  // 17. NEXT_SHADCN (16 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -533,6 +533,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // BEGINNER MC
   q('shadcn-what-is-1'),
   q('shadcn-customize-1'),
+  // BEGINNER predict (the class string cn() returns)
+  q('shadcn-cn-predict-1'),
   // INTERMEDIATE MC
   q('shadcn-radix-1'),
   // INTERMEDIATE coding
