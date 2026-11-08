@@ -10,6 +10,10 @@
  * ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines,
  * Optimization & Advanced, Data Governance, Data Modeling & Warehousing Design and
  * Lakehouse Architecture & Engineering Practice: every Databricks section.
+ * Then Data Engineering, in Python with DuckDB or the standard library: the topics
+ * the decisions-and-designs course outline gives an exercise, across Storage &
+ * Files, Warehouses, Lakes & Table Formats, Moving Data, Modeling for Analytics,
+ * Streaming, Distributed Data and Running Pipelines.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -1417,6 +1421,175 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Design a gold job\'s task gates, trigger and backfill as Jobs API settings, and split silver from a quarantine table on local Spark.',
       'Decide when a task runs from its `run_if`, play a run out to catch the Ghost Sink Failure, trigger on a table update, backfill with a bounded `for_each_task`, and quarantine rows with the rules they broke.',
+    ),
+  },
+  {
+    id: 'de_data_skipping',
+    topicKeys: [Topic.DE_DATA_SKIPPING],
+    title: 'Prove the pruning',
+    folder: 'exercises/data_engineering/de_data_skipping',
+    starter: ['pruned_sales.py'],
+    tests: 'test_pruned_sales.py',
+    minutes: 25,
+    task: lines(
+      'Lay a sales table out as Parquet on DuckDB and prove how much of it a query can skip.',
+      'Write a folder per day sorted by store, list the row groups a filter cannot skip from the footer statistics, count the files a query really reads from `EXPLAIN ANALYZE`, and choose the partition and sort columns from how the table is filtered.',
+    ),
+  },
+  {
+    id: 'de_updating_files',
+    topicKeys: [Topic.DE_UPDATING_FILES],
+    title: 'Plan the compaction',
+    folder: 'exercises/data_engineering/de_updating_files',
+    starter: ['compaction_plan.py'],
+    tests: 'test_compaction_plan.py',
+    minutes: 20,
+    task: lines(
+      'Look after a table that takes small updates all day, from its file list and version history.',
+      'Price an update as copy-on-write and as merge-on-read, pack the small files and the files with delete files into compaction rewrites, and list what cleanup may delete without going under the retention.',
+    ),
+  },
+  {
+    id: 'de_schema_evolution',
+    topicKeys: [Topic.DE_SCHEMA_EVOLUTION],
+    title: 'Schema changes, checked',
+    folder: 'exercises/data_engineering/de_schema_evolution',
+    starter: ['schema_compat.py'],
+    tests: 'test_schema_compat.py',
+    minutes: 25,
+    task: lines(
+      'Write the compatibility checker that guards a table\'s declared schema.',
+      'Classify every schema change, keep the ones that break readers or writers, list what a batch gets wrong, and load a batch only when all of it matches, so a renamed field is held instead of loading as NULLs.',
+    ),
+  },
+  {
+    id: 'de_full_vs_incremental',
+    topicKeys: [Topic.DE_FULL_VS_INCREMENTAL],
+    title: 'Products past the mark',
+    folder: 'exercises/data_engineering/de_full_vs_incremental',
+    starter: ['product_marks.py'],
+    tests: 'test_product_marks.py',
+    minutes: 20,
+    task: lines(
+      'Keep a warehouse copy of a product table with a high-water-mark load on DuckDB.',
+      'Upsert the rows changed since the mark and move the mark from the data in the same transaction, then reload in full and find the deletes an incremental run never sees.',
+    ),
+  },
+  {
+    id: 'de_idempotent_loads',
+    topicKeys: [Topic.DE_IDEMPOTENT_LOADS],
+    title: 'Orders, loaded twice',
+    folder: 'exercises/data_engineering/de_idempotent_loads',
+    starter: ['order_day_load.py'],
+    tests: 'test_order_day_load.py',
+    minutes: 25,
+    task: lines(
+      'Write `load_day(con, run_date)` against DuckDB, so a retry, a re-run or a backfill leaves `fact_orders` as one run would.',
+      'Replace only the run\'s day in one transaction, keep a late row in staging out of the other days, survive a crash after the delete, and apply a feed of changes with a `MERGE` on the key.',
+    ),
+  },
+  {
+    id: 'de_change_data_capture',
+    topicKeys: [Topic.DE_CHANGE_DATA_CAPTURE],
+    title: 'Members from the change log',
+    folder: 'exercises/data_engineering/de_change_data_capture',
+    starter: ['member_changes.py'],
+    tests: 'test_member_changes.py',
+    minutes: 25,
+    task: lines(
+      'Apply a CDC connector\'s change log to a warehouse table on DuckDB.',
+      'Keep the newest event per member by log position, delete on a delete, skip the events a restart re-sends, and start a new feed from a snapshot and the position noted before it.',
+    ),
+  },
+  {
+    id: 'de_dedup_late_data',
+    topicKeys: [Topic.DE_DEDUP_LATE_DATA],
+    title: 'Sales that arrive late',
+    folder: 'exercises/data_engineering/de_dedup_late_data',
+    starter: ['late_sales.py'],
+    tests: 'test_late_sales.py',
+    minutes: 25,
+    task: lines(
+      'Load a nightly batch of sales with duplicates, corrected versions and late rows on DuckDB.',
+      'Keep the newest version of each sale, find every day the batch touches, a corrected sale\'s old day included, and rebuild those days\' revenue under the day each sale happened.',
+    ),
+  },
+  {
+    id: 'de_backfills',
+    topicKeys: [Topic.DE_BACKFILLS],
+    title: 'Plan the backfill',
+    folder: 'exercises/data_engineering/de_backfills',
+    starter: ['backfill_planner.py'],
+    tests: 'test_backfill_planner.py',
+    minutes: 25,
+    task: lines(
+      'Plan the backfill after a fix to `orders_clean`.',
+      'List the days to rerun and the days raw retention cannot reach, the tables built from the fixed one in dependency order, and waves of (table, day) jobs that run independent days in parallel and a day-to-day table in date order.',
+    ),
+  },
+  {
+    id: 'de_grain_double_counting',
+    topicKeys: [Topic.DE_GRAIN_DOUBLE_COUNTING],
+    title: 'Totals at the right grain',
+    folder: 'exercises/data_engineering/de_grain_double_counting',
+    starter: ['order_grain.py'],
+    tests: 'test_order_grain.py',
+    minutes: 20,
+    task: lines(
+      'Report per customer and per month on DuckDB without counting anything twice.',
+      'Check that a table\'s key holds, count the fan-out of a join, add up shipping, goods and orders per customer at the order grain, and recompute monthly conversion and distinct buyers from their parts.',
+    ),
+  },
+  {
+    id: 'de_scd_point_in_time',
+    topicKeys: [Topic.DE_SCD_POINT_IN_TIME],
+    title: 'Customers through time',
+    folder: 'exercises/data_engineering/de_scd_point_in_time',
+    starter: ['customer_versions.py'],
+    tests: 'test_customer_versions.py',
+    minutes: 25,
+    task: lines(
+      'Keep a Type 2 customer dimension on DuckDB, so past sales stay under the city they were made in.',
+      'Merge a source snapshot by closing changed versions and adding new surrogate keys, overwrite emails as Type 1, find the version valid on a day, and stamp each sale, late ones included, with its version.',
+    ),
+  },
+  {
+    id: 'de_event_time_windows',
+    topicKeys: [Topic.DE_EVENT_TIME_WINDOWS],
+    title: 'Windows that close on time',
+    folder: 'exercises/data_engineering/de_event_time_windows',
+    starter: ['watermark_windows.py'],
+    tests: 'test_watermark_windows.py',
+    minutes: 25,
+    task: lines(
+      'Window a stream of late and out-of-order events by event time, in plain Python.',
+      'Find tumbling and hopping windows, split sessions on a gap, and play the stream through windows a watermark closes, sending events for closed windows to a late output.',
+    ),
+  },
+  {
+    id: 'de_partition_skew',
+    topicKeys: [Topic.DE_PARTITION_SKEW],
+    title: 'Salt the hot customer',
+    folder: 'exercises/data_engineering/de_partition_skew',
+    starter: ['salted_totals.py'],
+    tests: 'test_salted_totals.py',
+    minutes: 20,
+    task: lines(
+      'Total orders per customer on several machines when one customer holds most of the rows.',
+      'Measure the partitions, find the hot keys, salt only the hot customer by `order_id`, sum inside each partition and combine the partial sums into the same totals.',
+    ),
+  },
+  {
+    id: 'de_quality_gates',
+    topicKeys: [Topic.DE_QUALITY_GATES],
+    title: 'Hold the bad batch',
+    folder: 'exercises/data_engineering/de_quality_gates',
+    starter: ['order_gate.py'],
+    tests: 'test_order_gate.py',
+    minutes: 20,
+    task: lines(
+      'Gate tonight\'s orders in staging before anyone can read them, on DuckDB.',
+      'Count the rows breaking each blocking test, warn on an unusual row count, and publish the batch in one transaction only when no blocking test fails, so readers keep yesterday\'s data otherwise.',
     ),
   },
 ];
