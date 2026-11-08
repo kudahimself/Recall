@@ -8,6 +8,7 @@
  * Section 5, Next.js: every topic, Middleware & Auth and Optimization &
  * Deployment as one lesson each, as their course topics pair them.
  * Section 6, Prisma & Database: its one topic.
+ * Section 7, Forms & Validation (RHF + Zod): its one topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -40,6 +41,9 @@
  * page shows or the server answers after them. Every example was built with
  * Next.js 15.5 (next build, then next start), the requests made with curl and
  * headless Chromium, and the output read off the responses and the page.
+ * The React Hook Form + Zod one is a Client Component built that way with
+ * react-hook-form 7.91, @hookform/resolvers 7 and Zod 4.6, its boxes filled
+ * and its button pressed in headless Chromium.
  *
  * A Prisma worked example needs a Prisma project and its database, so it
  * sets `runs: false` (the "Prisma file" kind): it imports from
@@ -3005,5 +3009,122 @@ console.log(await dup.catch(e => e.code));`,
 P2002`,
     },
     exercises: ['prisma-4', 'prisma-include-select-predict-1', 'prisma-parsons-1', 'prisma-cloze-2', 'prisma-1'],
+  },
+
+  // ===== Section 7, Forms & Validation (RHF + Zod) =====
+  {
+    id: 'next_forms_validation/1',
+    topicKeys: [Topic.NEXT_FORMS_VALIDATION],
+    step: 1,
+    title: 'React Hook Form + Zod Validation',
+    idea: [
+      lines(
+        "A Zod schema states a form's rules once: `z.object({...})` holds a schema per field, and checks chain on, as in `z.string().min(2, \"Too short\")`, whose last argument is the message shown.",
+        "`.optional()` lets a field be left out, `z.enum([...])` allows a fixed set of strings, and `.refine()` on the object compares two fields, its `path` naming the field that gets the error.",
+        "`z.infer<typeof schema>` turns the schema into a TypeScript type, so the type and the rules cannot drift apart.",
+      ),
+      lines(
+        "React Hook Form keeps the form's state: `useForm()` returns `register`, `handleSubmit` and `formState.errors`.",
+        "`{...register(\"field\")}` wires a native input by its ref, uncontrolled, so give it no `value` prop and seed an edit form with `defaultValues`.",
+        "`handleSubmit(onValid)` stops the reload, validates, and calls `onValid` only with valid data; a UI-library input that takes no ref needs `<Controller>`.",
+      ),
+      lines(
+        "`resolver: zodResolver(schema)`, from `@hookform/resolvers/zod`, hands every check to Zod and maps its issues into `errors`, and `onValid` receives Zod's parsed output.",
+      ),
+      lines(
+        "A browser's checks can be skipped, so the Server Action checks again with the same schema.",
+        "`schema.safeParse(data)` never throws: it returns `{ success: true, data }` or `{ success: false, error }`, where `parse` would throw.",
+        "In Zod 4, `z.flattenError(error).fieldErrors` gives `{ field: [messages] }`; the exercises' Zod 3 forms, `error.flatten()` and `z.string().email()`, still work.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// schema.ts: one schema for the form and the server
+import { z } from "zod";
+export const schema = z.object({
+  text: z.string().min(2, "message"), // check, message
+  num: z.coerce.number().max(9), // convert, then check
+  pick: z.enum(["a", "b"]),
+  note: z.string().optional(),   // may be left out
+});
+export type Values = z.infer<typeof schema>;
+
+// Form.tsx
+"use client";
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+} = useForm({
+  resolver: zodResolver(schema), // Zod does the checks
+  defaultValues: { text: "" },   // seed values here
+});
+// onValid runs only with valid data
+<form onSubmit={handleSubmit(onValid)}>
+  <input {...register("text")} />
+  <p>{errors.text?.message}</p>
+</form>
+
+// actions.ts: check again on the server
+"use server";
+export async function save(formData: FormData) {
+  const raw = Object.fromEntries(formData);
+  const r = schema.safeParse(raw); // never throws
+  if (!r.success) {
+    return z.flattenError(r.error).fieldErrors;
+  }
+  // r.data is a Values, already coerced
+}`,
+    },
+    pitfall: lines(
+      "An input's value and `formData.get()` are always strings, so `z.number()` rejects `\"25\"` and the form never submits.",
+      "Write `z.coerce.number()` (or `z.coerce.date()`), which converts first and then runs the checks chained after it, and add a `.min()`, because `Number(\"\")` is 0 and an empty box would otherwise pass.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/hold/HoldForm.tsx: press Hold with both empty,
+// type "Dune" and "6", change "6" to "3", press Hold
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const holdSchema = z.object({
+  title: z.string().min(2, "Title: 2 letters or more"),
+  weeks: z.coerce.number().min(1, "1 week or more")
+    .max(4, "4 weeks at most"),
+});
+
+export default function HoldForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ resolver: zodResolver(holdSchema) });
+  const hold = handleSubmit((data) =>
+    console.log(JSON.stringify(data)));
+  return (
+    <form onSubmit={hold}>
+      <input {...register("title")} />
+      <p>{errors.title?.message}</p>
+      <input {...register("weeks")} />
+      <p>{errors.weeks?.message}</p>
+      <button>Hold</button>
+    </form>
+  );
+}`,
+      steps: [
+        "Lines 8-12: the schema holds every rule and message, and `weeks` is `z.coerce.number()`, because an input's value is a string.",
+        "Lines 15-19: `zodResolver(holdSchema)` hands validation to Zod, and `errors` gets one `message` for each failing field.",
+        "Lines 20 and 23: Hold runs `handleSubmit`, which stops the reload and asks Zod; with both boxes empty both fail, the title too short and `Number(\"\")` 0, under the minimum of 1.",
+        "Lines 24-27: the inputs are registered, uncontrolled, and after a failed submit RHF checks again on every change, so typing `Dune` clears its message and `6` brings \"4 weeks at most\".",
+        "Lines 20-21: with `3` the next Hold passes, and the callback gets Zod's output, so `weeks` is logged as the number 3, not the string.",
+      ],
+      output: `Hold, both empty:   Title: 2 letters or more | 1 week or more
+"Dune" and "6":     4 weeks at most
+"3", then Hold:     no messages; logs {"title":"Dune","weeks":3}`,
+    },
+    exercises: ['next-forms-4', 'next-forms-parsons-1', 'next-forms-cloze-1', 'next-forms-coerce-predict-1', 'next-forms-3'],
   },
 ];
