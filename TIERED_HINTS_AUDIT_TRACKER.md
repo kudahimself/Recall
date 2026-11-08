@@ -326,7 +326,6 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `proj-ts-1` | ADVANCED | `TS_PROJECT` | `projectQuestions.ts` | 🟢 Completed | |
 | `proj-ts-2` | ADVANCED | `TS_PROJECT` | `projectQuestions.ts` | 🟢 Completed | |
 | `proj-next-1` | INTERMEDIATE | `NEXT_DEPLOYMENT` | `projectQuestions.ts` | 🟢 Completed | |
-| `proj-next-2` | INTERMEDIATE | `NEXT_DEPLOYMENT` | `projectQuestions.ts` | 🟢 Completed | |
 | `proj-forms-1` | ADVANCED | `NEXT_FORMS_VALIDATION` | `projectQuestions.ts` | 🟢 Completed | |
 | `proj-forms-2` | ADVANCED | `NEXT_FORMS_VALIDATION` | `projectQuestions.ts` | 🟢 Completed | |
 | `proj-url-1` | ADVANCED | `NEXT_URL_STATE` | `projectQuestions.ts` | 🟢 Completed | |
@@ -1537,6 +1536,7 @@ When spawned to author or audit `tieredHints` on CODING questions, follow these 
 | `a11y-tabindex-coding-1` | INTERMEDIATE | `ACCESSIBILITY` | `a11yShadcnQuestions.ts` | 🟢 Completed | tightened (was HIGH 0.98, now MEDIUM 0.77) |
 | `shadcn-cn-utility-1` | BEGINNER | `NEXT_SHADCN` | `a11yShadcnQuestions.ts` | 🟢 Completed | added blank (was HIGH 0.91, now clean) |
 | `shadcn-dark-mode-1` | INTERMEDIATE | `NEXT_SHADCN` | `a11yShadcnQuestions.ts` | 🟢 Completed | condensed skeleton (was HIGH 1.04, now clean) |
+| `proj-next-2` | INTERMEDIATE | `NEXT_SHADCN` | `a11yShadcnQuestions.ts` | 🟢 Completed | |
 | `shadcn-cva-coding-1` | INTERMEDIATE | `NEXT_SHADCN` | `a11yShadcnQuestions.ts` | 🟢 Completed | fixed (was HIGH 0.80, now MEDIUM 0.79) |
 | `shadcn-aschild-coding-1` | INTERMEDIATE | `NEXT_SHADCN` | `a11yShadcnQuestions.ts` | 🟢 Completed | already correct (MEDIUM 0.70) |
 | `shadcn-theming-coding-1` | INTERMEDIATE | `NEXT_SHADCN` | `a11yShadcnQuestions.ts` | 🟢 Completed | restructured (was HIGH 1.62 due to checker quirk on `--` CSS vars, now clean 0.54) |
