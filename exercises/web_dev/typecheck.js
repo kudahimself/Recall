@@ -24,7 +24,7 @@ const libFiles = new Map();
 
 /** The compiler's errors for a program rooted at `root`, which may be a file only in memory. */
 function diagnose(root, code) {
-  const dir = dirname(root);
+  const dir = ts.getDirectoryPath(root);
   const host = ts.createCompilerHost(options, true);
   const { getSourceFile, fileExists, readFile } = host;
   if (code !== undefined) {
@@ -51,8 +51,8 @@ function diagnose(root, code) {
  * an empty array means they compile.
  */
 export function fileTypeErrors(fileUrl) {
-  const file = fileURLToPath(fileUrl);
-  const dir = dirname(file);
+  const file = ts.normalizePath(fileURLToPath(fileUrl));
+  const dir = ts.getDirectoryPath(file);
   return diagnose(file).map(d => (d.file ? `${d.file.slice(dir.length + 1)}:${d.line + 1}: ${d.text}` : d.text));
 }
 
@@ -64,7 +64,7 @@ export function fileTypeErrors(fileUrl) {
  * are fileTypeErrors' to report, not these.
  */
 export function typeErrors(code, testUrl) {
-  const root = join(dirname(fileURLToPath(testUrl)), '__typecheck__.ts');
+  const root = ts.normalizePath(join(dirname(fileURLToPath(testUrl)), '__typecheck__.ts'));
   const lines = code.split('\n');
   return diagnose(root, code)
     .filter(d => d.file === root)
