@@ -145,6 +145,14 @@ export enum Topic {
   DE_CHANGE_DATA_CAPTURE = 'de_change_data_capture',
   DE_DEDUP_LATE_DATA = 'de_dedup_late_data',
   DE_BACKFILLS = 'de_backfills',
+  // Storage & Files - the second rewritten section. It absorbs the old
+  // DE_ROWS_VS_COLUMNS, DE_WHAT_IS_A_FILE_FORMAT, DE_PARQUET_BASICS and
+  // DE_OBJECT_STORAGE, which keep no questions and stay here so stored
+  // progress keeps its course.
+  DE_ROW_VS_COLUMN_LAYOUT = 'de_row_vs_column_layout',
+  DE_FILE_FORMATS = 'de_file_formats',
+  DE_DATA_SKIPPING = 'de_data_skipping',
+  DE_SMALL_FILES = 'de_small_files',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).
