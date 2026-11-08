@@ -239,7 +239,7 @@ A section or unit the learner has already reached (one of its questions answered
 
 **Lessons (`utils/lessons.ts`, `data/lessons/`):**
 A lesson teaches one topic before its ramp: a rule card (the idea, the form, the one pitfall, and a worked example whose output is shown) and 3-5 of the topic's existing questions as exercises, in ramp order.
-Lessons are `TopicLesson` data beside the bank, one per topic for now, written one section per PR from each course's first topic, in course order (SQL for Data Engineering, then Backend, then Databricks; Data Engineering lessons arrive with each rewritten section); `/write-lesson` drafts one.
+Lessons are `TopicLesson` data beside the bank, one per topic for now, written one section per PR from each course's first topic, in course order (SQL for Data Engineering, then Backend, then Databricks, then Web Dev; Data Engineering lessons arrive with each rewritten section); `/write-lesson` drafts one.
 A lesson is met when it was completed, or when any of its exercises was already attempted, so existing progress is credited and never forced through a lesson.
 The gate lives in the App, not the selector: when the session serves an unseen card whose topic's lesson is not met (`lessonGateFor`), the App shows the rule card instead; "Try the exercises" (or Enter) then serves the exercises in order as new cards through the normal `handleAnswer`, so they count for coverage, the session's slots and the schedule exactly as other cards do, and a miss is asked again like any other.
 After the lesson the session goes on with the rest of the topic's ramp.
