@@ -53,14 +53,34 @@ export const RENDERED_OUTPUT_CONVENTION =
   'Read the code below as a browser renders it: nothing is printed. ' +
   'Answer exactly what the question asks about the page, in the form it gives.';
 
+/**
+ * A React component that logs nothing prints nothing either: its predicts ask
+ * what the page shows after some clicks or keystrokes, or which error React
+ * throws, and each question names the value and the form to type it in.
+ */
+export const REACT_RENDERED_OUTPUT_CONVENTION =
+  'Read the code below as React runs it in the browser: it logs nothing. ' +
+  'Answer exactly what the question asks, in the form it gives.';
+
 /** True for code the browser renders (HTML, CSS) rather than runs and prints. */
 export function rendersInBrowser(language: CodeLanguage): boolean {
   return language === CodeLanguage.HTML || language === CodeLanguage.CSS;
 }
 
+/** True for JSX that never calls console: the answer is about the page, not printed output. */
+function reactWithoutLogs(code: string, language: CodeLanguage): boolean {
+  return language === CodeLanguage.JSX && !/\bconsole\.\w+\s*\(/.test(code);
+}
+
+/** True when the predict's answer is about the rendered page rather than printed output. */
+export function answersAboutPage(code: string, language: CodeLanguage): boolean {
+  return rendersInBrowser(language) || reactWithoutLogs(code, language);
+}
+
 /** The answer instruction that matches what the code actually outputs. */
 export function outputInstruction(code: string, language: CodeLanguage): string {
   if (rendersInBrowser(language)) return RENDERED_OUTPUT_CONVENTION;
+  if (reactWithoutLogs(code, language)) return REACT_RENDERED_OUTPUT_CONVENTION;
   if (language !== CodeLanguage.SQL) return DEFAULT_OUTPUT_CONVENTION;
   if (!/\bPRINT\b/i.test(code)) return SQL_OUTPUT_CONVENTION;
   return /\bSELECT\b/i.test(code) ? SQL_MIXED_PRINT_CONVENTION : SQL_PRINT_CONVENTION;

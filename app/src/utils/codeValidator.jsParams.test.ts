@@ -114,3 +114,23 @@ describe('JS parameter names are the learner\'s choice', () => {
     expect(verdict(hi, 'const greet = (n) => ({ label: `Hi ${name}` });')).not.toBe('pass');
   });
 });
+
+describe('parentheses around a JSX element are layout, not code', () => {
+  const card = question('function Card({ children }) {\n  return <div className="card">{children}</div>;\n}', '', CodeLanguage.JSX);
+  const list = question('function ItemList({ items }) {\n  return (\n    <ul>\n      {items.map(item => (\n        <li key={item.id}>{item.name}</li>\n      ))}\n    </ul>\n  );\n}', '', CodeLanguage.JSX);
+
+  it('passes the same markup with or without wrapping parentheses', () => {
+    expect(verdict(card, 'function Card({ children }) {\n  return (\n    <div className="card">\n      {children}\n    </div>\n  );\n}')).toBe('pass');
+    expect(verdict(list, 'function ItemList({ items }) {\n  return <ul>{items.map((item) => <li key={item.id}>{item.name}</li>)}</ul>;\n}')).toBe('pass');
+  });
+
+  it('still fails different markup inside the parentheses', () => {
+    expect(verdict(card, 'function Card({ children }) {\n  return (\n    <section className="card">{children}</section>\n  );\n}')).not.toBe('pass');
+    expect(verdict(list, 'function ItemList({ items }) {\n  return (\n    <ul>\n      {items.map((item, i) => (\n        <li key={i}>{item.name}</li>\n      ))}\n    </ul>\n  );\n}')).not.toBe('pass');
+  });
+
+  it('keeps the parentheses of calls and comparisons', () => {
+    const cmp = question('const small = items.filter(x => (x.size < 3));', '', CodeLanguage.JSX);
+    expect(verdict(cmp, 'const small = items.filter(x => (x.size > 3));')).not.toBe('pass');
+  });
+});

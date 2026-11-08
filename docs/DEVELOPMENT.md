@@ -360,6 +360,7 @@ Regression suite: `codeValidator.mutants.test.ts` (every reference passes; flipp
    - Lowercase for SQL
    - HTML: `<!-- -->` comments stripped, class lists and attributes compared as sets (reordered `class` values or attributes still match), `/>` read as `>`
    - JS/TS/JSX: function parameters and loop variables renamed to positional placeholders within their own scope, `x =>` read as `(x) =>`, and an arrow's `{ return expr; }` read as `expr` (`canonicalizeJsParams`; tests in `codeValidator.jsParams.test.ts`)
+   - JSX/TS: parentheses wrapping a single JSX element dropped, so `return (<ul>...</ul>);` matches `return <ul>...</ul>;` (`stripJsxParens`)
 3. **Equivalence rewrites:** `filter`↔`where`, `sort`↔`orderBy`, `col("x")`↔`"x"`, `df["x"]`↔`"x"`, `F.func`→`func`, `INNER JOIN`↔`JOIN`, SQL `a.x = b.y` / `a.x <> b.y` (and `!=`) predicates after `ON`/`WHERE`/`AND`/`OR`/`WHEN`/`HAVING` put in a fixed side order (never `SET` assignments), etc.
 4. **Bracket check:** user code with an unclosed or mismatched `(`, `[` or `{` is a `fail` when the reference itself is balanced (catches truncated answers).
 5. **Match each alternative:** pass if ANY alternative matches, either by:
@@ -540,7 +541,7 @@ Forces mental-model use before writing.
 **Schema:**
 - `code: string` - snippet to read (3-8 lines is sweet spot)
 - `expectedOutput: string` - canonical output, compared by `outputMatches` in `src/utils/predictOutput.ts` (owner of the matching rules and the on-screen answer instructions; tests in `predictOutput.test.ts`):
-  - HTML/CSS: nothing is printed, so the on-screen instruction asks about the rendered page; the prompt must name the value and the form to type it in
+  - HTML/CSS, and JSX that never calls `console`: nothing is printed, so the on-screen instruction asks about the rendered page (`answersAboutPage`); the prompt must name the value and the form to type it in
   - Non-SQL: exact output after whitespace normalization (trailing whitespace, outer blank lines, blank-line runs, spaces inside list/dict reprs)
   - SQL query results: one row per line, columns in SELECT order separated by a comma, no headers, `NULL` for nulls, `(no rows)` for an empty result; quotes, spacing and tab separators are tolerated, values stay exact (`20` is not `20.0`)
   - SQL with `PRINT`: each printed line in order; when the batch also has a `SELECT`, only the `PRINT` output is the answer, so the prompt should say so
