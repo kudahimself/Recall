@@ -197,3 +197,27 @@ test('an HTML or CSS worked example with runs: false is not run, and the kind ho
   expect(r.pythonHtml.join('\n')).toMatch(/runs: false is only for a Django/);
   expect(r.textOnly.join('\n')).toMatch(/runs: false is only for a Django/);
 });
+
+test('a React worked example with runs: false is not run, and the kind needs JSX that imports React', () => {
+  const r = probe(`
+    const { LESSONS } = require('./src/data/lessons/index.ts');
+    const base = LESSONS.find(l => l.id === 'tsql_select/1');
+    const worked = (language, code) => ({ ...base, worked: { ...base.worked, language, tables: undefined, runs: false, code, output: 'Hi' } });
+    const paired = worked('jsx', 'import { useState } from "react";\\nfunction A() { return <p>Hi</p>; }');
+    const selfClosing = worked('jsx', 'import { createRoot } from "react-dom/client";\\ncreateRoot(el).render(<App />);');
+    const fragment = worked('jsx', 'import { Link } from "react-router";\\nconst A = () => <>Hi</>;');
+    const multiLine = worked('jsx', 'import {\\n  Link,\\n  useParams,\\n} from "react-router";\\nconst A = () => <p>Hi</p>;');
+    const noImport = worked('jsx', 'function A() { return <p>Hi</p>; }');
+    const noJsx = worked('jsx', 'import { useState } from "react";\\nconsole.log(typeof useState);');
+    const asJavaScript = worked('javascript', 'import { useState } from "react";\\nfunction A() { return <p>Hi</p>; }');
+    const errors = async l => (await C.checkLesson(l, new Set())).errors;
+    return { paired: await errors(paired), selfClosing: await errors(selfClosing), fragment: await errors(fragment), multiLine: await errors(multiLine), noImport: await errors(noImport), noJsx: await errors(noJsx), asJavaScript: await errors(asJavaScript) };
+  `);
+  for (const ok of [r.paired, r.selfClosing, r.fragment, r.multiLine]) {
+    expect(ok.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  }
+  // JSX without React, React without JSX, and the same code labelled JavaScript are not the kind.
+  expect(r.noImport.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.noJsx.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.asJavaScript.join('\n')).toMatch(/runs: false is only for a Django/);
+});

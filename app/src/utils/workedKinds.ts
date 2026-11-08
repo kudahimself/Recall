@@ -58,6 +58,21 @@ export const NON_RUNNABLE_KINDS: NonRunnableKind[] = [
       /<([a-z][a-z0-9-]*)\b[^<>]*>[\s\S]*<\/\1>/i.test(code)
       || /^[^{}\n;]+\{\s*[a-z-]+\s*:[^{}]+\}/im.test(code),
   },
+  {
+    // JSX that imports React (or react-dom / react-router), on one line or as a
+    // multi-line `import {\n  a,\n} from "react"`, and holds a JSX element:
+    // a paired `<p>...</p>`, a self-closing `<Card />` or a fragment `<>...</>`.
+    // It needs the React packages and a JSX compiler, and what it shows is what
+    // React renders, which no runner here reproduces.
+    kind: 'a React component (JSX that imports React)',
+    needs: 'a React project',
+    languages: ['jsx'],
+    test: code =>
+      /^\s*import\s[^;]*?\bfrom\s+['"](react|react-dom(\/client)?|react-router)['"]/m.test(code)
+      && (/<([A-Za-z][\w.]*)\b[^<>]*>[\s\S]*<\/\1>/.test(code)
+        || /<[A-Z][\w.]*\b[^<>]*\/>/.test(code)
+        || /<>[\s\S]*<\/>/.test(code)),
+  },
 ];
 
 /** The non-runnable kind a worked example's code in `language` is, if any. */
