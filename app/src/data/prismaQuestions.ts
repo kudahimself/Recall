@@ -1464,10 +1464,10 @@ model Tag {
   },
 
   // =====================================================================
-  // NEXT_TANSTACK (6 questions)
+  // NEXT_TANSTACK (17 questions)
   // =====================================================================
 
-  // BEGINNER faded (Parsons + Cloze) — lower-load scaffold before cold coding
+  // BEGINNER faded (Parsons + Cloze): lower-load scaffold before cold coding
   {
     id: 'tanstack-parsons-1',
     type: QuestionType.PARSONS,
@@ -1525,7 +1525,7 @@ if (isError) return <p>Error: {error.message}</p>;`,
   queryFn: () => fetch("/api/users").then((res) => res.json()),
 });`,
     explanation:
-      'The queryKey is the cache identity — TanStack uses it to dedupe identical requests and to target invalidation. The queryFn is the actual fetching logic; it just has to return a promise that resolves to your data.',
+      'The queryKey is the name of the cache entry: components that use the same key share one entry and one request, and invalidateQueries finds entries by it. The queryFn does the fetching; it only has to return a promise that resolves to the data, so a fetch(...).then((res) => res.json()) chain or an async function both work.',
     hints: [
       'The array that identifies this query in the cache',
       'The function that performs the fetch',
@@ -1552,6 +1552,7 @@ if (isError) return <p>Error: {error.message}</p>;`,
 
 mutation.___(newUser);`,
     blanks: ['invalidateQueries', 'mutate'],
+    blankAlternates: [[], ['mutateAsync']],
     solution: `const mutation = useMutation({
   mutationFn: createUser,
   onSuccess: () => {
@@ -1561,7 +1562,7 @@ mutation.___(newUser);`,
 
 mutation.mutate(newUser);`,
     explanation:
-      'invalidateQueries marks the matching cache entry stale and triggers a background refetch, so the list reflects the new user without manual state surgery. The mutation does not run until you call mutate() with the payload.',
+      'The cache cannot know what a write changed, so onSuccess calls invalidateQueries: it marks every cached query whose key starts with "users" stale and fetches again the ones a component on screen is showing, so the list picks up the new user with no manual state update. useMutation itself sends nothing until you call mutate(newUser); mutateAsync(newUser) also starts it and returns a promise you can await.',
     hints: [
       'The queryClient method that marks data stale and refetches',
       'The method that fires the mutation',
@@ -1578,22 +1579,12 @@ mutation.mutate(newUser);`,
     topic: Topic.NEXT_TANSTACK,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: 'Create a React component that uses TanStack Query\'s `useQuery` hook to fetch a list of users from "/api/users".\n\nRequirements:\n- Use `useQuery` with a queryKey of `["users"]` and a queryFn that fetches from "/api/users" and parses JSON\n- Handle three states: loading (show "Loading..."), error (show "Error: {error.message}"), and success (render a `<ul>` with each user\'s name in an `<li>`)\n- Assume each user has `id` and `name` properties\n- The component should be named `UserList`',
-    starterCode: `import { useQuery } from "@tanstack/react-query";
+    question: 'Write a `UserList` Client Component that fetches the users from "/api/users" with TanStack Query\'s `useQuery`.\n\nRequirements:\n- Cache the result under the query key `["users"]`, with a queryFn that fetches "/api/users" and parses the JSON\n- While there is no data yet, show "Loading..."\n- If the query failed, show "Error: " followed by `error.message`\n- Otherwise render a `<ul>` with one `<li>` per user, showing the user\'s `name` and keyed by `id`\n- Export the component as the default export',
+    starterCode: `"use client";
+import { useQuery } from "@tanstack/react-query";
 
-interface User {
-  id: number;
-  name: string;
-}
-
+// each user from /api/users: { id, name }
 export default function UserList() {
-  // Use useQuery to fetch users
-
-  // Handle loading state
-
-  // Handle error state
-
-  // Render the list of users
 }`,
     testCases: [
       {
@@ -1612,15 +1603,11 @@ export default function UserList() {
         description: 'Should render users in a list with key and name',
       },
     ],
-    solution: `import { useQuery } from "@tanstack/react-query";
-
-interface User {
-  id: number;
-  name: string;
-}
+    solution: `"use client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function UserList() {
-  const { data, isPending, isError, error } = useQuery<User[]>({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
       const res = await fetch("/api/users");
@@ -1629,8 +1616,56 @@ export default function UserList() {
     },
   });
 
-  if (isPending) return <div>Loading...</div>;
-  if (isError) return <div>Error: {error.message}</div>;
+  if (isPending) return <p>Loading...</p>;
+  if (isError) return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {data.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+
+# OR
+
+"use client";
+import { useQuery } from "@tanstack/react-query";
+
+export default function UserList() {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => fetch("/api/users").then((res) => res.json()),
+  });
+
+  if (isPending) return <p>Loading...</p>;
+  if (isError) return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {data.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+
+# OR
+
+"use client";
+import { useQuery } from "@tanstack/react-query";
+
+type User = { id: number; name: string };
+
+export default function UserList() {
+  const { data, isPending, isError, error } = useQuery<User[]>({
+    queryKey: ["users"],
+    queryFn: () => fetch("/api/users").then((res) => res.json()),
+  });
+
+  if (isPending) return <p>Loading...</p>;
+  if (isError) return <p>Error: {error.message}</p>;
 
   return (
     <ul>
@@ -1640,29 +1675,35 @@ export default function UserList() {
     </ul>
   );
 }`,
-    explanation: 'TanStack Query (formerly React Query) replaces the common useState + useEffect + loading/error state pattern with a single hook. The `queryKey` (["users"]) is the cache identifier — TanStack uses it to deduplicate requests, cache results, and know what to invalidate later. The `queryFn` is your actual data fetching logic — TanStack does not care HOW you fetch, just that you return a promise. The hook returns `isPending` (no data yet), `isError`, and `data` — you handle each state declaratively. Behind the scenes, TanStack automatically retries failed requests, deduplicates simultaneous identical requests, and serves cached data while revalidating in the background.',
+    explanation: 'useQuery replaces the useState + useEffect + loading flag pattern with one hook. queryKey ["users"] names the cache entry: every component that asks for it shares one entry and one request, and invalidateQueries finds it later. queryFn does the fetching and only has to return a promise of the data; throwing when res.ok is false turns a 500 into an error, since fetch itself only rejects on a network failure. data is undefined until the first answer, so check isPending and then isError before reading it; after those two guards data holds the users. The file needs "use client" because hooks run only in Client Components. TanStack Query also retries a failed fetch 3 times in the browser before isError turns true.',
     hints: [
-      'queryKey must be an array — it is the cache identifier',
-      'queryFn should return a Promise that resolves to your data',
-      'Always check isPending and isError before accessing data',
+      'The query key is an array that names the cache entry',
+      'The queryFn returns a promise of the data',
+      'Check isPending, then isError, before using data',
     ],
     tieredHints: {
-      apiSignature: 'const { data, isPending, isError, error } = useQuery<User[]>({ queryKey: ["users"], queryFn: fn })',
+      apiSignature: 'const { data, isPending, isError, error } = useQuery({ queryKey, queryFn })',
       skeleton: `export default function UserList() {
-  const { data, isPending, isError, error } = useQuery<User[]>({
+  const { data, isPending, isError, error } = useQuery({
     ____: ["users"],
-    ____: async () => {
-      const res = await fetch("/api/users");
-      return res.json();
-    },
+    ____: () => fetch(____).then((res) => res.json()),
   });
 
-  if (isPending) return <div>Loading...</div>;
-  if (isError) return <div>Error: {error.message}</div>;
+  if (____) return <p>Loading...</p>;
+  if (____) return <p>Error: {____}</p>;
 
-  return <ul>{data.map((user) => <li key={user.id}>{user.name}</li>)}</ul>;
+  return <ul>{/* one <li> per user */}</ul>;
 }`,
     },
+    requires: [
+      /useQuery(<[^(]*>)?\(\s*\{/,
+      /queryKey:\s*\[\s*["']users["']\s*\]/,
+      /fetch\(\s*["'`]\/api\/users/,
+      /isPending|isLoading|status\s*===?\s*["']pending/,
+      /isError|status\s*===?\s*["']error/,
+      'error.message',
+      /\.map\(/,
+    ],
     tags: ['tanstack-query', 'useQuery', 'data-fetching', 'loading-states'],
     concepts: ['next-tanstack-query', 'next-data-fetching'],
   },
@@ -1675,14 +1716,13 @@ export default function UserList() {
     topic: Topic.NEXT_TANSTACK,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: 'Create a `CreateUserForm` component that uses TanStack Query\'s `useMutation` to create a new user, then automatically refetches the user list.\n\nRequirements:\n- Use `useMutation` with a mutationFn that POSTs to "/api/users" with a JSON body containing `{ name }`\n- On success, use `queryClient.invalidateQueries({ queryKey: ["users"] })` to refetch the user list\n- Render a form with a text input for the name and a submit button\n- Use `useQueryClient` to get the query client instance\n- Disable the submit button while the mutation is pending',
-    starterCode: `import { useMutation, useQueryClient } from "@tanstack/react-query";
+    question: 'Write a `CreateUserForm` Client Component that adds a user with TanStack Query\'s `useMutation` and then refreshes the cached user list.\n\nRequirements:\n- A form with a text input for the name (kept in state) and a submit button\n- On submit, prevent the page reload and run the mutation with the name\n- The mutation POSTs to "/api/users" with the JSON body `{ name }`\n- When it succeeds, invalidate the `["users"]` query (get the client with `useQueryClient`) so any list showing it fetches again\n- Disable the submit button while the mutation is pending\n- Export the component as the default export',
+    starterCode: `"use client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function CreateUserForm() {
-  // your code here
-}
-`,
+}`,
     testCases: [
       {
         input: 'useMutation setup',
@@ -1695,7 +1735,8 @@ export default function CreateUserForm() {
         description: 'Should render form with controlled input and disabled button during mutation',
       },
     ],
-    solution: `import { useMutation, useQueryClient } from "@tanstack/react-query";
+    solution: `"use client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function CreateUserForm() {
@@ -1703,7 +1744,7 @@ export default function CreateUserForm() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (newName: string) => {
+    mutationFn: async (newName) => {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1718,53 +1759,91 @@ export default function CreateUserForm() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleSubmit(e) {
     e.preventDefault();
     mutation.mutate(name);
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit}>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="User name"
-      />
+      <input value={name} onChange={(e) => setName(e.target.value)} />
       <button type="submit" disabled={mutation.isPending}>
-        {mutation.isPending ? "Creating..." : "Create User"}
+        Create user
       </button>
     </form>
   );
-}`,
-    explanation: 'The mutation + invalidation pattern is the core of TanStack Query\'s data synchronization. `useMutation` handles the write operation (POST, PUT, DELETE), and `invalidateQueries` tells TanStack to mark the cached data as stale and immediately refetch it. This is why the user list automatically updates after creating a new user — you do not need to manually update state or splice arrays. The `queryKey: ["users"]` in invalidateQueries matches the same key used in the useQuery hook, creating a clean connection between reading and writing data. The `onSuccess` callback only fires if the mutation succeeds, ensuring you do not clear the form or refetch on errors.',
-    hints: [
-      'useMutation takes a mutationFn and optional callbacks like onSuccess',
-      'Call mutation.mutate(data) to trigger the mutation',
-      'invalidateQueries marks cached data as stale and triggers a refetch',
-    ],
-    tieredHints: {
-      apiSignature: 'const mutation = useMutation({ mutationFn: fn, onSuccess: fn })',
-      skeleton: `export default function CreateUserForm() {
+}
+
+# OR
+
+"use client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+export default function CreateUserForm() {
+  const [name, setName] = useState("");
   const queryClient = useQueryClient();
-  const mutation = useMutation({
-    ____: async (newName: string) => {
-      const res = await fetch("/api/users", { method: "POST", body: JSON.stringify({ name: newName }) });
-      return res.json();
-    },
-    ____: () => {
-      queryClient.____({ queryKey: ["users"] });
-    },
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (newName) =>
+      fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      }).then((res) => res.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(name); }}>
-      <button disabled={mutation.isPending}>Create User</button>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutate(name);
+      }}
+    >
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <button type="submit" disabled={isPending}>Create user</button>
+    </form>
+  );
+}`,
+    explanation: 'useMutation describes a write but sends nothing until you call mutate(vars); its isPending is true while the POST runs, which is what disables the button. The query cache cannot know what the POST changed, so onSuccess calls queryClient.invalidateQueries({ queryKey: ["users"] }): every cached query whose key starts with "users" is marked stale, and the ones a component is showing are fetched again, so the list updates with no manual state change. onSuccess runs only when the mutationFn resolves, which is why the reference throws when res.ok is false: fetch does not reject on a 400 or 500 by itself, so without the check a failed POST would still count as a success.',
+    hints: [
+      'useMutation takes a mutationFn and an onSuccess callback',
+      'Nothing is sent until you call mutate(name)',
+      'invalidateQueries takes the same key the list uses',
+    ],
+    tieredHints: {
+      apiSignature: 'const mutation = useMutation({ mutationFn, onSuccess }); mutation.mutate(vars)',
+      skeleton: `export default function CreateUserForm() {
+  const [name, setName] = useState("");
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    ____: (newName) => fetch("/api/users", { /* POST the JSON body */ }),
+    ____: () => queryClient.____({ queryKey: ____ }),
+  });
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); mutation.____(name); }}>
+      {/* the input */}
+      <button disabled={____}>Create user</button>
     </form>
   );
 }`,
     },
+    requires: [
+      /useMutation\(\s*\{/,
+      'useQueryClient()',
+      /method:\s*["']POST["']/i,
+      /JSON\.stringify\(/,
+      /onSuccess[\s\S]*invalidateQueries\(\s*\{\s*queryKey:\s*\[\s*["']users["']/,
+      /preventDefault\(\)/,
+      /\bmutate(Async)?\(/,
+      /disabled=\{[^}]*isPending/,
+    ],
     tags: ['tanstack-query', 'useMutation', 'invalidation', 'forms'],
-    concepts: ['next-tanstack-query', 'web-html-forms-a11y'],
+    concepts: [
+      'next-tanstack-query',
+    ],
   },
 
   // 3. MC: Query keys
@@ -1776,12 +1855,12 @@ export default function CreateUserForm() {
     course: Course.WEB_DEV,
     question: 'In TanStack Query, what are query keys and why do they matter?\n\n```typescript\nuseQuery({ queryKey: ["users", { status: "active" }], queryFn: fetchActiveUsers })\nuseQuery({ queryKey: ["users", { status: "inactive" }], queryFn: fetchInactiveUsers })\n```',
     options: [
-      { id: 'a', text: 'Query keys are optional display labels used for debugging in React DevTools; they have no functional impact on caching or refetching at all', isCorrect: false },
-      { id: 'b', text: 'Query keys are cache identifiers — TanStack uses them to cache data, dedupe simultaneous identical requests, and decide what to refetch on invalidateQueries', isCorrect: true },
-      { id: 'c', text: 'Query keys must be simple strings, never arrays, and their only purpose is to generate the URL endpoint that queryFn eventually fetches', isCorrect: false },
-      { id: 'd', text: 'Query keys must exactly match the queryFn function reference — TanStack compares function identity, not the key array, to find cached data', isCorrect: false },
+      { id: 'a', text: 'Query keys are labels for React DevTools: two hooks with different keys still share one cache entry when their queryFn fetches the same URL', isCorrect: false },
+      { id: 'b', text: 'Query keys name cache entries: hooks with the same key share one entry and one request, and invalidateQueries picks entries by key prefix', isCorrect: true },
+      { id: 'c', text: 'Query keys must be plain strings, and TanStack Query builds the request URL from them, so the object in each key is sent as query params', isCorrect: false },
+      { id: 'd', text: 'Query keys are matched against the queryFn: TanStack Query finds cached data by function identity, so the key array only labels it', isCorrect: false },
     ],
-    explanation: 'Query keys are the foundation of TanStack Query\'s caching system. They serve three critical purposes: (1) Cache identity — `["users", { status: "active" }]` and `["users", { status: "inactive" }]` are separate cache entries with independent data, loading states, and refresh intervals. (2) Deduplication — if two components use the same queryKey simultaneously, TanStack makes ONE network request and shares the result. (3) Invalidation targeting — `invalidateQueries({ queryKey: ["users"] })` invalidates BOTH queries above because ["users"] is a prefix match. This hierarchical invalidation is powerful: invalidating ["users"] refetches all user-related queries without knowing their exact keys.',
+    explanation: 'The query key is the cache entry\'s name, and it does three jobs. Cache identity: ["users", { status: "active" }] and ["users", { status: "inactive" }] are two separate entries, each with its own data and loading state. Sharing: two components that use the same key at the same time get one request and one result. Invalidation: invalidateQueries({ queryKey: ["users"] }) matches by prefix, so it marks both entries above stale without naming them. Keys must be arrays in TanStack Query v5, and the key never builds the URL: the queryFn alone decides what is fetched.',
     hints: [
       'Think about what happens when two components need the same data',
       'Consider how invalidateQueries knows which cached data to refresh',
@@ -1799,12 +1878,12 @@ export default function CreateUserForm() {
     course: Course.WEB_DEV,
     question: 'In TanStack Query v5, what is the difference between `staleTime` and `gcTime` (formerly `cacheTime`)?\n\n```typescript\nuseQuery({\n  queryKey: ["users"],\n  queryFn: fetchUsers,\n  staleTime: 5 * 60 * 1000,  // 5 minutes\n  gcTime: 30 * 60 * 1000,    // 30 minutes\n})\n```',
     options: [
-      { id: 'a', text: '`staleTime` controls how long before data is deleted from memory, `gcTime` controls how long before a refetch is triggered', isCorrect: false },
-      { id: 'b', text: 'They are the same thing — `gcTime` is just the renamed version of `staleTime` in v5', isCorrect: false },
-      { id: 'c', text: '`staleTime` is how long data is considered "fresh" (no background refetch), `gcTime` is how long UNUSED cached data stays in memory before garbage collection. With the config above, data shows instantly from cache for 30 min, but refetches in the background after 5 min', isCorrect: true },
-      { id: 'd', text: '`staleTime` applies to queries and `gcTime` applies to mutations — they control different operations entirely', isCorrect: false },
+      { id: 'a', text: 'The names are swapped from what they suggest: `staleTime` is how long unused data stays in memory, and `gcTime` is how long before a background refetch', isCorrect: false },
+      { id: 'b', text: '`gcTime` is the v5 name for `staleTime`, so setting both is a conflict and the larger value wins: data is refetched only after 30 minutes', isCorrect: false },
+      { id: 'c', text: 'For 5 minutes after a fetch the data is fresh and not refetched; once no component uses the query, its data stays in memory 30 more minutes', isCorrect: true },
+      { id: 'd', text: '`staleTime` applies to queries and `gcTime` to mutations, so the 30-minute `gcTime` on this useQuery has no effect at all', isCorrect: false },
     ],
-    explanation: 'These two timers work together to create TanStack Query\'s caching behavior. `staleTime` (default: 0) determines how long fetched data is considered "fresh." While fresh, navigating to a component using this query shows cached data with NO background refetch. After staleTime expires, TanStack still shows cached data instantly (great UX!) but triggers a background refetch to update it. `gcTime` (default: 5 minutes) determines how long UNUSED data stays in the cache after all components using it unmount. After gcTime expires, the data is garbage collected from memory entirely. In the example: data is fresh for 5 minutes (no refetches), then stale but cached for up to 30 minutes (show cache + refetch), then gone from memory entirely.',
+    explanation: 'These are two separate clocks. staleTime (default 0) starts when data arrives: while it runs the data is fresh, and mounting another component with this key shows the cache with no request. After it, the data is stale: it still shows at once, but is fetched again in the background on mount, window focus or reconnect. gcTime (default 5 minutes, called cacheTime before v5) starts only when the last component using the query unmounts: if nothing uses the key again within it, the entry is dropped from memory. So with this config the data is refetched in the background when used after 5 minutes, and an unused entry is kept 30 minutes. A query that stays on screen is never garbage collected, however long it is shown.',
     hints: [
       'Think about two separate clocks: one for "is this data current?" and one for "should I keep this data in memory?"',
       'staleTime = 0 means data is immediately stale (default behavior)',
@@ -1822,14 +1901,14 @@ export default function CreateUserForm() {
     course: Course.WEB_DEV,
     question: 'In a Next.js App Router application, when should you use a Server Component with direct `fetch()` vs a Client Component with TanStack Query?',
     options: [
-      { id: 'a', text: 'Always use TanStack Query — Server Component fetch is deprecated in Next.js 14+', isCorrect: false },
-      { id: 'b', text: 'Always use Server Component fetch — TanStack Query adds unnecessary bundle size and complexity', isCorrect: false },
-      { id: 'c', text: 'Use Server Component fetch for initial page data that benefits from SSR/streaming and does not need client interactivity. Use TanStack Query for data that needs polling, optimistic updates, infinite scroll, or user-triggered refetching', isCorrect: true },
-      { id: 'd', text: 'Use Server Component fetch for public data and TanStack Query for authenticated data — they differ only in security model', isCorrect: false },
+      { id: 'a', text: 'Always TanStack Query: a Server Component cannot read per-user data such as cookies, so any page with a signed-in user must fetch in the browser', isCorrect: false },
+      { id: 'b', text: 'Always Server Component fetch: `revalidate` and `router.refresh()` already give polling and live updates, so TanStack Query only adds bundle size', isCorrect: false },
+      { id: 'c', text: 'Server Component fetch for the data the first render needs; TanStack Query for data the browser keeps live, such as polling, infinite scroll or optimistic updates', isCorrect: true },
+      { id: 'd', text: 'Server Component fetch for public data and TanStack Query for signed-in data, since only browser code can send the session cookie with a request', isCorrect: false },
     ],
-    explanation: 'Server Component fetch and TanStack Query solve different problems. Server Component fetch runs on the server before HTML is sent to the browser — the data is already in the page when the user sees it. This is perfect for SEO-critical content, initial page loads, and data that does not change based on user interaction. TanStack Query runs on the CLIENT and excels at interactive scenarios: polling for real-time updates, optimistic UI (showing changes before the server confirms), infinite scrolling with cursor-based pagination, and user-triggered actions like search-as-you-type. Many apps use BOTH: Server Components fetch initial data (hydrated into the page), and TanStack Query takes over for subsequent client-side interactions. You can even prefetch TanStack queries on the server using `HydrationBoundary`.',
+    explanation: 'They solve different problems. A Server Component\'s fetch runs on the server before the HTML is sent, so the data is in the first render with no client JavaScript and no loading state: the right default for a page\'s initial data. TanStack Query runs in the browser and keeps data live after that: polling, infinite lists, optimistic updates, refetching on focus and invalidating after a mutation. Server Components can read cookies (cookies() from next/headers, or auth()), so signed-in data does not need the client. Many apps use both: the server prefetches with prefetchQuery and HydrationBoundary, and TanStack Query takes over in the browser.',
     hints: [
-      'Think about WHERE the code runs — server vs browser',
+      'Think about where the code runs: the server or the browser',
       'Consider what features require client-side JavaScript to work',
     ],
     tags: ['tanstack-query', 'server-components', 'nextjs', 'data-fetching', 'architecture'],
@@ -1844,7 +1923,7 @@ export default function CreateUserForm() {
     topic: Topic.NEXT_TANSTACK,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Implement an optimistic update using TanStack Query\'s `useMutation`.\n\nScenario: You have a list of todos cached under `queryKey: ["todos"]`. When the user toggles a todo\'s `completed` status, you want to:\n1. Immediately update the UI (optimistic)\n2. Send the PATCH request to the server\n3. Roll back the UI if the request fails\n\nImplement the mutation with `onMutate` (cancel outgoing refetches, snapshot previous data, optimistically update cache), `onError` (rollback using snapshot), and `onSettled` (always refetch to ensure consistency).\n\nAssume `Todo` has `id: number`, `title: string`, `completed: boolean`.',
+    question: 'Write a `useToggleTodo` hook that toggles a todo\'s `completed` flag with an optimistic update.\n\nThe todos are cached under the query key `["todos"]` as an array of `{ id, title, completed }`. The mutation takes a todo id and sends `PATCH /api/todos/<id>`; treat a response that is not ok as a failure.\n\nThe list must change on screen before the server answers and go back if the request fails:\n- `onMutate`: stop any refetch of the todos in flight, keep a copy of the current list, write the toggled list into the cache, and return the copy\n- `onError`: put the copy back\n- `onSettled`: whether it worked or not, mark the todos stale so they are fetched again from the server\n\nReturn the result of `useMutation` from the hook.',
     starterCode: `import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Todo {
@@ -1854,25 +1933,6 @@ interface Todo {
 }
 
 export function useToggleTodo() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (todoId: number) => {
-      // PATCH request to toggle todo
-    },
-    onMutate: async (todoId: number) => {
-      // 1. Cancel outgoing refetches
-      // 2. Snapshot previous todos
-      // 3. Optimistically update the cache
-      // 4. Return snapshot for rollback
-    },
-    onError: (err, todoId, context) => {
-      // Rollback to snapshot on error
-    },
-    onSettled: () => {
-      // Always refetch to ensure server/client consistency
-    },
-  });
 }`,
     testCases: [
       {
@@ -1904,51 +1964,37 @@ export function useToggleTodo() {
 
   return useMutation({
     mutationFn: async (todoId: number) => {
-      const res = await fetch(\`/api/todos/\${todoId}\`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toggleCompleted: true }),
-      });
+      const res = await fetch(\`/api/todos/\${todoId}\`, { method: "PATCH" });
       if (!res.ok) throw new Error("Failed to update todo");
       return res.json();
     },
     onMutate: async (todoId: number) => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      // stop a refetch in flight from overwriting the optimistic list
       await queryClient.cancelQueries({ queryKey: ["todos"] });
-
-      // Snapshot the previous value for rollback
       const previousTodos = queryClient.getQueryData<Todo[]>(["todos"]);
-
-      // Optimistically update the cache
       queryClient.setQueryData<Todo[]>(["todos"], (old) =>
         old?.map((todo) =>
-          todo.id === todoId
-            ? { ...todo, completed: !todo.completed }
-            : todo
+          todo.id === todoId ? { ...todo, completed: !todo.completed } : todo
         )
       );
-
-      // Return context with the snapshot
       return { previousTodos };
     },
     onError: (err, todoId, context) => {
-      // Rollback to the previous value on error
       if (context?.previousTodos) {
         queryClient.setQueryData(["todos"], context.previousTodos);
       }
     },
     onSettled: () => {
-      // Always refetch after mutation to ensure server/client consistency
       queryClient.invalidateQueries({ queryKey: ["todos"] });
     },
   });
 }`,
-    explanation: 'Optimistic updates make your UI feel instant by updating the cache BEFORE the server responds. The pattern has three phases: (1) `onMutate` — runs BEFORE the mutation request. You cancel outgoing refetches (so they do not overwrite your optimistic update), snapshot the current cache (for rollback), and set the new optimistic data. (2) `onError` — if the server request fails, you restore the snapshot, making it look like nothing happened. (3) `onSettled` — runs after success OR failure. You invalidate queries to trigger a fresh fetch, ensuring your cache matches the server truth. This pattern is critical for responsive UIs: the user sees the toggle instantly, and only sees a revert if the server rejects the change. Without optimistic updates, the UI would freeze for the duration of the network request.',
+    explanation: 'An optimistic update changes the cache before the server answers, and keeps a way back. onMutate runs before mutationFn: cancelQueries stops a refetch of ["todos"] that is already in flight, which would otherwise land after your edit and overwrite it; getQueryData keeps the current list; setQueryData writes the toggled copy (a new array via map, never a mutated one); and whatever onMutate returns is passed to onError and onSettled as their third argument. If the PATCH fails, onError writes the saved list back. onSettled runs after success or failure, and invalidating there refetches the list so the cache ends up matching the server either way. Without the optimistic step the toggle would show only when the PATCH answers, a visible lag on a slow network.',
     hints: [
-      'cancelQueries prevents in-flight refetches from overwriting your optimistic update',
-      'getQueryData reads the current cache without triggering a fetch',
-      'setQueryData directly modifies the cache — use it for the optimistic update and rollback',
-      'onSettled runs on both success AND error — perfect for final refetch',
+      'cancelQueries stops a refetch in flight from overwriting your edit',
+      'getQueryData reads the cache without fetching; setQueryData writes it',
+      'What onMutate returns reaches onError as its third argument',
+      'onSettled runs on success and on failure',
     ],
     tieredHints: {
       apiSignature: 'useMutation({ mutationFn, onMutate, onError, onSettled })',
@@ -1971,6 +2017,14 @@ export function useToggleTodo() {
   });
 }`,
     },
+    requires: [
+      /method:\s*["']PATCH["']/i,
+      /onMutate[\s\S]*cancelQueries\(\s*\{\s*queryKey:\s*\[\s*["']todos["']/,
+      /getQueryData(<[^(]*>)?\(\s*\[\s*["']todos["']/,
+      /onError[\s\S]*setQueryData(<[^(]*>)?\(\s*\[\s*["']todos["']/,
+      /onSettled[\s\S]*invalidateQueries\(\s*\{\s*queryKey:\s*\[\s*["']todos["']/,
+      /completed:\s*!/,
+    ],
     tags: ['tanstack-query', 'optimistic-updates', 'useMutation', 'cache-manipulation', 'advanced'],
     concepts: ['next-tanstack-query'],
   },
@@ -1983,8 +2037,7 @@ export function useToggleTodo() {
     topic: Topic.NEXT_TANSTACK,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Complete the infinite-scroll query: the hook that fetches pages instead of one result, the config field that has no earlier page so the first fetch starts undefined, and the function called to load more.',
+    question: 'Complete the infinite-scroll query: the hook that fetches a list page by page, the option that gives the first page\'s cursor (there is none yet, so undefined), and the function to call for the next page.',
     template: `const { data, fetchNextPage, hasNextPage } = ___({
   queryKey: ["posts"],
   queryFn: ({ pageParam }) => fetchPosts(pageParam),
@@ -2004,8 +2057,7 @@ if (hasNextPage) ___();`,
 
 // When the sentinel div comes into view:
 if (hasNextPage) fetchNextPage();`,
-    explanation:
-      'useInfiniteQuery is useQuery for paginated data: queryFn receives pageParam (the cursor for the page to fetch), getNextPageParam reads the next cursor off the last page\'s response, and initialPageParam is the value used for the very first fetch (undefined when there is no cursor yet). Calling fetchNextPage() appends the next page to data.pages instead of replacing the cache.',
+    explanation: 'useInfiniteQuery is useQuery for a list fetched in pages: queryFn receives pageParam, the cursor of the page to fetch; initialPageParam is the cursor for the first fetch (required in v5, undefined here because the first page has none); and getNextPageParam reads the next cursor off the last page. When getNextPageParam returns undefined or null, hasNextPage turns false. fetchNextPage() fetches the next page and adds it to data.pages instead of replacing the cache, so the list renders data.pages.flatMap((page) => page.items).',
     hints: [
       'The hook name mirrors useQuery but for paged data',
       'The first page has no prior cursor',
@@ -2059,13 +2111,9 @@ export function Providers({ children }) {
     topic: Topic.NEXT_TANSTACK,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: 'Create the Providers client component every TanStack Query hook in this App Router app needs, at app/providers.tsx.\n\nRequirements:\n- "use client" directive\n- Create exactly one QueryClient instance per component instance (not a module-level constant), using useState with a lazy initializer\n- Wrap children in QueryClientProvider, passing the client\n- Export Providers as the default export',
+    question: 'Write the `Providers` Client Component that every TanStack Query hook in this App Router app depends on, at app/providers.tsx (the root layout wraps `{children}` in it).\n\nRequirements:\n- Mark the file as a Client Component\n- Create one `QueryClient` per mounted `Providers` with `useState` and a lazy initializer, not a module-level constant\n- Wrap `children` in `QueryClientProvider`, passing that client\n- Export `Providers` as the default export',
     starterCode: `// app/providers.tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
-
 export default function Providers({ children }) {
-  // your code here
 }`,
     testCases: [
       {
@@ -2109,6 +2157,11 @@ export default function Providers({ children }) {
   );
 }`,
     },
+    requires: [
+      /["']use client["']/,
+      /useState\(\s*\(\)\s*=>\s*new QueryClient\(/,
+      /<QueryClientProvider\s+client=\{/,
+    ],
     tags: ['tanstack-query', 'QueryClientProvider', 'setup', 'app-router'],
     concepts: ['next-tanstack-query'],
   },
@@ -2135,7 +2188,7 @@ export default function Providers({ children }) {
   enabled: !!userId,
 });`,
     explanation:
-      'enabled: false (or any falsy expression) tells TanStack Query to skip running queryFn entirely - the query stays idle instead of firing with an undefined userId and erroring or fetching garbage. Once userId becomes truthy, the query automatically starts running because TanStack re-evaluates enabled on every render.',
+      'enabled: !!userId turns undefined, null or an empty string into false, and while enabled is false TanStack Query never calls queryFn, so fetchPostsByUser(undefined) is never sent. The query waits with isPending true (there is no data yet) but fetchStatus "idle". enabled is read again on every render, so the render where userId arrives starts the fetch by itself, under the key ["posts", userId].',
     hints: [
       'The option that gates whether the query is allowed to run at all',
     ],
@@ -2152,12 +2205,12 @@ export default function Providers({ children }) {
     course: Course.WEB_DEV,
     question: 'A component fetches a user\'s posts with `useQuery({ queryKey: ["posts", userId], queryFn: () => fetchPostsByUser(userId) })`, but userId comes from another query that has not resolved yet on first render (userId is undefined). What happens, and how do you fix it?',
     options: [
-      { id: 'a', text: 'TanStack Query automatically detects that userId is undefined and delays running the query until it becomes defined - no configuration is needed', isCorrect: false },
-      { id: 'b', text: 'The query runs immediately with userId as undefined, calling fetchPostsByUser(undefined) and likely erroring or fetching the wrong data. Add `enabled: !!userId` so the query stays idle until userId has a real value, then TanStack automatically fires it once enabled becomes true', isCorrect: true },
-      { id: 'c', text: 'This is not possible in TanStack Query - dependent queries where one query\'s input depends on another query\'s output require manually chaining two separate useEffect calls instead', isCorrect: false },
-      { id: 'd', text: 'The queryKey ["posts", userId] containing undefined causes TanStack to throw a build-time error and refuse to render the component at all', isCorrect: false },
+      { id: 'a', text: 'TanStack Query sees undefined inside the query key and waits by itself until userId is defined, so nothing needs to change', isCorrect: false },
+      { id: 'b', text: 'It runs at once as fetchPostsByUser(undefined); add `enabled: !!userId` so it waits, and it starts by itself once userId arrives', isCorrect: true },
+      { id: 'c', text: 'TanStack Query cannot chain queries, so fetch the posts in a useEffect that runs when the first query\'s data changes', isCorrect: false },
+      { id: 'd', text: 'useQuery throws on a key that holds undefined, so the component crashes until userId loads; wrap it in an error boundary', isCorrect: false },
     ],
-    explanation: 'By default, useQuery runs queryFn as soon as the component mounts, regardless of whether the values it depends on are ready - there is no automatic dependency detection. That means fetchPostsByUser(undefined) runs immediately here, which is either a bug or a wasted request. The `enabled` option controls whether the query is allowed to run at all; passing `enabled: !!userId` keeps the query idle until userId is truthy, at which point TanStack re-evaluates enabled on the next render and fires the query automatically - no manual refetch call needed.',
+    explanation: 'useQuery runs its queryFn as soon as the component mounts; it does not look inside the key or the function to see whether a value is ready, and undefined is a valid key part. So fetchPostsByUser(undefined) is sent at once, which errors or fetches the wrong thing. enabled controls whether the query may run at all: with enabled: !!userId it waits (isPending true, fetchStatus "idle"), and because enabled is read on every render, the render where userId arrives starts the fetch under ["posts", userId], with no manual refetch. This is TanStack Query\'s dependent-query pattern, so no useEffect is needed.',
     hints: [
       'useQuery has no built-in awareness that a value "isn\'t ready yet" - you have to tell it',
       'The enabled option accepts any boolean expression, re-evaluated every render',
@@ -2175,12 +2228,12 @@ export default function Providers({ children }) {
     course: Course.WEB_DEV,
     question: 'By default, a failing useQuery retries 3 times with exponential backoff, then just sets isError: true and leaves rendering to the component\'s own error UI. Your team wants critical queries to instead propagate to the nearest error.tsx-style boundary, matching how a thrown render error would be handled. How do you get that behavior?',
     options: [
-      { id: 'a', text: 'Pass `throwOnError: true` (or a function that returns true for specific errors) to useQuery - this makes TanStack Query re-throw the error during render after retries are exhausted, so the nearest error boundary catches it exactly like a normal render-time throw', isCorrect: true },
-      { id: 'b', text: 'Wrap every component using useQuery in a try/catch block inside its render function to manually forward query errors to the boundary', isCorrect: false },
-      { id: 'c', text: 'Set `retry: false` - disabling retries automatically routes any failed query straight to the nearest error boundary instead of returning isError', isCorrect: false },
-      { id: 'd', text: 'This is not possible - error boundaries can only catch errors thrown synchronously during render, and useQuery failures happen inside an async fetch, so they can never reach a boundary', isCorrect: false },
+      { id: 'a', text: 'Pass `throwOnError: true` (or a function that picks errors): once retries run out, useQuery throws the error during render, and the nearest boundary catches it', isCorrect: true },
+      { id: 'b', text: 'Wrap the useQuery call in try/catch and rethrow from the catch block, so the failed fetch leaves the component as an error the boundary can see', isCorrect: false },
+      { id: 'c', text: 'Set `retry: false`: with no retries left to run, a failed query has no isError state to fall back on, so it goes to the nearest boundary', isCorrect: false },
+      { id: 'd', text: 'It cannot be done: the fetch fails inside a promise after rendering, and error boundaries only see errors thrown while a component renders', isCorrect: false },
     ],
-    explanation: 'By default TanStack Query treats query failures as data to hand back to your component (isError, error), not as thrown exceptions - this is deliberate, since most fetch failures should be handled gracefully rather than crashing the tree. `throwOnError` flips that for cases where you genuinely want fetch failures treated as fatal: when true (or when a predicate function you provide returns true for a given error), TanStack re-throws the error during the next render after retries are exhausted, which is exactly the kind of synchronous render-time throw a React error boundary (and therefore error.tsx) is built to catch. retry: false only stops retrying - it does not change how the failure is reported.',
+    explanation: 'By default TanStack Query hands a failure back as data (isError and error) after retrying 3 times in the browser, so the component decides what to show. throwOnError changes how the final failure is reported: when it is true, or a function that returns true for that error, useQuery throws the error during the next render, which is exactly what a React error boundary, and so error.tsx, catches. useQuery itself never throws to your code, so a try/catch around it catches nothing. retry: false only removes the retries; the failure is still reported as isError.',
     hints: [
       'Error boundaries only catch throws that happen during render - TanStack needs an option that converts an async failure into one',
       'retry and throwOnError control two different things: how many attempts happen, and how the final failure is reported',
@@ -2198,12 +2251,12 @@ export default function Providers({ children }) {
     course: Course.WEB_DEV,
     question: 'You want a page\'s data to already be in the TanStack Query cache the moment the Client Component mounts, instead of showing a loading spinner while useQuery fetches for the first time client-side. What is the pattern for prefetching on the server and handing that cache to the client in an App Router page?',
     options: [
-      { id: 'a', text: 'In the Server Component page.tsx, call queryClient.prefetchQuery() with the same queryKey/queryFn the client will use, then wrap the Client Component in <HydrationBoundary state={dehydrate(queryClient)}>. useQuery on the client sees the matching queryKey already populated and skips the initial fetch/loading state entirely', isCorrect: true },
-      { id: 'b', text: 'Fetch the data in the Server Component and pass it down as a normal prop - useQuery automatically detects a matching prop with the same name as its queryKey and skips fetching', isCorrect: false },
-      { id: 'c', text: 'prefetchQuery only works with useMutation, not useQuery, since prefetching is conceptually a write operation that primes the cache', isCorrect: false },
-      { id: 'd', text: 'Call useQuery directly inside the Server Component to warm the cache, then the same hook call in the Client Component automatically reuses that warmed result since hooks share state across the server/client boundary', isCorrect: false },
+      { id: 'a', text: 'In the Server Component, run `prefetchQuery` with the same key, then wrap the Client Component in `<HydrationBoundary state={dehydrate(queryClient)}>`', isCorrect: true },
+      { id: 'b', text: 'Fetch in the Server Component and pass the data as a prop: useQuery finds a prop named like its query key and uses it in place of fetching', isCorrect: false },
+      { id: 'c', text: 'Call `queryClient.setQueryData` in the Server Component: the browser\'s QueryClient reads the same in-memory cache, so useQuery finds it', isCorrect: false },
+      { id: 'd', text: 'Call useQuery in the Server Component to warm the cache: hooks keep their state across the server and client, so the client call reuses it', isCorrect: false },
     ],
-    explanation: 'useQuery is a Client Component hook and cannot run on the server, so warming its cache server-side needs a separate mechanism. queryClient.prefetchQuery({ queryKey, queryFn }) runs the fetch on the server and stores the result under that queryKey in a (server-created) QueryClient. dehydrate(queryClient) serializes that cache into plain data, and <HydrationBoundary state={...}> ships it to the client and rehydrates it into the client-side QueryClient before any component reads from it. When a Client Component then calls useQuery with the SAME queryKey, TanStack finds the prefetched data already there and renders it immediately instead of showing a loading state - it still may revalidate in the background depending on staleTime.',
+    explanation: 'useQuery is a hook and cannot run in a Server Component, and the server\'s memory is not the browser\'s, so the cache has to be sent across. The page creates a QueryClient for this request, awaits queryClient.prefetchQuery({ queryKey, queryFn }), and wraps the Client Component in <HydrationBoundary state={dehydrate(queryClient)}>. dehydrate turns the cache into plain data that travels with the page, and HydrationBoundary puts it into the browser\'s QueryClient before any component reads it. A useQuery with the same key then renders the data at once, with no loading state. Set staleTime above 0 (for example 60 seconds), or the default of 0 makes the browser fetch it again straight after hydration. Passing the data as a prop works only through the initialData option, which useQuery never sets by itself.',
     hints: [
       'useQuery cannot run in a Server Component at all - prefetching needs its own client-independent API',
       'The queryKey used during prefetch must exactly match the queryKey the Client Component\'s useQuery uses',
