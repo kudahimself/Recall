@@ -8601,6 +8601,26 @@ The point of the envelope is that callers never have to wrap a try/catch themsel
   },
 
   {
+    id: 'react-comp-and-zero-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.REACT_COMPONENTS,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'The page renders <CartBadge count={0} />. What text does the paragraph show? Type it exactly as it appears on the page.',
+    code: `function CartBadge({ count }) {
+  return <p>Cart {count && <b>({count})</b>}</p>;
+}
+
+<CartBadge count={0} />`,
+    expectedOutput: 'Cart 0',
+    explanation: 'count && <b>...</b> evaluates to count itself when count is falsy, so the expression is 0, not false. React skips false, null and undefined, but it renders a number, so the paragraph reads "Cart 0" instead of just "Cart". Guard with a boolean, as in {count > 0 && <b>({count})</b>}.',
+    hints: ['What does 0 && anything evaluate to?', 'React renders nothing for false, but what does it do with a number?'],
+    tags: ['conditional-rendering', 'logical-and', 'jsx', 'react', 'predict'],
+    concepts: ['react-conditional-rendering'],
+  },
+
+  {
     id: 'react-jsx-rules-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.BEGINNER,
@@ -9870,6 +9890,30 @@ function Label() {
   // Beginner faded (Parsons + Cloze) → Beginner Coding → Intermediate Coding
 
   {
+    id: 'react-forms-controlled-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.REACT_FORMS,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'The user types the six letters abcdef into this input, one key at a time. What does the input box show afterwards? Type its text exactly.',
+    code: `function CodeInput() {
+  const [code, setCode] = useState("");
+  return (
+    <input
+      value={code}
+      onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))}
+    />
+  );
+}`,
+    expectedOutput: 'ABCD',
+    explanation: 'A controlled input always shows its state, never the raw keystrokes. Each change hands the box text to onChange, which stores it upper-cased and cut to 4 characters; React then sets the box back to that state. After "abcd" the state is "ABCD", and the next keys produce "ABCDE" and "ABCDF", which slice(0, 4) trims back to "ABCD" each time.',
+    hints: ['Which wins in a controlled input: what was typed, or what is in state?', 'Every keystroke goes through toUpperCase() and slice(0, 4) before it is stored'],
+    tags: ['forms', 'controlled-input', 'onChange', 'react', 'predict'],
+    concepts: ['react-controlled-forms'],
+  },
+
+  {
     id: 'react-forms-parsons-1',
     type: QuestionType.PARSONS,
     difficulty: Difficulty.BEGINNER,
@@ -10514,7 +10558,59 @@ function App() {
   },
 
   // ===== REACT_PROJECT =====
-  // Advanced Coding
+  // Intermediate MCQ + Predict -> Advanced Coding
+
+  {
+    id: 'react-project-lift-state-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.REACT_PROJECT,
+    course: Course.WEB_DEV,
+    question: 'In a todo app, an AddTodo form creates todos and its sibling TodoList shows them. Neither component renders the other. Where should the todos array live?',
+    options: [
+      { id: 'a', text: 'In a module-level array that both components import, with AddTodo pushing each new todo onto it so TodoList can read it', isCorrect: false }, { id: 'b', text: 'In two useState copies, one per component, with a useEffect in TodoList that copies the array from AddTodo whenever it changes', isCorrect: false }, { id: 'c', text: 'In a context provider around the whole app, since two sibling components that never render each other have no way to share props', isCorrect: false }, { id: 'd', text: 'In their closest common parent, TodoApp, which passes the array down to TodoList and an add callback down to AddTodo as props', isCorrect: true },
+    ],
+    explanation: 'Two siblings share data by lifting it to their closest common parent: TodoApp owns the todos state, TodoList receives the array as a prop, and AddTodo receives a callback that updates it. A module-level array changes without React knowing, so nothing re-renders. Two synced copies of the same state drift and cost an extra render per change. Context works but is meant for data many distant components read; siblings can always share through their parent.',
+    tags: ['project', 'lifting-state', 'props', 'architecture', 'react'],
+    concepts: ['react-state-immutability'],
+  },
+
+  {
+    id: 'react-project-reducer-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.REACT_PROJECT,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'TodoSummary mounts, then the user\'s clicks dispatch the four actions listed in the comment, in order. What text does the paragraph show afterwards? Type it exactly as it appears on the page.',
+    code: `function reducer(todos, action) {
+  switch (action.type) {
+    case "added":
+      return [...todos, { id: action.id, text: action.text, done: false }];
+    case "toggled":
+      return todos.map((t) => (t.id === action.id ? { ...t, done: !t.done } : t));
+    default:
+      return todos;
+  }
+}
+
+function TodoSummary() {
+  const [todos, dispatch] = useReducer(reducer, [{ id: 1, text: "Read", done: false }]);
+  const remaining = todos.filter((t) => !t.done).length;
+  return <p>{remaining} of {todos.length} left</p>;
+}
+
+// dispatched in order:
+// { type: "added", id: 2, text: "Cook" }
+// { type: "toggled", id: 2 }
+// { type: "toggled", id: 1 }
+// { type: "toggled", id: 2 }`,
+    expectedOutput: '1 of 2 left',
+    explanation: 'Each dispatch passes the latest todos and the action to the reducer, and its return value becomes the new state. "added" makes two todos. "toggled" flips done rather than setting it to true, so todo 2 goes true then back to false, while todo 1 is toggled once and ends done. remaining is derived on every render by filtering, so it counts only todo 2: 1 of 2 left.',
+    hints: ['Does "toggled" set done to true, or flip it?', 'Track each todo\'s done flag through the four actions'],
+    tags: ['project', 'useReducer', 'derived-state', 'react', 'predict'],
+    concepts: ['react-state-immutability'],
+  },
 
   {
     id: 'react-project-1',

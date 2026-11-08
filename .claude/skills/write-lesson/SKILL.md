@@ -88,6 +88,8 @@ House rules (check-lessons.js enforces the first two):
   An uncaught error or an unhandled rejection fails the run, so catch what the example throws.
   Keep it to the language and node's globals: code that needs the DOM (`document`, `window`, `localStorage`) belongs in an HTML example with a `<script>`, below.
 - HTML / CSS (Tailwind included) cannot run without a browser: use `CodeLanguage.HTML` or `CodeLanguage.CSS`, set `runs: false` (allowed only for those languages, when the code holds a paired element or a CSS rule), make `output` what the rendered page shows (the text, or the values the steps name), and confirm it by rendering the example in headless Chromium against current versions (Tailwind 4).
+- React cannot run without a project (the React packages and a JSX compiler): use `CodeLanguage.JSX`, import what the example uses from `react` (or `react-dom` / `react-router`), set `runs: false` (allowed only for JSX that imports React and holds a JSX element), make `output` what the rendered component shows and logs after the interactions the steps name, and confirm it by rendering the example with current React (19) and Testing Library in jsdom, or in headless Chromium.
+  Teach function components and hooks; class components appear only as what learners will still meet (an error boundary is the one place a class is still required).
   These kinds live in one list, `NON_RUNNABLE_KINDS` in `app/src/utils/workedKinds.ts`; a new kind is added there, kept as narrow, with a case in `checkLessons.test.ts`.
 - Set `output` to exactly what the code prints (SQL: `col | col` header and rows, a blank line between result sets).
   Run the checker to get it, then read it and confirm every value by hand against the steps.

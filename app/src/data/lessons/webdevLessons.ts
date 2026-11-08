@@ -3,6 +3,7 @@
  *
  * Section 1, HTML, CSS & Tailwind: every topic.
  * Section 2, JavaScript Fundamentals: every topic.
+ * Section 3, React: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -16,6 +17,14 @@
  * A JavaScript worked example runs on node under check-lessons.js and prints
  * its `output`; one that needs the DOM is an HTML page with a `<script>`,
  * rendered in headless Chromium like the HTML / CSS ones.
+ *
+ * A React worked example needs the React packages and a JSX compiler, so it
+ * sets `runs: false` (the "React component" kind) and imports what it uses
+ * from react, react-dom or react-router. Its first-line comment says what is
+ * rendered and what the reader does, and its output is what the page shows
+ * and logs after that, each state on its own line. Every example was rendered
+ * with React 19 (React Router 7 for the router one) in jsdom, the interactions
+ * driven with Testing Library's fireEvent, and the output read off the page.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -1188,5 +1197,671 @@ console.log(saved[0] === basket[0], saved[0].qty, total());`,
 false 2 16`,
     },
     exercises: ['test-1', 'js-project-predict-1', 'js-project-parsons-1', 'js-project-cloze-1', 'test-2'],
+  },
+
+  // ===== Section 3, React =====
+  {
+    id: 'react_components/1',
+    topicKeys: [Topic.REACT_COMPONENTS],
+    step: 1,
+    title: 'Components & JSX',
+    idea: [
+      lines(
+        "A React component is a function with a capitalised name that returns JSX, the HTML-like markup React turns into elements on the page.",
+        "It takes one argument, the props object, usually destructured in the parameter list: `function Book({ title })`.",
+        "A parent passes props as attributes, `<Book title=\"Emma\" />`, and whatever it nests between the tags arrives as `children`.",
+        "Older code writes components as classes (`class Book extends React.Component`); new code uses functions.",
+      ),
+      lines(
+        "JSX is JavaScript, so the HTML attribute `class` is written `className` and `for` is written `htmlFor`.",
+        "Curly braces switch back to JavaScript for one expression: `{title}`, `{price * 2}`, or a ternary `{inStock ? \"Buy\" : \"Sold out\"}`.",
+        "Statements such as `if` and `for` do not fit inside braces, so choose with a ternary or `&&` and repeat with `map`.",
+      ),
+      lines(
+        "A component returns one root; a fragment, `<>...</>`, groups siblings without adding an element.",
+        "A list is `items.map(item => <li key={item.id}>...</li>)`, and `key` is a stable id from the data, not the array index, so React matches each row to the right item when the list changes.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// a capitalised function: props in, JSX out
+function Component({ prop, items, children }) {
+  return (
+    <div className="box">
+      {prop}                          {/* any expression in braces */}
+      {cond ? <A /> : <B />}          {/* one or the other */}
+      {count > 0 && <Badge />}        {/* something or nothing */}
+      {items.map((item) => (
+        <Row key={item.id} label={item.label} />
+      ))}
+      {children}                      {/* what the parent nested inside */}
+    </div>
+  );
+}
+
+// a parent uses it like a tag
+<Component prop="value" items={rows}>nested JSX</Component>`,
+    },
+    pitfall: lines(
+      "`{count && <Badge />}` shows the number `0` when `count` is 0, because `&&` returns its left side when that side is falsy, and React renders numbers.",
+      "Make the left side a real boolean, `{count > 0 && <Badge />}`, or use a ternary that returns `null`.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `import { createRoot } from "react-dom/client";
+
+function Book({ title, stock }) {
+  const note = stock > 0 ? <b>{stock} left</b> : <i>sold out</i>;
+  return <li>{title} {note}</li>;
+}
+
+function Shelf({ books }) {
+  return (
+    <ul>
+      {books.map((b) => (
+        <Book key={b.id} title={b.title} stock={b.stock} />
+      ))}
+    </ul>
+  );
+}
+
+const books = [
+  { id: 7, title: "Emma", stock: 2 },
+  { id: 9, title: "Dune", stock: 0 },
+];
+const root = createRoot(document.getElementById("root"));
+root.render(<Shelf books={books} />);`,
+      steps: [
+        "Lines 3-6: `Book` is a component: it destructures `title` and `stock` from its props and returns one `<li>`, with braces embedding `title` and `note`.",
+        "Line 4: JSX is a value, so a ternary picks `<b>` or `<i>` and keeps it in `note`; the test is `stock > 0`, so a stock of 0 never prints as text.",
+        "Lines 11-13: `map` turns each book into a `<Book>` element, keyed by the book's own `id`.",
+        "Lines 22-23: `createRoot` takes the page's `#root` element, and `render` puts `Shelf` in it, with the array as its `books` prop.",
+      ],
+      output: `Emma 2 left
+Dune sold out`,
+    },
+    exercises: ['react-jsx-rules-mcq-1', 'react-comp-and-zero-predict-1', 'react-list-parsons-1', 'react-comp-cloze-1', 'react-comp-1'],
+  },
+  {
+    id: 'react_state/1',
+    topicKeys: [Topic.REACT_STATE],
+    step: 1,
+    title: 'State (useState)',
+    idea: [
+      lines(
+        "`useState(initial)` gives a component a value that survives between renders, as a pair: `const [count, setCount] = useState(0)`.",
+        "Calling the setter stores the new value and makes React render the component again, running the function from the top with the new value.",
+        "A plain variable would reset on every render, and changing it would not update the page.",
+      ),
+      lines(
+        "Each render sees its own snapshot: inside a handler, `count` keeps the value it had when that render ran, even right after `setCount`.",
+        "When the next value depends on the current one, pass an updater, `setCount(c => c + 1)`, which React calls with the latest pending value.",
+        "Updates made in one event are batched into a single re-render.",
+      ),
+      lines(
+        "React compares the old and the new value with `Object.is`, so state is replaced, never changed in place.",
+        "Add with `[...items, item]`, remove with `filter`, and change one field with `{ ...user, email }`.",
+        "A value you can compute from state, such as a count or a total, is computed during render, not kept as a second state.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `const [value, setValue] = useState(initial);  // the value and its setter
+const [data, setData] = useState(() => load()); // load() on first render only
+
+setValue(next);                    // replace it, then re-render
+setValue((prev) => prev + 1);      // the next value from the latest one
+
+setList([...list, item]);                   // add: a new array
+setList(list.filter((x) => x.id !== id));   // remove: a new array
+setObj({ ...obj, key: value });             // change one field: a new object`,
+    },
+    pitfall: lines(
+      "`setCount(count + 1)` called twice in one handler adds 1, not 2, because both calls read the same `count` from this render.",
+      "Use the updater form, `setCount(c => c + 1)`, whenever the new state is computed from the old.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// renders <Basket />, then the reader clicks "Add Dune", then "+2 copies"
+import { useState } from "react";
+
+function Basket() {
+  const [titles, setTitles] = useState(["Emma"]);
+  const [copies, setCopies] = useState(1);
+  function addDune() {
+    setTitles([...titles, "Dune"]);
+  }
+  function addTwoCopies() {
+    setCopies((c) => c + 1);
+    setCopies((c) => c + 1);
+  }
+  return (
+    <>
+      <p>{titles.join(", ")} (copies: {copies})</p>
+      <button onClick={addDune}>Add Dune</button>
+      <button onClick={addTwoCopies}>+2 copies</button>
+    </>
+  );
+}`,
+      steps: [
+        "Lines 5-6: two pieces of state, a list of titles starting as `[\"Emma\"]` and a count of copies starting at 1.",
+        "Line 8: Add Dune builds a new array with the spread, so React sees a new value and renders `Emma, Dune`; `titles.push(\"Dune\")` would change the old array and show nothing new.",
+        "Lines 10-13: each `setCopies(c => c + 1)` receives the latest pending value, so one click goes from 1 to 3; two calls of `setCopies(copies + 1)` would stop at 2.",
+        "Line 16: the paragraph is computed from state on every render, and both updates in `addTwoCopies` land in one re-render.",
+      ],
+      output: `at first:         Emma (copies: 1)
+after Add Dune:   Emma, Dune (copies: 1)
+after +2 copies:  Emma, Dune (copies: 3)`,
+    },
+    exercises: ['react-state-updater-predict-1', 'react-state-parsons-1', 'react-state-cloze-2', 'react-state-1', 'react-state-4'],
+  },
+  {
+    id: 'react_effects/1',
+    topicKeys: [Topic.REACT_EFFECTS],
+    step: 1,
+    title: 'Effects (useEffect, cleanup)',
+    idea: [
+      lines(
+        "`useEffect(setup, deps)` runs code after React has put a render on the screen, to keep the component in step with something outside React: a timer, a subscription, `document.title`, a request.",
+        "The dependency array says when it runs again: `[]` after the first render only, `[a, b]` after any render where `a` or `b` changed, and no array after every render.",
+        "List every prop and state value the effect reads.",
+      ),
+      lines(
+        "The function the setup returns is its cleanup.",
+        "React calls it, with the old values, before running the effect again and when the component leaves the page, so every setup is undone: `clearInterval`, `removeEventListener`, abort the request.",
+        "In development, `<StrictMode>` runs setup, cleanup and setup again on mount to expose a missing cleanup; production runs it once.",
+      ),
+      lines(
+        "An effect is not for computing a value from state, which belongs in render, or for responding to a click, which belongs in the handler.",
+        "For a request, set an `ignore` flag in the cleanup, or abort, so a late response for an old id is never stored.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `useEffect(() => {
+  const id = setInterval(tick, 1000);  // setup: after the render is on screen
+  return () => clearInterval(id);      // cleanup: before a rerun, on unmount
+}, [dep]);                             // runs again only when dep changes
+
+useEffect(() => { /* ... */ }, []);    // after the first render only
+useEffect(() => { /* ... */ });        // after every render`,
+    },
+    pitfall: lines(
+      "An effect with `[]` that starts an interval or a listener keeps the values of the first render forever: its callback closed over them, and the effect never runs again.",
+      "List what the callback reads in the dependency array, or read the latest value through an updater such as `setCount(c => c + 1)`.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// renders <Reading book="Emma" />, re-renders it with "Emma",
+// then with "Dune", then removes it
+import { useEffect } from "react";
+
+function Reading({ book }) {
+  useEffect(() => {
+    document.title = \`Reading \${book}\`;
+    console.log("open", book);
+    return () => console.log("close", book);
+  }, [book]);
+  return <p>{book}</p>;
+}`,
+      steps: [
+        "Lines 6-10: the effect sets the tab title and logs `open`; its return value is the cleanup, which logs `close` with the `book` of the render that created it.",
+        "Line 10, first render with Emma: the effect runs once the paragraph is on the page, so `open Emma`.",
+        "Line 10, re-render with Emma: `[book]` has not changed, so React skips the effect and logs nothing.",
+        "Line 9, re-render with Dune: React first runs the old cleanup, `close Emma`, then the new effect, `open Dune`, and the title becomes `Reading Dune`.",
+        lines(
+          "Line 9 again: removing the component runs the last cleanup, `close Dune`.",
+          "Under `<StrictMode>` in development, the first render would log an extra `close Emma` and `open Emma`.",
+        ),
+      ],
+      output: `open Emma
+close Emma
+open Dune
+close Dune`,
+    },
+    exercises: ['react-effect-parsons-1', 'react-effect-cloze-1', 'react-effect-staleclosure-mcq-1', 'react-effect-staleclosure-predict-1', 'react-fetch-1'],
+  },
+  {
+    id: 'react_hooks/1',
+    topicKeys: [Topic.REACT_HOOKS],
+    step: 1,
+    title: 'Hooks (useRef, useMemo, custom hooks)',
+    idea: [
+      lines(
+        "Hooks are the `use` functions that give a component memory and access to React: `useState`, `useEffect`, `useRef`, `useMemo`, `useCallback`, `useReducer`, `useContext`, `useId`.",
+        "React tells them apart by call order, so call them at the top level of a component or custom hook, the same ones in the same order every render: never inside a condition, a loop, or after an early return.",
+      ),
+      lines(
+        "`useRef(initial)` returns a box, `{ current }`, that lasts across renders; changing `ref.current` does not re-render.",
+        "Pass it as `ref={inputRef}` and React puts the DOM node in `inputRef.current`, ready for `focus()`; a ref also holds a timer id or a previous value.",
+        "`useMemo(() => compute(a), [a])` caches a computed value until a dependency changes, and `useCallback(fn, [a])` caches a function the same way.",
+      ),
+      lines(
+        "`useReducer(reducer, initial)` keeps state that changes in several named ways: `dispatch({ type: \"add\", payload })` calls `reducer(state, action)`, which returns the next state.",
+        "A custom hook is a function named `useSomething` that calls other hooks, so components share stateful logic while each keeps its own state.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `const ref = useRef(null);       // { current: null }, kept across renders
+<input ref={ref} />             // React sets ref.current to the node
+ref.current.focus();            // read or write it; no re-render
+
+const result = useMemo(() => compute(a), [a]);  // recomputed when a changes
+const onPick = useCallback((id) => pick(id), []);
+
+const [state, dispatch] = useReducer(reducer, initial);
+dispatch({ type: "add", payload: value });  // reducer returns the next state
+
+function useThing(arg) {        // a custom hook: "use" plus other hooks
+  const [value, setValue] = useState(arg);
+  return [value, setValue];
+}`,
+    },
+    pitfall: lines(
+      "A hook called inside an `if` runs on some renders and not others, and React fails with `Rendered more hooks than during the previous render`.",
+      "Call every hook unconditionally at the top, and put the condition inside it or in what you render.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// renders <Search />, then the reader types "du"
+import { useEffect, useMemo, useRef, useState } from "react";
+
+const titles = ["Emma", "Dune", "Dubliners"];
+
+function useFilter(items, query) {
+  return useMemo(() => {
+    const q = query.toLowerCase();
+    return items.filter((t) => t.toLowerCase().includes(q));
+  }, [items, query]);
+}
+
+function Search() {
+  const [query, setQuery] = useState("");
+  const boxRef = useRef(null);
+  const found = useFilter(titles, query);
+  useEffect(() => {
+    boxRef.current.focus();
+  }, []);
+  return (
+    <>
+      <input ref={boxRef} value={query}
+        onChange={(e) => setQuery(e.target.value)} />
+      <p>{found.length} found: {found.join(", ")}</p>
+    </>
+  );
+}`,
+      steps: [
+        "Lines 6-11: `useFilter` is a custom hook, a `use` function that calls `useMemo`, so the filtered list is recomputed only when `items` or `query` changes.",
+        "Lines 14-19: the four hooks run at the top of `Search`, in the same order on every render.",
+        "Line 22: `ref={boxRef}` makes React store the input element in `boxRef.current`, and the effect on lines 17-19 calls `focus()` on it once, after the first render, so the reader can type straight away.",
+        "Line 23: typing `du` calls `onChange`, which updates `query`; `useFilter` recomputes, and Dune and Dubliners match.",
+      ],
+      output: `on mount:           3 found: Emma, Dune, Dubliners;
+                    the box focused
+after typing "du":  2 found: Dune, Dubliners`,
+    },
+    exercises: ['react-hooks-rules-mcq-1', 'react-hooks-rules-predict-1', 'react-hooks-parsons-1', 'react-hooks-cloze-1', 'react-perf-1'],
+  },
+  {
+    id: 'react_context/1',
+    topicKeys: [Topic.REACT_CONTEXT],
+    step: 1,
+    title: 'Context (createContext, useContext)',
+    idea: [
+      lines(
+        "Context hands a value to every component below a point in the tree, without passing it through each level as props, the chore called prop drilling.",
+        "`createContext(defaultValue)` makes the context once, at module level, and a component reads it with `useContext(MyContext)`.",
+      ),
+      lines(
+        "A provider supplies the value; in React 19 you render the context itself: `<ThemeContext value={theme}>...</ThemeContext>`.",
+        "Older code, and the exercises, write `<ThemeContext.Provider value={theme}>`, which works the same way.",
+        "`useContext` returns the value of the nearest provider above the component, and the default only when there is none.",
+      ),
+      lines(
+        "Every component that reads a context re-renders when its provider's value changes, so context suits data many components need that changes rarely: the theme, the signed-in user, the language.",
+        "Keep the context, its provider and a `useTheme()` hook in one file, so callers never touch the context object.",
+        "State that changes often across many components belongs in a store such as Zustand or Redux.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `const Ctx = createContext(defaultValue);  // made once, at module level
+
+function CtxProvider({ children }) {
+  const [value, setValue] = useState(initial);
+  const shared = useMemo(() => ({ value, setValue }), [value]);
+  // React 19; older code writes <Ctx.Provider value={shared}>
+  return <Ctx value={shared}>{children}</Ctx>;
+}
+
+function useCtx() {
+  return useContext(Ctx);  // the nearest provider's value, else the default
+}`,
+    },
+    pitfall: lines(
+      "Passing an object literal as the value, `value={{ theme, setTheme }}`, makes a new object on every provider render, so every consumer re-renders even when `theme` did not change.",
+      "Memoize the object with `useMemo(() => ({ theme, setTheme }), [theme])`, or pass a plain value.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// renders <App />, then the reader clicks "Use USD"
+import { createContext, useContext, useState } from "react";
+
+const CurrencyContext = createContext("GBP");
+
+function Price({ amount }) {
+  const currency = useContext(CurrencyContext);
+  return <p>{amount} {currency}</p>;
+}
+
+function App() {
+  const [currency, setCurrency] = useState("EUR");
+  return (
+    <>
+      <Price amount={8} />
+      <CurrencyContext value={currency}>
+        <Price amount={12} />
+        <button onClick={() => setCurrency("USD")}>Use USD</button>
+      </CurrencyContext>
+    </>
+  );
+}`,
+      steps: [
+        "Line 4: the context is created once, with the default `GBP`.",
+        "Line 7: `Price` reads the context with `useContext`; no currency prop reaches it.",
+        "Line 15: the first `Price` has no provider above it, so it gets the default and shows `8 GBP`.",
+        "Lines 16-19: the second `Price` sits inside the provider, so it shows the provider's value, `EUR`.",
+        "Line 18: Use USD changes the state behind the provider's `value`, so React re-renders the `Price` inside it with `USD`, and the one outside keeps the default.",
+      ],
+      output: `at first:       8 GBP / 12 EUR
+after Use USD:  8 GBP / 12 USD`,
+    },
+    exercises: ['react-context-parsons-1', 'react-context-cloze-2', 'react-context-defaultvalue-mcq-1', 'react-context-defaultvalue-predict-1', 'react-ctx-2'],
+  },
+  {
+    id: 'react_forms/1',
+    topicKeys: [Topic.REACT_FORMS],
+    step: 1,
+    title: 'Forms & Events',
+    idea: [
+      lines(
+        "React handles events with camelCase props that take a function: `onClick`, `onChange`, `onSubmit`.",
+        "Pass the function itself, `onClick={save}`, or an arrow that calls it, `onClick={() => remove(id)}`; `onClick={remove(id)}` would call it during render.",
+        "The handler receives an event: `e.target` is the element, and `e.preventDefault()` stops the browser's own action.",
+      ),
+      lines(
+        "A controlled input takes its text from state, `value={email}`, and writes every change back, `onChange={e => setEmail(e.target.value)}`, so the box always shows the state.",
+        "A `<textarea>` and a `<select>` work the same way through `value`, while a checkbox uses `checked` and reads `e.target.checked`.",
+      ),
+      lines(
+        "Handle submission on the form, `<form onSubmit={handleSubmit}>`, so Enter and the submit button both run it, and call `e.preventDefault()` first, or the browser reloads the page.",
+        "For several fields, keep one object in state, give each input a `name`, and update it with a computed key, `[e.target.name]`.",
+        "An uncontrolled input, read through a ref only on submit, suits a field nothing reacts to while typing.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `const [obj, setObj] = useState({ field: "", flag: false });
+
+function onFieldChange(e) {     // one handler for every text field
+  setObj({ ...obj, [e.target.name]: e.target.value }); // key: input's name
+}
+function onFormSubmit(e) {
+  e.preventDefault();           // no page reload
+  save(obj);
+}
+
+<form onSubmit={onFormSubmit}>
+  <input name="field" value={obj.field} onChange={onFieldChange} />
+  <input type="checkbox" checked={obj.flag}
+    onChange={(e) => setObj({ ...obj, flag: e.target.checked })} />
+  <button>Save</button>         {/* a submit button by default */}
+</form>`,
+    },
+    pitfall: lines(
+      "An input with `value` and no `onChange` is read-only: on every keystroke React puts the state back in the box.",
+      "Pair `value` with an `onChange` that stores the new text, or use `defaultValue` for an uncontrolled field.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// <JoinForm />: the reader types "Ada", ticks the box, then presses Join
+import { useState } from "react";
+
+function JoinForm() {
+  const [entry, setEntry] = useState({ reader: "", news: false });
+  function update(e) {
+    const field = e.target;
+    const value = field.type === "checkbox" ? field.checked : field.value;
+    setEntry({ ...entry, [field.name]: value });
+  }
+  function join(e) {
+    e.preventDefault();
+    console.log(JSON.stringify(entry));
+  }
+  return (
+    <form onSubmit={join}>
+      <input name="reader" value={entry.reader} onChange={update} />
+      <input name="news" type="checkbox"
+        checked={entry.news} onChange={update} />
+      <button>Join</button>
+    </form>
+  );
+}`,
+      steps: [
+        "Line 5: one object in state holds every field, the reader's name as a string and the box as a boolean.",
+        "Lines 6-10: one handler serves both inputs: it reads `checked` from a checkbox and `value` from a text box, and the computed key `[field.name]` picks the field to replace in a new object.",
+        "Lines 17-19: each input is controlled, its `value` or `checked` read from state, so typing `Ada` and ticking the box both go through `update`.",
+        "Lines 11-13 and 16: Join submits the form, and the handler calls `e.preventDefault()`, so the page does not reload, then logs the state.",
+      ],
+      output: `{"reader":"Ada","news":true}`,
+    },
+    exercises: ['react-forms-controlled-predict-1', 'react-forms-cloze-1', 'react-forms-cloze-2', 'react-forms-uncontrolled-mcq-1', 'react-forms-computed-handler-cloze-1'],
+  },
+  {
+    id: 'react_patterns/1',
+    topicKeys: [Topic.REACT_PATTERNS],
+    step: 1,
+    title: 'Patterns & Best Practices',
+    idea: [
+      lines(
+        "React Router shows a component for each URL without reloading the page.",
+        "Wrap the app in `<BrowserRouter>`, list `<Route path=\"...\" element={<Page />} />` inside `<Routes>`, and move with `<Link to=\"...\">`, or with `navigate(\"/path\")` from `useNavigate()` after an action.",
+        "A `:id` segment is read with `useParams()`, and nested routes render at their parent's `<Outlet />`.",
+        "React Router 7 is imported from `react-router`; version 6 code imports the same names from `react-router-dom`, and version 5 code with `<Switch>` and `component={Page}` no longer runs.",
+      ),
+      lines(
+        "`lazy(() => import(\"./Page\"))` loads a component's code the first time it renders, inside a `<Suspense fallback={...}>` shown while it loads.",
+        "`memo(Component)` skips a re-render when the props are shallowly equal, worth it only for an expensive child with stable props.",
+        "`createPortal(jsx, node)` from `react-dom` renders a modal into another DOM node while it stays in the React tree.",
+      ),
+      lines(
+        "An error boundary shows a fallback when a child throws while rendering; it is still a class component, or the `react-error-boundary` package, and it does not catch errors in event handlers or async code.",
+        "A new `key` makes React discard a component with its state and mount a fresh one, which resets a form when the record it edits changes.",
+        "Custom hooks have replaced most higher-order components and render props, which you will still meet in older code.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Layout />}>  {/* Layout renders <Outlet /> */}
+      <Route index element={<Home />} />   {/* exactly "/" */}
+      <Route path="items/:id" element={<Item />} />  {/* useParams().id */}
+    </Route>
+  </Routes>
+</BrowserRouter>
+
+<Link to="/items/1">One</Link>                  // no page reload
+const navigate = useNavigate(); navigate("/");  // after an action
+
+const Page = lazy(() => import("./Page"));      // loaded on first render
+<Suspense fallback={<p>Loading...</p>}><Page /></Suspense>
+
+const Row = memo(function Row(props) { /* ... */ });  // skips equal props
+<Editor key={recordId} />                       // a new key: fresh state`,
+    },
+    pitfall: lines(
+      "A plain `<a href=\"/books/2\">` inside a routed app makes the browser load the whole page again, which throws away all React state.",
+      "Use `<Link to=\"/books/2\">` for links and `navigate()` for redirects, so React Router changes the URL and renders the matching route in place.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// the browser opens /books/2, then the reader clicks "Home"
+import {
+  BrowserRouter, Link, Outlet, Route, Routes, useParams,
+} from "react-router";
+
+const titles = { 1: "Emma", 2: "Dune" };
+
+function Layout() {
+  return (
+    <>
+      <nav><Link to="/">Home</Link></nav>
+      <Outlet />
+    </>
+  );
+}
+
+function Book() {
+  const { id } = useParams();
+  return <h1>{titles[id]}</h1>;
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<p>Pick a book</p>} />
+          <Route path="books/:id" element={<Book />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}`,
+      steps: [
+        "Lines 24-31: `BrowserRouter` reads the address bar, and `Routes` picks the route whose `path` matches it.",
+        "Lines 26-29: the child routes are nested in the `/` route, so `Layout` renders for both and shows the matching child at its `<Outlet />` on line 12.",
+        "Lines 17-19: at `/books/2` the `books/:id` route matches, `useParams()` returns `{ id: \"2\" }`, and the heading reads `Dune`.",
+        "Line 11: clicking Home changes the URL to `/` without a page load; the `index` route matches, and `Pick a book` replaces the heading while `Layout` stays on the page.",
+      ],
+      output: `at /books/2:       Home / Dune
+after Home, at /:  Home / Pick a book,
+                   with no page load`,
+    },
+    exercises: ['react-patterns-cloze-1', 'react-patterns-cloze-2', 'react-memo-mcq-1', 'react-key-reset-mcq-1', 'react-key-reset-predict-1'],
+  },
+  {
+    id: 'react_project/1',
+    topicKeys: [Topic.REACT_PROJECT],
+    step: 1,
+    title: 'React Project',
+    idea: [
+      lines(
+        "A small React app is a tree of components that each own as little as they can.",
+        "Start from the data: find the state the app needs, put each piece in the closest common parent of the components that use it, and pass it down as props, with callbacks that change it.",
+        "Everything you can compute from that state, such as a filtered list, a count or a total, is computed during render.",
+      ),
+      lines(
+        "When state changes in several named ways, a reducer keeps every change in one place: `useReducer(reducer, initial)` and `dispatch({ type, ... })`, each case returning a new array or object.",
+        "Forms are controlled inputs that hand their value up through a callback; data many distant components need, such as the theme, goes in a context, and saving to `localStorage` is an effect.",
+      ),
+      lines(
+        "Test the app the way a user uses it.",
+        "React Testing Library's `render` mounts a component, `screen.getByText` or `getByRole` finds what is on the page, and `fireEvent.click` acts on it, so a test checks what is shown, not the state inside.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `function reducer(state, action) {       // every change in one place
+  switch (action.type) {
+    case "added":   return [...state, action.item];
+    case "removed": return state.filter((x) => x.id !== action.id);
+    default:        return state;
+  }
+}
+
+function App() {                        // owns the state its children share
+  const [items, dispatch] = useReducer(reducer, []);
+  const count = items.length;           // derived, not stored
+  const add = (item) => dispatch({ type: "added", item });
+  const remove = (id) => dispatch({ type: "removed", id });
+  return (
+    <>
+      <AddForm onAdd={add} />
+      <List items={items} onRemove={remove} />
+    </>
+  );
+}
+
+// App.test.jsx: render, find what is shown, act, check again
+render(<App />);
+fireEvent.click(screen.getByRole("button", { name: "Add" }));
+expect(screen.getByText("1 item")).toBeInTheDocument();`,
+    },
+    pitfall: lines(
+      "Copying state into a second state, such as a `filtered` list kept in step by an effect, gives two sources of truth that drift apart and an extra render on every change.",
+      "Keep one state and compute the rest during render: `const visible = items.filter(...)`.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// <Shop />: add "Emma", "Dune", "Emma", then click "Remove Dune"
+import { useReducer, useState } from "react";
+
+function basket(items, action) {
+  const found = items.find((i) => i.title === action.title);
+  if (action.kind === "remove") return items.filter((i) => i !== found);
+  if (!found) return [...items, { title: action.title, qty: 1 }];
+  return items.map((i) => (i === found ? { ...i, qty: i.qty + 1 } : i));
+}
+
+function AddBook({ onAdd }) {
+  const [title, setTitle] = useState("");
+  function handleSubmit(e) {
+    e.preventDefault();
+    onAdd(title);
+    setTitle("");
+  }
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} />
+    </form>
+  );
+}
+
+function Shop() {
+  const [items, dispatch] = useReducer(basket, []);
+  const copies = items.reduce((n, i) => n + i.qty, 0);
+  const summary = items.map((i) => \`\${i.title} x\${i.qty}\`).join(", ");
+  return (
+    <>
+      <AddBook onAdd={(title) => dispatch({ kind: "add", title })} />
+      <p>{summary} (copies: {copies})</p>
+      <button onClick={() => dispatch({ kind: "remove", title: "Dune" })}>
+        Remove Dune
+      </button>
+    </>
+  );
+}`,
+      steps: [
+        "Lines 4-9: the reducer handles every change to the basket: `remove` filters the found title out, a new title is appended, and a title already there gets its `qty` raised in a new object.",
+        "Lines 11-23: `AddBook` owns only its input text; on submit it calls `e.preventDefault()`, hands the title up through `onAdd`, and clears the box.",
+        "Lines 26-28: `Shop` owns the basket and derives `copies` and the summary on every render, so no second state can drift.",
+        "Line 31: adding Emma, Dune and Emma dispatches three `add` actions, which leave Emma x2 and Dune x1, 3 copies.",
+        "Line 33: Remove Dune dispatches `remove`, and the paragraph re-renders from the new array.",
+      ],
+      output: `after the three adds:  Emma x2, Dune x1 (copies: 3)
+after Remove Dune:     Emma x2 (copies: 2)`,
+    },
+    exercises: ['react-project-lift-state-mcq-1', 'react-project-reducer-predict-1', 'react-project-todo'],
   },
 ];
