@@ -56,8 +56,8 @@ export function UnitStatus({ state }: { state: UnitState }) {
   );
 }
 
-const SECTION_ICON = { mastered: CheckCircle2, current: PlayCircle, locked: Lock };
-export const SECTION_LABEL = { mastered: 'Passed', current: 'Current section', locked: 'Locked' };
+const SECTION_ICON = { mastered: CheckCircle2, open: PlayCircle, current: PlayCircle, locked: Lock };
+export const SECTION_LABEL = { mastered: 'Passed', open: 'Open', current: 'Current section', locked: 'Locked' };
 
 /** A section's status as an icon in its state's colour. */
 export function SectionStatusIcon({ status }: { status: SectionStatus }) {

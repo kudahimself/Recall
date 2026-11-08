@@ -18,11 +18,16 @@ import {
   RECENT_WINDOW,
   SpacedRepetitionSystem,
   UNLOCK_ACCURACY_PCT,
+  isMastered,
   pct,
   recentAttempts,
 } from './spacedRepetition';
 
-export type SectionStatus = 'mastered' | 'current' | 'locked';
+/**
+ * `open` is an earlier section that is unlocked but not passed: one inserted
+ * ahead of a section the learner had already reached.
+ */
+export type SectionStatus = 'mastered' | 'open' | 'current' | 'locked';
 
 export interface PathUnit {
   displayName: string;
@@ -136,10 +141,14 @@ export function buildCoursePath(
   }
 
   // Exactly one current section: the last unlocked one. Earlier unlocked
-  // sections were passed on the way, so they are mastered.
+  // sections are mastered when passed; one inserted ahead of a section the
+  // learner had already reached is open but not passed.
   let lastOpen = -1;
   sections.forEach((s, i) => { if (s.status === 'current') lastOpen = i; });
-  sections.forEach((s, i) => { if (s.status === 'current' && i < lastOpen) s.status = 'mastered'; });
+  sections.forEach((s, i) => {
+    if (s.status !== 'current' || i >= lastOpen) return;
+    s.status = isMastered(getTopicKeysForSection(s.name), courseQuestions, progress) ? 'mastered' : 'open';
+  });
 
   const current = sections.find(s => s.status === 'current');
   const nextLocked = sections.find(s => s.status === 'locked');

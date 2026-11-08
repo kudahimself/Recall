@@ -228,17 +228,31 @@ describe('drain membership: mastered AND drain card AND (latest-wrong OR due)', 
 describe('getReviewStatus counts over the unlock-filtered pool', () => {
   test('a due drain card in a LOCKED section does not inflate the pill', () => {
     // py_basics (first unit, first section) is untouched → only it is unlocked.
-    // py_logging (Python Advanced) has a due mastered drain card from stale
-    // history - the selector cannot serve it, so the pill must not count it.
+    // py_logging (Python Advanced) is not reached (no answer, no mastery): its
+    // section stays locked, so its drain card is neither served nor counted.
     const basicsNew = makeQ('b-new', Topic.PY_BASICS, Difficulty.BEGINNER);
     const lockedAdv = makeQ('locked-adv', Topic.PY_LOGGING, Difficulty.ADVANCED);
     const p = emptyProgress();
-    p.masteredTopics.add(Topic.PY_LOGGING); // mastered... but its section is locked
-    recordAttempt(p, 'locked-adv', true, 10 * DAY); // due
+    expect(SpacedRepetitionSystem.getUnlockedTopics([basicsNew, lockedAdv], p)!.has(Topic.PY_LOGGING)).toBe(false);
 
     const s = SpacedRepetitionSystem.getReviewStatus([basicsNew, lockedAdv], p, backendPolicy);
     expect(s.drainQueueCount).toBe(0);
     expect(s.mode).toBe('new');
+  });
+
+  test('a due drain card in a section the learner already reached is counted, and its section stays open', () => {
+    // An answer in py_logging means the learner reached its section, so it
+    // stays open whatever comes before it (a section inserted ahead of it) -
+    // the pill counts the due card because the selector serves it.
+    const basicsNew = makeQ('b-new', Topic.PY_BASICS, Difficulty.BEGINNER);
+    const reachedAdv = makeQ('reached-adv', Topic.PY_LOGGING, Difficulty.ADVANCED);
+    const p = emptyProgress();
+    p.masteredTopics.add(Topic.PY_LOGGING);
+    recordAttempt(p, 'reached-adv', false, 10 * DAY); // latest-wrong drain card
+
+    const s = SpacedRepetitionSystem.getReviewStatus([basicsNew, reachedAdv], p, backendPolicy);
+    expect(s.drainQueueCount).toBe(1);
+    expect(SpacedRepetitionSystem.getUnlockedTopics([basicsNew, reachedAdv], p)!.has(Topic.PY_LOGGING)).toBe(true);
   });
 });
 

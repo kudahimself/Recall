@@ -3,11 +3,12 @@
  *
  * The section teaches the hardware/OS layer the rest of the course assumes, but
  * it was appended LAST rather than inserted at its pedagogically natural early
- * position. That is deliberate: getUnlockedSections walks DATA_ENG_PATH_ORDER
- * and `break`s at the first unmastered section, so inserting a new section at
- * position 2 would hard-lock steps 3-6 for a learner already past them. The
- * test that matters is therefore the one asserting existing progress is
- * untouched - the rest guard the four-file wiring against a partial edit.
+ * position. That was deliberate: getUnlockedSections then `break`ed at the
+ * first unmastered section, so inserting a new section at position 2 would
+ * have hard-locked steps 3-6 for a learner already past them (reached sections
+ * now stay open; see sectionInsertion.test.ts). The test that matters is the
+ * one asserting existing progress is untouched - the rest guard the four-file
+ * wiring against a partial edit.
  *
  * Run: npm test -- --testPathPattern=dataEngSystems --watchAll=false
  */
@@ -155,8 +156,7 @@ describe('placement leaves existing progress alone', () => {
     expect(Array.from(unlocked!.sections)).toEqual([DATA_ENG_PATH_ORDER[0]]);
   });
 
-  // The `break` in getUnlockedSections is what makes append-only mandatory. If a
-  // future edit inserts a section mid-path, this fails loudly.
+  // Pins the section's place as the last step, where it was appended.
   it('keeps the new section out of every earlier position in the path', () => {
     expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(DATA_ENG_PATH_ORDER.length - 1);
   });

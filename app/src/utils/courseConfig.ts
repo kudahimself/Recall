@@ -584,11 +584,12 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Data Engineering for AI': ['de_for_ai'],
     },
   },
-  // Appended LAST deliberately. getUnlockedSections walks DATA_ENG_PATH_ORDER and
-  // `break`s at the first unmastered section, so inserting this foundational
-  // material earlier would hard-lock every later step for a learner already past
-  // it. Appending disrupts no existing unlock state; the cost is that the
-  // hardware layer arrives as a deepening pass over material already seen.
+  // Appended LAST when it was written: getUnlockedSections then `break`ed at the
+  // first unmastered section, so inserting this foundational material earlier
+  // would have hard-locked every later step for a learner already past it.
+  // Sections a learner has reached now stay open across an insertion
+  // (lastReachedIndex); the cost of the late place is that the hardware layer
+  // arrives as a deepening pass over material already seen.
   'Machines, Memory & Disks': {
     weight: 'Step 9',
     topics: {
