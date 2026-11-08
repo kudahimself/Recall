@@ -141,6 +141,9 @@ Appending at the end costs nothing and disrupts no existing unlock state.
 The pedagogical cost is that foundational material arrives last.
 For the current learner this is acceptable: they have already worked through most of DE, so it lands as a deepening pass that explains what they have already seen, which is a legitimate concrete-then-abstract order.
 
+> Superseded constraint: `getUnlockedSections` no longer hard-locks reached sections when one is inserted earlier (`lastReachedIndex`; see the unlock rules in `docs/DEVELOPMENT.md`).
+> The late placement stands, but insertion is no longer a progress regression.
+
 ---
 
 ## 4. Topics
