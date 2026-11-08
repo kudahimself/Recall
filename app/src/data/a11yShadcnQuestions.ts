@@ -1382,6 +1382,45 @@ export function cn(...inputs: ____[]) {
     concepts: ['web-tailwind-utility', 'shadcn-radix-primitives'],
   },
 
+  // Dark mode with next-themes, the React side (moved from the Next.js deployment projects)
+  {
+    id: 'proj-next-2',
+    type: QuestionType.CODING,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'Build a dark/light theme toggle for a Next.js app with the next-themes package. Show both files.\n\n1. app/layout.tsx\n   - Import ThemeProvider from "next-themes"\n   - Render <html lang="en" suppressHydrationWarning> (next-themes sets a class on <html> before React hydrates)\n   - Inside <body>, wrap children in <ThemeProvider attribute="class" defaultTheme="system" enableSystem>\n\n2. components/ThemeToggle.tsx (a Client Component, default export ThemeToggle)\n   - Read resolvedTheme and setTheme from useTheme()\n   - Keep a mounted flag in state that an effect sets to true, and until then render an empty <button> placeholder, because the server cannot know the theme\n   - Then render a <button> that switches to the other theme: the text is "Switch to light" while the theme is dark and "Switch to dark" otherwise',
+    starterCode: `// app/layout.tsx\n\n\n// components/ThemeToggle.tsx\n`,
+    testCases: [
+      {
+        input: 'ThemeProvider setup',
+        expectedOutput: '<html lang="en" suppressHydrationWarning> ... <ThemeProvider attribute="class" defaultTheme="system" enableSystem>',
+        description: 'Layout wraps children in ThemeProvider with class-based theming',
+      },
+      {
+        input: 'Client component',
+        expectedOutput: '"use client"; const { resolvedTheme, setTheme } = useTheme();',
+        description: 'ThemeToggle is a Client Component using the useTheme hook',
+      },
+      {
+        input: 'Hydration safety',
+        expectedOutput: 'if (!mounted) return <button />;',
+        description: 'Renders a placeholder until mounted, so the server and first client render match',
+      },
+    ],
+    solution: `// app/layout.tsx\nimport { ThemeProvider } from "next-themes";\n\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode;\n}) {\n  return (\n    <html lang="en" suppressHydrationWarning>\n      <body>\n        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>\n          {children}\n        </ThemeProvider>\n      </body>\n    </html>\n  );\n}\n\n// components/ThemeToggle.tsx\n"use client";\n\nimport { useTheme } from "next-themes";\nimport { useState, useEffect } from "react";\n\nexport default function ThemeToggle() {\n  const { resolvedTheme, setTheme } = useTheme();\n  const [mounted, setMounted] = useState(false);\n\n  useEffect(() => {\n    setMounted(true);\n  }, []);\n\n  if (!mounted) {\n    return <button className="h-10 w-28 rounded-lg bg-gray-200 dark:bg-gray-700" />;\n  }\n\n  const isDark = resolvedTheme === "dark";\n\n  return (\n    <button\n      onClick={() => setTheme(isDark ? "light" : "dark")}\n      className="h-10 w-28 rounded-lg bg-gray-200 dark:bg-gray-700"\n    >\n      {isDark ? "Switch to light" : "Switch to dark"}\n    </button>\n  );\n}`,
+    requires: [/import\s*\{\s*ThemeProvider\s*\}\s*from\s*["']next-themes["']/, /suppressHydrationWarning/, /<ThemeProvider\b[^>]*attribute=["']class["']/, /defaultTheme=["']system["']/, /["']use client["']/, /useTheme\(\)/, /resolvedTheme/, /setTheme\(/, /useEffect\(/, /Switch to light/, /Switch to dark/],
+    explanation: 'Key decisions:\n\n1. **suppressHydrationWarning on <html>**: next-themes runs a small script before React hydrates that puts the theme class on <html>, so the server HTML and the browser\'s <html> differ. suppressHydrationWarning tells React to accept that one element\'s difference.\n\n2. **attribute="class"**: next-themes sets the theme as a class ("dark" or "light") on <html>. In Tailwind 4 the dark: variant follows the operating system by default, so globals.css adds @custom-variant dark (&:where(.dark, .dark *)); to make dark: follow that class instead (Tailwind 3 used darkMode: "class" in tailwind.config.js).\n\n3. **Mounted check**: the server does not know the visitor\'s theme (next-themes keeps it in localStorage). Rendering theme-dependent text on the server would not match the browser\'s first render, so the toggle renders a neutral placeholder until its effect has run in the browser.\n\n4. **resolvedTheme vs theme**: with defaultTheme="system", theme can be "system"; resolvedTheme is what that resolves to ("light" or "dark") from the operating system setting, which is what the button needs to compare.',
+    hints: ['suppressHydrationWarning goes on <html>, because next-themes changes it before React hydrates', 'Use resolvedTheme instead of theme: it resolves "system" to the actual value', 'The mounted flag keeps the server render and the first browser render the same'],
+    tieredHints: {
+      apiSignature: 'useTheme(): { theme?: string; setTheme: (theme: string) => void; resolvedTheme?: string }',
+      skeleton: '// app/layout.tsx\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang="en" ____>\n      <body>\n        <ThemeProvider ____>{children}</ThemeProvider>\n      </body>\n    </html>\n  );\n}\n\n// components/ThemeToggle.tsx\n"use client";\nexport default function ThemeToggle() {\n  const { ____, setTheme } = useTheme();\n  const [mounted, setMounted] = useState(false);\n\n  useEffect(() => {\n    ____;\n  }, []);\n\n  if (!mounted) {\n    return ____;\n  }\n\n  return <button onClick={() => ____}>____</button>;\n}',
+    },
+    tags: ['nextjs', 'dark-mode', 'theming', 'client-component', 'project'],
+    concepts: ['next-server-vs-client'],
+  },
+
   // -- Customizing shadcn components (MC #3, questionIndex=12, correct at position a) --
 
   {

@@ -21,12 +21,12 @@ export const securityQuestions: Question[] = [
     course: Course.WEB_DEV,
     question: 'A user clicks "Login with Google" on your Next.js app. What is the correct sequence of events in the OAuth 2.0 Authorization Code flow with PKCE?',
     options: [
-      { id: 'a', text: 'Your app generates a code_verifier and code_challenge, redirects the user to Google with the challenge. Google authenticates the user, redirects back to your app with an authorization code. Your server sends the code + code_verifier to Google to exchange for access and refresh tokens.', isCorrect: true },
-      { id: 'b', text: 'Your app sends the user\'s email and password directly to Google\'s API. Google returns tokens immediately without any redirects.', isCorrect: false },
-      { id: 'c', text: 'Google sends tokens directly to the browser in the redirect URL. No server-side exchange is needed because PKCE replaces the need for a client secret.', isCorrect: false },
-      { id: 'd', text: 'Your app fetches the user\'s Google profile using an API key, then creates a session locally. OAuth is only used if the user has 2FA enabled.', isCorrect: false },
+      { id: 'a', text: 'Your app makes a code_verifier and its hash, the code_challenge, and sends the user to Google with the challenge. Google signs them in and returns a code. Your server swaps the code plus the verifier for tokens.', isCorrect: true },
+      { id: 'b', text: 'Your app sends the user to Google with the client secret in the URL. Google signs them in and returns a code. Your server swaps the code plus the secret for tokens, and PKCE is that secret.', isCorrect: false },
+      { id: 'c', text: 'Your app sends the user to Google, which signs them in and puts the access token straight in the redirect URL; PKCE replaces the server-side code exchange.', isCorrect: false },
+      { id: 'd', text: 'Your app sends the user to Google with the code_verifier. Google returns the code_challenge, and your server swaps that challenge for tokens with no further secret.', isCorrect: false },
     ],
-    explanation: 'The Authorization Code flow with PKCE works in 4 steps: (1) Your app generates a random code_verifier and derives a code_challenge from it. (2) The user is redirected to Google\'s auth server with the code_challenge. (3) After the user consents, Google redirects back with a short-lived authorization code. (4) Your server exchanges the code + original code_verifier for tokens. PKCE prevents interception attacks because even if an attacker steals the authorization code, they don\'t have the code_verifier needed to exchange it. This is critical for SPAs and mobile apps where you can\'t safely store a client secret.',
+    explanation: 'The Authorization Code flow with PKCE has four steps. (1) Your app makes a random code_verifier and derives the code_challenge from it (its SHA-256 hash). (2) It sends the user to Google\'s sign-in page with the challenge. (3) After the user consents, Google redirects back with a short-lived authorization code. (4) Your server sends the code and the original verifier to Google and gets the tokens. An attacker who steals the code cannot use it without the verifier, which never left your app. The client secret is never put in a URL, tokens are not put in the redirect URL (that was the old implicit flow), and the verifier travels only in the last step: sending it first would give the secret away.',
     hints: [
       'PKCE adds a code_verifier/code_challenge pair to prevent authorization code interception',
       'Tokens are never sent through the browser URL -- they come from a server-to-server exchange',
@@ -43,12 +43,12 @@ export const securityQuestions: Question[] = [
     course: Course.WEB_DEV,
     question: 'A JWT looks like: eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMjN9.SIGNATURE_HERE\n\nWhat does each of the three dot-separated parts contain, and why is the payload Base64-encoded rather than encrypted?',
     options: [
-      { id: 'a', text: 'Header (user info), Payload (encrypted claims), Signature (checksum). The payload is encrypted so only your server can read the claims inside it.', isCorrect: false },
-      { id: 'b', text: 'Header (algorithm + token type), Payload (claims like user_id and expiration), Signature (HMAC or RSA of header+payload). The payload is only Base64-encoded, NOT encrypted -- anyone can decode and read it. The signature doesn\'t hide the data, it proves the data hasn\'t been tampered with.', isCorrect: true },
-      { id: 'c', text: 'Header (signature algorithm), Payload (Base64-encrypted user data), Signature (public key). Base64 is a form of encryption that keeps the payload secure.', isCorrect: false },
-      { id: 'd', text: 'All three parts are encrypted independently. The dots just separate the encryption blocks. You need the server\'s secret key to decode any part.', isCorrect: false },
+      { id: 'a', text: 'Header (algorithm and token type), payload (claims, encrypted with the secret so only your server can read them), signature (a checksum of the payload).', isCorrect: false },
+      { id: 'b', text: 'Header (algorithm and token type), payload (claims such as user_id and exp), signature (over header and payload). Base64url is only encoding, so anyone can read the payload; the signature proves it was not changed.', isCorrect: true },
+      { id: 'c', text: 'Header (algorithm and token type), payload (claims), signature (the server\'s public key). Base64 hides the claims well enough, so nobody without the key can read them.', isCorrect: false },
+      { id: 'd', text: 'Header (the user\'s identity), payload (claims), signature (the user\'s password hash, so the server can check it without a database).', isCorrect: false },
     ],
-    explanation: 'A JWT has three Base64url-encoded parts separated by dots. The Header specifies the signing algorithm (e.g., HS256, RS256). The Payload contains claims -- data like user_id, email, exp (expiration), iat (issued at). The Signature is created by signing header+payload with a secret key. CRITICAL: Base64 is an encoding, NOT encryption. Anyone can decode the payload with a simple Base64 decoder. Never put sensitive data (passwords, SSNs) in a JWT payload. The signature only guarantees integrity (nobody changed the data) and authenticity (it was signed by someone with the secret key).',
+    explanation: 'A JWT has three Base64url-encoded parts separated by dots. The header names the signing algorithm (such as HS256 or RS256). The payload holds the claims: user_id, email, exp (expiry), iat (issued at). The signature is computed over the header and payload with a secret or private key. Base64url is an encoding, not encryption: anyone can decode the payload, so never put secrets such as passwords in it. The signature gives integrity (nobody changed the data) and authenticity (someone with the key signed it), not secrecy.',
     hints: [
       'Try decoding a JWT payload at jwt.io -- you\'ll see the claims in plain JSON',
       'Base64 is reversible by anyone. Encryption requires a key to reverse.',
@@ -65,12 +65,12 @@ export const securityQuestions: Question[] = [
     course: Course.WEB_DEV,
     question: 'Your app uses JWT-based authentication. After login, the user gets an access token (15 min) and a refresh token (7 days). Why use two separate tokens instead of one long-lived access token?',
     options: [
-      { id: 'a', text: 'Two tokens are faster because the server checks the smaller access token for most requests and only reads the refresh token during login.', isCorrect: false },
-      { id: 'b', text: 'The refresh token encrypts the access token. Without both tokens together, neither one works.', isCorrect: false },
-      { id: 'c', text: 'If an access token is stolen, the attacker has only 15 minutes of access. The refresh token is stored more securely (httpOnly cookie) and is only sent to ONE endpoint (/api/refresh) to get a new access token. This limits the blast radius of token theft.', isCorrect: true },
-      { id: 'd', text: 'It\'s a legacy pattern from OAuth 1.0. Modern apps only need one token since JWTs are self-contained and can\'t be stolen if you use HTTPS.', isCorrect: false },
+      { id: 'a', text: 'Two tokens are faster: the server checks the small access token on most requests and reads the refresh token only at login.', isCorrect: false },
+      { id: 'b', text: 'The refresh token decrypts the access token, so a stolen access token is useless without the refresh token beside it.', isCorrect: false },
+      { id: 'c', text: 'A stolen access token works for at most 15 minutes, and the refresh token is kept in an httpOnly cookie and sent only to the refresh endpoint.', isCorrect: true },
+      { id: 'd', text: 'One long-lived token is fine over HTTPS: a JWT is signed, so it cannot be stolen or replayed, and two tokens only add work.', isCorrect: false },
     ],
-    explanation: 'The two-token strategy is about limiting damage from token theft. The access token is short-lived (15 min) and sent with every API request -- if stolen, the window of attack is small. The refresh token is long-lived (7 days) but is only sent to a single refresh endpoint, reducing exposure. When the access token expires, the client silently sends the refresh token to get a new access token -- the user never has to re-login. Store the refresh token in an httpOnly cookie (JavaScript can\'t access it), and the access token either in memory (safest) or an httpOnly cookie. NEVER store either in localStorage -- any XSS vulnerability exposes them.',
+    explanation: 'Two tokens limit the damage of a theft. The access token is short-lived (15 minutes) and sent with every API request, so a stolen one is useful only briefly. The refresh token lives longer (7 days) but is sent only to one refresh endpoint, so it is exposed far less, and when the access token expires the client uses it to get a new one without a new login. Keep the refresh token in an httpOnly cookie, and the access token in memory or an httpOnly cookie, never in localStorage, where any injected script can read it. A signature stops tampering, not copying: a stolen signed token still works.',
     hints: [
       'Think about what happens when a token is stolen -- how do you limit the damage?',
       'The refresh token is sent to fewer endpoints, reducing its exposure surface',
@@ -87,12 +87,12 @@ export const securityQuestions: Question[] = [
     course: Course.WEB_DEV,
     question: 'You need to store authentication tokens in a Next.js app. A teammate suggests localStorage. What are the security tradeoffs of localStorage, sessionStorage, and httpOnly cookies for token storage?',
     options: [
-      { id: 'a', text: 'localStorage is the most secure because data persists across sessions. sessionStorage is less secure because it\'s cleared when the tab closes. Cookies are the least secure because they\'re sent with every request.', isCorrect: false },
-      { id: 'b', text: 'All three are equally secure as long as you use HTTPS. The choice is about convenience: localStorage for SPAs, sessionStorage for SSR, cookies for APIs.', isCorrect: false },
-      { id: 'c', text: 'httpOnly cookies are obsolete because modern browsers block them. localStorage with encryption is the current best practice for token storage.', isCorrect: false },
-      { id: 'd', text: 'localStorage is vulnerable to XSS (any injected script can read tokens). sessionStorage is also XSS-vulnerable but scoped to the tab. httpOnly cookies can\'t be read by JavaScript (immune to XSS) but need CSRF protection via SameSite attribute or CSRF tokens. Best practice: refresh token in httpOnly cookie, access token in memory.', isCorrect: true },
+      { id: 'a', text: 'localStorage is the safest because it persists across sessions; sessionStorage is weaker because it clears with the tab; cookies are weakest because every request sends them.', isCorrect: false },
+      { id: 'b', text: 'All three are equally safe over HTTPS, since HTTPS encrypts everything; the choice is only convenience, such as localStorage for SPAs.', isCorrect: false },
+      { id: 'c', text: 'httpOnly cookies are obsolete because modern browsers block them, so localStorage holding an encrypted token is the current best practice.', isCorrect: false },
+      { id: 'd', text: 'Any injected script can read localStorage and sessionStorage; an httpOnly cookie is hidden from scripts but sent automatically, so it needs SameSite or CSRF tokens.', isCorrect: true },
     ],
-    explanation: 'XSS (Cross-Site Scripting) is the primary threat to token storage. If an attacker injects JavaScript into your page, they can run document.cookie or localStorage.getItem() to steal tokens. httpOnly cookies are NOT accessible via JavaScript -- document.cookie won\'t return them -- so XSS can\'t steal the token directly. However, cookies are automatically sent with requests, making them vulnerable to CSRF (Cross-Site Request Forgery). Set SameSite=Strict or SameSite=Lax to mitigate CSRF. The gold standard: store the refresh token in an httpOnly, Secure, SameSite=Strict cookie. Keep the access token in a JavaScript variable (memory) -- it\'s lost on page refresh but can be silently renewed via the refresh token.',
+    explanation: 'XSS (cross-site scripting) is the main threat to stored tokens: a script injected into your page can call localStorage.getItem() or read document.cookie and send the token away. sessionStorage is just as readable, only scoped to the tab. An httpOnly cookie is not visible to JavaScript at all (document.cookie leaves it out), so XSS cannot read it. Cookies are sent with requests automatically, though, which opens CSRF (cross-site request forgery): set SameSite=Lax or Strict, or use CSRF tokens. HTTPS protects tokens in transit, not from scripts on the page. A common setup is a refresh token in an httpOnly, Secure, SameSite cookie and the access token in memory.',
     hints: [
       'XSS lets an attacker run arbitrary JavaScript on your page. What can JavaScript access?',
       'httpOnly is a cookie flag that prevents JavaScript from reading the cookie value',
@@ -111,7 +111,7 @@ export const securityQuestions: Question[] = [
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Assemble a function that checks whether a JWT is valid using the jose library. Order: import, secret key, function declaration, try the verification, return true, catch and return false.',
+      'Assemble an async function isValidToken(token) that returns true when the jose library verifies the JWT against the JWT_SECRET environment variable, and false when verification throws.',
     correctOrder: [
       'import { jwtVerify } from "jose";',
       'const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key");',
@@ -139,12 +139,8 @@ async function isValidToken(token: string) {
   }
 }`,
     explanation:
-      'jose exports jwtVerify as a named export, not a default export. JWT_SECRET must be a Uint8Array, which is why the secret string is run through new TextEncoder().encode(). jwtVerify is async and throws when the token is expired, malformed, or has a bad signature — since there is nothing useful in the resolved value here, the pattern is to await it inside a try block and let a thrown error mean "invalid."',
-    hints: [
-      'jose exports jwtVerify by name — { jwtVerify }, not a default export',
-      'The secret must be encoded to a Uint8Array first',
-      'jwtVerify throws on an invalid or expired token — it does not return false',
-    ],
+      'jose exports jwtVerify by name, not as a default export. The key must be a Uint8Array, which is why the secret string goes through new TextEncoder().encode(). jwtVerify is async and throws when the token is expired, malformed or wrongly signed, so the pattern is to await it inside try: reaching the next line means valid, and a thrown error means invalid. Without await (the distractor), the Promise is never checked and the function returns true for any token.',
+    hints: ['jose exports jwtVerify by name: { jwtVerify }, not a default export', 'The secret must be encoded to a Uint8Array first', 'jwtVerify throws on an invalid or expired token: it does not return false'],
     tags: ['jwt', 'jose', 'jwtVerify', 'parsons'],
     concepts: ['web-security-auth-tokens'],
   },
@@ -227,63 +223,14 @@ async function isValidToken(token: string) {
         description: 'Should not intercept /login route (not in matcher)',
       },
     ],
-    solution: `import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key'
-);
-
-export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('access_token')?.value;
-
-  if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  try {
-    await jwtVerify(token, JWT_SECRET);
-    return NextResponse.next();
-  } catch (error) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-}
-
-export const config = {
-  matcher: ['/dashboard/:path*', '/api/:path*'],
-};`,
-    explanation: 'This middleware runs on the Edge Runtime before every matched request. Key points: (1) request.cookies.get() reads the httpOnly cookie -- middleware runs server-side so it CAN access httpOnly cookies even though client JS cannot. (2) jwtVerify from jose throws an error if the token is expired, has an invalid signature, or is malformed -- we catch all of these and redirect to /login. (3) The matcher config ensures we only check auth on protected routes, not on /login or static assets. (4) In production, JWT_SECRET must be a strong, randomly generated value stored in environment variables. Never hardcode it. This pattern works with Next.js 13+ App Router and runs at the edge for minimal latency.',
+    solution: `import { NextRequest, NextResponse } from 'next/server';\nimport { jwtVerify } from 'jose';\n\nconst JWT_SECRET = new TextEncoder().encode(\n  process.env.JWT_SECRET || 'your-secret-key'\n);\n\nexport async function middleware(request: NextRequest) {\n  const token = request.cookies.get('access_token')?.value;\n\n  if (!token) {\n    return NextResponse.redirect(new URL('/login', request.url));\n  }\n\n  try {\n    await jwtVerify(token, JWT_SECRET);\n    return NextResponse.next();\n  } catch (error) {\n    return NextResponse.redirect(new URL('/login', request.url));\n  }\n}\n\nexport const config = {\n  matcher: ['/dashboard/:path*', '/api/:path*'],\n};\n# OR\nimport { NextRequest, NextResponse } from 'next/server';\nimport { jwtVerify } from 'jose';\n\nconst JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);\n\nexport async function middleware(request: NextRequest) {\n  const token = request.cookies.get('access_token')?.value;\n  const login = new URL('/login', request.url);\n\n  if (!token) return NextResponse.redirect(login);\n\n  try {\n    await jwtVerify(token, JWT_SECRET);\n  } catch {\n    return NextResponse.redirect(login);\n  }\n  return NextResponse.next();\n}\n\nexport const config = {\n  matcher: ['/dashboard/:path*', '/api/:path*'],\n};`,
+    requires: [/import\s*\{\s*jwtVerify\s*\}\s*from\s*["']jose["']/, /new\s+TextEncoder\(\)\.encode\(/, /export\s+async\s+function\s+middleware\s*\(/, /request\.cookies\.get\(\s*["']access_token["']\s*\)/, /await\s+jwtVerify\(/, /catch/, /NextResponse\.redirect\(/, /NextResponse\.next\(\)/, /["']\/dashboard\/:path\*["']/, /["']\/api\/:path\*["']/],
+    explanation: 'Middleware runs before every matched request. (1) request.cookies.get() can read an httpOnly cookie: scripts in the browser cannot, but middleware runs on the server. (2) jwtVerify from jose throws when the token is expired, wrongly signed or malformed, so the catch branch redirects all three to /login, and a missing cookie is redirected before any verification. (3) The matcher limits the check to /dashboard and /api and everything below them, so /login, /register and static files are never checked. (4) JWT_SECRET must be a strong random value from the environment, never hardcoded; the "your-secret-key" fallback is only for local practice. Check the session again where data is read or changed, since middleware is the first gate, not the only one.',
     tieredHints: {
-      apiSignature: 'jwtVerify(jwt: string | Uint8Array, key: KeyLike | Uint8Array) -> Promise<JWTVerifyResult>',
-      skeleton: `import { ____, ____ } from 'next/server';
-import { jwtVerify } from 'jose';
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
-
-export async function ____(request: NextRequest) {
-  const token = ____.cookies.get('____')?.value;
-
-  if (!token) {
-    return ____.____(new URL('____', ____.url));
-  }
-
-  try {
-    await ____(token, JWT_SECRET);
-    return ____.____();
-  } catch (error) {
-    return ____.____(new URL('____', ____.url));
-  }
-}
-
-export const config = {
-  matcher: ['/dashboard/:path*', '/api/:path*'],
-};`,
+      apiSignature: 'jwtVerify(jwt: string, key: Uint8Array): Promise<JWTVerifyResult>  (throws when invalid)',
+      skeleton: 'import { NextRequest, NextResponse } from \'next/server\';\nimport { jwtVerify } from \'jose\';\n\nconst JWT_SECRET = ____;\n\nexport async function middleware(request: NextRequest) {\n  const token = ____;\n\n  if (!token) {\n    return ____;\n  }\n\n  try {\n    ____;\n    return ____;\n  } catch {\n    return ____;\n  }\n}\n\nexport const config = {\n  matcher: ____,\n};',
     },
-    hints: [
-      'Use request.cookies.get("access_token")?.value to read the cookie',
-      'jwtVerify throws an error for expired or invalid tokens -- wrap it in try/catch',
-      'The matcher array uses Next.js route patterns like /dashboard/:path*',
-    ],
+    hints: ['Use request.cookies.get("access_token")?.value to read the cookie', 'jwtVerify throws for expired or invalid tokens: wrap it in try/catch', 'The matcher array uses route patterns like /dashboard/:path*'],
     tags: ['nextjs', 'middleware', 'jwt', 'jose', 'authentication', 'cookies'],
     concepts: ['next-middleware', 'web-security-auth-tokens', 'web-security-csrf'],
   },
@@ -299,7 +246,7 @@ export const config = {
     template: 'import { ___ } from "next/headers";\n\nexport async function login(formData: FormData) {\n  "use server";\n  const token = await createSessionToken(formData);\n  const cookieStore = await cookies();\n  cookieStore.set("session", token, { ___: true, secure: true, sameSite: "lax" });\n}',
     blanks: ['cookies', 'httpOnly'],
     solution: 'import { cookies } from "next/headers";\n\nexport async function login(formData: FormData) {\n  "use server";\n  const token = await createSessionToken(formData);\n  const cookieStore = await cookies();\n  cookieStore.set("session", token, { httpOnly: true, secure: true, sameSite: "lax" });\n}',
-    explanation: 'The cookies() function from next/headers gives Server Actions and Route Handlers read/write access to cookies. Setting httpOnly: true means document.cookie in the browser cannot read or tamper with the session cookie — only the server (and the browser\'s own request pipeline) ever sees it, which is the main defense against session theft via XSS.',
+    explanation: 'cookies() from next/headers gives Server Actions and route handlers read and write access to cookies. httpOnly: true means scripts in the browser cannot read the session cookie through document.cookie: only the server, and the browser when it sends requests, ever see it. That is the main defence against a session token being stolen by XSS.',
     hints: ['the next/headers function that returns the cookie store', 'the option that blocks client-side JS from reading the cookie'],
     tags: ['cookies', 'httpOnly', 'session', 'server-action'],
     concepts: ['web-security-auth-tokens'],
@@ -346,7 +293,7 @@ export default function SignIn() {
     topic: Topic.NEXT_AUTH,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Implement a Server Action that logs a user in by setting an httpOnly session cookie.\n\nFile: app/actions/auth.ts\n\nRequirements:\n- "use server" directive at the top of the function\n- async function `login(formData: FormData)`\n- Get a token from `await verifyCredentials(formData)` (assume this is imported from "@/lib/auth" and returns a session token string)\n- `const cookieStore = await cookies();`\n- Set the cookie: `cookieStore.set("session", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 })`',
+    question: 'Implement a Server Action that logs a user in by setting an httpOnly session cookie.\n\nFile: app/actions/auth.ts (the starter already marks the whole file "use server")\n\nRequirements:\n- Export an async function `login(formData: FormData)`\n- Get a token from `await verifyCredentials(formData)` (import it from "@/lib/auth"; it returns a session token string)\n- Get the cookie store from cookies() in next/headers (it returns a Promise in Next.js 15)\n- Set a cookie named "session" to the token, readable only by the server (httpOnly), sent only over HTTPS (secure), with sameSite "lax", lasting 7 days (maxAge is in seconds)',
     starterCode: `// app/actions/auth.ts\n"use server";\n\n// Import cookies and verifyCredentials\n\n// Implement login Server Action
 `,
     testCases: [
@@ -361,23 +308,14 @@ export default function SignIn() {
         description: 'Should set an httpOnly session cookie with a 7-day expiry',
       },
     ],
-    solution: `// app/actions/auth.ts\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  const token = await verifyCredentials(formData);\n  const cookieStore = await cookies();\n\n  cookieStore.set("session", token, {\n    httpOnly: true,\n    secure: true,\n    sameSite: "lax",\n    maxAge: 60 * 60 * 24 * 7,\n  });\n}`,
-    explanation: 'A Server Action runs entirely on the server, so it can set an httpOnly cookie directly through cookies().set() — the browser never gets a chance to read or modify the raw token via document.cookie. secure: true ensures the cookie is only sent over HTTPS, and sameSite: "lax" blocks it from being attached to most cross-site requests, mitigating CSRF for the common case. maxAge is in seconds, so 60 * 60 * 24 * 7 is one week.',
+    solution: `// app/actions/auth.ts\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  const token = await verifyCredentials(formData);\n  const cookieStore = await cookies();\n\n  cookieStore.set("session", token, {\n    httpOnly: true,\n    secure: true,\n    sameSite: "lax",\n    maxAge: 60 * 60 * 24 * 7,\n  });\n}\n# OR\n"use server";\n\nimport { cookies } from "next/headers";\nimport { verifyCredentials } from "@/lib/auth";\n\nexport async function login(formData: FormData) {\n  const token = await verifyCredentials(formData);\n  (await cookies()).set("session", token, {\n    httpOnly: true,\n    secure: true,\n    sameSite: "lax",\n    maxAge: 604800,\n  });\n}`,
+    requires: [/import\s*\{\s*cookies\s*\}\s*from\s*["']next\/headers["']/, /import\s*\{\s*verifyCredentials\s*\}\s*from\s*["']@\/lib\/auth["']/, /export\s+async\s+function\s+login\s*\(\s*formData/, /await\s+verifyCredentials\(\s*formData\s*\)/, /await\s+cookies\(\)/, /\.set\(\s*["']session["']/, /httpOnly\s*:\s*true/, /secure\s*:\s*true/, /sameSite\s*:\s*["']lax["']/, /maxAge\s*:\s*(60\s*\*\s*60\s*\*\s*24\s*\*\s*7|604800|7\s*\*\s*24\s*\*\s*60\s*\*\s*60)/],
+    explanation: 'A Server Action runs on the server, so it can set an httpOnly cookie through cookies().set(): the browser stores it and sends it back, but no script can read the token through document.cookie. secure: true sends the cookie only over HTTPS, and sameSite: "lax" keeps it off most cross-site requests, which blocks the common CSRF case. maxAge is in seconds, so a week is 60 * 60 * 24 * 7, or 604800.',
     tieredHints: {
-      apiSignature: 'ResponseCookies.set(name: str, value: str, options: CookieOptions) -> ResponseCookies',
-      skeleton: `export async function login(formData: FormData) {
-  const token = await ____(formData);
-  const cookieStore = await ____();
-
-  cookieStore.____("session", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-}`,
+      apiSignature: 'const store = await cookies(); store.set(name: string, value: string, { httpOnly?, secure?, sameSite?, maxAge? })',
+      skeleton: 'export async function login(formData: FormData) {\n  const token = ____;\n  const cookieStore = ____;\n\n  cookieStore.set("session", token, {\n    ____\n  });\n}',
     },
-    hints: ['cookies() must be awaited before calling .set()', 'httpOnly, secure, and sameSite are all options in the same object'],
+    hints: ['cookies() must be awaited before calling .set()', 'httpOnly, secure, sameSite and maxAge all go in one options object', 'maxAge counts seconds'],
     tags: ['server-action', 'cookies', 'httpOnly', 'session'],
     concepts: ['web-security-auth-tokens'],
   },

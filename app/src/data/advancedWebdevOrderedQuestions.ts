@@ -528,6 +528,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // INTERMEDIATE coding
   q('shadcn-cn-utility-1'),
   q('shadcn-dark-mode-1'),
+  q('proj-next-2'),
   // INTERMEDIATE faded (Cloze), then coding — CVA
   q('shadcn-cva-cloze-1'),
   q('shadcn-cva-coding-1'),
@@ -675,7 +676,6 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('proj-ts-2'),
   // NEXT_DEPLOYMENT projects
   q('proj-next-1'),
-  q('proj-next-2'),
   q('proj-next-3'),
   // NEXT_FORMS_VALIDATION projects
   q('proj-forms-1'),
