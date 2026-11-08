@@ -1106,7 +1106,7 @@ Exit`,
   },
 
   // =====================================================================
-  // NEXT_SHADCN (5 questions)
+  // NEXT_SHADCN (10 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — lower-load scaffold before cold coding
