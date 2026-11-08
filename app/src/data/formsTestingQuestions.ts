@@ -2127,7 +2127,7 @@ test("logs in and redirects to dashboard", async ({ page }) => {
       },
       {
         id: 'b',
-        text: 'Wrap it in <Suspense> and render that, since React 19 resolves an async component inside Suspense in jsdom as well',
+        text: 'Wrap it in <Suspense>, since Suspense makes React Testing Library run the component on the server instead of jsdom',
         isCorrect: false,
       },
       {
@@ -2142,7 +2142,7 @@ test("logs in and redirects to dashboard", async ({ page }) => {
       },
     ],
     explanation:
-      'An async Server Component is an async function that returns JSX, and React Testing Library renders on the client, where React cannot run an async component: render(<UserList />) logs that UserList "is an async Client Component" and the list never appears, with or without <Suspense> around it. Calling it yourself works: jest.mock("./data") with getUsers resolving to test data, then render(await UserList()) renders the returned <ul>, and screen.getByText("Alice") finds a name. That covers one level only: an async Server Component inside the returned tree hits the same wall, which is why the Next.js docs point to end-to-end tests with Playwright for those pages. The data layer is what you mock, not React.',
+      'An async Server Component is an async function that returns JSX, and React Testing Library renders on the client, where async components are not supported: render(<UserList />) logs that UserList "is an async Client Component", and whether the list then shows up depends on the setup, even with <Suspense> around it. <Suspense> only shows a fallback while something loads; it never moves rendering to a server. The reliable options are to test the data function on its own, or to call the component yourself: jest.mock("./data") with getUsers resolving to test data, then render(await UserList()) renders the returned <ul>, and screen.getByText("Alice") finds a name. That covers one level only: an async Server Component inside the returned tree is unsupported in the same way, which is why the Next.js docs recommend end-to-end tests with Playwright for those pages. The data layer is what you mock, not React.',
     hints: [
       'A Server Component is an async function; what can a test do with an async function?',
       'Think about what you would mock: the data source, not React internals',
