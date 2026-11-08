@@ -52,7 +52,9 @@ describe('buildCoursePath', () => {
       const path = pathFor(progressOf([]));
       expect(path.current?.name).toBe(getPathOrder(Course.BACKEND).slice(-1)[0]);
       expect(path.focus?.name).toBe(getTopicPlace(Topic.PY_BASICS)!.section);
-      expect(path.sections.filter(s => s.status === 'mastered').length).toBe(path.sections.length - 1);
+      // Open, not passed: the preview unlocks sections without mastering them.
+      expect(path.sections.filter(s => s.status === 'open').length).toBe(path.sections.length - 1);
+      expect(path.sections.filter(s => s.status === 'mastered')).toHaveLength(0);
     } finally {
       localStorage.removeItem('recall-dev-unlock-all');
     }

@@ -61,6 +61,7 @@
 
 .status[data-state="now"],
 .status[data-state="open"],
+.status[data-section="open"],
 .status[data-section="current"] {
   color: var(--accent-text);
 }

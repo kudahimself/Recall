@@ -27,12 +27,14 @@ const [firstName, firstKeys] = units[0];
 const [secondName, secondKeys] = units[1];
 
 /**
- * The first unit answered a week ago, mostly wrong lately, so it is weak and
- * its card family is due; a few of the second unit's answered right two days
- * ago, so its family comes due later.
+ * The first unit answered a week ago (all but one card), mostly wrong lately,
+ * so it is weak and its card family is due; a few of the second unit's
+ * answered right two days ago, so its family comes due later. Answering the
+ * second unit opens it, so the learner's place is the first open unit not
+ * fully seen: the first.
  */
 function fixture() {
-  const firstQs = sql.filter(q => firstKeys.includes(q.topic)).slice(0, 10);
+  const firstQs = sql.filter(q => firstKeys.includes(q.topic)).slice(0, -1).slice(0, 10);
   const secondQs = sql.filter(q => secondKeys.includes(q.topic)).slice(0, 3);
   const answer = (q: { id: string }, timestamp: number, isCorrect: boolean): QuestionAttempt =>
     ({ questionId: q.id, timestamp, isCorrect, attempts: 1, timeSpent: 9000 });

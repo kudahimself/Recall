@@ -234,6 +234,7 @@ A topic's ramp (`topicRamp`) is the first card of each of its families plus up t
 The next topic opens when the topic's lesson is met (below), every ramp card is answered and the topic's answered cards are above `UNLOCK_ACCURACY_PCT` at their latest answer (`isRampDoneAtBar`, granted by `updateMasteredTopics` with the App's `isTopicLessonMet`), instead of at 100% coverage.
 A topic without a lesson yet needs only its ramp.
 Inside the ramp, intermediate opens when the beginner ramp cards are answered at `IN_TOPIC_DIFFICULTY_GATE_PCT` (`isRampDifficultyOpen`), and advanced likewise.
+A section or unit the learner has already reached (one of its questions answered or a topic mastered, `reachedTopics` / `lastReachedIndex`) stays open with everything before it, so a section inserted early in a course never re-locks later ones; the inserted section shows as open, not passed.
 
 **Lessons (`utils/lessons.ts`, `data/lessons/`):**
 A lesson teaches one topic before its ramp: a rule card (the idea, the form, the one pitfall, and a worked example whose output is shown) and 3-5 of the topic's existing questions as exercises, in ramp order.

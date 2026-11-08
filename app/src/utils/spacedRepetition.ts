@@ -395,6 +395,30 @@ export function isMastered(
   );
 }
 
+/**
+ * Topics the learner has already reached: one of its questions answered, or
+ * its mastery granted. Derived from stored progress, so it travels with
+ * Export/Import and needs no key of its own.
+ */
+export function reachedTopics(questions: Question[], progress: UserProgress): Set<string> {
+  const reached = new Set<string>(progress.masteredTopics);
+  for (const q of questions) if (progress.questionsAttempted.has(q.id)) reached.add(q.topic);
+  return reached;
+}
+
+/**
+ * Index of the last group (section or unit, in path order) holding a reached
+ * topic, or -1. Every group up to it stays open: a group the learner got to
+ * never re-locks when a new group is inserted ahead of it, and the inserted
+ * group opens too (open, not mastered).
+ */
+export function lastReachedIndex(groups: string[][], reached: Set<string>): number {
+  for (let i = groups.length - 1; i >= 0; i--) {
+    if (groups[i].some(t => reached.has(t))) return i;
+  }
+  return -1;
+}
+
 /** The card family a question belongs to: its topic plus its first concept tag. */
 export function familyOf(q: Pick<Question, 'topic' | 'concepts'>): string {
   return `${q.topic}/${q.concepts?.[0] ?? '*'}`;
@@ -1327,6 +1351,8 @@ export class SpacedRepetitionSystem {
    * A section unlocks only when the previous section has:
    *   - UNLOCK_COVERAGE_PCT coverage (every question attempted at least once), AND
    *   - > UNLOCK_ACCURACY_PCT accuracy over the last RECENT_WINDOW attempts in that section.
+   * A section the learner has already reached (lastReachedIndex) stays open
+   * whatever comes before it, so inserting a section never re-locks one.
    * Returns section names (not topic keys) + the ordered path for the course.
    */
   static getUnlockedSections(
@@ -1353,9 +1379,10 @@ export class SpacedRepetitionSystem {
       return { sections, pathOrder };
     }
 
+    const reachedUpTo = lastReachedIndex(pathOrder.map(getTopicKeysForSection), reachedTopics(questions, progress));
     for (let i = 0; i < pathOrder.length; i++) {
       const sectionName = pathOrder[i];
-      if (i === 0) {
+      if (i === 0 || i <= reachedUpTo) {
         sections.add(sectionName);
         continue;
       }
@@ -1374,7 +1401,8 @@ export class SpacedRepetitionSystem {
    * Returns the set of topic keys the learner is currently allowed to practise.
    * Applies BOTH section-level gating (via getUnlockedSections) AND topic-level
    * gating within each unlocked section: each unit unlocks only after the
-   * previous unit in the same section is mastered.
+   * previous unit in the same section is mastered, or once the learner has
+   * reached it or a later unit (lastReachedIndex).
    */
   static getUnlockedTopics(
     questions: Question[],
@@ -1395,11 +1423,13 @@ export class SpacedRepetitionSystem {
       return topics;
     }
 
+    const reached = reachedTopics(questions, progress);
     result.sections.forEach(sectionName => {
       const units = getSectionUnits(sectionName);
+      const reachedUpTo = lastReachedIndex(units.map(([, keys]) => keys), reached);
       for (let i = 0; i < units.length; i++) {
         const [, topicKeys] = units[i];
-        if (i === 0) {
+        if (i === 0 || i <= reachedUpTo) {
           topicKeys.forEach(t => topics.add(t));
           continue;
         }
