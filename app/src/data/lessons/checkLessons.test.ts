@@ -272,3 +272,36 @@ test('a Next.js worked example with runs: false is not run, and the kind needs T
   expect(r.noImport.join('\n')).toMatch(/runs: false is only for a Django/);
   expect(r.asJavaScript.join('\n')).toMatch(/runs: false is only for a Django/);
 });
+
+test('a Prisma worked example with runs: false is not run, and the kind needs TypeScript that imports Prisma Client or a schema model with an @id', () => {
+  const r = probe(`
+    const { LESSONS } = require('./src/data/lessons/index.ts');
+    const base = LESSONS.find(l => l.id === 'tsql_select/1');
+    const worked = (language, code) => ({ ...base, worked: { ...base.worked, language, tables: undefined, runs: false, code, output: 'Hi' } });
+    const script = worked('typescript', 'import { PrismaClient } from "@prisma/client";\\nconst prisma = new PrismaClient();\\nconsole.log(await prisma.book.count());');
+    const multiLine = worked('typescript', 'import {\\n  Prisma,\\n  PrismaClient,\\n} from "@prisma/client";\\nconst prisma = new PrismaClient();');
+    const schema = worked('typescript', 'model Book {\\n  id    Int    @id @default(autoincrement())\\n  title String\\n}');
+    const composite = worked('typescript', 'model Loan {\\n  bookId   Int\\n  readerId Int\\n  @@id([bookId, readerId])\\n}');
+    const handler = worked('typescript', 'import { NextResponse } from "next/server";\\nimport { PrismaClient } from "@prisma/client";\\nexport async function GET() { return NextResponse.json(await new PrismaClient().book.findMany()); }');
+    const noId = worked('typescript', 'model Note {\\n  body String\\n}');
+    const lookalike = worked('typescript', 'import { client } from "@prisma/clientele";\\nconsole.log(client);');
+    const otherPackage = worked('typescript', 'import { withAccelerate } from "@prisma/extension-accelerate";\\nconsole.log(withAccelerate);');
+    const asJavaScript = worked('javascript', 'import { PrismaClient } from "@prisma/client";\\nconst prisma = new PrismaClient();');
+    const errors = async l => (await C.checkLesson(l, new Set())).errors;
+    const { nonRunnableKind } = require('./src/utils/workedKinds.ts');
+    const kindOf = l => nonRunnableKind(l.worked.code, l.worked.language).needs;
+    return { script: await errors(script), scriptKind: kindOf(script), multiLine: await errors(multiLine), schema: await errors(schema), schemaKind: kindOf(schema), composite: await errors(composite), handler: await errors(handler), handlerKind: kindOf(handler), noId: await errors(noId), lookalike: await errors(lookalike), otherPackage: await errors(otherPackage), asJavaScript: await errors(asJavaScript) };
+  `);
+  for (const ok of [r.script, r.multiLine, r.schema, r.composite, r.handler]) {
+    expect(ok.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  }
+  expect(r.scriptKind).toBe('a Prisma project and its database');
+  expect(r.schemaKind).toBe('a Prisma project and its database');
+  // A route handler that also imports Prisma Client says it needs a Next.js project.
+  expect(r.handlerKind).toBe('a Next.js project');
+  // A model with no @id, a package whose name only starts with @prisma/client, another Prisma package and the same code labelled JavaScript are not the kind.
+  expect(r.noId.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.lookalike.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.otherPackage.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.asJavaScript.join('\n')).toMatch(/runs: false is only for a Django/);
+});

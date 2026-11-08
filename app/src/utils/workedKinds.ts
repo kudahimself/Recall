@@ -76,6 +76,22 @@ export const NON_RUNNABLE_KINDS: NonRunnableKind[] = [
       || /^\s*['"]use (client|server)['"];?\s*$/m.test(code),
   },
   {
+    // TypeScript that imports the generated Prisma Client from `@prisma/client`
+    // (on one line or as a multi-line import), or a schema.prisma model: a
+    // top-level `model Name {` block whose fields hold an `@id` or `@@id`.
+    // Prisma Client is generated from the project's schema and talks to its
+    // database, so what a query returns is what that database answers, which
+    // no runner here reproduces (the bank writes schema.prisma as TypeScript).
+    // It comes after the Next.js kind, so a route handler that also imports
+    // Prisma Client says it needs a Next.js project.
+    kind: 'a Prisma file (TypeScript that imports from @prisma/client, or a schema.prisma model with an @id)',
+    needs: 'a Prisma project and its database',
+    languages: ['typescript'],
+    test: code =>
+      /^\s*import\s[^;]*?\bfrom\s+['"]@prisma\/client(\/[\w-]+)*['"]/m.test(code)
+      || /^model\s+\w+\s*\{[^{}]*@@?id\b[^{}]*\}/m.test(code),
+  },
+  {
     // JSX that imports React (or react-dom / react-router), on one line or as a
     // multi-line `import {\n  a,\n} from "react"`, and holds a JSX element:
     // a paired `<p>...</p>`, a self-closing `<Card />` or a fragment `<>...</>`.

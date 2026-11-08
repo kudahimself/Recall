@@ -260,7 +260,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-db-6'),
 
   // =====================================================================
-  // 9. NEXT_PRISMA (29 questions)
+  // 9. NEXT_PRISMA (30 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)
@@ -275,6 +275,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // BEGINNER MC
   q('prisma-4'),
   q('prisma-8'),
+  // BEGINNER predict (which keys include and a nested select return)
+  q('prisma-include-select-predict-1'),
   // BEGINNER coding
   q('prisma-1'),
   q('prisma-2'),
