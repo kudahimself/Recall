@@ -16,14 +16,14 @@
  *     exercise is a cold write, or an exercise is a review-only card
  *     (isReviewOnly: an explain card);
  *   - its worked example does not run, or prints something other than
- *     `worked.output` (SQL on sql.js, Python on python3), or a SQL result of
- *     more than one row comes from a statement without ORDER BY (row order
- *     would then depend on the engine); an example of a kind that cannot run
- *     here (NON_RUNNABLE_KINDS in src/utils/workedKinds.ts: a Django / DRF
- *     example, a GitHub Actions workflow, an Nginx config, a Databricks
- *     notebook cell, an HTML / CSS page) sets `worked.runs: false` and is not
- *     run (its output is verified by hand), and
- *     `runs: false` on any other example fails;
+ *     `worked.output` (SQL on sql.js, Python on python3, JavaScript on node),
+ *     or a SQL result of more than one row comes from a statement without
+ *     ORDER BY (row order would then depend on the engine); an example of a
+ *     kind that cannot run here (NON_RUNNABLE_KINDS in
+ *     src/utils/workedKinds.ts: a Django / DRF example, a GitHub Actions
+ *     workflow, an Nginx config, a Databricks notebook cell, an HTML / CSS
+ *     page) sets `worked.runs: false` and is not run (its output is verified
+ *     by hand), and `runs: false` on any other example fails;
  *   - the worked example repeats an exercise's solution: the solution (or one
  *     of its `-- OR` / `# OR` forms) appears in it verbatim, or the worked code
  *     holds 80% or more of the solution's essential tokens (check-leaks.js
@@ -82,6 +82,23 @@ function runPython(code) {
   const r = spawnSync('python3', ['-I', '-c', code], { encoding: 'utf8', timeout: 10000 });
   if (r.error) return { error: `python3 could not run: ${r.error.message}` };
   if (r.status !== 0) return { error: `python3 exited ${r.status}: ${(r.stderr || '').trim().split('\n').slice(-1)[0]}` };
+  return { output: normalizeOutput(r.stdout) };
+}
+
+/**
+ * JavaScript runs as a CommonJS script on this same node, in an empty
+ * environment apart from PATH, so inherited NODE_OPTIONS cannot change it.
+ * Node exits only once its event loop is empty, so what promises and timers
+ * log is printed too; an uncaught error or unhandled rejection fails the run.
+ */
+function runJavaScript(code) {
+  const r = spawnSync(process.execPath, ['-e', code], { encoding: 'utf8', timeout: 10000, env: { PATH: process.env.PATH } });
+  if (r.error) return { error: `node could not run: ${r.error.message}` };
+  if (r.status !== 0) {
+    const why = r.signal ? `was stopped (${r.signal})` : `exited ${r.status}`;
+    const last = (r.stderr || '').trim().split('\n').filter(l => /\w/.test(l) && !/^\s+at /.test(l) && !/^Node\.js v/.test(l)).slice(-1)[0];
+    return { error: `node ${why}${last ? `: ${last.trim()}` : ''}` };
+  }
   return { output: normalizeOutput(r.stdout) };
 }
 
@@ -382,6 +399,7 @@ async function runSql(code, tables = []) {
 async function runWorked(worked) {
   if (worked.language === 'sql') return runSql(worked.code, worked.tables);
   if (worked.language === 'python') return runPython(worked.code);
+  if (worked.language === 'javascript') return runJavaScript(worked.code);
   return { error: `no runner for language ${worked.language}` };
 }
 
@@ -550,7 +568,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-module.exports = { checkLesson, runSql, runPython, translateTsql, expandGroupingSets, multiSentenceLines, TSQL_FUNCTIONS };
+module.exports = { checkLesson, runSql, runPython, runJavaScript, translateTsql, expandGroupingSets, multiSentenceLines, TSQL_FUNCTIONS };
 
 if (require.main === module) {
   main().catch(e => {
