@@ -141,6 +141,8 @@ def output_for(out, course, folder):
     marker = f"{course}/{folder.name}/"
     sections = re.split(r"^(?=_{3,} .* _{3,}$|={3,} .* ={3,}$)", out, flags=re.M)
     kept = [s.strip() for s in sections if marker in s and not s.startswith("=")]
+    if not kept:
+        return out[-3000:]
     kept += [line for line in out.splitlines() if line.startswith(("PASSED", "FAILED", "ERROR")) and marker in line]
     return "\n".join(kept)[-3000:]
 
