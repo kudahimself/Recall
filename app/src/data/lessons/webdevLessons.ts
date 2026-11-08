@@ -7,6 +7,7 @@
  * Section 4, TypeScript: every topic.
  * Section 5, Next.js: every topic, Middleware & Auth and Optimization &
  * Deployment as one lesson each, as their course topics pair them.
+ * Section 6, Prisma & Database: its one topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -39,6 +40,13 @@
  * page shows or the server answers after them. Every example was built with
  * Next.js 15.5 (next build, then next start), the requests made with curl and
  * headless Chromium, and the output read off the responses and the page.
+ *
+ * A Prisma worked example needs a Prisma project and its database, so it
+ * sets `runs: false` (the "Prisma file" kind): it imports from
+ * @prisma/client or holds a schema.prisma model with an @id, and a comment
+ * names each file. Its output is what the script prints. Every example was
+ * run in a scratch project with Prisma 6.19 on SQLite (migrate dev, then the
+ * script on a fresh database with tsx), and the output copied from the run.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -2878,5 +2886,124 @@ export default async function EditionPage({ params }: Props) {
             /_next/image?url=%2Fcovers%2Fdune.jpg&w=640&q=75`,
     },
     exercises: ['next-opt-font-mcq-1', 'next-opt-title-template-predict-1', 'next-opt-parsons-1', 'next-deploy-public-cloze-1', 'next-opt-3'],
+  },
+
+  // ===== Section 6, Prisma & Database =====
+  {
+    id: 'next_prisma/1',
+    topicKeys: [Topic.NEXT_PRISMA],
+    step: 1,
+    title: 'Prisma Schema & Migrations',
+    idea: [
+      lines(
+        "`prisma/schema.prisma` describes the database in one file: a `datasource` block names the database and its URL, a `generator` block asks for Prisma Client, and each `model` becomes a table.",
+        "Each line of a model is a field: a name, a type (`Int`, `String`, `Boolean`, `DateTime` or another model), then attributes that each add one rule.",
+        "`@id` makes the primary key, `@default(autoincrement())` fills it in, `@unique` refuses duplicates, and a `?` after the type lets the column be NULL.",
+      ),
+      lines(
+        "A relation is written on both models.",
+        "The model that holds the foreign key declares it as a field and links it with `@relation(fields: [ownerId], references: [id])`; the other side is a list such as `items Item[]`, which is no column at all.",
+        "When both sides are lists, Prisma makes a many-to-many and keeps the join table itself.",
+      ),
+      lines(
+        "`npx prisma migrate dev --name what_changed` compares the schema with the database, writes the SQL to a new folder under `prisma/migrations/`, applies it and regenerates the client.",
+        "Commit those folders: production runs `npx prisma migrate deploy` to apply them in order, while `npx prisma db push` syncs a prototype with no migration file.",
+      ),
+      lines(
+        "Prisma Client is generated code typed from your models, so `prisma.item.findMany()` exists only because `Item` does, and `npx prisma generate` refreshes it after a schema change.",
+        "`include` adds a relation to every scalar field, while `select` returns only the fields it lists, and a nested `select` narrows the relation the same way.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Owner {
+  id    Int     @id @default(autoincrement())
+  code  String  @unique // no two rows alike
+  note  String? // may be NULL
+  items Item[]  // the list side: no column
+}
+
+model Item {
+  id      Int   @id @default(autoincrement())
+  ownerId Int   // the foreign key column
+  owner   Owner @relation(fields: [ownerId], references: [id])
+}
+
+// terminal, after each schema change
+//   npx prisma migrate dev --name what_changed
+//   npx prisma migrate deploy   (production)
+//   npx prisma db push          (prototype, no file)
+
+// app code: the generated, typed client
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+await prisma.item.findMany({ include: { owner: true } });
+await prisma.item.findMany({
+  select: { id: true, owner: { select: { code: true } } },
+});`,
+    },
+    pitfall: lines(
+      "Each attribute is one rule and implies nothing else: `@default(autoincrement())` only fills in a value and does not make the primary key, a `String` without `?` is required, and a field without `@unique` takes duplicates.",
+      "Write every rule the column needs, as in `id Int @id @default(autoincrement())`, then run `migrate dev` so the database enforces it.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      runs: false,
+      code: `// prisma/schema.prisma (generator, datasource as usual)
+model Shelf {
+  id    Int    @id @default(autoincrement())
+  label String @unique
+  books Book[]
+}
+
+model Book {
+  id      Int     @id @default(autoincrement())
+  title   String
+  blurb   String?
+  shelfId Int
+  shelf   Shelf   @relation(fields: [shelfId], references: [id])
+}
+
+// shop.ts, after npx prisma migrate dev --name init
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+await prisma.shelf.create({
+  data: { label: "Fantasy", books: { create: [
+    { title: "Lathe" },
+    { title: "Earthsea", blurb: "Magic" },
+  ] } },
+});
+const books = await prisma.book.findMany({
+  orderBy: { title: "asc" },
+  select: { title: true, blurb: true,
+    shelf: { select: { label: true } } },
+});
+console.log(books);
+const dup = prisma.shelf.create({ data: { label: "Fantasy" } });
+console.log(await dup.catch(e => e.code));`,
+      steps: [
+        "Lines 3-4: `@id` makes `id` the key and `@default(autoincrement())` fills it in; `@unique` on `label` becomes a unique index, so no two shelves share a label.",
+        "Lines 11-13: `blurb String?` may be NULL, and `shelf` with `@relation` is what stores `shelfId` as a foreign key; `books Book[]` on line 5 is no column.",
+        "Line 16: `migrate dev` wrote `prisma/migrations/<timestamp>_init/migration.sql` with both tables, the index and the foreign key, applied it and generated the client, so `prisma.shelf` and `prisma.book` exist.",
+        "Lines 19-29: the nested `create` inserts the shelf and both books and fills in `shelfId`; `select` returns only `title`, `blurb` and the shelf's `label`, so Lathe's missing blurb comes back as `null`.",
+        "Lines 31-32: a second `Fantasy` shelf breaks the unique index, so the promise rejects with Prisma's code `P2002`, which the `catch` prints.",
+      ],
+      output: `[
+  { title: 'Earthsea', blurb: 'Magic', shelf: { label: 'Fantasy' } },
+  { title: 'Lathe', blurb: null, shelf: { label: 'Fantasy' } }
+]
+P2002`,
+    },
+    exercises: ['prisma-4', 'prisma-include-select-predict-1', 'prisma-parsons-1', 'prisma-cloze-2', 'prisma-1'],
   },
 ];
