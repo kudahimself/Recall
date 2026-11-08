@@ -1,7 +1,7 @@
 /**
  * scripts/check-lessons.js runs as part of `npm test`: every lesson must
  * pass it. The checker runs in its own Node process (it loads the bank with
- * sucrase and runs worked examples on sql.js and python3), and the cases
+ * sucrase and runs worked examples on sql.js, python3 and node), and the cases
  * below prove it fails what it should.
  */
 import { execFileSync, spawnSync } from 'child_process';
@@ -137,6 +137,18 @@ test('a lesson fails on a wrong output, exercises out of ramp order, a repeated 
 test('a Python worked example runs on python3', () => {
   const r = probe(`return C.runPython("def gen():\\n    yield 1\\n    yield 2\\nprint(list(gen()))");`);
   expect(r.output).toBe('[1, 2]');
+});
+
+test('a JavaScript worked example runs on node, drains its promises and timers, and fails on an uncaught error', () => {
+  const r = probe(`
+    const ok = C.runJavaScript("setTimeout(() => console.log('timer'), 0);\\nPromise.resolve().then(() => console.log('then'));\\nconsole.log('sync');");
+    const thrown = C.runJavaScript("null.x;");
+    const rejected = C.runJavaScript("Promise.reject(new Error('no stock'));");
+    return { ok, thrown, rejected };
+  `);
+  expect(r.ok.output).toBe('sync\nthen\ntimer');
+  expect(r.thrown.error).toMatch(/^node exited 1: TypeError/);
+  expect(r.rejected.error).toMatch(/^node exited 1: Error: no stock/);
 });
 
 test('a Django worked example, a GitHub Actions workflow, an Nginx config or a Databricks notebook cell with runs: false is not run, and runs: false elsewhere fails', () => {
