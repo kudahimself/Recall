@@ -526,6 +526,27 @@ export default function Pager({ currentPage, totalPages }) {
     tags: ['next.js', 'pagination', 'Link', 'URLSearchParams', 'app-router'],
     concepts: ['next-url-state'],
   },
+  {
+    id: 'next-url-state-string-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_URL_STATE,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'A visitor opens /reading?page=3. What text does the page show? Type it exactly, on one line.',
+    code: `// app/reading/page.tsx
+type Props = { searchParams: Promise<{ page?: string }> };
+
+export default async function ReadingPage({ searchParams }: Props) {
+  const { page = "1" } = await searchParams;
+  return <p>Page {page}, next {page + 1}</p>;
+}`,
+    expectedOutput: 'Page 3, next 31',
+    explanation: 'A URL holds only text, so every search param arrives as a string: page is "3", not 3. In JavaScript, "3" + 1 joins the two into "31" instead of adding them. Convert a param before doing arithmetic with it, as in Number(page) + 1, which gives 4. The same holds for useSearchParams().get("page") in a Client Component, which returns a string or null.',
+    hints: ['What type is every value read from a URL?', 'What does + do when one side is a string?'],
+    tags: ['next.js', 'searchParams', 'url-state', 'strings', 'predict'],
+    concepts: ['next-url-state'],
+  },
 
   // =====================================================================
   // NEXT_ERROR_HANDLING (5 questions)
@@ -984,6 +1005,44 @@ export async function GET(
     ],
     tags: ['next.js', 'error.tsx', 'digest', 'monitoring', 'logging', 'production'],
     concepts: ['next-error-boundary'],
+  },
+  {
+    id: 'next-error-handling-layout-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_ERROR_HANDLING,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'A visitor opens /shop/poetry, and getBooks throws. What text does the page show? Type each piece of visible text in page order, one per line (a button\'s label counts).',
+    code: `// app/shop/layout.tsx
+export default function ShopLayout({ children }) {
+  return <main><h1>Bookshop</h1>{children}</main>;
+}
+
+// app/shop/[shelf]/page.tsx
+export default async function ShelfPage({ params }) {
+  const { shelf } = await params;
+  const books = await getBooks(shelf); // throws
+  return <p>{books.join(", ")}</p>;
+}
+
+// app/shop/error.tsx
+"use client";
+export default function ShopError({ reset }) {
+  return (
+    <>
+      <p>Could not load the shelves</p>
+      <button onClick={() => reset()}>Try again</button>
+    </>
+  );
+}`,
+    expectedOutput: `Bookshop
+Could not load the shelves
+Try again`,
+    explanation: 'error.tsx wraps what sits below the layout of its folder: Next.js renders it as an error boundary inside ShopLayout, around the pages of /shop. When the page throws, only that inner part is swapped for the error UI, so the layout\'s Bookshop heading stays on screen above it and the layout stays usable. The Try again button calls reset(), which renders the segment again. An error in ShopLayout itself would not be caught here; it goes to an error.tsx one folder up (or global-error.tsx for the root layout).',
+    hints: ['Where does error.tsx sit in the tree: above or below the layout of its folder?', 'Which part of the page does the error UI replace?'],
+    tags: ['next.js', 'error.tsx', 'error-boundary', 'layout', 'predict'],
+    concepts: ['next-error-boundary', 'next-app-router'],
   },
 
   // =====================================================================
@@ -1553,6 +1612,40 @@ if (!passwordMatch) return null;`,
       'A hash is one-way - compare() works by re-hashing the input, not by reversing the stored value',
     ],
     tags: ['next-auth', 'bcrypt', 'password-hashing', 'credentials', 'security'],
+    concepts: ['web-security-auth-tokens'],
+  },
+  {
+    id: 'next-auth-deep-session-cb-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_AUTH_DEEP,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'Ada signs in with this Credentials provider and opens /account. What text does the page show? Type it exactly, on one line.',
+    code: `// auth.js
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    Credentials({
+      authorize: async () => ({ id: "1", name: "Ada", role: "admin" }),
+    }),
+  ],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) token.role = user.role;
+      return token;
+    },
+  },
+});
+
+// app/account/page.jsx
+export default async function AccountPage() {
+  const session = await auth();
+  return <p>{session.user.name}: {session.user.role ?? "no role"}</p>;
+}`,
+    expectedOutput: 'Ada: no role',
+    explanation: 'The jwt callback copies the role onto the token at sign-in, but the token is not what auth() returns. auth() returns the session, and with no session callback the session holds only the defaults: the user\'s name, email and image. So session.user.role is undefined and the page shows "Ada: no role". Add a session callback that copies it across, session.user.role = token.role, and the page shows "Ada: admin".',
+    hints: ['Which object does auth() return: the token or the session?', 'Which fields does the session hold when there is no session callback?'],
+    tags: ['next-auth', 'callbacks', 'jwt', 'session', 'rbac', 'predict'],
     concepts: ['web-security-auth-tokens'],
   },
 ];

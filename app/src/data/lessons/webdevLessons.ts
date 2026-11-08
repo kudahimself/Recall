@@ -10,6 +10,8 @@
  * Section 6, Prisma & Database: its one topic.
  * Section 7, Forms & Validation (RHF + Zod): its one topic.
  * Section 8, Testing: its one topic.
+ * Section 9, Advanced Next.js Patterns: every topic, Error Handling & Auth
+ * Depth as one lesson, as its course topic pairs them.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -42,6 +44,9 @@
  * page shows or the server answers after them. Every example was built with
  * Next.js 15.5 (next build, then next start), the requests made with curl and
  * headless Chromium, and the output read off the responses and the page.
+ * The TanStack Query one was built that way with @tanstack/react-query 5.107
+ * and the Auth.js one with next-auth 5.0.0-beta.32, signed in through its
+ * Credentials provider in headless Chromium.
  * The React Hook Form + Zod one is a Client Component built that way with
  * react-hook-form 7.91, @hookform/resolvers 7 and Zod 4.6, its boxes filled
  * and its button pressed in headless Chromium.
@@ -3243,5 +3248,336 @@ getByText, line 26: FAIL  Unable to find an element
                           with the text: Dune is on hold`,
     },
     exercises: ['next-testing-parsons-1', 'next-testing-3', 'next-testing-16', 'next-testing-queries-predict-1', 'next-testing-cloze-waitfor'],
+  },
+
+  // ===== Section 9, Advanced Next.js Patterns =====
+  {
+    id: 'next_tanstack/1',
+    topicKeys: [Topic.NEXT_TANSTACK],
+    step: 1,
+    title: 'TanStack Query (Server State)',
+    idea: [
+      lines(
+        "TanStack Query keeps data from the server in a cache in the browser.",
+        "`useQuery({ queryKey, queryFn })` returns `data`, `isPending`, `isError` and `error`; check the two flags first, since `data` is `undefined` until the first fetch answers.",
+        "The `queryKey` is the cache entry's name: components that ask for the same key share one entry and one request, and `[\"books\", shelf]` is a separate entry for each shelf.",
+      ),
+      lines(
+        "Every hook reads one `QueryClient` from context, so a Client Component creates it with `useState(() => new QueryClient())` and wraps the app in `<QueryClientProvider>` from the root layout.",
+      ),
+      lines(
+        "Data stays fresh for `staleTime` (0 by default); stale data still shows at once but is fetched again in the background, on mount, on window focus and on reconnect.",
+        "An entry no component uses is kept for `gcTime` (5 minutes), then dropped.",
+        "`enabled: !!id` holds a query until the value it needs exists.",
+      ),
+      lines(
+        "`useMutation({ mutationFn, onSuccess })` runs a write only when you call `mutate(vars)`, with its own `isPending` meanwhile.",
+        "The cache cannot know what the write changed, so `onSuccess` calls `queryClient.invalidateQueries({ queryKey: [\"books\"] })`, which marks every key starting with `\"books\"` stale and fetches the ones on screen again.",
+        "Use it for data the browser keeps live (polling, infinite lists, optimistic updates); a Server Component's fetch is simpler for the first render.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// app/providers.tsx, around {children} in app/layout.tsx
+"use client";
+export default function Providers({ children }) {
+  // one client per app, never a module constant
+  const [client] = useState(() => new QueryClient());
+  return (
+    <QueryClientProvider client={client}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+// any Client Component below it
+const { data, isPending, isError, error } = useQuery({
+  queryKey: ["things", id],    // every value queryFn uses
+  queryFn: () => getThing(id), // returns a promise
+  staleTime: 60_000,           // fresh 1 minute (default 0)
+  enabled: !!id,               // wait until id exists
+});
+if (isPending) return <p>Loading...</p>;
+if (isError) return <p>{error.message}</p>;
+
+const queryClient = useQueryClient();
+const save = useMutation({
+  mutationFn: (vars) => postThing(vars),
+  // marks stale every key that starts with "things"
+  onSuccess: () =>
+    queryClient.invalidateQueries({ queryKey: ["things"] }),
+});
+save.mutate(vars);             // nothing runs until this`,
+    },
+    pitfall: lines(
+      "Leaving a value the `queryFn` uses out of the key, as in `queryKey: [\"posts\"]` with `fetchPosts(userId)`, gives every user one shared entry: switch user and the page keeps the last user's posts and fetches nothing.",
+      "Put every such value in the key, `[\"posts\", userId]`, so each gets its own entry and a new value starts a fetch.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/shelf/Shelf.tsx, inside <Providers>: GET /api/books
+// answers ["Emma"], POST adds a title; click Add Dune
+"use client";
+import {
+  useMutation, useQuery, useQueryClient,
+} from "@tanstack/react-query";
+
+export default function Shelf() {
+  const queryClient = useQueryClient();
+  const { data, isPending } = useQuery<string[]>({
+    queryKey: ["books"],
+    queryFn: () => fetch("/api/books").then((r) => r.json()),
+  });
+  const add = useMutation({
+    mutationFn: (title: string) => fetch("/api/books", {
+      method: "POST", body: JSON.stringify({ title }),
+    }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["books"] }),
+  });
+  if (isPending) return <p>Loading...</p>;
+  return (
+    <>
+      <p>{data?.join(", ")}</p>
+      <button onClick={() => add.mutate("Dune")}>
+        {add.isPending ? "Adding..." : "Add Dune"}
+      </button>
+    </>
+  );
+}`,
+      steps: [
+        "Lines 10-13: `useQuery` fetches `/api/books` once under the key `[\"books\"]`, and until it answers `isPending` is true, so line 21 shows Loading...",
+        "Lines 14-20: the mutation does nothing until line 25 calls `add.mutate(\"Dune\")`; while the POST runs, `add.isPending` turns the label into Adding... and the list still shows the cached Emma.",
+        "Lines 18-19: when the POST succeeds, `invalidateQueries` marks `[\"books\"]` stale, and since this component shows it, TanStack Query fetches it again: the server logged GET, POST, GET.",
+        "Line 24: the new list replaces the cached one with no Loading... in between, because `isPending` is true only while there is no data at all.",
+      ],
+      output: `first render:      Loading...
+GET answers:       Emma        [Add Dune]
+Add Dune clicked:  Emma        [Adding...]
+POST, then GET:    Emma, Dune  [Add Dune]`,
+    },
+    exercises: ['tanstack-3', 'tanstack-dedupe-predict-1', 'tanstack-parsons-1', 'tanstack-cloze-2', 'tanstack-1'],
+  },
+  {
+    id: 'next_url_state/1',
+    topicKeys: [Topic.NEXT_URL_STATE],
+    step: 1,
+    title: 'URL State & Search Patterns',
+    idea: [
+      lines(
+        "State kept in the URL, such as a search, a filter, a sort or a page number, survives a refresh, can be shared as a link, works with Back and Forward, and reaches the server's first render.",
+        "Keep `useState` for what nobody shares: an open menu, a half-typed draft.",
+      ),
+      lines(
+        "A page reads the query on the server from its `searchParams` prop, a promise in Next.js 15: `const { q } = await searchParams`.",
+        "A Client Component reads it with `useSearchParams()` from `next/navigation`, a read-only `URLSearchParams` whose `.get(\"q\")` returns a string or `null`, and `usePathname()` gives the path without the query.",
+        "Every value is text, so convert it before arithmetic: `Number(page) + 1`.",
+        "On a page Next.js prerenders, wrap a component that calls `useSearchParams()` in `<Suspense>`, or the build fails.",
+      ),
+      lines(
+        "To change one param, copy the rest: `new URLSearchParams(searchParams.toString())`, then `.set(\"k\", v)` or `.delete(\"k\")`, and navigate to the path plus `?` and the copy.",
+        "`router.push` adds a history entry and `router.replace` swaps the current one, the usual choice while typing; a `<Link href>` built the same way is a real, prefetched link.",
+        "Each change renders the server page again with the new params, so delete `page` when a filter changes, and debounce a search box (about 300 ms) so it does not navigate on every key.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// app/list/page.tsx: the server reads the query
+type Props = {
+  searchParams: Promise<{ q?: string; page?: string }>;
+};
+
+export default async function Page({ searchParams }: Props) {
+  const { q = "", page = "1" } = await searchParams; // text
+  const n = Number(page);                  // convert first
+}
+
+// app/list/Controls.tsx: the client writes it
+"use client";
+import {
+  usePathname, useRouter, useSearchParams,
+} from "next/navigation";
+
+const router = useRouter();
+const pathname = usePathname();          // the path, no query
+const searchParams = useSearchParams();  // read-only
+const value = searchParams.get("k");     // a string or null
+
+// a copy: change one key, keep the rest
+const params = new URLSearchParams(searchParams.toString());
+params.set("k", "v");
+params.delete("page");
+router.replace(\`\${pathname}?\${params}\`); // or router.push`,
+    },
+    pitfall: lines(
+      "Building the query from scratch, as in `router.push(\"?genre=\" + genre)`, drops every other param in the URL: the search, the sort and the page are gone.",
+      "Copy the current ones with `new URLSearchParams(searchParams.toString())` and change only the key you mean to, deleting `page` when the results change.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/books/page.tsx, opened as
+// /books?genre=poetry&sort=title&page=2; Crime, then Back
+import Link from "next/link";
+
+type Props = {
+  searchParams: Promise<Record<string, string>>;
+};
+
+export default async function Page({ searchParams }: Props) {
+  const query = await searchParams;
+  const genre = query.genre ?? "all";
+  const page = Number(query.page ?? "1");
+  const crime = new URLSearchParams(query);
+  crime.set("genre", "crime");
+  crime.delete("page");
+  return (
+    <>
+      <p>{genre}, page {page}, next {page + 1}</p>
+      <Link href={\`/books?\${crime.toString()}\`}>Crime</Link>
+    </>
+  );
+}`,
+      steps: [
+        "Lines 10-12: the page awaits `searchParams` and gets strings, `page` among them as `\"2\"`, so `Number` turns it into 2 and line 18 shows next 3, where `\"2\" + 1` would be `\"21\"`.",
+        "Lines 13-15: `new URLSearchParams(query)` copies all three params, then the link sets `genre` to crime and deletes `page`, since page 2 of poetry means nothing for crime; `sort` is kept.",
+        "Line 19: the link is a real `<a href=\"/books?genre=crime&sort=title\">` with no client code, and clicking it renders this server page again with the new `searchParams`.",
+        "Back: a link pushes a history entry, as `router.push` does, so Back shows poetry, page 2 again; `router.replace` would have swapped the entry instead.",
+      ],
+      output: `/books?genre=poetry&sort=title&page=2:
+  poetry, page 2, next 3   [Crime]
+  the link: /books?genre=crime&sort=title
+Crime clicked:
+  crime, page 1, next 2    [Crime]
+Back:
+  poetry, page 2, next 3`,
+    },
+    exercises: ['next-url-state-string-predict-1', 'next-url-state-parsons-1', 'next-url-state-cloze-2', 'next-url-state-3', 'next-url-state-6'],
+  },
+  {
+    id: 'next_error_handling/1',
+    topicKeys: [Topic.NEXT_ERROR_HANDLING, Topic.NEXT_AUTH_DEEP],
+    step: 1,
+    title: 'Error Handling & Auth Depth',
+    idea: [
+      lines(
+        "`error.tsx` in a route folder is a Client Component that Next.js places as an error boundary around that folder's page and everything below it, inside the folder's layout.",
+        "When rendering throws, it shows instead, with two props: `error`, and `reset()`, which renders the segment again; the layout above stays on screen.",
+        "An error in the layout itself goes to the `error.tsx` a folder up, and the root layout's to `global-error.tsx`, which brings its own `<html>` and `<body>`.",
+      ),
+      lines(
+        "In production a Server Component's error reaches the browser with a generic message and a `digest`, the id the server printed beside the real error, so log `error.digest` (to Sentry, say) rather than show the message.",
+        "A route handler is outside every boundary: catch there and answer `NextResponse.json({ error }, { status: 500 })`.",
+      ),
+      lines(
+        "Auth.js (NextAuth v5) is set up once in `auth.ts`: `NextAuth({ providers, callbacks })` returns `handlers` (exported as `GET` and `POST` from `app/api/auth/[...nextauth]/route.ts`), `auth`, `signIn` and `signOut`.",
+        "On the server, `const session = await auth()` gives the session or `null`, and `redirect(\"/login\")` ends the render; in a Client Component, `useSession()` reads it inside a `<SessionProvider>`.",
+        "A Credentials provider's `authorize` checks the password with `await bcrypt.compare(input, hash)` and returns the user or `null`.",
+      ),
+      lines(
+        "The default JWT strategy keeps the session in an encrypted cookie, with no database lookup but no revoking it early; the database strategy keeps a row per session.",
+        "A field of your own, such as `role`, needs two callbacks: `jwt({ token, user })` copies it from `user` at sign-in, and `session({ session, token })` copies it onto `session.user`, the object `auth()` and `useSession()` return.",
+        "In TypeScript, add it to the `Session` and `JWT` interfaces with `declare module`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// app/area/error.tsx: catches below app/area/layout.tsx
+"use client";
+export default function AreaError({ error, reset }: {
+  error: Error & { digest?: string }; // id in the server log
+  reset: () => void;                  // renders it again
+}) {
+  return <button onClick={() => reset()}>Try again</button>;
+}
+
+// auth.ts
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [Google, Credentials({ authorize })],
+  callbacks: {
+    jwt({ token, user }) {         // user: only at sign-in
+      if (user) token.field = user.field;
+      return token;
+    },
+    session({ session, token }) {  // what auth() returns
+      session.user.field = token.field;
+      return session;
+    },
+  },
+});
+// authorize(input): bcrypt.compare, then the user or null
+
+// app/area/page.tsx, a Server Component
+const session = await auth();      // the session or null
+if (!session) redirect("/login");  // from next/navigation
+
+// app/area/actions.ts: expected failures are data
+"use server";
+if (!parsed.success) return { ok: false, errors };`,
+    },
+    pitfall: lines(
+      "`error.tsx` is not a catch-all: it catches only what throws while a segment renders.",
+      "A fetch that fails in an `onClick`, a timer or a route handler never reaches it and needs its own `try` / `catch`; a Server Action returns a validation failure as data, since a throw would swap the whole form for the error UI.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// auth.ts: Ada signs in as a reader, Grace as an admin
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  // authorize returns { id, name, role }
+  providers: [Credentials({ authorize })],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) token.role = user.role;
+      return token;
+    },
+    session({ session, token }) {
+      session.user.role = token.role;
+      return session;
+    },
+  },
+});
+
+// app/reports/page.tsx: opened signed out, as Ada, as Grace
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { loadReport } from "@/lib/reports"; // throws
+
+export default async function ReportsPage() {
+  const session = await auth();
+  if (!session) redirect("/login");
+  if (session.user.role !== "admin") redirect("/");
+  const report = await loadReport();
+  return <p>{report.title}</p>;
+}
+
+// app/reports/error.tsx
+"use client";
+export default function ReportsError({ error, reset }: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <>
+      <p>Report unavailable (ref {error.digest})</p>
+      <button onClick={() => reset()}>Retry</button>
+    </>
+  );
+}`,
+      steps: [
+        "Lines 6-13: at sign-in `jwt` gets the `user` that `authorize` returned and copies `role` onto the token in the session cookie, and `session` copies it onto `session.user`, which is what `auth()` returns to line 23.",
+        "Lines 23-24: signed out, `auth()` returns `null`, so `redirect(\"/login\")` ends the render and the response is a 307 to the login page.",
+        "Line 25: Ada is signed in but a reader, so she is sent home; the role is checked here, where the report is read, even when middleware checks too.",
+        "Line 26: for Grace `loadReport` throws while the page renders (the report store is down), so `error.tsx` in the same folder replaces the page below the root layout, and the response is a 500.",
+        "Line 38: in production the browser gets no server message, only `error.digest`, the number the server printed beside the real error, so the user's ref leads to the log line; Retry calls `reset()` and renders the page again.",
+      ],
+      output: `signed out:     307 to /login, the login page
+Ada (reader):   307 to /, the home page
+Grace (admin):  500, "Report unavailable (ref 3649392877)" and Retry;
+                the server log has "Error: report store down"
+                with digest '3649392877'`,
+    },
+    exercises: ['next-error-handling-3', 'next-error-handling-layout-predict-1', 'next-error-handling-cloze-2', 'next-auth-deep-3', 'next-auth-deep-session-cb-predict-1'],
   },
 ];
