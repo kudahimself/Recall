@@ -6906,6 +6906,26 @@ Prefer .find / .filter / .map over manual for-loops where it reads cleanly.`,
   },
 
   {
+    id: 'ts-basic-any-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TS_BASIC_TYPES,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'This code compiles without an error. What does it log? Type each logged value on its own line, in order.',
+    code: `const raw: any = JSON.parse('{"qty": "3"}');
+const qty: number = raw.qty;
+console.log(qty + 1);
+console.log(typeof qty);`,
+    expectedOutput: `31
+string`,
+    explanation: 'A type annotation is a promise to the compiler, not a conversion: it is erased before the code runs and never checks or changes the value. raw is any, so assigning raw.qty to a number variable compiles, but at runtime qty still holds the string "3". "3" + 1 is string concatenation, "31", and typeof qty is "string". Type the parsed value as unknown and check it (or convert it with Number()) so the compiler makes you deal with the real shape.',
+    hints: ['Does ": number" convert the value, or only tell the compiler what to expect?', 'What does + do when one side is the string "3"?'],
+    tags: ['any', 'type-erasure', 'annotations', 'typescript', 'predict'],
+    concepts: ['ts-any-vs-unknown'],
+  },
+
+  {
     id: 'ts-any-unknown-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.BEGINNER,
@@ -7250,6 +7270,29 @@ Prefer .find / .filter / .map over manual for-loops where it reads cleanly.`,
     explanation: 'Declaration merging is the one capability unique to interfaces: writing `interface User { id: number }` twice in the same scope merges both into one interface with all the combined members - useful for extending third-party library types. type aliases cannot do this (a repeated type Name is a compile error). Unions, optional properties, and compile-time checking all work identically for both interface and type.',
     tags: ['interface', 'type-alias', 'typescript'],
     concepts: ['ts-type-vs-interface'],
+  },
+
+  {
+    id: 'ts-iface-structural-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TS_INTERFACES,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'This code compiles without an error. What does it log? Type the single logged line exactly.',
+    code: `interface Titled {
+  title: string;
+}
+function fields(item: Titled): string {
+  return Object.keys(item).join(",");
+}
+const book = { title: "Dune", pages: 412 };
+console.log(fields(book));`,
+    expectedOutput: 'title,pages',
+    explanation: 'An interface only describes the shape the compiler checks; it is erased at runtime and never filters an object. book has a title, so it is assignable to Titled (structural typing: extra properties are fine when the value is a variable rather than a fresh object literal). Inside fields, TypeScript only lets you read item.title, but the object is still the same one with both keys, so Object.keys returns title and pages.',
+    hints: ['Does passing book as a Titled remove the pages property?', 'Interfaces exist only at compile time'],
+    tags: ['interfaces', 'structural-typing', 'type-erasure', 'typescript', 'predict'],
+    concepts: ['ts-structural-typing'],
   },
 
   {
@@ -8080,6 +8123,30 @@ active`,
   },
 
   {
+    id: 'ts-util-partial-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TS_UTILITY_TYPES,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'What does this code log? It prints one line with the two values separated by a space; type it exactly.',
+    code: `interface Settings {
+  theme: string;
+  fontSize: number;
+}
+function applyPatch(current: Settings, patch: Partial<Settings>): Settings {
+  return { ...current, ...patch };
+}
+const next = applyPatch({ theme: "dark", fontSize: 14 }, { fontSize: 16 });
+console.log(next.theme, next.fontSize);`,
+    expectedOutput: 'dark 16',
+    explanation: 'Partial<Settings> makes every field optional, so the patch may leave theme out entirely; it does not add theme: undefined to the object. Spreading current first and patch second keeps every field of current and overwrites only the keys the patch actually has, so theme stays "dark" and fontSize becomes 16.',
+    hints: ['Does the patch object have a theme key at all?', 'In { ...a, ...b }, which keys does b overwrite?'],
+    tags: ['partial', 'utility-types', 'spread', 'typescript', 'predict'],
+    concepts: ['ts-utility-types'],
+  },
+
+  {
     id: 'ts-type-5',
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
@@ -8312,7 +8379,60 @@ active`,
   },
 
   // ===== TS_PROJECT =====
-  // Advanced Coding
+  // Intermediate MCQ -> Intermediate Predict -> Advanced Coding
+
+  {
+    id: 'ts-project-guard-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TS_PROJECT,
+    course: Course.WEB_DEV,
+    question: `A wrapper returns a result envelope without checking the response:
+
+\`\`\`typescript
+async function getOrder(url: string): Promise<Result<Order>> {
+  const res = await fetch(url);
+  return { ok: true, data: (await res.json()) as Order };
+}
+\`\`\`
+
+The server answers with a 404 status and a JSON error body, \`{ "message": "not found" }\`. What does the caller get?`,
+    options: [
+      { id: 'a', text: 'A rejected promise: fetch rejects on a 404 status, so the call throws before res.json() ever runs and no result is returned', isCorrect: false },
+      { id: 'b', text: 'A TypeError: the `as Order` assertion checks the parsed body at runtime and throws because the fields an Order needs are missing', isCorrect: false },
+      { id: 'c', text: 'An ok: true result whose data is the error body, still typed as Order: fetch resolves on HTTP errors and `as` checks nothing', isCorrect: true },
+      { id: 'd', text: 'A compile error: TypeScript refuses `as Order` on a parsed body it cannot prove is an Order, so the wrapper never builds at all', isCorrect: false },
+    ],
+    explanation: 'fetch rejects only on a network failure; a 404 is still a response, so it resolves and res.json() parses the error body. res.json() returns any, so `as Order` compiles, and like every assertion it is erased at runtime and checks nothing. The caller gets { ok: true, data: { message: "not found" } } typed as an Order, and the bug surfaces later when it reads data.id. The fix is to check res.ok and return the error variant when it is false, parse the body to unknown, and run a type guard such as isOrder before returning it as data.',
+    tags: ['project', 'fetch', 'type-guard', 'as-assertion', 'result-type', 'typescript'],
+    concepts: ['ts-any-vs-unknown', 'ts-narrowing'],
+  },
+
+  {
+    id: 'ts-project-result-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TS_PROJECT,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'What does this code log? Type each logged line exactly, in order.',
+    code: `type Result<T> = { ok: true; data: T } | { ok: false; error: string };
+function parsePort(raw: string): Result<number> {
+  const port = Number(raw);
+  if (!Number.isInteger(port)) return { ok: false, error: \`bad port \${raw}\` };
+  return { ok: true, data: port };
+}
+for (const raw of ["8080", "80a"]) {
+  const r = parsePort(raw);
+  console.log(r.ok ? r.data + 1 : r.error);
+}`,
+    expectedOutput: `8081
+bad port 80a`,
+    explanation: 'parsePort never throws: it returns a Result whose ok field says which variant it is. Number("8080") is the number 8080, so the first call returns { ok: true, data: 8080 }; checking r.ok narrows r to the success variant, where data is a number, so data + 1 is arithmetic, 8081. Number("80a") is NaN, which is not an integer, so the second call returns the error variant and the ternary logs its message.',
+    hints: ['What is Number("80a")?', 'After checking r.ok, is r.data a number or a string?'],
+    tags: ['project', 'discriminated-union', 'result-type', 'generics', 'typescript', 'predict'],
+    concepts: ['ts-discriminated-unions', 'ts-generics'],
+  },
 
   {
     id: 'ts-project-1',

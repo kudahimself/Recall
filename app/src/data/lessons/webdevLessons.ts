@@ -4,6 +4,7 @@
  * Section 1, HTML, CSS & Tailwind: every topic.
  * Section 2, JavaScript Fundamentals: every topic.
  * Section 3, React: every topic.
+ * Section 4, TypeScript: every topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -25,6 +26,9 @@
  * and logs after that, each state on its own line. Every example was rendered
  * with React 19 (React Router 7 for the router one) in jsdom, the interactions
  * driven with Testing Library's fireEvent, and the output read off the page.
+ *
+ * A TypeScript worked example is type-checked in strict mode under
+ * check-lessons.js and then runs on node, printing its `output`.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -1863,5 +1867,468 @@ function Shop() {
 after Remove Dune:     Emma x2 (copies: 2)`,
     },
     exercises: ['react-project-lift-state-mcq-1', 'react-project-reducer-predict-1', 'react-project-todo'],
+  },
+  // ===== Section 4, TypeScript =====
+  {
+    id: 'ts_basic_types/1',
+    topicKeys: [Topic.TS_BASIC_TYPES],
+    step: 1,
+    title: 'Basic Types & Functions',
+    idea: [
+      lines(
+        "TypeScript is JavaScript with types the compiler checks before the code runs.",
+        "Write a type after a name with a colon: `let title: string`, `let tags: string[]`.",
+        "Where a value is assigned at once, TypeScript infers the type, so `let count = 0` is already a `number` and needs no annotation.",
+      ),
+      lines(
+        "A function types each parameter and its return: `function f(a: number, b: number): number`.",
+        "`b?: number` makes a parameter optional, so it is `undefined` when left out, and `b = 1` gives it a default instead.",
+        "A function that returns nothing useful returns `void`; one that always throws returns `never`.",
+      ),
+      lines(
+        "A union `string | number` allows either type, and a literal union such as `\"light\" | \"dark\"` allows only those exact values.",
+        "Before using a union in a way only one member supports, narrow it with a check such as `typeof x === \"number\"`.",
+        "`any` switches checking off for a value; `unknown` accepts anything too, but forces that check before you use it.",
+      ),
+      lines(
+        "Types are erased when TypeScript compiles to JavaScript.",
+        "An annotation never converts or checks a value at runtime.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `let n: number = 1;         // annotation: name: Type
+let list = ["a", "b"];     // inferred: string[]
+type Mode = "on" | "off";  // a named literal union
+
+function f(a: number, b?: number, c = 1): number {
+  return a + (b ?? 0) + c; // b is number | undefined
+}
+function log(msg: string): void {}
+
+function use(x: unknown): string {
+  if (typeof x === "string") return x; // narrowed
+  return "not text";
+}`,
+    },
+    pitfall: lines(
+      "An annotation is not a conversion: `const qty: number = data.qty` compiles when `data` is `any`, but `qty` still holds whatever came in, such as the string `\"3\"`.",
+      "Type outside data such as `JSON.parse` results as `unknown`, then narrow it with `typeof` or convert it with `Number()` before you rely on its type.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type Format = "paperback" | "ebook";
+let shelf = "fiction";
+
+function price(base: number, fmt: Format, off?: number): number {
+  const cost = fmt === "ebook" ? base - 3 : base;
+  return cost - (off ?? 0);
+}
+
+function pages(raw: unknown): number {
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") return Number(raw);
+  return 0;
+}
+
+console.log(price(12, "paperback"), price(12, "ebook", 2));
+console.log(pages(328), pages("320") + 1, pages(null));
+console.log(typeof shelf, shelf.toUpperCase());`,
+      steps: [
+        "Lines 1-2: `Format` allows only two strings, and `shelf` is inferred as `string` from its value, with no annotation.",
+        lines(
+          "Lines 4-7: `off?` is optional, so inside `price` it is `number | undefined` and `?? 0` stands in when it is missing.",
+          "Line 15 prints 12, then 12 - 3 - 2 = 7; `price(12, \"audio\")` would not compile.",
+        ),
+        lines(
+          "Lines 9-13: `raw` is `unknown`, so it can be used only after a `typeof` check narrows it.",
+          "Line 16: the string `\"320\"` goes through `Number()`, so adding 1 gives 321, and `null` falls through to 0.",
+        ),
+        "Line 17: at runtime `shelf` is a plain string, so `typeof` prints `string`, not anything TypeScript added.",
+      ],
+      output: `12 7
+328 321 0
+string FICTION`,
+    },
+    exercises: ['ts-any-unknown-mcq-1', 'ts-basic-any-predict-1', 'ts-basic-parsons-1', 'ts-union-cloze-1', 'ts-type-1'],
+  },
+  {
+    id: 'ts_interfaces/1',
+    topicKeys: [Topic.TS_INTERFACES],
+    step: 1,
+    title: 'Interfaces & Type Aliases',
+    idea: [
+      lines(
+        "An interface names the shape of an object: its properties and the type of each.",
+        "`email?: string` makes a property optional, and `readonly id: number` lets it be set only when the object is created.",
+        "`interface Admin extends User { ... }` inherits every member of `User` and adds more.",
+      ),
+      lines(
+        "A type alias, `type Name = ...`, names any type: an object shape, a union, a function type or a primitive.",
+        "For object shapes the two are interchangeable; only an interface can be declared twice and merged, which is how libraries and globals such as `Window` are extended.",
+      ),
+      lines(
+        "An index signature, `[key: string]: number`, types an object whose keys are not known ahead of time; `Record<string, number>` is the same type.",
+        "TypeScript compares shapes, not names: any object with the required properties fits, extra properties included.",
+        "Like every type, an interface is erased at runtime.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `interface Shape {
+  readonly id: number;    // set once, at creation
+  label: string;
+  note?: string;          // optional: may be missing
+  describe(): string;     // a method signature
+}
+interface Special extends Shape {
+  extra: boolean;         // plus every Shape member
+}
+interface Counts {
+  [key: string]: number;  // any string key, number values
+}
+type Id = string | number; // an alias can name a union`,
+    },
+    pitfall: lines(
+      "An interface describes an object; it does not filter or check it at runtime.",
+      "Passing a variable with extra properties to a parameter typed as a smaller interface compiles, and the extra properties are still on the object, so `Object.keys` or a spread copies them.",
+      "Pick out the fields you mean to keep when the extras must not travel on.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type Isbn = string;
+interface Book {
+  readonly isbn: Isbn;
+  title: string;
+  pages?: number;
+}
+interface Ebook extends Book { sizeMb: number }
+interface Stock { [isbn: string]: number }
+function card(book: Book, stock: Stock): string {
+  const n = stock[book.isbn] ?? 0;
+  return \`\${book.title}: \${book.pages ?? "?"} pages, \${n} left\`;
+}
+const stock: Stock = { "111": 4 };
+const emma: Book = { isbn: "111", title: "Emma", pages: 474 };
+const dune: Ebook = { isbn: "222", title: "Dune", sizeMb: 2 };
+console.log(card(emma, stock));
+console.log(card(dune, stock), dune.sizeMb);`,
+      steps: [
+        "Lines 1-6: `Isbn` is an alias for `string`; `isbn` can never be reassigned, and `pages` may be missing.",
+        "Line 7: `Ebook` extends `Book`, so `dune` on line 15 must have an isbn and a title as well as its size.",
+        "Line 8: the index signature lets `Stock` hold any ISBN as a key, each mapped to a count.",
+        lines(
+          "Line 16: Emma has pages and 4 copies left.",
+          "Line 17: an `Ebook` fits the `Book` parameter, since it has every `Book` property; it has no pages and no stock entry, so both fallbacks print, and `sizeMb` is still there afterwards.",
+        ),
+      ],
+      output: `Emma: 474 pages, 4 left
+Dune: ? pages, 0 left 2`,
+    },
+    exercises: ['ts-iface-vs-type-mcq-1', 'ts-iface-structural-predict-1', 'ts-iface-parsons-1', 'ts-iface-cloze-1', 'ts-iface-2'],
+  },
+  {
+    id: 'ts_generics/1',
+    topicKeys: [Topic.TS_GENERICS],
+    step: 1,
+    title: 'Generics',
+    idea: [
+      lines(
+        "A generic is a type with a parameter: `function f<T>(x: T): T` works for any type `T` and keeps track of which one it was.",
+        "TypeScript usually infers `T` from the arguments, so `f(42)` returns a `number`; you can also pass it, as `f<number>(42)`.",
+        "Unlike a union or `any`, the same `T` ties the parameter to the result.",
+      ),
+      lines(
+        "Interfaces and aliases take parameters too: `interface Box<T> { value: T }`, and `<T = string>` gives one a default.",
+        "`T extends { id: number }` is a constraint: `T` can be any type that has at least those properties, so the body may read `x.id`.",
+      ),
+      lines(
+        "`keyof T` is the union of `T`'s property names, so `K extends keyof T` accepts only real keys, and `T[K]` is the type stored at that key.",
+        "Type arguments are erased at runtime, like every type.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `function f<T>(x: T): T[] {     // T declared after the name
+  return [x];
+}
+interface Box<T = string> {    // generic, with a default
+  value: T;
+}
+function g<T extends { id: number }>(x: T): number {
+  return x.id;                 // every T has an id
+}
+type Keys = keyof { a: string; b: number };  // "a" | "b"
+type AtB = { a: string; b: number }["b"];    // number
+function h<T, K extends keyof T>(rows: T[], k: K): T[K][] {
+  // K can only be a real key of T
+}`,
+    },
+    pitfall: lines(
+      "A bare `T` has no known properties, so reading `x.id` or `x.length` inside the body does not compile.",
+      "Do not fall back to `any`; add a constraint such as `T extends { length: number }` that names what the body needs.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `interface Page<T> { items: T[]; total: number }
+function paginate<T>(all: T[], size: number): Page<T> {
+  return { items: all.slice(0, size), total: all.length };
+}
+function longer<T extends { length: number }>(a: T, b: T): T {
+  return b.length > a.length ? b : a;
+}
+function column<T, K extends keyof T>(rows: T[], key: K): T[K][] {
+  return rows.map((row) => row[key]);
+}
+const books = [
+  { title: "Emma", year: 1815 },
+  { title: "Dune", year: 1965 },
+];
+const page = paginate(books, 1);
+console.log(page.items[0].title, page.total);
+console.log(longer("Emma", "Ulysses"), longer([1, 2], []).length);
+console.log(column(books, "year").join(" "));`,
+      steps: [
+        "Lines 1-4: `Page<T>` is a generic interface, and `paginate` returns a `Page` of whatever it was given, so line 16 knows the items are books and can read `.title`.",
+        "Lines 5-7: the constraint lets `longer` read `.length`, so it accepts two strings or two arrays, but not two numbers.",
+        "Lines 8-10: `K extends keyof T` allows only `\"title\"` or `\"year\"` here, and `T[K][]` makes line 18's result a `number[]`.",
+        "Line 16: one item on the page, out of a total of 2.",
+      ],
+      output: `Emma 2
+Ulysses 2
+1815 1965`,
+    },
+    exercises: ['ts-gen-predict-1', 'ts-gen-parsons-1', 'ts-gen-constraint-cloze-1', 'ts-gen-vs-union-mcq-1', 'ts-gen-keyof-1'],
+  },
+  {
+    id: 'ts_advanced_types/1',
+    topicKeys: [Topic.TS_ADVANCED_TYPES],
+    step: 1,
+    title: 'Advanced Types (unions, guards, narrowing)',
+    idea: [
+      lines(
+        "Narrowing is how TypeScript works out which member of a union a value is, from the checks you write.",
+        "`typeof x === \"string\"` narrows primitives, `x instanceof Date` narrows class instances, and `\"key\" in x` narrows objects by a property they have.",
+      ),
+      lines(
+        "A discriminated union gives every variant the same literal field, such as `kind: \"post\"`, and a `switch` on that field narrows each case to its variant.",
+        "Assigning the value to a `never` in the `default` case makes the compiler flag any variant you forgot.",
+        "A type guard is a function whose return type is a predicate, `x is T`; when it returns true, the caller's value is narrowed to `T`.",
+      ),
+      lines(
+        "`A & B` is an intersection: a value with every property of both.",
+        "`as T` is an assertion, and `as const` freezes a value to its literal, readonly type; neither changes anything at runtime.",
+        "`satisfies T` checks a value against `T` but keeps its own narrower inferred type.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type V =
+  | { kind: "a"; x: number }   // the same literal field
+  | { kind: "b"; y: string };  // in every variant
+
+function use(v: V): string {
+  switch (v.kind) {
+    case "a": return String(v.x); // v is the "a" variant
+    case "b": return v.y;
+    default: {
+      const missed: never = v; // a missing case fails
+      return missed;
+    }
+  }
+}
+function isV(x: unknown): x is V { // a type guard
+  return typeof x === "object" && x !== null
+    && "kind" in x;
+}`,
+    },
+    pitfall: lines(
+      "`as` only tells the compiler what to believe: `el as HTMLInputElement` compiles even when `el` is a `div` or `null`, and the code then fails at runtime.",
+      "Check the value instead, with `instanceof`, `in` or a type guard, so the narrowing is true at runtime too.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type Delivery =
+  | { kind: "pickup"; store: string }
+  | { kind: "post"; days: number }
+  | { kind: "courier"; fee: number };
+function eta(d: Delivery): string {
+  switch (d.kind) {
+    case "pickup": return \`collect at \${d.store}\`;
+    case "post": return \`\${d.days} days by post\`;
+    case "courier": return \`next day, \${d.fee} extra\`;
+    default: { const missed: never = d; return missed; }
+  }
+}
+const post: Delivery = { kind: "post", days: 3 };
+console.log(eta(post), "|", eta({ kind: "courier", fee: 5 }));
+const errs = [new Error("declined"), "no stock"];
+const text = errs.map((e) => e instanceof Error ? e.message : e);
+console.log(text.join(", "));`,
+      steps: [
+        "Lines 1-4: every `Delivery` variant has a literal `kind`, the field the `switch` narrows on.",
+        "Lines 7-9: inside each case, `d` is that one variant, so `d.store` is allowed only under `\"pickup\"`.",
+        "Line 10: every variant is handled, so `d` is `never` here; adding a fourth variant without a case would stop this line compiling.",
+        lines(
+          "Line 15: `errs` is inferred as `(string | Error)[]`.",
+          "Line 16: `instanceof` narrows each entry, so `.message` is read only from the `Error`, and the plain string passes through unchanged.",
+        ),
+      ],
+      output: `3 days by post | next day, 5 extra
+declined, no stock`,
+    },
+    exercises: ['ts-adv-assertion-mcq-1', 'ts-adv-predict-1', 'ts-adv-parsons-1', 'ts-adv-narrow-in-cloze-1', 'ts-type-4'],
+  },
+  {
+    id: 'ts_utility_types/1',
+    topicKeys: [Topic.TS_UTILITY_TYPES],
+    step: 1,
+    title: 'Utility Types (Partial, Pick, Omit, Record)',
+    idea: [
+      lines(
+        "Utility types are built-in generics that make a new type from an existing one, so related shapes stay in step with the original.",
+        "`Partial<T>` makes every property optional, `Required<T>` makes every one required, and `Readonly<T>` makes every one readonly.",
+        "`Pick<T, \"a\" | \"b\">` keeps only the named keys, and `Omit<T, \"a\">` keeps every key but those.",
+      ),
+      lines(
+        "`Record<K, V>` is an object type whose keys are `K` and values `V`; with a literal union as `K`, every key must be present.",
+        "`ReturnType<typeof f>` and `Parameters<typeof f>` read a function's result and argument types, and `Awaited<T>` unwraps a promise.",
+        "For unions, `Exclude<U, X>` drops members, `Extract<U, X>` keeps them, and `NonNullable<T>` drops `null` and `undefined`.",
+      ),
+      lines(
+        "They nest, as in `Partial<Omit<T, \"id\">>`, and they combine with `&`.",
+        "Like every type, they are erased at runtime: none of them adds or removes a property from an actual object.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `interface T { id: number; a: string; b: number }
+
+type Draft = Partial<T>;             // all optional
+type Card = Pick<T, "a" | "b">;      // only a and b
+type New = Omit<T, "id">;            // all but id
+type Patch = Partial<Omit<T, "id">>; // nested
+type Frozen = Readonly<T>;           // all readonly
+type ByKey = Record<"x" | "y", T>;   // keys x and y
+
+type Out = ReturnType<typeof make>;  // what make returns
+type Some = Exclude<"p" | "q", "p">; // "q"`,
+    },
+    pitfall: lines(
+      "`Partial<T>` lets a key be missing; it does not mean the key is there with the value `undefined`.",
+      "So spreading a partial patch over a full object, `{ ...current, ...patch }`, keeps every field the patch leaves out, and you do not need to copy them by hand.",
+      "An explicit `undefined` in the patch, such as `{ price: undefined }`, is still allowed by `Partial` and is copied over the field, while the result is still typed as the full type.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `interface Book {
+  isbn: string; title: string; price: number; stock: number;
+}
+type NewBook = Omit<Book, "stock">;
+type Card = Pick<Book, "title" | "price">;
+const shelve = (b: NewBook): Book => ({ ...b, stock: 0 });
+type Shelved = ReturnType<typeof shelve>;
+const input: NewBook = { isbn: "1", title: "Emma", price: 8 };
+const emma: Shelved = shelve(input);
+const sale: Partial<Omit<Book, "isbn">> = { price: 6 };
+const onSale = { ...emma, ...sale };
+const cards: Readonly<Record<string, Card>> = {
+  [onSale.isbn]: { title: onSale.title, price: onSale.price },
+};
+console.log(onSale.title, onSale.price, onSale.stock);
+console.log(Object.keys(cards["1"]).join(","));`,
+      steps: [
+        "Lines 4-5: two types made from `Book`: one without `stock`, and one with only the two fields a card shows.",
+        "Lines 6-7: `shelve` takes a book without stock and adds it, and `Shelved` is read off its return type, so it stays `Book` without being written out again.",
+        "Lines 10-11: the sale patch may hold any field but `isbn`; it holds only `price`, so the spread changes the price and keeps the rest.",
+        lines(
+          "Lines 12-14: `cards` is a read-only record of cards keyed by ISBN.",
+          "Lines 15-16: the book now costs 6 with a stock of 0, and its card holds just the two picked fields.",
+        ),
+      ],
+      output: `Emma 6 0
+title,price`,
+    },
+    exercises: ['ts-util-partial-predict-1', 'ts-util-parsons-1', 'ts-util-cloze-2', 'ts-util-returntype-mcq-1', 'ts-util-combine-1'],
+  },
+  {
+    id: 'ts_project/1',
+    topicKeys: [Topic.TS_PROJECT],
+    step: 1,
+    title: 'TS Project',
+    idea: [
+      lines(
+        "A TypeScript project puts the section's types to work at the edges of an app, where data comes in and errors happen.",
+        "A common shape is a result envelope: a discriminated union such as `{ ok: true; data: T } | { ok: false; error: string }`, generic in the data it carries.",
+        "A function that can fail returns one instead of throwing, and callers must check `ok` before they can read `data`.",
+      ),
+      lines(
+        "Data from outside, such as a `fetch` response body or `JSON.parse` output, arrives as `unknown` or `any`.",
+        "Check it with a type guard before it becomes a `T`, so the envelope's type is true at runtime.",
+        "`fetch` rejects only on a network failure, so an HTTP error such as 404 needs its own check of `response.ok`.",
+      ),
+      lines(
+        "In React the same generics type components and hooks: a `DataTable<T>` whose columns are `keyof T`, or a `useLocalStorage<T>` that returns `[T, setter]` like `useState`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type Result<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+type Guard<T> = (x: unknown) => x is T;
+
+function load<T>(raw: string, isT: Guard<T>): Result<T> {
+  // parse, check with isT, return a variant; never throw
+}
+
+const r = load(raw, isThing);
+if (r.ok) {
+  r.data;      // only here: narrowed to the ok variant
+} else {
+  r.error;
+}`,
+    },
+    pitfall: lines(
+      "Casting outside data to the type you expect, as in `(await res.json()) as T`, makes the envelope claim a shape nobody checked.",
+      "Run a type guard over the parsed value and return the error variant when it fails.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `type Result<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+interface Order { id: number; copies: number }
+type Guard<T> = (x: unknown) => x is T;
+function isOrder(x: unknown): x is Order {
+  return typeof x === "object" && x !== null
+    && "id" in x && typeof x.id === "number"
+    && "copies" in x && typeof x.copies === "number";
+}
+function parse<T>(text: string, isT: Guard<T>): Result<T> {
+  try {
+    const value: unknown = JSON.parse(text);
+    if (isT(value)) return { ok: true, data: value };
+    return { ok: false, error: "wrong shape" };
+  } catch {
+    return { ok: false, error: "not JSON" };
+  }
+}
+for (const t of ['{"id":7,"copies":2}', '{"id":"7"}', "x=2"]) {
+  const r = parse(t, isOrder);
+  if (r.ok) console.log(\`#\${r.data.id} x\${r.data.copies}\`);
+  else console.log(r.error);
+}`,
+      steps: [
+        "Lines 6-10: the guard checks every field the code will read, so `x is Order` holds whenever it returns true.",
+        "Lines 11-19: `parse` never throws: the parsed value starts as `unknown`, becomes `data` only after the guard passes, and a parse error becomes the error variant.",
+        "Line 20: the first text is a valid order, the second has a string id, and the third is not JSON at all.",
+        "Line 22: `r.ok` narrows `r`, so `r.data.id` can be read only in the success branch.",
+      ],
+      output: `#7 x2
+wrong shape
+not JSON`,
+    },
+    exercises: ['ts-project-guard-mcq-1', 'ts-project-result-predict-1', 'ts-project-1', 'proj-ts-1', 'proj-ts-2'],
   },
 ];

@@ -16,7 +16,8 @@
  *     exercise is a cold write, or an exercise is a review-only card
  *     (isReviewOnly: an explain card);
  *   - its worked example does not run, or prints something other than
- *     `worked.output` (SQL on sql.js, Python on python3, JavaScript on node),
+ *     `worked.output` (SQL on sql.js, Python on python3, JavaScript on node,
+ *     TypeScript type-checked in strict mode and then run on node),
  *     or a SQL result of more than one row comes from a statement without
  *     ORDER BY (row order would then depend on the engine); an example of a
  *     kind that cannot run here (NON_RUNNABLE_KINDS in
@@ -48,6 +49,10 @@
  * PRINT lines are printed in order with the result sets, consecutive lines
  * forming one block. Input tables come from `worked.tables`
  * (columns typed INTEGER, REAL or TEXT from their values).
+ *
+ * TypeScript worked examples are checked with the app's installed typescript
+ * (strict, ES2022 library and node's types, no DOM): a type error fails the
+ * example, and the transpiled code then runs as a JavaScript example does.
  */
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -100,6 +105,40 @@ function runJavaScript(code) {
     return { error: `node ${why}${last ? `: ${last.trim()}` : ''}` };
   }
   return { output: normalizeOutput(r.stdout) };
+}
+
+/**
+ * TypeScript is type-checked in memory with the app's own typescript package,
+ * in strict mode against the ES2022 library and node's types (no DOM), and any
+ * type error fails the run; the code is then transpiled to CommonJS and run
+ * exactly as JavaScript is, so both its types and what it prints are checked.
+ */
+let ts;
+const TS_FILE = 'lesson.ts';
+function runTypeScript(code) {
+  ts = ts || require(require.resolve('typescript', { paths: [APP] }));
+  const options = {
+    strict: true,
+    noEmit: true,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.CommonJS,
+    lib: ['lib.es2022.d.ts'],
+    types: ['node'],
+    typeRoots: [path.join(APP, 'node_modules/@types')],
+  };
+  const host = ts.createCompilerHost(options);
+  const readSource = host.getSourceFile;
+  host.getSourceFile = (file, version, ...rest) =>
+    file === TS_FILE ? ts.createSourceFile(file, code, version) : readSource(file, version, ...rest);
+  const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram([TS_FILE], options, host));
+  if (diagnostics.length) {
+    const d = diagnostics[0];
+    const where = d.file && d.start !== undefined ? `line ${d.file.getLineAndCharacterOfPosition(d.start).line + 1}: ` : '';
+    const more = diagnostics.length > 1 ? ` (and ${diagnostics.length - 1} more)` : '';
+    return { error: `tsc: ${where}${ts.flattenDiagnosticMessageText(d.messageText, ' ')}${more}` };
+  }
+  const js = ts.transpileModule(code, { compilerOptions: { target: options.target, module: options.module } }).outputText;
+  return runJavaScript(js);
 }
 
 // T-SQL date helpers. Dates are 'YYYY-MM-DD' text (a time part is ignored).
@@ -400,6 +439,7 @@ async function runWorked(worked) {
   if (worked.language === 'sql') return runSql(worked.code, worked.tables);
   if (worked.language === 'python') return runPython(worked.code);
   if (worked.language === 'javascript') return runJavaScript(worked.code);
+  if (worked.language === 'typescript') return runTypeScript(worked.code);
   return { error: `no runner for language ${worked.language}` };
 }
 
@@ -568,7 +608,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-module.exports = { checkLesson, runSql, runPython, runJavaScript, translateTsql, expandGroupingSets, multiSentenceLines, TSQL_FUNCTIONS };
+module.exports = { checkLesson, runSql, runPython, runJavaScript, runTypeScript, translateTsql, expandGroupingSets, multiSentenceLines, TSQL_FUNCTIONS };
 
 if (require.main === module) {
   main().catch(e => {

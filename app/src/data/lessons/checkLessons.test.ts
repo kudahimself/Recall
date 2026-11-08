@@ -151,6 +151,22 @@ test('a JavaScript worked example runs on node, drains its promises and timers, 
   expect(r.rejected.error).toMatch(/^node exited 1: Error: no stock/);
 });
 
+test('a TypeScript worked example is type-checked in strict mode, then runs on node', () => {
+  const r = probe(`
+    const ok = C.runTypeScript("type Book = { title: string; pages?: number };\\nconst b: Book = { title: 'Emma' };\\nconsole.log(b.title, b.pages ?? 0);\\nsetTimeout(() => console.log([1, 2].at(-1)), 0);");
+    const mistyped = C.runTypeScript("const n: number = 1;\\nconst s: string = n;\\nconsole.log(s);");
+    const implicitAny = C.runTypeScript("function f(x) { return x; }\\nconsole.log(f(1));");
+    const noDom = C.runTypeScript("console.log(document.title);");
+    const thrown = C.runTypeScript("const xs: number[] = [];\\nconsole.log(xs[0]!.toFixed());");
+    return { ok, mistyped, implicitAny, noDom, thrown };
+  `);
+  expect(r.ok.output).toBe('Emma 0\n2');
+  expect(r.mistyped.error).toMatch(/^tsc: line 2: Type 'number' is not assignable to type 'string'/);
+  expect(r.implicitAny.error).toMatch(/^tsc: line 1: .*implicitly has an 'any' type/);
+  expect(r.noDom.error).toMatch(/^tsc: line 1: Cannot find name 'document'/);
+  expect(r.thrown.error).toMatch(/^node exited 1: TypeError/);
+});
+
 test('a Django worked example, a GitHub Actions workflow, an Nginx config or a Databricks notebook cell with runs: false is not run, and runs: false elsewhere fails', () => {
   const r = probe(`
     const { LESSONS } = require('./src/data/lessons/index.ts');
