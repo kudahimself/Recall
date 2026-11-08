@@ -5,6 +5,7 @@ import {
   outputInstruction,
   outputMatches,
   DEFAULT_OUTPUT_CONVENTION,
+  RENDERED_OUTPUT_CONVENTION,
   SQL_MIXED_PRINT_CONVENTION,
   SQL_OUTPUT_CONVENTION,
   SQL_PRINT_CONVENTION,
@@ -80,6 +81,28 @@ describe('predict-output instruction matches what the code outputs', () => {
 
   it('keeps the exact-output instruction for other languages', () => {
     expect(outputInstruction("print('hi')", CodeLanguage.PYTHON)).toBe(DEFAULT_OUTPUT_CONVENTION);
+  });
+
+  it('asks about the rendered page, not printed output, for HTML and CSS', () => {
+    expect(outputInstruction('<p>Hi</p>', CodeLanguage.HTML)).toBe(RENDERED_OUTPUT_CONVENTION);
+    expect(outputInstruction('.a { width: 10px; }', CodeLanguage.CSS)).toBe(RENDERED_OUTPUT_CONVENTION);
+    expect(RENDERED_OUTPUT_CONVENTION).not.toMatch(/prints\b/);
+  });
+});
+
+describe('HTML and CSS predict questions', () => {
+  const rendered = questions.filter(
+    (q): q is PredictOutputQuestion =>
+      q.type === QuestionType.PREDICT_OUTPUT
+      && [CodeLanguage.HTML, CodeLanguage.CSS].includes((q as PredictOutputQuestion).language),
+  );
+
+  it('each names what to type and in what form, since the instruction defers to the question', () => {
+    expect(rendered.length).toBeGreaterThan(0);
+    const vague = rendered
+      .filter(q => !/\bType\b/.test(q.question) || /what (?:does it|it) prints?\b/i.test(q.question))
+      .map(q => q.id);
+    expect(vague).toEqual([]);
   });
 });
 

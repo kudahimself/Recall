@@ -44,8 +44,23 @@ export const SQL_MIXED_PRINT_CONVENTION =
 export const DEFAULT_OUTPUT_CONVENTION =
   'Read the code below and predict what it prints. Type the exact output - match whitespace and line breaks.';
 
+/**
+ * HTML and CSS print nothing: the browser renders them. Their predicts ask
+ * about the page (the text it shows, a computed size or style, the request a
+ * form sends), and each question names the value and the form to type it in.
+ */
+export const RENDERED_OUTPUT_CONVENTION =
+  'Read the code below as a browser renders it: nothing is printed. ' +
+  'Answer exactly what the question asks about the page, in the form it gives.';
+
+/** True for code the browser renders (HTML, CSS) rather than runs and prints. */
+export function rendersInBrowser(language: CodeLanguage): boolean {
+  return language === CodeLanguage.HTML || language === CodeLanguage.CSS;
+}
+
 /** The answer instruction that matches what the code actually outputs. */
 export function outputInstruction(code: string, language: CodeLanguage): string {
+  if (rendersInBrowser(language)) return RENDERED_OUTPUT_CONVENTION;
   if (language !== CodeLanguage.SQL) return DEFAULT_OUTPUT_CONVENTION;
   if (!/\bPRINT\b/i.test(code)) return SQL_OUTPUT_CONVENTION;
   return /\bSELECT\b/i.test(code) ? SQL_MIXED_PRINT_CONVENTION : SQL_PRINT_CONVENTION;
