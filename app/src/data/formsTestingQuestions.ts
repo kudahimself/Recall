@@ -1203,10 +1203,10 @@ function CommentForm({ postComment }) {
   },
 
   // =====================================================================
-  // NEXT_TESTING (15 questions)
+  // NEXT_TESTING (25 questions)
   // =====================================================================
 
-  // BEGINNER faded (Parsons + Cloze) — lower-load scaffold before cold coding
+  // BEGINNER faded (Parsons + Cloze): lower-load scaffold before cold coding
   {
     id: 'next-testing-parsons-1',
     type: QuestionType.PARSONS,
@@ -1235,11 +1235,11 @@ function CommentForm({ postComment }) {
   expect(handleClick).toHaveBeenCalled();
 });`,
     explanation:
-      'jest.fn() creates a spy you can assert on — jest.mock() is for replacing whole modules, not making a callback. fireEvent.click simulates a DOM click (there is no fireEvent.press in RTL). getByRole("button") finds the element the way a user or screen reader would. You must render before you can query or fire events.',
+      'jest.fn() makes a mock function that records its calls, so the test can pass it as onClick and assert on it; jest.mock("./module") replaces a whole module and returns nothing to pass as a prop. The mock comes first because render needs it as a prop, and render comes before the query because screen finds only what is rendered. fireEvent.click dispatches one click event on the button (fireEvent.press belongs to React Native Testing Library, not the DOM one). getByRole("button") finds the button the way a screen reader does. it and test are the same function in Jest.',
     hints: [
-      'jest.fn() makes a spy; jest.mock() replaces a module',
-      'RTL uses fireEvent.click, not press',
-      'Render first, then query, then assert',
+      'jest.fn() makes a mock function; jest.mock() replaces a module',
+      'The DOM Testing Library fires a click with fireEvent.click',
+      'render needs the mock as a prop, and screen finds only what is rendered',
     ],
     tags: ['jest', 'react-testing-library', 'fireEvent', 'parsons'],
     concepts: ['testing-rtl-queries'],
@@ -1253,7 +1253,7 @@ function CommentForm({ postComment }) {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Complete the test: query the button by its accessible role, then simulate a click on it.',
+      'Complete the test: find the button by its role and accessible name with the query that throws when it is missing, then fire a click event on it.',
     template: `render(<Button>Submit</Button>);
 const button = screen.___("button", { name: "Submit" });
 fireEvent.___(button);`,
@@ -1262,9 +1262,9 @@ fireEvent.___(button);`,
 const button = screen.getByRole("button", { name: "Submit" });
 fireEvent.click(button);`,
     explanation:
-      'getByRole is RTL\'s recommended query — it finds elements by their ARIA role and accessible name, mirroring how assistive tech navigates. fireEvent.click dispatches a click event on the resolved element.',
+      'getByRole is the query React Testing Library recommends first: it finds an element by its role and accessible name, as a screen reader does, and throws when there is no match, so a missing button fails the test right there. queryByRole would also return the button, but it is for checking that something is absent, since it returns null instead of throwing. fireEvent.click dispatches one click event on the element.',
     hints: [
-      'The query that finds an element by ARIA role',
+      'The getBy* query that finds an element by its role',
       'The fireEvent method for a mouse click',
     ],
     tags: ['react-testing-library', 'getByRole', 'cloze'],
@@ -1290,10 +1290,10 @@ render(<Button onClick={handleClick}>Go</Button>);
 fireEvent.click(screen.getByRole("button"));
 expect(handleClick).toHaveBeenCalled();`,
     explanation:
-      'jest.fn() returns a mock function that records every call. After firing the click, toHaveBeenCalled() asserts the spy ran at least once — use toHaveBeenCalledTimes(n) when the exact count matters.',
+      'jest.fn() returns a mock function that records every call. After the click, toHaveBeenCalled() passes when the mock ran at least once; use toHaveBeenCalledTimes(1) when the exact count matters, or toHaveBeenCalledWith(...) to check the arguments. The old alias toBeCalled() was removed in Jest 30.',
     hints: [
-      'The Jest factory for a spy function',
-      'The matcher that checks a spy was invoked',
+      'The Jest function that makes a mock function',
+      'The matcher that checks a mock function was called',
     ],
     tags: ['jest', 'mock', 'cloze'],
     concepts: ['testing-rtl-queries'],
@@ -1308,7 +1308,7 @@ expect(handleClick).toHaveBeenCalled();`,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Write a Jest + React Testing Library test for a Button component. The Button accepts props: children (string), onClick (function), and disabled (boolean). Write three tests: 1) renders with the correct text, 2) calls onClick when clicked, 3) does not call onClick when disabled. Use render, screen, fireEvent, and jest.fn().',
+      'Write Jest + React Testing Library tests for a Button component imported from "./Button". Button takes children (its text), onClick and disabled, and renders a <button>. Render it with the text "Click me" and write three tests: 1) the button shows its text, 2) clicking it calls onClick once, 3) clicking it while disabled does not call onClick. Use render, screen, fireEvent.click and jest.fn().',
     starterCode: `import { render, screen, fireEvent } from "@testing-library/react";
 import { Button } from "./Button";
 
@@ -1344,9 +1344,40 @@ describe("Button", () => {
     fireEvent.click(screen.getByRole("button", { name: "Click me" }));
     expect(handleClick).not.toHaveBeenCalled();
   });
+});
+# OR
+import { render, screen, fireEvent } from "@testing-library/react";
+import { Button } from "./Button";
+
+describe("Button", () => {
+  test("shows its text", () => {
+    render(<Button onClick={jest.fn()}>Click me</Button>);
+    expect(screen.getByText("Click me")).toBeInTheDocument();
+  });
+
+  test("calls onClick when clicked", () => {
+    const onClick = jest.fn();
+    render(<Button onClick={onClick}>Click me</Button>);
+    fireEvent.click(screen.getByText("Click me"));
+    expect(onClick).toHaveBeenCalled();
+  });
+
+  test("does not call onClick when disabled", () => {
+    const onClick = jest.fn();
+    render(<Button onClick={onClick} disabled={true}>Click me</Button>);
+    fireEvent.click(screen.getByText("Click me"));
+    expect(onClick).toHaveBeenCalledTimes(0);
+  });
 });`,
+    requires: [
+      /toBeInTheDocument\(\)|toHaveTextContent\(/,
+      /(?:fireEvent|user|userEvent)\.click\([\s\S]*(?:fireEvent|user|userEvent)\.click\(/,
+      /(?<!not)\.toHaveBeenCalled(?:\(\)|Times\(\s*1\s*\))/,
+      /<Button[^>]*\bdisabled\b/,
+      /\.not\.toHaveBeenCalled\(\)|toHaveBeenCalledTimes\(\s*0\s*\)/,
+    ],
     explanation:
-      'React Testing Library encourages testing from the user\'s perspective. screen.getByRole("button") finds elements the way a user or screen reader would — by their accessible role. jest.fn() creates a mock function that tracks calls, so you can assert it was called (or not). fireEvent.click simulates a real click event. Testing the disabled state ensures your component correctly prevents interaction, which is important for accessibility and UX.',
+      'React Testing Library tests what a user sees: getByRole("button", { name: "Click me" }) finds the button by its role and accessible name, as a screen reader does, and getByText("Click me") finds it by its text. jest.fn() makes a mock function that records its calls, so the test can check it ran once (toHaveBeenCalledTimes(1)) or never (not.toHaveBeenCalled()). fireEvent.click dispatches one click event. On a disabled button React does not run onClick, so the third test passes only if Button really passes disabled through to the <button>. A Button that drops the prop fails it, which is the bug this test exists to catch.',
     hints: [
       'Use screen.getByRole("button", { name: "text" }) to find buttons accessibly',
       'jest.fn() creates a spy you can assert on with toHaveBeenCalled()',
@@ -1383,22 +1414,17 @@ describe("Button", () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Write a test for a UserProfile component that fetches user data from /api/users/1 on mount and displays the user\'s name. Mock the global fetch with jest.fn() to return { name: "Alice", email: "alice@test.com" }. Use findByText (async) to wait for the data to appear. Also test that a loading state shows while fetching.',
+      'Write a test for a UserProfile component imported from "./UserProfile". On mount it calls fetch("/api/users/1"), shows "Loading..." until the response arrives, then shows the user\'s name in an <h1>. Jest\'s jsdom environment has no fetch, so set global.fetch to a jest.fn() that resolves to a response whose json() resolves to { name: "Alice", email: "alice@test.com" }. In one async test, check that "Loading..." shows first, wait for "Alice" with a findBy query, and check that fetch was called with "/api/users/1".',
     starterCode: `import { render, screen } from "@testing-library/react";
 import { UserProfile } from "./UserProfile";
 
-// UserProfile fetches from /api/users/1 on mount
-// Shows "Loading..." until data arrives
-// Then shows <h1>{user.name}</h1>
-
 describe("UserProfile", () => {
-  // TODO: mock fetch, test loading and loaded states
 });`,
     testCases: [
       {
         input: 'Async component test',
-        expectedOutput: 'jest.fn mock fetch, findByText for async, getByText for loading',
-        description: 'Should mock fetch and test loading/loaded states',
+        expectedOutput: 'jest.fn mock fetch, getByText for loading, findBy for the name, fetch called with the URL',
+        description: 'Should mock fetch and test the loading and loaded states',
       },
     ],
     solution: `import { render, screen } from "@testing-library/react";
@@ -1411,49 +1437,65 @@ describe("UserProfile", () => {
         ok: true,
         json: () => Promise.resolve({ name: "Alice", email: "alice@test.com" }),
       })
-    ) as jest.Mock;
+    );
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it("shows loading state initially", () => {
+  it("shows Loading... and then the user's name", async () => {
     render(<UserProfile />);
     expect(screen.getByText("Loading...")).toBeInTheDocument();
-  });
-
-  it("displays user name after fetch completes", async () => {
-    render(<UserProfile />);
-    const userName = await screen.findByText("Alice");
+    const userName = await screen.findByRole("heading", { name: "Alice" });
     expect(userName).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith("/api/users/1");
   });
+});
+# OR
+import { render, screen } from "@testing-library/react";
+import { UserProfile } from "./UserProfile";
+
+describe("UserProfile", () => {
+  test("shows Loading... and then the user's name", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ name: "Alice", email: "alice@test.com" }),
+    });
+    render(<UserProfile />);
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(await screen.findByText("Alice")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/users/1");
+  });
 });`,
+    requires: [
+      /(?:global|globalThis|window)\.fetch\s*=\s*jest\.fn\(/,
+      /Alice/,
+      /getByText\(\s*["'`]Loading\.\.\.["'`]|getByText\(\s*\/Loading/,
+      /await\s+(?:screen\.)?findBy\w+\(/,
+      /toHaveBeenCalledWith\(\s*["'`]\/api\/users\/1["'`]\s*\)/,
+    ],
     explanation:
-      'Testing async components requires two key techniques: mocking the data source (here, global.fetch) and waiting for the UI to update. findByText is the async version of getByText — it retries until the element appears or times out (default 1000ms). This avoids flaky tests that depend on timing. We mock fetch in beforeEach so each test gets a fresh mock, and restoreAllMocks in afterEach cleans up to prevent test pollution. The loading state test uses getByText (synchronous) because the loading text is rendered immediately before the fetch resolves.',
+      'An async component needs two things in its test: a stand-in for the data source and a wait for the screen to change. Jest\'s jsdom environment has no fetch, so the test assigns global.fetch a jest.fn() that resolves to an object with a json() method, which is all the component reads. "Loading..." is on screen as soon as render returns, so getByText finds it at once. The name appears only after the two promises settle, so the test awaits findByRole or findByText, which retries until a match appears (1000 ms by default); getByText("Alice") at that point would throw. Keep both checks in one async test: a test that ends while the fetch is still pending lets the component update after it, and React logs a "not wrapped in act(...)" warning. jest.restoreAllMocks() would not undo the assignment either, since it restores only spies made with jest.spyOn; beforeEach puts a fresh mock in place for every test instead.',
     hints: [
-      'Mock global.fetch to return a Promise that resolves with { json: () => Promise.resolve(data) }',
-      'Use findByText (async) for elements that appear after state updates',
-      'Use getByText (sync) for elements rendered immediately',
+      'global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve(data) }))',
+      'getByText for what is there at once, await findBy* for what appears later',
+      'toHaveBeenCalledWith checks the URL fetch was called with',
     ],
     tieredHints: {
-      apiSignature: 'it("displays data", async () => { ... })',
+      apiSignature: 'it("shows loading, then data", async () => { ... })',
       skeleton: `beforeEach(() => {
   global.fetch = jest.____(() =>
     Promise.resolve({ ok: true, json: () => Promise.resolve({ name: "Alice" }) })
-  ) as jest.Mock;
+  );
 });
 
-it("displays user", async () => {
+it("shows Loading... and then the user's name", async () => {
   render(<UserProfile />);
   expect(screen.getByText("Loading...")).____();
   const userName = await screen.____("Alice");
   expect(userName).toBeInTheDocument();
+  expect(global.fetch).____("/api/users/1");
 });`,
     },
     tags: ['jest', 'react-testing-library', 'async', 'fetch', 'mock'],
-    concepts: ['testing-rtl-queries', 'js-promises-async'],
+    concepts: ['testing-rtl-queries', 'testing-async', 'js-promises-async'],
   },
 
   // 3. MC: getByText vs queryByText vs findByText (correct answer index 0 → position a)
@@ -1467,30 +1509,30 @@ it("displays user", async () => {
     options: [
       {
         id: 'a',
-        text: 'getByText throws if the element is not found, queryByText returns null if not found, and findByText waits and retries asynchronously — use findByText for elements that appear after async operations',
+        text: 'getByText throws when nothing matches, queryByText returns null, and findByText returns a promise that retries until the text appears',
         isCorrect: true,
       },
       {
         id: 'b',
-        text: 'They all work the same way but findByText is faster because it uses requestAnimationFrame',
+        text: 'getByText waits up to 1000 ms for the text, queryByText looks once and returns null, and findByText returns every match as an array',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'getByText searches by exact text, queryByText supports regex, and findByText supports CSS selectors',
+        text: 'getByText and queryByText both throw when nothing matches; findByText returns null instead, so it is the one for checking absence',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'getByText is for unit tests, queryByText for integration tests, and findByText for E2E tests',
+        text: 'They act the same when nothing matches and differ only in matching: exact text for getByText, any substring for queryByText',
         isCorrect: false,
       },
     ],
     explanation:
-      'These three variants exist for different use cases: getBy* is for elements that should be in the DOM right now — it throws immediately if not found, which gives a clear error. queryBy* returns null instead of throwing, making it perfect for asserting something is NOT rendered (expect(queryByText("Error")).not.toBeInTheDocument()). findBy* returns a Promise and retries using waitFor under the hood — use it for elements that appear after async operations like data fetching or state updates. All three support the same query types (text, role, testId, etc.).',
+      'The three prefixes differ only in what happens when the match is missing; all of them match text the same way, exact by default or with a regex. getBy* looks once and throws when there is no match (or more than one), which suits something that should be on screen now. queryBy* looks once and returns null instead, which is how a test checks that something is absent: expect(screen.queryByText("Error")).not.toBeInTheDocument(). findBy* returns a promise that retries the query until it matches, and rejects after 1000 ms by default, which suits text that appears after a fetch, a timer or an effect. The arrays come from the getAllBy*, queryAllBy* and findAllBy* forms.',
     hints: [
-      'Think about when each would fail vs succeed',
-      'Which one would you use to test that an error message is NOT shown?',
+      'What does each one do when there is no match?',
+      'Which one would you use to check that an error message is not shown?',
     ],
     tags: ['react-testing-library', 'queries', 'getBy', 'queryBy', 'findBy'],
     concepts: ['testing-rtl-queries', 'testing-async'],
@@ -1507,30 +1549,30 @@ it("displays user", async () => {
     options: [
       {
         id: 'a',
-        text: 'getByRole is faster because it uses native browser APIs instead of DOM traversal',
+        text: 'getByRole is faster, since it reads the accessibility tree the browser has already built where getByTestId walks the whole DOM',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Role queries test what the user actually sees and interacts with — they verify accessible names and ARIA roles, catching accessibility issues. Test IDs are implementation details invisible to users.',
+        text: 'A role query finds an element as users and screen readers do, by its role and name, so it also fails when that role or name breaks',
         isCorrect: true,
       },
       {
         id: 'c',
-        text: 'getByTestId does not work in React 18 due to concurrent mode changes',
+        text: 'getByTestId finds nothing in a Next.js app, since the compiler strips data-testid attributes from every page by default',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'getByRole supports regex matching while getByTestId only supports exact strings',
+        text: 'getByRole matches on the text alone, so it keeps passing through markup changes that break a test id when it is renamed',
         isCorrect: false,
       },
     ],
     explanation:
-      'RTL\'s guiding principle is "the more your tests resemble the way your software is used, the more confidence they give you." Users and screen readers interact with elements by their role (button, textbox, heading) and accessible name, not by data-testid attributes. getByRole("button", { name: "Submit" }) verifies that the element is both a button AND has the correct accessible name — if you accidentally change it to a div, the test fails, catching a real bug. getByTestId would still pass even if the element is no longer interactive. Use getByTestId only as a last resort for elements with no semantic role.',
+      'Testing Library\'s guiding principle is "the more your tests resemble the way your software is used, the more confidence they can give you." Users and screen readers find elements by their role (button, textbox, heading) and accessible name, never by a data-testid. getByRole("button", { name: "Submit" }) passes only when the element is a button and its name is "Submit": change the <button> to a clickable <div>, or drop the label from an icon button, and the test fails, which is a real accessibility bug caught. getByTestId would still pass. Role queries are not faster (they are the slowest queries, since they compute roles and names), and Next.js keeps data-testid unless you opt in to removing it. Use getByTestId only as a last resort, for an element with no role or text.',
     hints: [
       'Think about how a screen reader user navigates a page',
-      'What would happen if you changed a <button> to a <div> — which query catches that?',
+      'If a <button> became a <div>, which query would notice?',
     ],
     tags: ['react-testing-library', 'getByRole', 'accessibility', 'testing-best-practices'],
     concepts: ['testing-rtl-queries', 'a11y-aria-roles'],
@@ -1545,24 +1587,48 @@ it("displays user", async () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Write a test for a ContactForm component that has name (text input), email (email input), and message (textarea) fields plus a Submit button. Fill in all fields using fireEvent.change, submit the form, and assert that the onSubmit prop was called with { name: "John", email: "john@test.com", message: "Hello" }.',
+      'Write a test for a ContactForm component imported from "./ContactForm". It has three labelled fields, "Name" (a text input), "Email" (an email input) and "Message" (a textarea), and a "Submit" button; on submit it calls its onSubmit prop with { name, email, message }. Pass a jest.fn() as onSubmit, fill the fields with "John", "john@test.com" and "Hello" using fireEvent.change, submit the form, and assert that onSubmit was called with { name: "John", email: "john@test.com", message: "Hello" }.',
     starterCode: `import { render, screen, fireEvent } from "@testing-library/react";
 import { ContactForm } from "./ContactForm";
 
-// ContactForm has: name input, email input, message textarea, Submit button
-// On submit it calls props.onSubmit({ name, email, message })
-
 describe("ContactForm", () => {
-  // TODO: fill form and test submission
 });`,
     testCases: [
       {
         input: 'Form submission test',
-        expectedOutput: 'fireEvent.change for inputs, fireEvent.submit or click, expect onSubmit called with data',
-        description: 'Should fill form fields and verify submit handler receives correct data',
+        expectedOutput: 'fireEvent.change for each field, submit, expect onSubmit called with the data',
+        description: 'Should fill the fields and check the submit handler receives the entered data',
       },
     ],
     solution: `import { render, screen, fireEvent } from "@testing-library/react";
+import { ContactForm } from "./ContactForm";
+
+describe("ContactForm", () => {
+  it("calls onSubmit with form data when submitted", () => {
+    const handleSubmit = jest.fn();
+    render(<ContactForm onSubmit={handleSubmit} />);
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "John" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "john@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Message"), {
+      target: { value: "Hello" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(handleSubmit).toHaveBeenCalledWith({
+      name: "John",
+      email: "john@test.com",
+      message: "Hello",
+    });
+  });
+});
+# OR
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ContactForm } from "./ContactForm";
 
 describe("ContactForm", () => {
@@ -1589,35 +1655,34 @@ describe("ContactForm", () => {
     });
   });
 });`,
+    requires: [
+      /jest\.fn\(/,
+      /(?:fireEvent\.change|user\.type)\([\s\S]*(?:fireEvent\.change|user\.type)\([\s\S]*(?:fireEvent\.change|user\.type)\(/,
+      /fireEvent\.(?:click|submit)\(|user\.click\(/,
+      /toHaveBeenCalledWith\(\s*\{[\s\S]*John[\s\S]*\}\s*\)/,
+      /john@test\.com/,
+      /Hello/,
+    ],
     explanation:
-      'Testing form submission exercises the full user flow: find inputs, type values, click submit, verify the result. fireEvent.change simulates a change event with a new value — you pass { target: { value: "..." } } to set the input\'s value. We find inputs by their accessible role and name (/name/i uses regex for case-insensitive matching of the label). After clicking Submit, we verify the mock was called with the exact data object the user entered. This is an integration test — it tests the form as a whole, not individual inputs.',
+      'This test drives the form the way a user does and checks only what comes out. getByLabelText("Email") finds a field by its label, as a screen reader does, and getByRole("textbox", { name: /email/i }) finds the same field, since email inputs and textareas both have the textbox role. fireEvent.change(field, { target: { value: "..." } }) sets the field\'s value and fires the change event that React\'s onChange listens for. Clicking the Submit button inside the form makes the browser fire the form\'s submit event, and fireEvent.submit on the form does the same. toHaveBeenCalledWith compares the argument by value, so the test passes only when every field reached onSubmit. Testing the form as a whole like this is an integration test: it would catch a field whose onChange is wired to the wrong state.',
     hints: [
-      'fireEvent.change(input, { target: { value: "..." } }) simulates user typing',
-      'fireEvent.click(button) simulates a click event',
-      'waitFor(() => expect(...)) retries assertions until they pass or time out',
+      'fireEvent.change(field, { target: { value: "..." } }) sets a field\'s value',
+      'getByLabelText("Email") finds a field by its label',
+      'toHaveBeenCalledWith({ ... }) checks the object onSubmit received',
     ],
     tieredHints: {
-      apiSignature: 'describe("ContactForm", () => { it("calls onSubmit with form data", () => { ... }) })',
-      skeleton: `describe("ContactForm", () => {
-  it("calls onSubmit with form data when submitted", () => {
-    const handleSubmit = jest.fn();
-    render(<ContactForm onSubmit={handleSubmit} />);
+      apiSignature: 'fireEvent.change(field, { target: { value } }); expect(fn).toHaveBeenCalledWith(obj)',
+      skeleton: `it("calls onSubmit with form data when submitted", () => {
+  const handleSubmit = jest.fn();
+  render(<ContactForm onSubmit={____} />);
 
-    fireEvent.____(screen.getByRole("textbox", { name: /name/i }), {
-      target: { value: "John" },
-    });
-    fireEvent.change(screen.getByRole("textbox", { name: /email/i }), {
-      target: { value: "john@test.com" },
-    });
-
-    fireEvent.click(screen.getByRole("____", { name: /submit/i }));
-
-    expect(handleSubmit).____({
-      name: "John",
-      email: "john@test.com",
-      message: "Hello",
-    });
+  fireEvent.____(screen.getByLabelText("Name"), {
+    target: { value: "John" },
   });
+  // ... the same for Email and Message
+
+  fireEvent.click(screen.getByRole("____", { name: "Submit" }));
+  expect(handleSubmit).____({ /* the three values */ });
 });`,
     },
     tags: ['jest', 'react-testing-library', 'form', 'fireEvent', 'integration-test'],
@@ -1631,33 +1696,33 @@ describe("ContactForm", () => {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_TESTING,
     course: Course.WEB_DEV,
-    question: 'What is MSW (Mock Service Worker) and why use it over jest.mock for API mocking?',
+    question: 'What does Mock Service Worker (MSW) do, and why use it instead of jest.mock("./api") to fake an API?',
     options: [
       {
         id: 'a',
-        text: 'MSW is a browser extension that records real API calls and replays them — it only works in the browser',
+        text: 'It records the real API\'s responses on the first run and replays them later, so a test needs the real server only once',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'MSW is faster than jest.mock because it uses WebAssembly to process requests',
+        text: 'It swaps fetch for a jest.fn() for you, so it is jest.mock with less setup, and it runs the same code paths that jest.mock does',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'MSW intercepts network requests at the service worker level, so it tests the full fetch/axios pipeline including headers, error handling, and request parsing. jest.mock bypasses the network layer entirely, so bugs in request construction go undetected.',
+        text: 'It answers your code\'s real fetch call with your handlers, so the URL, headers and response parsing in your code are tested too',
         isCorrect: true,
       },
       {
         id: 'd',
-        text: 'MSW and jest.mock are identical in behavior but MSW has a nicer API',
+        text: 'It starts a real HTTP server on a port for each test file, so the app has to be set to call localhost while the tests run',
         isCorrect: false,
       },
     ],
     explanation:
-      'jest.mock("./api") replaces your API module with a fake — the actual fetch/axios call never happens, so you cannot catch bugs like wrong headers, incorrect URL construction, or missing error handling. MSW intercepts at the network level: your code makes a real fetch() call, MSW catches it and returns your mock response. This means you test the entire request pipeline. MSW handlers also work in both Node (tests) and browser (development), so you can use the same mocks for Storybook and manual testing. It gives you much higher confidence that your code works with a real API.',
+      'jest.mock("./api") replaces your API module with a fake, so the fetch inside it never runs: a wrong URL, a missing header or a response parsed the wrong way all pass. With MSW your code makes its real fetch call, and MSW answers it from handlers such as http.get("/api/users", () => HttpResponse.json(data)). In the browser it does that from a service worker; under Jest, setupServer from "msw/node" intercepts requests inside the Node process, so despite its name it opens no port and the app needs no special URL. MSW does not record anything: every response comes from a handler you wrote. The same handlers can serve the browser in development and Storybook too.',
     hints: [
-      'Think about what jest.mock actually skips — the entire HTTP request',
+      'Think about what jest.mock skips: the request itself',
       'What bugs could hide if the fetch call itself is never executed?',
     ],
     tags: ['msw', 'mock-service-worker', 'jest', 'api-mocking', 'testing'],
@@ -1673,16 +1738,15 @@ describe("ContactForm", () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Set up MSW (Mock Service Worker) handlers for a REST API. Define handlers for: GET /api/users (returns a JSON array of users: [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]) and POST /api/users (reads the JSON body, returns the created user with an id of 3 and status 201). Export the handlers array. Use the msw v2 API with http.get and http.post.',
+      'Write Mock Service Worker (MSW 2) handlers for a users API with http.get, http.post and HttpResponse from "msw", and export them as an array named handlers. GET /api/users answers with the JSON array [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]. POST /api/users reads the JSON body, a new user such as { name: "Cara" }, and answers with that user plus id 3, with status 201; the id must be 3 even if the body sends one. request.json() is not typed for you, so type the body as { name: string } before you spread it.',
     starterCode: `import { http, HttpResponse } from "msw";
 
-// TODO: define handlers for GET and POST /api/users
 export const handlers = [];`,
     testCases: [
       {
         input: 'MSW handlers',
-        expectedOutput: 'http.get and http.post with HttpResponse.json',
-        description: 'Should define GET and POST handlers returning appropriate JSON responses',
+        expectedOutput: 'http.get and http.post with HttpResponse.json, status 201 for the POST',
+        description: 'Should define GET and POST handlers returning the right JSON and status',
       },
     ],
     solution: `import { http, HttpResponse } from "msw";
@@ -1696,38 +1760,54 @@ export const handlers = [
   }),
 
   http.post("/api/users", async ({ request }) => {
-    const body = await request.json();
-    return HttpResponse.json(
-      { id: 3, ...body },
-      { status: 201 }
-    );
+    const body = (await request.json()) as { name: string };
+    return HttpResponse.json({ ...body, id: 3 }, { status: 201 });
   }),
-];`,
-    explanation:
-      'MSW v2 uses http.get/post/put/delete to define request handlers. Each handler receives a resolver function with the request info (params, request body, cookies). HttpResponse.json() creates a JSON response — you can pass a second argument for status code, headers, etc. These handlers are typically defined in a handlers.ts file and passed to setupServer (Node/tests) or setupWorker (browser). The handlers intercept matching requests and return your mock responses, letting your code exercise the full fetch pipeline while controlling the data.',
-    hints: [
-      'Use http.get("/api/users", resolverFn) and http.post("/api/users", resolverFn)',
-      'HttpResponse.json(data) creates a JSON response',
-      'For POST, access the body with await request.json()',
-    ],
-    tieredHints: {
-      apiSignature: 'HttpResponse.json(body, init?: { status?: number }) -> Response',
-      skeleton: `import { http, HttpResponse } from "msw";
+];
+# OR
+import { http, HttpResponse } from "msw";
+
+type NewUser = { name: string };
 
 export const handlers = [
-  http.____("/api/users", () => {
-    return ____.____([
-      { id: ____, name: "Alice" },
-      { id: ____, name: "Bob" },
-    ]);
+  http.get("/api/users", () =>
+    HttpResponse.json([
+      { id: 1, name: "Alice" },
+      { id: 2, name: "Bob" },
+    ])
+  ),
+
+  http.post<never, NewUser>("/api/users", async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json({ ...body, id: 3 }, { status: 201 });
+  }),
+];`,
+    requires: [
+      /http\.get\(\s*["'`]\/api\/users["'`]/,
+      /http\.post(?:<[^>]*>)?\(\s*["'`]\/api\/users["'`]/,
+      /HttpResponse\.json\(/,
+      /Alice[\s\S]*Bob/,
+      /request\.json\(\)/,
+      /status:\s*201/,
+      /id:\s*3/,
+    ],
+    explanation:
+      'In MSW 2 a handler pairs a method and a path with a resolver: http.get(path, resolver) and http.post(path, resolver). The resolver gets { request, params, cookies } and returns a Response, and HttpResponse.json(data, { status }) builds one with a JSON body, status 200 unless you pass another. For the POST, await request.json() reads the body. Its type is MSW\'s loose DefaultBodyType, which may not be an object, so spreading it is a TypeScript error until you narrow it: cast the result, or type the handler as http.post<never, NewUser> (the first type argument is the path params, the second the body). Put the spread first, { ...body, id: 3 }: written as { id: 3, ...body }, a body that sends its own id overrides the 3. The handlers go to setupServer(...handlers) under Jest or setupWorker(...handlers) in the browser.',
+    hints: [
+      'http.get("/api/users", () => HttpResponse.json(data)) answers a GET',
+      'HttpResponse.json(data, { status: 201 }) sets the status',
+      'await request.json() reads the POST body; spread it before id: 3',
+    ],
+    tieredHints: {
+      apiSignature: 'http.post(path, async ({ request }) => Response); HttpResponse.json(body, init?: { status?: number })',
+      skeleton: `export const handlers = [
+  http.get("/api/users", () => {
+    return HttpResponse.____([ /* the two users */ ]);
   }),
 
   http.____("/api/users", async ({ request }) => {
-    const body = await request.____();
-    return ____.____(
-      { id: ____, ...body },
-      { ____: ____ }
-    );
+    const body = (await request.____()) as { name: string };
+    return HttpResponse.json({ ...____, id: 3 }, { ____ });
   }),
 ];`,
     },
@@ -1742,33 +1822,33 @@ export const handlers = [
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_TESTING,
     course: Course.WEB_DEV,
-    question: 'What is the "Testing Trophy" and what does it recommend about where to invest testing effort?',
+    question: 'What does the "Testing Trophy" recommend about where to spend testing effort?',
     options: [
       {
         id: 'a',
-        text: 'Write as many unit tests as possible since they are the fastest and cheapest to maintain',
+        text: 'Most effort on unit tests at the wide base, as in the test pyramid, since they are the fastest to run and the cheapest to fix',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Focus entirely on E2E tests because they give the most confidence',
+        text: 'Most effort on end-to-end tests at the top, since a real browser catches every bug that the layers below it could catch',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'Skip testing and rely on TypeScript for all correctness guarantees',
+        text: 'Equal effort on every layer, so static analysis, unit, integration and end-to-end tests each get about a quarter',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'Prioritize integration tests (the widest part of the trophy) because they give the most confidence per effort. Static analysis at the base, then unit tests, integration tests (largest), and E2E tests at the top.',
+        text: 'Most effort on integration tests, the widest band, above static analysis and unit tests, with a few end-to-end tests on top',
         isCorrect: true,
       },
     ],
     explanation:
-      'The Testing Trophy (coined by Kent C. Dodds) differs from the traditional Testing Pyramid. It recommends: Static analysis (TypeScript, ESLint) catches typos and type errors cheaply. Unit tests verify isolated logic (pure functions, utilities). Integration tests (the biggest investment) test components working together — RTL tests that render a component with its children, make API calls, and assert the result. E2E tests (Playwright/Cypress) cover critical user flows. The key insight is that integration tests catch the most real-world bugs because most bugs happen at the boundaries between components, not within isolated units.',
+      'The Testing Trophy, from Kent C. Dodds, reshapes the older test pyramid, whose wide base is unit tests. From the bottom up: static analysis (TypeScript, ESLint) catches typos and type errors for almost nothing; unit tests check isolated logic such as pure functions; integration tests, the widest band, render a component with its children and check what the user sees, as React Testing Library tests do; and a few end-to-end tests (Playwright) cover the flows that matter most. Integration tests get the most effort because they give the most confidence for their cost: many bugs sit where components meet, which a unit test never exercises, while end-to-end tests are the slowest to run and the hardest to keep stable.',
     hints: [
-      'Think about where most real bugs occur — within a single function or between components?',
+      'Where do many real bugs sit: inside one function, or where components meet?',
       'The trophy shape means the widest section is the focus area',
     ],
     tags: ['testing-trophy', 'testing-strategy', 'integration-tests', 'best-practices'],
@@ -1784,13 +1864,12 @@ export const handlers = [
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Write a test for a useCounter custom hook that returns { count, increment, decrement }. The hook starts at 0. Test that: 1) initial count is 0, 2) increment increases count by 1, 3) decrement decreases count by 1. Use renderHook from @testing-library/react and wrap state updates in act().',
-    starterCode: `// Import renderHook + act from "@testing-library/react" and useCounter
-// describe("useCounter", ...) with three it() blocks:
-//   initial count is 0 (read result.current.count)
-//   calling increment inside act() yields count 1
-//   calling decrement inside act() yields count -1
-`,
+      'Write tests for a useCounter custom hook imported from "./useCounter". It returns { count, increment, decrement }, and count starts at 0. Test that 1) count starts at 0, 2) increment on a fresh hook makes it 1, and 3) decrement on a fresh hook makes it -1. Use renderHook from @testing-library/react, read the values from result.current, and wrap each call that changes state in act().',
+    starterCode: `import { renderHook, act } from "@testing-library/react";
+import { useCounter } from "./useCounter";
+
+describe("useCounter", () => {
+});`,
     testCases: [
       {
         input: 'Custom hook test with renderHook',
@@ -1822,9 +1901,37 @@ describe("useCounter", () => {
     });
     expect(result.current.count).toBe(-1);
   });
+});
+# OR
+import { renderHook, act } from "@testing-library/react";
+import { useCounter } from "./useCounter";
+
+test("starts at 0", () => {
+  const { result } = renderHook(() => useCounter());
+  expect(result.current.count).toBe(0);
+});
+
+test("increment adds 1", () => {
+  const { result } = renderHook(() => useCounter());
+  act(() => result.current.increment());
+  expect(result.current.count).toBe(1);
+});
+
+test("decrement takes 1 away", () => {
+  const { result } = renderHook(() => useCounter());
+  act(() => result.current.decrement());
+  expect(result.current.count).toBe(-1);
 });`,
+    requires: [
+      /renderHook\(/,
+      /^(?![\s\S]*=\s*useCounter\()/,
+      /result\.current\.count/,
+      /act\(\s*\(\)\s*=>\s*\{?\s*result\.current\.increment\(\)/,
+      /act\(\s*\(\)\s*=>\s*\{?\s*result\.current\.decrement\(\)/,
+      /-\s*1\b/,
+    ],
     explanation:
-      'Hooks cannot be called outside of React components, so renderHook wraps your hook in a test component automatically. result.current gives you the current return value of the hook — it updates after state changes. act() is required around any code that triggers state updates (like calling increment()) because React needs to process the update and re-render before you can assert on the new value. Without act(), you would read stale state. Each test creates a fresh hook instance via a new renderHook call, so tests are isolated.',
+      'A hook can only run inside a component, so renderHook renders a small test component that calls it. result.current holds the hook\'s latest return value, and it is replaced on every render, so read it again after each change instead of keeping an old copy. act() makes React apply the state update and re-render before it returns; call increment() outside act and result.current.count is still 0 on the next line, and React logs a "not wrapped in act(...)" warning. Each test calls renderHook again, so each one starts from a fresh counter at 0, which is why decrement gives -1.',
     hints: [
       'renderHook(() => useCounter()) returns { result }',
       'Access return values with result.current.count',
@@ -1860,29 +1967,29 @@ it("increments the count", () => {
     options: [
       {
         id: 'a',
-        text: 'Use RTL for component logic and user flows within a page (form validation, data display, interactions). Use Playwright for multi-page flows, authentication, real browser behavior, and cross-browser testing.',
+        text: 'RTL for what a component does within one page, such as validation and showing data; Playwright for real-browser flows across pages',
         isCorrect: true,
       },
       {
         id: 'b',
-        text: 'Always use Playwright because it tests real browsers and RTL only tests in jsdom which is unreliable',
+        text: 'Playwright for everything, since jsdom misses so much that RTL tests pass on components that are broken in a real browser',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'Use RTL for server components and Playwright for client components',
+        text: 'RTL for Server Components, which it renders like any other, and Playwright for Client Components, which need a browser',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'They are interchangeable — use whichever your team prefers for all testing needs',
+        text: 'Either one for any test, since both drive a real browser engine and differ only in the API you write the test with',
         isCorrect: false,
       },
     ],
     explanation:
-      'RTL runs in Node with jsdom (fast, no real browser) — perfect for testing component behavior, user interactions, and data display within a page. It is fast enough to run on every save. Playwright runs a real browser (Chromium, Firefox, WebKit) — essential for testing page navigation, authentication flows, cookies/localStorage across pages, file uploads, and cross-browser compatibility. Playwright tests are slower and more brittle (network, timing), so reserve them for critical user journeys. Most apps need both: many RTL integration tests and a smaller set of Playwright E2E tests for key flows.',
+      'React Testing Library runs in Node against jsdom, a page in memory with no real browser: fast enough to run on every save, and right for a component\'s behaviour within a page, such as validation, interactions and showing fetched data. jsdom has no layout, no real navigation and no server, so it cannot render an async Server Component either. Playwright drives a real browser (Chromium, Firefox, WebKit) against the running app, which is what page navigation, sign-in flows, cookies across pages and cross-browser checks need. Its tests are slower and depend on the whole stack, so keep them for the journeys that matter most. Most apps use both: many RTL tests and a few Playwright ones.',
     hints: [
-      'Think about speed vs fidelity tradeoffs',
+      'Think about speed against how much of the real app runs',
       'What can only be tested in a real browser?',
     ],
     tags: ['playwright', 'react-testing-library', 'e2e', 'integration', 'testing-strategy'],
@@ -1898,7 +2005,7 @@ it("increments the count", () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Write a Playwright E2E test for a login flow. The test should: 1) navigate to /login, 2) fill the email input with "user@test.com", 3) fill the password input with "password123", 4) click the "Log In" button, 5) expect the URL to change to /dashboard, 6) expect a heading "Welcome back" to be visible. Use Playwright\'s page.goto, page.fill (or getByLabel), page.click (or getByRole), and expect.',
+      'Write a Playwright end-to-end test for a login flow (the config sets baseURL to the running app). The test should 1) go to /login, 2) fill the field labelled "Email" with "user@test.com", 3) fill the field labelled "Password" with "password123", 4) click the "Log In" button, 5) expect the URL to become /dashboard, and 6) expect a "Welcome back" heading to be visible. Use page.goto, the getByLabel and getByRole locators, and awaited expect assertions.',
     starterCode: `import { test, expect } from "@playwright/test";
 
 test.describe("Login Flow", () => {
@@ -1924,11 +2031,30 @@ test.describe("Login Flow", () => {
     await expect(page).toHaveURL(/\\/dashboard/);
     await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   });
+});
+# OR
+import { test, expect } from "@playwright/test";
+
+test("logs in and redirects to dashboard", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel(/email/i).fill("user@test.com");
+  await page.getByLabel(/password/i).fill("password123");
+  await page.getByRole("button", { name: /log in/i }).click();
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
 });`,
+    requires: [
+      /page\.goto\(\s*["'`]\/login["'`]/,
+      /user@test\.com/,
+      /password123/,
+      /\.click\(/,
+      /await\s+expect\(\s*page\s*\)\.toHaveURL\(/,
+      /await\s+expect\([^;]*welcome back[^;]*\)\.toBeVisible\(\)/i,
+    ],
     explanation:
-      'Playwright tests run in a real browser, so they test the complete user experience including server-side rendering, client-side hydration, API calls, and navigation. page.goto() navigates to a URL. getByLabel() and getByRole() are Playwright\'s accessibility-first locators (similar philosophy to RTL). fill() types into an input. All Playwright actions auto-wait for the element to be ready — no manual waitFor needed. expect(page).toHaveURL() waits for navigation to complete. These auto-waiting semantics make Playwright tests less flaky than manual waits.',
+      'A Playwright test drives a real browser against the running app, so it covers what jsdom cannot: the server render, hydration, real requests and navigation between pages. page.goto("/login") opens the page relative to baseURL. getByLabel("Email") and getByRole("button", { name: "Log In" }) are locators that find elements as a user does, like React Testing Library\'s queries, and each action on a locator (fill, click) waits until the element is ready. The older page.fill(selector) and page.click(selector) still work, but locators are what the docs recommend. Assertions such as expect(page).toHaveURL("/dashboard") and toBeVisible() retry until they pass or time out (5 seconds by default), so the test waits for the redirect without any manual delay; they return promises, so each one needs await, or the test can finish before they check anything.',
     hints: [
-      'Playwright auto-waits for elements — no need for manual delays',
+      'Locators and expect assertions wait on their own; no manual delays',
       'Use getByLabel and getByRole for accessible locators',
       'expect(page).toHaveURL() waits for navigation',
     ],
@@ -1952,33 +2078,33 @@ test.describe("Login Flow", () => {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_TESTING,
     course: Course.WEB_DEV,
-    question: 'What does jest.mock("next/navigation") do and when do you need it?',
+    question: 'A Client Component calls useRouter() from "next/navigation" and runs router.push("/dashboard") when you click Save. Why does its Jest test need jest.mock("next/navigation")?',
     options: [
       {
         id: 'a',
-        text: 'It enables client-side navigation in test environments so Link components work',
+        text: 'Without it, router.push really changes jsdom\'s URL, so the later tests in the same file start on /dashboard instead of /',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'It mocks useRouter, usePathname, useSearchParams, and other navigation hooks — needed when testing components that use Next.js routing because these hooks require the Next.js runtime context that does not exist in Jest',
+        text: 'Outside a Next.js app useRouter() has no router to read and throws, and the mock also lets the test check what push received',
         isCorrect: true,
       },
       {
         id: 'c',
-        text: 'It replaces the browser History API with an in-memory implementation for faster tests',
+        text: 'jest.mock turns on Next.js\'s test mode, which makes <Link> and useRouter work in jsdom with no further setup needed',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'It is only needed for server components that use redirect()',
+        text: 'It is needed only for Server Components that call redirect(); a Client Component\'s useRouter() works in Jest unmocked',
         isCorrect: false,
       },
     ],
     explanation:
-      'Next.js navigation hooks (useRouter, usePathname, useSearchParams) depend on Next.js internal context providers that are not available in a plain Jest/RTL test environment. Without mocking, any component that calls useRouter() will throw. jest.mock("next/navigation") replaces the module with mock functions you can control: const mockPush = jest.fn(); jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) })). This lets you assert that router.push("/dashboard") was called without needing a real Next.js server.',
+      'The hooks in "next/navigation" read context that the Next.js App Router provides, and a plain Jest render has none. useRouter() then throws "invariant expected app router to be mounted", so the component cannot even render; usePathname() and useSearchParams() return null instead, which breaks code that reads them, so mock those too when the component uses them. jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) })) swaps the module for one you control, with const mockPush = jest.fn() at the top of the file (Jest allows a variable whose name starts with mock inside the factory). The test can then click Save and assert expect(mockPush).toHaveBeenCalledWith("/dashboard") without a Next.js server.',
     hints: [
-      'Think about what happens when useRouter() is called outside of Next.js',
+      'What happens when useRouter() runs with no Next.js app around it?',
       'You need to provide mock return values for the hooks your component uses',
     ],
     tags: ['jest', 'next.js', 'useRouter', 'mock', 'navigation'],
@@ -1992,33 +2118,33 @@ test.describe("Login Flow", () => {
     difficulty: Difficulty.ADVANCED,
     topic: Topic.NEXT_TESTING,
     course: Course.WEB_DEV,
-    question: 'How do you test React Server Components in Next.js?',
+    question: 'A Server Component is async function UserList(), which awaits getUsers() from "./data" and returns a <ul> of names. How can a Jest test with React Testing Library check that list?',
     options: [
       {
         id: 'a',
-        text: 'Use React Testing Library\'s render() — Server Components work the same as Client Components in tests',
+        text: 'render(<UserList />) like any other component, since React Testing Library waits for an async component to resolve',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Server Components cannot be tested — you must convert them to Client Components first',
+        text: 'Wrap it in <Suspense>, since Suspense makes React Testing Library run the component on the server instead of jsdom',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'They are async functions that return JSX — you can test the output directly by calling them as functions and awaiting the result, mocking the data layer (database, fetch). For simple cases, you do not need RTL.',
+        text: 'Mock getUsers, call UserList() as a plain async function, and render the element it returns: render(await UserList())',
         isCorrect: true,
       },
       {
         id: 'd',
-        text: 'Only Playwright can test Server Components because they require a running server',
+        text: 'It cannot be tested in Jest at all; only a Playwright test against a running Next.js server can check a Server Component',
         isCorrect: false,
       },
     ],
     explanation:
-      'Server Components are just async functions: async function UserList() { const users = await db.user.findMany(); return <ul>...</ul>; }. You can test them by: 1) mocking the data layer (jest.mock the DB or fetch), 2) calling the component as a function: const result = await UserList(), 3) asserting on the returned JSX. For more complex testing, you can render the result with RTL. The key insight is that there is no client-side state or effects — it is pure input-to-output, which is actually simpler to test than Client Components. E2E tests with Playwright test the full SSR pipeline if needed.',
+      'An async Server Component is an async function that returns JSX, and React Testing Library renders on the client, where async components are not supported: render(<UserList />) logs that UserList "is an async Client Component", and whether the list then shows up depends on the setup, even with <Suspense> around it. <Suspense> only shows a fallback while something loads; it never moves rendering to a server. The reliable options are to test the data function on its own, or to call the component yourself: jest.mock("./data") with getUsers resolving to test data, then render(await UserList()) renders the returned <ul>, and screen.getByText("Alice") finds a name. That covers one level only: an async Server Component inside the returned tree is unsupported in the same way, which is why the Next.js docs recommend end-to-end tests with Playwright for those pages. The data layer is what you mock, not React.',
     hints: [
-      'Server Components are async functions — what does that make them from a testing perspective?',
+      'A Server Component is an async function; what can a test do with an async function?',
       'Think about what you would mock: the data source, not React internals',
     ],
     tags: ['server-components', 'next.js', 'testing', 'async', 'jest'],
@@ -2032,40 +2158,40 @@ test.describe("Login Flow", () => {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_TESTING,
     course: Course.WEB_DEV,
-    question: 'What is snapshot testing and when should you avoid it?',
+    question: 'What is snapshot testing, and when should you avoid it?',
     options: [
       {
         id: 'a',
-        text: 'Snapshot testing takes screenshots of components and compares pixels — avoid it when components have animations',
+        text: 'It saves a screenshot of the component and compares pixels, so avoid it for components with animations or web fonts',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Snapshot testing is always the best approach because it tests everything at once',
+        text: 'It saves the rendered markup and fails on any change, so it suits big components best, catching changes nobody wrote a test for',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'Snapshot testing is only for CSS — it captures computed styles and diffs them',
+        text: 'It records the computed CSS of every element and diffs it, so avoid it while a design system\'s theme still changes often',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'It captures rendered output (DOM structure) as a file and diffs against it on subsequent runs. Avoid it for frequently changing or complex components where developers blindly update snapshots without reviewing — it becomes meaningless noise. Best for stable, simple components like icons or formatted text.',
+        text: 'It saves the rendered markup to a file and fails when it changes; avoid it for big, changing components, where diffs get approved unread',
         isCorrect: true,
       },
     ],
     explanation:
-      'Snapshot testing (toMatchSnapshot or toMatchInlineSnapshot) serializes a component\'s rendered output to a file. On subsequent test runs, it compares against the stored snapshot and fails if anything changed. The problem: developers often run "update all snapshots" without reviewing diffs, especially for large, complex components. This defeats the purpose — the test passes but nobody verified the change was intentional. Snapshots work well for small, stable components (icons, badges, formatted dates) where any change is likely unintentional. For complex components, write specific assertions (getByRole, toHaveTextContent) that document intended behavior.',
+      'A Jest snapshot test (toMatchSnapshot or toMatchInlineSnapshot) serializes the rendered markup, saves it the first time, and fails on any later run where it differs. It compares text, not pixels or styles; pixel comparison is a separate tool, such as Playwright\'s toHaveScreenshot. The trouble with a big component that changes often is that every change fails the test, people run jest -u to accept the new snapshots without reading a long diff, and the test passes without anyone checking that the change was meant. Snapshots suit small, stable output such as an icon, a badge or a formatted date, where any change is likely a mistake. For a complex component, assert the behaviour you mean with getByRole or toHaveTextContent.',
     hints: [
-      'Think about what happens when a developer sees "15 snapshot tests failed"',
+      'What happens when a developer sees "15 snapshots failed" after a small change?',
       'Would you carefully review a 500-line snapshot diff?',
     ],
     tags: ['snapshot-testing', 'jest', 'testing-best-practices', 'anti-patterns'],
     concepts: ['testing-rtl-queries'],
   },
 
-  // 15. Coding (JSX): Integration test — UserList with MSW
+  // 15. Coding (JSX): Integration test, UserList with MSW
   {
     id: 'next-testing-15',
     type: QuestionType.CODING,
@@ -2074,21 +2200,17 @@ test.describe("Login Flow", () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Write an integration test for a UserList component that fetches users from /api/users on mount and renders each user\'s name in a list. Use MSW (setupServer) to mock the API, returning [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]. Set up the server in beforeAll/afterAll/afterEach. Render the component and use findByText to verify both names appear.',
+      'Write an integration test for a UserList component imported from "./UserList". On mount it fetches GET /api/users and renders each user\'s name in an <li>; when the response is not ok it shows "Error loading users". With MSW\'s setupServer, answer GET /api/users with [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }], and start, reset and close the server in beforeAll, afterEach and afterAll. Then write two tests: one uses findByText to check that both names appear, and one uses server.use to answer the request with status 500 for that test only and checks that the error text appears.',
     starterCode: `import { render, screen } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 import { UserList } from "./UserList";
-
-// UserList fetches GET /api/users on mount
-// Renders: <ul>{users.map(u => <li key={u.id}>{u.name}</li>)}</ul>
-
-// TODO: set up MSW server, write test`,
+`,
     testCases: [
       {
         input: 'Integration test with MSW',
-        expectedOutput: 'setupServer, beforeAll/afterAll, render, findByText',
-        description: 'Should mock API with MSW and test async component rendering',
+        expectedOutput: 'setupServer, beforeAll/afterEach/afterAll, render, findByText, server.use for the error',
+        description: 'Should mock the API with MSW and test the loaded and error states',
       },
     ],
     solution: `import { render, screen } from "@testing-library/react";
@@ -2128,13 +2250,54 @@ describe("UserList", () => {
 
     expect(await screen.findByText(/error/i)).toBeInTheDocument();
   });
+});
+# OR
+import { render, screen } from "@testing-library/react";
+import { setupServer } from "msw/node";
+import { http, HttpResponse } from "msw";
+import { UserList } from "./UserList";
+
+const server = setupServer(
+  http.get("/api/users", () =>
+    HttpResponse.json([
+      { id: 1, name: "Alice" },
+      { id: 2, name: "Bob" },
+    ])
+  )
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+test("lists the users", async () => {
+  render(<UserList />);
+  expect(await screen.findByText("Alice")).toBeInTheDocument();
+  expect(await screen.findByText("Bob")).toBeInTheDocument();
+});
+
+test("shows an error when the API fails", async () => {
+  server.use(http.get("/api/users", () => HttpResponse.json(null, { status: 500 })));
+  render(<UserList />);
+  expect(await screen.findByText("Error loading users")).toBeInTheDocument();
 });`,
+    requires: [
+      /setupServer\(/,
+      /http\.get\(\s*["'`]\/api\/users["'`]/,
+      /beforeAll\([\s\S]{0,40}server\.listen\(/,
+      /afterEach\([\s\S]{0,40}server\.resetHandlers\(/,
+      /afterAll\([\s\S]{0,40}server\.close\(/,
+      /await\s+(?:screen\.)?findBy\w*\(\s*["'`/]Alice/i,
+      /await\s+(?:screen\.)?findBy\w*\(\s*["'`/]Bob/i,
+      /server\.use\(/,
+      /status:\s*500/,
+    ],
     explanation:
-      'This is a full integration test combining MSW for API mocking with RTL for component testing. setupServer creates a mock server that intercepts fetch/axios requests in Node. server.listen() starts interception, server.resetHandlers() restores original handlers between tests (cleaning up server.use overrides), and server.close() stops interception. The second test uses server.use() to override the default handler for a single test, simulating a server error. findByText waits for the async fetch to complete and the UI to update. This test exercises the entire component lifecycle: mount → fetch → render data, giving high confidence the component works correctly.',
+      'This integration test runs the component, its fetch and its rendering together, with only the network faked. setupServer from "msw/node" intercepts the component\'s real fetch inside the Jest process and answers it from the handler. server.listen() turns that on once before the tests, server.resetHandlers() after each test removes any handler a test added with server.use(), and server.close() turns it off at the end. The first test awaits findByText, which retries until the fetch has resolved and the names are on screen. The second adds a handler that answers 500 for that test only, so the component takes its error path, and afterEach puts the normal handler back. listen({ onUnhandledRequest: "error" }) also fails any test that makes a request no handler matches. Jest\'s own jsdom environment has no fetch, so MSW\'s docs have you run these tests in jest-fixed-jsdom, which keeps Node\'s fetch.',
     hints: [
-      'setupServer() creates the server, .listen() starts it, .close() stops it',
-      'Use server.resetHandlers() in afterEach to clean up per-test overrides',
-      'server.use() adds one-time handler overrides for testing error states',
+      'setupServer(handler) creates the server; listen(), resetHandlers() and close() run in the three hooks',
+      'await screen.findByText("Alice") waits for the fetch to resolve',
+      'server.use(http.get(...)) overrides the handler for one test',
     ],
     tieredHints: {
       apiSignature: 'const server = setupServer(...handlers); beforeAll(() => server.listen()); afterEach(() => server.resetHandlers()); afterAll(() => server.close());',
@@ -2151,6 +2314,11 @@ describe("UserList", () => {
     render(<UserList />);
     expect(await screen.findByText("Alice")).toBeInTheDocument();
   });
+
+  it("shows error message when API fails", async () => {
+    server.____(/* a GET /api/users handler that answers 500 */);
+    // render, then find the error text
+  });
 });`,
     },
     tags: ['msw', 'react-testing-library', 'integration-test', 'setupServer', 'async'],
@@ -2166,7 +2334,7 @@ describe("UserList", () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Complete the test: find the email input by the text of its associated <label>, then set its value.',
+      'Complete the test: find the email input by the text of its <label>, with the query that throws when it is missing, then set its value.',
     template: `render(<ContactForm />);
 const emailInput = screen.___("Email");
 fireEvent.change(emailInput, { target: { value: "a@test.com" } });`,
@@ -2177,7 +2345,7 @@ fireEvent.change(emailInput, { target: { value: "a@test.com" } });`,
     explanation:
       'getByLabelText finds a form control by the text of its associated <label> - the same relationship a screen reader uses to announce the field. It only works when the label is properly wired to the input (htmlFor/id, or the input nested inside the label), so a failing query here is often a real accessibility bug, not just a flaky test.',
     hints: [
-      'The query that matches an input via its <label> text',
+      'The getBy* query that matches a field by its <label> text',
     ],
     tags: ['react-testing-library', 'getByLabelText', 'accessibility', 'cloze'],
     concepts: ['testing-rtl-queries', 'a11y-aria-roles'],
@@ -2206,7 +2374,7 @@ fireEvent.change(emailInput, { target: { value: "a@test.com" } });`,
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());`,
     explanation:
-      'beforeAll runs once before the whole suite, so the server starts listening a single time rather than being torn down and rebuilt per test. afterEach resets any per-test handler overrides (from server.use()) so tests stay isolated from each other. afterAll closes the server once the entire suite finishes. Swapping beforeAll/beforeEach here would restart the server before every single test - wasteful and unnecessary since resetHandlers already isolates tests.',
+      'beforeAll runs once before the whole suite, so the server starts listening a single time rather than being torn down and rebuilt per test. afterEach resets any per-test handler overrides (from server.use()) so tests stay isolated from each other. afterAll closes the server once the entire suite finishes. Calling listen() in beforeEach instead does not just waste time: on current MSW 2 the second listen() without a close() throws "cannot configure an already enabled network", so every test after the first fails. resetHandlers() already isolates the tests, which is why it alone runs after each one.',
     hints: [
       'Only one hook needs to run before EVERY test - which lifecycle event needs resetting per test, not the whole server?',
       'listen and close are expensive - run them once per suite, not per test',
@@ -2224,7 +2392,7 @@ afterAll(() => server.close());`,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Complete the modernized test: create a userEvent session, then use it to click the button (the call must be awaited).',
+      'Complete the test: create a user-event session, then use it to click the Save button (the call must be awaited).',
     template: `const user = userEvent.___();
 render(<Button onClick={handleClick}>Save</Button>);
 await user.___(screen.getByRole("button", { name: "Save" }));`,
@@ -2233,7 +2401,7 @@ await user.___(screen.getByRole("button", { name: "Save" }));`,
 render(<Button onClick={handleClick}>Save</Button>);
 await user.click(screen.getByRole("button", { name: "Save" }));`,
     explanation:
-      'userEvent.setup() creates a session that simulates a full sequence of real browser events (pointerdown, mousedown, focus, mouseup, click) instead of firing one synthetic event like fireEvent.click does. Every userEvent interaction is async and must be awaited, which is why user.click() (unlike fireEvent.click()) returns a Promise - this catches bugs that only surface with the intermediate events real users trigger, like a focus handler that fireEvent would skip entirely.',
+      'userEvent.setup() creates a user for this test, and user.click() fires the whole sequence a real click produces: hover and pointer events, mousedown, focus, mouseup and then click. fireEvent.click fires the click event alone. Every user-event action returns a promise, so await it before you assert; that is what catches bugs that hide in the in-between events, such as an onMouseDown or onFocus handler that fireEvent.click never triggers.',
     hints: [
       'The function that creates a userEvent session',
       'The method that simulates a realistic click sequence, awaited',
@@ -2253,7 +2421,7 @@ await user.click(screen.getByRole("button", { name: "Save" }));`,
     options: [
       { id: 'a', text: 'They dispatch the exact same underlying DOM events in the exact same order - userEvent is only a thin wrapper that adds automatic retries around fireEvent for flaky CI environments, with no behavioral difference otherwise', isCorrect: false },
       { id: 'b', text: 'fireEvent only works correctly with legacy class components, while userEvent is required for any function component that relies on hooks like useState or useEffect internally', isCorrect: false },
-      { id: 'c', text: 'fireEvent.click dispatches a single synthetic "click" DOM event. userEvent.click simulates the fuller sequence a real mouse click triggers (pointerdown, mousedown, focus, mouseup, click), so it catches bugs in handlers that depend on those intermediate events - this is why Testing Library\'s own docs recommend userEvent as the default', isCorrect: true },
+      { id: 'c', text: 'fireEvent.click dispatches one "click" event. userEvent.click fires the sequence a real click makes (pointerdown, mousedown, focus, pointerup, mouseup, click), so it catches handlers that rely on the in-between events, which is why Testing Library\'s docs recommend userEvent', isCorrect: true },
       { id: 'd', text: 'userEvent has been deprecated in favor of fireEvent as of Testing Library v14, specifically because of the extra async overhead userEvent adds to every simulated interaction', isCorrect: false },
     ],
     explanation: 'fireEvent is a thin wrapper that dispatches exactly the DOM event you name - fireEvent.click fires only a "click" event, skipping everything a real click actually produces along the way. userEvent.click simulates the realistic sequence a browser fires for a physical click: pointer and mouse events, a focus event if the target is focusable, then the click itself. A button with an onFocus side effect, or a component that only updates state on mousedown, would pass a fireEvent-based test while being broken for real users - userEvent catches that gap, which is why Testing Library\'s guidance now treats it as the default over fireEvent for user interactions.',
@@ -2312,7 +2480,7 @@ Ready null`,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Complete the assertion: wait until the mock has been called, since the save happens after a debounce delay rather than producing new text to query for.',
+      'Complete the assertion: the component calls handleSave 300 ms after the last change (a debounce) and shows no new text, so wait until the mock has been called.',
     template: `fireEvent.change(screen.getByRole("textbox"), { target: { value: "draft" } });
 await ___(() => {
   expect(handleSave).toHaveBeenCalledWith("draft");
@@ -2323,7 +2491,7 @@ await waitFor(() => {
   expect(handleSave).toHaveBeenCalledWith("draft");
 });`,
     explanation:
-      'findBy* queries only help when you are waiting for an ELEMENT to appear in the DOM. waitFor is more general: it retries any callback (usually containing one or more expect assertions) until it stops throwing or times out. That makes it the right tool here, since a debounced save calls a mock function rather than rendering new text you could query for.',
+      'findBy* queries help only when you wait for an element to appear. waitFor is more general: it runs the callback again and again until it stops throwing, or fails after 1000 ms by default. A debounced save calls a mock instead of rendering text you could query for, so waitFor around the expect is the right tool, and the 300 ms delay is well inside its timeout. A plain expect right after the change would fail, since the save has not happened yet.',
     hints: [
       'The general-purpose retry helper for any assertion, not just DOM queries',
     ],
@@ -2340,7 +2508,7 @@ await waitFor(() => {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Complete the spy: watch the real Date.now implementation without replacing its behavior, then restore the original implementation after the test.',
+      'Complete the spy: record calls to the real Date.now while it still returns the real time, then put the original method back after the test.',
     template: `const spy = jest.___(Date, "now");
 // ... run code that calls Date.now() ...
 expect(spy).toHaveBeenCalled();
