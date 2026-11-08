@@ -2,8 +2,9 @@
  * Data Engineering lessons, one per topic, in course order.
  *
  * Section Storage & Files (the second rewritten section) comes first on the
- * path and then Moving Data (the first section of the decisions-and-designs
- * rewrite): every topic of each. Each rule card teaches the decision rule as its form
+ * path, then Warehouses, Lakes & Table Formats (the third), and then Moving
+ * Data (the first section of the decisions-and-designs rewrite): every topic
+ * of each. Each rule card teaches the decision rule as its form
  * and works one scenario on small tables; the SQL is T-SQL that
  * check-lessons.js runs on sql.js. MERGE is not run there, so the worked
  * examples replace by key with DELETE and INSERT, and the idea names MERGE.
@@ -314,6 +315,303 @@ small files | 8 | 12 | 172
 compacted | 1 | 12 | 32`,
     },
     exercises: ['de-small-1', 'de-small-2', 'de-small-3', 'de-small-4', 'de-small-6'],
+  },
+  {
+    id: 'de_workloads_systems/1',
+    topicKeys: [Topic.DE_WORKLOADS_SYSTEMS],
+    step: 1,
+    title: 'Workloads & Systems: Warehouse, Lake, Lakehouse',
+    idea: [
+      lines(
+        'Two workloads touch data in opposite ways.',
+        'OLTP is the app: many small reads and writes of a few rows each, answered in milliseconds, on the current state.',
+        'OLAP is analysis: a few large queries over many rows and a few columns, often over years of history.',
+      ),
+      lines(
+        'A warehouse is a managed database for analytics: it checks data against a schema as it is loaded (schema on write) and keeps tables in its own format.',
+        'A lake is files in object storage: cheap, any format, open to every engine, with a schema applied only when the data is read (schema on read).',
+        'A folder of files is not a table, though: nothing in it says which files are finished, so a reader can see a job half done.',
+      ),
+      lines(
+        'A lakehouse is a lake plus a table format, a log of commits beside the files that gives each table atomic writes, a schema and versions.',
+        'So warehouse-style SQL, updates and deletes run on one copy of open files, and storage and compute are paid for apart.',
+      ),
+      lines(
+        'Every system after the first is a copy: it needs a pipeline and lags behind the app, so add one only when a workload needs it.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `few rows, reply in ms (the app)             -> OLTP database
+typed tables, SQL reports                   -> warehouse (schema on write)
+raw files of any shape, kept cheaply        -> lake (schema on read)
+tables on open files, many engines, updates -> lakehouse (lake + table format)
+analytics on the app's database: only while it is small`,
+    },
+    pitfall: lines(
+      'A plain lake folder read as if it were a table: the reader lists the files while a job is still writing and counts rows that are not finished.',
+      'Analytics on the app\'s primary database: one large scan competes with every checkout for disk, memory and CPU.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'workloads',
+          columns: ['workload', 'rows_per_query', 'reply_needed', 'data_kind', 'engines'],
+          rows: [
+            ['checkout writes an order', 1, 'ms', 'typed rows', 1],
+            ['monthly revenue report', 40000000, 'minutes', 'typed tables', 1],
+            ['raw clickstream kept a year', 900000000, 'hours', 'raw files', 1],
+            ['churn model and BI on one table', 60000000, 'minutes', 'typed tables', 3],
+          ],
+        },
+      ],
+      code: `-- The decision rule, applied to each workload in turn.
+SELECT workload,
+  CASE
+    WHEN reply_needed = 'ms' THEN 'OLTP database'
+    WHEN data_kind = 'raw files' THEN 'lake'
+    WHEN engines > 1 THEN 'lakehouse'
+    ELSE 'warehouse'
+  END AS system
+FROM workloads
+ORDER BY rows_per_query;`,
+      steps: [
+        'Line 4: checkout touches one row and must answer in milliseconds, so it stays on the OLTP database, however large the table grows.',
+        'Line 5: the raw clickstream is kept as it came and read rarely, so it lands in the lake and gets its schema when it is read.',
+        'Line 6: the churn table is typed and read by three engines (SQL, Spark and notebooks), so it lives on open files with a table format, as a lakehouse table.',
+        'Line 7: the revenue report reads typed tables with SQL alone, so a warehouse fits, and a lakehouse table would serve it as well.',
+        'The order of the WHEN lines matters: the app\'s latency is checked first, because no analytics store answers a checkout in milliseconds.',
+      ],
+      output: `workload | system
+checkout writes an order | OLTP database
+monthly revenue report | warehouse
+churn model and BI on one table | lakehouse
+raw clickstream kept a year | lake`,
+    },
+    exercises: ['de-workload-1', 'de-workload-2', 'de-workload-3', 'de-workload-4', 'de-workload-5'],
+  },
+  {
+    id: 'de_table_format_log/1',
+    topicKeys: [Topic.DE_TABLE_FORMAT_LOG],
+    step: 1,
+    title: 'Table Formats: Log, Snapshots & Concurrent Writers',
+    idea: [
+      lines(
+        'A table format (Delta Lake, Apache Iceberg, Apache Hudi) turns a folder of Parquet files into a table by keeping a log beside them.',
+        'Each commit is a numbered version that lists the files it added and the files it removed.',
+        'The table at version v is every file added up to v and not removed by then; any other file in the folder is not in the table.',
+      ),
+      lines(
+        'A writer writes its data files first, under new names, and then commits by creating the next entry of the log.',
+        'A reader picks a version when it starts and reads exactly that version\'s files, so it never sees half a commit.',
+        'An older version can be read again later (time travel), for as long as its files are kept.',
+      ),
+      lines(
+        'Two writers can race for the same version: the store lets only one of them create the entry, and the loser re-reads the winning commits.',
+        'If they changed nothing it read, it retries as the next version; if they removed a file it read, it fails and has to run again.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `table at v    = files added in commits <= v, minus files removed by then
+reader        -> pick one version, read only its files
+writer        -> write new files, then create log entry v+1 if it is free
+lost the race -> re-read: no overlap, retry as v+2; overlap, fail
+a file no version lists -> not in the table`,
+    },
+    pitfall: lines(
+      'Reading or cleaning a table by listing its folder goes around the log.',
+      'The folder holds removed files kept for old versions and files of writes that never committed, so a folder reader counts rows twice, and a file deleted by hand breaks the versions that still need it.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'table_log',
+          columns: ['version', 'action', 'file', 'row_count'],
+          rows: [
+            [0, 'add', 'f1', 100],
+            [0, 'add', 'f2', 100],
+            [1, 'add', 'f3', 80],
+            [2, 'remove', 'f1', null],
+            [2, 'add', 'f4', 95],
+            [3, 'remove', 'f2', null],
+            [3, 'remove', 'f3', null],
+            [3, 'add', 'f5', 180],
+          ],
+        },
+      ],
+      code: `-- The table as of version 3: files added and not yet removed.
+SELECT a.file, a.row_count
+FROM table_log a
+WHERE a.action = 'add' AND a.version <= 3
+  AND NOT EXISTS (SELECT 1 FROM table_log r
+                  WHERE r.action = 'remove' AND r.file = a.file AND r.version <= 3)
+ORDER BY a.file;
+
+-- Time travel: the same question as of version 1.
+SELECT a.file, a.row_count
+FROM table_log a
+WHERE a.action = 'add' AND a.version <= 1
+  AND NOT EXISTS (SELECT 1 FROM table_log r
+                  WHERE r.action = 'remove' AND r.file = a.file AND r.version <= 1)
+ORDER BY a.file;`,
+      steps: [
+        'Version 2 is an update: it removed f1 and added f4, the same rows with 5 of them deleted.',
+        'Version 3 is a compaction: it removed f2 and f3 and added f5, which holds their 180 rows in one file.',
+        'Lines 2-7: as of version 3 the table is f4 and f5, 275 rows, although all five files are still in the folder.',
+        'Lines 10-15: as of version 1 the table is f1, f2 and f3, 280 rows, and it can still be read because nothing has deleted those files yet.',
+      ],
+      output: `file | row_count
+f4 | 95
+f5 | 180
+
+file | row_count
+f1 | 100
+f2 | 100
+f3 | 80`,
+    },
+    exercises: ['de-snapshot-1', 'de-snapshot-2', 'de-snapshot-3', 'de-snapshot-4', 'de-snapshot-5'],
+  },
+  {
+    id: 'de_updating_files/1',
+    topicKeys: [Topic.DE_UPDATING_FILES],
+    step: 1,
+    title: 'Updating Files: Copy-on-Write, Merge-on-Read & Cleanup',
+    idea: [
+      lines(
+        'Data files are never edited: changing a row means writing new files and committing a version that swaps them in.',
+        'There are two ways to do it, and they differ in who pays for the change.',
+      ),
+      lines(
+        'Copy-on-write (CoW) rewrites every file that holds a changed row, whole, so the writer pays and readers see plain files.',
+        'Merge-on-read (MoR) writes only the change, a small delete file that marks the old rows plus the rows\' new versions, and every reader merges them with the base files.',
+        'Compaction later rewrites the base files with the changes applied, which brings the read cost back down.',
+      ),
+      lines(
+        'A file that a commit removes stays on storage, because older versions and readers that started earlier still use it.',
+        'Cleanup (vacuum, expire snapshots) deletes the files that no version inside the retention needs.',
+        'The retention trades time travel and safety for running jobs against the cost of storage.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `rare updates, many reads   -> copy-on-write
+frequent small updates     -> merge-on-read + scheduled compaction
+copy-on-write write = every file holding a changed row, whole
+merge-on-read read  = base files + every change file since compaction
+cleanup: delete files removed before the retention, never newer ones`,
+    },
+    pitfall: lines(
+      'A delete or a compaction only adds a version: the old files, and the deleted rows in them, stay on storage until cleanup.',
+      'Setting the retention near zero deletes files that a running job or yesterday\'s version still reads.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'data_files',
+          columns: ['file', 'row_count', 'rows_changed'],
+          rows: [
+            ['f1', 1000, 2],
+            ['f2', 1000, 0],
+            ['f3', 1000, 5],
+            ['f4', 1000, 0],
+          ],
+        },
+      ],
+      code: `-- An update changes 7 rows, spread over f1 and f3.
+SELECT 'CoW' AS strategy,
+       SUM(CASE WHEN rows_changed > 0 THEN row_count ELSE 0 END) AS rows_written,
+       COUNT(*) AS files_read_per_scan
+FROM data_files
+UNION ALL
+SELECT 'MoR',
+       2 * SUM(rows_changed),
+       COUNT(*) + SUM(CASE WHEN rows_changed > 0 THEN 1 ELSE 0 END) + 1
+FROM data_files
+ORDER BY strategy;`,
+      steps: [
+        'Lines 2-5: CoW rewrites f1 and f3 whole, 2,000 rows written to change 7, and a scan still reads 4 plain files.',
+        'Lines 7-8: MoR writes 7 delete entries and the 7 new row versions, 14 rows in all.',
+        'Line 9: its scan reads the 4 base files, a delete file for each of the 2 touched files, and the 1 file of new versions, 7 files to merge.',
+        'A compaction would fold the changes into new copies of f1 and f3 and bring the scan back to 4 files, while the old files wait for cleanup.',
+      ],
+      output: `strategy | rows_written | files_read_per_scan
+CoW | 2000 | 4
+MoR | 14 | 7`,
+    },
+    exercises: ['de-rewrite-1', 'de-rewrite-2', 'de-rewrite-3', 'de-rewrite-4', 'de-rewrite-5'],
+  },
+  {
+    id: 'de_schema_evolution/1',
+    topicKeys: [Topic.DE_SCHEMA_EVOLUTION],
+    step: 1,
+    title: 'Schema Enforcement & Evolution',
+    idea: [
+      lines(
+        'A table keeps its schema in its metadata, and enforcing it means that a write which does not match is refused as a whole, before it is committed.',
+        'A folder of plain files has no such check: each file can differ, and the reader finds out at query time.',
+      ),
+      lines(
+        'Evolving a schema is changing it on purpose.',
+        'Some changes touch only the metadata and are safe for every reader: adding a nullable column (old files read NULL) and widening a type (INT to BIGINT).',
+        'Renaming, dropping, narrowing or retyping a column breaks the readers that use it, so it is done by adding a new column, moving the readers, and dropping the old column last.',
+      ),
+      lines(
+        'Schema drift is a source changing its structure without telling anyone.',
+        'A pipeline that infers each batch\'s schema and merges whatever arrives lets drift in silently, so check each batch against a declared schema and hold back the ones that do not match.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `add a nullable column         -> safe: old rows read NULL
+widen a type (INT -> BIGINT)  -> safe: every value still fits
+rename, drop, narrow, retype  -> add a new column, move readers, drop last
+a batch that does not match   -> refuse or quarantine it, and alert
+never: infer and merge whatever the source sends`,
+    },
+    pitfall: lines(
+      'Automatic schema merge turns a renamed field into a new column and fills the old one with NULL.',
+      'Every load succeeds and row counts look normal, while the reports that sum the old column quietly fall.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'orders',
+          columns: ['order_id', 'load_day', 'amount', 'amount_cents'],
+          rows: [
+            [1, '2026-11-01', 40, null],
+            [2, '2026-11-01', 25, null],
+            [3, '2026-11-02', 35, null],
+            [4, '2026-11-02', 50, null],
+            [5, '2026-11-03', null, 3000],
+            [6, '2026-11-03', null, 4500],
+          ],
+        },
+      ],
+      code: `-- Loaded with each batch's schema inferred and new columns merged in.
+SELECT load_day,
+       COUNT(*) AS order_rows,
+       COALESCE(SUM(amount), 0) AS revenue,
+       SUM(CASE WHEN amount IS NULL THEN 1 ELSE 0 END) AS rows_without_amount
+FROM orders
+GROUP BY load_day
+ORDER BY load_day;`,
+      steps: [
+        'On 2026-11-03 the source renamed amount to amount_cents, and the load added amount_cents to the table as a new column.',
+        'Line 3: the row count is normal every day, so a check on row counts alone passes.',
+        'Lines 4-5: revenue for the day is 0, because amount is NULL in both of the new rows.',
+        'A declared schema with amount required would have refused the 2026-11-03 batch and raised an alert, before any report read it.',
+      ],
+      output: `load_day | order_rows | revenue | rows_without_amount
+2026-11-01 | 2 | 65 | 0
+2026-11-02 | 2 | 85 | 0
+2026-11-03 | 2 | 0 | 2`,
+    },
+    exercises: ['de-schema-1', 'de-schema-2', 'de-schema-3', 'de-schema-4', 'de-schema-5'],
   },
   {
     id: 'de_etl_elt_staging/1',

@@ -153,6 +153,14 @@ export enum Topic {
   DE_FILE_FORMATS = 'de_file_formats',
   DE_DATA_SKIPPING = 'de_data_skipping',
   DE_SMALL_FILES = 'de_small_files',
+  // Warehouses, Lakes & Table Formats - the third rewritten section. It absorbs
+  // the old DE_OLTP_VS_OLAP, DE_DATA_LAKE_WAREHOUSE, DE_LAKEHOUSE,
+  // DE_TABLE_FORMATS_INTRO and DE_ICEBERG_DELTA_HUDI, which keep no questions
+  // and stay here so stored progress keeps its course.
+  DE_WORKLOADS_SYSTEMS = 'de_workloads_systems',
+  DE_TABLE_FORMAT_LOG = 'de_table_format_log',
+  DE_UPDATING_FILES = 'de_updating_files',
+  DE_SCHEMA_EVOLUTION = 'de_schema_evolution',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).

@@ -76,6 +76,9 @@ const DATA_ENG_TOPICS = new Set<string>([
   // Storage & Files
   Topic.DE_ROW_VS_COLUMN_LAYOUT, Topic.DE_FILE_FORMATS, Topic.DE_DATA_SKIPPING,
   Topic.DE_SMALL_FILES,
+  // Warehouses, Lakes & Table Formats
+  Topic.DE_WORKLOADS_SYSTEMS, Topic.DE_TABLE_FORMAT_LOG, Topic.DE_UPDATING_FILES,
+  Topic.DE_SCHEMA_EVOLUTION,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -486,8 +489,9 @@ export const DATABRICKS_PATH_ORDER = [
  * Data Engineering Concepts course — tool-agnostic.
  * Being rewritten section by section as decisions and designs (a lesson per
  * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
- * explain cards in review); Moving Data and Storage & Files are rewritten. The
- * older sections are MCQ-only, built as many small topics, each ramping from a TRUE beginner intro (plain
+ * explain cards in review); Moving Data, Storage & Files and Warehouses, Lakes
+ * & Table Formats are rewritten. The older sections are MCQ-only, built as
+ * many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
  * exactly-once semantics, open-table-format guts). The selector serves
@@ -499,14 +503,12 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     topics: {
       'What Is Data Engineering?': ['de_what_is'],
       'Batch vs Streaming': ['de_batch_vs_streaming'],
-      'OLTP vs OLAP': ['de_oltp_vs_olap'],
-      'Data Lake vs Data Warehouse': ['de_data_lake_warehouse'],
     },
   },
   // The second rewritten section. It absorbs the old row vs columnar, file
   // format, Parquet and object storage topics of Foundations, whose keys stay in
   // DATA_ENG_TOPICS so stored scores still map to this course. It follows
-  // Foundations, whose OLTP vs OLAP topic is the workload these layouts serve.
+  // Foundations, as the first section of the course outline.
   'Storage & Files': {
     weight: 'Step 2',
     topics: {
@@ -516,22 +518,35 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Object Storage & Small Files': ['de_small_files'],
     },
   },
-  'Architecture & Open Table Formats': {
+  // The third rewritten section. It absorbs the old OLTP vs OLAP and lake vs
+  // warehouse topics of Foundations and the lakehouse, table format and
+  // Iceberg / Delta / Hudi topics of Architecture, whose keys stay in
+  // DATA_ENG_TOPICS so stored scores still map to this course. It follows
+  // Storage & Files: tables on files build on files, formats and object storage.
+  'Warehouses, Lakes & Table Formats': {
     weight: 'Step 3',
     topics: {
-      'What Is a Lakehouse?': ['de_lakehouse'],
-      'Why Put Tables on Files?': ['de_table_formats_intro'],
-      'Iceberg, Delta & Hudi': ['de_iceberg_delta_hudi'],
+      'Workloads & Systems: Warehouse, Lake, Lakehouse': ['de_workloads_systems'],
+      'Table Formats: Log, Snapshots & Concurrent Writers': ['de_table_format_log'],
+      'Updating Files: Copy-on-Write, Merge-on-Read & Cleanup': ['de_updating_files'],
+      'Schema Enforcement & Evolution': ['de_schema_evolution'],
+    },
+  },
+  // What is left of the old Architecture section until Modeling for Analytics
+  // is rewritten and absorbs its transformation tools topic.
+  'Architecture & Open Table Formats': {
+    weight: 'Step 4',
+    topics: {
       'Transformation Tools (dbt / SQLMesh)': ['de_transformation_tools'],
     },
   },
   // The first rewritten section (decisions and designs). It absorbs the old
   // ETL / ELT, CDC and retries topics, whose keys stay in DATA_ENG_TOPICS so
-  // stored scores still map to this course. Placed at Step 4 by owner
-  // decision, after Storage & Files and Architecture: a learner past them
-  // meets it before the old later steps.
+  // stored scores still map to this course. Placed by owner decision after
+  // the sections before it (Step 5 now): a learner past them meets it before
+  // the old later steps.
   'Moving Data': {
-    weight: 'Step 4',
+    weight: 'Step 5',
     topics: {
       'ETL, ELT & Staging': ['de_etl_elt_staging'],
       'Full vs Incremental Loads': ['de_full_vs_incremental'],
@@ -542,7 +557,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Modeling Concepts': {
-    weight: 'Step 5',
+    weight: 'Step 6',
     topics: {
       'Why Model Data?': ['de_why_model'],
       'Facts & Dimensions': ['de_tables_facts_dims'],
@@ -553,7 +568,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Streaming': {
-    weight: 'Step 6',
+    weight: 'Step 7',
     topics: {
       'What Is a Stream?': ['de_what_is_a_stream'],
       'Event Time vs Processing Time': ['de_event_vs_processing_time'],
@@ -564,7 +579,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Distributed Systems & Storage': {
-    weight: 'Step 7',
+    weight: 'Step 8',
     topics: {
       'Why Distribute?': ['de_why_distribute'],
       'Partitioning & Sharding': ['de_partitioning'],
@@ -574,7 +589,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Operations, Quality & Modern DE': {
-    weight: 'Step 8',
+    weight: 'Step 9',
     topics: {
       'What Is Orchestration?': ['de_what_is_orchestration'],
       'Airflow, Dagster & Prefect': ['de_airflow_dagster'],
@@ -591,7 +606,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   // (lastReachedIndex); the cost of the late place is that the hardware layer
   // arrives as a deepening pass over material already seen.
   'Machines, Memory & Disks': {
-    weight: 'Step 9',
+    weight: 'Step 10',
     topics: {
       'The Memory Hierarchy': ['de_memory_hierarchy'],
       'RAM vs Disk': ['de_ram_vs_disk'],
@@ -608,6 +623,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
 export const DATA_ENG_PATH_ORDER = [
   'Foundations',
   'Storage & Files',
+  'Warehouses, Lakes & Table Formats',
   'Architecture & Open Table Formats',
   'Moving Data',
   'Modeling Concepts',

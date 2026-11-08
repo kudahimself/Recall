@@ -44,10 +44,10 @@ function emptyProgress(): UserProgress {
 }
 
 describe('section wiring', () => {
-  it('is Step 2, after Foundations and before Architecture & Open Table Formats', () => {
+  it('is Step 2, after Foundations and before Warehouses, Lakes & Table Formats', () => {
     expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(1);
     expect(DATA_ENG_PATH_ORDER[0]).toBe('Foundations');
-    expect(DATA_ENG_PATH_ORDER[2]).toBe('Architecture & Open Table Formats');
+    expect(DATA_ENG_PATH_ORDER[2]).toBe('Warehouses, Lakes & Table Formats');
     expect(DATA_ENG_SECTIONS[SECTION].weight).toBe('Step 2');
   });
 
@@ -72,14 +72,12 @@ describe('section wiring', () => {
     const dePool = allQuestions.filter(q => getCourseForTopic(q.topic) === Course.DATA_ENGINEERING);
     const unlocked = SpacedRepetitionSystem.getUnlockedSections(dePool, progress);
     expect(unlocked!.sections).toContain(SECTION);
-    expect(unlocked!.sections).not.toContain('Architecture & Open Table Formats');
+    expect(unlocked!.sections).not.toContain('Warehouses, Lakes & Table Formats');
     expect(SpacedRepetitionSystem.getUnlockedTopics(dePool, progress)).toContain(TOPICS[0]);
   });
 
-  it('keeps the Foundations topics it did not absorb', () => {
-    expect(getTopicKeysForSection('Foundations')).toEqual([
-      Topic.DE_WHAT_IS, Topic.DE_BATCH_VS_STREAMING, Topic.DE_OLTP_VS_OLAP, Topic.DE_DATA_LAKE_WAREHOUSE,
-    ]);
+  it('keeps the Foundations topics no rewritten section absorbed', () => {
+    expect(getTopicKeysForSection('Foundations')).toEqual([Topic.DE_WHAT_IS, Topic.DE_BATCH_VS_STREAMING]);
   });
 });
 
