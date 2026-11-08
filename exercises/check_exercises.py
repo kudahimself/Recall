@@ -18,10 +18,12 @@ A course in BATCHED (databricks) is checked in one pytest run per step instead o
 because every run starts a Spark JVM that takes 10 to 20 seconds: all the starters run together,
 then all the reference solutions, and each test result is matched back to its exercise folder.
 
-A course in NODE (web_dev) is JavaScript: its exercises have *.test.js Vitest tests, run with node
+A course in NODE (web_dev) is JavaScript and TypeScript: its exercises have Vitest tests (*.test.js,
+*.test.jsx for React, *.test.ts for TypeScript), run with node
 from the course folder's own package.json, whose packages `npm ci` installs in exercises/<course>/node_modules.
 It is checked the same batched way, in one Vitest run for the starters and one for the solutions,
-each copy taking the course folder's shared files (package.json, vitest.config.js, page.js) and its node_modules along.
+each copy taking the course folder's shared files (package.json, vitest.config.js, page.js, typecheck.js,
+tsconfig.json) and its node_modules along.
 
 Usage, from anywhere: python exercises/check_exercises.py [course or course/topic ...]
 With no argument it checks every course; with names (backend, databricks) or course/topic
@@ -46,6 +48,8 @@ IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc", "node_m
 BATCHED = {"databricks"}
 # JavaScript courses, tested with Vitest from the course folder's package.json, also checked together.
 NODE = {"web_dev"}
+# The Vitest test files of a NODE course's exercise, as vitest.config.js includes them.
+NODE_TESTS = ("*.test.js", "*.test.jsx", "*.test.ts")
 
 
 def exercise_dirs(courses=()):
@@ -162,7 +166,7 @@ def output_for(out, course, folder):
 
 
 def run_vitest_batch(course_dir):
-    """Run every *.test.js under `course_dir` in one Vitest run; return {topic: (passed, failed)} and the output."""
+    """Run every Vitest test file under `course_dir` in one Vitest run; return {topic: (passed, failed)} and the output."""
     report = course_dir / "vitest-report.json"
     env = {k: v for k, v in os.environ.items() if k != "INIT_CWD"}
     result = subprocess.run(
@@ -198,8 +202,8 @@ def check_batch(course, folders):
         solution = SOLUTIONS / rel
         if not solution.is_dir():
             problems[folder].append(f"no reference solution at {solution.relative_to(ROOT.parent)}")
-        elif not list(folder.glob("*.test.js" if node else "test_*.py")):
-            problems[folder].append("no *.test.js file" if node else "no test_*.py file")
+        elif not any(any(folder.glob(g)) for g in (NODE_TESTS if node else ("test_*.py",))):
+            problems[folder].append("no *.test.js, *.test.jsx or *.test.ts file" if node else "no test_*.py file")
         else:
             runnable.append(folder)
             files = solution.rglob("*") if node else solution.rglob("*.py")

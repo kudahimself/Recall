@@ -800,7 +800,7 @@ export interface TopicExercise {
   folder: string;
   /** The starter file(s) to fill in, relative to the folder. */
   starter: string[];
-  /** The test file, relative to the folder: pytest's test_*.py, or Vitest's *.test.js for Web Dev. */
+  /** The test file, relative to the folder: pytest's test_*.py, or Vitest's *.test.js (.jsx for React, .ts for TypeScript) for Web Dev. */
   tests: string;
   /** Rough time to finish, in minutes. */
   minutes: number;
