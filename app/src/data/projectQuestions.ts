@@ -415,357 +415,37 @@ renderProducts(products);`,
     topic: Topic.NEXT_DEPLOYMENT,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build a Blog Index Page with Server Components
-
-Create a Next.js 14+ blog using the App Router. You need:
-1. A Server Component page (app/blog/page.tsx) that fetches posts from an API and renders a list with next/link
-2. generateMetadata for SEO
-3. A loading.tsx for streaming/suspense
-4. A dynamic [slug]/page.tsx that fetches and renders a single post
-
-Show all files. The fetch URL is "https://api.example.com/posts" (returns {posts: Post[]}) and "https://api.example.com/posts/{slug}" (returns a Post).`,
-    starterCode: `// types.ts
-interface Post {
-  slug: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  publishedAt: string;
-  author: string;
-}
-
-// ==========================================
-// app/blog/page.tsx — Blog index (Server Component)
-// ==========================================
-import Link from 'next/link';
-import { Metadata } from 'next';
-
-// TODO: Export generateMetadata or a static metadata object for SEO
-// (title: "Blog", description: "Latest articles")
-
-// TODO: Create an async function to fetch posts from the API
-// https://api.example.com/posts
-// Don't forget: { next: { revalidate: 3600 } } for ISR
-
-// TODO: Export default async function BlogPage that:
-// - Awaits the fetch
-// - Renders a heading and a list of posts
-// - Each post links to /blog/{slug} using next/link
-// - Show title, excerpt, date, and author for each post
-
-// ==========================================
-// app/blog/loading.tsx — Loading skeleton
-// ==========================================
-// TODO: Export a loading component that shows placeholder cards
-// (This file enables streaming — Next.js wraps the page in Suspense)
-
-// ==========================================
-// app/blog/[slug]/page.tsx — Single post (Server Component)
-// ==========================================
-// TODO: Export async function that:
-// - Receives { params } with slug
-// - Fetches single post from https://api.example.com/posts/{slug}
-// - If not found, call notFound()
-// - Renders the post title, author, date, and content
-
-// TODO: Export generateMetadata that fetches the post and returns
-// dynamic title and description for SEO
-`,
+    question: 'Build a blog index and post pages with Server Components (Next.js 15 App Router). Show all three files; the Post type is in the starter and is imported from "@/types".\n\n1. app/blog/page.tsx\n   - Export a static metadata object: title "Blog", description "Latest articles"\n   - An async page that fetches https://api.example.com/posts (it returns { posts: Post[] }) with next: { revalidate: 3600 }\n   - Render <h1>Blog</h1> and a <ul> with one <li key={post.slug}> per post holding a next/link <Link> to /blog/{slug} with the post title, then a <p> with the excerpt\n\n2. app/blog/loading.tsx\n   - A default component that renders <p>Loading posts...</p> while the index loads\n\n3. app/blog/[slug]/page.tsx (params is a Promise in Next.js 15)\n   - Fetch https://api.example.com/posts/{slug} with the same revalidate; it answers 404 for an unknown slug\n   - The page calls notFound() when the response is not ok, otherwise renders an <article> with <h1>{post.title}</h1>, <p>By {post.author}</p> and <p>{post.content}</p>\n   - Export generateMetadata returning the post\'s title and its excerpt as the description, or { title: "Post not found" } when there is no post',
+    starterCode: `// types.ts\nexport type Post = {\n  slug: string;\n  title: string;\n  excerpt: string;\n  content: string;\n  author: string;\n};\n\n// app/blog/page.tsx\n\n\n// app/blog/loading.tsx\n\n\n// app/blog/[slug]/page.tsx\n`,
     testCases: [
       {
         input: 'Blog index page',
-        expectedOutput: 'async.*function.*Blog|export default async|generateMetadata',
-        description: 'Blog page is an async Server Component with metadata',
+        expectedOutput: 'export const metadata = { title: "Blog", ... }; export default async function BlogPage() { ... fetch(..., { next: { revalidate: 3600 } }) ... }',
+        description: 'Blog index is an async Server Component with metadata and hourly revalidation',
       },
       {
         input: 'Dynamic route',
-        expectedOutput: 'params.*slug|notFound|api.example.com/posts/',
-        description: 'Dynamic page reads slug from params and handles not found',
+        expectedOutput: 'const { slug } = await params; ... if (!post) notFound();',
+        description: 'Post page awaits params and calls notFound() for a missing post',
       },
       {
-        input: 'ISR / revalidation',
-        expectedOutput: 'revalidate|next.*revalidate|cache',
-        description: 'Uses revalidation for incremental static regeneration',
+        input: 'Loading UI and metadata',
+        expectedOutput: '<p>Loading posts...</p>; export async function generateMetadata({ params }) { ... }',
+        description: 'loading.tsx streams a fallback and generateMetadata sets the post title',
       },
     ],
-    solution: `// ==========================================
-// app/blog/page.tsx
-// ==========================================
-import Link from 'next/link';
-import { Metadata } from 'next';
-
-interface Post {
-  slug: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  publishedAt: string;
-  author: string;
-}
-
-export const metadata: Metadata = {
-  title: 'Blog',
-  description: 'Latest articles and tutorials',
-};
-
-async function getPosts(): Promise<Post[]> {
-  const res = await fetch('https://api.example.com/posts', {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) throw new Error('Failed to fetch posts');
-  const data = await res.json();
-  return data.posts;
-}
-
-export default async function BlogPage() {
-  const posts = await getPosts();
-
-  return (
-    <main>
-      <h1>Blog</h1>
-      <ul>
-        {posts.map((post) => (
-          <li key={post.slug}>
-            <Link href={\`/blog/\${post.slug}\`}>
-              <h2>{post.title}</h2>
-              <p>{post.excerpt}</p>
-              <span>{post.author} · {new Date(post.publishedAt).toLocaleDateString()}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
-}
-
-// ==========================================
-// app/blog/loading.tsx
-// ==========================================
-export default function BlogLoading() {
-  return (
-    <main>
-      <h1>Blog</h1>
-      <ul>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <li key={i} className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-3/4 mb-2" />
-            <div className="h-4 bg-gray-200 rounded w-full mb-1" />
-            <div className="h-4 bg-gray-200 rounded w-1/4" />
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
-}
-
-// ==========================================
-// app/blog/[slug]/page.tsx
-// ==========================================
-import { notFound } from 'next/navigation';
-import { Metadata } from 'next';
-
-async function getPost(slug: string): Promise<Post | null> {
-  const res = await fetch(\`https://api.example.com/posts/\${slug}\`, {
-    next: { revalidate: 3600 },
-  });
-  if (!res.ok) return null;
-  return res.json();
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  const post = await getPost(params.slug);
-  if (!post) return { title: 'Post Not Found' };
-  return {
-    title: post.title,
-    description: post.excerpt,
-  };
-}
-
-export default async function PostPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const post = await getPost(params.slug);
-  if (!post) notFound();
-
-  return (
-    <article>
-      <h1>{post.title}</h1>
-      <p>{post.author} · {new Date(post.publishedAt).toLocaleDateString()}</p>
-      <div dangerouslySetInnerHTML={{ __html: post.content }} />
-    </article>
-  );
-}`,
-    explanation: `Architectural highlights:
-
-1. **Server Components by default** — These pages are async functions that fetch data on the server. No useEffect, no loading state management, no client-side fetch waterfall. The HTML is generated with the data already embedded.
-
-2. **Streaming with loading.tsx** — Next.js automatically wraps the page in a Suspense boundary. While the async page is fetching, users see the skeleton from loading.tsx. The page streams in when data is ready. No extra code needed.
-
-3. **ISR with revalidate** — \`{ next: { revalidate: 3600 } }\` means the page is statically generated but revalidated every hour. First visitor gets a cached page instantly; after an hour, the next visitor triggers a background rebuild.
-
-4. **generateMetadata** — Runs on the server before rendering. For the dynamic page, it fetches the post to generate a proper <title> and <meta description>. This is critical for SEO — crawlers see the correct metadata without executing JavaScript.
-
-5. **notFound()** — Calling notFound() renders the nearest not-found.tsx boundary (or the default 404 page). It's the Next.js equivalent of throwing a 404.`,
-    hints: [
-      'Server Components can be async functions — just await your data directly',
-      'loading.tsx is automatically used as a Suspense fallback by Next.js',
-      'generateMetadata can also be async — it runs before the page renders',
-    ],
+    solution: `// types.ts\nexport type Post = {\n  slug: string;\n  title: string;\n  excerpt: string;\n  content: string;\n  author: string;\n};\n\n// app/blog/page.tsx\nimport Link from "next/link";\nimport type { Metadata } from "next";\nimport type { Post } from "@/types";\n\nexport const metadata: Metadata = {\n  title: "Blog",\n  description: "Latest articles",\n};\n\nexport default async function BlogPage() {\n  const res = await fetch("https://api.example.com/posts", {\n    next: { revalidate: 3600 },\n  });\n  const { posts }: { posts: Post[] } = await res.json();\n\n  return (\n    <main>\n      <h1>Blog</h1>\n      <ul>\n        {posts.map((post) => (\n          <li key={post.slug}>\n            <Link href={\`/blog/\${post.slug}\`}>{post.title}</Link>\n            <p>{post.excerpt}</p>\n          </li>\n        ))}\n      </ul>\n    </main>\n  );\n}\n\n// app/blog/loading.tsx\nexport default function BlogLoading() {\n  return <p>Loading posts...</p>;\n}\n\n// app/blog/[slug]/page.tsx\nimport { notFound } from "next/navigation";\nimport type { Metadata } from "next";\nimport type { Post } from "@/types";\n\ntype Props = { params: Promise<{ slug: string }> };\n\nasync function getPost(slug: string): Promise<Post | null> {\n  const res = await fetch(\`https://api.example.com/posts/\${slug}\`, {\n    next: { revalidate: 3600 },\n  });\n  if (!res.ok) return null;\n  return res.json();\n}\n\nexport async function generateMetadata({ params }: Props): Promise<Metadata> {\n  const { slug } = await params;\n  const post = await getPost(slug);\n  if (!post) return { title: "Post not found" };\n  return { title: post.title, description: post.excerpt };\n}\n\nexport default async function PostPage({ params }: Props) {\n  const { slug } = await params;\n  const post = await getPost(slug);\n  if (!post) notFound();\n\n  return (\n    <article>\n      <h1>{post.title}</h1>\n      <p>By {post.author}</p>\n      <p>{post.content}</p>\n    </article>\n  );\n}`,
+    requires: [/export\s+const\s+metadata/, /title\s*:\s*["']Blog["']/, /fetch\(\s*["'`]https:\/\/api\.example\.com\/posts["'`]/, /revalidate\s*:\s*3600/, /<Link\s+href=\{\s*`\/blog\/\$\{\s*post\.slug\s*\}`\s*\}/, /Loading posts\.\.\./, /await\s+params/, /api\.example\.com\/posts\/\$\{\s*slug\s*\}/, /(\.ok\b|status\s*===?\s*404)/, /notFound\(\)/, /export\s+async\s+function\s+generateMetadata/, /Post not found/],
+    explanation: 'Architecture notes:\n\n1. **Server Components by default**: both pages are async functions that fetch on the server. No useEffect, no loading state of their own, no fetch from the browser: the HTML arrives with the posts in it.\n\n2. **Streaming with loading.tsx**: Next.js wraps the route\'s page in a Suspense boundary with loading.tsx as the fallback, so visitors see "Loading posts..." at once while the index fetch is in flight.\n\n3. **ISR with revalidate**: next: { revalidate: 3600 } keeps each response for an hour. After that, the next visitor still gets the cached page while Next.js regenerates it in the background, and the visitor after that sees the new version.\n\n4. **Next.js 15 params**: params is a Promise, so the post page and generateMetadata both await it before reading slug; reading params.slug directly is the Next.js 14 form and a type error in 15.\n\n5. **generateMetadata and notFound()**: generateMetadata runs on the server before the page, so the post\'s <title> and description are in the first HTML response. The page and generateMetadata both call getPost, but a fetch to the same URL is made once per request. notFound() stops the render and shows the nearest not-found.tsx (or the default 404 page).',
+    hints: ['Server Components can be async functions: just await your data directly', 'loading.tsx is used as a Suspense fallback by Next.js automatically', 'params is a Promise in Next.js 15, in generateMetadata too'],
     tieredHints: {
       apiSignature: 'fetch(url, { next: { revalidate: seconds } }); generateMetadata({ params }): Promise<Metadata>; notFound(): never',
-      skeleton: '// app/blog/page.tsx\nasync function getPosts(): Promise<Post[]> {\n  const res = await ____("https://api.example.com/posts", {\n    ____,\n  });\n  if (!res.ok) throw new Error("Failed to fetch posts");\n  const data = await res.json();\n  return data.posts;\n}\n\n// app/blog/[slug]/page.tsx\nexport default async function PostPage({ params }: { params: { slug: string } }) {\n  const post = await ____(params.slug);\n  if (!post) ____;\n  return (\n    <article>\n      <h1>{post.title}</h1>\n      <div dangerouslySetInnerHTML={{ __html: post.content }} />\n    </article>\n  );\n}',
+      skeleton: '// app/blog/page.tsx\nexport const metadata: Metadata = ____;\n\nexport default async function BlogPage() {\n  const res = await fetch("https://api.example.com/posts", ____);\n  const { posts }: { posts: Post[] } = ____;\n  return (\n    <main>\n      <h1>Blog</h1>\n      <ul>{____}</ul>\n    </main>\n  );\n}\n\n// app/blog/[slug]/page.tsx\nasync function getPost(slug: string): Promise<Post | null> {\n  const res = await fetch(____, ____);\n  if (____) return null;\n  return res.json();\n}\n\nexport default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {\n  const { slug } = ____;\n  const post = ____;\n  if (!post) ____;\n  return <article>____</article>;\n}',
     },
     tags: ['nextjs', 'server-components', 'app-router', 'seo', 'project'],
     concepts: ['next-server-vs-client', 'next-app-router', 'web-html-semantics'],
   },
 
-  {
-    id: 'proj-next-2',
-    type: QuestionType.CODING,
-    difficulty: Difficulty.INTERMEDIATE,
-    topic: Topic.NEXT_DEPLOYMENT,
-    course: Course.WEB_DEV,
-    language: CodeLanguage.JSX,
-    question: `Build a Theme Toggle with Next.js
-
-Create a dark/light theme toggle for a Next.js app. You need:
-1. A Client Component (ThemeToggle.tsx) that switches between light and dark mode
-2. A layout.tsx that wraps children in a ThemeProvider (using next-themes)
-3. Uses Tailwind CSS dark: classes for styling
-4. Persists the user's preference
-
-Show the layout file and the toggle component.`,
-    starterCode: `// ==========================================
-// app/layout.tsx
-// ==========================================
-import { ThemeProvider } from 'next-themes';
-
-// TODO: Export default RootLayout function
-// - Accept { children }: { children: React.ReactNode }
-// - Return <html> with suppressHydrationWarning on the <html> tag
-// - Wrap <body>'s children in <ThemeProvider>
-//   with attribute="class" and defaultTheme="system"
-// - suppressHydrationWarning prevents the mismatch warning
-//   because the theme is read from localStorage on the client
-
-// ==========================================
-// components/ThemeToggle.tsx (Client Component)
-// ==========================================
-// TODO: Add 'use client' directive
-
-// TODO: Import useTheme from 'next-themes'
-// TODO: Import useState, useEffect from 'react'
-
-// TODO: Export ThemeToggle component that:
-// - Uses useTheme() to get { theme, setTheme, resolvedTheme }
-// - Has a mounted state (useEffect to set mounted = true)
-//   This prevents hydration mismatch — on server, we don't know the theme
-// - If not mounted, render a placeholder button (same size, no icon)
-// - Renders a button that toggles between light and dark
-// - Shows a sun icon for dark mode, moon icon for light mode
-//   (because clicking it switches TO that mode)
-`,
-    testCases: [
-      {
-        input: 'ThemeProvider setup',
-        expectedOutput: 'ThemeProvider.*attribute.*class|ThemeProvider.*defaultTheme',
-        description: 'Layout wraps children in ThemeProvider with correct props',
-      },
-      {
-        input: 'Client component',
-        expectedOutput: 'use client.*useTheme|useTheme.*setTheme',
-        description: 'ThemeToggle is a client component using the useTheme hook',
-      },
-      {
-        input: 'Hydration safety',
-        expectedOutput: 'mounted|suppressHydrationWarning',
-        description: 'Handles hydration mismatch with mounted check or suppressHydrationWarning',
-      },
-    ],
-    solution: `// ==========================================
-// app/layout.tsx
-// ==========================================
-import { ThemeProvider } from 'next-themes';
-import './globals.css';
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
-  );
-}
-
-// ==========================================
-// components/ThemeToggle.tsx
-// ==========================================
-'use client';
-
-import { useTheme } from 'next-themes';
-import { useState, useEffect } from 'react';
-
-export default function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <button className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
-    );
-  }
-
-  return (
-    <button
-      onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700
-                 flex items-center justify-center transition-colors"
-      aria-label={\`Switch to \${resolvedTheme === 'dark' ? 'light' : 'dark'} mode\`}
-    >
-      {resolvedTheme === 'dark' ? '☀️' : '🌙'}
-    </button>
-  );
-}`,
-    explanation: `Key decisions:
-
-1. **suppressHydrationWarning on <html>** — next-themes adds a class to <html> via a script that runs before React hydrates. This causes a hydration mismatch warning because the server-rendered HTML doesn't have the class. suppressHydrationWarning tells React to ignore this specific element's mismatch.
-
-2. **attribute="class"** — This tells next-themes to set the theme by adding "dark" or "light" as a class on <html>. Tailwind's dark: variant checks for this class, so \`dark:bg-gray-900\` automatically works.
-
-3. **Mounted check** — On the server, we don't know the user's theme preference (it's in localStorage/cookies). If we render theme-dependent UI during SSR, it will mismatch with the client. The mounted pattern renders a neutral placeholder on the server and swaps in the real toggle after hydration.
-
-4. **resolvedTheme vs theme** — When defaultTheme="system", \`theme\` might be "system". \`resolvedTheme\` tells you the actual resolved value ("light" or "dark") based on the user's OS preference.
-
-5. **Tailwind dark mode** — With \`darkMode: 'class'\` in tailwind.config, all \`dark:\` variants activate when the "dark" class is on <html>. No CSS-in-JS or style prop toggling needed.`,
-    hints: [
-      'suppressHydrationWarning goes on the <html> tag because next-themes modifies it before React hydrates',
-      'Use resolvedTheme instead of theme — it resolves "system" to the actual value',
-      'The mounted pattern prevents hydration mismatches for theme-dependent rendering',
-    ],
-    tieredHints: {
-      apiSignature: 'useTheme(): { theme?: string; setTheme: (theme: string) => void; resolvedTheme?: string }',
-      skeleton: '// app/layout.tsx\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang="en" ____>\n      <body>\n        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>\n          {children}\n        </ThemeProvider>\n      </body>\n    </html>\n  );\n}\n\n// components/ThemeToggle.tsx\n"use client";\nexport default function ThemeToggle() {\n  const { ____, setTheme } = useTheme();\n  const [mounted, setMounted] = useState(false);\n\n  useEffect(() => {\n    setMounted(true);\n  }, []);\n\n  if (!mounted) {\n    return ____;\n  }\n\n  return (\n    <button onClick={() => ____}>\n      Toggle\n    </button>\n  );\n}',
-    },
-    tags: ['nextjs', 'dark-mode', 'theming', 'client-component', 'project'],
-    concepts: ['next-server-vs-client'],
-  },
 
   {
     id: 'proj-next-3',
@@ -775,43 +455,13 @@ export default function ThemeToggle() {
     course: Course.WEB_DEV,
     question: `You're building a marketing website with 50 blog posts. The content is written in a CMS and changes maybe once or twice a day. Which Next.js rendering strategy gives the best combination of performance and freshness?`,
     options: [
-      {
-        id: 'a',
-        text: 'Fully dynamic — use "force-dynamic" or no-store on every page so each visitor gets the latest content from the CMS in real time.',
-        isCorrect: false,
-      },
-      {
-        id: 'b',
-        text: 'Client-side fetching — use useEffect + fetch in a Client Component so the browser loads the content after page load.',
-        isCorrect: false,
-      },
-      {
-        id: 'c',
-        text: 'Static generation with revalidation — generate pages at build time with generateStaticParams, add revalidate: 3600 so pages rebuild in the background hourly. Visitors always get a fast static page.',
-        isCorrect: true,
-      },
-      {
-        id: 'd',
-        text: 'Static generation without revalidation — generate all pages at build time with generateStaticParams and never revalidate. Redeploy whenever content changes.',
-        isCorrect: false,
-      },
+      { id: 'a', text: 'Fully dynamic: use "force-dynamic" or no-store on every page, so each visitor gets the latest content from the CMS in real time.', isCorrect: false },
+      { id: 'b', text: 'Client-side fetching: use useEffect and fetch in a Client Component, so the browser loads the content after the page loads.', isCorrect: false },
+      { id: 'c', text: 'Static generation with revalidation: build the pages with generateStaticParams and set revalidate: 3600, so a page older than an hour is rebuilt in the background.', isCorrect: true },
+      { id: 'd', text: 'Static generation without revalidation: build every page with generateStaticParams, never revalidate, and redeploy whenever content changes.', isCorrect: false },
     ],
-    explanation: `Static generation + revalidation (ISR) is the sweet spot here:
-
-**Why static + revalidate?**
-- Pages are pre-built as static HTML at build time — fastest possible response time (served from CDN edge)
-- \`revalidate: 3600\` means after 1 hour, the next visitor triggers a background rebuild. They still get the cached page instantly, and the new version is ready for the next visitor
-- 50 pages is small enough that generateStaticParams can pre-build all of them
-
-**Why NOT fully dynamic?** Every request hits the origin server and the CMS API. For content that changes once a day, this is massive overkill and slower for users. You're paying for server time for no benefit.
-
-**Why NOT client-side fetching?** Terrible for SEO — search engines see an empty page with a loading spinner. Marketing sites NEED good SEO. Also slower perceived performance (content loads after JavaScript).
-
-**Why NOT static without revalidation?** Requires a full redeploy whenever content changes. For a marketing team updating blog posts, they'd need to trigger builds manually. Revalidation automates this — the site stays fresh without deploys.`,
-    hints: [
-      'Think about how often the content changes vs. how fast you need the page to load',
-      'SEO is critical for a marketing site — how does each strategy affect crawlers?',
-    ],
+    explanation: 'Static generation with revalidation (ISR) fits here.\n\n**Why static with revalidate?**\n- The pages are built as static HTML at build time, the fastest possible response, served from a CDN.\n- With revalidate: 3600, the first visitor after a page is an hour old still gets the cached page at once while Next.js rebuilds it in the background, and the next visitor gets the new version.\n- 50 pages is small enough for generateStaticParams to build them all ahead.\n- Even better for a CMS: have the CMS call a webhook that runs revalidateTag or revalidatePath when an editor publishes, so a change shows at once and the timer is only a fallback.\n\n**Why not fully dynamic?** Every request hits the server and the CMS API. For content that changes once a day that is slower for visitors and costs server time for nothing.\n\n**Why not client-side fetching?** Search engines and link previews get an empty page with a spinner, which hurts a marketing site, and the content appears only after the JavaScript runs.\n\n**Why not static without revalidation?** Every content change needs a full redeploy, so editors would have to trigger builds by hand.',
+    hints: ['How often does the content change, and how fast must the page load?', 'SEO matters for a marketing site: what does each strategy show a crawler?'],
     tags: ['nextjs', 'rendering', 'isr', 'static-generation', 'project'],
     concepts: ['next-data-fetching'],
   },

@@ -62,6 +62,15 @@ export const REACT_RENDERED_OUTPUT_CONVENTION =
   'Read the code below as React runs it in the browser: it logs nothing. ' +
   'Answer exactly what the question asks, in the form it gives.';
 
+/**
+ * TypeScript that logs nothing (a route handler, a middleware) prints nothing
+ * either: its predicts ask about what the code does, such as the status codes
+ * it answers or where it redirects, and each question names the value and the
+ * form to type it in.
+ */
+export const NO_LOG_OUTPUT_CONVENTION =
+  'This code logs nothing. Answer exactly what the question asks about it, in the form it gives.';
+
 /** True for code the browser renders (HTML, CSS) rather than runs and prints. */
 export function rendersInBrowser(language: CodeLanguage): boolean {
   return language === CodeLanguage.HTML || language === CodeLanguage.CSS;
@@ -72,15 +81,26 @@ function reactWithoutLogs(code: string, language: CodeLanguage): boolean {
   return language === CodeLanguage.JSX && !/\bconsole\.\w+\s*\(/.test(code);
 }
 
+/** True for TypeScript that never calls console: the answer is about what the code does. */
+function typescriptWithoutLogs(code: string, language: CodeLanguage): boolean {
+  return language === CodeLanguage.TYPESCRIPT && !/\bconsole\.\w+\s*\(/.test(code);
+}
+
 /** True when the predict's answer is about the rendered page rather than printed output. */
 export function answersAboutPage(code: string, language: CodeLanguage): boolean {
   return rendersInBrowser(language) || reactWithoutLogs(code, language);
+}
+
+/** True when the predict's answer is not printed output: a rendered page, or code that logs nothing. */
+export function answersWithoutPrintedOutput(code: string, language: CodeLanguage): boolean {
+  return answersAboutPage(code, language) || typescriptWithoutLogs(code, language);
 }
 
 /** The answer instruction that matches what the code actually outputs. */
 export function outputInstruction(code: string, language: CodeLanguage): string {
   if (rendersInBrowser(language)) return RENDERED_OUTPUT_CONVENTION;
   if (reactWithoutLogs(code, language)) return REACT_RENDERED_OUTPUT_CONVENTION;
+  if (typescriptWithoutLogs(code, language)) return NO_LOG_OUTPUT_CONVENTION;
   if (language !== CodeLanguage.SQL) return DEFAULT_OUTPUT_CONVENTION;
   if (!/\bPRINT\b/i.test(code)) return SQL_OUTPUT_CONVENTION;
   return /\bSELECT\b/i.test(code) ? SQL_MIXED_PRINT_CONVENTION : SQL_PRINT_CONVENTION;

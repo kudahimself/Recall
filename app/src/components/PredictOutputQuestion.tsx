@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PredictOutputQuestion as PredictQ, QuestionType } from '../types';
-import { answersAboutPage, outputInstruction, outputMatches } from '../utils/predictOutput';
+import { answersWithoutPrintedOutput, outputInstruction, outputMatches } from '../utils/predictOutput';
 import { DataTables } from './DataTables';
 import { CodeBlock, languageLabel } from './ui/CodeBlock';
 import { Prose } from './ui/InlineText';
@@ -33,8 +33,9 @@ export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, sho
     onAnswer(outputMatches(typed, [question.expectedOutput, ...(question.acceptableOutputs || [])], question.language));
   };
 
-  // HTML, CSS and React code that logs nothing are rendered, not printed: the answer is about the page.
-  const rendered = answersAboutPage(question.code, question.language);
+  // HTML, CSS, React code that logs nothing and TypeScript that logs nothing print nothing:
+  // the answer is about the page or what the code does, not printed output.
+  const rendered = answersWithoutPrintedOutput(question.code, question.language);
   const lines = question.code.split(/\r?\n/);
   const sideBySide = lines.length <= SIDE_BY_SIDE_MAX_LINES && Math.max(...lines.map(l => l.length)) <= SIDE_BY_SIDE_MAX_COLUMNS;
 

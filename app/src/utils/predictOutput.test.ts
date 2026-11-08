@@ -7,6 +7,8 @@ import {
   outputMatches,
   DEFAULT_OUTPUT_CONVENTION,
   REACT_RENDERED_OUTPUT_CONVENTION,
+  NO_LOG_OUTPUT_CONVENTION,
+  answersWithoutPrintedOutput,
   RENDERED_OUTPUT_CONVENTION,
   SQL_MIXED_PRINT_CONVENTION,
   SQL_OUTPUT_CONVENTION,
@@ -100,6 +102,16 @@ describe('predict-output instruction matches what the code outputs', () => {
     expect(answersAboutPage(logged, CodeLanguage.JSX)).toBe(false);
     expect(answersAboutPage('console.log(1)', CodeLanguage.JAVASCRIPT)).toBe(false);
     expect(REACT_RENDERED_OUTPUT_CONVENTION).not.toMatch(/prints\b/);
+  });
+
+  it('says TypeScript that logs nothing prints nothing, and keeps the output instruction when it logs', () => {
+    const handler = 'export async function GET() {\n  return NextResponse.json({ ok: true }, { status: 201 });\n}';
+    expect(outputInstruction(handler, CodeLanguage.TYPESCRIPT)).toBe(NO_LOG_OUTPUT_CONVENTION);
+    expect(answersWithoutPrintedOutput(handler, CodeLanguage.TYPESCRIPT)).toBe(true);
+    expect(answersAboutPage(handler, CodeLanguage.TYPESCRIPT)).toBe(false);
+    expect(outputInstruction('const n: number = 1;\nconsole.log(n);', CodeLanguage.TYPESCRIPT)).toBe(DEFAULT_OUTPUT_CONVENTION);
+    expect(answersWithoutPrintedOutput('console.log(1)', CodeLanguage.TYPESCRIPT)).toBe(false);
+    expect(NO_LOG_OUTPUT_CONVENTION).not.toMatch(/prints\b/);
   });
 });
 
