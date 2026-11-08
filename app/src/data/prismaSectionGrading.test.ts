@@ -88,6 +88,15 @@ describe('Web Dev Prisma & Database section grading', () => {
     expect(hardFails(q, swap(ref, 'globalForPrisma.prisma ?? new PrismaClient()', 'new PrismaClient()'))).toBe(true);
   });
 
+  it('prisma-7 accepts a singleton whose client variable has another name', () => {
+    const renamed = 'import { PrismaClient } from "@prisma/client";\n\n'
+      + 'const globalForPrisma = globalThis as unknown as {\n  prisma: PrismaClient | undefined;\n};\n\n'
+      + 'const client = globalForPrisma.prisma ?? new PrismaClient();\n\n'
+      + 'if (process.env.NODE_ENV !== "production") {\n  globalForPrisma.prisma = client;\n}\n\n'
+      + 'export default client;';
+    expect(hardFails(coding('prisma-7'), renamed)).toBe(false);
+  });
+
   it('prisma-9 rejects a relation without onDelete: Cascade, even when written as comments', () => {
     const q = coding('prisma-9');
     for (const branch of branches(q)) {
