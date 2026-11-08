@@ -10,14 +10,14 @@
 import { CodeLanguage, CodingQuestion, Course, Difficulty, QuestionType, Topic } from '../types';
 import { gradeCodingSubmission } from './codeValidator';
 
-function question(solution: string, starterCode = ''): CodingQuestion {
+function question(solution: string, starterCode = '', language = CodeLanguage.JAVASCRIPT): CodingQuestion {
   return {
     id: 'js-params-fixture',
     type: QuestionType.CODING,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.JS_ARRAYS,
     course: Course.WEB_DEV,
-    language: CodeLanguage.JAVASCRIPT,
+    language,
     question: 'Fixture',
     starterCode,
     testCases: [],
@@ -69,5 +69,30 @@ describe('JS parameter names are the learner\'s choice', () => {
     const greet = question('const greet = (who) => "Hi, " + who;');
     expect(verdict(greet, 'const greet = (person) => "Hi, " + person;')).toBe('pass');
     expect(verdict(greet, 'const greet = (person) => "Hi, person";')).not.toBe('pass');
+  });
+
+  it('renames a parameter only inside its own function, never after it ends', () => {
+    const total = question('const nums = [1, 2, 3];\nconst sum = nums.reduce((sum, n) => sum + n, 0);\nconsole.log(sum);');
+    const start = 'const nums = [1, 2, 3];\n';
+    expect(verdict(total, start + 'const sum = nums.reduce((acc, n) => acc + n, 0);\nconsole.log(sum);')).toBe('pass');
+    expect(verdict(total, start + 'const sum = nums.reduce((acc, n) => acc + n, 0);\nconsole.log(acc);')).not.toBe('pass');
+  });
+
+  it('keeps object keys, shorthand keys and JSX attribute names as written', () => {
+    const user = question('function createUser(name, age) {\n  return { name, age };\n}');
+    expect(verdict(user, 'function createUser(n, a) {\n  return { name: n, age: a };\n}')).toBe('pass');
+    expect(verdict(user, 'function createUser(n, a) {\n  return { n, a };\n}')).not.toBe('pass');
+    const item = question('const toItem = (id, label) => ({ id: id, label: label });');
+    expect(verdict(item, 'const toItem = (a, b) => ({ id: a, label: b });')).toBe('pass');
+    expect(verdict(item, 'const toItem = (a, b) => ({ a: a, b: b });')).not.toBe('pass');
+    const row = question('const rows = items.map(item => <Row item={item} key={item.id} />);', '', CodeLanguage.JSX);
+    expect(verdict(row, 'const rows = items.map(x => <Row item={x} key={x.id} />);')).toBe('pass');
+    expect(verdict(row, 'const rows = items.map(x => <Row x={x} key={x.id} />);')).not.toBe('pass');
+  });
+
+  it('does not let extra code before the solution shift its parameters', () => {
+    const doubled = question('const doubled = nums.map(n => n * 2);');
+    expect(verdict(doubled, 'const tripled = nums.map(n => n * 3);\nconst doubled = nums.map(n => n * 2);')).toBe('pass');
+    expect(verdict(doubled, 'const tripled = nums.map((a, b) => a * b);\nconst doubled = nums.map(x => x * 2);')).toBe('pass');
   });
 });
