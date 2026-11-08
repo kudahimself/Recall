@@ -4,8 +4,9 @@
  * Section Storage & Files (the second rewritten section) comes first on the
  * path, then Warehouses, Lakes & Table Formats (the third), then Moving Data
  * (the first section of the decisions-and-designs rewrite), then Modeling
- * for Analytics (the fourth), then Streaming (the fifth), and then Distributed
- * Data (the sixth): every topic of each. Each rule card teaches the decision
+ * for Analytics (the fourth), then Streaming (the fifth), then Distributed
+ * Data (the sixth), and then Running Pipelines (the seventh): every topic of
+ * each. Each rule card teaches the decision
  * rule as its form and works one scenario on small tables; the SQL is T-SQL that
  * check-lessons.js runs on sql.js. MERGE is not run there, so the worked
  * examples replace by key with DELETE and INSERT, and the idea names MERGE.
@@ -2236,5 +2237,529 @@ cherry | 9
 date | 4`,
     },
     exercises: ['de-engine-1', 'de-engine-2', 'de-engine-3', 'de-engine-4', 'de-engine-5'],
+  },
+  {
+    id: 'de_orchestration_dags/1',
+    topicKeys: [Topic.DE_ORCHESTRATION_DAGS],
+    step: 1,
+    title: 'Orchestration: DAGs, Dependencies, Sensors & Retries',
+    idea: [
+      lines(
+        'An orchestrator runs a pipeline as a DAG (directed acyclic graph): tasks, and edges that say which task needs which.',
+        'A task runs when every task upstream of it has succeeded, so tasks with no path between them run side by side, and a run lasts as long as its longest path, the critical path.',
+        'When a task fails after its retries, the tasks downstream of it are not run, and the other branches carry on.',
+      ),
+      lines(
+        'Each run is for one slice of data, its run_date, which the orchestrator passes to every task.',
+        'A schedule only decides when a run begins; the order inside the run comes from the edges.',
+        'Input that arrives from outside at an unknown time is waited for with a sensor: a task that checks for the file or partition and succeeds once it is there, with a timeout so that a missing input becomes a failure and an alert.',
+      ),
+      lines(
+        'Retries are for transient failures, such as a timeout or a service that is briefly down, tried a few times with growing waits.',
+        'A failure that repeats the same way (a bug, a renamed column, a malformed record) is not helped by retrying: fail fast, or set the bad record aside in a rejects table and load the rest.',
+        'A retry runs the task again on the same input, so every task must be idempotent for its run_date, as Moving Data\'s Re-runs & Idempotent Loads teaches.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `a task needs another's output  -> an edge: it runs once every upstream task succeeded
+an upstream task failed         -> downstream not run; the other branches carry on
+input lands at an unknown time  -> wait on it: a sensor with a timeout, not a clock time
+transient error (timeout, 503)  -> retry a few times, with growing waits
+the same error every time       -> fail fast, or set the bad record aside
+every task, for its run_date    -> idempotent, so a retry or a re-run is safe`,
+    },
+    pitfall: lines(
+      'Ordering tasks by the clock: "the load runs at 02:00 because the extract is done by then".',
+      'On the night the extract is late, the load reads half a day, succeeds, and every task shows green.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'tasks',
+          columns: ['task_name', 'minutes'],
+          rows: [
+            ['extract_orders', 20],
+            ['extract_customers', 10],
+            ['clean_orders', 25],
+            ['dim_customers', 15],
+            ['fact_orders', 20],
+            ['revenue_report', 5],
+            ['customer_report', 10],
+          ],
+        },
+        {
+          name: 'edges',
+          columns: ['upstream', 'downstream'],
+          rows: [
+            ['extract_orders', 'clean_orders'],
+            ['clean_orders', 'fact_orders'],
+            ['extract_customers', 'dim_customers'],
+            ['dim_customers', 'fact_orders'],
+            ['dim_customers', 'customer_report'],
+            ['fact_orders', 'revenue_report'],
+          ],
+        },
+      ],
+      code: `-- when each task finishes, if every task succeeds
+WITH paths (task_name, finish) AS (
+  SELECT t.task_name, t.minutes
+  FROM tasks t
+  WHERE NOT EXISTS (SELECT 1 FROM edges e
+                    WHERE e.downstream = t.task_name)
+  UNION ALL
+  SELECT e.downstream, p.finish + t.minutes
+  FROM paths p
+  JOIN edges e ON e.upstream = p.task_name
+  JOIN tasks t ON t.task_name = e.downstream
+)
+SELECT task_name, MAX(finish) AS finishes_at_minute
+FROM paths
+GROUP BY task_name
+ORDER BY finishes_at_minute, task_name;
+
+-- what is not run when dim_customers fails after its retries
+WITH down (task_name) AS (
+  SELECT downstream FROM edges
+  WHERE upstream = 'dim_customers'
+  UNION ALL
+  SELECT e.downstream
+  FROM edges e
+  JOIN down d ON e.upstream = d.task_name
+)
+SELECT DISTINCT task_name AS not_run
+FROM down
+ORDER BY not_run;`,
+      steps: [
+        'tasks holds each task\'s run time in minutes and edges the dependencies: fact_orders needs both clean_orders and dim_customers.',
+        'Lines 2-16: a task finishes at its own minutes plus the latest finish among its upstream tasks, starting from the tasks with nothing upstream.',
+        'fact_orders waits for clean_orders at minute 45, not dim_customers at 25, so the run ends at minute 70, though its tasks add up to 105.',
+        'Lines 19-29: if dim_customers fails after its retries, everything reachable from it is not run, while extract_orders and clean_orders still finish.',
+        'Once the cause is fixed, clearing dim_customers runs it and those three tasks again for the same run_date, and nothing upstream runs twice.',
+      ],
+      output: `task_name | finishes_at_minute
+extract_customers | 10
+extract_orders | 20
+dim_customers | 25
+customer_report | 35
+clean_orders | 45
+fact_orders | 65
+revenue_report | 70
+
+not_run
+customer_report
+fact_orders
+revenue_report`,
+    },
+    exercises: ['de-dag-1', 'de-dag-2', 'de-dag-3', 'de-dag-4', 'de-dag-5'],
+  },
+  {
+    id: 'de_quality_gates/1',
+    topicKeys: [Topic.DE_QUALITY_GATES],
+    step: 1,
+    title: 'Data Quality: Tests, Contracts & Circuit Breakers',
+    idea: [
+      lines(
+        'A pipeline can run without an error and still deliver wrong data: a NULL key, a status nobody expects, an order for a customer who does not exist.',
+        'So write down what the readers rely on as tests, each a query for the rows that break one rule: not NULL, unique, one of the accepted values, a key that exists in its dimension, a row count near normal.',
+      ),
+      lines(
+        'Run the tests on the new batch before anyone can read it: write it to a staging table, audit it there, and publish it only if it passes (write, audit, publish).',
+        'A failing blocking test holds the batch, so readers keep yesterday\'s correct data while the owner is alerted: a circuit breaker, where stale and right beats fresh and wrong.',
+        'Rules that readers do not depend on warn instead, so a small issue does not make everything stale.',
+      ),
+      lines(
+        'The producer of a feed can promise its shape in a data contract: the columns and types, the keys, what each value means, and how fresh it is.',
+        'The contract is checked on each batch at the boundary, so a renamed column fails loudly instead of loading as NULLs, and a breaking change ships as a new version beside the old one.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `a rule the readers rely on  -> a test: a query for the rows that break it
+where it runs               -> on the batch in staging, before it is published
+a blocking test fails       -> hold the batch: readers keep yesterday's data, owner alerted
+a warning test fails        -> publish, and alert the owner
+a producer's feed           -> a contract: schema, keys, meaning, checked on each batch
+a breaking change           -> a new version beside the old; readers move in their time`,
+    },
+    pitfall: lines(
+      'Testing the published table after the load.',
+      'By the time the test fails, dashboards and downstream jobs have read the bad batch, and a NULL rate measured over years of rows hides a bad day.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'staging_orders',
+          columns: ['order_id', 'customer_id', 'status', 'amount'],
+          rows: [
+            [201, 11, 'paid', 40],
+            [202, 12, 'paid', 25],
+            [203, null, 'paid', 30],
+            [204, 13, 'shipped', 15],
+            [205, 19, 'paid', 60],
+            [206, 12, 'refunded', 20],
+          ],
+        },
+        {
+          name: 'dim_customers',
+          columns: ['customer_id', 'segment'],
+          rows: [
+            [11, 'retail'],
+            [12, 'business'],
+            [13, 'retail'],
+            [14, 'retail'],
+          ],
+        },
+      ],
+      code: `-- each blocking test counts the batch rows that break one rule
+SELECT 'customer_id not null' AS test_name, COUNT(*) AS failing_rows
+FROM staging_orders WHERE customer_id IS NULL
+UNION ALL
+SELECT 'status accepted', COUNT(*)
+FROM staging_orders
+WHERE status NOT IN ('paid', 'refunded', 'cancelled')
+UNION ALL
+SELECT 'customer exists', COUNT(*)
+FROM staging_orders s
+WHERE s.customer_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM dim_customers d
+                  WHERE d.customer_id = s.customer_id)
+ORDER BY test_name;
+
+-- the gate: publish only when no blocking test found a row
+SELECT CASE WHEN COUNT(*) = 0 THEN 'publish'
+            ELSE 'hold' END AS decision
+FROM staging_orders s
+WHERE s.customer_id IS NULL
+   OR s.status NOT IN ('paid', 'refunded', 'cancelled')
+   OR NOT EXISTS (SELECT 1 FROM dim_customers d
+                  WHERE d.customer_id = s.customer_id);`,
+      steps: [
+        'staging_orders is tonight\'s batch, written where no dashboard reads it; dim_customers is the dimension its orders must point at.',
+        'Lines 2-14: each test counts the rows that break one rule: order 203 has no customer, 204 has a status nobody expects, and 205 points at customer 19, whom dim_customers does not have.',
+        'Lines 17-23: the gate checks every blocking rule at once and finds rows, so the batch is held.',
+        'fact_orders keeps yesterday\'s data and the owner gets the three failing rows; once the cause is fixed, the batch is tested again and published.',
+      ],
+      output: `test_name | failing_rows
+customer exists | 1
+customer_id not null | 1
+status accepted | 1
+
+decision
+hold`,
+    },
+    exercises: ['de-quality-1', 'de-quality-2', 'de-quality-3', 'de-quality-4', 'de-quality-5'],
+  },
+  {
+    id: 'de_pipeline_observability/1',
+    topicKeys: [Topic.DE_PIPELINE_OBSERVABILITY],
+    step: 1,
+    title: 'Observability & Lineage',
+    idea: [
+      lines(
+        'A job reports whether it ran, not whether its data is right: a short file, a stale file loaded again or a renamed column all load without an error.',
+        'So watch the tables themselves: freshness (how old the newest data is, by the data\'s own time), volume (rows against a normal day), schema (columns and types) and values (null rates, ranges).',
+        'Compare each with what is normal for that table, such as the same weekday over recent weeks, and alert the table\'s owner when an expectation its readers rely on breaks, rather than a shared channel on every wobble.',
+      ),
+      lines(
+        'Lineage is the graph of what each table, and each column, is built from.',
+        'Take it from the jobs as they run (the SQL they execute, or run events in an open standard such as OpenLineage), so it cannot drift from the code the way a hand-drawn diagram does.',
+      ),
+      lines(
+        'Lineage answers two questions.',
+        'When a number is wrong, walk upstream from it to the first table that is wrong while everything it is built from is right: that is the cause, and the tables after it are symptoms.',
+        'Before a change, or after an incident, walk downstream as far as it goes to list every table, report and owner affected; column-level lineage narrows the list to what carries the value.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `job succeeded, is the data right? -> watch tables: freshness, volume, schema, values
+what is normal                    -> per table: the same weekday over recent weeks
+who is alerted                    -> the owner, when readers' expectations break
+a number looks wrong              -> walk upstream: the first bad table with good inputs
+a change or an incident           -> walk downstream: every table and owner reached
+lineage                           -> from the jobs' runs, by column where possible`,
+    },
+    pitfall: lines(
+      'Watching only the jobs.',
+      'The worst incidents are jobs that succeed on bad input: every task is green while a table holds a sixteenth of its usual rows.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'lineage',
+          columns: ['source_table', 'target_table'],
+          rows: [
+            ['orders_raw', 'orders_clean'],
+            ['orders_clean', 'fact_orders'],
+            ['customers_raw', 'dim_customers'],
+            ['dim_customers', 'fact_orders'],
+            ['fact_orders', 'revenue_daily'],
+            ['revenue_daily', 'exec_dashboard'],
+            ['dim_customers', 'churn_report'],
+          ],
+        },
+        {
+          name: 'table_health',
+          columns: ['table_name', 'rows_yesterday', 'rows_usual'],
+          rows: [
+            ['orders_raw', 48000, 48000],
+            ['orders_clean', 47800, 47800],
+            ['customers_raw', 9100, 9000],
+            ['dim_customers', 4500, 9000],
+            ['fact_orders', 23900, 47800],
+            ['revenue_daily', 1, 1],
+            ['exec_dashboard', 1, 1],
+            ['churn_report', 4500, 9000],
+          ],
+        },
+      ],
+      code: `-- walk upstream from the dashboard, with each table's health
+WITH up (table_name, depth) AS (
+  SELECT source_table, 1 FROM lineage
+  WHERE target_table = 'exec_dashboard'
+  UNION ALL
+  SELECT l.source_table, u.depth + 1
+  FROM lineage l
+  JOIN up u ON l.target_table = u.table_name
+)
+SELECT u.table_name, u.depth, h.rows_yesterday, h.rows_usual
+FROM up u
+JOIN table_health h ON h.table_name = u.table_name
+ORDER BY u.depth, u.table_name;
+
+-- walk downstream from the root cause: what it reached
+WITH down (table_name) AS (
+  SELECT target_table FROM lineage
+  WHERE source_table = 'dim_customers'
+  UNION ALL
+  SELECT l.target_table
+  FROM lineage l
+  JOIN down d ON l.source_table = d.table_name
+)
+SELECT DISTINCT table_name AS affected
+FROM down
+ORDER BY affected;`,
+      steps: [
+        'The exec dashboard shows half of yesterday\'s revenue; lineage says what each table is built from, and table_health compares yesterday\'s rows with a normal day.',
+        'Lines 2-13: the upstream walk lists every table the dashboard depends on, nearest first.',
+        'revenue_daily has its usual single row (its value is what is wrong), and fact_orders is at half; of its inputs, orders_clean is normal and dim_customers is at half, while customers_raw, the input of dim_customers, is normal.',
+        'So dim_customers is the root cause, the first table that is wrong while its inputs are right; fact_orders lost the orders of the missing customers in its join.',
+        'Lines 16-26: the downstream walk from dim_customers lists what to rebuild and whose owners to tell, churn_report included, though nobody had reported it.',
+      ],
+      output: `table_name | depth | rows_yesterday | rows_usual
+revenue_daily | 1 | 1 | 1
+fact_orders | 2 | 23900 | 47800
+dim_customers | 3 | 4500 | 9000
+orders_clean | 3 | 47800 | 47800
+customers_raw | 4 | 9100 | 9000
+orders_raw | 4 | 48000 | 48000
+
+affected
+churn_report
+exec_dashboard
+fact_orders
+revenue_daily`,
+    },
+    exercises: ['de-lineage-1', 'de-lineage-2', 'de-lineage-3', 'de-lineage-4', 'de-lineage-5'],
+  },
+  {
+    id: 'de_access_governance/1',
+    topicKeys: [Topic.DE_ACCESS_GOVERNANCE],
+    step: 1,
+    title: 'Governance & Access',
+    idea: [
+      lines(
+        'Governance decides who may see and change which data, and keeps the record to show it.',
+        'Grant access to roles that match jobs, and make people members of roles (role-based access control): a joiner, a mover or a leaver is one change, and a review reads a few roles instead of thousands of personal grants.',
+        'Each role gets the least its job needs (least privilege), and broad roles such as all_staff get very little, because they reach everyone.',
+      ),
+      lines(
+        'Inside a table, the rules can follow the data.',
+        'Tag personal columns (PII, personally identifiable information) once in the catalog, and a masking policy hides or hashes them for every role without the need; a keyed hash still joins, since equal values give equal hashes.',
+        'A row filter shows each user only their rows, from an attribute such as their region (attribute-based access).',
+        'Both are enforced by the platform on every query, so no dashboard, notebook or export gets around them.',
+      ),
+      lines(
+        'The catalog records what each table is, who owns it and what is sensitive, and the audit log records who read what.',
+        'Erasing a person (the right to be forgotten) means every copy: rows in many tables, and the older snapshots a table format keeps for time travel.',
+        'Keeping personal fields in one table, keyed by a pseudonymous key that the other tables carry, makes an erasure one delete plus snapshot expiry.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `who can read it        -> roles that match jobs; people are members of roles
+how much               -> least privilege: the tables, columns, rows the job needs
+personal columns       -> tagged once; masked or hashed for roles without the need
+rows by region or team -> a row filter from the user's attributes, in the platform
+erase a person         -> every copy and snapshot; best, PII in one keyed table`,
+    },
+    pitfall: lines(
+      'Protecting data in the tool instead of on the data.',
+      'A dashboard that shows *** while the role can query the raw column, or a "safe" copy made for one team, leaves the data open to any query and adds one more place to secure, audit and erase.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'customers',
+          columns: ['customer_id', 'region', 'email', 'lifetime_value'],
+          rows: [
+            [1, 'EU', 'ana@example.com', 420],
+            [2, 'US', 'bo@example.com', 90],
+            [3, 'EU', 'cy@example.com', 150],
+            [4, 'APAC', 'di@example.com', 300],
+            [5, 'EU', 'ed@example.com', 75],
+          ],
+        },
+        {
+          name: 'user_access',
+          columns: ['user_name', 'region', 'sees_personal'],
+          rows: [
+            ['lena', 'EU', 0],
+            ['sam', 'EU', 1],
+            ['omar', 'US', 0],
+          ],
+        },
+      ],
+      code: `-- one policy for every reader: a row filter and a column mask
+CREATE VIEW customers_policy AS
+SELECT u.user_name, c.customer_id, c.region,
+       CASE WHEN u.sees_personal = 1 THEN c.email
+            ELSE '***' END AS email,
+       c.lifetime_value
+FROM customers c
+JOIN user_access u ON u.region = c.region;
+GO
+-- what lena, an EU analyst, gets from any query
+SELECT customer_id, email, lifetime_value
+FROM customers_policy
+WHERE user_name = 'lena'
+ORDER BY customer_id;
+
+-- what sam, in EU support, gets
+SELECT customer_id, email
+FROM customers_policy
+WHERE user_name = 'sam'
+ORDER BY customer_id;`,
+      steps: [
+        'customers holds personal emails; user_access gives each user\'s region and whether their job needs personal data.',
+        'Lines 2-8: the policy joins each row to the users of its region (the row filter) and shows email only to users who may see it (the mask).',
+        'A real platform takes the user from the session; user_name stands in for it here.',
+        'Lines 11-14: lena sees the three EU customers, with lifetime value for the analysis and the email masked.',
+        'Lines 17-20: sam, in support, sees the same three rows with their emails, since support\'s job is to contact them.',
+        'Neither sees the US or APAC rows, and because the rule sits on the data, a notebook or an export gets the same answer as the dashboard.',
+      ],
+      output: `customer_id | email | lifetime_value
+1 | *** | 420
+3 | *** | 150
+5 | *** | 75
+
+customer_id | email
+1 | ana@example.com
+3 | cy@example.com
+5 | ed@example.com`,
+    },
+    exercises: ['de-access-1', 'de-access-2', 'de-access-3', 'de-access-4', 'de-access-5'],
+  },
+  {
+    id: 'de_data_for_ai/1',
+    topicKeys: [Topic.DE_DATA_FOR_AI],
+    step: 1,
+    title: 'Data for AI',
+    idea: [
+      lines(
+        'Many AI features read company data through a pipeline.',
+        'For an assistant that answers from documents (retrieval-augmented generation), the pipeline splits each document into chunks, turns each chunk into an embedding (a vector of numbers, placed so that texts with similar meaning are close) and stores it in a vector index with its source, version and access group.',
+        'A question is embedded with the same model, the nearest chunks the user may see are retrieved, and the language model answers from them.',
+      ),
+      lines(
+        'The data engineering decisions are the familiar ones.',
+        'Chunks split at headings, with a little overlap, keep each chunk about one thing.',
+        'The index goes stale when its sources change, so each run finds changed documents by content hash, replaces their chunks, and deletes the chunks of removed documents.',
+        'Vectors from different embedding models cannot be compared, so one index holds one model\'s vectors, and a new model means a new index filled beside the old one before questions switch to it.',
+      ),
+      lines(
+        'Training data for a model has its own trap: leakage.',
+        'Each training row\'s features must be computed as of its prediction date, from data known then (a point-in-time join), or the model learns from the future and does worse in use than in training.',
+        'Scores that are read on a schedule are produced in batch into a table; real-time scoring is for inputs that exist only at that moment, such as a basket at checkout.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `documents for an assistant -> chunk, embed, store with source, hash, access group
+a document changes or goes -> embed it again by content hash; delete its old chunks
+who may see a chunk        -> filter by the user's access inside the search
+a new embedding model      -> a new index beside the old, then switch the questions
+training features          -> as of each row's prediction date, never later`,
+    },
+    pitfall: lines(
+      'Embedding the documents once and never again.',
+      'The index keeps answering from old versions of a policy, and a deleted document keeps being cited, with no error anywhere.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'documents',
+          columns: ['doc_id', 'content_hash'],
+          rows: [
+            [1, 'a91'],
+            [2, 'c07'],
+            [3, 'f3e'],
+            [5, 'd44'],
+          ],
+        },
+        {
+          name: 'index_chunks',
+          columns: ['chunk_id', 'doc_id', 'content_hash'],
+          rows: [
+            [101, 1, 'a91'],
+            [102, 1, 'a91'],
+            [103, 2, 'c06'],
+            [104, 2, 'c06'],
+            [105, 3, 'f3e'],
+            [106, 4, 'b10'],
+          ],
+        },
+      ],
+      code: `-- documents to chunk and embed tonight: new, or changed since indexed
+SELECT d.doc_id,
+       CASE WHEN NOT EXISTS (SELECT 1 FROM index_chunks i
+                             WHERE i.doc_id = d.doc_id)
+            THEN 'new' ELSE 'changed' END AS reason
+FROM documents d
+WHERE NOT EXISTS (SELECT 1 FROM index_chunks i
+                  WHERE i.doc_id = d.doc_id
+                    AND i.content_hash = d.content_hash)
+ORDER BY d.doc_id;
+
+-- chunks to delete: old versions, and documents removed at the source
+SELECT i.chunk_id, i.doc_id
+FROM index_chunks i
+WHERE NOT EXISTS (SELECT 1 FROM documents d
+                  WHERE d.doc_id = i.doc_id
+                    AND d.content_hash = i.content_hash)
+ORDER BY i.chunk_id;`,
+      steps: [
+        'documents holds each document\'s current content hash, and index_chunks the chunks in the vector index, with the hash of the text each was embedded from.',
+        'Lines 2-10: a document is chunked and embedded again when no chunk carries its current hash: document 2 changed (c06 to c07) and document 5 is new.',
+        'Lines 13-18: a chunk is deleted when its document no longer has that hash: document 2\'s two old chunks, and document 4\'s chunk, since it was removed at the source.',
+        'Documents 1 and 3 are unchanged, so their three chunks stay and cost nothing tonight.',
+        'Replacing a document\'s chunks in one step, with its access group on every chunk, keeps one version of each document in the index and lets the search filter by who is asking.',
+      ],
+      output: `doc_id | reason
+2 | changed
+5 | new
+
+chunk_id | doc_id
+103 | 2
+104 | 2
+106 | 4`,
+    },
+    exercises: ['de-rag-1', 'de-rag-2', 'de-rag-3', 'de-rag-4', 'de-rag-5'],
   },
 ];

@@ -82,7 +82,7 @@ This file maps every `Topic` to its `Course` and defines:
   - `dataEngineeringModelingAnalyticsQuestions.ts` (a rewritten section, Step 5; its predict-the-outcome checks are in `dataEngineeringModelingAnalyticsChecks.ts`)
   - `dataEngineeringStreamingQuestions.ts` (a rewritten section, Step 6; its predict-the-outcome checks are in `dataEngineeringStreamingChecks.ts`)
   - `dataEngineeringDistributedQuestions.ts` (a rewritten section, Step 7; its predict-the-outcome checks are in `dataEngineeringDistributedChecks.ts`)
-  - `dataEngineeringOpsQuestions.ts`
+  - `dataEngineeringOpsQuestions.ts` (a rewritten section, Running Pipelines, Step 8; its predict-the-outcome checks are in `dataEngineeringOpsChecks.ts`)
 
 ### Spaced Repetition System
 
@@ -607,7 +607,7 @@ Nothing to eliminate.
 
 **Grading:** exact after trimming, case-folding, collapsing spaces, dropping a final full stop and the unit (`outcomeMatches`); `8` is not `8.0`.
 
-**Checked by running it:** every predict-the-outcome card needs an entry in a checks registry (`dataEngineeringMovingDataChecks.ts`, `dataEngineeringStorageFilesChecks.ts`, `dataEngineeringWarehousesLakesChecks.ts`, `dataEngineeringModelingAnalyticsChecks.ts`, `dataEngineeringStreamingChecks.ts`, `dataEngineeringDistributedChecks.ts`): SQLite run on the card's `tables` (each named by the first word of its title), or Python.
+**Checked by running it:** every predict-the-outcome card needs an entry in a checks registry (`dataEngineeringMovingDataChecks.ts`, `dataEngineeringStorageFilesChecks.ts`, `dataEngineeringWarehousesLakesChecks.ts`, `dataEngineeringModelingAnalyticsChecks.ts`, `dataEngineeringStreamingChecks.ts`, `dataEngineeringDistributedChecks.ts`, `dataEngineeringOpsChecks.ts`): SQLite run on the card's `tables` (each named by the first word of its title), or Python.
 `scripts/check-outcomes.js`, run by `npm test` (`data/outcomeChecks.test.ts`), fails a card with no check or whose check gives something other than its `answer`.
 
 #### 7. Choose and Justify (`QuestionType.CHOOSE_JUSTIFY`)

@@ -137,6 +137,9 @@ export enum Topic {
   DE_LSM_VS_BTREE = 'de_lsm_vs_btree',
   DE_COMPACTION_BLOOM = 'de_compaction_bloom',
   // Operations, Quality & Modern DE (small beginner-first topics)
+  // Retired into Running Pipelines (no questions; kept so stored progress
+  // keeps its course): every topic below except DE_RETRIES_IDEMPOTENCY,
+  // which Moving Data absorbed.
   DE_WHAT_IS_ORCHESTRATION = 'de_what_is_orchestration',
   DE_AIRFLOW_DAGSTER = 'de_airflow_dagster',
   DE_RETRIES_IDEMPOTENCY = 'de_retries_idempotency',
@@ -194,6 +197,15 @@ export enum Topic {
   DE_PARTITION_SKEW = 'de_partition_skew',
   DE_REPLICATION_CONSISTENCY = 'de_replication_consistency',
   DE_STORAGE_ENGINES = 'de_storage_engines',
+  // Running Pipelines - the seventh rewritten section. It absorbs the old
+  // DE_WHAT_IS_ORCHESTRATION, DE_AIRFLOW_DAGSTER, DE_DATA_QUALITY_BASICS,
+  // DE_OBSERVABILITY_LINEAGE, DE_GOVERNANCE and DE_FOR_AI, which keep no
+  // questions and stay here so stored progress keeps its course.
+  DE_ORCHESTRATION_DAGS = 'de_orchestration_dags',
+  DE_QUALITY_GATES = 'de_quality_gates',
+  DE_PIPELINE_OBSERVABILITY = 'de_pipeline_observability',
+  DE_ACCESS_GOVERNANCE = 'de_access_governance',
+  DE_DATA_FOR_AI = 'de_data_for_ai',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).
