@@ -98,18 +98,37 @@ function stripComments(code: string, language: CodeLanguage): string {
 
 const JS_IDENT = /[A-Za-z_$][\w$]*/g;
 
-/** Positions inside a '...' or "..." string literal (template literals count as code). */
+/**
+ * Positions inside a '...' or "..." string literal or the text of a `...`
+ * template literal. A template's `${...}` interpolations stay code; only
+ * their `${` and `}` delimiters are masked.
+ */
 function jsStringMask(code: string): boolean[] {
   const mask = new Array<boolean>(code.length).fill(false);
   let quote: string | null = null;
+  // One entry per open template (-1) or interpolation (its open-brace depth).
+  const stack: number[] = [];
   for (let i = 0; i < code.length; i++) {
     const c = code[i];
+    const top = stack.length ? stack[stack.length - 1] : undefined;
     if (quote) {
       mask[i] = true;
       if (c === '\\') { if (i + 1 < code.length) mask[++i] = true; } else if (c === quote) quote = null;
+    } else if (top === -1) {
+      mask[i] = true;
+      if (c === '\\') { if (i + 1 < code.length) mask[++i] = true; }
+      else if (c === '`') stack.pop();
+      else if (c === '$' && code[i + 1] === '{') { mask[++i] = true; stack.push(0); }
     } else if (c === '"' || c === "'") {
       quote = c;
       mask[i] = true;
+    } else if (c === '`') {
+      mask[i] = true;
+      stack.push(-1);
+    } else if (top !== undefined && c === '{') {
+      stack[stack.length - 1]++;
+    } else if (top !== undefined && c === '}') {
+      if (top === 0) { mask[i] = true; stack.pop(); } else stack[stack.length - 1]--;
     }
   }
   return mask;

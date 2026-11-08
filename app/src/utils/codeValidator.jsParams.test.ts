@@ -95,4 +95,13 @@ describe('JS parameter names are the learner\'s choice', () => {
     expect(verdict(doubled, 'const tripled = nums.map(n => n * 3);\nconst doubled = nums.map(n => n * 2);')).toBe('pass');
     expect(verdict(doubled, 'const tripled = nums.map((a, b) => a * b);\nconst doubled = nums.map(x => x * 2);')).toBe('pass');
   });
+
+  it('reads a template literal\'s text as text, so its commas and quotes do not end the scope', () => {
+    const fullName = question('const fullName = (user) => `${user.first}, ${user.last}`;');
+    expect(verdict(fullName, 'const fullName = (u) => `${u.first}, ${u.last}`;')).toBe('pass');
+    expect(verdict(fullName, 'const fullName = (u) => `${u.first}, ${user.last}`;')).not.toBe('pass');
+    const intro = question("const intro = (who) => `It's ${who}`;");
+    expect(verdict(intro, "const intro = (p) => `It's ${p}`;")).toBe('pass');
+    expect(verdict(intro, "const intro = (p) => `It's p`;")).not.toBe('pass');
+  });
 });
