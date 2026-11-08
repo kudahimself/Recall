@@ -10,7 +10,7 @@ Do the setup in `exercises/README.md`, then:
 
 1. Install Java 17 or newer and check `java -version` prints it (Spark runs on the JVM).
    If Spark cannot find it, set `JAVA_HOME`.
-2. `pip install -r exercises/requirements.txt` installs `pyspark` and `delta-spark`, pinned to versions that go together.
+2. `pip install -r exercises/requirements.txt` installs `pyspark` and `delta-spark`, pinned to versions that go together, and `pandas` and `pyarrow` for the pandas UDFs of `advanced_topics`.
    Python 3.10 to 3.12 is the safe range for them.
 
 The first test run starts Spark (10 to 20 seconds) and downloads the Delta jars once from Maven Central, so it needs the internet that one time.

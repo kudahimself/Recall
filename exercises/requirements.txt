@@ -34,3 +34,8 @@ daphne==4.2.3
 # The first run downloads the Delta jars once from Maven Central, then it works offline.
 pyspark==4.0.5
 delta-spark==4.0.1
+# pandas and pyarrow are pyspark's own sql extra, for the UDF exercise (exercises/databricks/advanced_topics):
+# a pandas UDF gets its rows as pandas Series in Apache Arrow batches.
+# pyspark 4.0 needs pandas 2.0+ and pyarrow 11+; both releases have wheels for Python 3.10 to 3.12.
+pandas==2.3.3
+pyarrow==21.0.0
