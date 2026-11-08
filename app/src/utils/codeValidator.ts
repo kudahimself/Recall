@@ -182,7 +182,7 @@ function normalizeCode(code: string, language: CodeLanguage): string {
     n = n
       .replace(/\/>/g, '>')
       .replace(/\bclass="([^"]*)"/g, (_m, value: string) => `class=" ${value.trim()} "`)
-      .replace(/"(?=>)/g, '" ');
+      .replace(/(<[a-z][^<> ]* [^<>]*)>/g, '$1 >');
   }
 
   // SQL comparisons between two qualified columns are symmetric: a join

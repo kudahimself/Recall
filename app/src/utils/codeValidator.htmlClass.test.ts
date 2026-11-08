@@ -40,6 +40,13 @@ describe('HTML is graded as markup', () => {
     expect(graded('<img src="photo.jpg" width="600">')).toBe(false);
   });
 
+  it('passes boolean attributes in any order', () => {
+    const option: CodingQuestion = { ...card, starterCode: '', solution: '<option value="" disabled selected>Pick</option>' };
+    const graded = (code: string) => gradeCodingSubmission(option, code).every(r => r.verdict === 'pass');
+    expect(graded('<option value="" selected disabled>Pick</option>')).toBe(true);
+    expect(graded('<option value="" selected>Pick</option>')).toBe(false);
+  });
+
   it('ignores a starter comment the learner kept', () => {
     const link: CodingQuestion = { ...card, starterCode: '<!-- Create a link -->\n', solution: '<a href="https://example.com" target="_blank">Visit</a>' };
     const linkPasses = (code: string) => gradeCodingSubmission(link, code).every(r => r.verdict === 'pass');
