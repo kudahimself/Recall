@@ -18,6 +18,10 @@ function passes(question: CodingQuestion, code: string): boolean {
   return results.length > 0 && results.every(r => r.verdict === 'pass');
 }
 
+function hardFails(question: CodingQuestion, code: string): boolean {
+  return gradeCodingSubmission(question, code).some(r => r.verdict === 'fail');
+}
+
 function branches(q: CodingQuestion): string[] {
   const sep = q.language === CodeLanguage.SQL ? /\n\s*--\s*OR\s*\n/i : /\n\s*#\s*OR\s*\n/i;
   return q.solution.split(sep).map(s => s.trim()).filter(Boolean);
@@ -70,7 +74,34 @@ describe('Web Dev Next.js section grading', () => {
       + '  return (<div><h1>{product.name}</h1><p>{product.price}</p><ul>{reviews.map((review: { id: number; text: string }) => <li key={review.id}>{review.text}</li>)}</ul></div>);\n'
       + '}';
     /* eslint-enable no-template-curly-in-string */
-    expect(passes(q, wrong)).toBe(false);
+    expect(hardFails(q, wrong)).toBe(true);
+  });
+
+  it('does not hard-fail string-concatenated URLs and hrefs in proj-next-1', () => {
+    const q = coding('proj-next-1');
+    /* eslint-disable no-template-curly-in-string */
+    const concat = branches(q)[0]
+      .replace('href={`/blog/${post.slug}`}', 'href={"/blog/" + post.slug}')
+      .replace('fetch(`https://api.example.com/posts/${slug}`', 'fetch("https://api.example.com/posts/" + slug');
+    /* eslint-enable no-template-curly-in-string */
+    expect(concat).not.toBe(branches(q)[0]);
+    expect(hardFails(q, concat)).toBe(false);
+    expect(hardFails(q, concat.replace(/<Link href=\{"\/blog\/" \+ post\.slug\}>/, '<Link href="/blog">'))).toBe(true);
+  });
+
+  it('does not hard-fail Promise.all over stored promises and concatenated URLs in next-parallel-1', () => {
+    const q = coding('next-parallel-1');
+    const stored = 'export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {\n'
+      + '  const { id } = await params;\n'
+      + '  const productP = fetch("https://api.example.com/products/" + id);\n'
+      + '  const reviewsP = fetch("https://api.example.com/reviews?productId=" + id);\n'
+      + '  const [productRes, reviewsRes] = await Promise.all([productP, reviewsP]);\n'
+      + '  const product = await productRes.json();\n'
+      + '  const reviews = await reviewsRes.json();\n'
+      + '  return (<div><h1>{product.name}</h1><p>{product.price}</p><ul>{reviews.map((review: { id: number; text: string }) => <li key={review.id}>{review.text}</li>)}</ul></div>);\n'
+      + '}';
+    expect(hardFails(q, stored)).toBe(false);
+    expect(hardFails(q, stored.replace('"https://api.example.com/reviews?productId=" + id', '"https://api.example.com/reviews"'))).toBe(true);
   });
 
   it('rejects a session cookie without httpOnly in next-auth-session-cookie-1', () => {
