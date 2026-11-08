@@ -305,6 +305,41 @@ export const config = {
     concepts: ['web-security-auth-tokens'],
   },
   {
+    id: 'next-auth-httponly-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_AUTH,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'The browser has no cookies for the site. A visitor clicks Sign in. What does the browser console log? Type the single logged line exactly.',
+    code: `// app/actions.ts
+"use server";
+import { cookies } from "next/headers";
+
+export async function signIn() {
+  const store = await cookies();
+  store.set("session", "abc123", { httpOnly: true, path: "/" });
+  store.set("lang", "fr", { path: "/" });
+}
+
+// app/SignIn.tsx
+"use client";
+import { signIn } from "./actions";
+
+export default function SignIn() {
+  async function handleClick() {
+    await signIn();
+    console.log(document.cookie);
+  }
+  return <button onClick={handleClick}>Sign in</button>;
+}`,
+    expectedOutput: 'lang=fr',
+    explanation: 'The Server Action runs on the server and sets both cookies on its response, so the browser stores both. httpOnly keeps the session cookie out of reach of JavaScript: document.cookie lists only the cookies scripts may read, so it shows "lang=fr" and never the session token. That is the point of an httpOnly session cookie: an injected script cannot read or steal it, while the browser still sends it with every request to the site.',
+    hints: ['Does the browser store an httpOnly cookie at all?', 'Which cookies can document.cookie see?'],
+    tags: ['httpOnly', 'cookies', 'server-action', 'session', 'predict'],
+    concepts: ['web-security-auth-tokens'],
+  },
+  {
     id: 'next-auth-session-cookie-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.INTERMEDIATE,
