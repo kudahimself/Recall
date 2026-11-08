@@ -3,10 +3,10 @@ import { Question, QuestionType, Difficulty, Topic, CodeLanguage, Course } from 
 export const prismaQuestions: Question[] = [
 
   // =====================================================================
-  // NEXT_PRISMA (10 questions)
+  // NEXT_PRISMA (30 questions)
   // =====================================================================
 
-  // BEGINNER faded (Parsons + Cloze) — lower-load scaffold before cold coding
+  // BEGINNER faded (Parsons + Cloze) - lower-load scaffold before cold coding
   {
     id: 'prisma-parsons-1',
     type: QuestionType.PARSONS,
@@ -15,7 +15,7 @@ export const prismaQuestions: Question[] = [
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Assemble a Prisma `User` model in schema.prisma. The user has an auto-incrementing integer primary key, a unique email, an optional name, and a one-to-many relation to posts. Arrange the field lines in this order: id, email, name, posts.',
+      'Assemble the `User` model in schema.prisma: an auto-incrementing integer primary key `id`, a unique `email`, an optional `name`, and `posts`, the list of the user\'s Post rows. List the fields in that order: id, email, name, posts.',
     correctOrder: [
       'model User {',
       '  id Int @id @default(autoincrement())',
@@ -36,7 +36,7 @@ export const prismaQuestions: Question[] = [
   posts Post[]
 }`,
     explanation:
-      'A primary key needs @id, not just @default(autoincrement()) — the latter only sets the default value. @unique enforces no duplicate emails at the database level. String? (with the trailing ?) makes name nullable; without the ? Prisma treats it as required. posts Post[] is the virtual "many" side of the relation — it stores no column itself; the foreign key lives on Post.',
+      'Each attribute adds one rule. `@id` makes `id` the primary key, and `@default(autoincrement())` only fills in its value, so the line needs both. `@unique` becomes a unique index, so the database refuses a second row with the same email. `String?` lets `name` be NULL; a plain `String` is required. `posts Post[]` is the list side of the one-to-many relation: it is no column at all, because the foreign key lives on Post.',
     hints: [
       '@id marks the primary key; @default(autoincrement()) only supplies the value',
       'The ? suffix makes a field optional (nullable)',
@@ -65,7 +65,7 @@ export const prismaQuestions: Question[] = [
   include: { author: true },
 });`,
     explanation:
-      'The `contains` filter does a substring match (SQL LIKE). `include` pulls in a relation alongside the base record — here it JOINs the author so each post object carries its full User. Use `select` instead when you want only specific fields rather than everything plus relations.',
+      '`contains` matches a substring: Prisma sends `LIKE \'%prisma%\'`, which is case-sensitive on PostgreSQL unless you add `mode: "insensitive"`. `include` keeps every field of the post and adds the relation, so each post carries its full author; Prisma 6 loads the authors with one more query (`WHERE id IN (...)`), not a JOIN. Use `select` instead when you want only some fields.',
     hints: [
       'The string filter that matches a substring',
       'The option that loads a relation alongside the record',
@@ -82,7 +82,7 @@ export const prismaQuestions: Question[] = [
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Fill in the two Prisma schema directives: one supplies the auto-increment default for the primary key, the other declares the relation that links the foreign key to the parent record.',
+      'Fill in the two Prisma schema attributes: one fills in an auto-incrementing value for the primary key, the other declares the relation that links the foreign key `authorId` to its User.',
     template: `model Post {
   id Int @id @___(autoincrement())
   title String
@@ -97,10 +97,10 @@ export const prismaQuestions: Question[] = [
   author User @relation(fields: [authorId], references: [id])
 }`,
     explanation:
-      '@default(autoincrement()) tells the database to generate the next integer for new rows. @relation declares how the foreign key column (authorId) maps to the referenced primary key (User.id) — this is the "one" side that actually stores the foreign key, complementing the virtual Post[] field on User.',
+      '`@default(autoincrement())` lets the database pick the next integer for each new row. `@relation(fields: [authorId], references: [id])` says that the `authorId` column holds a `User.id`, which becomes a foreign key in the migration. Post is the side that stores the key: one user has many posts, and the `posts Post[]` list on User is no column at all.',
     hints: [
-      'The directive that supplies a generated value',
-      'The directive that wires a foreign key to its parent',
+      'The attribute that supplies a value when a row is created',
+      'The attribute that wires a foreign key to the model it points at',
     ],
     tags: ['prisma', 'schema', 'relations', 'cloze'],
     concepts: ['prisma-schema-relations'],
@@ -114,24 +114,10 @@ export const prismaQuestions: Question[] = [
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Define a Prisma schema with a User model and a Post model.\n\nRequirements:\n- User model: id (Int, auto-increment, primary key), email (String, unique), name (String, optional), posts (relation to Post[])\n- Post model: id (Int, auto-increment, primary key), title (String), content (String), authorId (Int, foreign key to User), author (relation to User)\n\nUse the `datasource db` block with provider "postgresql" and `generator client` block for prisma-client-js.\n\nWrite the full schema.prisma file contents.',
+    question: 'Write the whole schema.prisma file for a User model and a Post model.\n\n- A `generator client` block whose provider is "prisma-client-js".\n- A `datasource db` block whose provider is "postgresql" and whose url comes from the `DATABASE_URL` environment variable.\n- User: `id` (Int, auto-increment, primary key), `email` (String, unique), `name` (String, optional) and `posts`, the list of the user\'s posts.\n- Post: `id` (Int, auto-increment, primary key), `title` (String), `content` (String), `authorId` (Int, the foreign key to User) and `author`, the relation to User.',
     starterCode: `// schema.prisma
-
-generator client {
-  // configure the generator
-}
-
-datasource db {
-  // configure the datasource
-}
-
-model User {
-  // define User fields and relations
-}
-
-model Post {
-  // define Post fields and relations
-}`,
+// the generator block, the datasource block, then the User and Post models
+`,
     testCases: [
       {
         input: 'generator block',
@@ -174,20 +160,34 @@ model Post {
   authorId Int
   author   User   @relation(fields: [authorId], references: [id])
 }`,
-    explanation: 'A Prisma schema has three core blocks: generator (tells Prisma what client to build), datasource (which database to connect to), and models (your data shape). Relations in Prisma are defined on BOTH sides: the "many" side (User.posts) is a virtual field with no column, while the "one" side (Post.author) stores the actual foreign key (authorId). The @relation directive explicitly maps the foreign key field to the referenced primary key. The ? after String makes the field optional (nullable in the database). This two-sided approach is why Prisma can auto-generate type-safe includes and nested queries.',
+    explanation: 'A schema file has three kinds of block: `generator` says which client to build, `datasource` names the database and reads its URL with `env("DATABASE_URL")`, and each `model` becomes a table. A relation is written on both models. Post holds the foreign key: `authorId Int` is the column, and `author User @relation(fields: [authorId], references: [id])` says it points at `User.id`. The other side, `posts Post[]`, is no column; it lets you write `include: { posts: true }`. `String?` makes `name` nullable, while `title` and `content` without `?` are required. Field order inside a model and the order of the blocks do not matter.',
     hints: [
       'Use @id and @default(autoincrement()) for primary keys',
       'Use @unique on the email field',
       'String? makes a field optional (nullable)',
-      '@relation(fields: [authorId], references: [id]) links the foreign key to the parent',
+      '@relation(fields: [...], references: [...]) links the foreign key to the model it points at',
+    ],
+    requires: [
+      /provider\s*=\s*"prisma-client-js"/,
+      /provider\s*=\s*"postgresql"/,
+      /url\s*=\s*env\(\s*"DATABASE_URL"\s*\)/,
+      /(^\s*id\s+Int\b(?=[^\n]*@id\b)(?=[^\n]*@default\(\s*autoincrement\(\s*\)\s*\))[\s\S]*){2}/m,
+      /^\s*email\s+String\b[^\n]*@unique/m,
+      /^\s*name\s+String\?/m,
+      /^\s*posts\s+Post\[\]/m,
+      /^\s*content\s+String(?![?[])/m,
+      /^\s*authorId\s+Int\b/m,
+      /^\s*author\s+User\s+@relation\((?=[^)]*fields:\s*\[\s*authorId\s*\])(?=[^)]*references:\s*\[\s*id\s*\])/m,
     ],
     tieredHints: {
       apiSignature: '@relation(fields: FieldReference[], references: FieldReference[], onDelete?: ReferentialAction)',
-      skeleton: `model User {
+      skeleton: `// generator client and datasource db blocks first, as the prompt lists them
+
+model User {
   id    Int     @____ @default(____())
   email String  @____
-  name  String____
-  posts ____[]
+  name  ____
+  posts ____
 }
 
 model Post {
@@ -202,7 +202,7 @@ model Post {
     concepts: ['prisma-schema-relations'],
   },
 
-  // 2. Coding: Prisma Client queries — findMany and create with nested relation
+  // 2. Coding: Prisma Client queries - findMany and create with nested relation
   {
     id: 'prisma-2',
     type: QuestionType.CODING,
@@ -210,20 +210,19 @@ model Post {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Write two Prisma Client queries:\n\n1. `getPublishedPosts`: Use `findMany` to get all posts where the title contains "prisma" (case-insensitive), ordered by `id` descending, and include the author\'s name and email.\n\n2. `createUserWithPost`: Use `create` to make a new user with email "alice@prisma.io", name "Alice", and simultaneously create a connected post with title "My First Post" and content "Hello world!".\n\nAssume `prisma` is already imported as a PrismaClient instance.',
+    question: 'The database is PostgreSQL. Write two Prisma Client queries; the starter already creates `prisma`.\n\n1. `searchPosts`: use `findMany` to get every post whose title contains "prisma" in any letter case (so "Learning Prisma" matches), newest first by `id` (descending), with each post\'s author included.\n\n2. `createUserWithPost`: use one `create` call to make a user with email "alice@prisma.io" and name "Alice" together with a post of theirs, title "My First Post" and content "Hello world!".',
     starterCode: `import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-// Query 1: Find posts containing "prisma" in title (case-insensitive)
-// Order by id descending, include author
-async function getPublishedPosts() {
+// Query 1: posts whose title contains "prisma", any case
+async function searchPosts() {
   const posts = await prisma.post.findMany({
     // Add where, orderBy, and include
   });
   return posts;
 }
 
-// Query 2: Create a user with a connected post in one operation
+// Query 2: a user and their first post in one call
 async function createUserWithPost() {
   const user = await prisma.user.create({
     // Add data with nested post creation
@@ -234,7 +233,7 @@ async function createUserWithPost() {
       {
         input: 'findMany query',
         expectedOutput: 'prisma.post.findMany({ where: { title: { contains: "prisma", mode: "insensitive" } }, orderBy: { id: "desc" }, include: { author: true } })',
-        description: 'Should use findMany with where/contains/mode, orderBy desc, and include author',
+        description: 'Should use findMany with contains and mode "insensitive", orderBy id desc, and include the author',
       },
       {
         input: 'create with nested relation',
@@ -245,9 +244,8 @@ async function createUserWithPost() {
     solution: `import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-// Query 1: Find posts containing "prisma" in title (case-insensitive)
-// Order by id descending, include author
-async function getPublishedPosts() {
+// Query 1: posts whose title contains "prisma", any case
+async function searchPosts() {
   const posts = await prisma.post.findMany({
     where: {
       title: {
@@ -265,7 +263,7 @@ async function getPublishedPosts() {
   return posts;
 }
 
-// Query 2: Create a user with a connected post in one operation
+// Query 2: a user and their first post in one call
 async function createUserWithPost() {
   const user = await prisma.user.create({
     data: {
@@ -280,19 +278,98 @@ async function createUserWithPost() {
     },
   });
   return user;
+}
+# OR
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function searchPosts() {
+  return prisma.post.findMany({
+    where: { title: { contains: "prisma", mode: "insensitive" } },
+    orderBy: { id: "desc" },
+    include: { author: true },
+  });
+}
+
+async function createUserWithPost() {
+  return prisma.user.create({
+    data: {
+      email: "alice@prisma.io",
+      name: "Alice",
+      posts: { create: { title: "My First Post", content: "Hello world!" } },
+    },
+  });
+}
+# OR
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function searchPosts() {
+  const posts = await prisma.post.findMany({
+    where: { title: { contains: "prisma", mode: "insensitive" } },
+    orderBy: { id: "desc" },
+    include: { author: true },
+  });
+  return posts;
+}
+
+async function createUserWithPost() {
+  const user = await prisma.user.create({
+    data: {
+      email: "alice@prisma.io",
+      name: "Alice",
+      posts: { create: [{ title: "My First Post", content: "Hello world!" }] },
+    },
+  });
+  return user;
+}
+# OR
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function searchPosts() {
+  const posts = await prisma.post.findMany({
+    where: { title: { contains: "prisma", mode: "insensitive" } },
+    orderBy: { id: "desc" },
+    include: { author: { select: { name: true, email: true } } },
+  });
+  return posts;
+}
+
+async function createUserWithPost() {
+  const user = await prisma.user.create({
+    data: {
+      email: "alice@prisma.io",
+      name: "Alice",
+      posts: { create: { title: "My First Post", content: "Hello world!" } },
+    },
+  });
+  return user;
 }`,
-    explanation: 'Prisma Client queries are fully type-safe — your IDE will autocomplete every field, filter, and relation. The `contains` filter with `mode: "insensitive"` translates to a case-insensitive LIKE query in SQL. The `include: { author: true }` tells Prisma to JOIN the User table and return the full author object alongside each post. For nested creation, `posts: { create: {...} }` generates an INSERT for both the user AND the post in a single transaction — Prisma automatically sets the foreign key (authorId) on the post. This is why Prisma is so powerful: one query object replaces what would be multiple raw SQL statements with manual ID management.',
+    explanation: '`contains` alone is case-sensitive on PostgreSQL (`LIKE`), so "Learning Prisma" would be missed; `mode: "insensitive"` makes Prisma send `ILIKE` instead (the option exists for PostgreSQL and MongoDB only). `orderBy: { id: "desc" }` puts the newest id first. `include: { author: true }` keeps every post field and adds the full author (a nested `select` inside it, such as `author: { select: { name: true, email: true } }`, narrows the author); Prisma 6 loads the authors with a second query (`WHERE id IN (...)`), not a JOIN. In the create, `posts: { create: {...} }` is a nested write: Prisma inserts the user, then the post with `authorId` set to the new user\'s id, inside one transaction, so either both rows exist or neither does. `create` also takes an array to add several posts at once.',
     hints: [
       'Use `contains` and `mode: "insensitive"` for case-insensitive search',
       'orderBy takes an object like { field: "desc" }',
       'Nested creates use the relation name (posts) with { create: {...} }',
     ],
+    requires: [
+      /prisma\.post\.findMany\(/,
+      /contains:\s*["'`]prisma["'`]/,
+      /mode:\s*["'`]insensitive["'`]/,
+      /orderBy:\s*\[?\s*\{\s*id:\s*["'`]desc["'`]/,
+      /include:\s*\{\s*author:\s*(true\b|\{\s*select:)/,
+      /prisma\.user\.create\(/,
+      /email:\s*["'`]alice@prisma\.io["'`]/,
+      /posts:\s*\{\s*create:/,
+      /title:\s*["'`]My First Post["'`]/,
+      /content:\s*["'`]Hello world!["'`]/,
+    ],
     tieredHints: {
-      apiSignature: 'prisma.post.findMany(options) / prisma.user.create(options)',
-      skeleton: `async function getPublishedPosts() {
+      apiSignature: 'prisma.post.findMany({ where?, orderBy?, include? }) / prisma.user.create({ data })',
+      skeleton: `async function searchPosts() {
   return prisma.post.findMany({
-    where: { title: { ____: "prisma", mode: "insensitive" } },
-    orderBy: { id: "____" },
+    where: { title: { ____: "prisma", ____: "____" } },
+    orderBy: { ____: "____" },
     ____: { author: true },
   });
 }
@@ -302,7 +379,7 @@ async function createUserWithPost() {
     data: {
       email: "alice@prisma.io",
       name: "Alice",
-      posts: { ____: { title: "My First Post", content: "Hello world!" } },
+      ____: { ____: { title: "My First Post", content: "Hello world!" } },
     },
   });
 }`,
@@ -320,12 +397,12 @@ async function createUserWithPost() {
     course: Course.WEB_DEV,
     question: 'You are working on a Next.js project with Prisma. What is the key difference between `npx prisma migrate dev` and `npx prisma db push`?',
     options: [
-      { id: 'a', text: '`db push` applies the schema to the database AND creates a migration SQL file in prisma/migrations for version control, while `migrate dev` only syncs the schema without saving history', isCorrect: false },
-      { id: 'b', text: 'They are identical commands — `db push` is just an alias for `migrate dev`', isCorrect: false },
-      { id: 'c', text: '`migrate dev` creates a timestamped SQL migration file in prisma/migrations/ for version control and team collaboration, while `db push` directly syncs the schema to the database without creating migration files', isCorrect: true },
-      { id: 'd', text: '`migrate dev` is for development databases only and `db push` is for production deployments', isCorrect: false },
+      { id: 'a', text: '`db push` applies the schema AND writes a migration file to prisma/migrations for version control, while `migrate dev` only syncs the schema and saves no history', isCorrect: false },
+      { id: 'b', text: 'They are the same command: `db push` is a shorter alias for `migrate dev`', isCorrect: false },
+      { id: 'c', text: '`migrate dev` writes a timestamped SQL migration file to prisma/migrations for version control, while `db push` syncs the schema directly and writes no file', isCorrect: true },
+      { id: 'd', text: '`migrate dev` is meant only for development databases, while `db push` is the command that applies schema changes in production', isCorrect: false },
     ],
-    explanation: '`prisma migrate dev` generates a SQL migration file (like 20240101_add_user_table/migration.sql) that you commit to git. This gives your team a reviewable, replayable history of every schema change — essential for production deployments and team collaboration. `prisma db push` directly applies your schema.prisma changes to the database without creating any migration files. It is great for rapid prototyping and early development when you are iterating on your schema frequently. In production, you would use `prisma migrate deploy` (not `migrate dev`) to apply committed migrations without generating new ones.',
+    explanation: '`npx prisma migrate dev --name add_users` compares the schema with the database, writes the SQL to a new folder such as `prisma/migrations/20260101120000_add_users/migration.sql`, applies it and regenerates the client. You commit those folders, so every teammate and every environment replays the same history. `npx prisma db push` makes the database match the schema directly and writes no file, which suits a prototype you are still reshaping. Production uses neither: it runs `npx prisma migrate deploy`, which applies the committed migrations in order and never creates new ones; `db push` is not a deployment tool.',
     hints: [
       'Think about what a team needs to keep database schemas in sync',
       'Consider what happens when you need to deploy schema changes to production',
@@ -345,13 +422,13 @@ async function createUserWithPost() {
     options: [
       { id: 'a', text: 'A REST API client that Prisma hosts in the cloud; you install it with `npm install @prisma/cloud-client`', isCorrect: false },
       { id: 'b', text: 'A generic database driver like pg or mysql2; you import it from "prisma/driver" after running `npx prisma init`', isCorrect: false },
-      { id: 'c', text: 'A manually written ORM layer you define in a prisma.config.ts file alongside your schema', isCorrect: false },
-      { id: 'd', text: 'An auto-generated, type-safe database client tailored to YOUR schema; you generate it by running `npx prisma generate` after modifying schema.prisma', isCorrect: true },
+      { id: 'c', text: 'A data-access class you write by hand for each model; Prisma itself only runs your migrations', isCorrect: false },
+      { id: 'd', text: 'Code generated from your own schema.prisma and typed to your models; `npx prisma generate` rebuilds it after a schema change', isCorrect: true },
     ],
-    explanation: 'Prisma Client is not a generic library — it is custom-generated code based on YOUR specific schema.prisma file. When you run `npx prisma generate`, Prisma reads your models, fields, and relations, then outputs a fully typed TypeScript/JavaScript client into node_modules/@prisma/client. This is why you get autocomplete for `prisma.user.findMany()` (because User is in your schema) and type errors if you query a field that does not exist. Any time you change your schema, you need to re-run `npx prisma generate` to update the client. This "codegen" approach is what makes Prisma fundamentally different from runtime ORMs like Sequelize or TypeORM.',
+    explanation: 'Prisma Client is code generated from your own schema.prisma. `npx prisma generate` reads the models, fields and relations and writes a typed client; with the usual `prisma-client-js` generator it lands in `node_modules/.prisma/client`, which `import { PrismaClient } from "@prisma/client"` re-exports. That is why `prisma.user.findMany()` autocompletes (User is in your schema) and a misspelled field is a type error. After a schema change the client must be regenerated: `npx prisma migrate dev` does it for you in Prisma 6, and `npx prisma generate` does it on its own, for example in a build step. No hand-written per-model class is involved, and the client is not a hosted API or a plain driver.',
     hints: [
       'Think about how Prisma knows the exact shape of your models for autocomplete',
-      'The client lives in node_modules/@prisma/client',
+      'Which command reads schema.prisma and writes code?',
     ],
     tags: ['prisma', 'prisma-client', 'codegen', 'type-safety'],
     concepts: ['prisma-schema-relations'],
@@ -365,14 +442,14 @@ async function createUserWithPost() {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Fill in the Prisma Client method that runs an array of operations atomically — all succeed or all roll back.',
+    question: 'Fill in the Prisma Client method that runs an array of operations atomically: either all of them succeed or every change is rolled back.',
     template: `const [user, post] = await prisma.___([
   prisma.user.update({ where: { id: 1 }, data: { name: "Alice" } }),
   prisma.post.create({ data: { title: "New Post", authorId: 1 } }),
 ]);`,
     blanks: ['$transaction'],
     solution: 'const [user, post] = await prisma.$transaction([\n  prisma.user.update({ where: { id: 1 }, data: { name: "Alice" } }),\n  prisma.post.create({ data: { title: "New Post", authorId: 1 } }),\n]);',
-    explanation: '$transaction takes an array of Prisma operations and runs them in a single database transaction — if any operation fails, all are rolled back, guaranteeing atomicity for related writes.',
+    explanation: '`prisma.$transaction([...])` takes an array of queries that have not been awaited yet and runs them in order inside one database transaction (BEGIN, the queries, COMMIT). If any of them fails, the transaction is rolled back, so the name change and the new post land together or not at all. It resolves to an array of the results in the same order, here `[user, post]`. Client-level methods such as `$transaction`, `$disconnect` and `$queryRaw` start with `$` so they cannot clash with a model name.',
     hints: ['A single Prisma Client method, prefixed with $.'],
     tags: ['prisma', 'transaction', 'atomicity', 'cloze'],
     concepts: ['prisma-schema-relations'],
@@ -386,7 +463,7 @@ async function createUserWithPost() {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Write a function that uses `prisma.$transaction` to perform two operations atomically:\n\n1. Update the user with id 1 — change their name to "Alice Updated"\n2. Create a new post for that user with title "Transaction Post" and content "Created in a transaction"\n\nBoth operations must succeed or both must fail. Use the sequential transaction API (array of promises).\n\nAssume `prisma` is already instantiated.',
+    question: 'Finish `updateUserAndCreatePost` so that one `prisma.$transaction` call, given an array of queries, runs two operations atomically:\n\n1. Update the user with id 1: change their name to "Alice Updated".\n2. Create a post for that user with title "Transaction Post" and content "Created in a transaction".\n\nEither both changes are saved or neither is.',
     starterCode: `import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
@@ -426,23 +503,55 @@ async function updateUserAndCreatePost() {
   ]);
 
   return { updatedUser, newPost };
-}`,
-    explanation: 'Prisma\'s `$transaction` accepts an array of Prisma operations and executes them in a single database transaction. If ANY operation fails, ALL changes are rolled back — this guarantees atomicity. This is critical when related data must stay consistent (e.g., transferring money between accounts, or creating a user and their settings together). Prisma also supports an interactive transaction API (`prisma.$transaction(async (tx) => { ... })`) where you get a transaction client `tx` and can write conditional logic, but the array form is simpler when you just need multiple independent operations to succeed or fail together.',
-    hints: [
-      '$transaction takes an array of Prisma promises',
-      'Use prisma.user.update with where and data',
-      'Use prisma.post.create with authorId to connect to the user',
-    ],
-    tieredHints: {
-      apiSignature: 'prisma.$transaction([ prisma.user.update(...), prisma.post.create(...) ])',
-      skeleton: `async function updateUserAndCreatePost() {
-  const [updatedUser, newPost] = await prisma.____([
-    prisma.user.____({
+}
+# OR
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function updateUserAndCreatePost() {
+  // Use prisma.$transaction to run both operations atomically
+  const [updatedUser, newPost] = await prisma.$transaction([
+    prisma.user.update({
       where: { id: 1 },
       data: { name: "Alice Updated" },
     }),
+    prisma.post.create({
+      data: {
+        title: "Transaction Post",
+        content: "Created in a transaction",
+        author: { connect: { id: 1 } },
+      },
+    }),
+  ]);
+
+  return { updatedUser, newPost };
+}`,
+    explanation: '`$transaction` takes an array of queries that have not been awaited yet, runs them in order inside one database transaction and resolves to their results in the same order. If either query fails (say user 1 does not exist), the transaction is rolled back and neither change is kept. Awaiting the update and then the create on their own would commit the first even when the second fails. The post can name its user with the foreign key, `authorId: 1`, or through the relation, `author: { connect: { id: 1 } }`; both store the same row. When a later step depends on an earlier result, use the interactive form, `prisma.$transaction(async (tx) => { ... })`, and run every query on `tx`.',
+    hints: [
+      '$transaction takes an array of queries, not awaited',
+      'Use prisma.user.update with where and data',
+      'The post needs its user: authorId, or author with connect',
+    ],
+    requires: [
+      /\$transaction\(\s*\[/,
+      /prisma\.user\.update\(/,
+      /where:\s*\{\s*id:\s*1\s*\}/,
+      /name:\s*["'`]Alice Updated["'`]/,
+      /prisma\.post\.create\(/,
+      /title:\s*["'`]Transaction Post["'`]/,
+      /content:\s*["'`]Created in a transaction["'`]/,
+      /authorId:\s*1\b|author:\s*\{\s*connect:\s*\{\s*id:\s*1\s*\}/,
+    ],
+    tieredHints: {
+      apiSignature: 'prisma.$transaction(queries: PrismaPromise[]): Promise<results[]>',
+      skeleton: `async function updateUserAndCreatePost() {
+  const [updatedUser, newPost] = await prisma.$transaction([
+    prisma.user.____({
+      ____: { id: 1 },
+      ____: { name: "Alice Updated" },
+    }),
     prisma.post.____({
-      data: { title: "Transaction Post", content: "Created in a transaction", authorId: 1 },
+      ____: { title: "Transaction Post", content: "Created in a transaction", ____: 1 },
     }),
   ]);
   return { updatedUser, newPost };
@@ -459,14 +568,14 @@ async function updateUserAndCreatePost() {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
-    question: 'You have a page that lists 50 users and each user\'s posts. Your colleague wrote this code:\n\n```typescript\nconst users = await prisma.user.findMany();\nfor (const user of users) {\n  user.posts = await prisma.post.findMany({ where: { authorId: user.id } });\n}\n```\n\nWhat problem does this code have, and how should it be fixed?',
+    question: 'A page lists 50 users and each user\'s posts. Your colleague wrote this code:\n\n```typescript\nconst users = await prisma.user.findMany();\nconst withPosts = [];\nfor (const user of users) {\n  const posts = await prisma.post.findMany({ where: { authorId: user.id } });\n  withPosts.push({ ...user, posts });\n}\n```\n\nWhat problem does this code have, and how should it be fixed?',
     options: [
-      { id: 'a', text: 'It is fine — Prisma automatically batches sequential queries like this into a single round trip behind the scenes, so no code change is needed', isCorrect: false },
-      { id: 'b', text: 'This is the N+1 problem: 1 query for users plus 50 for posts. Fix it with `include: { posts: true }` in findMany, which generates a single JOIN query', isCorrect: true },
-      { id: 'c', text: 'The code is fine for small datasets like this one; N+1 only becomes a real problem once a table has millions of rows', isCorrect: false },
-      { id: 'd', text: 'The fix is to drop Prisma for this query and hand-write a raw SQL JOIN, since the query builder cannot express relation loading', isCorrect: false },
+      { id: 'a', text: 'Nothing: Prisma batches the awaited queries in the loop into one round trip behind the scenes, so no change is needed', isCorrect: false },
+      { id: 'b', text: 'It is the N+1 problem, 51 queries; `findMany({ include: { posts: true } })` loads every user\'s posts in one more query', isCorrect: true },
+      { id: 'c', text: 'Nothing at this size: N+1 only starts to cost anything once a table holds millions of rows', isCorrect: false },
+      { id: 'd', text: 'The query builder cannot load relations, so this list needs a hand-written raw SQL JOIN', isCorrect: false },
     ],
-    explanation: 'The N+1 problem is one of the most common performance pitfalls in any ORM. The original code makes 1 query for users, then N additional queries (one per user) for their posts. With 50 users, that is 51 database round-trips instead of 1-2. The fix is simple: `prisma.user.findMany({ include: { posts: true } })`. Prisma translates this into efficient SQL (typically a JOIN or a second IN query) that fetches everything in minimal round-trips. You can also use `select` instead of `include` if you only need specific fields, which reduces data transfer. This is why Prisma\'s relation loading is declarative — you describe what data you want, and Prisma optimizes the queries.',
+    explanation: 'This is the N+1 problem: one query for the users, then one more per user inside the loop, so 51 round trips for 50 users, and each waits for the one before. `prisma.user.findMany({ include: { posts: true } })` gives the same result with two queries: the users, then every post with `WHERE "authorId" IN (...)`, which Prisma matches back to each user (the Prisma 6 default; it uses a JOIN only when the `relationJoins` preview feature is turned on). Prisma does batch some calls on its own, such as several `findUnique` calls started in the same tick, but never a loop that awaits each `findMany` in turn. Even 50 users cost 51 round trips, so the fix matters at any size, and raw SQL is not needed because `include` and `select` load relations.',
     hints: [
       'Count how many database queries the loop generates',
       'Think about what Prisma\'s include option does under the hood',
@@ -483,7 +592,7 @@ async function updateUserAndCreatePost() {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Create a Prisma Client singleton for use in a Next.js application.\n\nFile: lib/prisma.ts\n\nIn development, Next.js hot-reloads modules on every save. Each reload creates a new PrismaClient instance, which opens a new database connection pool. This quickly exhausts your database connections.\n\nThe fix: store the PrismaClient instance on `globalThis` so it survives hot reloads.\n\n- Declare a global type that adds `prisma` to globalThis\n- Create a function or constant that returns an existing global instance or creates a new one\n- In development, store the instance on globalThis\n- Export the singleton instance as the default export',
+    question: 'Create a Prisma Client singleton for a Next.js app in `lib/prisma.ts`.\n\nIn development, Next.js reloads changed modules on every save. Each reload runs `new PrismaClient()` again, and each client opens its own pool of database connections, so the connections soon run out.\n\nThe fix is to keep the client on `globalThis`, which survives the reloads:\n\n- Give `globalThis` a typed `prisma` property (a cast or a `declare global`).\n- Reuse the instance already on `globalThis`, or create a new PrismaClient when there is none.\n- Outside production, store the instance on `globalThis`.\n- Export the instance as the default export.',
     starterCode: `// lib/prisma.ts
 import { PrismaClient } from "@prisma/client";
 
@@ -520,25 +629,74 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
+export default prisma;
+# OR
+// lib/prisma.ts
+import { PrismaClient } from "@prisma/client";
+
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+const prisma = globalThis.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.prisma = prisma;
+}
+
+export default prisma;
+# OR
+// lib/prisma.ts
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export default prisma;
+# OR
+// lib/prisma.ts
+import { PrismaClient } from "@prisma/client";
+
+const prismaClientSingleton = () => new PrismaClient();
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: ReturnType<typeof prismaClientSingleton> | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
 export default prisma;`,
-    explanation: 'This pattern solves a real production problem: Next.js dev server hot-reloads modules on every file save, which re-executes module-level code. Without the singleton, each reload creates a new PrismaClient (and its connection pool), eventually hitting "too many connections" errors. By casting globalThis and storing the instance there, the same PrismaClient survives across hot reloads. We only do this in development because production builds run module initialization once. The `??` (nullish coalescing) operator returns the left side if it is not null/undefined, otherwise creates a new client. This pattern is recommended in the official Prisma docs for Next.js integration.',
+    explanation: 'This is a development problem: `next dev` re-runs a changed module\'s top-level code, so a plain `const prisma = new PrismaClient()` would build a new client, with its own connection pool, on every save until PostgreSQL reports "too many connections". `globalThis` (`global` in Node) is not reloaded, so the first client is stored there and every reload reuses it: `globalForPrisma.prisma ?? new PrismaClient()` takes the stored one and creates a client only when there is none. The cast (or `declare global { var prisma: ... }`) just tells TypeScript that the property exists. Production skips the store because a production server runs the module once, so there is only ever one client. Prisma\'s Next.js guide shows the same pattern.',
     hints: [
       'globalThis persists across module re-evaluations in dev',
       'Use nullish coalescing (??) to reuse or create',
       'Only assign to globalThis in non-production environments',
     ],
+    requires: [
+      /\bglobal(This)?\b/,
+      /new PrismaClient\(/,
+      /(\?\?|\|\|)\s*(new PrismaClient|\w+)\(\)/,
+      /NODE_ENV\s*!==?\s*["'`]production["'`]/,
+      /\.prisma\w*\s*=\s*[A-Za-z_$][\w$]*/,
+      /export\s+default\s+[A-Za-z_$][\w$]*/,
+    ],
     tieredHints: {
-      apiSignature: 'new PrismaClient(options?: PrismaClientOptions)',
+      apiSignature: 'globalThis: the one global object, kept across hot reloads; new PrismaClient(options?)',
       skeleton: `import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = ____ as unknown as {
-  ____: PrismaClient | undefined;
+  prisma: ____ | undefined;
 };
 
-const prisma = globalForPrisma.____ ____ ____();
+const prisma = ____ ____ new PrismaClient();
 
-if (process.env.____ !== "____") {
-  globalForPrisma.____ = prisma;
+if (____) {
+  ____ = prisma;
 }
 
 export default prisma;`,
@@ -554,14 +712,14 @@ export default prisma;`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
-    question: 'What is the difference between `include` and `select` in a Prisma query?\n\n```typescript\n// Option A\nprisma.user.findMany({ include: { posts: true } })\n\n// Option B\nprisma.user.findMany({ select: { name: true, posts: true } })\n```',
+    question: 'User has `id`, `email`, `name` and `posts Post[]`. What is the difference between these two queries?\n\n```typescript\n// Query 1\nprisma.user.findMany({ include: { posts: true } })\n\n// Query 2\nprisma.user.findMany({ select: { name: true, posts: true } })\n```',
     options: [
-      { id: 'a', text: 'They are interchangeable — both fetch relations and you can use either one', isCorrect: false },
-      { id: 'b', text: '`include` adds relations to ALL scalar fields (returns the full user object + posts), while `select` returns ONLY the fields you specify (just name and posts, no id or email) — `select` is more efficient when you need fewer fields', isCorrect: true },
-      { id: 'c', text: '`include` is for one-to-many relations and `select` is for one-to-one relations', isCorrect: false },
-      { id: 'd', text: '`select` only works with scalar fields and cannot load relations — you must use `include` for any relation', isCorrect: false },
+      { id: 'a', text: 'None: both return every user field plus posts, since `select` also adds to the defaults', isCorrect: false },
+      { id: 'b', text: 'Query 1 returns every user field plus posts; Query 2 returns only name and posts', isCorrect: true },
+      { id: 'c', text: '`include` loads one-to-many relations and `select` loads only one-to-one relations', isCorrect: false },
+      { id: 'd', text: 'Query 2 fails: `select` takes only scalar fields, and relations need `include`', isCorrect: false },
     ],
-    explanation: '`include` means "give me everything on this model AND also load these relations." The result includes all scalar fields (id, email, name) plus the included relations (posts). `select` means "give me ONLY these specific fields." If you use `select: { name: true, posts: true }`, the result will ONLY have name and posts — no id, no email. This is important for two reasons: (1) performance — selecting fewer fields means less data transferred from the database, and (2) security — you can avoid accidentally exposing sensitive fields like password hashes. You cannot use `include` and `select` at the same level in the same query — they are mutually exclusive.',
+    explanation: '`include` keeps every scalar field and adds the relations it names, so each user in Query 1 has `id`, `email`, `name` and `posts`. `select` returns only the fields it lists, relations included, so each user in Query 2 has just `name` and `posts`, with no `id` or `email`. Both work for any kind of relation. Choosing `select` sends less data and keeps fields such as a password hash out of the result. `include` and `select` cannot sit side by side at the same level of one query; to narrow a relation, nest a `select` inside it, as in `include: { posts: { select: { title: true } } }`.',
     hints: [
       'Think about what fields appear in the result object for each approach',
       'Consider which approach sends less data from the database',
@@ -607,7 +765,7 @@ name`,
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Modify the Prisma schema and write a delete query so that deleting a User automatically deletes all their Posts.\n\nPart 1: Show the updated Post model with `onDelete: Cascade` on the author relation.\nPart 2: Write a `deleteUser` function that deletes a user by their id. Because of the cascade, all their posts will be automatically deleted by the database.\n\nAssume the User model is already defined with id, email, name, and posts relation.',
+    question: 'Change the schema and write a delete function so that deleting a User also deletes all of their Posts.\n\nPart 1: write the whole Post model (`id`, `title`, `content`, `authorId` and the `author` relation to User) with `onDelete: Cascade` on that relation. This editor holds TypeScript, so the model may also be written as comment lines.\nPart 2: write `deleteUser(userId)`, which deletes the user with that id; the database then deletes their posts.\n\nThe User model already has `id`, `email`, `name` and `posts Post[]`.',
     starterCode: `// Part 1: Updated Post model in schema.prisma
 // The current Post model has id, title, content, authorId, and an author
 // relation to User. Add the cascade behavior to that relation.
@@ -617,7 +775,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function deleteUser(userId: number) {
-  // Delete the user — cascade will handle posts
+  // Delete the user; the cascade removes their posts
 }`,
     testCases: [
       {
@@ -628,10 +786,47 @@ async function deleteUser(userId: number) {
       {
         input: 'delete query',
         expectedOutput: 'prisma.user.delete({ where: { id: userId } })',
-        description: 'Should delete user by id — cascade handles related posts',
+        description: 'Should delete the user by id; the cascade removes their posts',
       },
     ],
     solution: `// Part 1: Updated Post model in schema.prisma
+model Post {
+  id       Int    @id @default(autoincrement())
+  title    String
+  content  String
+  authorId Int
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+// Part 2: Delete function
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function deleteUser(userId: number) {
+  const deletedUser = await prisma.user.delete({
+    where: { id: userId },
+  });
+  return deletedUser;
+}
+# OR
+// Part 1: Updated Post model in schema.prisma
+model Post {
+  id       Int    @id @default(autoincrement())
+  title    String
+  content  String
+  authorId Int
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+// Part 2: Delete function
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function deleteUser(userId: number) {
+  return prisma.user.delete({ where: { id: userId } });
+}
+# OR
+// Part 1: Updated Post model in schema.prisma
 // model Post {
 //   id       Int    @id @default(autoincrement())
 //   title    String
@@ -650,26 +845,36 @@ async function deleteUser(userId: number) {
   });
   return deletedUser;
 }`,
-    explanation: 'Without `onDelete: Cascade`, trying to delete a user who has posts would throw a foreign key constraint error — the database refuses to delete a row that other rows depend on. `onDelete: Cascade` tells the database: "when the referenced User is deleted, automatically delete all Posts that reference them." This happens at the DATABASE level (not in Prisma Client code), making it atomic and reliable. Alternatives include `onDelete: SetNull` (set authorId to null, requiring the field to be optional) and `onDelete: Restrict` (the default — prevent deletion if related records exist). Choose Cascade for "parent owns children" relationships where children have no meaning without the parent.',
+    explanation: 'With no `onDelete`, a required relation such as `author` gets `ON DELETE RESTRICT` in the migration, so PostgreSQL refuses to delete a user who still has posts and `prisma.user.delete` throws. `onDelete: Cascade` makes the migration write `ON DELETE CASCADE` on the `authorId` foreign key, so the database itself removes the user\'s posts in the same statement, and `deleteUser` needs only `prisma.user.delete({ where: { id: userId } })`. Run `npx prisma migrate dev` after the change so the database gets the new rule. Other choices are `onDelete: SetNull`, which needs an optional `authorId Int?`, and `Restrict`, the default you started with. Cascade fits rows that mean nothing without their parent, such as a user\'s posts.',
     hints: [
-      'onDelete: Cascade goes inside the @relation directive',
-      'With cascade in place, a simple prisma.user.delete is all you need',
-      'The database handles deleting related records automatically',
+      'onDelete: Cascade goes inside the @relation attribute',
+      'With cascade in place, a plain prisma.user.delete is all you need',
+      'The database deletes the related rows itself',
+    ],
+    requires: [
+      /^\s*(\/\/\s*)?model\s+Post\s*\{/m,
+      /@relation\((?=[^)]*fields:\s*\[\s*authorId\s*\])(?=[^)]*references:\s*\[\s*id\s*\])(?=[^)]*onDelete:\s*Cascade\b)/,
+      /prisma\.user\.delete\(\s*\{\s*where:\s*\{\s*id:\s*userId\s*\}/,
     ],
     tieredHints: {
-      apiSignature: '@relation(fields, references, onDelete?: ReferentialAction) / prisma.<model>.delete(args: { where }) -> Promise<T>',
+      apiSignature: '@relation(fields: [...], references: [...], onDelete?: Cascade | Restrict | SetNull | NoAction | SetDefault) / prisma.user.delete({ where }): Promise<User>',
       skeleton: `// Post model in schema.prisma
-author User @relation(fields: [authorId], references: [id], ____: ____)
+model Post {
+  id       Int    @id @default(autoincrement())
+  title    String
+  content  String
+  authorId Int
+  author   User   @relation(fields: [authorId], references: [id], ____: ____)
+}
 
-// deleteUser function
 async function deleteUser(userId: number) {
   return prisma.user.____({
-    ____: { id: userId },
+    ____: { ____: userId },
   });
 }`,
     },
     tags: ['prisma', 'cascade', 'delete', 'referential-actions', 'schema'],
-    concepts: ['prisma-schema-relations', 'web-css-specificity'],
+    concepts: ['prisma-schema-relations'],
   },
 
   // 10. MC: Connection pooling in serverless
@@ -679,14 +884,14 @@ async function deleteUser(userId: number) {
     difficulty: Difficulty.ADVANCED,
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
-    question: 'Your Next.js app deployed on Vercel (serverless) starts throwing "too many connections" errors from your PostgreSQL database during traffic spikes. Why does this happen, and what is the recommended solution?',
+    question: 'Your Next.js app runs on Vercel\'s serverless functions and uses Prisma with PostgreSQL. During traffic spikes the database starts refusing connections with "too many connections". Why, and what is the usual fix?',
     options: [
-      { id: 'a', text: 'Serverless functions reuse a single persistent connection, so the issue must be a memory leak in your code; fix it by restarting the database', isCorrect: false },
-      { id: 'b', text: 'PostgreSQL has a hard limit of 10 connections; upgrade to a database that supports more connections like MongoDB', isCorrect: false },
-      { id: 'c', text: 'Each serverless function invocation can spin up its own PrismaClient with its own connection pool. During traffic spikes, hundreds of instances open connections simultaneously, exhausting the database limit. Use an external connection pooler like PgBouncer or Prisma Accelerate to multiplex many client connections over fewer database connections', isCorrect: true },
-      { id: 'd', text: 'This only happens in development due to hot reloading; the globalThis singleton pattern fixes it in production too', isCorrect: false },
+      { id: 'a', text: 'Every request leaves its connection open, so call `prisma.$disconnect()` before each function returns', isCorrect: false },
+      { id: 'b', text: 'Each instance\'s pool is too small; raise `connection_limit` in DATABASE_URL so each instance gets more', isCorrect: false },
+      { id: 'c', text: 'Each function instance opens its own pool, and a spike starts many instances; add a pooler such as PgBouncer', isCorrect: true },
+      { id: 'd', text: 'It comes from dev hot reloading, and the globalThis singleton fixes it in production too', isCorrect: false },
     ],
-    explanation: 'Traditional servers maintain a single connection pool shared across all requests. Serverless is fundamentally different: each function invocation may run in an isolated container with its own PrismaClient and connection pool. During a traffic spike, if 200 serverless functions spin up simultaneously, each opening 5 connections (the default pool size), that is 1,000 database connections — far exceeding typical PostgreSQL limits (usually 100-300). The solution is an external connection pooler that sits between your serverless functions and the database. PgBouncer or Prisma Accelerate accepts thousands of incoming connections but maintains a small, fixed pool of actual database connections, queuing excess requests. The globalThis pattern (option D) only helps with Next.js dev hot reloading — it does nothing for serverless cold starts in production.',
+    explanation: 'A long-running server keeps one PrismaClient and one connection pool for every request. On serverless, each function instance is a separate process with its own PrismaClient and its own pool, and a spike starts many instances at once: 100 instances with a pool of 5 each hold 500 connections, well past a typical PostgreSQL `max_connections` of 100. The usual fix is a pooler between the functions and the database, such as PgBouncer, Prisma Accelerate or your host\'s built-in pooler, which shares a few real database connections among many clients; with Prisma 6, a PgBouncer URL in transaction mode also takes `?pgbouncer=true`, and serverless apps often set `connection_limit=1` so each instance opens just one. Raising `connection_limit` makes the spike worse, `$disconnect()` per request only adds reconnect time while the instances still run at once, and the globalThis singleton prevents duplicate clients inside one dev process, not across many instances.',
     hints: [
       'Think about what happens when 200 serverless functions start at once',
       'Each serverless instance has its own memory space and connection pool',
@@ -703,7 +908,7 @@ async function deleteUser(userId: number) {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Complete the two insert calls: one creates a single tag, the other bulk-inserts an array of tags in one round trip, skipping any that would violate a unique constraint.',
+    question: 'The database is PostgreSQL and Tag has a unique `label`. Complete the two insert calls: one creates a single tag, the other inserts an array of tags in one query, skipping any whose label already exists.',
     template: `const tag = await prisma.tag.___({ data: { label: "featured" } });
 
 const result = await prisma.tag.___({
@@ -717,7 +922,7 @@ const result = await prisma.tag.createMany({
   data: [{ label: "sale" }, { label: "new" }],
   skipDuplicates: true,
 });`,
-    explanation: '`create` inserts one row and returns the full created record. `createMany` inserts an array of rows in a single query but returns only a `{ count }` object, not the created records themselves - use it for bulk seeding where you do not need the rows back. `skipDuplicates` silently skips rows that would violate a unique constraint instead of throwing.',
+    explanation: '`create` inserts one row and returns it. `createMany` sends one `INSERT` with every row of the array and returns only `{ count }`, the number of rows inserted, not the rows (`createManyAndReturn` gives the rows back). `skipDuplicates: true` adds `ON CONFLICT DO NOTHING`, so a label that already exists is skipped instead of failing the whole insert; it works on PostgreSQL, MySQL and CockroachDB, not on SQLite.',
     hints: [
       'The single-row insert method',
       'The bulk-insert method that takes an array under `data`',
@@ -734,7 +939,7 @@ const result = await prisma.tag.createMany({
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Write a function `seedTags` that bulk-inserts three Tag rows in one query: labels "sale", "new", and "featured". Skip any that already exist instead of throwing. Return the number of rows actually created.\n\nAssume `prisma` is already instantiated and the Tag model has a unique `label` field.',
+    question: 'The database is PostgreSQL and the Tag model has a unique `label`. Write `seedTags`, which inserts three Tag rows in one query, labelled "sale", "new" and "featured", skipping any label that already exists instead of throwing. Return the number of rows it actually inserted.',
     starterCode: `import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
@@ -757,19 +962,49 @@ async function seedTags() {
     skipDuplicates: true,
   });
   return result.count;
+}
+# OR
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function seedTags() {
+  const { count } = await prisma.tag.createMany({
+    data: [{ label: "sale" }, { label: "new" }, { label: "featured" }],
+    skipDuplicates: true,
+  });
+  return count;
+}
+# OR
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+async function seedTags() {
+  const result = await prisma.tag.createMany({
+    data: ["sale", "new", "featured"].map((label) => ({ label })),
+    skipDuplicates: true,
+  });
+  return result.count;
 }`,
-    explanation: '`createMany` sends one INSERT statement for the whole array instead of one round trip per row - far cheaper than looping `create` calls. It returns `{ count }`, the number of rows actually inserted, not the rows themselves. `skipDuplicates` makes reseeding idempotent: rerunning this function will not throw once "sale" already exists.',
+    explanation: '`createMany` sends one `INSERT` for the whole array instead of one round trip per row, as a loop of `create` calls would. It resolves to `{ count }`, the number of rows actually inserted, so `result.count` (or a destructured `count`) is the answer. `skipDuplicates: true` turns the insert into `INSERT ... ON CONFLICT DO NOTHING`: on a second run all three labels exist, nothing is inserted, and the function returns 0 instead of throwing a unique-constraint error. SQLite does not support `skipDuplicates`.',
     hints: [
       'createMany takes `data` as an array of row objects',
       'skipDuplicates: true avoids unique-constraint errors on rerun',
       'The return value has a `count` field',
     ],
+    requires: [
+      /prisma\.tag\.createMany\(/,
+      /["'`]sale["'`]/,
+      /["'`]new["'`]/,
+      /["'`]featured["'`]/,
+      /skipDuplicates:\s*true\b/,
+      /\.count\b|\{\s*count\s*\}/,
+    ],
     tieredHints: {
-      apiSignature: 'prisma.tag.createMany({ data: [...], skipDuplicates: true })',
+      apiSignature: 'prisma.tag.createMany({ data: TagCreateManyInput[], skipDuplicates?: boolean }): Promise<{ count: number }>',
       skeleton: `async function seedTags() {
   const result = await prisma.tag.____({
-    data: [{ label: "sale" }, { label: "new" }, { label: "featured" }],
-    ____: true,
+    ____: [{ label: "sale" }, { label: "new" }, { label: "featured" }],
+    ____: ____,
   });
   return result.____;
 }`,
@@ -794,7 +1029,7 @@ const deleted = await prisma.post.___({ where: { authorId: 7 } });`,
     solution: `const post = await prisma.post.delete({ where: { id: 1 } });
 
 const deleted = await prisma.post.deleteMany({ where: { authorId: 7 } });`,
-    explanation: '`delete` requires a `where` that uniquely identifies exactly one row (like a primary key) and returns that row. `deleteMany` accepts any filter and removes every matching row, returning only `{ count }` - it will not error if zero rows match.',
+    explanation: '`delete` needs a `where` on a unique field, such as the primary key `id`, so it can only ever remove one row; it returns that row and throws (Prisma error P2025) when no row matches. `deleteMany` takes any filter, such as `authorId`, removes every matching row and returns only `{ count }`, which is 0 when nothing matched.',
     hints: [
       'The single-row method takes a unique where clause',
       'The bulk method matches on any filter, not just a unique key',
@@ -831,10 +1066,10 @@ model User {
   id   Int  @id @default(autoincrement())
   role Role @default(USER)
 }`,
-    explanation: '`enum` declares a fixed set of allowed string values at the database level (Postgres creates a native enum type). A model field typed with that enum can only ever hold one of its listed values, and `@default(USER)` supplies the value for rows that do not specify one - both catch invalid values at write time instead of leaking bad data into the app layer.',
+    explanation: '`enum Role { ... }` declares a fixed set of values; on PostgreSQL the migration creates a native enum type for it. A field typed `Role` can hold only `USER` or `ADMIN`: the generated client types it as `"USER" | "ADMIN"`, and the database rejects anything else. `@default(USER)` fills in `USER` for a row created without a role; the value is written bare, with no quotes, because it names an enum member.',
     hints: [
       'The schema keyword that declares a fixed set of values',
-      'The directive that supplies a fallback value',
+      'The attribute that supplies a value when none is given',
     ],
     tags: ['prisma', 'enum', 'schema', 'cloze'],
     concepts: ['prisma-schema-relations'],
@@ -864,7 +1099,7 @@ const selected = await prisma.post.findMany({
 const selected = await prisma.post.findMany({
   where: { id: { in: [3, 7, 12] } },
 });`,
-    explanation: '`gte` (greater-than-or-equal) and `gt` are the comparison operators for numbers and dates. `in` matches any value present in the given array, translating to a SQL `IN (...)` clause - much cheaper than OR-ing several equality checks by hand.',
+    explanation: '`gte` means greater than or equal, so `{ gte: 18 }` matches 18 and older; `gt`, `lt` and `lte` are its siblings, and all four work on numbers and dates. `in` matches any value in the array and becomes SQL `IN (3, 7, 12)`, which is shorter than an `OR` of three equality checks; `notIn` is its opposite.',
     hints: [
       'The operator meaning "18 or older"',
       'The operator that matches against a list of values',
@@ -881,7 +1116,7 @@ const selected = await prisma.post.findMany({
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Write a function `getFlaggedPosts` that returns every post where EITHER the title contains "urgent" OR the title contains "important", but NOT the ones written by author id 1.\n\nUse the `OR` and `NOT` where operators.',
+    question: 'Write `getFlaggedPosts`, which returns every post whose title contains "urgent" or contains "important", leaving out the posts written by the author with id 1.\n\nUse the `OR` and `NOT` operators of `where`.',
     starterCode: `import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
@@ -909,22 +1144,29 @@ async function getFlaggedPosts() {
     },
   });
 }`,
-    explanation: '`OR` takes an array of where conditions - a row matches if ANY of them is true. `NOT` inverts a condition - here it excludes rows matching `{ authorId: 1 }`. Top-level where fields are implicitly ANDed together, so this reads as "(urgent OR important) AND NOT authorId 1".',
+    explanation: '`OR` takes an array of conditions, and a row matches when any of them is true. `NOT` takes a condition (or an array of them) and keeps only the rows that do not match it, here every post whose `authorId` is not 1. Keys at the top level of `where` are joined with AND, so Prisma sends `(title LIKE \'%urgent%\' OR title LIKE \'%important%\') AND NOT authorId = 1`; wrapping both in an explicit `AND: [...]` gives the same query. On PostgreSQL `contains` is case-sensitive, so "URGENT" would need `mode: "insensitive"`.',
     hints: [
       'OR takes an array of where clauses',
       'NOT wraps a single condition to exclude it',
       'Fields at the top level of `where` are ANDed together',
     ],
+    requires: [
+      /prisma\.post\.findMany\(/,
+      /\bOR:\s*\[/,
+      /contains:\s*["'`]urgent["'`]/,
+      /contains:\s*["'`]important["'`]/,
+      /\bNOT:\s*\[?\s*\{\s*authorId:\s*1\s*\}/,
+    ],
     tieredHints: {
-      apiSignature: 'prisma.post.findMany({ where: { OR: [...], NOT: { authorId: 1 } } })',
+      apiSignature: 'where: { OR?: PostWhereInput[], AND?: PostWhereInput[], NOT?: PostWhereInput | PostWhereInput[] }',
       skeleton: `async function getFlaggedPosts() {
   return prisma.post.findMany({
     where: {
       ____: [
-        { title: { contains: "urgent" } },
-        { title: { contains: "important" } },
+        { title: { ____: "urgent" } },
+        { title: { ____: "important" } },
       ],
-      ____: { authorId: 1 },
+      ____: { ____: 1 },
     },
   });
 }`,
@@ -941,7 +1183,7 @@ async function getFlaggedPosts() {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Complete the upsert: it must supply the data to use when updating an existing row, and the data to use when no row matches and one must be created.',
+    question: 'PageView has a unique `path`. Complete the upsert: one blank names the data used when a row with that path already exists, the other the data used when there is none and a row must be created.',
     template: `const view = await prisma.pageView.upsert({
   where: { path: "/pricing" },
   ___: { count: { increment: 1 } },
@@ -953,7 +1195,7 @@ async function getFlaggedPosts() {
   update: { count: { increment: 1 } },
   create: { path: "/pricing", count: 1 },
 });`,
-    explanation: '`upsert` first tries to find a row matching `where`. If found, it applies `update`; if not, it applies `create`. This avoids the race-prone read-then-branch pattern of "findUnique, then if null create else update" - the database handles the check atomically.',
+    explanation: '`upsert` looks for the row that `where` names by a unique field: when it exists, `update` is applied (here the count goes up by one); when it does not, `create` inserts the new row. Because `where` holds just the unique `path` and `create` uses the same value, Prisma 6 sends one native statement on PostgreSQL, `INSERT ... ON CONFLICT ("path") DO UPDATE`, so two requests at once cannot both create the row. When those conditions do not hold, Prisma falls back to a read and then a write, which can still hit a unique-constraint error under concurrency.',
     hints: [
       'The branch that runs when a matching row already exists',
       'The branch that runs when no row matches',
@@ -969,14 +1211,14 @@ async function getFlaggedPosts() {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
-    question: 'Your colleague writes this to record a page view counter:\n\n```typescript\nconst existing = await prisma.pageView.findUnique({ where: { path } });\nif (existing) {\n  await prisma.pageView.update({ where: { path }, data: { count: { increment: 1 } } });\n} else {\n  await prisma.pageView.create({ data: { path, count: 1 } });\n}\n```\n\nWhy is `prisma.pageView.upsert({ where: { path }, update: {...}, create: {...} })` a better fit here?',
+    question: 'PageView has a unique `path`. Your colleague writes this to record a page view counter:\n\n```typescript\nconst existing = await prisma.pageView.findUnique({ where: { path } });\nif (existing) {\n  await prisma.pageView.update({ where: { path }, data: { count: { increment: 1 } } });\n} else {\n  await prisma.pageView.create({ data: { path, count: 1 } });\n}\n```\n\nWhy is `prisma.pageView.upsert({ where: { path }, update: {...}, create: {...} })` a better fit here?',
     options: [
-      { id: 'a', text: 'The findUnique-then-branch version has a race window: two concurrent requests for the same new path can both see "no existing row" and both attempt create, causing a unique-constraint error. upsert lets the database handle the check-and-write atomically in one operation', isCorrect: true },
-      { id: 'b', text: 'upsert is purely a stylistic shorthand for the same two database round trips as the findUnique-then-branch code - it still reads then conditionally writes, so it does not change the concurrency behavior at all', isCorrect: false },
-      { id: 'c', text: 'upsert is only needed because Prisma throws a runtime error whenever update is called without a prior findUnique earlier in the same function, unlike raw SQL UPDATE statements', isCorrect: false },
-      { id: 'd', text: 'The two approaches behave identically under concurrent access; upsert is only faster because it skips validating the where clause before running the query', isCorrect: false },
+      { id: 'a', text: 'Two concurrent requests for a new path can both see no row and both call create, so one fails on the unique constraint; upsert lets the database check and write in one statement', isCorrect: true },
+      { id: 'b', text: 'upsert is only a shorthand: it still runs the same read and then the conditional write as two round trips, so the behavior under concurrent requests is unchanged', isCorrect: false },
+      { id: 'c', text: 'Prisma throws a runtime error when update runs without a findUnique before it in the same function, and upsert is the way to avoid that requirement', isCorrect: false },
+      { id: 'd', text: 'Both versions behave the same under concurrent requests; upsert is only faster because it skips validating the where clause before running the query', isCorrect: false },
     ],
-    explanation: 'The findUnique-then-branch pattern has a classic time-of-check-to-time-of-use race: between the read and the write, another concurrent request can insert the same row, so both requests see "not found" and both call create, and the second one throws a unique-constraint violation. upsert pushes the check-and-write into a single atomic database operation, eliminating that window entirely. It is not just fewer lines of code - it is a correctness fix under concurrency.',
+    explanation: 'The read-then-branch code has a time-of-check-to-time-of-use race: two requests for a new path can both read "no row" before either writes, both call `create`, and the second fails with a unique-constraint error (Prisma code P2002). This `upsert` has a `where` on the one unique field and a `create` with the same `path`, so Prisma 6 runs it as a single database statement, `INSERT ... ON CONFLICT ("path") DO UPDATE SET count = count + 1` on PostgreSQL, and the database settles the race itself. Prisma uses that native form only when `where` names one unique field that `create` repeats and there are no nested writes; otherwise it still reads and then writes, so the code must catch P2002 and retry. Prisma never requires a read before `update`, and the gain is correctness, not speed.',
     hints: [
       'Think about two requests for a brand-new path arriving at the same instant',
       'What happens between the read and the write in the findUnique version?',
@@ -1022,7 +1264,7 @@ async function getFlaggedPosts() {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Write a function `getNextPage` that takes a `lastPostId` and returns the next 10 posts after it, ordered by id ascending, using cursor-based pagination instead of skip/take.\n\nUse `cursor`, `skip: 1` (to exclude the cursor row itself), and `take: 10`.',
+    question: 'Write `getNextPage(lastPostId)`, which returns the 10 posts that come after the post with id `lastPostId`, ordered by id ascending. Use cursor-based pagination: start from that post with `cursor`, leave the cursor row itself out, and take 10.',
     starterCode: `import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
@@ -1047,14 +1289,21 @@ async function getNextPage(lastPostId: number) {
     orderBy: { id: "asc" },
   });
 }`,
-    explanation: '`cursor` seeks directly to the row matching the given unique field instead of counting through skipped rows, so performance stays constant no matter how deep the page is - offset pagination with a large `skip` gets slower as the offset grows because the database still has to scan past those rows. `skip: 1` excludes the cursor row itself since it was already shown on the previous page.',
+    explanation: '`cursor: { id: lastPostId }` starts the page at the row with that unique id, and Prisma turns it into `WHERE id >= (that row\'s id)` on the indexed key, so the database seeks straight to it however deep the page is; a large `skip` instead makes the database read and discard every skipped row. The cursor row itself was the last one on the previous page, so `skip: 1` leaves it out, and `take: 10` returns the next ten. `orderBy` on the cursor field keeps the pages in a fixed order.',
     hints: [
       'cursor takes a unique where-style object, usually { id: ... }',
       'skip: 1 excludes the cursor row itself from the results',
       'A deterministic orderBy is still required',
     ],
+    requires: [
+      /prisma\.post\.findMany\(/,
+      /cursor:\s*\{\s*id:\s*lastPostId\s*\}/,
+      /\bskip:\s*1\b/,
+      /\btake:\s*10\b/,
+      /orderBy:\s*\[?\s*\{\s*id:\s*["'`]asc["'`]/,
+    ],
     tieredHints: {
-      apiSignature: 'prisma.post.findMany({ cursor: { id: lastPostId }, skip: 1, take: 10, orderBy: { id: "asc" } })',
+      apiSignature: 'prisma.post.findMany({ cursor?: PostWhereUniqueInput, skip?: number, take?: number, orderBy? })',
       skeleton: `async function getNextPage(lastPostId: number) {
   return prisma.post.findMany({
     ____: { id: lastPostId },
@@ -1077,12 +1326,12 @@ async function getNextPage(lastPostId: number) {
     course: Course.WEB_DEV,
     question: 'Your app paginates a table with millions of rows. Users on page 2 report snappy loads, but users who jump to page 5,000 report multi-second delays. Why, and what should you switch to?',
     options: [
-      { id: 'a', text: 'skip/take always costs the same regardless of the offset, since Prisma compiles it to a single indexed lookup either way; the slowdown at page 5,000 must be an unrelated network or connection-pool issue', isCorrect: false },
-      { id: 'b', text: 'The fix is to raise `take` to a much larger page size so fewer page requests are needed overall - this reduces round trips and would resolve the slowdown users see on deep pages', isCorrect: false },
-      { id: 'c', text: 'skip/take stops working correctly once a table passes roughly a thousand rows, so Prisma\'s own docs recommend dropping to hand-written raw SQL for any table past that size', isCorrect: false },
-      { id: 'd', text: 'A large `skip` still requires the database to scan and discard that many rows before it can return the next page, so cost grows with the offset. Switching to cursor-based pagination (cursor + skip: 1) seeks directly to a row by index, keeping cost roughly constant regardless of how deep the page is', isCorrect: true },
+      { id: 'a', text: 'skip/take becomes an indexed seek at any offset, so the delay must come from the network or the connection pool', isCorrect: false },
+      { id: 'b', text: 'Pages are too small: raise `take` so each request returns more rows and deep pages need fewer requests', isCorrect: false },
+      { id: 'c', text: 'Prisma\'s skip/take is the slow part; the same LIMIT and OFFSET written as raw SQL with $queryRaw is fast', isCorrect: false },
+      { id: 'd', text: 'A large `skip` makes the database read and discard every skipped row; cursor pagination seeks straight to the last row seen', isCorrect: true },
     ],
-    explanation: 'Offset pagination (`skip`/`take`) requires the database to walk through and discard `skip` rows before it can start returning results - the deeper the page, the more rows get scanned and thrown away, so cost scales with the offset even though the page size stays constant. Cursor-based pagination avoids this because it seeks directly to a known row (usually via an indexed unique column) and reads forward from there, so page 5,000 costs about the same as page 2.',
+    explanation: '`skip`/`take` becomes `OFFSET`/`LIMIT`, and the database cannot jump to row 50,001: it reads the first 50,000 rows in order and throws them away, so each page costs more the deeper it is, whoever writes the SQL. Cursor pagination (`cursor: { id: lastId }, skip: 1, take: 10`) starts from the last row the user saw, which the database finds through the index on `id`, so page 5,000 costs about the same as page 2. A bigger `take` only makes each page heavier. The trade-off is that a cursor cannot jump straight to page 5,000; it moves page by page from a known row.',
     hints: [
       'Think about what the database has to do before it can return row 50,001',
       'Cursor pagination seeks to a row instead of counting up to it',
@@ -1099,24 +1348,24 @@ async function getNextPage(lastPostId: number) {
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Complete the two aggregate queries: one just counts published posts, the other computes the sum and average of order totals.',
+    question: 'Complete the two queries: the first counts the published posts, the second computes the sum of every order\'s `total` and the average `itemCount` per order.',
     template: `const published = await prisma.post.___({ where: { published: true } });
 
 const stats = await prisma.order.aggregate({
   ___: { total: true },
-  ___: { total: true },
+  ___: { itemCount: true },
 });`,
     blanks: ['count', '_sum', '_avg'],
     solution: `const published = await prisma.post.count({ where: { published: true } });
 
 const stats = await prisma.order.aggregate({
   _sum: { total: true },
-  _avg: { total: true },
+  _avg: { itemCount: true },
 });`,
-    explanation: '`count` returns just a row count for the given filter - cheaper than fetching rows to measure `.length`. `aggregate` computes multiple statistics in one query; `_sum` and `_avg` each take the field(s) to aggregate. Both run entirely in the database instead of pulling raw rows into the app to compute manually.',
+    explanation: '`count` returns the number of matching rows as a plain number, which is cheaper than fetching the rows to read `.length`. `aggregate` computes several statistics in one `SELECT`: `_sum: { total: true }` adds up `total` and `_avg: { itemCount: true }` averages `itemCount`, and the results come back under the same keys, as `stats._sum.total` and `stats._avg.itemCount`. `_min`, `_max` and `_count` work the same way.',
     hints: [
       'The method that returns only a row count',
-      'The two aggregate fields for total and average',
+      'The aggregate keys start with an underscore: one for a sum, one for an average',
     ],
     tags: ['prisma', 'count', 'aggregate', 'cloze'],
     concepts: ['prisma-schema-relations'],
@@ -1130,12 +1379,12 @@ const stats = await prisma.order.aggregate({
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: 'Assemble a many-to-many relation between Post and Tag using Prisma\'s implicit join table (no explicit join model). Arrange in this order: Post model, Tag model.',
+    question: 'Assemble a many-to-many relation between Post and Tag that uses Prisma\'s implicit join table, with no join model of your own. Write the Post model first, then the Tag model; in each, list the `id` first, then its own field (`title` or `label`), then the relation list.',
     correctOrder: [
       'model Post {',
-      '  id   Int   @id @default(autoincrement())',
+      '  id    Int    @id @default(autoincrement())',
       '  title String',
-      '  tags Tag[]',
+      '  tags  Tag[]',
       '}',
       'model Tag {',
       '  id    Int    @id @default(autoincrement())',
@@ -1147,19 +1396,18 @@ const stats = await prisma.order.aggregate({
       'model PostTag {',
       '  postId Int',
       '  tagId  Int',
-      '}',
     ],
     solution: `model Post {
-  id   Int   @id @default(autoincrement())
+  id    Int    @id @default(autoincrement())
   title String
-  tags Tag[]
+  tags  Tag[]
 }
 model Tag {
   id    Int    @id @default(autoincrement())
   label String @unique
   posts Post[]
 }`,
-    explanation: 'When both sides of a relation are arrays (Post.tags is Tag[] and Tag.posts is Post[]), Prisma infers a many-to-many relation and silently manages a hidden join table for you - no explicit PostTag model is needed. You only need an explicit join model when the relationship itself carries extra data (like an assignedAt timestamp).',
+    explanation: 'When both sides of a relation are lists (`tags Tag[]` on Post and `posts Post[]` on Tag), Prisma reads it as a many-to-many relation and its migration creates a hidden join table, `_PostToTag`, with one column per side (`A` and `B`). You never declare that table: you link rows through the relation fields, as in `tags: { connect: [{ label: "sale" }] }`. A `PostTag` model of your own (an explicit many-to-many) is needed only when the link carries data of its own, such as an `assignedAt` time, and then it also needs its own `@relation` fields.',
     hints: [
       'Both sides declare the other model as an array field',
       'No join model is needed unless the relation needs its own extra fields',
@@ -1178,12 +1426,12 @@ model Tag {
     course: Course.WEB_DEV,
     question: 'Given this schema:\n\n```prisma\nmodel Post {\n  id   Int   @id @default(autoincrement())\n  tags Tag[]\n}\n\nmodel Tag {\n  id    Int    @id @default(autoincrement())\n  posts Post[]\n}\n```\n\nWhere does Prisma store the association between a Post and a Tag?',
     options: [
-      { id: 'a', text: 'Prisma generates and manages a hidden implicit join table (something like _PostToTag) behind the scenes - you never define or query it directly, only the tags and posts relation fields', isCorrect: true },
-      { id: 'b', text: 'It adds a nullable tagId column directly on Post, limiting each post to one tag at a time and making a true many-to-many relationship impossible to express', isCorrect: false },
-      { id: 'c', text: 'Both models must be manually given a shared array column that stores serialized JSON of related ids, which Prisma then parses on every query', isCorrect: false },
-      { id: 'd', text: 'Prisma refuses to create this schema at all - many-to-many relations always require an explicit join model to be defined by hand first', isCorrect: false },
+      { id: 'a', text: 'In a join table Prisma creates and manages itself (named like _PostToTag), which you reach only through the tags and posts relation fields', isCorrect: true },
+      { id: 'b', text: 'In a nullable tagId column on Post, so each post holds one tag at a time and a true many-to-many relation cannot be expressed', isCorrect: false },
+      { id: 'c', text: 'In an integer array column (`Int[]` on PostgreSQL) on each model, holding the ids of the rows on the other side', isCorrect: false },
+      { id: 'd', text: 'Nowhere: Prisma rejects this schema, since a many-to-many relation always needs a join model you define by hand', isCorrect: false },
     ],
-    explanation: 'Because both Post.tags and Tag.posts are declared as arrays of the other model, Prisma recognizes an implicit many-to-many relation and auto-creates a two-column join table in the database (by default named _PostToTag) to store the pairs. You interact with it only through the relation fields (post.tags, tag.posts, connect/disconnect) - the join table itself is invisible in the Prisma Client API. An explicit join model becomes necessary only when the relationship needs its own extra columns.',
+    explanation: 'Because Post.tags and Tag.posts are both lists of the other model, Prisma treats the pair as an implicit many-to-many relation, and the migration creates a join table named `_PostToTag` with two columns, `A` (the post id) and `B` (the tag id), one row per link. Neither model gets a new column, neither a foreign key nor an id array. You use the table only through the relation fields (`post.tags`, `tag.posts`, `connect`, `disconnect`); the client has no model for it. A join model of your own is needed only when each link carries extra data.',
     hints: [
       'Neither model has a foreign key column for the other in the schema',
       'Compare to the one-to-many case, which does store an explicit foreign key',
@@ -1199,17 +1447,17 @@ model Tag {
     difficulty: Difficulty.ADVANCED,
     topic: Topic.NEXT_PRISMA,
     course: Course.WEB_DEV,
-    question: 'A booking system must ensure no two rows have the same combination of `roomId` and `date` (one booking per room per day), and lookups by `roomId` alone need to stay fast as the table grows. Which schema addition covers both requirements?\n\n```prisma\nmodel Booking {\n  id     Int      @id @default(autoincrement())\n  roomId Int\n  date   DateTime\n}\n```',
+    question: 'A booking system allows one booking per room per day, so no two rows may share the same `roomId` and `day`. The daily schedule page also looks up every booking on one `day`, across all rooms, and it must stay fast as the table grows. Which schema addition covers both?\n\n```prisma\nmodel Booking {\n  id     Int      @id @default(autoincrement())\n  roomId Int\n  day    DateTime\n}\n```',
     options: [
-      { id: 'a', text: 'Add `@unique` to both roomId and date individually - two single-column unique constraints together enforce the same rule as one composite constraint', isCorrect: false },
-      { id: 'b', text: 'Add `@@unique([roomId, date])` for the composite uniqueness rule, and `@@index([roomId])` so lookups filtering by roomId alone can use an index', isCorrect: true },
-      { id: 'c', text: 'Composite constraints spanning two fields are not supported by Prisma - this must be enforced with application-level validation before every insert', isCorrect: false },
-      { id: 'd', text: '@@index([roomId]) alone is sufficient - indexes automatically enforce uniqueness on the indexed column', isCorrect: false },
+      { id: 'a', text: 'Add `@unique` to `roomId` and to `day`: two single-column unique rules enforce the pair rule', isCorrect: false },
+      { id: 'b', text: 'Add `@@unique([roomId, day])` for the pair rule and `@@index([day])` for the day lookups', isCorrect: true },
+      { id: 'c', text: 'Add only `@@unique([roomId, day])`: its index finds the rows of one day as fast as one room\'s', isCorrect: false },
+      { id: 'd', text: 'Add only `@@index([roomId, day])`: an index on both columns also refuses a repeated pair', isCorrect: false },
     ],
-    explanation: '`@@unique([roomId, date])` is a block-level (model-level) attribute that enforces uniqueness across the COMBINATION of fields, not each independently - two single-field `@unique` attributes would wrongly forbid any room from ever being booked twice at all, or any date from being reused by any room. `@@index([roomId])` separately speeds up queries that filter by roomId without affecting uniqueness at all - indexes and uniqueness constraints are independent concerns; an index does not imply uniqueness unless it is a unique index.',
+    explanation: '`@@unique([roomId, day])` is a model-level attribute that makes the pair unique: room 4 can be booked on many days and a day can hold many rooms, but room 4 on 1 May only once. Two single `@unique` fields would instead allow each room only one booking ever and each day only one booking. The unique rule is kept as an index sorted by `roomId` first, then `day`, so it serves lookups by room, or by room and day, but cannot seek straight to one day across all rooms; `@@index([day])` adds an index that can. A plain `@@index` speeds up lookups and refuses nothing; only `@unique` and `@@unique` reject duplicates.',
     hints: [
-      'Composite uniqueness needs a block-level attribute spanning multiple fields',
-      'An index for query speed and a uniqueness constraint solve different problems',
+      'Composite uniqueness needs a model-level attribute spanning both fields',
+      'A two-column index is sorted by its first column, then its second',
     ],
     tags: ['prisma', '@@unique', '@@index', 'composite-constraints', 'schema'],
     concepts: ['prisma-schema-relations'],
