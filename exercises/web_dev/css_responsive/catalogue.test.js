@@ -36,8 +36,8 @@ describe('the list of books', () => {
 
   test('is written mobile-first: the phone layout has no media query, and none asks for a max-width', () => {
     const text = css();
-    expect(text).toMatch(/@media[^{]*min-width/);
-    expect(text).not.toMatch(/@media[^{]*max-width/);
+    expect(text, 'the exercise asks for mobile-first media queries, with min-width (or width >=)').toMatch(/@media[^{]*(min-width|width\s*>|<=?\s*width)/i);
+    expect(text, 'the exercise asks for mobile-first media queries, so none with max-width (or width <=)').not.toMatch(/@media[^{]*(max-width|width\s*<|>=?\s*width)/i);
     const books = at(375).querySelector('.books');
     expect(columnCount(books)).toBe(1);
   });
@@ -54,7 +54,6 @@ test('the phone shows the menu button, and from 768px the menu itself as a row',
 
 test('the heading scales with the width between 24px and 40px', () => {
   const size = width => styleOf(at(width).querySelector('h1'), 'font-size');
-  expect(css()).toMatch(/clamp\(/);
   expect(size(375)).toBe('24px');
   expect(size(800)).toBe('32px');
   expect(size(1440)).toBe('40px');

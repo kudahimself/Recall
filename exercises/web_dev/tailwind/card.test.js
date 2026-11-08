@@ -65,8 +65,8 @@ test('the buttons are brand-colored, darker on hover, outlined on keyboard focus
 
 test('theme.css brings in Tailwind and adds the two brand colors as theme tokens', () => {
   const css = readFileSync(new URL('./theme.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  expect(css).toMatch(/@import\s+["']tailwindcss["']\s*;/);
-  const theme = css.match(/@theme\s*\{([^}]*)\}/)?.[1] ?? '';
-  expect(theme).toMatch(/--color-brand-500\s*:\s*#7c3aed\s*;/i);
-  expect(theme).toMatch(/--color-brand-600\s*:\s*#6d28d9\s*;?/i);
+  expect(css, 'the exercise asks theme.css to bring in Tailwind with @import "tailwindcss"').toMatch(/@import\s+(url\(\s*)?["']tailwindcss["']\s*\)?\s*;/i);
+  const theme = css.match(/@theme(\s+[\w-]+)*\s*\{([^}]*)\}/)?.[2] ?? '';
+  expect(theme, 'the exercise asks for --color-brand-500: #7c3aed inside an @theme block').toMatch(/--color-brand-500\s*:\s*#7c3aed\s*(;|$)/i);
+  expect(theme, 'the exercise asks for --color-brand-600: #6d28d9 inside an @theme block').toMatch(/--color-brand-600\s*:\s*#6d28d9\s*(;|$)/i);
 });

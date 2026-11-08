@@ -1,9 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import * as money from './money.js';
 import * as order from './order.js';
-
-const source = name => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
 
 describe('the modules', () => {
   test('money.js exports formatPrice as its default export', () => {
@@ -14,11 +11,19 @@ describe('the modules', () => {
     expect(money.default(5)).toBe('£0.05');
   });
 
-  test('order.js imports formatPrice from money.js, the ES module way', () => {
-    expect(source('order.js')).toMatch(/import\s+\w+\s+from\s+['"]\.\/money\.js['"]/);
-    expect(source('order.js') + source('money.js')).not.toMatch(/\brequire\s*\(|module\.exports/);
+  test('order.js imports formatPrice from money.js, the ES module way', async () => {
     expect(order.receiptLine({ title: 'Emma', pence: 350, quantity: 2 })).toBe('2 x Emma: £7.00');
     expect(order.receiptLine({ title: 'Dune', pence: 1099 })).toBe('1 x Dune: £10.99');
+    vi.resetModules();
+    vi.doMock('./money.js', () => ({ default: pence => `<${pence}p>` }));
+    try {
+      const withStandIn = await import('./order.js');
+      expect(withStandIn.receiptLine({ title: 'Emma', pence: 350, quantity: 2 }),
+        'receiptLine should format with the default export that order.js imports from ./money.js').toBe('2 x Emma: <700p>');
+    } finally {
+      vi.doUnmock('./money.js');
+      vi.resetModules();
+    }
   });
 });
 
