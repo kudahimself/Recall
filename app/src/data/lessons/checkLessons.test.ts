@@ -237,3 +237,38 @@ test('a React worked example with runs: false is not run, and the kind needs JSX
   expect(r.noJsx.join('\n')).toMatch(/runs: false is only for a Django/);
   expect(r.asJavaScript.join('\n')).toMatch(/runs: false is only for a Django/);
 });
+
+test('a Next.js worked example with runs: false is not run, and the kind needs TSX or TypeScript that imports from next or holds a directive line', () => {
+  const r = probe(`
+    const { LESSONS } = require('./src/data/lessons/index.ts');
+    const base = LESSONS.find(l => l.id === 'tsql_select/1');
+    const worked = (language, code) => ({ ...base, worked: { ...base.worked, language, tables: undefined, runs: false, code, output: 'Hi' } });
+    const page = worked('jsx', 'import Link from "next/link";\\nexport default function Page() { return <Link href="/">Hi</Link>; }');
+    const handler = worked('typescript', 'import { NextResponse } from "next/server";\\nexport async function GET() { return NextResponse.json({ ok: true }); }');
+    const typeOnly = worked('typescript', 'import type { Metadata } from "next";\\nexport const metadata: Metadata = { title: "Hi" };');
+    const withReact = worked('jsx', 'import { useState } from "react";\\nimport { useRouter } from "next/navigation";\\nexport default function A() { return <p>Hi</p>; }');
+    const directive = worked('jsx', '"use client";\\nimport { useState } from "react";\\nexport default function A() { return <p>Hi</p>; }');
+    const quotedDirective = worked('typescript', 'console.log("use client");');
+    const multiLine = worked('typescript', 'import {\\n  NextRequest,\\n  NextResponse,\\n} from "next/server";\\nexport function middleware(r: NextRequest) { return NextResponse.next(); }');
+    const lookalike = worked('typescript', 'import { next } from "nextgen";\\nconsole.log(next);');
+    const noImport = worked('typescript', 'export async function GET() { return Response.json({ ok: true }); }');
+    const asJavaScript = worked('javascript', 'import { NextResponse } from "next/server";\\nexport async function GET() { return NextResponse.json({}); }');
+    const errors = async l => (await C.checkLesson(l, new Set())).errors;
+    const { nonRunnableKind } = require('./src/utils/workedKinds.ts');
+    const kindOf = l => nonRunnableKind(l.worked.code, l.worked.language).needs;
+    return { page: await errors(page), handler: await errors(handler), typeOnly: await errors(typeOnly), withReact: await errors(withReact), withReactKind: kindOf(withReact), directive: await errors(directive), directiveKind: kindOf(directive), quotedDirective: await errors(quotedDirective), multiLine: await errors(multiLine), lookalike: await errors(lookalike), noImport: await errors(noImport), asJavaScript: await errors(asJavaScript) };
+  `);
+  for (const ok of [r.page, r.handler, r.typeOnly, r.withReact, r.directive, r.multiLine]) {
+    expect(ok.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  }
+  // A Next.js page that also imports React says it needs a Next.js project.
+  expect(r.withReactKind).toBe('a Next.js project');
+  // So does a Server / Client Component pair that imports only React but carries a directive line.
+  expect(r.directiveKind).toBe('a Next.js project');
+  // "use client" inside a string is not a directive line.
+  expect(r.quotedDirective.join('\n')).toMatch(/runs: false is only for a Django/);
+  // Another package whose name starts with next, no Next.js import, and the same code labelled JavaScript are not the kind.
+  expect(r.lookalike.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.noImport.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.asJavaScript.join('\n')).toMatch(/runs: false is only for a Django/);
+});

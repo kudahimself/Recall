@@ -72,6 +72,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // INTERMEDIATE MC
   q('next-route-catchall-mcq-1'),
   q('next-route-catchall-cloze-1'),
+  // INTERMEDIATE predict (route group + catch-all params)
+  q('next-route-catchall-predict-1'),
   // ADVANCED MC
   q('next-route-parallel-mcq-1'),
 
@@ -87,6 +89,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-sc-1'),
   // INTERMEDIATE faded (Cloze, on-ramp for serializable-props MC)
   q('next-sc-serializable-cloze-1'),
+  // INTERMEDIATE predict (where Server and Client Component code runs)
+  q('next-sc-boundary-predict-1'),
   // INTERMEDIATE MC
   q('next-sc-3'),
   q('next-sc-serializable-mcq-1'),
@@ -117,6 +121,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-fetch-3'),
   q('next-dynamic-mcq-1'),
   q('next-dynamic-mcq-2'),
+  // INTERMEDIATE predict (stale-while-revalidate timing)
+  q('next-fetch-isr-predict-1'),
   // INTERMEDIATE faded (Cloze, on-ramp for the parallel-fetch coding question)
   q('next-parallel-cloze-1'),
   // INTERMEDIATE coding
@@ -136,6 +142,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-api-parsons-1'),
   q('next-api-cloze-1'),
   q('next-api-cloze-2'),
+  // BEGINNER predict (method exports and status codes)
+  q('next-api-status-predict-1'),
   // BEGINNER coding
   q('next-api-1'),
   // BEGINNER faded (dynamic segment primitive, before next-api-dynamic-1 combines it)
@@ -165,6 +173,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-mw-parsons-1'),
   q('next-mw-cloze-1'),
   q('next-mw-cloze-2'),
+  // BEGINNER predict (matcher and redirect)
+  q('next-mw-matcher-predict-1'),
   // INTERMEDIATE MC
   q('next-mw-2'),
   // INTERMEDIATE coding
@@ -185,6 +195,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-opt-parsons-1'),
   q('next-opt-cloze-1'),
   q('next-opt-cloze-2'),
+  // BEGINNER predict (title template and generateMetadata)
+  q('next-opt-title-template-predict-1'),
   // BEGINNER coding
   q('next-opt-1'),
   // BEGINNER faded + MC (next/font)
@@ -219,6 +231,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-auth-cloze-1'),
   // INTERMEDIATE faded + coding (httpOnly session cookie on login)
   q('next-auth-session-cookie-cloze-1'),
+  // INTERMEDIATE predict (what document.cookie can read)
+  q('next-auth-httponly-predict-1'),
   q('next-auth-session-cookie-1'),
   // ADVANCED coding
   q('sec-auth-5'),
@@ -634,6 +648,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-deploy-1'),
   // BEGINNER faded (NEXT_PUBLIC_ hands-on)
   q('next-deploy-public-cloze-1'),
+  // INTERMEDIATE predict (NEXT_PUBLIC_ is inlined at build time)
+  q('next-deploy-public-env-predict-1'),
   // INTERMEDIATE MC
   q('next-deploy-2'),
   q('next-deploy-buildtime-mcq-1'),

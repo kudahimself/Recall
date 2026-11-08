@@ -350,6 +350,29 @@ export default function GoToDashboardButton() {
     concepts: ['next-app-router'],
   },
   {
+    id: 'next-route-catchall-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_ROUTING,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'A visitor opens /recipes/soups/winter. What text does the heading show? Type it exactly as it appears on the page.',
+    code: `// app/(site)/recipes/[...path]/page.tsx
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ path: string[] }>;
+}) {
+  const { path } = await params;
+  return <h1>{path.length} parts: {path.join(" / ")}</h1>;
+}`,
+    expectedOutput: '2 parts: soups / winter',
+    explanation: '(site) is a route group: a folder name in parentheses organizes files without adding a URL segment, so this file serves /recipes/..., not /site/recipes/.... [...path] is a catch-all segment: it captures every remaining segment after /recipes as an array of strings, so /recipes/soups/winter gives path = ["soups", "winter"], without "recipes". In Next.js 15 params is a Promise, so the page awaits it first. The heading reads "2 parts: soups / winter".',
+    hints: ['Does a folder name in parentheses appear in the URL?', 'Which segments does [...path] capture: all of them, or only those after /recipes?'],
+    tags: ['catch-all', 'route-groups', 'dynamic-routes', 'params', 'predict'],
+    concepts: ['next-app-router'],
+  },
+  {
     id: 'next-route-parallel-mcq-1',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,
@@ -518,6 +541,39 @@ export default async function ProductPage({ params }) {
     concepts: ['next-server-vs-client'],
   },
 
+  {
+    id: 'next-sc-boundary-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_SERVER_COMPONENTS,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'The app runs in production (next build, then next start). A visitor opens /shop and clicks the button twice. What does the browser\'s DevTools console show? Type each logged line in order, one per line.',
+    code: `// app/shop/page.tsx (a Server Component)
+import Counter from "./Counter";
+
+export default function Page() {
+  console.log("page rendered");
+  return <Counter start={5} />;
+}
+
+// app/shop/Counter.tsx
+"use client";
+import { useState } from "react";
+
+export default function Counter({ start }: { start: number }) {
+  const [n, setN] = useState(start);
+  console.log("counter", n);
+  return <button onClick={() => setN(n + 1)}>{n}</button>;
+}`,
+    expectedOutput: `counter 5
+counter 6
+counter 7`,
+    explanation: 'A Server Component runs only on the server, so "page rendered" is logged in the server\'s terminal (here once, at build time, since the page is static) and never in the browser. A Client Component is pre-rendered on the server too, but its code is also sent to the browser, where hydration renders it again: that render logs "counter 5" in the browser. Each click re-renders it in the browser, logging "counter 6" and then "counter 7". The question says production because in development Next.js also replays server logs in the browser console, tagged Server.',
+    hints: ['Where does a Server Component\'s code run, and does any of it reach the browser?', 'Hydration renders a Client Component once in the browser, before any click.'],
+    tags: ['server-components', 'client-components', 'use-client', 'hydration', 'predict'],
+    concepts: ['next-server-vs-client'],
+  },
   {
     id: 'next-sc-3',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -701,6 +757,30 @@ export default async function ProductPage({ params }) {
     concepts: ['next-streaming-suspense'],
   },
 
+  {
+    id: 'next-fetch-isr-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_DATA_FETCHING,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'The page is built at 10:00:00, when the API returns version "v1". The API switches to "v2" at 10:00:50. Visitors open the page at 10:00:30, 10:01:10 and 10:01:20, one at a time, and any background regeneration finishes within a second. What does the paragraph show for each visit? Type the three values in visit order, one per line.',
+    code: `// app/prices/page.tsx
+export default async function Page() {
+  const res = await fetch("https://api.example.com/prices", {
+    next: { revalidate: 60 },
+  });
+  const data: { version: string } = await res.json();
+  return <p>{data.version}</p>;
+}`,
+    expectedOutput: `v1
+v1
+v2`,
+    explanation: 'With next: { revalidate: 60 } and no request-time API such as cookies(), the page is prerendered at build time and served from the cache (Incremental Static Regeneration). At 10:00:30 the cached page is 30 seconds old, so it is fresh: v1. At 10:01:10 it is 70 seconds old, so it is stale, but Next.js still serves the stale page (v1) to that visitor and regenerates it in the background, fetching v2. The visit at 10:01:20 gets the regenerated page: v2. revalidate: 60 means "regenerate after the first visit once the page is 60 seconds old", not "refetch every 60 seconds".',
+    hints: ['Is the visit at 10:01:10 within 60 seconds of the build?', 'When a cached page is stale, does Next.js make that visitor wait for a fresh one?'],
+    tags: ['isr', 'revalidate', 'fetch', 'caching', 'stale-while-revalidate', 'predict'],
+    concepts: ['next-data-fetching'],
+  },
   {
     id: 'next-fetch-3',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -1286,6 +1366,34 @@ export async function POST(request: NextRequest) {
   },
 
   {
+    id: 'next-api-status-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_API_ROUTES,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'Three requests reach this route handler: GET /api/stock?item=jam, then GET /api/stock, then POST /api/stock?item=tea. What HTTP status code does each response have? Type the three codes in request order, one per line.',
+    code: `// app/api/stock/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+const stock: Record<string, number> = { tea: 4, jam: 0 };
+
+export async function GET(request: NextRequest) {
+  const item = request.nextUrl.searchParams.get("item");
+  if (item === null) {
+    return NextResponse.json({ error: "item is required" }, { status: 400 });
+  }
+  return NextResponse.json({ item, left: stock[item] ?? 0 });
+}`,
+    expectedOutput: `200
+400
+405`,
+    explanation: 'A route handler answers only the HTTP methods its file exports. GET /api/stock?item=jam finds item "jam", and NextResponse.json without a status option answers 200, even though left is 0. GET /api/stock has no item parameter, so searchParams.get returns null and the handler answers 400. The file exports no POST function, so Next.js answers the POST with 405 Method Not Allowed without running any of this code.',
+    hints: ['What status does NextResponse.json use when you pass none?', 'Which exported function would handle a POST, and does this file have one?'],
+    tags: ['route-handlers', 'http-methods', 'status-codes', 'searchParams', 'predict'],
+    concepts: ['next-route-handlers'],
+  },
+  {
     id: 'next-api-dynamic-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.BEGINNER,
@@ -1595,6 +1703,33 @@ export const config = {
   },
 
   {
+    id: 'next-mw-matcher-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_MIDDLEWARE,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'A visitor with no cookies requests /dashboard/reports, then /about, then /dashboard. Which path does the browser end up on for each request? Type the three paths in request order, one per line.',
+    code: `// middleware.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export function middleware(request: NextRequest) {
+  if (!request.cookies.get("session")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = { matcher: ["/dashboard/:path*"] };`,
+    expectedOutput: `/login
+/about
+/login`,
+    explanation: 'Middleware runs before the route, but only for the paths its matcher lists. "/dashboard/:path*" matches /dashboard followed by zero or more segments, so it matches /dashboard/reports and /dashboard itself; with no session cookie, both are redirected to /login. /about is outside the matcher, so the middleware never runs for it and the page renders as usual.',
+    hints: ['Does :path* need at least one segment after /dashboard?', 'Does middleware run for a path its matcher does not list?'],
+    tags: ['middleware', 'matcher', 'redirect', 'cookies', 'predict'],
+    concepts: ['next-middleware'],
+  },
+  {
     id: 'next-mw-2',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.INTERMEDIATE,
@@ -1838,6 +1973,36 @@ export const config = {
     concepts: ['web-css-responsive'],
   },
   {
+    id: 'next-opt-title-template-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_OPTIMIZATION,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'A visitor opens /meals/soup, then /about. What does the browser tab show as the title of each page? Type the two titles in that order, one per line.',
+    code: `// app/layout.tsx
+export const metadata: Metadata = {
+  title: { template: "%s | Pantry", default: "Pantry" },
+};
+
+// app/meals/[slug]/page.tsx
+export async function generateMetadata({ params }: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  return { title: slug.toUpperCase() };
+}
+
+// app/about/page.tsx
+export const metadata: Metadata = { description: "Who we are" };`,
+    expectedOutput: `SOUP | Pantry
+Pantry`,
+    explanation: 'A title template set in a layout applies to the pages below it: %s is replaced by the title each page sets. generateMetadata runs with the page\'s params, so /meals/soup sets the title "SOUP", and the template makes the tab read "SOUP | Pantry". /about exports metadata with no title, so the layout\'s default is used on its own: "Pantry", with no template around it.',
+    hints: ['What replaces %s in the template?', 'Which title does a page that sets none get?'],
+    tags: ['metadata', 'generateMetadata', 'title-template', 'seo', 'predict'],
+    concepts: ['next-app-router'],
+  },
+  {
     id: 'next-opt-font-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.BEGINNER,
@@ -1962,6 +2127,29 @@ export const config = {
     concepts: ['web-security-input-validation'],
   },
 
+  {
+    id: 'next-deploy-public-env-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_DEPLOYMENT,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'The app is built with .env.production holding NEXT_PUBLIC_SHOP_NAME=Pantry and STRIPE_SECRET=sk_live_123, then started with NEXT_PUBLIC_SHOP_NAME=Larder next start. A visitor opens a page that renders <Banner />. What does the browser console log? Type the two logged lines in order, one per line.',
+    code: `// app/Banner.tsx
+"use client";
+
+export default function Banner() {
+  console.log(process.env.NEXT_PUBLIC_SHOP_NAME);
+  console.log(process.env.STRIPE_SECRET);
+  return null;
+}`,
+    expectedOutput: `Pantry
+undefined`,
+    explanation: 'next build replaces every process.env.NEXT_PUBLIC_ variable in client code with its value at build time, so the browser bundle holds the literal "Pantry"; a different value set when the server starts changes nothing in code that is already built. A variable without the NEXT_PUBLIC_ prefix is never put in the client bundle, so STRIPE_SECRET is undefined in the browser, which is what keeps secrets on the server. To change a public value per environment, build once per environment or read the value on the server at request time.',
+    hints: ['When does Next.js read NEXT_PUBLIC_ values for client code: at build or at start?', 'Which variables does Next.js put in the browser bundle?'],
+    tags: ['environment-variables', 'NEXT_PUBLIC', 'build-time', 'deployment', 'predict'],
+    concepts: ['next-deployment'],
+  },
   {
     id: 'next-deploy-2',
     type: QuestionType.MULTIPLE_CHOICE,
