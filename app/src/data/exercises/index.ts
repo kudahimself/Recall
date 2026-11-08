@@ -6,8 +6,8 @@
  * Python Advanced, Django, Django Advanced & Deployment, DRF Production Patterns,
  * Celery & Background Tasks, Testing & CI/CD, Production Infrastructure, Python
  * Mastery & Advanced and Real-time & Monitoring: every Backend section.
- * Then Databricks, which run on local PySpark and Delta: Lakehouse Platform and
- * ELT with Spark SQL & Python.
+ * Then Databricks, which run on local PySpark and Delta: Lakehouse Platform,
+ * ELT with Spark SQL & Python, Incremental Data Processing and Production Pipelines.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -1207,6 +1207,84 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Move between DataFrames and SQL with five small helpers.',
       'Register a temp view, clean text with `try_cast`, label rows with `CASE`, reshape with `PIVOT`, and create a view with `CREATE OR REPLACE TEMP VIEW`.',
+    ),
+  },
+  {
+    id: 'structured_streaming',
+    topicKeys: [Topic.STRUCTURED_STREAMING],
+    title: 'Checkouts on a stream',
+    folder: 'exercises/databricks/structured_streaming',
+    starter: ['checkout_stream.py'],
+    tests: 'test_checkout_stream.py',
+    minutes: 20,
+    task: lines(
+      'Keep tables in step with a growing `checkouts` Delta table by streaming only its new rows.',
+      'Pick the output mode a query needs, append new rows with a checkpoint and an `availableNow` trigger, keep running counts per branch in `complete` mode, and drop redelivered events behind a watermark.',
+    ),
+  },
+  {
+    id: 'auto_loader',
+    topicKeys: [Topic.AUTO_LOADER],
+    title: 'Landing files once',
+    folder: 'exercises/databricks/auto_loader',
+    starter: ['landing_loader.py'],
+    tests: 'test_landing_loader.py',
+    minutes: 20,
+    task: lines(
+      'Write Auto Loader\'s settings and schema decisions in plain Python, since `cloudFiles` is Databricks-only, then load files once with the open-source file stream.',
+      'Build the `cloudFiles.*` options, name what is wrong with a source, say what each schema evolution mode does with a new column, and stream new JSON files into a table with their file names.',
+    ),
+  },
+  {
+    id: 'medallion_architecture',
+    topicKeys: [Topic.MEDALLION_ARCHITECTURE],
+    title: 'Loans through the layers',
+    folder: 'exercises/databricks/medallion_architecture',
+    starter: ['loan_layers.py'],
+    tests: 'test_loan_layers.py',
+    minutes: 20,
+    task: lines(
+      'Carry raw loan records through Bronze, Silver and Gold Delta tables.',
+      'Append records with their source file to Bronze, keep the latest typed row per loan in Silver, quarantine the records Silver leaves out, and sum fees per branch in Gold from Silver only.',
+    ),
+  },
+  {
+    id: 'change_data_capture',
+    topicKeys: [Topic.CHANGE_DATA_CAPTURE],
+    title: 'Title changes from the feed',
+    folder: 'exercises/databricks/change_data_capture',
+    starter: ['title_changes.py'],
+    tests: 'test_title_changes.py',
+    minutes: 25,
+    task: lines(
+      'Pass on only the rows that changed in a `titles` Delta table with the Change Data Feed.',
+      'Switch the feed on at `CREATE TABLE` and with `ALTER TABLE`, read `table_changes` without the update preimages, count the changes by type, and `MERGE` the latest change of each isbn into an older copy.',
+    ),
+  },
+  {
+    id: 'delta_live_tables',
+    topicKeys: [Topic.DELTA_LIVE_TABLES],
+    title: 'Pipeline expectations',
+    folder: 'exercises/databricks/delta_live_tables',
+    starter: ['pipeline_rules.py'],
+    tests: 'test_pipeline_rules.py',
+    minutes: 25,
+    task: lines(
+      'Make the decisions a declarative pipeline makes for you, since Lakeflow pipelines run only on Databricks.',
+      'Write an expectation\'s `CONSTRAINT` SQL, choose a streaming table or a materialized view, apply warn, drop and fail expectations to a Spark DataFrame with their failure counts, and order datasets by their references.',
+    ),
+  },
+  {
+    id: 'databricks_workflows',
+    topicKeys: [Topic.DATABRICKS_WORKFLOWS],
+    title: 'Job graphs and repair runs',
+    folder: 'exercises/databricks/databricks_workflows',
+    starter: ['job_specs.py'],
+    tests: 'test_job_specs.py',
+    minutes: 25,
+    task: lines(
+      'Write a nightly job\'s settings as the plain dicts the Jobs API takes, and play its runs out on paper.',
+      'Build tasks with `depends_on` and retries, a scheduled job with parameters, name the problems in a task graph, work out which tasks succeed, fail or are skipped as upstream failed, and list what a repair run reruns.',
     ),
   },
 ];

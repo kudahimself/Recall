@@ -2020,7 +2020,7 @@ for r in changes.collect():
       ),
       lines(
         "A streaming table reads its source with `STREAM(...)` and processes only the rows added since the last update, which suits append-only sources such as files.",
-        "A materialized view holds a query's whole result, kept correct on each update, which suits joins and aggregations, and a temporary view is computed inside the pipeline but not published.",
+        "A materialized view holds a query's whole result, kept correct on each update, which suits aggregations and joins where both sides change, while a streaming table can still join its stream to a static reference table, and a temporary view is computed inside the pipeline but not published.",
       ),
       lines(
         "An expectation, `CONSTRAINT name EXPECT (cond)`, checks every row: with no clause it only warns, `ON VIOLATION DROP ROW` drops failing rows, and `ON VIOLATION FAIL UPDATE` stops the update.",
