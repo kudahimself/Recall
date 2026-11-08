@@ -39,6 +39,7 @@ def _builder():
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.default.parallelism", "2")
         .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.driver.extraJavaOptions", "-Duser.timezone=UTC")
         .config("spark.sql.warehouse.dir", str(Path(_warehouse) / "warehouse"))
         .config("spark.databricks.delta.snapshotPartitions", "2")
         .config("spark.databricks.delta.retentionDurationCheck.enabled", "true")

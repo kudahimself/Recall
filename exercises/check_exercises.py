@@ -122,7 +122,7 @@ def run_pytest_batch(course_dir):
     """Run every test under `course_dir` in one pytest run; return {topic: (passed, failed)} and the output."""
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--color=no", "--tb=short", "-rA", course_dir.name],
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--color=no", "--tb=short", "-rA", "--continue-on-collection-errors", course_dir.name],
         cwd=course_dir.parent, capture_output=True, text=True, env=env, timeout=900,
     )
     out = result.stdout + result.stderr
@@ -134,6 +134,15 @@ def run_pytest_batch(course_dir):
         passed, failed = counts.get(parts[1], (0, 0))
         counts[parts[1]] = (passed + 1, failed) if kind == "PASSED" else (passed, failed + 1)
     return counts, out
+
+
+def output_for(out, course, folder):
+    """The failure sections and result lines of a batched run's output that name this exercise folder."""
+    marker = f"{course}/{folder.name}/"
+    sections = re.split(r"^(?=_{3,} .* _{3,}$|={3,} .* ={3,}$)", out, flags=re.M)
+    kept = [s.strip() for s in sections if marker in s and not s.startswith("=")]
+    kept += [line for line in out.splitlines() if line.startswith(("PASSED", "FAILED", "ERROR")) and marker in line]
+    return "\n".join(kept)[-3000:]
 
 
 def check_batch(course, folders):
@@ -174,14 +183,14 @@ def check_batch(course, folders):
         for folder in fresh:
             passed, failed = counts.get(folder.name, (0, 0))
             if passed > 0 or failed == 0:
-                problems[folder].append(f"on the starter every test should fail, got {passed} passed, {failed} failed\n{out[-3000:]}")
+                problems[folder].append(f"on the starter every test should fail, got {passed} passed, {failed} failed\n{output_for(out, course, folder)}")
     if runnable:
         with tempfile.TemporaryDirectory() as tmp:
             counts, out = run_pytest_batch(stage(tmp, True, runnable))
         for folder in runnable:
             passed, failed = counts.get(folder.name, (0, 0))
             if failed > 0 or passed == 0:
-                problems[folder].append(f"on the reference solution every test should pass, got {passed} passed, {failed} failed\n{out[-3000:]}")
+                problems[folder].append(f"on the reference solution every test should pass, got {passed} passed, {failed} failed\n{output_for(out, course, folder)}")
     return problems
 
 

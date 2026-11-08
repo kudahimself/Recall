@@ -52,8 +52,10 @@ def test_old_version_still_has_its_rows(spark, shelves):
 
 
 def test_timestamp_as_of_reads_the_version_current_then(spark, shelves):
-    history = {r["version"]: r["timestamp"] for r in spark.sql(f"DESCRIBE HISTORY {shelves}").collect()}
-    moment = history[1].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    history = spark.sql(f"DESCRIBE HISTORY {shelves}").selectExpr(
+        "version", "date_format(timestamp, 'yyyy-MM-dd HH:mm:ss.SSS') AS moment"
+    )
+    moment = {r["version"]: r["moment"] for r in history.collect()}[1]
     assert total_books_at_time(spark, shelves, moment) == 65
 
 
