@@ -66,7 +66,7 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutDef> = {
   pick: { keys: ['1-9'], label: 'Pick an option or a line', group: 'Answering' },
   submit: { keys: ['Enter'], label: 'Check your answer, then go to the next one', group: 'Answering' },
   hint: { keys: ['H'], label: 'Show the hint (in code: the next hint)', group: 'Answering' },
-  solution: { keys: ['S'], label: 'Show the solution after a miss (in code: give up)', group: 'Answering' },
+  solution: { keys: ['S'], label: 'Show the solution beside yours after a miss (in code: give up)', group: 'Answering' },
   submitTyping: { keys: ['Shift+Enter', 'Mod+Enter'], label: 'Check from a text box, a blank or the code editor', group: 'While typing', whileTyping: true },
   nextBlank: { keys: ['Enter'], label: 'In a blank: go to the next one (checks on the last)', group: 'While typing', whileTyping: true },
   leaveTyping: { keys: ['Esc'], label: 'Leave the text box or editor, so single keys work again', group: 'While typing', whileTyping: true },

@@ -1,0 +1,108 @@
+/* The solution, large: the reference beside the learner's code, both at
+   full code size; the dialog body scrolls when the code is long. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding-top: var(--sp-3);
+  padding-bottom: var(--sp-4);
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+}
+
+.forms {
+  flex: 1 1 100%;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* The + and - as the code shows them, in their colours. */
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  width: var(--kbd-h);
+  height: var(--kbd-h);
+  border-left: var(--diff-mark-w) solid;
+  border-radius: var(--radius-s);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+}
+
+.add {
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.remove {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.keys {
+  margin-left: auto;
+}
+
+/* Focus rests here only to scroll the code, so it shows no ring of its own. */
+.code:focus {
+  outline: none;
+}
+
+/* The solution a little wider than the learner's code: it is the one to learn from. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.head {
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* A phone: the solution, then the learner's code under it; no keys to show. */
+@media (max-width: 767px) {
+  .body {
+    padding-left: var(--sp-3);
+    padding-right: var(--sp-3);
+  }
+
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .keys {
+    display: none;
+  }
+}

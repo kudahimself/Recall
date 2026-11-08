@@ -310,7 +310,7 @@ describe('Coding, keys only', () => {
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('S gives up after a miss and shows the solution beside the code; Enter goes Next', async () => {
+  it('S gives up after a miss and opens the solution; Esc closes it, it stays beside the code, Enter goes Next', async () => {
     const onAnswer = jest.fn();
     const { onNext } = renderWithNav(<CodingQuestion question={TIERED} onAnswer={onAnswer} showHints />);
     fireEvent.change(editor(), { target: { value: 'print(15)' } });
@@ -318,7 +318,10 @@ describe('Coding, keys only', () => {
     press('s');
     expect(onAnswer).toHaveBeenCalledWith(false, { hintTierUsed: 0, attempts: 1 });
     expect(verdict()).toHaveTextContent('Not quite');
-    expect(screen.getByLabelText('Solution')).toHaveTextContent('total = sum(numbers)');
+    expect(screen.getByRole('dialog', { name: 'Solution' })).toHaveTextContent('total = sum(numbers)');
+    press('Escape');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Solution' })).toHaveTextContent('total = sum(numbers)');
     focusedIsVerdict();
     press('Enter');
     expect(onNext).toHaveBeenCalledTimes(1);
@@ -370,6 +373,11 @@ describe('Coding, keys only', () => {
     expect(onAnswer).toHaveBeenCalledWith(false, { hintTierUsed: 0, attempts: 1 });
     expect(screen.queryByLabelText('Solution')).toBeNull();
     press('s');
-    expect(screen.getByLabelText('Solution')).toHaveTextContent('print(total)');
+    expect(screen.getByRole('dialog', { name: 'Solution' })).toHaveTextContent('print(total)');
+    // S again closes it, and opens it again.
+    press('s');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    press('s');
+    expect(screen.getByRole('dialog', { name: 'Solution' })).toBeInTheDocument();
   });
 });

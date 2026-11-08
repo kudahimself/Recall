@@ -208,6 +208,6 @@ describe('tiered coding - give up', () => {
 
     expect(onAnswer).toHaveBeenCalledWith(false, { hintTierUsed: 0, attempts: 1 });
     expect(screen.getByText('sum() adds the iterable.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Solution' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Solution' })).toHaveTextContent('total = sum(numbers)');
   });
 });

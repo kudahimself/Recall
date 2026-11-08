@@ -487,7 +487,8 @@ function normalizeCode(code: string, language: CodeLanguage): string {
 
 // ── split solution into alternatives ───────────────────────────────────
 
-function splitAlternatives(solution: string, language: CodeLanguage): string[] {
+/** A solution's accepted forms: the parts between its standalone `# OR` (`-- OR` in SQL) lines. */
+export function splitAlternatives(solution: string, language: CodeLanguage): string[] {
   // Split on "# OR" (Python) or "-- OR" (SQL) as a standalone line
   const sep = language === CodeLanguage.SQL ? /\n\s*--\s*OR\s*\n/i : /\n\s*#\s*OR\s*\n/i;
   const parts = solution.split(sep).map(s => s.trim()).filter(Boolean);

@@ -96,3 +96,71 @@
 .slotLine {
   align-items: baseline;
 }
+
+/* Syntax colours, the same tokens as the editor's theme. */
+.kw { color: var(--code-kw); }
+.str { color: var(--code-str); }
+.num { color: var(--code-num); }
+.fn { color: var(--code-fn); }
+
+/* Long lines wrap at full size (a solution read in a dialog), never scrolling sideways. */
+.wrap .line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* On a phone, wrapping would break nearly every line: lines keep their shape and the
+   block scrolls sideways inside itself, a changed line's colour running its whole length. */
+@media (max-width: 767px) {
+  .wrap .line {
+    white-space: pre;
+    overflow-wrap: normal;
+  }
+
+  .wrap .pre code {
+    width: max-content;
+    min-width: 100%;
+  }
+}
+
+/* A diff: the + or - beside each line, and the changed lines across the whole width. */
+.marked .pre {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.marked .line {
+  padding-right: var(--sp-4);
+  border-left: var(--diff-mark-w) solid transparent;
+}
+
+.marked .ln {
+  margin-left: var(--sp-3);
+}
+
+.sign {
+  flex: none;
+  width: 2ch;
+  margin: 0 var(--sp-1);
+  text-align: center;
+  color: var(--text-3);
+  user-select: none;
+}
+
+.add {
+  background: var(--success-soft);
+  border-left-color: var(--success);
+}
+
+.add .sign {
+  color: var(--success);
+}
+
+.remove {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.remove .sign {
+  color: var(--danger);
+}
