@@ -28,3 +28,9 @@ factory_boy==3.3.3
 Faker==40.44.0
 channels[daphne]==4.3.2
 daphne==4.2.3
+# pyspark and delta-spark are for the Databricks exercises (exercises/databricks/*): they run
+# on a local Spark session with Delta Lake switched on, with no Databricks workspace.
+# Spark needs Java 17 or newer installed; delta-spark 4.0.1 is the Delta release built for Spark 4.0.
+# The first run downloads the Delta jars once from Maven Central, then it works offline.
+pyspark==4.0.5
+delta-spark==4.0.1

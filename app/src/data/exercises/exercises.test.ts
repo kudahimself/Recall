@@ -4,7 +4,7 @@
  * every folder has an entry, each Python Fundamentals, Python Advanced, Django,
  * Django Advanced & Deployment, DRF Production Patterns, Celery & Background
  * Tasks, Testing & CI/CD, Production Infrastructure, Python Mastery & Advanced and
- * Real-time & Monitoring topic has one, test files and modules have names unique across exercises
+ * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform and ELT with Spark SQL & Python topics, test files and modules have names unique across exercises
  * so pytest can collect them all from the repo root, and exercises/check_exercises.py passes (each
  * exercise's tests fail on its starter and pass on its reference solution), so
  * an exercise cannot rot.
@@ -13,10 +13,12 @@ import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import { EXERCISES } from './index';
-import { BACKEND_SECTIONS, getCourseForTopic, getSectionUnits } from '../../utils/courseConfig';
+import { BACKEND_SECTIONS, DATABRICKS_SECTIONS, getCourseForTopic, getSectionUnits } from '../../utils/courseConfig';
 
 const REPO = path.join(__dirname, '..', '..', '..', '..');
 const EXERCISES_DIR = path.join(REPO, 'exercises');
+// The Python that runs the exercises' tests; the Databricks ones also need Java 17+ and pyspark.
+const PYTHON = process.env.EXERCISES_PYTHON ?? 'python3';
 
 jest.setTimeout(300000);
 
@@ -76,19 +78,38 @@ describe('exercise list', () => {
     const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
     expect(inSection.map(e => e.topicKeys)).toEqual(units);
   });
+
+  it.each(['Lakehouse Platform', 'ELT with Spark SQL & Python'])('has an exercise for every Databricks %s topic, in path order', section => {
+    expect(DATABRICKS_SECTIONS[section]).toBeDefined();
+    const units = getSectionUnits(section).map(([, keys]) => keys);
+    const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
+    expect(inSection.map(e => e.topicKeys)).toEqual(units);
+  });
 });
 
 test('pytest collects every exercise together from the repo root without errors', () => {
-  const r = spawnSync('python3', ['-m', 'pytest', '--collect-only', '-q', '-p', 'no:cacheprovider', '--ignore=exercises/solutions', 'exercises'], {
+  const r = spawnSync(PYTHON, ['-m', 'pytest', '--collect-only', '-q', '-p', 'no:cacheprovider', '--ignore=exercises/solutions', 'exercises'], {
     cwd: REPO, encoding: 'utf8', timeout: 300000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
   });
   if (r.status !== 0) throw new Error(`pytest --collect-only exercises failed:\n${r.stdout}\n${r.stderr}`);
 });
 
-test('every exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
-  const r = spawnSync('python3', [path.join(EXERCISES_DIR, 'check_exercises.py')], {
-    cwd: REPO, encoding: 'utf8', timeout: 300000,
-  });
-  if (r.status !== 0) throw new Error(`check_exercises.py failed:\n${r.stdout}\n${r.stderr}`);
-  expect(r.stdout).toMatch(new RegExp(`exercises checked: ${EXERCISES.length} pass, 0 fail`));
+const checkCourses = (courses: string[]) => {
+  const args = [path.join(EXERCISES_DIR, 'check_exercises.py'), ...courses];
+  const r = spawnSync(PYTHON, args, { cwd: REPO, encoding: 'utf8', timeout: 900000 });
+  if (r.status !== 0) throw new Error(`check_exercises.py ${courses.join(' ')} failed:\n${r.stdout}\n${r.stderr}`);
+  return r.stdout;
+};
+
+test('every Backend exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
+  const out = checkCourses(['backend']);
+  const count = EXERCISES.filter(e => e.folder.startsWith('exercises/backend/')).length;
+  expect(out).toMatch(new RegExp(`exercises checked: ${count} pass, 0 fail`));
+});
+
+// One Spark JVM runs every Databricks exercise's tests together (see check_exercises.py), so this stays quick.
+test('every Databricks exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
+  const out = checkCourses(['databricks']);
+  const count = EXERCISES.filter(e => e.folder.startsWith('exercises/databricks/')).length;
+  expect(out).toMatch(new RegExp(`exercises checked: ${count} pass, 0 fail`));
 });
