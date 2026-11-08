@@ -7,47 +7,29 @@ import {
   CodeLanguage,
 } from '../types';
 
-// GOLD_LAYER_DESIGN — Databricks course, "Lakehouse Architecture &
-// Engineering Practice" section. Second of three new design-judgment topics
-// (siblings: orchestration_design [built], ingestion_architecture [still to
-// come]).
+// GOLD_LAYER_DESIGN - Databricks course, "Lakehouse Architecture &
+// Engineering Practice" section.
 //
-// This is NOT re-teaching data_modeling/scd_patterns (star-vs-snowflake,
-// grain, surrogate keys, SCD1/2 MERGE) or pipeline_design (idempotency,
-// replaceWhere backfill, data contracts) or medallion_architecture (what
-// each layer IS) — all already exist and are assumed as prerequisites,
-// including dim-additivity (additive/semi-additive/non-additive measure
-// DEFINITIONS, already taught in data_modeling). This topic is the
-// Databricks-specific GOLD-LAYER DESIGN JUDGMENT layer on top: how to shape
-// a gold table (OBT vs star), how to choose its grain, how to split gold
-// ownership (single catalog vs domain marts), where a transform belongs
-// (silver vs gold), how to reprocess gold after a bug — plus the production
-// failure modes that show up when these are misjudged.
-//
-// Sources: Databricks Medallion Architecture docs, Uber/Airbnb engineering
-// blogs on trillion-record lakehouse pipelines and the Minerva semantic
-// layer (see databricks_de_research_results.md).
+// This topic is the gold-layer design judgment layer on top of data_modeling,
+// scd_patterns, pipeline_design and medallion_architecture: how to shape a gold
+// table (OBT vs star), how to choose its grain, how to split gold ownership
+// (one catalog vs domain marts), where a transform belongs (silver vs gold),
+// how to reprocess gold after a bug, and the failure modes that follow when
+// these are misjudged (the Fan-Out Bug, summing a measure that cannot be
+// summed, collapsing the grain).
 //
 // Coverage (39 questions):
-//   Beginner (5 MCQ): define each of the 5 core primitives (additivity
-//     itself is NOT redefined here — see dim-additivity in data_modeling).
-//   Intermediate (12): 6 PREDICT_OUTPUT tracing Fan-Out Bug / Non-Additive
-//     Aggregation Trap arithmetic as small deterministic Python functions
-//     (genuinely deterministic, unlike most of this topic — a real faded
-//     layer) + 6 scenario MCQs (OBT-vs-star x2, placement x2, domain-marts
-//     x1, reprocessing x1).
-//   Advanced (19): 3 anti-patterns x 3 domain-transfer scenarios each
-//     (Fan-Out Bug, Non-Additive Aggregation Trap, Grain Shift Catastrophe)
-//     + 3 decision-judgment primitives x 3 domain-transfer scenarios each
-//     (OBT vs star, domain marts, reprocessing strategy) + 1 discrimination
-//     question distinguishing two anti-patterns with a similar symptom.
-//   Coding/Parsons (3): fix a Fan-Out Bug by pre-aggregating before the
-//     join, implement a scoped replaceWhere reprocessing fix, Parsons
-//     assembly of a blue/green versioned-gold swap.
+//   Beginner (5 MCQ): the five core ideas.
+//   Intermediate (12): 6 predicts that run the fan-out and non-additive
+//     arithmetic as Spark SQL on small tables, and 6 scenario MCQs.
+//   Advanced (19 MCQ): each failure mode and each decision in three settings,
+//     and one question that tells two look-alike failures apart.
+//   Coding/Parsons (3): pre-aggregate before a join, a scoped replaceWhere
+//     write, and a blue/green swap.
 
 export const goldLayerDesignQuestions: Question[] = [
   // ────────────────────────────────────────────────────────────────────
-  // BEGINNER (5) — define each core primitive
+  // BEGINNER (5)
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'gld-mcq-b1',
@@ -56,15 +38,15 @@ export const goldLayerDesignQuestions: Question[] = [
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "In a Databricks gold layer, what's the fundamental tradeoff between building One Big Table (OBT) versus a star schema (dimensional model)?",
+      'What is the main tradeoff between a One Big Table (OBT) and a star schema in a gold layer?',
     options: [
-      { id: 'a', text: 'OBT flattens facts and dimensions into a single wide table, paying join costs once at ETL time so BI queries execute zero runtime joins; star schema keeps facts and dimensions separate, avoiding ETL duplication while pushing joins to query time.', isCorrect: true },
-      { id: 'b', text: 'OBT stores raw data as uncompressed Avro files, while star schema persists data as Delta tables; the choice is purely a file format decision that can be freely swapped without altering how business intelligence dashboards query the tables.', isCorrect: false },
-      { id: 'c', text: "OBT is required whenever a table uses date partitioning, and star schema is required when using Liquid Clustering; the choice is dictated entirely by storage clustering strategies rather than how business intelligence tools query the layer.", isCorrect: false },
-      { id: 'd', text: 'OBT is a star schema with dimension tables physically deleted after loading, meaning any pipeline using OBT permanently loses the ability to update dimension attributes like customer address without performing a full historical rebuild.', isCorrect: false },
+      { id: 'a', text: 'An OBT pre-joins everything once at load time, so queries run no joins but repeat dimension values on every row; a star schema joins at query time.', isCorrect: true },
+      { id: 'b', text: 'An OBT is stored as Parquet files and a star schema as Delta tables, so the choice is only a file format decision that dashboards cannot tell apart.', isCorrect: false },
+      { id: 'c', text: 'An OBT is meant for tables under 1 TB and a star schema for tables above it, so the size of the data alone decides which shape to build.', isCorrect: false },
+      { id: 'd', text: 'An OBT keeps facts and dimensions in separate tables that are joined when a query runs, while a star schema pre-joins them once at load time into one wide table.', isCorrect: false },
     ],
     explanation:
-      "Neither shape is universally 'better' - OBT trades storage/ETL cost for query-time simplicity, star schema trades query-time joins for storage efficiency and reusable conformed dimensions. Which one fits depends on the consuming BI tool's query mode, covered in the intermediate/advanced scenarios in this topic.",
+      'Neither shape is better everywhere. An OBT pays the join once, when the table is loaded, so interactive queries are simple and fast, at the cost of repeated dimension values and a rewrite when a dimension changes. A star schema keeps each fact and dimension once and joins them when a query runs. The right choice depends on how the consumer queries, which the next questions practise.',
     tags: ['obt-vs-star'],
     concepts: ['gld-obt-vs-star'],
   },
@@ -75,15 +57,15 @@ export const goldLayerDesignQuestions: Question[] = [
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "When designing a gold fact table's grain, what should the grain declaration describe, and why does it matter that every measure column matches it?",
+      "What does a gold fact table's grain declaration state, and why must every measure column match it?",
     options: [
-      { id: 'a', text: 'The grain specifies the table primary key column name; declaring a PRIMARY KEY constraint in Unity Catalog automatically enforces table grain and guarantees that all downstream measure aggregations remain mathematically valid.', isCorrect: false },
-      { id: 'b', text: 'The grain is the finest level one row represents (e.g. "one row per order line item"), stated as a business fact; every measure column must be valid at that exact grain, or aggregating it later silently produces corrupt numbers.', isCorrect: true },
-      { id: 'c', text: 'The grain should be set as coarse as possible (e.g. "one row per month") to minimize storage, since finer-grained gold tables can always be re-aggregated down to a daily or line-item level on demand without any loss of detail.', isCorrect: false },
-      { id: 'd', text: "The grain only matters for OBT tables; star-schema fact tables do not require explicit grain declarations because the surrounding dimension tables implicitly define the grain for all possible business intelligence queries.", isCorrect: false },
+      { id: 'a', text: 'It names the primary key column, and a PRIMARY KEY constraint in Unity Catalog then enforces the grain, so every measure can be summed safely.', isCorrect: false },
+      { id: 'b', text: 'It sets how coarse the table is, and the coarsest grain, such as one row per month, is best because any finer view can be rebuilt from it later.', isCorrect: false },
+      { id: 'c', text: "It only matters for an OBT, because a star schema's dimension tables already fix the grain for every query that joins to them.", isCorrect: false },
+      { id: 'd', text: "It says what one row represents, such as one row per order line; a measure not valid at that grain gives wrong totals when summed.", isCorrect: true },
     ],
     explanation:
-      "Declaring the grain explicitly ('one row per X') is what lets you check whether a measure is valid to sum at that grain. Get the grain wrong or leave it implicit and you get exactly the failure modes covered later in this topic: the Fan-Out Bug (grain finer than assumed) and Grain Shift Catastrophe (grain coarsened and the detail lost).",
+      "Stating the grain as \"one row per X\" is what lets you check whether a measure can be summed at that grain. PRIMARY KEY constraints on Delta tables document intent but are not enforced. Leaving the grain implicit leads to the failures later in this topic: a measure repeated by a join, and detail lost by a rollup that replaces the finer table.",
     tags: ['gold-granularity'],
     concepts: ['gld-granularity'],
   },
@@ -94,15 +76,15 @@ export const goldLayerDesignQuestions: Question[] = [
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "What's the tradeoff between a single shared gold catalog versus splitting gold into per-domain marts (e.g. finance_gold, marketing_gold)?",
+      'What is the tradeoff between one shared gold catalog and one gold catalog per domain, such as finance_gold and marketing_gold?',
     options: [
-      { id: 'a', text: 'A single shared gold is suitable only for streaming pipelines, whereas domain marts apply exclusively to batch jobs; the architectural choice is determined entirely by source ingestion modes rather than team organizational structures.', isCorrect: false },
-      { id: 'b', text: "Domain marts are an anti-pattern in a Lakehouse, because Unity Catalog's 3-level namespace architecture was specifically designed to enforce a single shared gold catalog across all engineering teams regardless of organizational scale.", isCorrect: false },
-      { id: 'c', text: 'A single shared gold centralizes governance and is simplest for small teams and unified dashboards, but becomes an engineering bottleneck as more domains contend for the same schema; domain marts give each domain independent ownership and schema evolution at the cost of duplicated logic and looser central control.', isCorrect: true },
-      { id: 'd', text: 'A single shared gold uses Delta tables while domain marts require migrating to Iceberg tables, since the two catalog structures are backed by incompatible physical storage formats under Unity Catalog metastores.', isCorrect: false },
+      { id: 'a', text: "One shared catalog is simplest to govern but queues changes behind one owner; domain catalogs let teams move alone, with repeated logic.", isCorrect: true },
+      { id: 'b', text: "Per-domain catalogs do not suit Unity Catalog, whose three-level namespace is designed for exactly one gold catalog shared by every team.", isCorrect: false },
+      { id: 'c', text: 'A shared catalog is only for streaming tables and per-domain catalogs only for batch tables, so the ingestion mode decides the layout.', isCorrect: false },
+      { id: 'd', text: 'Per-domain catalogs need a different table format from a shared catalog, so splitting gold means migrating every table to a new format.', isCorrect: false },
     ],
     explanation:
-      "This is a team-topology decision as much as a technical one - it mirrors data mesh's core argument (autonomous domain ownership) versus the simplicity and consistency a single centrally-governed catalog gives a small team. The right answer depends on org size and compliance boundaries, explored in the advanced scenarios.",
+      "This is a team and compliance decision as much as a technical one. A single catalog gives one place to govern and a consistent set of tables, which suits a small team. Separate domain catalogs give each team its own schema changes and its own access grants, and they pay for it with some repeated logic and looser central control.",
     tags: ['domain-marts'],
     concepts: ['gld-domain-marts'],
   },
@@ -113,15 +95,15 @@ export const goldLayerDesignQuestions: Question[] = [
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "What's the general rule for deciding whether a transformation belongs in silver or in gold?",
+      'What is the general rule for deciding whether a transformation belongs in silver or in gold?',
     options: [
-      { id: 'a', text: 'Silver holds transformations running on streaming sources, while gold holds transformations running on batch sources; layer placement is determined by trigger mode rather than the business nature of the transformation.', isCorrect: false },
-      { id: 'b', text: 'Silver only adds new columns, while gold only removes columns; any transformation altering existing values, like type casting or currency conversion, belongs in bronze regardless of consumer requirements.', isCorrect: false },
-      { id: 'c', text: 'Silver holds transformations owned by the data platform team, while gold holds transformations written by business analysts; layer assignment depends on author role rather than transformation semantics.', isCorrect: false },
-      { id: 'd', text: 'Silver holds transformations that make the data itself correct and conformed regardless of who consumes it — deduplication, type casting, technical filtering. Gold holds transformations specific to a business question — filtering to a business rule, joining across domains, computing KPIs.', isCorrect: true },
+      { id: 'a', text: 'Silver holds transformations on streaming sources and gold holds transformations on batch sources, so the trigger mode decides the layer.', isCorrect: false },
+      { id: 'b', text: 'Silver holds the work of the platform team and gold holds the work of the analysts, so the author decides the layer rather than the transformation.', isCorrect: false },
+      { id: 'c', text: "Silver fixes what all consumers need, like deduplicating and casting; gold holds rules for one business question, like excluding test accounts.", isCorrect: true },
+      { id: 'd', text: 'Any step that changes a value, such as casting a type or converting a currency, belongs in gold, because silver must keep the source values untouched.', isCorrect: false },
     ],
     explanation:
-      'The test is "would every consumer need this, or just this one"? A dedup fix belongs in silver because every downstream table needs correct row counts. A business rule like "exclude test accounts from the revenue dashboard" belongs in gold because a different consumer might legitimately want test accounts included.',
+      'Ask whether every consumer needs the change or only one. Removing duplicates is right for everyone, so it belongs in silver. Leaving out test accounts is right for the revenue dashboard but another consumer may want them, so it belongs in gold. Who writes the code and whether the source streams do not decide it.',
     tags: ['placement-rule'],
     concepts: ['gld-placement-rule'],
   },
@@ -132,22 +114,21 @@ export const goldLayerDesignQuestions: Question[] = [
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'What are the main strategies for reprocessing a Databricks multi-hop pipeline after fixing a transformation bug, from most to least expensive?',
+      'After a transformation bug is fixed, which description of the ways to reprocess a pipeline is right?',
     options: [
-      { id: 'a', text: 'Full pipeline rebuild (drop silver/gold, replay everything from bronze) is deterministic but expensive at scale; selective replay (Delta time travel to find a good state, then REPLACE WHERE/MERGE over just the affected partitions) is cheaper and targeted; versioned gold (build a new table in parallel, then atomically swap the view) avoids any BI downtime during the fix.', isCorrect: true },
-      { id: 'b', text: 'The only supported strategy is a full pipeline rebuild, because Delta Lake transaction logs lack sufficient metadata history to support targeted partition-level reprocessing or view swapping after bug fixes.', isCorrect: false },
-      { id: 'c', text: 'Reprocessing strategy is determined strictly by dataset file size: tables under 1 GB use full rebuilds, tables between 1 GB and 100 GB use selective replay, and tables over 100 GB cannot be safely reprocessed.', isCorrect: false },
-      { id: 'd', text: 'All three strategies yield different output values for the same bug fix, making choice a trade-off in business data accuracy rather than an engineering optimization of cost, time, and service downtime.', isCorrect: false },
+      { id: 'a', text: "Always rebuild the whole table from bronze, because Delta cannot rewrite only part of a table once it has been written and committed to storage.", isCorrect: false },
+      { id: 'b', text: "Replay only the damaged slice with REPLACE WHERE if the damage is bounded, rebuild everything if not, or build a copy and repoint the view.", isCorrect: true },
+      { id: 'c', text: "Choose by table size: under 1 GB rebuild, up to 100 GB replay a slice, and above 100 GB a table cannot safely be reprocessed at all.", isCorrect: false },
+      { id: 'd', text: "The three approaches give different numbers for the same fix, so the choice is about which numbers the business prefers to report.", isCorrect: false },
     ],
     explanation:
-      "All three strategies should converge on the same correct result for a well-scoped bug - the choice between them is about cost, turnaround time, and downtime tolerance, not correctness. Which one fits a given situation is explored in the advanced scenarios later in this topic.",
+      'The approaches differ in cost and in what readers see, not in the answer. Replaying a slice is the cheapest when you know which rows are wrong. A full rebuild is for damage you cannot bound. Blue/green builds a new copy beside the live one, checks it, then repoints the view, so readers never see a half-built table.',
     tags: ['gold-reprocessing'],
     concepts: ['gld-reprocessing'],
   },
 
   // ────────────────────────────────────────────────────────────────────
-  // INTERMEDIATE (12) — 6 PREDICT_OUTPUT (deterministic trace of Fan-Out
-  // Bug / Non-Additive Aggregation Trap arithmetic) + 6 scenario MCQs
+  // INTERMEDIATE (12) - 6 predicts + 6 scenario MCQs
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'gld-predict-1',
@@ -157,16 +138,31 @@ export const goldLayerDesignQuestions: Question[] = [
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function models a naive join between an order and its line items, without pre-aggregating first. Trace it and print the result.',
-    code: `def total_without_preagg(order_amount, line_items):
-    return sum(order_amount for _ in line_items)
-
-order_amount = 100
-line_items = ["sku_1", "sku_2", "sku_3"]
-print(total_without_preagg(order_amount, line_items))`,
-    expectedOutput: '300',
+      'In a Databricks notebook, the tables orders and order_lines hold exactly the rows shown; order_lines has one row per item on an order. What does the cell print? The answer is a single whole number.',
+    tables: [
+      { name: 'orders', columns: ['order_id', 'amount'], rows: [
+        [1, 100],
+        [2, 50],
+      ] },
+      { name: 'order_lines', columns: ['order_id', 'sku'], rows: [
+        [1, 'a'],
+        [1, 'b'],
+        [1, 'c'],
+        [2, 'd'],
+        [2, 'e'],
+      ] },
+    ],
+    code: `r = spark.sql("""SELECT SUM(o.amount) AS revenue
+    FROM orders o JOIN order_lines l
+      ON o.order_id = l.order_id""").first()
+print(r.revenue)`,
+    expectedOutput: '400',
     explanation:
-      'This models the Fan-Out Bug: joining a 1-to-many table without pre-aggregating means the parent row\'s amount gets counted once per matching child row. A $100 order with 3 line items reports as $300.',
+      'The join gives one row per order line: order 1 meets three lines and order 2 meets two. Each order\'s amount is therefore repeated once per line, so the sum is 100 + 100 + 100 + 50 + 50 = 400, not the true revenue of 150. This is the Fan-Out Bug: joining the parent to the many side before aggregating.',
+    hints: [
+      'How many rows does the join return for order 1?',
+      'The amount is a column of orders, but it rides along on every joined row.',
+    ],
     tags: ['fan-out-bug', 'predict-output'],
     concepts: ['gld-fan-out-bug'],
   },
@@ -178,16 +174,34 @@ print(total_without_preagg(order_amount, line_items))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'Same idea, now fixed by pre-aggregating: the order amount is looked up once, independent of how many line items the order has. Trace it and print the result.',
-    code: `def total_with_preagg(order_amount, line_items):
-    return order_amount
-
-order_amount = 100
-line_items = ["sku_1", "sku_2", "sku_3", "sku_4", "sku_5"]
-print(total_with_preagg(order_amount, line_items))`,
-    expectedOutput: '100',
+      'Same two tables, now queried by counting the lines per order first and joining that to orders. What does the cell print? The answer is one line: two whole numbers separated by a space (revenue, then items).',
+    tables: [
+      { name: 'orders', columns: ['order_id', 'amount'], rows: [
+        [1, 100],
+        [2, 50],
+      ] },
+      { name: 'order_lines', columns: ['order_id', 'sku'], rows: [
+        [1, 'a'],
+        [1, 'b'],
+        [1, 'c'],
+        [2, 'd'],
+        [2, 'e'],
+      ] },
+    ],
+    code: `r = spark.sql("""WITH per_order AS (
+      SELECT order_id, COUNT(*) AS n
+      FROM order_lines GROUP BY order_id)
+    SELECT SUM(o.amount) AS revenue, SUM(p.n) AS items
+    FROM orders o LEFT JOIN per_order p
+      ON o.order_id = p.order_id""").first()
+print(r.revenue, r.items)`,
+    expectedOutput: '150 5',
     explanation:
-      'The fix for the Fan-Out Bug: the order amount is read once, entirely independent of the line-item count. Whether the order has 3 line items or 5, the correct total stays $100.',
+      'per_order has one row per order (order 1 with 3 lines, order 2 with 2), so each order meets exactly one row. Revenue is 100 + 50 = 150 and the items add to 3 + 2 = 5. Bringing the many side to the parent\'s grain before the join keeps the parent\'s measure from being repeated.',
+    hints: [
+      'How many rows does per_order have?',
+      'Each order now meets one row, so its amount is counted once.',
+    ],
     tags: ['fan-out-bug', 'predict-output'],
     concepts: ['gld-fan-out-bug'],
   },
@@ -199,19 +213,32 @@ print(total_with_preagg(order_amount, line_items))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function models the naive fan-out across MULTIPLE orders, each with its own line-item count. Trace it and print the result.',
-    code: `def naive_revenue(orders):
-    total = 0
-    for order_amount, line_items in orders:
-        for _ in line_items:
-            total += order_amount
-    return total
-
-orders = [(100, ["a", "b"]), (50, ["c", "d", "e"])]
-print(naive_revenue(orders))`,
-    expectedOutput: '350',
+      'The tables below hold exactly these rows; order 3 has no lines. The cell joins without aggregating the lines first. What does it print? The answer is one line: two whole numbers separated by a space (rows, then revenue).',
+    tables: [
+      { name: 'orders', columns: ['order_id', 'amount'], rows: [
+        [1, 100],
+        [2, 50],
+        [3, 30],
+      ] },
+      { name: 'order_lines', columns: ['order_id', 'sku'], rows: [
+        [1, 'a'],
+        [1, 'b'],
+        [1, 'c'],
+        [2, 'd'],
+        [2, 'e'],
+      ] },
+    ],
+    code: `r = spark.sql("""SELECT COUNT(*) AS n, SUM(o.amount) AS revenue
+    FROM orders o LEFT JOIN order_lines l
+      ON o.order_id = l.order_id""").first()
+print(r.n, r.revenue)`,
+    expectedOutput: '6 430',
     explanation:
-      'The real total revenue is $150 (100 + 50). The naive fan-out join inflates it to $350 by counting the first order\'s $100 twice (2 line items) and the second order\'s $50 three times (3 line items) - the inflation scales with how many line items each order happens to have.',
+      'The left join returns 3 rows for order 1, 2 rows for order 2 and 1 row for order 3, whose missing lines give it a single row with NULLs: 6 rows in all. The sum is 300 + 100 + 30 = 430, against a true revenue of 180. The inflation depends on how many lines each order has: the order with no lines is the only one counted correctly.',
+    hints: [
+      'A left join keeps an order that has no matching line, once.',
+      'Multiply each amount by the number of rows its order produces.',
+    ],
     tags: ['fan-out-bug', 'predict-output'],
     concepts: ['gld-fan-out-bug'],
   },
@@ -223,15 +250,26 @@ print(naive_revenue(orders))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function sums a semi-additive measure (account balance) across a week of daily snapshots. Trace it and print the result.',
-    code: `def sum_daily_balance(daily_balances):
-    return sum(daily_balances)
-
-daily_balances = [1000, 1000, 1000, 1000, 1000, 1000, 1000]
-print(sum_daily_balance(daily_balances))`,
-    expectedOutput: '7000',
+      'The table balance_snapshot holds one row per account per day with the closing balance, exactly the rows shown. A report adds up the days to show a balance for the period. What does the cell print? The answer is a single whole number.',
+    tables: [
+      { name: 'balance_snapshot', columns: ['account', 'day', 'balance'], rows: [
+        ['a1', '2026-03-02', 1000],
+        ['a1', '2026-03-03', 1000],
+        ['a1', '2026-03-04', 1000],
+        ['a1', '2026-03-05', 1000],
+      ] },
+    ],
+    code: `r = spark.sql("""SELECT SUM(balance) AS b
+    FROM balance_snapshot
+    WHERE account = 'a1'""").first()
+print(r.b)`,
+    expectedOutput: '4000',
     explanation:
-      'Summing a semi-additive measure like account balance across 7 days produces a meaningless "balance-days" number, not a real balance - the correct weekly figure is a single point-in-time snapshot (e.g. the last day\'s balance, 1000), not the sum.',
+      'The account held 1000 on each of 4 days, so the sum is 4000. That figure is "balance-days", not a balance: the account never held 4000. A balance is semi-additive. It can be added across accounts on one day, but across days a report needs one point in time, such as the last day\'s balance (1000 here).',
+    hints: [
+      'Add the four balance values.',
+      'Is the result an amount the account ever actually held?',
+    ],
     tags: ['non-additive-trap', 'additivity', 'predict-output'],
     concepts: ['gld-non-additive-trap'],
   },
@@ -243,15 +281,29 @@ print(sum_daily_balance(daily_balances))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function sums daily active users across 5 days to try to report a weekly figure. Trace it and print the result.',
-    code: `def sum_daily_active_users(daily_dau):
-    return sum(daily_dau)
-
-daily_dau = [500, 520, 510, 505, 515]
-print(sum_daily_active_users(daily_dau))`,
-    expectedOutput: '2550',
+      'The table logins has one row each time a user logs in on a day, exactly the rows shown. The cell adds up the daily active users and also counts the distinct users for the whole period. What does it print? The answer is one line: two whole numbers separated by a space (sum of daily counts, then distinct users).',
+    tables: [
+      { name: 'logins', columns: ['day', 'user_id'], rows: [
+        ['2026-03-02', 'u1'],
+        ['2026-03-02', 'u2'],
+        ['2026-03-03', 'u1'],
+        ['2026-03-03', 'u2'],
+        ['2026-03-03', 'u3'],
+        ['2026-03-04', 'u1'],
+      ] },
+    ],
+    code: `r = spark.sql("""SELECT SUM(dau) AS summed,
+        (SELECT COUNT(DISTINCT user_id) FROM logins) AS distinct_users
+    FROM (SELECT day, COUNT(DISTINCT user_id) AS dau
+          FROM logins GROUP BY day)""").first()
+print(r.summed, r.distinct_users)`,
+    expectedOutput: '6 3',
     explanation:
-      'Summing daily active users across days produces "user-days," not weekly active users - the same person active all 5 days gets counted 5 times, badly inflating the true distinct-user weekly figure, which requires a distinct count over the window instead.',
+      'The daily active users are 2, 3 and 1, which sum to 6, but only 3 different people logged in. Summing daily distinct counts counts a returning user once per day ("user-days"). A distinct count is not additive across days, so a weekly figure has to be a distinct count over the whole window.',
+    hints: [
+      'First work out the distinct users on each day.',
+      'u1 appears on all three days.',
+    ],
     tags: ['non-additive-trap', 'additivity', 'predict-output'],
     concepts: ['gld-non-additive-trap'],
   },
@@ -263,15 +315,28 @@ print(sum_daily_active_users(daily_dau))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function computes the CORRECT weekly balance as a point-in-time snapshot instead of a sum. Trace it and print the result.',
-    code: `def correct_weekly_balance(daily_balances):
-    return daily_balances[-1]
-
-daily_balances = [1000, 950, 980, 1020, 990, 990, 990]
-print(correct_weekly_balance(daily_balances))`,
-    expectedOutput: '990',
+      'The table balance_snapshot holds exactly these rows. The cell takes each account\'s balance on its last day, then adds the accounts together. What does it print? The answer is a single whole number.',
+    tables: [
+      { name: 'balance_snapshot', columns: ['account', 'day', 'balance'], rows: [
+        ['a1', '2026-03-02', 1000],
+        ['a1', '2026-03-03', 950],
+        ['a1', '2026-03-04', 980],
+        ['b1', '2026-03-02', 500],
+        ['b1', '2026-03-03', 500],
+        ['b1', '2026-03-04', 520],
+      ] },
+    ],
+    code: `r = spark.sql("""SELECT SUM(balance) AS total
+    FROM (SELECT account, MAX_BY(balance, day) AS balance
+          FROM balance_snapshot GROUP BY account)""").first()
+print(r.total)`,
+    expectedOutput: '1500',
     explanation:
-      'The correct weekly balance is the final day\'s snapshot value, not a sum across the 7 days - this is the fix for the Non-Additive Aggregation Trap when the measure is semi-additive across time.',
+      'MAX_BY(balance, day) returns the balance on each account\'s latest day: 980 for a1 and 520 for b1. Those are added across accounts, which is valid for a balance on one day: 980 + 520 = 1500. This is the fix for summing a semi-additive measure over time: take one point in time per account, then add across accounts.',
+    hints: [
+      'What does MAX_BY(balance, day) return for each account?',
+      'Adding across accounts on the same day is fine for a balance.',
+    ],
     tags: ['non-additive-trap', 'additivity', 'predict-output'],
     concepts: ['gld-non-additive-trap'],
   },
@@ -282,15 +347,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A new embedded analytics dashboard needs sub-second interactive filtering directly against the gold layer (DirectQuery, no import/cache step). Which gold shape fits better, and why?',
+      'An embedded dashboard in a customer-facing app needs sub-second filtering straight against the gold layer, with DirectQuery and no import step. Which gold shape fits better, and why?',
     options: [
-      { id: 'a', text: 'OBT — a DirectQuery dashboard issues live queries straight at the gold table on every filter change, so pre-materializing joins into one wide table avoids runtime Spark shuffle joins; star schema forces query-time joins.', isCorrect: true },
-      { id: 'b', text: 'Star schema — DirectQuery dashboards are specifically optimized to push multi-table joins down efficiently, so keeping dimensions separate produces faster interactive filtering than single wide tables.', isCorrect: false },
-      { id: 'c', text: 'Neither shape matters for DirectQuery — the choice between OBT and star schema only affects Import Mode dashboards, because DirectQuery bypasses physical table structures during execution.', isCorrect: false },
-      { id: 'd', text: 'OBT — DirectQuery dashboards cannot execute queries involving more than one physical table, making OBT mandatory regardless of query latency or compute resource considerations.', isCorrect: false },
+      { id: 'a', text: 'A star schema, because the dimension tables are small, so joining them on every filter change is always free and a pre-joined table adds nothing.', isCorrect: false },
+      { id: 'b', text: 'Neither shape matters for DirectQuery, because it ignores the physical table design and reads every table as one flat view of the data.', isCorrect: false },
+      { id: 'c', text: 'An OBT, because DirectQuery sends a live query on every filter change, and a pre-joined table means that query needs no join at run time.', isCorrect: true },
+      { id: 'd', text: 'A star schema, because DirectQuery engines run a single-table scan faster only when the table is split into a fact and its dimensions.', isCorrect: false },
     ],
     explanation:
-      'This is the core OBT use case from the research: DirectQuery / embedded real-time dashboards eliminate runtime Spark shuffle joins by paying the join cost once, at ETL time, instead of on every user interaction.',
+      'With DirectQuery every click becomes a query against gold, so work done at query time is paid for on every interaction. An OBT pays the join once at load time. This is the standard OBT case; a star schema also works, but each filter change then joins the fact to its dimensions.',
     tags: ['obt-vs-star'],
     concepts: ['gld-obt-vs-star'],
   },
@@ -301,15 +366,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A BI team uses Power BI Import Mode and needs full historical tracking of customer attribute changes over time (address, segment) via SCD Type 2. Which gold shape fits, and why?',
+      'A BI team uses Power BI Import Mode and must keep full history of customer attribute changes, such as address and segment, with SCD Type 2. Which gold shape fits, and why?',
     options: [
-      { id: 'a', text: "Star schema — Import Mode compresses a conformed dim_customer dimension extremely well via columnar dictionary encoding, and SCD Type 2 history naturally lives in a dimension table with effective-date columns; flattening that history into a wide OBT would duplicate every fact row's dimension attributes on every version change.", isCorrect: true },
-      { id: 'b', text: "OBT — Import Mode's VertiPaq engine only supports single-table imports, so any dashboard using Import Mode is required to use a flattened OBT gold table regardless of historical-tracking requirements.", isCorrect: false },
-      { id: 'c', text: 'Star schema — SCD Type 2 tracking is impossible in a Databricks gold layer regardless of shape choice, requiring full change history to be reconstructed from Delta time travel on every BI query.', isCorrect: false },
-      { id: 'd', text: "OBT — SCD Type 2 effective-date columns are supported exclusively within single wide table schemas, as separate dimension tables cannot maintain temporal attribute change histories.", isCorrect: false },
+      { id: 'a', text: 'An OBT, because SCD Type 2 date columns are only supported in a single wide table, so a separate dimension cannot keep a change history.', isCorrect: false },
+      { id: 'b', text: "A star schema: the history lives once in dim_customer with valid dates, where an OBT would repeat it on every fact row.", isCorrect: true },
+      { id: 'c', text: 'An OBT, because Import Mode can only load one table, so every dashboard on Import Mode needs its data flattened first.', isCorrect: false },
+      { id: 'd', text: 'A star schema, because SCD Type 2 is not possible in gold at all, so history has to be rebuilt from Delta time travel on every query.', isCorrect: false },
     ],
     explanation:
-      'This is the core star-schema use case: conformed dimensions with SCD Type 2 history compress well under Import Mode and avoid the duplication an OBT would force on every attribute change.',
+      'A Type 2 dimension is a table of customer versions with valid-from and valid-to dates, and facts point at the right version. Flattening that into an OBT would copy every attribute onto every fact row and rewrite many rows whenever a customer changes. Import Mode loads several related tables without trouble, so a star schema suits it.',
     tags: ['obt-vs-star'],
     concepts: ['gld-obt-vs-star'],
   },
@@ -320,15 +385,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A pipeline needs to (1) drop exact-duplicate raw events coming from a retrying producer, and (2) exclude internal test accounts from the customer-facing revenue dashboard. Which hop does each belong in?',
+      'A pipeline must (1) drop exact-duplicate raw events sent twice by a retrying producer, and (2) leave internal test accounts out of the customer-facing revenue dashboard. Which layer does each belong in?',
     options: [
-      { id: 'a', text: "Deduplication is a data-correctness fix that should apply no matter who consumes the table, so it belongs in silver. Excluding test accounts is a business rule specific to one consumer (the revenue dashboard) - other consumers might legitimately want test accounts included - so it belongs in gold.", isCorrect: true },
-      { id: 'b', text: 'Both belong in silver — any filtering logic, whether a technical correctness fix or a business rule, must run as early as possible so gold tables never contain rows requiring downstream filtration.', isCorrect: false },
-      { id: 'c', text: 'Both belong in gold — silver is restricted to type casting and column renaming, forcing all row-removal logic, including deduplication, to execute downstream in the business gold layer.', isCorrect: false },
-      { id: 'd', text: 'Deduplication belongs in gold because modifying row counts is a business concern; excluding test accounts belongs in silver because boolean filters are generic technical transformations.', isCorrect: false },
+      { id: 'a', text: "Deduplication in silver, since a repeated event is wrong for everyone; test accounts in gold, since another consumer may want them.", isCorrect: true },
+      { id: 'b', text: 'Both in gold, because silver is limited to casting types and renaming columns, so every step that removes rows runs in the business layer.', isCorrect: false },
+      { id: 'c', text: 'Deduplication in gold, because changing row counts is a business matter, and the test-account filter in silver, because it is a plain condition.', isCorrect: false },
+      { id: 'd', text: 'Both in silver, because filtering should happen as early as possible, so that gold never holds rows that something downstream has to remove.', isCorrect: false },
     ],
     explanation:
-      'The test is whether every consumer needs the fix (silver) or only one specific business question needs it (gold). A retry-caused duplicate is wrong for everyone; whether test accounts belong in a given number is specific to that number\'s purpose.',
+      'Ask whether every consumer needs the fix. A duplicate caused by a retry is wrong for everyone, so it is fixed once in silver. Whether test accounts belong in a number depends on that number\'s purpose, so the rule lives in the gold table that serves the revenue dashboard.',
     tags: ['placement-rule'],
     concepts: ['gld-placement-rule'],
   },
@@ -339,15 +404,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A pipeline needs to (1) cast a raw string "2024-03-15T10:00:00Z" column into a proper timestamp type, and (2) compute a rolling 7-day average order value for an executive dashboard. Which hop does each belong in?',
+      'A pipeline must (1) cast a raw string such as "2024-03-15T10:00:00Z" into a timestamp column, and (2) compute a rolling 7-day average order value for an executive dashboard. Which layer does each belong in?',
     options: [
-      { id: 'a', text: "Casting a raw string into its correct type is a conformance fix every downstream consumer needs regardless of use case, so it belongs in silver. A rolling 7-day average is a business-specific KPI computed for one particular dashboard's needs, so it belongs in gold.", isCorrect: true },
-      { id: 'b', text: 'Both belong in gold — type casting affects only BI display formats rather than underlying data correctness, allowing type conversions to be deferred to the final consumption layer.', isCorrect: false },
-      { id: 'c', text: 'Type casting belongs in bronze because bronze enforces schema-on-read for string columns; rolling averages belong in silver so all downstream gold tables can share precomputed aggregations.', isCorrect: false },
-      { id: 'd', text: 'Both belong in silver — rolling averages are standard statistical transformations that should be precalculated once in silver to maximize downstream gold layer reusability across teams.', isCorrect: false },
+      { id: 'a', text: 'Both in silver, because a rolling average is a standard statistic that is best computed once, so that every gold table can reuse it.', isCorrect: false },
+      { id: 'b', text: "The cast in silver, as all consumers need a timestamp; the rolling average in gold, as one dashboard's own definition of recent.", isCorrect: true },
+      { id: 'c', text: 'The cast in bronze, because bronze applies types to string columns as it reads them, and the rolling average in silver for reuse.', isCorrect: false },
+      { id: 'd', text: 'Both in gold, because a cast only changes how a value is displayed, so it can wait until the final layer that people actually query.', isCorrect: false },
     ],
     explanation:
-      'Type casting is exactly the kind of "makes the data itself correct" fix every consumer needs - it belongs in silver. A rolling average tailored to one executive dashboard\'s definition of "recent" is a business computation, so it belongs in gold.',
+      'Bronze keeps the data as it arrived. Turning a string into a timestamp makes the data itself correct for every consumer, so it belongs in silver. A 7-day average is a business calculation that one dashboard defines, so it belongs in the gold table for that dashboard.',
     tags: ['placement-rule'],
     concepts: ['gld-placement-rule'],
   },
@@ -358,15 +423,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A 200-person data org has finance, marketing, and product teams each wanting to evolve their own gold schemas independently, with finance under strict GDPR/audit requirements the other teams don\'t need. What structure fits better than one shared gold catalog?',
+      'A 200-person data org has finance, marketing and product teams, and each wants to change its own gold schemas without waiting for the others. Finance also has strict GDPR and audit rules the other teams do not. What fits better than one shared gold catalog?',
     options: [
-      { id: 'a', text: 'Domain marts (e.g. finance_gold, marketing_gold, product_gold) — splitting by domain lets each team own its own schema evolution and lets finance apply stricter Unity Catalog access controls to just its own catalog, without those constraints or that coordination overhead spilling into marketing\'s or product\'s tables.', isCorrect: true },
-      { id: 'b', text: 'A single shared gold catalog — Unity Catalog enforces governance exclusively at the workspace level rather than per catalog, making domain marts redundant for isolating compliance rules.', isCorrect: false },
-      { id: 'c', text: 'Domain marts for finance only — marketing and product should share a combined catalog, as neither domain has compliance rules justifying independent catalog boundaries.', isCorrect: false },
-      { id: 'd', text: 'A single shared gold catalog — 200 engineers is small enough for a central platform team to review and approve all cross-domain schema changes without creating engineering bottlenecks.', isCorrect: false },
+      { id: 'a', text: 'One shared catalog, because Unity Catalog applies governance only at the workspace level, so a separate catalog could not isolate finance anyway.', isCorrect: false },
+      { id: 'b', text: "Domain catalogs such as finance_gold and marketing_gold: each team owns its schema changes, and finance gets stricter grants on its own catalog.", isCorrect: true },
+      { id: 'c', text: 'A separate catalog for finance only, with marketing and product sharing one, since only finance has a compliance need worth isolating.', isCorrect: false },
+      { id: 'd', text: 'One shared catalog, because 200 people is small enough for a central team to review every schema change without delaying the other teams.', isCorrect: false },
     ],
     explanation:
-      'Domain marts let compliance-driven access boundaries be scoped per-catalog rather than layered on top of one shared schema, and let each team evolve its own tables without funneling every change through a central review queue.',
+      'Splitting by domain gives each team its own schema changes and lets the compliance boundary be a grant on one catalog instead of a pile of table-level rules in a shared schema. The question says all three teams want independence, so keeping marketing and product together would leave them waiting on each other.',
     tags: ['domain-marts'],
     concepts: ['gld-domain-marts'],
   },
@@ -377,23 +442,21 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A gold sales_summary table has a bug affecting only the last 5 days of data; the table is 8 TB and rebuilding it from bronze would take 6+ hours. What reprocessing approach fits?',
+      'A bug in a gold sales_summary table affected only the last 5 days of data. The table is 8 TB and a rebuild from bronze would take over 6 hours. Silver is correct. What reprocessing fits?',
     options: [
-      { id: 'a', text: 'Selective replay — use Delta time travel (VERSION AS OF/TIMESTAMP AS OF) to find the last good state, then run REPLACE WHERE/MERGE INTO scoped to just the affected 5 days, instead of dropping and rebuilding the entire 8 TB table from bronze.', isCorrect: true },
-      { id: 'b', text: 'Full pipeline rebuild — replaying from bronze is mandatory whenever transformation code changes, regardless of how small the affected partition range or how long the rebuild duration takes.', isCorrect: false },
-      { id: 'c', text: 'Versioned blue/green swap — build sales_summary_v2 from scratch and repoint the view, as blue/green swaps are the only supported reprocessing mechanism for tables exceeding 5 TB in scale.', isCorrect: false },
-      { id: 'd', text: 'Direct Parquet modification — tables over 5 TB require manual file system scripts because Delta transactions like REPLACE WHERE cannot operate reliably at petabyte storage scale.', isCorrect: false },
+      { id: 'a', text: 'Rebuild the whole table, because any change to transformation code means every row must be recomputed from bronze, however small the damage.', isCorrect: false },
+      { id: 'b', text: 'Build sales_summary_v2 from scratch and repoint the view, since a blue/green copy is the only supported way to reprocess a table above 5 TB.', isCorrect: false },
+      { id: 'c', text: 'Rewrite the data files by hand with a script, because Delta transactions such as REPLACE WHERE cannot run reliably on tables this large.', isCorrect: false },
+      { id: 'd', text: 'Recompute just those 5 days from silver and write them with REPLACE WHERE or MERGE, so the other days of the table are not rewritten.', isCorrect: true },
     ],
     explanation:
-      'When the bug\'s scope is known and narrow relative to the table, selective replay gets the same correctness as a full rebuild at a fraction of the cost - reserve the full rebuild for when you can\'t bound the affected range.',
+      'The damage is bounded, so replay only that slice: recompute it from silver and replace it atomically. This gives the same result as a full rebuild at a fraction of the cost. Keep the full rebuild for damage you cannot bound.',
     tags: ['gold-reprocessing'],
     concepts: ['gld-reprocessing'],
   },
 
   // ────────────────────────────────────────────────────────────────────
-  // ADVANCED (19) — 3 anti-patterns x 3 domain-transfer scenarios (9) +
-  // 3 decision primitives x 3 domain-transfer scenarios (9) + 1
-  // discrimination question
+  // ADVANCED (19)
   // ────────────────────────────────────────────────────────────────────
 
   // Fan-Out Bug (x3)
@@ -404,15 +467,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A gold daily_revenue table is built by joining orders (one row per order, with order_amount) to order_line_items (many rows per order) and then running SUM(order_amount) over the joined result. A single $100 order with 3 line items shows up as $300 in the joined rows before aggregation. What\'s this anti-pattern called, and what\'s the fix?',
+      'A gold daily_revenue table joins orders (one row per order, with order_amount) to order_line_items (many rows per order) and then runs SUM(order_amount) over the joined rows. A single $100 order with 3 line items shows as $300. What is wrong, and what is the fix?',
     options: [
-      { id: 'a', text: "The Fan-Out Bug (fan trap) — joining a 1-to-many table without pre-aggregating multiplies the parent row's amount once per matching child row. The fix is to pre-aggregate order_line_items down to one row per order (or aggregate order_amount before the join) so each order's amount is counted exactly once.", isCorrect: true },
-      { id: 'b', text: 'This is expected Delta Lake behavior for any join, not a bug — SUM() is defined to include a duplicated value once per row it appears in, so a $100 order with 3 line items correctly contributes $300 to any revenue total by design.', isCorrect: false },
-      { id: 'c', text: 'Liquid Clustering misconfiguration — clustering the orders table by the wrong key causes Delta to physically duplicate matching rows during a join, which is fixed by re-clustering the table on order_id instead of order_amount.', isCorrect: false },
-      { id: 'd', text: 'A rounding error in floating-point summation — SUM(order_amount) accumulates small precision errors across line items, which is fixed by casting order_amount to a DECIMAL type before running the aggregation.', isCorrect: false },
+      { id: 'a', text: 'The join repeats order_amount once per line item (the Fan-Out Bug); the fix is to reduce the line items to one row per order before joining.', isCorrect: true },
+      { id: 'b', text: 'Liquid Clustering on the wrong key makes Delta copy matching rows during a join; the fix is to re-cluster orders on order_id instead of order_amount.', isCorrect: false },
+      { id: 'c', text: 'Floating-point error builds up across the line items; the fix is to cast order_amount to DECIMAL before the aggregation.', isCorrect: false },
+      { id: 'd', text: 'SUM adds a repeated value once per row by design, so $300 is correct; the fix is to report the total per line item instead of per order.', isCorrect: false },
     ],
     explanation:
-      'This is the canonical, named production failure mode - reported as up to 340% over-reporting in real cases. Pre-aggregate the many-side before joining, never after.',
+      'Joining a parent to its many side before aggregating repeats the parent\'s measure once for every child row, so the sum is multiplied by the number of line items. Aggregate the many side to one row per order first, then join, so each order\'s amount is counted exactly once.',
     tags: ['fan-out-bug'],
     concepts: ['gld-fan-out-bug'],
   },
@@ -423,15 +486,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "A SaaS company's gold mrr_summary table joins subscriptions (one row per subscription, with monthly_amount) to subscription_seats (many rows per subscription, one per licensed seat) and sums monthly_amount over the joined rows. A $500/month subscription with 10 seats reports as $5,000 in the summary. What's happening, and what's the fix?",
+      "A SaaS company's gold mrr_summary joins subscriptions (one row per subscription, with monthly_amount) to subscription_seats (one row per licensed seat) and sums monthly_amount. A $500/month subscription with 10 seats reports $5,000. What is happening, and what is the fix?",
     options: [
-      { id: 'a', text: 'This is correct MRR accounting — since each seat represents a separate licensed user, the $500 monthly_amount should legitimately be attributed once per seat, meaning the true MRR contribution of this subscription actually is $5,000, not $500.', isCorrect: false },
-      { id: 'b', text: 'Same Fan-Out Bug as the order/line-item case — joining the 1-to-many subscription_seats table without pre-aggregating multiplies each subscription\'s monthly_amount by its seat count. The fix is to aggregate seats down to a count column joined against the subscription\'s amount once, not repeat the amount per seat row.', isCorrect: true },
-      { id: 'c', text: "A schema drift issue — the subscription_seats table's _rescued_data column is capturing duplicate seat records from an upstream schema change, which is fixed by adding a rescued-data check to the Auto Loader ingestion for that table.", isCorrect: false },
-      { id: 'd', text: 'An idempotency failure in the MERGE that builds subscriptions — re-running the MERGE without a proper key match condition is inserting the same subscription row multiple times, which is fixed by adding a deterministic merge key.', isCorrect: false },
+      { id: 'a', text: 'The $500 is billed once per seat, so $5,000 is the true monthly revenue of this subscription and the summary is correct.', isCorrect: false },
+      { id: 'b', text: 'The MERGE that builds subscriptions inserts the same row more than once; the fix is a deterministic merge key on the subscription id.', isCorrect: false },
+      { id: 'c', text: "The join repeats the subscription's amount once per seat; reduce seats to one row per subscription, such as a count, before joining.", isCorrect: true },
+      { id: 'd', text: 'Schema drift fills _rescued_data with duplicate seat records; the fix is a rescued-data check in the Auto Loader that ingests the seats.', isCorrect: false },
     ],
     explanation:
-      'Same mechanism, different domain - a 10x seat count produces a 10x inflated MRR figure for exactly the same reason a 3x line-item count produced a 3x inflated order total.',
+      'The same mechanism as orders and line items: a one-to-many join before the aggregation repeats the subscription\'s amount for each seat, so 10 seats inflate the figure 10 times. Aggregate the seats to the subscription\'s grain first and join that.',
     tags: ['fan-out-bug'],
     concepts: ['gld-fan-out-bug'],
   },
@@ -442,20 +505,20 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A ride-share gold driver_earnings table joins trips (one row per trip, with base_fare) to fare_adjustments (many rows per trip - surge, tip, toll reimbursement) and sums base_fare over the joined rows. A trip with a $20 base fare and 4 fare adjustment rows reports $80 in base fare alone. What\'s the underlying issue, and what\'s the fix?',
+      'A ride-share gold driver_earnings table joins trips (one row per trip, with base_fare) to fare_adjustments (many rows per trip: surge, tip, toll) and sums base_fare over the joined rows. A trip with a $20 base fare and 4 adjustment rows reports $80 of base fare. What is the issue, and what is the fix?',
     options: [
-      { id: 'a', text: 'This is intended behavior — base_fare should be split evenly across each fare_adjustments row so that summing the joined result reconstructs the total earnings including adjustments, meaning $80 is the trip\'s genuinely correct total earnings figure.', isCorrect: false },
-      { id: 'b', text: "A late-arriving data issue — fare_adjustments rows for this trip arrived after the gold table's watermark cutoff, which is fixed by widening the watermark window so all adjustment rows land in the same micro-batch.", isCorrect: false },
-      { id: 'c', text: 'The Fan-Out Bug again — joining the 1-to-many fare_adjustments table without pre-aggregating repeats base_fare once per adjustment row. The fix is to pre-aggregate adjustments into their own summed column(s) and join that against the trip\'s base_fare exactly once, rather than letting the join itself multiply base_fare.', isCorrect: true },
-      { id: 'd', text: 'A grain mismatch between trips and fare_adjustments caused by using Liquid Clustering on one table and traditional PARTITIONED BY on the other — the fix is making both tables use the same partitioning strategy.', isCorrect: false },
+      { id: 'a', text: 'The adjustments for this trip arrived after the watermark; the fix is to widen the watermark so every adjustment lands in the same micro-batch.', isCorrect: false },
+      { id: 'b', text: 'The join repeats base_fare once per adjustment row; the fix is to sum the adjustments per trip first and join that single row to the trip.', isCorrect: true },
+      { id: 'c', text: 'base_fare is meant to be split evenly across the adjustment rows, so $80 is the trip\'s correct total once the adjustments are added.', isCorrect: false },
+      { id: 'd', text: 'One table uses Liquid Clustering and the other PARTITIONED BY, so the grains differ; the fix is to give both tables the same layout.', isCorrect: false },
     ],
     explanation:
-      'Three domains, one mechanism: whenever a 1-to-many join runs before an aggregation instead of after, the parent-side measure gets multiplied by the child row count. Recognizing the shape matters more than the specific tables involved.',
+      'Whenever a one-to-many join runs before the aggregation, the parent\'s measure is multiplied by the number of child rows. Here that is 4 adjustment rows, so $20 becomes $80. Recognising the shape matters more than the table names: reduce the many side to the parent\'s grain, then join.',
     tags: ['fan-out-bug'],
     concepts: ['gld-fan-out-bug'],
   },
 
-  // Non-Additive Aggregation Trap (x3)
+  // Summing a measure that cannot be summed (x3)
   {
     id: 'gld-mcq-a4',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -463,15 +526,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A gold weekly_balance_summary table computes each account\'s weekly balance as SUM(daily_balance) across the 7 daily snapshot rows for that account. An account with a stable $1,000 balance all week reports $7,000 for the week. What\'s wrong, and what\'s the fix?',
+      'A gold weekly_balance_summary computes an account\'s weekly balance as SUM(daily_balance) over its 7 daily snapshot rows. An account that holds a steady $1,000 all week reports $7,000. What is wrong, and what is the fix?',
     options: [
-      { id: 'a', text: "Non-Additive Aggregation Trap — daily_balance is semi-additive: it can be summed across accounts on a given day, but summing it across days for the same account produces a meaningless 'balance-days' figure, not a real balance. The fix is to report a point-in-time snapshot for the week, like the last day's balance, instead of summing.", isCorrect: true },
-      { id: 'b', text: "This is correct — a weekly balance is genuinely the sum of that account's daily balances across the 7 days, since 'weekly' just means aggregating the daily grain up to a coarser time bucket, the same way daily revenue sums up to weekly revenue.", isCorrect: false },
-      { id: 'c', text: "A timezone bug — the 7 daily snapshot rows are being read using UTC instead of the account holder's local timezone, which causes the same day's balance to be counted twice, and is fixed by adding a timezone conversion before aggregating.", isCorrect: false },
-      { id: 'd', text: "A duplicate-row issue in the bronze ingestion — the balance snapshot job is writing each day's balance twice due to a retry without deduplication, which is fixed by adding a dropDuplicates step in silver.", isCorrect: false },
+      { id: 'a', text: 'Nothing is wrong: a weekly balance is the sum of the daily balances, in the same way that daily revenue adds up to weekly revenue.', isCorrect: false },
+      { id: 'b', text: "A balance is semi-additive, so adding it across days gives \"balance-days\"; use a point-in-time value for the week, such as the last day's.", isCorrect: true },
+      { id: 'c', text: 'The 7 snapshot rows are read in UTC instead of the holder\'s time zone, which counts a day twice; the fix is a time-zone conversion before the sum.', isCorrect: false },
+      { id: 'd', text: 'The snapshot job wrote each day twice after a retry; the fix is a dropDuplicates step in silver so every day is counted once.', isCorrect: false },
     ],
     explanation:
-      'The word "daily revenue sums to weekly revenue" is a trap in distractor (a): revenue is additive across time, balance is not. Confirming which category a measure falls into (additive/semi-additive/non-additive, from data_modeling) is the prerequisite check before choosing how to roll it up.',
+      'Revenue is additive over time, but a balance describes how much there is at one moment. It can be added across accounts on the same day, not across days of the same account. Revenue summing to a weekly total is the trap in option A. Check how a measure behaves before choosing how to roll it up.',
     tags: ['non-additive-trap', 'additivity'],
     concepts: ['gld-non-additive-trap'],
   },
@@ -482,15 +545,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A gold weekly_active_users table computes SUM(daily_active_users) across 7 daily DAU rows to report weekly active users. A product with 500 DAU every day of the week reports 3,500 weekly active users. What\'s wrong, and what\'s the fix?',
+      'A gold weekly_active_users table sums 7 daily active user (DAU) rows to report weekly active users. A product with 500 DAU on every day of the week reports 3,500. What is wrong, and what is the fix?',
     options: [
-      { id: 'a', text: 'A Fan-Out Bug caused by joining the DAU table against a dim_date dimension without pre-aggregating first, which is fixed by aggregating dim_date down to one row per week before performing the join.', isCorrect: false },
-      { id: 'b', text: "Non-Additive Aggregation Trap — daily active users is non-additive across time because the same person can be active on multiple days; summing it produces 'user-days,' not a real distinct-user count. The fix is to compute weekly active users directly as a distinct count of users over the 7-day window, not as a sum of the daily counts.", isCorrect: true },
-      { id: 'c', text: 'This is correct, assuming the product has no repeat users within a week — since 500 users were active each day for 7 days, 3,500 genuinely represents seven separate cohorts of 500 first-time users each, which the sum correctly captures.', isCorrect: false },
-      { id: 'd', text: 'A double-counting bug caused by running the DAU job twice per day due to a Cron Surgery scheduling issue, which is fixed by consolidating the two separately-scheduled DAU jobs into one Databricks Workflow with proper task dependencies.', isCorrect: false },
+      { id: 'a', text: "The same person is active on several days, so summing counts people once per day; use a distinct count of users over the 7-day window.", isCorrect: true },
+      { id: 'b', text: 'The DAU table is joined to dim_date without aggregating first, which repeats each row; the fix is to reduce dim_date to one row per week.', isCorrect: false },
+      { id: 'c', text: 'Nothing is wrong when the product has no repeat users, since 3,500 then counts seven separate groups of 500 first-time users each.', isCorrect: false },
+      { id: 'd', text: 'The DAU job runs twice a day because of two separate schedules; the fix is to merge them into one job with proper task dependencies.', isCorrect: false },
     ],
     explanation:
-      'The assumption in distractor (c) - "no repeat users" - is exactly the assumption that almost never holds in practice; a real distinct-user count over the window is the only way to get a defensible weekly figure.',
+      'A distinct count is not additive across days: someone active on 5 days is counted 5 times by the sum. The only defensible weekly figure is a distinct count of users over the whole window. The "no repeat users" case in option C almost never holds for a real product.',
     tags: ['non-additive-trap', 'additivity'],
     concepts: ['gld-non-additive-trap'],
   },
@@ -501,20 +564,20 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A gold weekly_inventory_summary table computes SUM(inventory_on_hand) across 7 daily snapshot rows per warehouse to report a weekly inventory figure. A warehouse holding a stable 10,000 units all week reports 70,000 units for the week. What\'s wrong, and what should the weekly figure be instead?',
+      'A gold weekly_inventory_summary sums inventory_on_hand over 7 daily snapshot rows per warehouse. A warehouse holding a steady 10,000 units reports 70,000 for the week. What is wrong, and what should the weekly figure be?',
     options: [
-      { id: 'a', text: 'This is correct — inventory naturally accumulates over time the same way revenue does, so summing 7 days of 10,000-unit snapshots into a 70,000-unit weekly total accurately reflects a full week\'s worth of inventory being held.', isCorrect: false },
-      { id: 'b', text: "A double-write issue from a Naked Overwrite — the daily inventory job is using mode('overwrite') without a date filter, which is duplicating the previous 6 days' snapshots into the current day's partition and inflating the sum.", isCorrect: false },
-      { id: 'c', text: 'A grain mismatch — the inventory_on_hand column was declared at the SKU grain in silver but the gold table aggregates at the warehouse grain, so the fix is adding a SKU-level dimension table to reconcile the two grains before summing.', isCorrect: false },
-      { id: 'd', text: 'Non-Additive Aggregation Trap again — inventory-on-hand is a semi-additive, point-in-time measure; it can be summed across warehouses on a given day but not across days for the same warehouse. The correct weekly figure is a snapshot, typically the last day\'s on-hand count (10,000 here), not a sum across the 7 days.', isCorrect: true },
+      { id: 'a', text: "Inventory builds up over time like revenue does, so 70,000 correctly shows a full week of stock being held, which is why the sum is the right rollup.", isCorrect: false },
+      { id: 'b', text: 'A mode("overwrite") without a date filter copies the previous 6 days into the current partition, which inflates the sum; the fix is a replaceWhere.', isCorrect: false },
+      { id: 'c', text: 'The column was declared at SKU grain in silver but is summed at warehouse grain; the fix is a SKU dimension to reconcile the two grains.', isCorrect: false },
+      { id: 'd', text: "Inventory on hand is a point-in-time, semi-additive measure; the weekly figure is a snapshot such as the last day's 10,000, not a sum of days.", isCorrect: true },
     ],
     explanation:
-      'Third domain, same mechanism as balance and DAU: any "how much do we have right now" measure is semi-additive across time and needs a point-in-time snapshot for a period rollup, never a sum across the period.',
+      'Any "how much do we have right now" measure is semi-additive. It can be added across warehouses on one day but not across days for the same warehouse. A period rollup takes a snapshot, such as the closing count, never the sum.',
     tags: ['non-additive-trap', 'additivity'],
     concepts: ['gld-non-additive-trap'],
   },
 
-  // Grain Shift Catastrophe (x3)
+  // Collapsing the grain (x3)
   {
     id: 'gld-mcq-a7',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -522,15 +585,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'To save storage, a team redesigns their gold sales table to store only weekly rollups instead of the original daily-grain transactional table, then deletes the daily-grain table entirely. Three months later, finance asks for a day-by-day drill-down for a specific promotional week. What\'s the resulting problem called, and what\'s the fix?',
+      'To save storage, a team replaces its daily-grain gold sales table with weekly rollups and deletes the daily table. Three months later finance asks for a day-by-day drill-down for one promotional week. What went wrong, and what should have been done?',
     options: [
-      { id: 'a', text: "Grain Shift Catastrophe — the destroyed daily grain can never be reconstructed from the weekly rollup alone. The fix is keeping the transactional-grain table alongside the rollup, as a derived addition rather than a destructive replacement.", isCorrect: true },
-      { id: 'b', text: 'Nothing is actually lost — a weekly rollup can always be evenly divided by 7 to reconstruct each day\'s individual sales figure, since daily sales within a stable week are assumed to be roughly uniform across all 7 days.', isCorrect: false },
-      { id: 'c', text: "A Partition Blast Radius issue — the weekly redesign accidentally used an unscoped mode('overwrite') that wiped historical partitions, which is fixed by re-running the daily job with a replaceWhere predicate scoped to the missing week.", isCorrect: false },
-      { id: 'd', text: "A Time-Gap Roulette issue — the weekly rollup job is scheduled too soon after the daily job finishes, so it's silently reading a stale, pre-promotion snapshot; the fix is a table-update trigger instead of a fixed cron time.", isCorrect: false },
+      { id: 'a', text: 'Nothing is lost: each weekly figure can be divided by 7 to recover the days, since sales within a week are roughly even.', isCorrect: false },
+      { id: 'b', text: 'The weekly job ran an unscoped overwrite that wiped old partitions; the fix is to re-run the daily job with a replaceWhere for the missing week.', isCorrect: false },
+      { id: 'c', text: 'The finer grain was destroyed and cannot be recovered from the rollup; the daily table should have been kept and the rollup added beside it.', isCorrect: true },
+      { id: 'd', text: 'The weekly job ran too soon after the daily job and read a stale snapshot; the fix is a table update trigger instead of a fixed time.', isCorrect: false },
     ],
     explanation:
-      "This is Grain Shift Catastrophe: prematurely aggregating gold to a coarser grain and discarding the finer-grained table destroys information no arithmetic can recover - dividing a weekly total back down only produces an estimate, never the real daily figures. Answering the drill-down now needs a full rebuild from bronze, if bronze even retained the raw data that far back. Keep the fine grain as the source of truth; build rollups as additions, not replacements.",
+      'Collapsing gold to a coarser grain and deleting the finer table destroys information no arithmetic can restore: dividing a weekly total gives an estimate, not the real days. Answering the drill-down now means a rebuild from bronze, if bronze still holds the data. Keep the finest grain as the source of truth and build rollups beside it.',
     tags: ['grain-shift-catastrophe', 'gold-granularity'],
     concepts: ['gld-grain-shift-catastrophe'],
   },
@@ -541,15 +604,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A marketing team rebuilds their gold ad_spend table to store only monthly totals per campaign, discarding the original daily-grain fact table to cut storage costs. Two months later, an analyst needs to identify which specific day a campaign\'s cost-per-click spiked. What\'s this called, and what should have been done differently?',
+      'A marketing team keeps only monthly totals per campaign in gold ad_spend and drops the daily table to cut storage. Two months later an analyst must find the day a campaign\'s cost per click spiked. What went wrong, and what should have been done differently?',
     options: [
-      { id: 'a', text: 'No problem exists here — since a month is just 30ish rolled-up days, the analyst can approximate the daily cost-per-click by dividing the monthly total by the number of days in the month and treating that as the daily figure.', isCorrect: false },
-      { id: 'b', text: "A Non-Additive Aggregation Trap — cost-per-click is a ratio and can't be legitimately summed across days into a monthly total in the first place, so the real fix is to stop reporting a monthly cost-per-click at all, independent of the grain question.", isCorrect: false },
-      { id: 'c', text: "A Naked Overwrite issue — the monthly rebuild used mode('overwrite') without scoping to the current month, which is fixed with a replaceWhere predicate for the affected month's partition.", isCorrect: false },
-      { id: 'd', text: "Grain Shift Catastrophe — once the daily-grain table is gone, the monthly rollup can't be un-aggregated to recover which day the spike happened on; that granularity is permanently lost. The fix is to always retain the transactional/finest grain as the source of truth and treat the monthly rollup as a derived, non-destructive summary built on top of it.", isCorrect: true },
+      { id: 'a', text: "Nothing: the analyst can divide the monthly total by the days in the month and treat that as the daily figure, since cost per click is steady within a month.", isCorrect: false },
+      { id: 'b', text: 'Cost per click is a ratio and cannot be summed into a monthly total, so the real fix is to stop reporting a monthly figure at all.', isCorrect: false },
+      { id: 'c', text: 'The monthly rebuild used an overwrite not scoped to the current month; the fix is a replaceWhere on the month being rebuilt.', isCorrect: false },
+      { id: 'd', text: 'The daily detail is gone and cannot be recovered from a monthly rollup; keep the daily table as the source of truth and build the rollup from it.', isCorrect: true },
     ],
     explanation:
-      'Distractor (b) is a real observation about cost-per-click being non-additive, but it\'s a distraction from the actual failure here - the daily grain itself was destroyed, which is a different problem than how a ratio measure should be aggregated.',
+      'Option B notices something true, that a ratio cannot be summed, but it is not what stopped the analyst. The cause is that the daily grain no longer exists. A coarse rollup cannot be turned back into the days, so keep the finest grain and derive the rollup.',
     tags: ['grain-shift-catastrophe', 'gold-granularity'],
     concepts: ['gld-grain-shift-catastrophe'],
   },
@@ -560,20 +623,20 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "A support team redesigns gold to store only quarterly ticket-volume totals per category, dropping the original per-ticket fact table since 'nobody looks at individual tickets in gold anyway.' The next quarter, a spike in one category triggers an investigation that needs to see exactly which tickets and which days drove it. What's the structural mistake, and what's the durable fix?",
+      "A support team keeps only quarterly ticket totals per category in gold and drops the per-ticket table, because \"nobody looks at individual tickets in gold\". Next quarter a spike in one category needs an investigation of which tickets and days drove it. What is the mistake, and the durable fix?",
     options: [
-      { id: 'a', text: "Grain Shift Catastrophe — collapsing to a quarterly rollup and deleting the per-ticket table removes the only path back to a ticket-by-ticket investigation. The durable fix is keeping the per-ticket fact table as the retained source of truth, with the rollup built as an additional, non-destructive table.", isCorrect: true },
-      { id: 'b', text: "A Silent Drop Sinking issue — the quarterly aggregation job is using expect_or_drop on malformed ticket rows without a quarantine stream, which is fixed by routing dropped rows to a dead-letter table via DLT's dual-stream pattern.", isCorrect: false },
-      { id: 'c', text: 'A Cron Surgery issue — the quarterly rollup job and the underlying per-ticket ingestion job are on separate, offset schedules, which is fixed by merging them into a single Databricks Workflow with explicit task dependencies.', isCorrect: false },
-      { id: 'd', text: "This isn't actually a mistake, since 'nobody looks at individual tickets in gold anyway' was already true before the redesign — deleting a table nobody queries has no real cost, independent of what grain the remaining table is stored at.", isCorrect: false },
+      { id: 'a', text: "Deleting a table nobody queries costs nothing, so the design was fine and the investigation should use the quarterly totals it already has.", isCorrect: false },
+      { id: 'b', text: 'The quarterly job drops malformed tickets with expect_or_drop and no quarantine table; the fix is a dead-letter table for the dropped rows.', isCorrect: false },
+      { id: 'c', text: "Dropping the per-ticket table removed the only route to ticket detail; keep it as the source of truth and build the rollup beside it.", isCorrect: true },
+      { id: 'd', text: 'The rollup and the ticket ingestion job run on offset schedules; the fix is one Databricks job with explicit task dependencies.', isCorrect: false },
     ],
     explanation:
-      '"Nobody looks at it" is a description of today\'s access pattern, not a guarantee about tomorrow\'s - an investigation is exactly the kind of unplanned need that a destroyed fine grain can never satisfy again, and there\'s no way to derive finer detail back out of a coarser aggregate after the fact.',
+      '"Nobody looks at it" describes today\'s access pattern, not tomorrow\'s. An investigation is exactly the unplanned need that a destroyed fine grain can never meet, and detail cannot be derived back out of an aggregate. Keep the ticket-level table and add the quarterly rollup beside it.',
     tags: ['grain-shift-catastrophe', 'gold-granularity'],
     concepts: ['gld-grain-shift-catastrophe'],
   },
 
-  // OBT vs star, complex decision scenarios (x3)
+  // OBT vs star in harder scenarios (x3)
   {
     id: 'gld-mcq-a10',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -581,15 +644,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A single gold orders_summary table currently in OBT shape serves both (1) a DirectQuery embedded dashboard needing sub-second filtering and (2) a data science team building repeated ad-hoc feature joins against dim_customer attributes that change weekly. The OBT shape is starting to strain under duplicated dimension data that goes stale between refreshes. What\'s the better long-term design?',
+      'One gold orders_summary OBT serves (1) a DirectQuery embedded dashboard that needs sub-second filtering and (2) a data science team that repeatedly joins to dim_customer attributes that change weekly. The OBT\'s copied dimension values go stale between refreshes. What is the better long-term design?',
     options: [
-      { id: 'a', text: "Split into a star schema with a properly refreshed dim_customer for the data science team's feature work, and materialize a separate OBT (or a materialized view over the star schema) specifically for the DirectQuery dashboard's query pattern — each consumer gets the shape suited to how it actually queries, instead of forcing one shape to serve two conflicting access patterns.", isCorrect: true },
-      { id: 'b', text: 'Keep the single OBT table but increase the refresh frequency to hourly — since the underlying problem is only staleness of the duplicated dimension data, refreshing more often fully resolves both the DirectQuery latency and the data science team\'s staleness concern with no structural change needed.', isCorrect: false },
-      { id: 'c', text: "Move both consumers to query bronze directly instead of gold, since bronze retains the most granular, freshest version of every dimension attribute and neither the DirectQuery latency requirement nor the feature-join pattern actually depends on any gold-layer transformation.", isCorrect: false },
-      { id: 'd', text: 'This is not a real design conflict — OBT and star schema are functionally interchangeable representations of the same data, and Databricks automatically converts between the two behind the scenes depending on which query pattern is detected at runtime.', isCorrect: false },
+      { id: 'a', text: 'Keep the single OBT and refresh it hourly, since staleness is the only problem and a faster refresh solves both consumers without a structural change.', isCorrect: false },
+      { id: 'b', text: 'Treat this as no real conflict: Databricks converts between an OBT and a star schema at run time, depending on which query pattern it detects.', isCorrect: false },
+      { id: 'c', text: 'Let both consumers read bronze, which keeps the freshest, most detailed version of every dimension attribute and needs no gold transformation.', isCorrect: false },
+      { id: 'd', text: "Use a star schema with a current dim_customer for the data science work and a separate OBT, or materialized view, for the dashboard: one shape each.", isCorrect: true },
     ],
     explanation:
-      'One gold shape forced to serve two conflicting access patterns is a design smell, not a fact of life - splitting into a shape-per-consumer (backed by unity catalog materialized views where useful) is the standard fix once a table is straining this way.',
+      'One shape forced to serve two different access patterns is a design smell. Keep the star schema as the source of truth, with its dimension refreshed once, and build the flat table the dashboard needs from it, for example as a materialized view. Each consumer then gets the shape that matches how it queries.',
     tags: ['obt-vs-star'],
     concepts: ['gld-obt-vs-star'],
   },
@@ -600,15 +663,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A team currently has a star-schema gold layer (fact_orders, dim_customer, dim_product) serving nightly-refreshed Import Mode dashboards. Product now wants to add a real-time, embedded DirectQuery view for a customer-facing order-status page. What\'s the right move, and what\'s the wrong move?',
+      'A team has a star-schema gold layer (fact_orders, dim_customer, dim_product) serving nightly Import Mode dashboards. Product now wants a real-time DirectQuery order-status page in a customer-facing app. What is the right move?',
     options: [
-      { id: 'a', text: 'Right move: fully migrate fact_orders/dim_customer/dim_product into one OBT table and retire the star schema entirely, since a single gold shape should always serve every consumer the org has, present and future, to keep the design simple.', isCorrect: false },
-      { id: 'b', text: "Right move: add a purpose-built OBT (or materialized view flattening the star schema) specifically for the new DirectQuery use case, keeping the existing star schema intact for the Import Mode dashboards it already serves well. Wrong move: migrating the entire existing gold layer to OBT just because the new consumer needs it, which would hurt the Import Mode dashboards that were already well-served by the star schema.", isCorrect: true },
-      { id: 'c', text: "Right move: leave the star schema completely unchanged and tell product that DirectQuery isn't achievable in a lakehouse architecture at all, since DirectQuery is fundamentally incompatible with any table built from a Databricks gold layer.", isCorrect: false },
-      { id: 'd', text: 'Right move: convert the existing dashboards from Import Mode to DirectQuery against the current star schema with no other changes, since DirectQuery performance against a star schema and against an OBT table is identical in every case.', isCorrect: false },
+      { id: 'a', text: 'Migrate the whole gold layer into one OBT and retire the star schema, so that a single shape serves every present and future consumer.', isCorrect: false },
+      { id: 'b', text: 'Tell product that DirectQuery cannot be done on a table built in a Databricks gold layer, and leave the star schema as it is.', isCorrect: false },
+      { id: 'c', text: 'Move the existing dashboards to DirectQuery against the current star schema, since DirectQuery on a star schema and on an OBT performs the same.', isCorrect: false },
+      { id: 'd', text: "Add a purpose-built OBT, or a view that flattens the star, for the new page, and keep the star for the dashboards it already suits.", isCorrect: true },
     ],
     explanation:
-      'A new consumer with a different query pattern is a reason to add a purpose-built table, not a reason to migrate everything - the existing star schema was already the right fit for its existing consumers.',
+      'A new consumer with a different query pattern is a reason to add a table made for it, not to migrate everything. The star schema still fits the Import Mode dashboards, and moving them to an OBT would give up what suited them.',
     tags: ['obt-vs-star'],
     concepts: ['gld-obt-vs-star'],
   },
@@ -619,20 +682,20 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A finance team is deciding gold shape for a new expenses table. It\'s queried heavily by a self-service DirectQuery dashboard used by 50 non-technical analysts running varied ad-hoc filters all day, and rarely by any tool that would benefit from a shared, reusable dimension. Storage cost is a secondary concern. What shape fits, and why?',
+      'A finance team is choosing a gold shape for a new expenses table. It is queried by one self-service DirectQuery dashboard with 50 non-technical analysts running varied ad-hoc filters all day, and nothing else needs to reuse its dimensions. Storage cost matters little. Which shape fits?',
     options: [
-      { id: 'a', text: "OBT — the dominant access pattern (frequent, varied, non-technical ad-hoc filtering against a live DirectQuery dashboard) is exactly what OBT optimizes for by eliminating runtime joins, and since there's little reuse of a shared conformed dimension across other consumers, the storage-duplication cost that would normally argue for a star schema barely applies here.", isCorrect: true },
-      { id: 'b', text: 'Star schema — since storage cost is described as a secondary concern, that removes the main argument for OBT (avoiding duplication), leaving star schema as the safer default choice regardless of the dashboard\'s query pattern or its DirectQuery mode.', isCorrect: false },
-      { id: 'c', text: 'Neither — 50 concurrent analysts running ad-hoc filters exceeds what any single gold table shape can support, so the table needs to be pre-aggregated into a fixed, non-interactive summary that the dashboard reads once per day instead of querying live.', isCorrect: false },
-      { id: 'd', text: 'OBT, but only because expenses is a financial table — table shape for gold in a lakehouse is chosen by which business domain the data belongs to (finance, marketing, product), not by the consuming tool\'s query pattern.', isCorrect: false },
+      { id: 'a', text: "An OBT: live ad-hoc filtering is what an OBT serves best, and with no other consumer reusing a dimension, duplication barely matters.", isCorrect: true },
+      { id: 'b', text: 'A star schema, because storage cost is not a concern, so the main argument for an OBT is gone and a star schema is the safer default.', isCorrect: false },
+      { id: 'c', text: 'Neither, because 50 analysts filtering at once is more than any single gold table can serve, so the table has to become a fixed daily summary.', isCorrect: false },
+      { id: 'd', text: 'An OBT, because expenses is a finance table, and gold shape follows the business domain rather than how the consuming tool queries it.', isCorrect: false },
     ],
     explanation:
-      'Two signals point the same direction here: the DirectQuery access pattern favors OBT, and the usual counter-argument (storage duplication, or losing a genuinely shared/reused dimension) doesn\'t really apply in this case - so there\'s no real tension pulling toward star schema.',
+      'Both signals point the same way. The access pattern, frequent and varied live filtering, favours an OBT because it removes runtime joins. The usual reasons to prefer a star schema, saving storage and reusing a shared dimension, hardly apply here.',
     tags: ['obt-vs-star'],
     concepts: ['gld-obt-vs-star'],
   },
 
-  // Domain marts, complex decision scenarios (x3)
+  // Domain marts in harder scenarios (x3)
   {
     id: 'gld-mcq-a13',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -640,15 +703,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A company grows from 30 to 300 data engineers over two years, all still funneling schema changes through one shared gold catalog owned by a 5-person platform team. PR review queues for gold schema changes now regularly exceed two weeks. What\'s the structural problem, and what\'s the fix?',
+      'A company grew from 30 to 300 data engineers in two years, and every gold schema change still goes through one shared catalog owned by a 5-person platform team. Review queues for schema changes now exceed two weeks. What is the structural problem, and the fix?',
     options: [
-      { id: 'a', text: 'This is the classic single-shared-gold bottleneck — one team can\'t keep up with schema-change review volume from 300 engineers across many domains. The fix is splitting into domain marts, each owned and evolved independently by its own domain team, with the platform team setting standards (naming, access, governance) rather than gatekeeping every individual change.', isCorrect: true },
-      { id: 'b', text: 'The fix is to hire more people onto the 5-person platform team proportional to headcount growth, since a single shared gold catalog scales cleanly with team size as long as the review team itself grows at the same rate as the rest of the org.', isCorrect: false },
-      { id: 'c', text: 'The fix is to freeze the gold schema entirely and require every new business need to be served by ad-hoc queries against silver instead, since further schema evolution at this org size is inherently unmanageable regardless of catalog structure.', isCorrect: false },
-      { id: 'd', text: "The fix is to move from Delta Lake to a different storage format, since the two-week review queue is a limitation of Delta's transaction log serializing schema changes across the org's tables, not a team-structure or process problem.", isCorrect: false },
+      { id: 'a', text: 'Hire platform engineers in proportion to headcount, since one shared catalog scales as long as the review team grows at the same rate.', isCorrect: false },
+      { id: 'b', text: 'Freeze the gold schema and serve every new need with ad-hoc queries on silver, because schema change at this size cannot be managed.', isCorrect: false },
+      { id: 'c', text: "One team cannot review 300 engineers' changes; split into domain catalogs owned by their teams, the platform team setting standards.", isCorrect: true },
+      { id: 'd', text: 'Move off Delta to another format, since the queue comes from the Delta log serializing schema changes across the organisation.', isCorrect: false },
     ],
     explanation:
-      'This is the review-queue symptom the "domain marts vs single shared gold" tradeoff predicts directly: a central bottleneck team can\'t scale with headcount the way independently-owned domain marts can.',
+      'A central team is a bottleneck that does not scale with headcount. Domain catalogs owned by domain teams remove the queue, while the platform team keeps the rules on naming, access and governance instead of approving every change. The Delta log has nothing to do with the review queue.',
     tags: ['domain-marts'],
     concepts: ['gld-domain-marts'],
   },
@@ -659,15 +722,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "A healthcare company's data platform serves both a clinical-operations domain under strict HIPAA controls and a marketing-analytics domain with no such requirement, both currently reading and writing to one shared gold catalog. An audit flags that marketing engineers technically have query access to clinical gold tables. What's the structural fix?",
+      "A healthcare company's clinical-operations data is under strict HIPAA rules, while marketing analytics has none, yet both sit in one shared gold catalog. An audit finds marketing engineers can query clinical tables. The team wants the boundary to be part of the structure, not a long list of per-table rules. What is the fix?",
     options: [
-      { id: 'a', text: "Split into domain marts with clinical operations in its own catalog (clinical_gold) under HIPAA-appropriate Unity Catalog access controls, separate from a marketing_gold catalog with looser access — a shared catalog structurally can't express that clinical and marketing teams need fundamentally different access boundaries.", isCorrect: true },
-      { id: 'b', text: 'Keep the single shared catalog and instead train marketing engineers on HIPAA policy, since the underlying issue is a knowledge gap about what they\'re allowed to query, not a structural gap in how access is actually enforced by the catalog.', isCorrect: false },
-      { id: 'c', text: 'Keep the single shared catalog and encrypt only the clinical tables\' columns at rest, since column-level encryption alone is sufficient to satisfy a HIPAA audit even when a marketing engineer\'s account technically retains query access to those tables.', isCorrect: false },
-      { id: 'd', text: "This isn't fixable within a lakehouse architecture at all — Unity Catalog has no mechanism for restricting table access by team, so any HIPAA-compliant separation of clinical and marketing data would require moving clinical data out of Databricks entirely.", isCorrect: false },
+      { id: 'a', text: "Put clinical data in its own catalog, clinical_gold, granted only to clinical staff; marketing gets a separate catalog with its own grants.", isCorrect: true },
+      { id: 'b', text: 'Keep one catalog and revoke marketing\'s access table by table, then repeat that for every new clinical table that appears.', isCorrect: false },
+      { id: 'c', text: 'Keep one catalog and train marketing engineers on HIPAA, since the gap is knowledge of what they may query, not how access is set.', isCorrect: false },
+      { id: 'd', text: 'Keep one catalog and encrypt the clinical columns at rest, since column encryption alone satisfies the audit even if marketing can query them.', isCorrect: false },
     ],
     explanation:
-      'This is exactly the compliance-boundary case the research highlights for domain marts: strict regulatory boundaries (GDPR/HIPAA) are the clearest justification for splitting a catalog, independent of team size.',
+      'A catalog is a boundary you grant as a whole, so putting the regulated domain in its own catalog makes "marketing cannot see clinical data" true by structure. Per-table revokes work only until someone forgets one. Training and encryption at rest do not change who can query the tables.',
     tags: ['domain-marts'],
     concepts: ['gld-domain-marts'],
   },
@@ -678,20 +741,20 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "A 15-person startup, all data work handled by one small team with one shared executive dashboard, splits gold into 6 separate domain marts (sales_gold, marketing_gold, product_gold, support_gold, finance_gold, ops_gold) because 'that's what data mesh recommends.' What's the likely outcome, and what would have been the better call?",
+      "A 15-person startup, with one small data team and one executive dashboard, splits gold into six domain catalogs (sales_gold, marketing_gold, product_gold, support_gold, finance_gold, ops_gold) because \"that is what data mesh recommends\". What is the likely outcome, and what would have been better?",
     options: [
-      { id: 'a', text: 'At this size, splitting into 6 marts mostly adds coordination overhead (6 catalogs, 6 sets of access controls, duplicated conformance logic) with none of the benefit domain marts exist for, since there\'s no team-ownership boundary to actually decouple — one team still does all the work. A single shared gold catalog would have been the better fit; domain marts pay off once there are genuinely separate teams that need independent schema evolution.', isCorrect: true },
-      { id: 'b', text: "This is the correct call regardless of team size — data mesh's domain-mart pattern is a strict best practice that should always be followed as soon as an organization has more than one identifiable business domain in its data, independent of how many people actually work on it.", isCorrect: false },
-      { id: 'c', text: 'The outcome will be positive because 6 separate catalogs allow Unity Catalog to parallelize query execution across domains, meaning the executive dashboard will run measurably faster once it\'s rebuilt against the 6 split marts instead of the original single catalog.', isCorrect: false },
-      { id: 'd', text: 'The likely outcome is a Fan-Out Bug, since splitting one gold table into 6 separate catalogs forces every cross-domain query to perform an implicit 1-to-many join across catalog boundaries that wasn\'t present in the single shared design.', isCorrect: false },
+      { id: 'a', text: "It is right at any size: the domain pattern is a strict best practice once there is more than one business area in the data, whatever the team structure.", isCorrect: false },
+      { id: 'b', text: 'It adds overhead and no benefit, since one team still does all the work; a single shared catalog fits until separate teams need their own changes.', isCorrect: true },
+      { id: 'c', text: 'It makes the dashboard faster, because Unity Catalog runs queries in parallel across catalogs once the data is split into six.', isCorrect: false },
+      { id: 'd', text: 'It causes the Fan-Out Bug, because every query across the six catalogs becomes an implicit one-to-many join across catalog boundaries.', isCorrect: false },
     ],
     explanation:
-      'The domain-marts tradeoff cuts both ways - it\'s just as much a mistake to over-apply it (splitting when there\'s no ownership boundary to decouple) as it is to under-apply it (staying centralized when review queues or compliance boundaries demand a split).',
+      'Domain catalogs pay off when separate teams need independent schema changes or a compliance boundary. With one team there is no ownership boundary to decouple, so six catalogs only add six sets of grants and repeated shared logic. The tradeoff cuts both ways: it is as much a mistake to split too early as to stay central too long.',
     tags: ['domain-marts'],
     concepts: ['gld-domain-marts'],
   },
 
-  // Reprocessing/replay, complex decision scenarios (x3)
+  // Reprocessing in harder scenarios (x3)
   {
     id: 'gld-mcq-a16',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -699,15 +762,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      'A gold revenue table has a bug in a currency-conversion transform affecting all of 2023 (12 TB of gold data; silver and bronze are unaffected and still correct). The team has a maintenance window long enough for a full rebuild, and wants to guarantee the fix is completely correct with no risk of a partially-applied patch. What\'s the right reprocessing choice, and what tradeoff is being accepted?',
+      'A currency-conversion transform in a 12 TB gold revenue table has been wrong since launch, and nobody can say which dates it affected. Silver and bronze are correct and there is a maintenance window long enough for a rebuild. What is the right reprocessing choice, and what tradeoff is accepted?',
     options: [
-      { id: 'a', text: "A full pipeline rebuild for 2023 — since the bug is deterministic, silver is unaffected, and there's a maintenance window available, replaying the affected date range from silver through the currency-conversion transform is the most certain way to guarantee correctness. The tradeoff is accepted compute cost and time, in exchange for not having to reason about whether a selective replaceWhere/MERGE patch covers every edge case the bug touched.", isCorrect: true },
-      { id: 'b', text: "A versioned blue/green swap — build revenue_v2 from scratch in parallel and atomically swap the view, since this is always strictly better than any other reprocessing strategy regardless of the bug's scope or how much maintenance window is available.", isCorrect: false },
-      { id: 'c', text: 'Selective replay via REPLACE WHERE scoped to 2023 — since the bug\'s scope is exactly known (all of 2023), this is guaranteed to be both faster and just as correct as a full rebuild, with no tradeoff being accepted at all.', isCorrect: false },
-      { id: 'd', text: 'None of the standard strategies apply, since a bug spanning a full calendar year is too large in scope for selective replay and too small in scope to justify a full rebuild — this situation requires a custom one-off script outside the normal pipeline.', isCorrect: false },
+      { id: 'a', text: 'Replay only the last 30 days with REPLACE WHERE, because recent dates are the ones people read and a smaller replay always gives the same result.', isCorrect: false },
+      { id: 'b', text: "Rebuild the whole table from silver, because the damage cannot be bounded; the tradeoff is compute and time for certainty nothing is missed.", isCorrect: true },
+      { id: 'c', text: 'Use a blue/green copy, which is strictly better than every other approach whatever the scope of the bug or the window available.', isCorrect: false },
+      { id: 'd', text: 'Write a one-off script outside the pipeline, since the damage is too wide to replay a slice and too small to justify a full rebuild.', isCorrect: false },
     ],
     explanation:
-      'A full rebuild isn\'t automatically the "safe" default, but it is the right call here specifically because a maintenance window exists and certainty matters more than speed - the same bug at a smaller scale with no maintenance window would favor selective replay instead.',
+      'A bounded bug calls for replaying a slice. When you cannot say which rows are wrong, a slice replay may leave bad rows behind, so recompute the whole table. The cost is compute and time, which a maintenance window makes affordable. Building a v2 copy first would also work if readers must not see the rebuild.',
     tags: ['gold-reprocessing'],
     concepts: ['gld-reprocessing'],
   },
@@ -718,15 +781,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "A gold inventory_levels table backs a live, customer-facing 'in stock' indicator with continuous read traffic that can't tolerate even a brief gap or inconsistent read. The team needs to fix a bug affecting the whole table's current logic. What reprocessing approach avoids customer-visible downtime?",
+      "A gold inventory_levels table backs a live \"in stock\" indicator with constant read traffic. A bug affects the whole table's logic. The team must check the corrected table before any customer reads it, and be able to switch back instantly. What approach does that?",
     options: [
-      { id: 'a', text: "Versioned gold (blue/green view swap) — build the corrected table (inventory_levels_v2) in parallel while the current table keeps serving live traffic unaffected, validate v2, then atomically repoint the Unity Catalog view to v2 in one instant switch, so customers never see a gap or an inconsistent intermediate state.", isCorrect: true },
-      { id: 'b', text: 'A full pipeline rebuild in place — drop and rebuild inventory_levels directly from bronze, since Delta Lake\'s snapshot isolation guarantees customer reads stay fully consistent throughout the entire multi-hour rebuild window with zero visible impact.', isCorrect: false },
-      { id: 'c', text: "Selective replay via REPLACE WHERE run directly against the live table during business hours, since REPLACE WHERE is defined to be atomic across the entire predicate's matching partitions regardless of how large the affected partition set is.", isCorrect: false },
-      { id: 'd', text: "There's no way to avoid some visible downtime here — any reprocessing strategy applied to a table serving continuous live read traffic necessarily produces at least a brief window where reads see partially-updated data, no matter which approach is used.", isCorrect: false },
+      { id: 'a', text: 'Drop inventory_levels and rebuild it from bronze, since Delta snapshot isolation keeps reads consistent through the whole rebuild.', isCorrect: false },
+      { id: 'b', text: 'Build inventory_levels_v2 beside it, check it, then repoint the view customers read to v2, keeping the old table as the way back.', isCorrect: true },
+      { id: 'c', text: 'Run REPLACE WHERE on the live table during business hours, since it is atomic, so customers only ever see old or new rows.', isCorrect: false },
+      { id: 'd', text: 'Accept that any reprocessing of a table under constant reads shows customers some partly updated data, whichever approach is used.', isCorrect: false },
     ],
     explanation:
-      'Blue/green is the reprocessing strategy purpose-built for exactly this constraint - zero-downtime is a property of NOT touching the table consumers are reading until the moment of an atomic view swap, not a property Delta gives you automatically on any in-place rebuild.',
+      'Blue/green leaves the table customers read untouched until the checked copy is ready, then switches the view in one step, with the old table still there to switch back to. Dropping the table leaves nothing to read. REPLACE WHERE is atomic but publishes the new rows straight away with no chance to check them first.',
     tags: ['gold-reprocessing'],
     concepts: ['gld-reprocessing'],
   },
@@ -737,20 +800,20 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "A team needs to backfill just the last 3 days of a gold table after a minor bug, but reaches for a full versioned blue/green rebuild (parallel _v2 table, full historical replay from bronze) because 'that's the safest option.' What's the actual downside of defaulting to this for a small, targeted fix?",
+      "To backfill just the last 3 days of a gold table after a minor bug, a team builds a full blue/green copy, replaying the whole table's history into a _v2 table, because \"it is the safest option\". What is the downside of using that for a small fix?",
     options: [
-      { id: 'a', text: "It's significant wasted cost and time for no real benefit — a blue/green rebuild replays the ENTIRE table's history to build _v2, when a selective REPLACE WHERE/MERGE scoped to just the last 3 days would fix the same bug at a fraction of the compute and turnaround time, with equivalent correctness for a change this narrow in scope.", isCorrect: true },
-      { id: 'b', text: 'There is no real downside — a blue/green rebuild is strictly the safest reprocessing option in every situation, so defaulting to it for even a small, 3-day fix is always the correct engineering choice regardless of the extra cost.', isCorrect: false },
-      { id: 'c', text: 'The downside is that blue/green rebuilds are only supported for tables under 1 TB in Delta Lake, so this approach would fail outright on any larger gold table rather than simply being more expensive than necessary.', isCorrect: false },
-      { id: 'd', text: 'The downside is purely aesthetic — a _v2 table left behind after the swap clutters the catalog\'s naming, but there is no actual difference in compute cost or turnaround time between a blue/green rebuild and a selective 3-day patch.', isCorrect: false },
+      { id: 'a', text: 'It is strictly the safest approach in every case, so reaching for it even on a 3-day fix is always right whatever it costs.', isCorrect: false },
+      { id: 'b', text: 'It replays the whole table to fix 3 days; a REPLACE WHERE or MERGE on those days gives the same result for far less compute and time.', isCorrect: true },
+      { id: 'c', text: 'Blue/green copies are only supported for tables under 1 TB, so the approach fails outright on a larger gold table.', isCorrect: false },
+      { id: 'd', text: "The only cost is a leftover _v2 table that clutters the catalog; the compute and time are the same as a 3-day patch, and nothing else changes.", isCorrect: false },
     ],
     explanation:
-      'This closes the loop on all three reprocessing scenarios in this topic: the "safest" strategy isn\'t free, and reaching for the heaviest tool by default wastes real compute and time when a scoped fix would do the job with equivalent correctness.',
+      'The safest-looking option is not free. A blue/green rebuild recomputes everything to fix 3 days, while a scoped replay recomputes only the damaged slice and is just as correct for a change this narrow. Match the tool to the size of the damage.',
     tags: ['gold-reprocessing'],
     concepts: ['gld-reprocessing'],
   },
 
-  // Discrimination question
+  // Telling two failures apart
   {
     id: 'gld-mcq-disc1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -758,15 +821,15 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     question:
-      "Both the Fan-Out Bug and the Non-Additive Aggregation Trap can produce a gold revenue-like number that's inflated far above the true value. What's the concrete difference between the two, in terms of WHERE the inflation comes from?",
+      "Both the Fan-Out Bug and summing a measure that cannot be summed can leave a gold revenue-like number far above the true value. Where does the inflation come from in each?",
     options: [
-      { id: 'a', text: "The Fan-Out Bug's inflation comes from a join — a 1-to-many join without pre-aggregating causes a parent value to be repeated once per matching child row. The Non-Additive Aggregation Trap's inflation comes from an aggregation — summing a semi-additive or non-additive measure (like a balance or DAU) across a dimension, usually time, that it isn't valid to sum across, with no join involved at all.", isCorrect: true },
-      { id: 'b', text: "There's no real difference — both names describe the exact same underlying mechanism (a join multiplying a value across duplicate rows), just discovered independently in two different domains (order data and account-balance data) and given two different names for historical reasons.", isCorrect: false },
-      { id: 'c', text: 'The Fan-Out Bug only happens in streaming pipelines, while the Non-Additive Aggregation Trap only happens in batch pipelines — the distinguishing factor is the trigger mode of the job, not anything about joins or aggregation.', isCorrect: false },
-      { id: 'd', text: 'The Fan-Out Bug is a bronze-layer issue caused by schema drift, while the Non-Additive Aggregation Trap is a silver-layer issue caused by late-arriving data — the distinguishing factor is which hop of the medallion architecture the bug originates in.', isCorrect: false },
+      { id: 'a', text: 'The Fan-Out Bug happens only in streaming pipelines and the summing problem only in batch, so the trigger mode tells them apart.', isCorrect: false },
+      { id: 'b', text: "They are one mechanism, a join multiplying a value across duplicate rows, which was found in two domains and named twice by different teams over the years.", isCorrect: false },
+      { id: 'c', text: 'The Fan-Out Bug comes from schema drift in bronze and the summing problem from late-arriving data in silver, so the layer tells them apart.', isCorrect: false },
+      { id: 'd', text: "The Fan-Out Bug comes from a join repeating a parent value per child row; the other from a plain SUM across a dimension, usually time, with no join.", isCorrect: true },
     ],
     explanation:
-      "The practical test: does the inflated number involve a join between two tables of different grain (Fan-Out Bug), or a plain SUM() over one table's own rows across a dimension the measure isn't additive over (Non-Additive Aggregation Trap)? The predict-output questions earlier in this topic modeled each mechanism separately for exactly this reason.",
+      'Ask whether the inflated number involves a join between tables of different grain, which is the Fan-Out Bug, or only a SUM over one table\'s own rows across a dimension the measure cannot be added over, such as a balance across days. The fixes differ too: pre-aggregate before joining, or take a snapshot or a distinct count.',
     tags: ['fan-out-bug', 'non-additive-trap'],
     concepts: ['gld-fan-out-bug', 'gld-non-additive-trap'],
   },
@@ -781,28 +844,42 @@ print(correct_weekly_balance(daily_balances))`,
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
-    question: `A gold pipeline joins orders_df (order_id, order_amount) to line_items_df (order_id, sku, quantity - 1-to-many) to compute total_items per order alongside order_amount.
+    requires: ['groupBy', 'sum', 'quantity', 'total_items', '.join(', 'left'],
+    question: `A gold pipeline has two DataFrames: orders_df (order_id, order_amount, one row per order) and line_items_df (order_id, sku, quantity, many rows per order).
 
-Pre-aggregate line_items_df by order_id to compute total_items (SUM of quantity) BEFORE left-joining to orders_df, preventing Fan-Out Bug inflation of order_amount. Store the result in \`result\`.`,
-    starterCode: `# Pre-aggregate line_items_df and join to orders_df\nimport pyspark.sql.functions as F\n\nresult = None\n`,
+Build result: every order with its order_amount and a total_items column holding the sum of quantity over its line items. Orders with no line items must stay in result.
+
+Reduce line_items_df to one row per order BEFORE joining, so order_amount is not repeated for each line item.`,
+    starterCode: `import pyspark.sql.functions as F
+
+result = None
+`,
     solution: `line_item_totals = line_items_df.groupBy("order_id").agg(F.sum("quantity").alias("total_items"))
 result = orders_df.join(line_item_totals, on="order_id", how="left")
 # OR
 result = orders_df.join(
     line_items_df.groupBy("order_id").agg(F.sum("quantity").alias("total_items")),
-    on="order_id",
-    how="left"
-)`,
+    "order_id",
+    "left",
+)
+# OR
+totals = line_items_df.groupBy("order_id").agg(F.sum("quantity").alias("total_items"))
+result = orders_df.join(totals, orders_df.order_id == totals.order_id, "left").drop(totals.order_id)`,
     testCases: [
       {
         input: '',
         expectedOutput:
           'line_item_totals = line_items_df.groupBy("order_id").agg(F.sum("quantity").alias("total_items"))\nresult = orders_df.join(line_item_totals, on="order_id", how="left")',
         description:
-          'Pre-aggregates line_items_df by order_id with SUM(quantity) aliased total_items, then LEFT-joins those per-order totals to orders_df on order_id (so order_amount is not fanned out).',
+          'Groups line_items_df by order_id with SUM(quantity) as total_items, then left-joins those per-order totals to orders_df, so each order keeps one row and its order_amount is not repeated.',
       },
     ],
-    explanation: 'Pre-aggregating line_items_df by order_id before joining prevents fan-out inflation of order_amount.',
+    explanation:
+      'Grouping line_items_df by order_id first leaves one row per order, so the join cannot repeat an order\'s amount. A left join keeps orders that have no line items, with a NULL total_items. Joining first and then aggregating would repeat order_amount once per line item.',
+    hints: [
+      'What is the grain of the table you join in? It should match the grain of orders_df.',
+      'Which join type keeps an order that has no matching row?',
+    ],
     tieredHints: {
       apiSignature: 'df.groupBy(*cols).agg(*exprs)',
       skeleton: `line_item_totals = line_items_df.groupBy("order_id").____(F.____("quantity").alias("total_items"))\nresult = orders_df.____(line_item_totals, on="order_id", how="____")`,
@@ -817,28 +894,39 @@ result = orders_df.join(
     topic: Topic.GOLD_LAYER_DESIGN,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
-    requires: ['replaceWhere'],
-    question: `A gold sales_summary table partitioned by sales_date has a bug affecting only sales_date = '2024-03-15'.
+    requires: ['replaceWhere', 'overwrite', 'sales_date', '2024-03-15'],
+    question: `The gold Delta table sales_summary has a bug in the rows for sales_date = '2024-03-15' only. The DataFrame corrected_df holds the corrected rows for that one date.
 
-Write PySpark code to overwrite ONLY the sales_date = '2024-03-15' partition in sales_summary using corrected_df via Delta replaceWhere.`,
-    starterCode: `# Overwrite partition sales_date = '2024-03-15' using replaceWhere\n`,
+Write PySpark code that replaces only the rows for sales_date = '2024-03-15' in sales_summary with the rows of corrected_df, using Delta's replaceWhere. Every other date in the table must stay as it is.`,
+    starterCode: `# Replace only the sales_date = '2024-03-15' rows of sales_summary
+`,
     solution: `corrected_df.write \\
     .format("delta") \\
     .mode("overwrite") \\
     .option("replaceWhere", "sales_date = '2024-03-15'") \\
     .saveAsTable("sales_summary")
 # OR
-corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = '2024-03-15'").saveAsTable("sales_summary")`,
+corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = '2024-03-15'").saveAsTable("sales_summary")
+# OR
+(corrected_df.write
+    .mode("overwrite")
+    .option("replaceWhere", "sales_date = DATE'2024-03-15'")
+    .saveAsTable("sales_summary"))`,
     testCases: [
       {
         input: '',
         expectedOutput:
           'corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sales_date = \'2024-03-15\'").saveAsTable("sales_summary")',
         description:
-          'Must use mode overwrite with the replaceWhere option, so a naked overwrite with no replaceWhere fails outright. The grader checks that replaceWhere is present but does not itself verify the sales_date literal, so an answer that has replaceWhere but names a wrong partition value reaches the self-grade panel rather than failing.',
+          'Overwrites in Delta with replaceWhere set to the sales_date predicate, so only that date is replaced. A plain overwrite with no replaceWhere fails.',
       },
     ],
-    explanation: 'replaceWhere overwrites only the matching partition slice without affecting existing historical partitions.',
+    explanation:
+      'With mode("overwrite") alone, Delta replaces the whole table with the DataFrame. The replaceWhere option limits the overwrite to rows matching its predicate, so only the 2024-03-15 rows are replaced, in one atomic commit. Rows in corrected_df that do not match the predicate make the write fail.',
+    hints: [
+      'A DataFrameWriter option set with .option(key, value) can narrow an overwrite.',
+      'The predicate is a SQL condition written as a string.',
+    ],
     tieredHints: {
       apiSignature: 'dfWriter.option(key, value)',
       skeleton: `corrected_df.____ \\\n    .____("delta") \\\n    .____("overwrite") \\\n    .____("replaceWhere", "sales_date = '2024-03-15'") \\\n    .____("sales_summary")`,
@@ -854,19 +942,20 @@ corrected_df.write.format("delta").mode("overwrite").option("replaceWhere", "sal
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'Order the steps to implement a zero-downtime versioned gold swap: build corrected table sales_summary_v2, validate it, and atomically update sales_summary_view.',
+      'The DataFrame fixed_df holds the corrected rows of a gold table that readers query through the view gold_orders. Order the lines that write the corrected rows to a new table gold_orders_v2, check the new table, and only then repoint the view. Two lines do not belong.',
     correctOrder: [
-      'build_v2_df = build_corrected_gold_transform(source_df)',
-      'build_v2_df.write.format("delta").mode("overwrite").saveAsTable("sales_summary_v2")',
-      'validate_v2 = run_validation_checks("sales_summary_v2")',
-      'spark.sql("ALTER VIEW sales_summary_view AS SELECT * FROM sales_summary_v2")',
+      'fixed_df.write.format("delta").mode("overwrite").saveAsTable("gold_orders_v2")',
+      'ok = spark.table("gold_orders_v2").count() == fixed_df.count()',
+      'if ok:',
+      '    spark.sql("ALTER VIEW gold_orders AS SELECT * FROM gold_orders_v2")',
     ],
     distractorLines: [
-      'spark.sql("DROP TABLE sales_summary")',
-      'build_v2_df.write.format("delta").mode("overwrite").saveAsTable("sales_summary")',
+      'spark.sql("DROP VIEW gold_orders")',
+      'fixed_df.write.format("delta").mode("overwrite").saveAsTable("gold_orders")',
     ],
-    solution: `build_v2_df = build_corrected_gold_transform(source_df)\nbuild_v2_df.write.format("delta").mode("overwrite").saveAsTable("sales_summary_v2")\nvalidate_v2 = run_validation_checks("sales_summary_v2")\nspark.sql("ALTER VIEW sales_summary_view AS SELECT * FROM sales_summary_v2")`,
-    explanation: 'Atomic view repointing ensures zero downtime for downstream consumers during a versioned gold rebuild.',
+    solution: `fixed_df.write.format("delta").mode("overwrite").saveAsTable("gold_orders_v2")\nok = spark.table("gold_orders_v2").count() == fixed_df.count()\nif ok:\n    spark.sql("ALTER VIEW gold_orders AS SELECT * FROM gold_orders_v2")`,
+    explanation:
+      'The new table is written beside the live one, checked, and only then does the view switch to it in a single statement, so readers never see a half-built table. Dropping the view first would leave readers with nothing, and writing over gold_orders itself skips the check and the old table as a way back. The old table stays in place until the new one is trusted.',
     tags: ['gold-reprocessing'],
     concepts: ['gld-reprocessing'],
   },
