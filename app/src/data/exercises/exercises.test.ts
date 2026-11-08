@@ -4,7 +4,7 @@
  * every folder has an entry, each Python Fundamentals, Python Advanced, Django,
  * Django Advanced & Deployment, DRF Production Patterns, Celery & Background
  * Tasks, Testing & CI/CD, Production Infrastructure, Python Mastery & Advanced and
- * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform and ELT with Spark SQL & Python topics, test files and modules have names unique across exercises
+ * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform, ELT with Spark SQL & Python, Incremental Data Processing and Production Pipelines topics, test files and modules have names unique across exercises
  * so pytest can collect them all from the repo root, and exercises/check_exercises.py passes (each
  * exercise's tests fail on its starter and pass on its reference solution), so
  * an exercise cannot rot.
@@ -79,7 +79,7 @@ describe('exercise list', () => {
     expect(inSection.map(e => e.topicKeys)).toEqual(units);
   });
 
-  it.each(['Lakehouse Platform', 'ELT with Spark SQL & Python'])('has an exercise for every Databricks %s topic, in path order', section => {
+  it.each(['Lakehouse Platform', 'ELT with Spark SQL & Python', 'Incremental Data Processing', 'Production Pipelines'])('has an exercise for every Databricks %s topic, in path order', section => {
     expect(DATABRICKS_SECTIONS[section]).toBeDefined();
     const units = getSectionUnits(section).map(([, keys]) => keys);
     const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
