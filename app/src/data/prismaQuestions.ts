@@ -570,6 +570,35 @@ export default prisma;`,
     concepts: ['prisma-schema-relations', 'prisma-include-select'],
   },
 
+  // Predict: which keys include and a nested select return
+  {
+    id: 'prisma-include-select-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_PRISMA,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'The Post table holds one post, "Hello", written by the user Ann. The schema is the usual pair: `User` has `id`, `email`, `name` and `posts Post[]`, and `Post` has `id`, `title`, `authorId` and `author User`, in that order. What do the three `console.log` calls print? Type the three lines exactly as printed, keys separated by a comma and a space.',
+    code: `const full = await prisma.post.findFirst({ include: { author: true } });
+const slim = await prisma.post.findFirst({
+  select: { title: true, author: { select: { name: true } } },
+});
+
+console.log(Object.keys(full!).join(", "));
+console.log(Object.keys(slim!).join(", "));
+console.log(Object.keys(slim!.author).join(", "));`,
+    expectedOutput: `id, title, authorId, author
+title, author
+name`,
+    explanation: '`include` keeps every scalar field of the post and adds the relation on top, so `full` has `id`, `title`, the foreign key `authorId`, then `author`. `select` returns only the fields it lists, so `slim` has just `title` and `author`. The nested `select` applies the same rule inside the relation: `slim.author` holds only `name`, with no `id` or `email`. Prisma 6 returns the keys in the order the select object lists them, and for `include` the scalar fields in schema order with the relation after them.',
+    hints: [
+      'Does `include` remove any of the post\'s own fields, the foreign key included?',
+      'A nested `select` narrows the related record the same way the outer one narrows the post',
+    ],
+    tags: ['prisma', 'include', 'select', 'nested-select', 'predict'],
+    concepts: ['prisma-include-select'],
+  },
+
   // 9. Coding: Cascading delete
   {
     id: 'prisma-9',
