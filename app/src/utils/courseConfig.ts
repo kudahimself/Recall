@@ -85,6 +85,8 @@ const DATA_ENG_TOPICS = new Set<string>([
   // Streaming
   Topic.DE_STREAM_LOGS, Topic.DE_EVENT_TIME_WINDOWS, Topic.DE_DELIVERY_GUARANTEES,
   Topic.DE_STREAM_STATE_JOINS,
+  // Distributed Data
+  Topic.DE_PARTITION_SKEW, Topic.DE_REPLICATION_CONSISTENCY, Topic.DE_STORAGE_ENGINES,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -496,8 +498,8 @@ export const DATABRICKS_PATH_ORDER = [
  * Being rewritten section by section as decisions and designs (a lesson per
  * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
  * explain cards in review); Moving Data, Storage & Files, Warehouses, Lakes
- * & Table Formats, Modeling for Analytics and Streaming are rewritten. The
- * older sections are MCQ-only, built as
+ * & Table Formats, Modeling for Analytics, Streaming and Distributed Data are
+ * rewritten. The older sections are MCQ-only, built as
  * many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
@@ -585,14 +587,17 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'State & Stream Joins': ['de_stream_state_joins'],
     },
   },
-  'Distributed Systems & Storage': {
+  // The sixth rewritten section. It absorbs the whole old Distributed Systems
+  // & Storage section (why distribute, partitioning, replication, LSM trees vs
+  // B-trees, compaction and bloom filters); their keys stay in DATA_ENG_TOPICS
+  // so stored scores still map to this course. It takes the old section's
+  // place, after Streaming, as in the course outline.
+  'Distributed Data': {
     weight: 'Step 7',
     topics: {
-      'Why Distribute?': ['de_why_distribute'],
-      'Partitioning & Sharding': ['de_partitioning'],
-      'Replication & Consistency': ['de_replication'],
-      'LSM Trees vs B-Trees': ['de_lsm_vs_btree'],
-      'Compaction & Bloom Filters': ['de_compaction_bloom'],
+      'Partitioning, Skew & Hot Keys': ['de_partition_skew'],
+      'Replication & Consistency': ['de_replication_consistency'],
+      'Storage Engines: B-Trees, LSM Trees & Bloom Filters': ['de_storage_engines'],
     },
   },
   'Operations, Quality & Modern DE': {
@@ -634,7 +639,7 @@ export const DATA_ENG_PATH_ORDER = [
   'Moving Data',
   'Modeling for Analytics',
   'Streaming',
-  'Distributed Systems & Storage',
+  'Distributed Data',
   'Operations, Quality & Modern DE',
   'Machines, Memory & Disks',
 ];

@@ -4,8 +4,9 @@
  * Section Storage & Files (the second rewritten section) comes first on the
  * path, then Warehouses, Lakes & Table Formats (the third), then Moving Data
  * (the first section of the decisions-and-designs rewrite), then Modeling
- * for Analytics (the fourth), and then Streaming (the fifth): every topic of each. Each rule card teaches the decision rule as its form
- * and works one scenario on small tables; the SQL is T-SQL that
+ * for Analytics (the fourth), then Streaming (the fifth), and then Distributed
+ * Data (the sixth): every topic of each. Each rule card teaches the decision
+ * rule as its form and works one scenario on small tables; the SQL is T-SQL that
  * check-lessons.js runs on sql.js. MERGE is not run there, so the worked
  * examples replace by key with DELETE and INSERT, and the idea names MERGE.
  *
@@ -1922,5 +1923,318 @@ o3
 o4`,
     },
     exercises: ['de-sjoin-1', 'de-sjoin-2', 'de-sjoin-3', 'de-sjoin-4', 'de-sjoin-5'],
+  },
+  {
+    id: 'de_partition_skew/1',
+    topicKeys: [Topic.DE_PARTITION_SKEW],
+    step: 1,
+    title: 'Partitioning, Skew & Hot Keys',
+    idea: [
+      lines(
+        'Data too big for one machine is split into partitions by a key, and each machine works on its partitions at the same time as the others.',
+        'Hash partitioning sends a row to hash(key) % N, which spreads the keys evenly; range partitioning gives each partition a range of key values, which keeps neighbouring keys together for range reads.',
+        'Either way, every row of one key lands in the same partition.',
+      ),
+      lines(
+        'A parallel step ends when its slowest partition ends, so the balance of rows per partition sets the time, not the total.',
+        'Skew is a few keys holding a big share of the rows: a NULL, a default such as \'unknown\', one huge customer.',
+        'Their partition is far bigger than the others, and more machines do not help, since one key still goes to one partition.',
+      ),
+      lines(
+        'Choose the key from the data and the jobs: many values, none of them dominant, and the key the main jobs group or join by, so their rows are already together.',
+        'A range on a key that grows with time sends every new row to the newest range, so that partition takes all the writes.',
+        'When one key is hot anyway, salt it: add a sub-key such as order_id % 8, work on the parts in parallel, then combine the partial results; for a join to a small table, broadcast the small table and move no rows at all.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `spread rows evenly           -> hash a key with many values, none dominant
+read ranges of the key       -> range partition (the newest range takes the writes)
+one key holds a big share    -> salt it, then combine the partial results
+join to a small table        -> broadcast the small table: no shuffle
+time of a step = time of its largest partition, not rows / machines`,
+    },
+    pitfall: lines(
+      'Adding machines to a skewed job.',
+      'Every row of the hot key still goes to one partition on one machine, so the step takes as long as before and the new machines finish early and wait.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'orders',
+          columns: ['order_id', 'customer_id', 'amount'],
+          rows: [
+            [1, 8, 10],
+            [2, 8, 20],
+            [3, 3, 15],
+            [4, 8, 5],
+            [5, 5, 30],
+            [6, 8, 25],
+            [7, 8, 10],
+            [8, 6, 40],
+            [9, 8, 15],
+            [10, 1, 20],
+            [11, 8, 30],
+            [12, 8, 5],
+          ],
+        },
+      ],
+      code: `-- rows per partition, hashing customer_id over 4
+SELECT customer_id % 4 AS part, COUNT(*) AS row_count
+FROM orders
+GROUP BY customer_id % 4
+ORDER BY part;
+
+-- customer 8 salted over the 4 by order_id % 4
+WITH salted AS (
+  SELECT CASE WHEN customer_id = 8 THEN order_id % 4
+              ELSE customer_id % 4 END AS part
+  FROM orders
+)
+SELECT part, COUNT(*) AS row_count
+FROM salted
+GROUP BY part
+ORDER BY part;
+
+-- step 2: add up each customer's partial sums
+WITH partial AS (
+  SELECT customer_id, order_id % 4 AS salt,
+         SUM(amount) AS part_sum
+  FROM orders
+  GROUP BY customer_id, order_id % 4
+)
+SELECT customer_id, SUM(part_sum) AS total
+FROM partial
+GROUP BY customer_id
+ORDER BY customer_id;`,
+      steps: [
+        'Customer 8, a marketplace, has 8 of the 12 orders, and the job totals amount per customer on 4 machines.',
+        'Lines 2-5: hashing customer_id puts all 8 of customer 8\'s orders in partition 0, which has 8 rows while the others have 1 or 2, so the job waits on one machine.',
+        'Lines 8-16: salting customer 8 by order_id % 4 spreads its orders over all four partitions, and the largest now holds 4 rows.',
+        'Lines 19-28: the salted job sums each customer by salt, and a second, small step adds up the parts, so customer 8\'s total is 120 either way.',
+        'Only the hot key needs a salt; the other customers keep one partition each.',
+      ],
+      output: `part | row_count
+0 | 8
+1 | 2
+2 | 1
+3 | 1
+
+part | row_count
+0 | 2
+1 | 4
+2 | 3
+3 | 3
+
+customer_id | total
+1 | 20
+3 | 15
+5 | 30
+6 | 40
+8 | 120`,
+    },
+    exercises: ['de-skew-1', 'de-skew-2', 'de-skew-3', 'de-skew-4', 'de-skew-5'],
+  },
+  {
+    id: 'de_replication_consistency/1',
+    topicKeys: [Topic.DE_REPLICATION_CONSISTENCY],
+    step: 1,
+    title: 'Replication & Consistency',
+    idea: [
+      lines(
+        'Replication keeps copies of the same data on several machines, so the data survives a machine failing and reads can be spread over the copies.',
+        'Most systems have one leader that takes the writes and sends each change, in order, through a replication log to its followers.',
+        'Each follower applies the log up to its own position, so at any moment the replicas can be at different points in it.',
+      ),
+      lines(
+        'The choice is when the leader tells the client a write is done.',
+        'Synchronous replication waits until a follower has the write: a failover loses nothing, but every write waits, and a follower that is down stops the writes that wait for it.',
+        'Asynchronous replication answers at once: writes are fast, but followers lag, so a read from one can be stale, and if the leader dies, the writes it had not yet sent are lost.',
+      ),
+      lines(
+        'A lagging follower breaks read-your-writes: a user saves and then reads their old value.',
+        'Read a user\'s own data from the leader for a short time after they write, or wait until the replica has reached their write\'s position.',
+        'Without a leader, a quorum does the same job: with N replicas, a write waits for W of them and a read asks R, and when W + R > N every read meets the latest write.',
+      ),
+      lines(
+        'When the network splits, a replica cut off from the majority must refuse requests (consistent) or answer with what it has (available, maybe stale): that is the choice the CAP theorem names.',
+        'Choose per kind of data: a balance or a unique name should refuse, a like count or a product page can answer.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `no acknowledged write may be lost -> synchronous to at least one follower
+writes must stay fast             -> asynchronous: reads lag, failover loses the tail
+a user must see their own write   -> read it from the leader, or wait for its position
+N replicas, no leader             -> W + R > N: every read meets the latest write
+network split                     -> refuse (consistent) or answer stale (available)`,
+    },
+    pitfall: lines(
+      'Treating a read replica as the database.',
+      'A job that writes to the leader and then checks its own write on a replica can find nothing and act again: charge a card twice, send a second email.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'writes',
+          columns: ['lsn', 'account_id', 'balance'],
+          rows: [
+            [101, 7, 50],
+            [102, 9, 20],
+            [103, 7, 80],
+            [104, 7, 65],
+            [105, 9, 0],
+          ],
+        },
+        {
+          name: 'replicas',
+          columns: ['replica_name', 'applied_lsn'],
+          rows: [
+            ['leader', 105],
+            ['f1', 105],
+            ['f2', 103],
+            ['f3', 101],
+          ],
+        },
+      ],
+      code: `-- account 7's balance, as each replica answers now
+SELECT r.replica_name, w.balance AS balance_7
+FROM replicas r
+JOIN writes w ON w.account_id = 7
+ AND w.lsn = (SELECT MAX(x.lsn) FROM writes x
+   WHERE x.account_id = 7
+     AND x.lsn <= r.applied_lsn)
+ORDER BY r.replica_name;
+
+-- each follower's lag behind the leader, in writes
+SELECT f.replica_name,
+       l.applied_lsn - f.applied_lsn AS writes_behind
+FROM replicas f
+JOIN replicas l ON l.replica_name = 'leader'
+WHERE f.replica_name <> 'leader'
+ORDER BY f.replica_name;
+
+-- writes lost if the leader died now and f2 took over
+SELECT lsn, account_id, balance
+FROM writes
+WHERE lsn > (SELECT applied_lsn FROM replicas
+             WHERE replica_name = 'f2')
+ORDER BY lsn;`,
+      steps: [
+        'writes is the leader\'s log, one position (lsn) per write, and the leader replicates it asynchronously to f1, f2 and f3.',
+        'Lines 2-8: each replica answers with the newest write for account 7 that it has applied, so the leader and f1 say 65, f2 says 80 and f3 says 50.',
+        'Lines 11-16: f1 is caught up, f2 is 2 writes behind and f3 is 4; that lag is how stale a read from each can be.',
+        'Lines 19-23: with async replication the leader has acknowledged writes 104 and 105, so promoting f2 would lose them.',
+        'Promote the follower with the highest position (f1 here), and wait for at least one follower on each write if none may be lost.',
+      ],
+      output: `replica_name | balance_7
+f1 | 65
+f2 | 80
+f3 | 50
+leader | 65
+
+replica_name | writes_behind
+f1 | 0
+f2 | 2
+f3 | 4
+
+lsn | account_id | balance
+104 | 7 | 65
+105 | 9 | 0`,
+    },
+    exercises: ['de-replica-1', 'de-replica-2', 'de-replica-3', 'de-replica-4', 'de-replica-5'],
+  },
+  {
+    id: 'de_storage_engines/1',
+    topicKeys: [Topic.DE_STORAGE_ENGINES],
+    step: 1,
+    title: 'Storage Engines: B-Trees, LSM Trees & Bloom Filters',
+    idea: [
+      lines(
+        'A storage engine decides how a database keeps its keys on disk, and the two common designs make opposite trades.',
+        'A B-tree keeps keys sorted in fixed-size pages and changes a page in place: a lookup reads one path from the root to a leaf, three or four pages, and a write rewrites the page that holds its key, a random write.',
+      ),
+      lines(
+        'An LSM tree (log-structured merge tree) turns writes into appends.',
+        'A write goes to a log on disk, for safety, and into a sorted table in memory (the memtable); when that fills, it is written out once as a sorted file that is never changed again.',
+        'An update or a delete is just a newer entry, a delete being a tombstone, and a read checks the memtable and then the files newest first, taking the first entry it finds for the key.',
+      ),
+      lines(
+        'Files pile up, so reads check more of them and old versions take space.',
+        'Compaction merges files, keeps the newest entry per key, drops tombstones once no older file can hold the key, and writes fewer, bigger files: it rewrites the same data again and again in exchange for fast reads.',
+        'A bloom filter per file answers "definitely not here" or "maybe", so a lookup skips most files; a "maybe" can be wrong (a false positive), a "no" cannot, and more bits per key make the wrong "maybe"s rarer.',
+      ),
+      lines(
+        'So choose by the workload: an LSM tree for heavy, steady writes and reads of recent keys, a B-tree for read-heavy data with updates in place and range scans.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `heavy writes, reads of recent keys     -> LSM tree: appends now, merges later
+read-heavy, updates in place, ranges   -> B-tree: one path of pages per lookup
+LSM read: memtable, then files newest first; the first entry found wins
+compaction: newest entry per key, tombstones dropped, fewer files
+bloom filter: "no" is certain, "maybe" can be wrong; skips files on lookups, not scans`,
+    },
+    pitfall: lines(
+      'Expecting a delete to give space back in an LSM tree.',
+      'A delete adds a tombstone; the old value and the tombstone stay on disk until compaction rewrites every file that holds the key, so a large delete first makes the table bigger and its reads slower.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'entries',
+          columns: ['source', 'written_seq', 'fruit', 'stock'],
+          rows: [
+            ['sst1', 1, 'apple', 3],
+            ['sst1', 1, 'banana', 7],
+            ['sst1', 1, 'cherry', 2],
+            ['sst2', 2, 'apple', 5],
+            ['sst2', 2, 'date', 4],
+            ['sst3', 3, 'banana', null],
+            ['sst3', 3, 'cherry', 9],
+            ['memtable', 4, 'apple', 6],
+          ],
+        },
+      ],
+      code: `-- what a read of each key returns: its newest entry
+SELECT e.fruit, e.stock, e.source
+FROM entries e
+WHERE e.written_seq = (
+  SELECT MAX(x.written_seq) FROM entries x
+  WHERE x.fruit = e.fruit)
+ORDER BY e.fruit;
+
+-- compaction of sst1, sst2 and sst3 into one file
+SELECT e.fruit, e.stock
+FROM entries e
+WHERE e.source <> 'memtable'
+  AND e.stock IS NOT NULL
+  AND e.written_seq = (
+    SELECT MAX(x.written_seq) FROM entries x
+    WHERE x.fruit = e.fruit AND x.source <> 'memtable')
+ORDER BY e.fruit;`,
+      steps: [
+        'Three files were flushed from memory in turn (sst1 the oldest), and the memtable holds the newest write; a NULL stock is a tombstone, a delete.',
+        'Lines 2-7: a read takes each key\'s newest entry, so apple comes from the memtable, banana reads as deleted, and cherry and date come from the files.',
+        'Lines 10-17: compaction keeps the newest entry per key among the three files and drops banana, whose newest entry is a tombstone in the oldest files.',
+        'The three files held 7 entries; the compacted file holds 3, so a read has one file to check where it had three, and the old versions\' space comes back.',
+        'The memtable\'s apple = 6 stays newer than the compacted file\'s apple = 5 until it is flushed and compacted in turn.',
+      ],
+      output: `fruit | stock | source
+apple | 6 | memtable
+banana | NULL | sst3
+cherry | 9 | sst3
+date | 4 | sst2
+
+fruit | stock
+apple | 5
+cherry | 9
+date | 4`,
+    },
+    exercises: ['de-engine-1', 'de-engine-2', 'de-engine-3', 'de-engine-4', 'de-engine-5'],
   },
 ];
