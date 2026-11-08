@@ -32,6 +32,7 @@ npm run build                              # production build into app/build/
 npm test                                   # run the test suite (watch mode)
 npm test -- --testPathPattern=spacedRep    # run a single test file
 npx tsc --noEmit                           # type-check without emitting
+npm run lint                               # ESLint over src/ (react-app config)
 ```
 
 ### Authoring / quality scripts

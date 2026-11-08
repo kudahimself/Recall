@@ -45,14 +45,15 @@ describe('find-node.sh', () => {
     }
   });
 
-  it('fails cleanly when node is nowhere to be found', () => {
+  // Only run the negative case on machines that do not keep a node in /usr/local/bin.
+  const itWithoutLocalNode = fs.existsSync('/usr/local/bin/node') ? it.skip : it;
+  itWithoutLocalNode('fails cleanly when node is nowhere to be found', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'recall-home-'));
     try {
       const r = spawnSync('bash', ['-c', '. "$1"; recall_find_node', 'x', path.join(LAUNCHER, 'find-node.sh')], {
         env: { HOME: home, PATH: '/nonexistent' } as unknown as NodeJS.ProcessEnv, encoding: 'utf8',
       });
-      // Only skip the negative case on machines that keep a node in /usr/local/bin.
-      if (!fs.existsSync('/usr/local/bin/node')) expect(r.status).not.toBe(0);
+      expect(r.status).not.toBe(0);
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }
