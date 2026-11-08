@@ -527,8 +527,9 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   },
   // The first rewritten section (decisions and designs). It absorbs the old
   // ETL / ELT, CDC and retries topics, whose keys stay in DATA_ENG_TOPICS so
-  // stored scores still map to this course. Placed at Step 3 by owner
-  // decision: a learner past Step 2 meets it before the old later steps.
+  // stored scores still map to this course. Placed at Step 4 by owner
+  // decision, after Storage & Files and Architecture: a learner past them
+  // meets it before the old later steps.
   'Moving Data': {
     weight: 'Step 4',
     topics: {

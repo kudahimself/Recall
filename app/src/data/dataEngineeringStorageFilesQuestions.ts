@@ -688,7 +688,7 @@ const dataSkipping: Question[] = [
     unit: 'rows',
     tempting: [
       { answer: '1200', why: 'f2 row group 1 is the only group made of 2026-11-03 alone, but f1 row group 3 runs from 11-02 to 11-03 and may hold matching rows too.' },
-      { answer: '5500', why: 'That is every row in both files. Three of the six row groups have ranges that rule the day out.' },
+      { answer: '5500', why: 'That is every row in both files. Four of the six row groups have ranges that rule the day out.' },
     ],
     explanation:
       'Two row groups can contain 2026-11-03: f1 group 3 (11-02 to 11-03, 800 rows) and f2 group 1 (11-03 to 11-03, 1,200 rows). The other four ranges end before the day or start after it.\n' +
@@ -856,7 +856,7 @@ const dataSkipping: Question[] = [
     unit: 'files',
     tempting: [
       { answer: '2', why: 'Two is the files in the load_date=2026-11-02 folder. Folders can be pruned only by a filter on load_date, and late events for 11-02 landed in later folders too.' },
-      { answer: '6', why: 'Six is every file. The statistics rule out the two whose event_date range is 11-03 to 11-04 or 11-04 alone.' },
+      { answer: '6', why: 'Six is every file. The statistics rule out the two whose event_date range is 11-03 alone or 11-04 alone.' },
     ],
     explanation:
       'The filter is on event_date, not on the partition column, so no folder can be dropped by its name. The engine falls back on the file statistics and reads the four files whose range contains 2026-11-02: both files of 11-02, load_date 11-03 file a and load_date 11-04 file a.\n' +
