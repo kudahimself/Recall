@@ -870,7 +870,7 @@ export default function EditForm({ post }: Props) {
   },
 
   // =====================================================================
-  // CHECKPOINT 5: After Advanced Patterns (Topic.NEXT_URL_STATE) — 3 questions
+  // CHECKPOINT 5: After Advanced Patterns (Topic.NEXT_URL_STATE): 3 questions
   // =====================================================================
 
   {
@@ -880,50 +880,21 @@ export default function EditForm({ post }: Props) {
     topic: Topic.NEXT_URL_STATE,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build a Searchable, Filterable Product Page
+    question: 'Build a searchable, filterable product page whose filter state lives entirely in the URL, so a link reproduces the view and Back and Forward step through the changes.\n\n`app/products/page.tsx`, a Server Component:\n- Await the `searchParams` prop (a promise in Next.js 15) and read "q" (default ""), "category" (default "all"), "sort" (default "newest") and "page" (default "1", converted to a number)\n- Load the results with `await getProducts({ q, category, sort, page })` from "@/lib/products"; it returns `{ products, totalPages }`, and each product has `id` and `name`\n- Render `<FilterBar />`, then the product names, then one next/link `Link` per page from 1 to `totalPages`, each keeping every current param and setting only "page"\n\n`components/FilterBar.tsx`, a Client Component:\n- A search input, a category `<select>` (all, electronics, clothing, books) and a sort `<select>` (newest, price-asc, price-desc), each showing the value now in the URL\n- A change copies the current params, sets the changed one (or deletes it when it is empty or "all"), deletes "page" so the new results start at page 1, and pushes the new URL\n- The search input keeps its text in local state and updates the URL 300 ms after typing stops',
+    starterCode: `// app/products/page.tsx (Server Component)
+import Link from "next/link";
+import FilterBar from "@/components/FilterBar";
+import { getProducts } from "@/lib/products";
 
-Create a product listing page that stores all filter state in the URL:
-1. **Server Component page** — reads searchParams for "q" (search query), "category", "sort", and "page"
-2. **Client Component FilterBar** — updates the URL using useRouter + useSearchParams when the user changes filters
-3. The page should work with direct URL access (shareable links) and browser back/forward
+export default async function ProductsPage({ searchParams }) {
+}
 
-Show both the Server Component page and the Client Component FilterBar.`,
-    starterCode: `// ==========================================
-// app/products/page.tsx — Server Component
-// ==========================================
+// components/FilterBar.tsx (Client Component)
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-// TODO: Define the searchParams type
-// In Next.js App Router, page components receive searchParams as a prop
-
-// TODO: Export default async function ProductsPage
-// - Receive { searchParams } prop
-// - Extract q, category, sort (default: 'newest'), page (default: '1')
-// - Fetch products from API or DB using these filters
-// - Render <FilterBar /> (Client Component) with current filter values
-// - Render the product grid
-// - Render pagination controls
-
-// ==========================================
-// components/FilterBar.tsx — Client Component
-// ==========================================
-'use client';
-
-// TODO: Import useRouter, useSearchParams, useCallback from appropriate packages
-
-// TODO: Export FilterBar component that:
-// - Uses useSearchParams() to read current URL params
-// - Uses useRouter() to push new URLs
-// - Has a helper function updateParams(key, value) that:
-//   1. Creates a new URLSearchParams from current params
-//   2. Sets or deletes the param
-//   3. Resets page to 1 when filters change
-//   4. Calls router.push with the new query string
-// - Renders:
-//   - Search input (updates 'q' param, consider debouncing)
-//   - Category dropdown (updates 'category' param)
-//   - Sort dropdown (updates 'sort' param)
-// - All inputs reflect the current URL state (controlled components)
-`,
+export default function FilterBar() {
+}`,
     testCases: [
       {
         input: 'Server reads searchParams',
@@ -941,184 +912,141 @@ Show both the Server Component page and the Client Component FilterBar.`,
         description: 'Resets pagination to page 1 when filters change',
       },
     ],
-    solution: `// ==========================================
-// app/products/page.tsx
-// ==========================================
-import FilterBar from '@/components/FilterBar';
+    solution: `// app/products/page.tsx (Server Component)
+import Link from "next/link";
+import FilterBar from "@/components/FilterBar";
+import { getProducts } from "@/lib/products";
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  image: string;
-}
+export default async function ProductsPage({ searchParams }) {
+  const query = await searchParams;
+  const q = query.q ?? "";
+  const category = query.category ?? "all";
+  const sort = query.sort ?? "newest";
+  const page = Number(query.page ?? "1");
+  const { products, totalPages } = await getProducts({ q, category, sort, page });
 
-interface PageProps {
-  searchParams: {
-    q?: string;
-    category?: string;
-    sort?: string;
-    page?: string;
-  };
-}
-
-async function getProducts(params: PageProps['searchParams']): Promise<{
-  products: Product[];
-  totalPages: number;
-}> {
-  const query = new URLSearchParams();
-  if (params.q) query.set('q', params.q);
-  if (params.category) query.set('category', params.category);
-  query.set('sort', params.sort || 'newest');
-  query.set('page', params.page || '1');
-
-  const res = await fetch(\`https://api.example.com/products?\${query}\`, {
-    next: { revalidate: 60 },
-  });
-  return res.json();
-}
-
-export default async function ProductsPage({ searchParams }: PageProps) {
-  const { products, totalPages } = await getProducts(searchParams);
-  const currentPage = parseInt(searchParams.page || '1');
+  function pageHref(n) {
+    const params = new URLSearchParams(query);
+    params.set("page", String(n));
+    return \`/products?\${params.toString()}\`;
+  }
 
   return (
-    <main className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Products</h1>
-
+    <main>
+      <h1>Products</h1>
       <FilterBar />
-
-      <div className="grid grid-cols-3 gap-4 mt-6">
+      <ul>
         {products.map((product) => (
-          <div key={product.id} className="border rounded p-4">
-            <h3 className="font-semibold">{product.name}</h3>
-            <p className="text-gray-600">{product.category}</p>
-            <p className="text-lg font-bold">\${product.price}</p>
-          </div>
+          <li key={product.id}>{product.name}</li>
         ))}
-      </div>
-
-      {products.length === 0 && (
-        <p className="text-gray-500 text-center py-12">No products found</p>
-      )}
-
-      <div className="flex gap-2 mt-6 justify-center">
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <a
-            key={page}
-            href={\`?page=\${page}\`}
-            className={\`px-3 py-1 rounded \${page === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-200'}\`}
-          >
-            {page}
-          </a>
+      </ul>
+      {products.length === 0 && <p>No products found</p>}
+      <nav>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+          <Link key={n} href={pageHref(n)} aria-current={n === page ? "page" : undefined}>
+            {n}
+          </Link>
         ))}
-      </div>
+      </nav>
     </main>
   );
 }
 
-// ==========================================
-// components/FilterBar.tsx
-// ==========================================
-'use client';
+// components/FilterBar.tsx (Client Component)
+"use client";
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useState, useEffect } from 'react';
-
-const CATEGORIES = ['All', 'Electronics', 'Clothing', 'Home', 'Books'];
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'name', label: 'Name A-Z' },
-];
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function FilterBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
+  const [text, setText] = useState(searchParams.get("q") ?? "");
 
-  const updateParams = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value && value !== 'All') {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-      // Reset to page 1 when filters change
-      if (key !== 'page') {
-        params.delete('page');
-      }
-      router.push(\`?\${params.toString()}\`);
-    },
-    [searchParams, router]
-  );
+  function updateParam(key, value) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && value !== "all") {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    params.delete("page"); // new results start at page 1
+    router.push(\`\${pathname}?\${params.toString()}\`);
+  }
 
-  // Debounce search input
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const currentQ = searchParams.get('q') || '';
-      if (searchInput !== currentQ) {
-        updateParams('q', searchInput);
-      }
-    }, 300);
+    if (text === (searchParams.get("q") ?? "")) return;
+    const timer = setTimeout(() => updateParam("q", text), 300);
     return () => clearTimeout(timer);
-  }, [searchInput, searchParams, updateParams]);
+  }, [text]);
 
   return (
-    <div className="flex gap-4 items-center flex-wrap">
+    <div>
       <input
-        type="text"
-        placeholder="Search products..."
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        className="border rounded px-3 py-2 w-64"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Search products"
       />
-
       <select
-        value={searchParams.get('category') || 'All'}
-        onChange={(e) => updateParams('category', e.target.value)}
-        className="border rounded px-3 py-2"
+        value={searchParams.get("category") ?? "all"}
+        onChange={(e) => updateParam("category", e.target.value)}
       >
-        {CATEGORIES.map((cat) => (
-          <option key={cat} value={cat}>{cat}</option>
-        ))}
+        <option value="all">All</option>
+        <option value="electronics">Electronics</option>
+        <option value="clothing">Clothing</option>
+        <option value="books">Books</option>
       </select>
-
       <select
-        value={searchParams.get('sort') || 'newest'}
-        onChange={(e) => updateParams('sort', e.target.value)}
-        className="border rounded px-3 py-2"
+        value={searchParams.get("sort") ?? "newest"}
+        onChange={(e) => updateParam("sort", e.target.value)}
       >
-        {SORT_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
+        <option value="newest">Newest</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
       </select>
     </div>
   );
 }`,
-    explanation: `This pattern makes filter state shareable and bookmarkable:
-
-1. **URL as single source of truth** — All filter state lives in the URL search params. This means: links are shareable ("here are products filtered by Electronics"), browser back/forward works naturally, and bookmarks preserve the exact view.
-
-2. **Server Component reads, Client Component writes** — The page (Server Component) reads searchParams and fetches matching data on the server. The FilterBar (Client Component) writes new params to the URL. This is a clean separation.
-
-3. **router.push vs router.replace** — push adds to browser history (back button works), replace doesn't. For search-as-you-type, you might prefer replace to avoid flooding the history.
-
-4. **Page reset on filter change** — When a user changes category, they should go back to page 1, not stay on page 5 of the old results. Deleting the page param accomplishes this.
-
-5. **Debounced search** — The search input debounces URL updates to avoid triggering a server re-render on every keystroke. Category and sort update immediately since they're select elements (single change event).`,
+    explanation: 'The URL is the single source of truth, which is what makes a link, a refresh and Back and Forward all show the same view.\n\n1. The server reads: in Next.js 15 the page awaits its searchParams promise, converts page with Number (a param is always text, so "2" + 1 would be "21"), and fetches the matching products, so the first HTML is already filtered.\n\n2. The page links keep the filters: each href is a copy of every current param with only page changed. A bare `?page=2` link would drop the search, the category and the sort.\n\n3. The client writes: FilterBar copies the current params with new URLSearchParams(searchParams.toString()), changes one key, and navigates; Next.js renders the server page again with the new searchParams. Because the selects read their value from useSearchParams, they follow Back and Forward too.\n\n4. A filter change deletes page: page 5 of the old results means nothing for the new ones.\n\n5. The search box debounces: its text lives in local state so typing is instant, and the URL changes 300 ms after the last keystroke, so typing a word is one server render, not one per letter. Selects fire one change event each, so they navigate at once. router.replace is a reasonable choice for the search box if Back should not step through each search.',
     hints: [
-      'new URLSearchParams(searchParams.toString()) creates a mutable copy of current params',
-      'router.push with just a query string (?key=value) keeps the current path',
-      'Delete the "page" param when other filters change to reset pagination',
+      'searchParams is a promise in Next.js 15, and every value in it is a string',
+      'new URLSearchParams(searchParams.toString()) is a writable copy of the current params',
+      'Delete "page" whenever another filter changes',
     ],
     tieredHints: {
-      apiSignature: 'useSearchParams(): ReadonlyURLSearchParams; useRouter(): AppRouterInstance; URLSearchParams.prototype.set(name, value): void',
-      skeleton: '// components/FilterBar.tsx\n"use client";\nimport { useRouter, useSearchParams } from "next/navigation";\n\nexport default function FilterBar() {\n  const router = useRouter();\n  const searchParams = useSearchParams();\n\n  const updateParams = useCallback(\n    (key: string, value: string) => {\n      const params = ____;\n      if (value && value !== "All") {\n        params.set(key, value);\n      } else {\n        params.delete(key);\n      }\n      if (key !== "page") {\n        ____;\n      }\n      ____;\n    },\n    [searchParams, router]\n  );\n  return <div />;\n}',
+      apiSignature: 'searchParams: Promise<Record<string, string>>; new URLSearchParams(init); params.set(key, value) / params.delete(key); router.push(url)',
+      skeleton: `// components/FilterBar.tsx
+"use client";
+export default function FilterBar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function updateParam(key, value) {
+    const params = ____;
+    if (value && value !== "all") params.set(key, value);
+    else params.delete(key);
+    ____; // back to page 1
+    ____;
+  }
+  // the search input: local state, then updateParam("q", text) after 300 ms
+  return <div />;
+}`,
     },
+    requires: [
+      /await\s+searchParams/,
+      /Number\(|parseInt\(|\+\s*\(?\s*(query|params|sp)\.page/,
+      /getProducts\(\s*\{/,
+      /<Link/,
+      /(new URLSearchParams\([^)][\s\S]*){2}|query:\s*\{\s*\.\.\./,
+      /["']use client["']/,
+      /new URLSearchParams\(\s*searchParams/,
+      /\.delete\(\s*["']page["']\s*\)/,
+      /router\.(push|replace)\(/,
+      /setTimeout\(/,
+      /clearTimeout\(/,
+    ],
     tags: ['nextjs', 'url-state', 'searchParams', 'filters', 'project'],
     concepts: ['next-url-state'],
   },
@@ -1130,62 +1058,14 @@ export default function FilterBar() {
     topic: Topic.NEXT_URL_STATE,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build an Infinite Scroll Feed
+    question: 'Build an `InfiniteFeed` Client Component that loads posts page by page as the user scrolls.\n\n`GET /api/feed` returns the first page as `{ items, nextCursor }`, where each item has `id` and `title`; `GET /api/feed?cursor=<cursor>` returns the page after that cursor, and `nextCursor` is null on the last page.\n\nRequirements:\n- Fetch with TanStack Query\'s `useInfiniteQuery` under the key `["feed"]`: the first page has no cursor, and each next cursor comes from the last page\'s `nextCursor`\n- While the first page loads show "Loading feed...", and on failure "Error: " followed by the message\n- Render every post\'s title from all the loaded pages as one list\n- Put an empty sentinel `<div>` after the list and watch it with an `IntersectionObserver`: when it comes into view, there is a next page and none is being fetched, fetch the next page; disconnect the observer on cleanup\n- Show "Loading more..." while the next page loads, and "No more posts" when there is no next page\n- Export it as the default export',
+    starterCode: `"use client";
 
-Create an infinite scroll component using TanStack Query (React Query) and Intersection Observer:
-1. useInfiniteQuery to fetch paginated data with cursor-based pagination
-2. getNextPageParam to determine the next cursor from the API response
-3. An Intersection Observer on a "sentinel" div at the bottom of the list that triggers fetchNextPage when visible
-
-The API returns: { items: Post[], nextCursor: string | null }`,
-    starterCode: `'use client';
-
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useRef, useEffect } from 'react';
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  author: string;
-  createdAt: string;
-}
-
-interface FeedResponse {
-  items: Post[];
-  nextCursor: string | null;
-}
-
-// TODO: Create an async function fetchFeed(cursor?: string)
-// - Builds URL: '/api/feed' + '?cursor=' + cursor if cursor exists
-// - Fetches and returns the JSON as FeedResponse
-
-// TODO: Export InfiniteFeed component that:
-// 1. Uses useInfiniteQuery with:
-//    - queryKey: ['feed']
-//    - queryFn: receives { pageParam } — call fetchFeed(pageParam)
-//    - getNextPageParam: return lastPage.nextCursor (or undefined to stop)
-//    - initialPageParam: undefined (first page has no cursor)
-//
-// 2. Creates a ref for the sentinel div (useRef<HTMLDivElement>)
-//
-// 3. Sets up an IntersectionObserver in useEffect that:
-//    - Observes the sentinel div
-//    - When it's intersecting AND hasNextPage AND !isFetchingNextPage:
-//      calls fetchNextPage()
-//    - Cleans up the observer on unmount
-//
-// 4. Renders:
-//    - All posts from data.pages.flatMap(page => page.items)
-//    - A sentinel <div ref={sentinelRef}> at the bottom
-//    - Loading state for initial load
-//    - "Loading more..." text when fetching next page
-//    - "No more posts" when !hasNextPage
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
 export default function InfiniteFeed() {
-  // Your code here
-}
-`,
+}`,
     testCases: [
       {
         input: 'useInfiniteQuery setup',
@@ -1203,125 +1083,161 @@ export default function InfiniteFeed() {
         description: 'Flattens all pages into a single list for rendering',
       },
     ],
-    solution: `'use client';
+    solution: `"use client";
 
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useRef, useEffect } from 'react';
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  author: string;
-  createdAt: string;
-}
-
-interface FeedResponse {
-  items: Post[];
-  nextCursor: string | null;
-}
-
-async function fetchFeed(cursor?: string): Promise<FeedResponse> {
-  const url = cursor ? \`/api/feed?cursor=\${cursor}\` : '/api/feed';
+async function fetchFeed(cursor) {
+  const url = cursor ? \`/api/feed?cursor=\${encodeURIComponent(cursor)}\` : "/api/feed";
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch feed');
+  if (!res.ok) throw new Error("Failed to fetch feed");
   return res.json();
 }
 
 export default function InfiniteFeed() {
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef(null);
 
   const {
     data,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isPending,
     isError,
     error,
   } = useInfiniteQuery({
-    queryKey: ['feed'],
+    queryKey: ["feed"],
     queryFn: ({ pageParam }) => fetchFeed(pageParam),
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    initialPageParam: undefined as string | undefined,
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    });
     observer.observe(sentinel);
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading) {
-    return <div className="text-center py-12">Loading feed...</div>;
-  }
+  if (isPending) return <p>Loading feed...</p>;
+  if (isError) return <p>Error: {error.message}</p>;
 
-  if (isError) {
-    return <div className="text-red-500 text-center py-12">Error: {error.message}</div>;
-  }
-
-  const allPosts = data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = data.pages.flatMap((page) => page.items);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {allPosts.map((post) => (
-        <article key={post.id} className="border-b py-6">
-          <h2 className="text-xl font-bold">{post.title}</h2>
-          <p className="text-gray-600 text-sm mt-1">
-            {post.author} · {new Date(post.createdAt).toLocaleDateString()}
-          </p>
-          <p className="mt-2">{post.content}</p>
+    <div>
+      {posts.map((post) => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
         </article>
       ))}
+      <div ref={sentinelRef} />
+      {isFetchingNextPage && <p>Loading more...</p>}
+      {!hasNextPage && <p>No more posts</p>}
+    </div>
+  );
+}
 
-      {/* Sentinel div — triggers next page fetch when visible */}
-      <div ref={sentinelRef} className="h-10" />
+# OR
 
-      {isFetchingNextPage && (
-        <p className="text-center py-4 text-gray-500">Loading more...</p>
-      )}
+"use client";
 
-      {!hasNextPage && allPosts.length > 0 && (
-        <p className="text-center py-4 text-gray-400">No more posts</p>
-      )}
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+
+type Post = { id: string; title: string };
+type FeedPage = { items: Post[]; nextCursor: string | null };
+
+async function fetchFeed(cursor?: string): Promise<FeedPage> {
+  const url = cursor ? \`/api/feed?cursor=\${encodeURIComponent(cursor)}\` : "/api/feed";
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch feed");
+  return res.json();
+}
+
+export default function InfiniteFeed() {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending, isError, error } =
+    useInfiniteQuery({
+      queryKey: ["feed"],
+      queryFn: ({ pageParam }) => fetchFeed(pageParam),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    });
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  if (isPending) return <p>Loading feed...</p>;
+  if (isError) return <p>Error: {error.message}</p>;
+
+  return (
+    <div>
+      {data.pages.flatMap((page) => page.items).map((post) => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+        </article>
+      ))}
+      <div ref={sentinelRef} />
+      {isFetchingNextPage && <p>Loading more...</p>}
+      {!hasNextPage && <p>No more posts</p>}
     </div>
   );
 }`,
-    explanation: `This combines two powerful APIs:
-
-1. **useInfiniteQuery** — Manages paginated data as an array of "pages." Each page is one API response. getNextPageParam extracts the cursor from the last response; if it returns undefined, hasNextPage becomes false and pagination stops. TanStack Query handles caching, deduplication, and refetching automatically.
-
-2. **Cursor-based pagination** — Better than offset-based (page numbers) because it doesn't break when new items are added. If item 51 is inserted while the user is on "page 5," offset-based pagination shows duplicates. Cursor-based says "give me items after this specific item" — always consistent.
-
-3. **IntersectionObserver** — The browser API that detects when an element enters the viewport. We observe a "sentinel" div at the bottom of the list. When it becomes visible (user scrolled to the bottom), we fetch the next page. This is more performant than listening to scroll events.
-
-4. **Guard conditions** — \`hasNextPage && !isFetchingNextPage\` prevents double-fetching. Without this, rapid scrolling could trigger multiple simultaneous fetches for the same page.
-
-5. **flatMap for rendering** — \`data.pages.flatMap(page => page.items)\` collapses the nested array of pages into a flat list of posts for rendering. This is the standard pattern with useInfiniteQuery.`,
+    explanation: 'This joins TanStack Query\'s paged query to a browser API.\n\n1. useInfiniteQuery keeps the list as data.pages, one entry per response. queryFn gets pageParam, the cursor to fetch: initialPageParam (undefined here, since the first page has none) for the first call, then whatever getNextPageParam returned. Returning the last page\'s nextCursor ends the list when it is null: in TanStack Query v5, undefined or null both turn hasNextPage false.\n\n2. Cursor pagination asks for "the items after this one", so a post added at the top does not shift the pages and show a duplicate, as an offset would. The cursor is passed through encodeURIComponent because it goes into a URL.\n\n3. An IntersectionObserver calls back when the sentinel div enters the viewport, which is cheaper and simpler than a scroll listener. The effect depends on hasNextPage and isFetchingNextPage, so it re-subscribes with fresh values, and disconnect() in the cleanup drops the old observer.\n\n4. The guard hasNextPage && !isFetchingNextPage stops a second request for the same page while one is in flight, and stops fetching past the end.\n\n5. data.pages.flatMap((page) => page.items) turns the pages into one list to render.',
     hints: [
-      'getNextPageParam should return undefined (not null) to signal no more pages',
-      'The IntersectionObserver callback should check hasNextPage AND !isFetchingNextPage before fetching',
-      'data.pages is an array of page responses — flatMap flattens them into a single array',
+      'getNextPageParam returns the cursor for the next request; undefined or null means there is no next page',
+      'Check hasNextPage and !isFetchingNextPage before calling fetchNextPage',
+      'data.pages is an array of responses; flatMap turns it into one list of posts',
     ],
     tieredHints: {
-      apiSignature: 'useInfiniteQuery({ queryKey, queryFn, getNextPageParam, initialPageParam }): UseInfiniteQueryResult; IntersectionObserver(callback, options): IntersectionObserver',
-      skeleton: '"use client";\nimport { useInfiniteQuery } from "@tanstack/react-query";\nimport { useRef, useEffect } from "react";\n\nexport default function InfiniteFeed() {\n  const sentinelRef = useRef<HTMLDivElement>(null);\n  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({\n    queryKey: ["feed"],\n    queryFn: ({ pageParam }) => fetchFeed(pageParam),\n    getNextPageParam: (lastPage) => ____,\n    initialPageParam: ____,\n  });\n\n  useEffect(() => {\n    const sentinel = sentinelRef.current;\n    if (!sentinel) return;\n    const observer = new IntersectionObserver((entries) => {\n      if (____) {\n        ____;\n      }\n    });\n    observer.observe(sentinel);\n    return () => observer.disconnect();\n  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);\n\n  const allPosts = data?.pages.flatMap(____) ?? [];\n  return <div ref={sentinelRef} />;\n}',
+      apiSignature: 'useInfiniteQuery({ queryKey, queryFn: ({ pageParam }) => ..., initialPageParam, getNextPageParam: (lastPage) => cursor }); new IntersectionObserver(callback)',
+      skeleton: `export default function InfiniteFeed() {
+  const sentinelRef = useRef(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending, isError, error } = useInfiniteQuery({
+    queryKey: ["feed"],
+    queryFn: ({ pageParam }) => ____,
+    initialPageParam: ____,
+    getNextPageParam: (lastPage) => ____,
+  });
+
+  useEffect(() => {
+    // observe sentinelRef.current; on intersect, guard, then fetch the next page
+    return () => ____;
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const posts = data?.pages.____ ?? [];
+  return <div>{/* posts, the sentinel div, the status text */}</div>;
+}`,
     },
+    requires: [
+      /useInfiniteQuery\(\s*\{/,
+      /queryKey:\s*\[\s*["']feed["']\s*\]/,
+      /pageParam/,
+      'initialPageParam',
+      /getNextPageParam[\s\S]*nextCursor/,
+      /new IntersectionObserver\(/,
+      'isIntersecting',
+      /hasNextPage\s*&&\s*!isFetchingNextPage|!isFetchingNextPage\s*&&\s*hasNextPage/,
+      /fetchNextPage\(\)/,
+      /\.observe\(/,
+      /disconnect\(\)|unobserve\(/,
+      /pages\.(flatMap|map)\(/,
+    ],
     tags: ['tanstack-query', 'infinite-scroll', 'intersection-observer', 'pagination', 'project'],
     concepts: ['next-tanstack-query', 'api-pagination'],
   },
@@ -1332,7 +1248,7 @@ export default function InfiniteFeed() {
     difficulty: Difficulty.ADVANCED,
     topic: Topic.NEXT_URL_STATE,
     course: Course.WEB_DEV,
-    question: `You have a dashboard page with 5 widget components, each fetching data from a different API endpoint. The page takes 3 seconds to load because the fetches happen sequentially — each widget waits for the previous one to finish. How do you fix this so widgets load independently?`,
+    question: `You have a dashboard page with 5 widget components, each fetching data from a different API endpoint. The page component awaits the 5 fetches one after another and only then renders, so it takes 3 seconds to load: each fetch waits for the previous one to finish. How do you fix this so widgets load independently?`,
     options: [
       {
         id: 'a',
@@ -1346,7 +1262,7 @@ export default function InfiniteFeed() {
       },
       {
         id: 'c',
-        text: 'Wrap each widget in its own <Suspense> boundary — each widget is an async Server Component that fetches independently. The page shell loads instantly, and each widget streams in as its data resolves.',
+        text: 'Wrap each widget in its own <Suspense> boundary; each widget is an async Server Component that fetches independently. The page shell loads instantly, and each widget streams in as its data resolves.',
         isCorrect: true,
       },
       {
@@ -1367,7 +1283,7 @@ export default function InfiniteFeed() {
 
 **Why NOT Client Components with useEffect?** This moves all fetching to the browser. Users download JavaScript, execute it, THEN start 5 fetch requests. Slower overall and worse for SEO. Server Components fetch on the server (closer to the data) with zero client-side JavaScript.
 
-**Why NOT React.lazy?** Code-splitting reduces bundle size but doesn't affect data fetching. The widgets aren't slow because of JavaScript size — they're slow because of data fetching.`,
+**Why NOT React.lazy?** Code-splitting reduces bundle size but doesn't affect data fetching. The widgets aren't slow because of JavaScript size; they're slow because of data fetching.`,
     hints: [
       'The problem is sequential data fetching, not sequential rendering',
       'Think about what Next.js streaming with Suspense gives you over Promise.all',

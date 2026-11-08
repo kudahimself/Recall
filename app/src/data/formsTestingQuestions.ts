@@ -478,7 +478,7 @@ function RegistrationForm({ onSubmit }) {
   );
 }`,
     requires: [
-      /useForm(<\s*RegistrationValues\s*>)?\(\s*\{[\s\S]*?resolver\s*:\s*zodResolver\(\s*registrationSchema\s*\)/,
+      /useForm(<[^(]*>)?\(\s*\{[\s\S]*?resolver\s*:\s*zodResolver\(\s*registrationSchema\s*\)/,
       /handleSubmit\(/,
       /register\(\s*["']name["']\s*\)/,
       /register\(\s*["']email["']\s*\)/,
