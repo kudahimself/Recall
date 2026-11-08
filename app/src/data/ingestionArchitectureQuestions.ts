@@ -7,46 +7,29 @@ import {
   CodeLanguage,
 } from '../types';
 
-// INGESTION_ARCHITECTURE — Databricks course, "Lakehouse Architecture &
-// Engineering Practice" section. Third and final of three new
-// design-judgment topics (siblings: orchestration_design, gold_layer_design,
-// both already built).
+// INGESTION_ARCHITECTURE - Databricks course, "Lakehouse Architecture &
+// Engineering Practice" section.
 //
-// This is NOT re-teaching auto_loader (cloudFiles syntax), structured_streaming
-// (readStream/writeStream mechanics), or change_data_capture (APPLY CHANGES
-// INTO / CDF API syntax) — all already exist and are assumed as
-// prerequisites. This topic is the Databricks-specific INGESTION DESIGN
-// JUDGMENT layer on top: when to choose batch vs streaming, which raw file
-// format to land, how to lay out and retain a landing zone, how to choose a
-// partitioning strategy, and how to choose between CDC/batch-diff/full-reload
-// — plus the production failure modes that show up when these are
-// misjudged.
-//
-// Sources: Databricks Auto Loader docs, Netflix/DoorDash/Uber engineering
-// blogs on incremental ingestion and CDC at scale (see
-// databricks_de_research_results.md).
+// This topic is the ingestion design judgment layer on top of auto_loader,
+// structured_streaming and change_data_capture: when to ingest in batch or as
+// a stream, what to land and how to keep it, how to lay out a table (Liquid
+// Clustering vs PARTITIONED BY), how to keep a table in step with a source,
+// and the failure modes that follow when these are misjudged (partitioning a
+// small table too finely, overwriting a whole table for a few rows, letting
+// Auto Loader list a bucket of millions of files).
 //
 // Coverage (39 questions):
-//   Beginner (5 MCQ): define each of the 5 core primitives.
-//   Intermediate (12): 6 PREDICT_OUTPUT tracing Hive Time-Machine partition
-//     math / Naked Overwrites write-amplification / CDC-vs-full-reload row
-//     counts as small deterministic Python functions (a real faded layer,
-//     same pattern as gold_layer_design) + 6 scenario MCQs (batch-vs-streaming
-//     x2, file-format x1, partitioning x1, CDC x1, landing-zone x1).
-//   Advanced (19): 3 anti-patterns x 3 domain-transfer scenarios each
-//     (Hive Time-Machine, Naked Overwrites, Directory Listing Ingestion Trap)
-//     + 3 decision-judgment primitives x 3 domain-transfer scenarios each
-//     (batch vs streaming, partitioning strategy, CDC strategy) + 1
-//     discrimination question distinguishing two "too many small files"
-//     failure modes with different root causes.
-//   Coding/Parsons (3): fix a Hive Time-Machine by re-partitioning to a
-//     coarser grain, implement a scoped replaceWhere fix for a Naked
-//     Overwrite, Parsons assembly of switching Auto Loader from directory
-//     listing mode to file notification mode.
+//   Beginner (5 MCQ): the five core ideas.
+//   Intermediate (12): 6 predicts that run partition counts, overwrites and a
+//     MERGE of a change log on small Delta tables, and 6 scenario MCQs.
+//   Advanced (19 MCQ): each failure mode and each decision in three settings,
+//     and one question that tells two look-alike failures apart.
+//   Coding/Parsons (3): rebuild a table with Liquid Clustering, a scoped
+//     replaceWhere write, and an Auto Loader file-notification setup.
 
 export const ingestionArchitectureQuestions: Question[] = [
   // ────────────────────────────────────────────────────────────────────
-  // BEGINNER (5) — define each core primitive
+  // BEGINNER (5)
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'ing-mcq-b1',
@@ -55,15 +38,15 @@ export const ingestionArchitectureQuestions: Question[] = [
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "What's the main signal for choosing continuous streaming ingestion over scheduled incremental batch ingestion?",
+      'What is the main signal for choosing continuous streaming ingestion over scheduled incremental batch ingestion?',
     options: [
-      { id: 'a', text: "SLA and source push behavior — continuous streaming fits sub-minute SLAs and push-based sources like Kafka/Event Hubs/Kinesis, while scheduled batch (Trigger.AvailableNow) fits 15-minute-or-longer SLAs and file-drop sources, provisioning a cluster only long enough to clear the backlog before shutting down.", isCorrect: true },
-      { id: 'b', text: 'File format alone — any source landing data as Parquet must be ingested with continuous streaming, while any source landing data as JSON or CSV must be ingested with scheduled batch, regardless of how quickly downstream consumers need the data.', isCorrect: false },
-      { id: 'c', text: "Table size alone — tables under 1 TB are always ingested with continuous streaming for simplicity, and tables over 1 TB are always ingested with scheduled batch because a streaming cluster can't keep up with that volume.", isCorrect: false },
-      { id: 'd', text: "Whether Unity Catalog is enabled — continuous streaming is only available for tables registered in Unity Catalog's 3-level namespace, so a legacy hive_metastore table must always use scheduled batch ingestion instead.", isCorrect: false },
+      { id: 'a', text: 'The file format: a source that lands Parquet must be streamed and one that lands JSON or CSV must be batched, whatever freshness consumers need.', isCorrect: false },
+      { id: 'b', text: "How fresh consumers need the data and how the source delivers: a push source with a seconds target needs a stream, looser ones a scheduled run.", isCorrect: true },
+      { id: 'c', text: 'The table size: tables under 1 TB are always streamed for simplicity and larger ones batched, because a stream cannot keep up with that volume.', isCorrect: false },
+      { id: 'd', text: 'Whether the table is in Unity Catalog: only Unity Catalog tables can be streamed, so a table in the legacy Hive metastore must be batch.', isCorrect: false },
     ],
     explanation:
-      "The decision is driven by SLA tightness and how the source delivers data, not by file format, table size, or catalog registration. A push-based source with a sub-minute SLA needs a continuously running cluster; a periodic file drop with a looser SLA can run Trigger.AvailableNow and shut the cluster down between runs, saving 80-90% of compute cost.",
+      'The mode follows the freshness consumers need and how the source delivers. A push source such as Kafka with a target of seconds needs a stream that runs all the time. Anything looser is incremental batch: the same stream code with trigger(availableNow=True) on a schedule loads what is new exactly once and stops, so no cluster sits idle between runs.',
     tags: ['batch-vs-streaming'],
     concepts: ['ing-batch-vs-streaming'],
   },
@@ -74,15 +57,15 @@ export const ingestionArchitectureQuestions: Question[] = [
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A source system delivers data as raw JSON. What's the recommended practice for landing and ingesting it, and why?",
+      'A source system delivers raw JSON files. What is the recommended way to land and ingest them, and why?',
     options: [
-      { id: 'a', text: 'Land raw JSON as-is (no pre-conversion) and parse it directly into Delta at bronze using Auto Loader; JSON/CSV lack native type enforcement, so landing teams intentionally do not convert before ingestion, and Auto Loader handles the parse-and-type step during the bronze write.', isCorrect: true },
-      { id: 'b', text: 'Convert JSON to Parquet using a separate preprocessing job before it touches the landing zone, because Auto Loader is restricted to reading Avro and Parquet formats, unable to parse raw JSON or CSV files at the bronze layer.', isCorrect: false },
-      { id: 'c', text: 'Land raw JSON and retain it as JSON permanently across all medallion layers, including gold, since converting JSON to Delta tables strips the schema-on-read flexibility that upstream source applications depend upon.', isCorrect: false },
-      { id: 'd', text: 'Reject the source payload and demand the upstream team switch to Avro or Parquet, because Databricks pipelines are not engineered to ingest JSON or CSV sources regardless of payload volume or update frequency.', isCorrect: false },
+      { id: 'a', text: 'Land the files exactly as sent and let Auto Loader parse them into bronze, so the landing zone stays a faithful copy of what the source sent.', isCorrect: true },
+      { id: 'b', text: 'Keep the data as JSON in every layer, gold included, because turning it into Delta tables removes the flexibility the source applications rely on.', isCorrect: false },
+      { id: 'c', text: 'Ask the source team to send Avro or Parquet instead, because Databricks pipelines are not designed to ingest JSON or CSV sources.', isCorrect: false },
+      { id: 'd', text: 'Convert the JSON to Parquet in a preprocessing job before landing it, because Auto Loader cannot read JSON or CSV files into bronze.', isCorrect: false },
     ],
     explanation:
-      "Avro/Parquet preserve explicit types and support schema evolution natively, but that doesn't mean JSON/CSV sources need pre-conversion - landing teams land the raw format untouched and let Auto Loader do the parse-and-type-cast step when writing to bronze, keeping the raw landing zone a faithful copy of what the source actually sent.",
+      'Auto Loader reads JSON and CSV directly, so nothing needs converting first. Landing the files as sent keeps an exact record of what arrived, and the parse and type step happens once, when Auto Loader writes bronze, where values that do not fit the schema go to _rescued_data.',
     tags: ['file-format-landing'],
     concepts: ['ing-file-format-landing'],
   },
@@ -93,15 +76,15 @@ export const ingestionArchitectureQuestions: Question[] = [
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "What are the two key properties a well-designed landing zone should enforce, beyond just having a sensible directory structure?",
+      'Beyond a sensible folder layout per source, entity and version, what should a landing zone guarantee about its files?',
     options: [
-      { id: 'a', text: 'Strict WORM immutability (write-once, block s3:DeleteObject) and a storage lifecycle policy (standard storage for a short window, colder/cheaper tiers after, auto-purge once bronze with Delta time travel covers the retention need) — these keep the landing zone auditable without it growing forever.', isCorrect: true },
-      { id: 'b', text: 'Unrestricted overwrite and delete access for reading pipelines, ensuring the landing zone continuously reflects only the single most recent file version delivered by upstream producer systems.', isCorrect: false },
-      { id: 'c', text: 'Immediate Parquet compression on file arrival followed by automatic raw file deletion, avoiding storage duplication across the raw landing bucket and downstream transformed Delta tables.', isCorrect: false },
-      { id: 'd', text: 'Flat directory layouts with no source-system or entity segmentation, allowing a single unified Auto Loader stream to ingest all incoming files across all domains simultaneously.', isCorrect: false },
+      { id: 'a', text: 'Reading pipelines may overwrite or delete files, so that the zone always shows only the latest version that each producer sent.', isCorrect: false },
+      { id: 'b', text: 'Files are compressed to Parquet on arrival and the raw copy is deleted at once, so the data is not stored twice.', isCorrect: false },
+      { id: 'c', text: "Files stay unchanged and are removed only after bronze covers the retention need, so the zone is an audit trail that does not grow forever.", isCorrect: true },
+      { id: 'd', text: 'Files sit in one flat folder with no source or entity levels, so a single Auto Loader stream can read every file from every domain together.', isCorrect: false },
     ],
     explanation:
-      "A landing zone's job is to be an immutable, auditable record of exactly what the source sent, structured per source/entity/version (e.g. landing/<source_system>/<entity>/v<version>/year=/month=/day=/), with WORM enforcement blocking deletes and a lifecycle policy that ages data out once Delta bronze's own time travel can cover the retention need.",
+      'A landing zone is an immutable record of what each source sent, laid out per source, entity and version. Files are kept until bronze holds the history the retention rules need, and a storage lifecycle policy then ages them out, so the zone stays auditable without growing without limit.',
     tags: ['landing-zone'],
     concepts: ['ing-landing-zone'],
   },
@@ -112,15 +95,15 @@ export const ingestionArchitectureQuestions: Question[] = [
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "What's the difference between traditional Delta `PARTITIONED BY` and Databricks Liquid Clustering (`CLUSTER BY`) as a partitioning strategy?",
+      'How does PARTITIONED BY differ from Liquid Clustering (CLUSTER BY) as a layout for a Delta table?',
     options: [
-      { id: 'a', text: '`PARTITIONED BY` fits only low-cardinality, coarse columns (like a `year-month` date column) on tables over roughly 1 TB, aiming for 1-10 GB per partition directory; Liquid Clustering works on both high- and low-cardinality keys (like `user_id` or `event_date`) and can re-cluster dynamically without a full data rewrite, making it the modern default.', isCorrect: true },
-      { id: 'b', text: '`PARTITIONED BY` and `CLUSTER BY` represent identical physical directory structures, as Liquid Clustering is a pure syntactic alias introduced to improve DDL code readability without altering file organization on cloud storage.', isCorrect: false },
-      { id: 'c', text: '`PARTITIONED BY` requires tables to exceed 1 TB prior to declaration, whereas `CLUSTER BY` applies exclusively to sub-terabyte datasets, establishing table size rather than query patterns as the sole governing rule.', isCorrect: false },
-      { id: 'd', text: '`CLUSTER BY` operates exclusively on numeric data types, whereas `PARTITIONED BY` functions only on string columns, forcing layout selection to depend on column data types rather than cardinality or filtering patterns.', isCorrect: false },
+      { id: 'a', text: "PARTITIONED BY makes a directory per value and suits low-cardinality columns on very large tables; CLUSTER BY makes none and takes high-cardinality keys.", isCorrect: true },
+      { id: 'b', text: 'The two build the same directories on storage; CLUSTER BY is just a newer spelling of PARTITIONED BY that makes the DDL easier to read.', isCorrect: false },
+      { id: 'c', text: "CLUSTER BY is only for tables under 1 TB, and PARTITIONED BY is required once a table passes it, so size alone decides, whatever the queries filter on.", isCorrect: false },
+      { id: 'd', text: "CLUSTER BY works only on numeric columns and PARTITIONED BY only on string columns, so the data types decide which one to use, whatever the queries filter on.", isCorrect: false },
     ],
     explanation:
-      "Traditional PARTITIONED BY creates physical subdirectories, so it only makes sense for coarse, low-cardinality columns on large tables - a high-cardinality partition key produces the exact small-file explosion this topic covers as the Hive Time-Machine anti-pattern. Liquid Clustering avoids that constraint entirely by clustering data without hard directory partitions.",
+      'PARTITIONED BY writes a directory for every value, so Databricks advises it only for tables over about 1 TB, on a low-cardinality column with at least 1 GB per partition. Liquid Clustering makes no directories, accepts high-cardinality keys such as customer_id, and lets you change the keys with ALTER TABLE without rewriting the table. It is the default for a new table.',
     tags: ['partitioning-strategy'],
     concepts: ['ing-partitioning-strategy'],
   },
@@ -131,23 +114,21 @@ export const ingestionArchitectureQuestions: Question[] = [
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "What are the three strategies for keeping a Delta table in sync with a changing source system, and what's the basic tradeoff between them?",
+      "There are three ways to keep a Delta table in step with a changing source: read its change log, compare snapshots, or reload in full. What is the basic tradeoff between them?",
     options: [
-      { id: 'a', text: 'CDC (log-based, e.g. Debezium/Delta CDF) has the lowest source-system impact and write amplification since it only processes actual changes; periodic batch-diff (snapshot MERGE) costs more transient compute to calculate the diff but works when source logs are inaccessible; full reload (OVERWRITE) has the highest write amplification and is acceptable only for small lookup tables.', isCorrect: true },
-      { id: 'b', text: 'CDC, batch-diff, and full reload produce identical write amplification and source database load, differing only in the specific DML statement executed during the final target table write operation.', isCorrect: false },
-      { id: 'c', text: 'Full reload imposes the lowest source-system overhead by bypassing transaction log reads entirely, making CDC and batch-diff inferior choices whenever source systems tolerate periodic snapshot overwrites.', isCorrect: false },
-      { id: 'd', text: 'Batch-diff applies exclusively to streaming ingestion sources, whereas CDC and full reload apply strictly to batch jobs, binding synchronization strategies to execution trigger modes rather than table size.', isCorrect: false },
+      { id: 'a', text: 'All three cost the same and load the source equally; they differ only in the final DML statement that writes to the target table.', isCorrect: false },
+      { id: 'b', text: "A full reload is lightest on the source because it never reads a transaction log, so it beats the others whenever snapshot overwrites are allowed by the source team.", isCorrect: false },
+      { id: 'c', text: 'Comparing snapshots is only for streaming sources, while the change log and a full reload are only for batch jobs, so the trigger decides.', isCorrect: false },
+      { id: 'd', text: "The change log is cheapest and lightest on the source; snapshots cost more compute but need no log; a full reload rewrites everything and suits small tables.", isCorrect: true },
     ],
     explanation:
-      "CDC reads a change log directly, so it's cheapest and lowest-impact when available. Batch-diff computes a snapshot comparison instead, useful when logs aren't accessible but costlier to compute. Full reload is simplest but rewrites everything, so it's reserved for small tables where the write amplification doesn't matter.",
+      'Change data capture reads only the changes, so it writes the least and puts the least load on the source. Without a log you can diff two snapshots, which costs extra compute. A full reload is the simplest but rewrites the whole table every time, so keep it for small tables.',
     tags: ['cdc-strategy'],
     concepts: ['ing-cdc-strategy'],
   },
 
   // ────────────────────────────────────────────────────────────────────
-  // INTERMEDIATE (12) — 6 PREDICT_OUTPUT (deterministic trace of Hive
-  // Time-Machine partition math / Naked Overwrites write amplification /
-  // CDC-vs-full-reload row counts) + 6 scenario MCQs
+  // INTERMEDIATE (12) - 6 predicts + 6 scenario MCQs
   // ────────────────────────────────────────────────────────────────────
   {
     id: 'ing-predict-1',
@@ -157,15 +138,26 @@ export const ingestionArchitectureQuestions: Question[] = [
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function models how many partition directories a table gets when partitioned by year/month/day/hour. Trace it and print the result.',
-    code: `def partition_count(days, partitions_per_day):
-    return days * partitions_per_day
-
-# 90 days of data, partitioned down to the hour = 24 partitions per day
-print(partition_count(90, 24))`,
-    expectedOutput: '2160',
+      'In a Databricks notebook, the table events holds exactly the rows shown. The cell writes a copy partitioned by day and hour and counts its partitions. What does it print? The answer is a single whole number.',
+    tables: [
+      { name: 'events', columns: ['event_id', 'day', 'hour'], rows: [
+        [1, '2026-03-01', 9],
+        [2, '2026-03-01', 9],
+        [3, '2026-03-01', 14],
+        [4, '2026-03-02', 9],
+        [5, '2026-03-02', 22],
+        [6, '2026-03-03', 14],
+      ] },
+    ],
+    code: `spark.table("events").write.partitionBy("day", "hour").saveAsTable("events_by_hour")
+print(spark.sql("SHOW PARTITIONS events_by_hour").count())`,
+    expectedOutput: '5',
     explanation:
-      'This models the setup for the Hive Time-Machine: partitioning by hour multiplies the partition count by 24x compared to partitioning by day alone, regardless of how much data the table actually holds.',
+      'A table gets one partition, and so one directory, for every distinct combination of its partition columns. The (day, hour) pairs are (03-01, 9), (03-01, 14), (03-02, 9), (03-02, 22) and (03-03, 14), so there are 5 partitions for 6 rows. Partitioning a small table down to the hour gives partitions that hold almost nothing.',
+    hints: [
+      'Count the distinct (day, hour) pairs.',
+      'Rows 1 and 2 share a day and an hour.',
+    ],
     tags: ['hive-time-machine', 'predict-output'],
     concepts: ['ing-hive-time-machine'],
   },
@@ -177,15 +169,25 @@ print(partition_count(90, 24))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'Same table, now partitioned by day only instead of by hour. Trace it and print the result.',
-    code: `def partition_count(days, partitions_per_day):
-    return days * partitions_per_day
-
-# same 90 days, partitioned by day only
-print(partition_count(90, 1))`,
-    expectedOutput: '90',
+      'Same events table, now written partitioned by day only. What does the cell print? The answer is a single whole number.',
+    tables: [
+      { name: 'events', columns: ['event_id', 'day', 'hour'], rows: [
+        [1, '2026-03-01', 9],
+        [2, '2026-03-01', 9],
+        [3, '2026-03-01', 14],
+        [4, '2026-03-02', 9],
+        [5, '2026-03-02', 22],
+        [6, '2026-03-03', 14],
+      ] },
+    ],
+    code: `spark.table("events").write.partitionBy("day").saveAsTable("events_by_day")
+print(spark.sql("SHOW PARTITIONS events_by_day").count())`,
+    expectedOutput: '3',
     explanation:
-      "The fix for the Hive Time-Machine: partitioning by day alone keeps the partition count proportional to how much data actually exists (one partition per day), instead of multiplying it by an arbitrary hourly grain the table's size doesn't justify.",
+      'Only the day counts now: 2026-03-01, 2026-03-02 and 2026-03-03 give 3 partitions. A coarser partition column keeps the number of directories in line with how much data there is. For a small table, leaving it unpartitioned and clustering it is better still.',
+    hints: [
+      'How many distinct days are there?',
+    ],
     tags: ['hive-time-machine', 'predict-output'],
     concepts: ['ing-hive-time-machine'],
   },
@@ -197,14 +199,28 @@ print(partition_count(90, 1))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function models the bytes written by a daily full `OVERWRITE` of a table, regardless of how much data actually changed. Trace it and print the result.',
-    code: `def bytes_written_full_overwrite(table_size_gb):
-    return table_size_gb
-
-print(bytes_written_full_overwrite(500))`,
-    expectedOutput: '500',
+      'The nightly job should update warehouse WH-2 only. warehouse_inventory and updated_rows hold exactly the rows shown. What does the cell print? The answer is a single whole number.',
+    tables: [
+      { name: 'warehouse_inventory', columns: ['warehouse_id', 'item', 'qty'], rows: [
+        ['WH-1', 'bolt', 10],
+        ['WH-2', 'nut', 20],
+        ['WH-3', 'screw', 30],
+      ] },
+      { name: 'updated_rows', columns: ['warehouse_id', 'item', 'qty'], rows: [
+        ['WH-2', 'nut', 25],
+      ] },
+    ],
+    code: `(spark.table("updated_rows").write
+    .format("delta")
+    .mode("overwrite")
+    .saveAsTable("warehouse_inventory"))
+print(spark.table("warehouse_inventory").count())`,
+    expectedOutput: '1',
     explanation:
-      'This is the Naked Overwrites mechanic: a full OVERWRITE rewrites the entire 500 GB table on every run, no matter how few rows actually changed since the last run.',
+      'mode("overwrite") replaces the whole table with the DataFrame, however few rows the DataFrame holds. WH-1 and WH-3 are gone and only the one row for WH-2 is left. A full overwrite of a large table for a few changed rows rewrites everything and, as here, deletes whatever the DataFrame does not contain.',
+    hints: [
+      'What does overwrite replace: the matching rows, or the table?',
+    ],
     tags: ['naked-overwrites', 'predict-output'],
     concepts: ['ing-naked-overwrites'],
   },
@@ -216,14 +232,32 @@ print(bytes_written_full_overwrite(500))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'Same table, now fixed by scoping the write to only the partitions that actually changed. Trace it and print the result.',
-    code: `def bytes_written_scoped_overwrite(table_size_gb, changed_pct):
-    return round(table_size_gb * changed_pct, 1)
-
-print(bytes_written_scoped_overwrite(500, 0.01))`,
-    expectedOutput: '5.0',
+      'Same tables, but the write is now scoped with replaceWhere. What does the cell print? The answer is one line: two whole numbers separated by a space (rows, then the total of qty).',
+    tables: [
+      { name: 'warehouse_inventory', columns: ['warehouse_id', 'item', 'qty'], rows: [
+        ['WH-1', 'bolt', 10],
+        ['WH-2', 'nut', 20],
+        ['WH-3', 'screw', 30],
+      ] },
+      { name: 'updated_rows', columns: ['warehouse_id', 'item', 'qty'], rows: [
+        ['WH-2', 'nut', 25],
+      ] },
+    ],
+    code: `(spark.table("updated_rows").write
+    .format("delta")
+    .mode("overwrite")
+    .option("replaceWhere", "warehouse_id = 'WH-2'")
+    .saveAsTable("warehouse_inventory"))
+r = spark.sql("""SELECT COUNT(*) AS n, SUM(qty) AS total
+    FROM warehouse_inventory""").first()
+print(r.n, r.total)`,
+    expectedOutput: '3 65',
     explanation:
-      "The fix for Naked Overwrites: scoping the write to just the changed 1% of partitions (via replaceWhere or MERGE) writes 100x less data than a naked full overwrite of the whole 500 GB table.",
+      'replaceWhere limits the overwrite to rows matching the predicate. Only the WH-2 row is replaced, by the new row with qty 25, and WH-1 and WH-3 are untouched: 3 rows with qty 10 + 25 + 30 = 65. The write touches the changed slice instead of the whole table.',
+    hints: [
+      'Which rows match warehouse_id = \'WH-2\'?',
+      'The rows that do not match are left as they are.',
+    ],
     tags: ['naked-overwrites', 'predict-output'],
     concepts: ['ing-naked-overwrites'],
   },
@@ -235,16 +269,39 @@ print(bytes_written_scoped_overwrite(500, 0.01))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This function models how many rows a full-reload strategy processes on every run. Trace it and print the result.',
-    code: `def rows_processed(total_rows, strategy):
-    if strategy == "full_reload":
-        return total_rows
-    return None
-
-print(rows_processed(10_000_000, "full_reload"))`,
-    expectedOutput: '10000000',
+      "The source's change log stock_changes holds exactly the rows shown, with op U for update, D for delete and I for insert, and seq giving the order of changes to the same item. The cell applies the latest change per item to stock. What does it print? The answer is one line per item in item order, written as the item and its qty separated by a space.",
+    tables: [
+      { name: 'stock', columns: ['item', 'qty'], rows: [
+        ['a', 5],
+        ['b', 7],
+        ['c', 2],
+      ] },
+      { name: 'stock_changes', columns: ['item', 'op', 'qty', 'seq'], rows: [
+        ['b', 'U', 9, 1],
+        ['b', 'U', 12, 2],
+        ['c', 'D', null, 1],
+        ['d', 'I', 4, 1],
+      ] },
+    ],
+    code: `spark.sql("""MERGE INTO stock t USING (
+    SELECT * FROM (
+      SELECT *, ROW_NUMBER() OVER (
+        PARTITION BY item ORDER BY seq DESC) AS rn
+      FROM stock_changes) WHERE rn = 1) c
+  ON t.item = c.item
+  WHEN MATCHED AND c.op = 'D' THEN DELETE
+  WHEN MATCHED THEN UPDATE SET qty = c.qty
+  WHEN NOT MATCHED AND c.op <> 'D' THEN
+    INSERT (item, qty) VALUES (c.item, c.qty)""")
+for r in spark.table("stock").orderBy("item").collect():
+    print(r.item, r.qty)`,
+    expectedOutput: 'a 5\nb 12\nd 4',
     explanation:
-      'Full reload reprocesses every row in the source table on every run, regardless of how many rows actually changed since the last run - this is why it only fits small tables.',
+      'The subquery keeps the latest change per item, so item b is applied once, with qty 12 from seq 2. Then item a has no change and stays at 5; b is updated to 12; c is deleted; d is new and is inserted with 4. Applying only the latest change per key is what lets MERGE take a change log without matching the same target row twice.',
+    hints: [
+      'Which change per item survives the subquery?',
+      'Items missing from the change log are left alone.',
+    ],
     tags: ['cdc-strategy', 'predict-output'],
     concepts: ['ing-cdc-strategy'],
   },
@@ -256,16 +313,34 @@ print(rows_processed(10_000_000, "full_reload"))`,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'Same source, now using CDC instead of full reload. Trace it and print the result.',
-    code: `def rows_processed(changed_rows, strategy):
-    if strategy == "cdc":
-        return changed_rows
-    return None
-
-print(rows_processed(15_000, "cdc"))`,
-    expectedOutput: '15000',
+      'The cell applies two changes from the log to a five-row stock table with MERGE. stock and stock_changes hold exactly the rows shown. What does it print? The answer is one line: two whole numbers separated by a space (rows the MERGE affected, then rows left in stock).',
+    tables: [
+      { name: 'stock', columns: ['item', 'qty'], rows: [
+        ['a', 5],
+        ['b', 7],
+        ['c', 2],
+        ['d', 8],
+        ['e', 1],
+      ] },
+      { name: 'stock_changes', columns: ['item', 'op', 'qty'], rows: [
+        ['b', 'U', 9],
+        ['e', 'D', null],
+      ] },
+    ],
+    code: `r = spark.sql("""MERGE INTO stock t USING stock_changes c
+  ON t.item = c.item
+  WHEN MATCHED AND c.op = 'D' THEN DELETE
+  WHEN MATCHED THEN UPDATE SET qty = c.qty
+  WHEN NOT MATCHED AND c.op <> 'D' THEN
+    INSERT (item, qty) VALUES (c.item, c.qty)""").first()
+print(r.num_affected_rows, spark.table("stock").count())`,
+    expectedOutput: '2 4',
     explanation:
-      "CDC only processes the rows the source system's change log reports as modified - a small fraction of the 10,000,000-row table from the previous question - which is why it has the lowest source-system impact and write amplification of the three strategies.",
+      'Item b is updated and item e is deleted: 2 affected rows. Five rows minus the deleted one leaves 4. Only the 2 changed rows are touched, while a full reload would rewrite every row of the table on every run. That is why reading the change log is the cheapest way to stay in step.',
+    hints: [
+      'Which rows in stock match a row in stock_changes?',
+      'A delete removes a row; an update does not change the count.',
+    ],
     tags: ['cdc-strategy', 'predict-output'],
     concepts: ['ing-cdc-strategy'],
   },
@@ -276,15 +351,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A fraud-detection model needs to score each transaction within 30 seconds of it happening, and transactions arrive continuously from a Kafka topic. What ingestion mode fits, and why?',
+      'A fraud model must score each transaction within 30 seconds of it happening, and transactions arrive continuously on a Kafka topic. Which ingestion mode fits, and why?',
     options: [
-      { id: 'a', text: "Continuous streaming (Trigger.ProcessingTime) — a 30-second SLA against a push-based Kafka source requires a continuously running cluster consuming the topic in near real time; a scheduled batch job, even a frequent one, adds startup latency and can't guarantee that tight a window.", isCorrect: true },
-      { id: 'b', text: 'Scheduled batch with Trigger.AvailableNow running every 5 minutes — a 5-minute cadence is close enough to "continuous" for most fraud use cases, and batch is always preferred over streaming when the source is a message queue like Kafka.', isCorrect: false },
-      { id: 'c', text: 'Neither — Kafka topics cannot be consumed directly by Databricks at all, so the transactions would need to first land as files in cloud storage before any ingestion strategy could apply.', isCorrect: false },
-      { id: 'd', text: "Scheduled batch with Trigger.AvailableNow running once per day, since Auto Loader's cost-saving cluster shutdown behavior only applies to daily jobs and the SLA can be relaxed to next-day scoring for cost reasons.", isCorrect: false },
+      { id: 'a', text: 'A scheduled run of trigger(availableNow=True) every 5 minutes, because that is close enough to continuous and batch is preferred for any message queue.', isCorrect: false },
+      { id: 'b', text: 'A scheduled run of trigger(availableNow=True) once a day, because its cluster shutdown saves cost and next-day scoring is acceptable to the business.', isCorrect: false },
+      { id: 'c', text: 'Land the Kafka messages as files first, because Databricks cannot read a Kafka topic directly, and then ingest those files on a schedule.', isCorrect: false },
+      { id: 'd', text: "A continuously running stream, because a 30-second target on a push source needs a cluster that is always consuming, which a schedule cannot promise.", isCorrect: true },
     ],
     explanation:
-      "This is the canonical continuous-streaming signal from the decision framework: sub-minute SLA plus a push-based source (Kafka). A scheduled batch job, however frequent, can't consistently hit a 30-second window the way a continuously running stream can.",
+      'A target of seconds on a push source such as Kafka is the case for a continuous stream. A scheduled run, however frequent, pays start-up time and waits for its next slot, so it cannot hold a 30-second window reliably. Databricks reads Kafka directly with Structured Streaming.',
     tags: ['batch-vs-streaming'],
     concepts: ['ing-batch-vs-streaming'],
   },
@@ -295,15 +370,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A vendor drops a CSV export into an S3 bucket once a night, and the downstream report only needs to reflect that data by the next morning. What ingestion mode fits, and why?',
+      'A vendor drops one CSV export into a cloud storage folder every night, and the downstream report only has to reflect it by the next morning. Which ingestion mode fits, and why?',
     options: [
-      { id: 'a', text: "Scheduled incremental batch with Trigger.AvailableNow, run once nightly — a next-morning SLA against a file-drop source is exactly the case for provisioning a cluster, processing the backlogged file with exactly-once checkpoints, and shutting the cluster down, saving 80-90% of the compute cost a 24/7 stream would need.", isCorrect: true },
-      { id: 'b', text: 'Continuous streaming, kept running 24/7 against the bucket — even though the SLA is loose, continuous streaming is always the safer default because it guarantees the data is available the instant it lands, at no meaningful extra cost.', isCorrect: false },
-      { id: 'c', text: 'Neither batch nor streaming applies to file-drop sources — S3 bucket drops require a custom polling script outside of Databricks entirely, since Auto Loader only supports push-based sources like Kafka.', isCorrect: false },
-      { id: 'd', text: "Continuous streaming, but only for the first ingestion run — after the initial load, all subsequent nightly drops should switch to a manual, non-Auto-Loader script since streaming checkpoints can't be reused across a batch/streaming transition.", isCorrect: false },
+      { id: 'a', text: 'A stream that runs 24 hours a day, because a stream is the safer default and the data is then available the instant it lands.', isCorrect: false },
+      { id: 'b', text: 'A stream for the first load only, then a manual script, because a checkpoint cannot be reused after a switch between streaming and batch.', isCorrect: false },
+      { id: 'c', text: 'A nightly run of trigger(availableNow=True), because it loads the new file once and then stops, so no cluster idles the rest of the day.', isCorrect: true },
+      { id: 'd', text: 'A custom polling script outside Databricks, because Auto Loader reads only push sources such as Kafka and cannot watch a storage folder.', isCorrect: false },
     ],
     explanation:
-      "A 15-minute-or-looser SLA against a file-based landing source is the textbook case for Trigger.AvailableNow: it clears the backlog with exactly-once semantics and then shuts the cluster down, which is far cheaper than running a stream continuously for data that only needs to be fresh by morning.",
+      'A next-morning target on a file drop is the case for incremental batch. The Auto Loader stream runs with trigger(availableNow=True) on a schedule, uses its checkpoint to load only the new files exactly once, and shuts down, which costs far less than keeping a stream running for data that is needed once a day.',
     tags: ['batch-vs-streaming'],
     concepts: ['ing-batch-vs-streaming'],
   },
@@ -314,15 +389,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A source system starts sending a new field in its JSON payloads that the bronze schema doesn't know about yet. What should happen to that field if the bronze table has a rescued data column configured, versus if it doesn't?",
+      'An Auto Loader stream reads JSON into bronze with a fixed schema, and cloudFiles.schemaEvolutionMode is set to none, so a new field does not stop the stream. The source starts sending a field the schema does not know. What happens to it with a rescued data column, and without one?',
     options: [
-      { id: 'a', text: "The new field is silently dropped without a rescued data column, and captured (typically as JSON) in a `_rescued_data` column with one — this is the exact failure mode a rescued data column is designed to prevent: unannounced upstream schema drift silently losing data instead of surfacing it for recovery.", isCorrect: true },
-      { id: 'b', text: 'With a rescued data column, the new field is silently discarded exactly the same as without one — the rescued data column only ever captures type-cast failures, not genuinely new fields the schema has never seen before.', isCorrect: false },
-      { id: 'c', text: 'Without a rescued data column, Auto Loader always fails the entire ingestion job the moment it sees an unrecognized field, so unannounced schema drift is loud and immediately visible rather than silent.', isCorrect: false },
-      { id: 'd', text: 'A rescued data column only applies to CSV sources, not JSON — for a JSON payload the new field is always silently dropped regardless of whether a rescued data column is configured on the bronze table.', isCorrect: false },
+      { id: 'a', text: 'With the column the field is kept in _rescued_data, typically as JSON; without it the field is ignored and lost, with no error.', isCorrect: true },
+      { id: 'b', text: 'It is dropped in both cases, because _rescued_data only holds values that failed a type cast and never a field the schema lacks.', isCorrect: false },
+      { id: 'c', text: 'Without a rescued data column the stream always fails when it meets an unknown field, so schema drift is loud rather than silent.', isCorrect: false },
+      { id: 'd', text: 'A rescued data column applies only to CSV sources; for JSON the new field is always dropped, whether or not the column exists.', isCorrect: false },
     ],
     explanation:
-      "This is the Blind Schema Blindspot failure mode from the research: ingesting raw JSON without a rescued data column means an unannounced new field from the source just vanishes with no error and no trace. Configuring `_rescued_data` turns that silent loss into a visible, recoverable column instead.",
+      'With the schema fixed and evolution off, a field the schema does not know is skipped. Without a rescued data column it disappears with no error and no trace. With one, Auto Loader keeps it, along with values that do not fit their column, in _rescued_data, so you can see it and recover it.',
     tags: ['file-format-landing'],
     concepts: ['ing-file-format-landing'],
   },
@@ -333,15 +408,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A 50 GB orders table is queried both by a coarse `order_date` filter and, separately, by a high-cardinality `customer_id` lookup. Traditional `PARTITIONED BY` can only pick one column well. What does Liquid Clustering offer here that traditional partitioning can't?",
+      'A 50 GB orders table is filtered by a coarse order_date and also looked up by a high-cardinality customer_id. What does Liquid Clustering offer here that PARTITIONED BY cannot?',
     options: [
-      { id: 'a', text: "Liquid Clustering can cluster on both `order_date` and `customer_id` together, including the high-cardinality `customer_id`, without creating the directory explosion a `PARTITIONED BY customer_id` declaration would — and it can re-cluster later without a full table rewrite if the query pattern shifts.", isCorrect: true },
-      { id: 'b', text: "Liquid Clustering can only be applied to `order_date`, not `customer_id`, since it shares the same low-cardinality-only restriction as traditional `PARTITIONED BY` — the only real difference between the two is the keyword used to declare it.", isCorrect: false },
-      { id: 'c', text: 'Traditional `PARTITIONED BY` already handles this case fine at 50 GB, since the 1-10 GB per partition directory guideline only starts to matter once a table crosses the 1 TB threshold Liquid Clustering was built for.', isCorrect: false },
-      { id: 'd', text: 'Liquid Clustering removes the need for any query filter at all — once a table is declared `CLUSTER BY`, every query against it runs at the same speed regardless of which columns are filtered on.', isCorrect: false },
+      { id: 'a', text: 'It can cluster on order_date and customer_id together without a directory per customer, and its keys can be changed later without a rewrite.', isCorrect: true },
+      { id: 'b', text: 'It takes only low-cardinality keys such as order_date, as PARTITIONED BY does, so the two differ only in the keyword.', isCorrect: false },
+      { id: 'c', text: 'Nothing, because PARTITIONED BY customer_id and order_date works well on any table, as the 1 TB guideline concerns size and not the number of values.', isCorrect: false },
+      { id: 'd', text: 'It makes every query run at the same speed whichever columns it filters on, so no filter on the clustering keys is needed.', isCorrect: false },
     ],
     explanation:
-      "Liquid Clustering's core advantage over PARTITIONED BY is that it works on high-cardinality keys like customer_id without the directory-explosion cost of a hard partition, and it can dynamically re-cluster later without rewriting the whole table if query patterns change.",
+      'Partitioning by customer_id would make a directory per customer, which is far too many for a 50 GB table. Liquid Clustering groups rows by several keys, including high-cardinality ones, without creating directories, and ALTER TABLE ... CLUSTER BY changes the keys later without a rewrite. It helps queries that filter on the keys; it does not make every query equally fast.',
     tags: ['partitioning-strategy'],
     concepts: ['ing-partitioning-strategy'],
   },
@@ -352,15 +427,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A legacy on-prem database has no accessible transaction log and no CDC tooling, but the pipeline still needs to detect which rows changed since the last run. What strategy fits, and what's the cost of using it?",
+      'A legacy on-premises database has no accessible transaction log and no CDC tooling, but the pipeline must still find which rows changed since the last run. What strategy fits, and what does it cost?',
     options: [
-      { id: 'a', text: "Periodic batch-diff (snapshot MERGE) — without an accessible change log, the pipeline has to pull a full snapshot and diff it against the previous snapshot to find changed rows; this costs more transient compute to calculate the diff than log-based CDC would, but it works when logs simply aren't available.", isCorrect: true },
-      { id: 'b', text: "CDC via Delta CDF — Delta Change Data Feed can be pointed directly at any source database's internal storage, transaction log or not, so the lack of accessible logs on the legacy system doesn't actually block using CDC here.", isCorrect: false },
-      { id: 'c', text: 'Full reload is the only option — since CDC requires an accessible transaction log, and batch-diff also requires an accessible transaction log to compute a diff, a legacy system with neither must fall back to a full OVERWRITE regardless of table size.', isCorrect: false },
-      { id: 'd', text: "CDC via Debezium — Debezium is specifically designed to work without any access to a source database's transaction log, reconstructing changes purely from periodic full-table snapshots instead.", isCorrect: false },
+      { id: 'a', text: 'Delta Change Data Feed, which can be pointed at any source database, so a missing log on the legacy system is no obstacle.', isCorrect: false },
+      { id: 'b', text: 'A full reload is the only option, because comparing snapshots also needs a transaction log, however large the table is.', isCorrect: false },
+      { id: 'c', text: 'Debezium, which is built to work without log access and rebuilds the changes from periodic full-table snapshots.', isCorrect: false },
+      { id: 'd', text: 'Compare snapshots and MERGE the difference: it needs no log, but costs more compute than reading a change log would.', isCorrect: true },
     ],
     explanation:
-      "Batch-diff is exactly the fallback for when CDC's prerequisite (an accessible change log) isn't available: it snapshots the source and diffs against the prior snapshot, at the cost of more transient compute than a log-based CDC read would need.",
+      'Snapshot diffing is the fallback when no change log is available: pull the current state, compare it with the previous snapshot and MERGE the differences. It costs more compute than log-based CDC, but it does not depend on the source exposing a log. Delta Change Data Feed records changes to Delta tables, not to a foreign database, and Debezium reads database logs.',
     tags: ['cdc-strategy'],
     concepts: ['ing-cdc-strategy'],
   },
@@ -371,26 +446,24 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A compliance team asks why the landing zone still has raw files from 6 months ago, when the equivalent bronze Delta table has 90 days of time travel history covering the same retention need. What landing zone practice addresses this?',
+      'A compliance team asks why the landing zone still holds raw files from 6 months ago, when the bronze table already keeps the same records for the whole 90-day retention period. What landing-zone practice answers this?',
     options: [
-      { id: 'a', text: "A storage lifecycle policy: standard storage for a short window, a colder/cheaper tier for a while longer, then auto-purge once the retention need is already covered by Delta bronze's own time travel — so the landing zone doesn't grow forever holding data the Delta layer already retains.", isCorrect: true },
-      { id: 'b', text: "Landing zones should never have a lifecycle policy at all — since WORM immutability blocks deletes, the only compliant way to reduce storage is to migrate to a completely different cloud provider with lower per-GB pricing.", isCorrect: false },
-      { id: 'c', text: "The compliance team is mistaken — a landing zone should always retain every file forever with no lifecycle policy, since WORM immutability and infinite retention are the same requirement and can't be separated.", isCorrect: false },
-      { id: 'd', text: 'The fix is to disable WORM immutability so old landing-zone files can be manually deleted by an engineer on request, trading the audit guarantee for storage savings whenever compliance flags an old file.', isCorrect: false },
+      { id: 'a', text: "None is needed, because immutable files and infinite retention are the same requirement, so a landing zone keeps every file once written.", isCorrect: false },
+      { id: 'b', text: 'A storage lifecycle policy: files stay a short time on standard storage, move to cheaper tiers, then are purged once bronze covers the retention need.', isCorrect: true },
+      { id: 'c', text: "Turn off immutability so an engineer can delete old files by hand on request, trading the audit guarantee for savings, at the cost of a weaker audit trail.", isCorrect: false },
+      { id: 'd', text: 'A landing zone must never have a lifecycle policy, so the only way to cut the cost is to move to a cloud provider with cheaper storage.', isCorrect: false },
     ],
     explanation:
-      "This is exactly the landing zone lifecycle pattern from the research: tiered storage that ages data out over a defined window, auto-purging once Delta bronze's own time travel already covers the retention requirement - keeping the landing zone from growing without bound while still staying auditable during its active window.",
+      'Files are kept unchanged while they are the audit record. Once bronze holds the history the retention rules need, a lifecycle policy moves old files to cheaper tiers and then deletes them automatically. Immutability stops edits and early deletion; it does not require keeping files forever.',
     tags: ['landing-zone'],
     concepts: ['ing-landing-zone'],
   },
 
   // ────────────────────────────────────────────────────────────────────
-  // ADVANCED (19) — 3 anti-patterns x 3 domain-transfer scenarios (9) +
-  // 3 decision primitives x 3 domain-transfer scenarios (9) + 1
-  // discrimination question
+  // ADVANCED (19)
   // ────────────────────────────────────────────────────────────────────
 
-  // Hive Time-Machine (x3)
+  // Partitioning a small table too finely (x3)
   {
     id: 'ing-mcq-a1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -398,15 +471,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A 40 GB clickstream_events table is partitioned by `year/month/day/hour`. Over 18 months this produces over 13,000 partition directories, most holding files under 200 KB, and queries now regularly time out with metastore RPC errors. What\'s this anti-pattern called, and what\'s the fix?',
+      'A 40 GB clickstream_events table is partitioned by year, month, day and hour. After 18 months it has over 13,000 partition directories, most holding files under 200 KB, and queries often time out while planning. What is wrong, and what is the fix?',
     options: [
-      { id: 'a', text: 'The Hive Time-Machine — partitioning a table this small by hour creates far more partition directories than the data volume justifies, producing tiny files and overwhelming the metastore with RPC calls. The fix is a coarser partitioning grain (day, not hour) or switching to Liquid Clustering instead.', isCorrect: true },
-      { id: 'b', text: 'This is expected behavior for any partitioned table regardless of size — metastore RPC errors at this file count are a fixed Databricks platform limit that has to be worked around by upgrading to a larger metastore instance, not by changing the partitioning scheme.', isCorrect: false },
-      { id: 'c', text: 'A Liquid Clustering misconfiguration — the table should never have been declared with `CLUSTER BY` on an hourly timestamp, and switching to `PARTITIONED BY year, month, day, hour` is the correct fix for the RPC timeouts.', isCorrect: false },
-      { id: 'd', text: 'A checkpoint corruption issue in Auto Loader — the fix is to delete and rebuild the streaming checkpoint, which will automatically consolidate the small partition files into larger ones on the next run.', isCorrect: false },
+      { id: 'a', text: "This is a fixed platform limit on file counts, so a larger metastore is needed; changing the partitioning would not help.", isCorrect: false },
+      { id: 'b', text: 'Auto Loader\'s checkpoint is corrupted; deleting and rebuilding it consolidates the small partition files on the next run.', isCorrect: false },
+      { id: 'c', text: "The table is cut much finer than 40 GB needs, leaving tiny files; use a coarser grain such as day, or Liquid Clustering.", isCorrect: true },
+      { id: 'd', text: 'The table should not use CLUSTER BY on an hourly timestamp; the fix is to switch to PARTITIONED BY year, month, day and hour.', isCorrect: false },
     ],
     explanation:
-      'This is the named production failure mode: partitioning a small table (under 100 GB) by year/month/day/hour produces tens of thousands of tiny files and metastore RPC crashes. The fix is a coarser partition grain or Liquid Clustering, not a metastore hardware upgrade.',
+      'Every distinct combination of partition values becomes a directory, and 40 GB spread over thousands of directories leaves each with a few small files. Planning has to list and open them all. Partition at a coarser grain or, better for a table this size, leave it unpartitioned and cluster it on the columns queries filter by.',
     tags: ['hive-time-machine'],
     concepts: ['ing-hive-time-machine'],
   },
@@ -417,15 +490,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "An IoT platform's sensor_readings table is only 15 GB but was partitioned by `year/month/day/hour/device_region` at launch. It now has over 40,000 partitions, most under 100 KB, and simple date-range queries take minutes to plan. What's happening, and what's the fix?",
+      "An IoT sensor_readings table is only 15 GB but was partitioned by year, month, day, hour and device_region at launch. It has over 40,000 partitions, most under 100 KB, and simple date-range queries take minutes to plan. What is happening, and what is the fix?",
     options: [
-      { id: 'a', text: "This is the Hive Time-Machine — stacking a fine-grained time partition with an additional `device_region` column multiplies the partition count far beyond what a 15 GB table needs, producing tiny files and slow query planning. The fix is to drop to a single coarse partition column (e.g. day) or move to Liquid Clustering on `event_date` and `device_region` together.", isCorrect: true },
-      { id: 'b', text: 'This is a compute sizing problem, not a partitioning problem — the query planning is slow because the cluster is too small, and adding more worker nodes will fix the minutes-long planning time without any change to the partition columns.', isCorrect: false },
-      { id: 'c', text: 'This is expected: any table partitioned by more than one column will always have slower query planning than a single-column partition, regardless of the partition columns\' cardinality or the total table size.', isCorrect: false },
-      { id: 'd', text: "This is a Delta transaction log corruption issue — the fix is to run VACUUM with a 0-hour retention window to immediately purge the metadata backlog causing the slow planning.", isCorrect: false },
+      { id: 'a', text: 'Planning is slow because the cluster is too small; adding workers fixes the planning time without changing the partition columns.', isCorrect: false },
+      { id: 'b', text: "The Delta log is corrupted; running VACUUM with a zero-hour retention clears the metadata backlog that slows planning, so more workers are the fix.", isCorrect: false },
+      { id: 'c', text: "Any table with more than one partition column plans slowly, whatever the cardinality of the columns or the size of the table.", isCorrect: false },
+      { id: 'd', text: "The partition count multiplies across every column, far beyond what 15 GB needs; use one coarse column, or cluster on date and region.", isCorrect: true },
     ],
     explanation:
-      'Stacking a fine time grain with an additional partition column compounds the Hive Time-Machine effect - the partition count multiplies by the cardinality of every partition column combined, not just the time grain alone.',
+      'The partition count is the product of the distinct values of each partition column, so adding device_region to a fine time grain multiplies the directories. At 15 GB each ends up tiny. Drop to one coarse column or cluster on the columns the queries use. VACUUM with zero retention would not help and is unsafe.',
     tags: ['hive-time-machine'],
     concepts: ['ing-hive-time-machine'],
   },
@@ -436,20 +509,20 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A support_tickets table (8 GB) is partitioned by `year/month/day/hour` "to make time-range queries fast." Ticket volume is only a few hundred rows per hour, so most hourly partition files are a few KB. What\'s the correct diagnosis and fix?',
+      'An 8 GB support_tickets table is partitioned by year, month, day and hour "to make time-range queries fast". It gets only a few hundred rows an hour, so most hourly files are a few KB. What is the right diagnosis and fix?',
     options: [
-      { id: 'a', text: "The Hive Time-Machine — an 8 GB table with only a few hundred rows per hour doesn't generate enough data per partition to justify an hourly grain; the fix is to partition by day (or use Liquid Clustering on the ticket timestamp) so each partition holds a meaningful amount of data instead of a few KB.", isCorrect: true },
-      { id: 'b', text: 'There is no problem here — "make time-range queries fast" is a valid justification for any partition grain, no matter how small the resulting files end up being, since query speed always outweighs file-count concerns.', isCorrect: false },
-      { id: 'c', text: 'The issue is that support_tickets should not be a Delta table at all — tables under 10 GB should always be stored as a single Parquet file with no partitioning or clustering of any kind.', isCorrect: false },
-      { id: 'd', text: "The issue is unrelated to partition grain — it's that the table lacks a Bloom filter index, and adding one would resolve the small-file problem without changing the partitioning scheme.", isCorrect: false },
+      { id: 'a', text: "There is no problem: making time-range queries fast justifies any grain, since query speed always outweighs file count and the cost of planning.", isCorrect: false },
+      { id: 'b', text: "Tables under 10 GB should be stored as a single Parquet file with no partitioning or clustering of any kind, whatever the queries.", isCorrect: false },
+      { id: 'c', text: 'A few hundred rows an hour cannot fill an hourly partition; partition by day, or better cluster on the timestamp, so files hold useful amounts of data.', isCorrect: true },
+      { id: 'd', text: "The table lacks a Bloom filter index, and adding one removes the small-file problem without changing the partitioning, leaving the hourly layout as it is.", isCorrect: false },
     ],
     explanation:
-      "Wanting fast time-range queries doesn't justify an arbitrarily fine partition grain - the grain still has to match the data volume. A few hundred rows per hour is nowhere near enough to fill a partition directory, so the 'faster queries' goal is better served by day-level partitioning or Liquid Clustering.",
+      'Wanting fast time-range queries does not justify any grain: the partitions still have to hold enough data. A few hundred rows an hour fills nothing. Clustering on the timestamp (or at most a daily partition) keeps files a sensible size and still lets queries skip data by time.',
     tags: ['hive-time-machine'],
     concepts: ['ing-hive-time-machine'],
   },
 
-  // Naked Overwrites (x3)
+  // Overwriting a whole table for a few changed rows (x3)
   {
     id: 'ing-mcq-a4',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -457,15 +530,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A nightly job runs `.mode(\"overwrite\").saveAsTable(\"subscription_billing\")` against a 600 GB table, even though only the current day's invoices (roughly 0.5% of rows) actually changed. What's this anti-pattern called, and what breaks besides the wasted compute?",
+      "A nightly job runs .mode(\"overwrite\").saveAsTable(\"subscription_billing\") on a 600 GB table, though only the current day's invoices, about 0.5% of rows, changed. What does that cost beyond the compute, and what is the fix?",
     options: [
-      { id: 'a', text: 'Naked Overwrites — rewriting the full 600 GB table daily when only 0.5% changed causes high write amplification, invalidates any cached query plans/results against the table, and breaks Delta time travel retention by generating a full new version every single day instead of a small, scoped one.', isCorrect: true },
-      { id: 'b', text: 'Nothing breaks beyond the extra compute cost — `.mode("overwrite")` is transactionally identical to a scoped `replaceWhere` write from Delta\'s perspective, so caches and time travel retention are unaffected either way.', isCorrect: false },
-      { id: 'c', text: 'This is the Fan-Out Bug — the overwrite is duplicating each invoice row once per line item during the write, inflating the table\'s row count on every run regardless of how much data actually changed.', isCorrect: false },
-      { id: 'd', text: "This is a checkpoint staleness issue specific to Structured Streaming — since the job uses `.mode(\"overwrite\")`, it must be a streaming write whose checkpoint file has fallen out of sync with the source, not a batch write pattern problem at all.", isCorrect: false },
+      { id: 'a', text: 'Nothing beyond compute: an overwrite rewrites only the files that changed, so it behaves like a scoped write and the table history is unaffected.', isCorrect: false },
+      { id: 'b', text: 'It writes 600 GB to change 0.5%, and each night\'s old copy stays on storage until VACUUM; MERGE the changed invoices, or replaceWhere the day.', isCorrect: true },
+      { id: 'c', text: 'It switches the job into a streaming write whose checkpoint falls out of step with the source; the fix is to delete the checkpoint.', isCorrect: false },
+      { id: 'd', text: 'It adds the day\'s rows next to the existing ones, so invoices duplicate; the fix is a distinct step after each run.', isCorrect: false },
     ],
     explanation:
-      "This is the named anti-pattern: a full daily OVERWRITE on a 500 GB+ table causes high write amplification, invalidates caches, and breaks time travel retention by generating a full new table version every run - even when the actual change volume is tiny.",
+      'An overwrite replaces the whole table, so every night 600 GB of new files are written to change about 3 GB, and the previous 600 GB of files stay on storage, readable through time travel, until VACUUM removes them. Applying only the changes with MERGE, or overwriting just the changed day with replaceWhere, writes a small fraction of that.',
     tags: ['naked-overwrites'],
     concepts: ['ing-naked-overwrites'],
   },
@@ -476,15 +549,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "An `inventory_snapshot` table (2 TB) is fully overwritten every hour by a job that recomputes stock levels for every warehouse, even though only a handful of warehouses had any stock movement that hour. What's the fix, framed in terms of Delta write options?",
+      'A 2 TB inventory_snapshot table is overwritten in full every hour, recomputing every warehouse, although only a few warehouses had stock movement that hour. What is the fix, in terms of Delta write options?',
     options: [
-      { id: 'a', text: "Scope the write with `replaceWhere` (or a targeted `MERGE INTO`) filtered to just the warehouses with actual movement that hour, instead of a bare `.mode(\"overwrite\")` against the whole 2 TB table — this cuts write amplification down to roughly the fraction of warehouses that actually changed.", isCorrect: true },
-      { id: 'b', text: 'Switch the write from `.mode("overwrite")` to `.mode("append")` — appending instead of overwriting eliminates write amplification entirely, since Delta only ever writes new files on append regardless of how large the table is.', isCorrect: false },
-      { id: 'c', text: 'Reduce the job\'s schedule from hourly to daily — running the same full `.mode("overwrite")` less often reduces the total number of naked overwrites per day without addressing the write amplification of each individual run.', isCorrect: false },
-      { id: 'd', text: "Add a `VACUUM` call immediately after each overwrite — vacuuming removes old data files after the write completes, but does nothing to reduce the amount of data written during the overwrite itself.", isCorrect: false },
+      { id: 'a', text: 'Switch to .mode("append"), which rewrites nothing and keeps the same table, since each hour only adds the warehouses that moved.', isCorrect: false },
+      { id: 'b', text: 'Run the same full overwrite once a day instead of hourly, which cuts the number of full rewrites without changing what each one writes.', isCorrect: false },
+      { id: 'c', text: 'Scope the write with replaceWhere, or a MERGE, to the warehouses that moved, instead of a bare overwrite of the whole 2 TB.', isCorrect: true },
+      { id: 'd', text: 'Run VACUUM straight after each overwrite, so the old files are removed and the next write has less to rewrite.', isCorrect: false },
     ],
     explanation:
-      "replaceWhere (or a scoped MERGE) is the concrete fix for Naked Overwrites: it lets the write target only the partitions/rows that actually changed, instead of rewriting the entire table on every run regardless of how localized the change was.",
+      'replaceWhere (or a MERGE keyed on the warehouse) limits the write to the rows that changed, so the work follows the size of the change rather than the table. An append would stack a second row for each warehouse that moved. Running less often or vacuuming does not reduce what each overwrite writes.',
     tags: ['naked-overwrites'],
     concepts: ['ing-naked-overwrites'],
   },
@@ -495,20 +568,20 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A team defends a nightly full overwrite of a 900 GB `employee_directory` table by saying \"it's simple and we've never had a correctness bug.\" What's the actual cost they're not accounting for, beyond raw compute time?",
+      "A team defends a nightly full overwrite of a 900 GB employee_directory table because \"it is simple and we have never had a correctness bug\". What cost are they missing, beyond raw compute time?",
     options: [
-      { id: 'a', text: "Correctness isn't the axis Naked Overwrites breaks — the cost is write amplification (rewriting 900 GB nightly for what's likely a small daily change set), cache invalidation for downstream readers, and time travel retention filling up faster since every run creates a full new table version instead of a scoped one.", isCorrect: true },
-      { id: 'b', text: "There isn't a hidden cost — if the job has never produced a correctness bug, a full overwrite is strictly equivalent to a scoped write in every respect that matters, including cost and time travel behavior.", isCorrect: false },
-      { id: 'c', text: "The only real cost is storage duplication from `VACUUM` not running often enough — switching to a nightly `VACUUM RETAIN 0 HOURS` call would fully eliminate the downside of the full overwrite pattern.", isCorrect: false },
-      { id: 'd', text: 'The hidden cost is that full overwrites silently skip schema enforcement, so a nightly `.mode("overwrite")` is actually more likely to introduce a correctness bug over time than a scoped `replaceWhere`/MERGE write would be.', isCorrect: false },
+      { id: 'a', text: 'None: if the job has never produced a bad result, a full overwrite is as good as a scoped write in cost and in table history.', isCorrect: false },
+      { id: 'b', text: "A full overwrite skips schema enforcement, so it is more likely than a scoped write to let bad data in over time, since Delta does not check overwrites.", isCorrect: false },
+      { id: 'c', text: 'The only cost is old files piling up; a nightly VACUUM with zero retention would remove the downside of the pattern completely.', isCorrect: false },
+      { id: 'd', text: 'Correctness is not the issue: it rewrites 900 GB for a small daily change, and every night\'s full copy of old files stays until VACUUM.', isCorrect: true },
     ],
     explanation:
-      "A full overwrite can be perfectly correct and still be an expensive, wasteful pattern - the cost shows up as write amplification, cache invalidation for downstream consumers, and time travel history filling up with full-table versions instead of small scoped ones, none of which 'no correctness bugs so far' addresses.",
+      'A full overwrite can be perfectly correct and still wasteful. It rewrites everything for a small change set, and each run leaves a full copy of the previous files behind, readable by time travel, until VACUUM removes them. Delta still enforces the schema on an overwrite, and vacuuming with zero retention would break time travel and concurrent readers.',
     tags: ['naked-overwrites'],
     concepts: ['ing-naked-overwrites'],
   },
 
-  // Directory Listing Ingestion Trap (x3)
+  // Auto Loader listing a bucket of millions of files (x3)
   {
     id: 'ing-mcq-a7',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -516,15 +589,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'An Auto Loader stream ingesting from an image-upload bucket with over 2 million files, running in default directory listing mode, now spends hours just listing the bucket before it processes a single new file. What\'s this anti-pattern called, and what\'s the fix?',
+      'An Auto Loader stream reads an image-upload bucket of over 2 million files in its default directory listing mode. It now spends hours listing the bucket before it processes a single new file. What is wrong, and what is the fix?',
     options: [
-      { id: 'a', text: "The Directory Listing Ingestion Trap — running Auto Loader in directory listing mode against a bucket with over 1 million files makes every trigger re-list the entire bucket via cloud storage APIs, which gets slower as the file count grows. The fix is to enable file notification mode (`cloudFiles.useNotifications=true`) so Auto Loader is told about new files instead of scanning for them.", isCorrect: true },
-      { id: 'b', text: "This is a network bandwidth issue — the fix is to provision a larger cluster with more network throughput, since directory listing mode's speed is purely a function of available bandwidth, not file count.", isCorrect: false },
-      { id: 'c', text: 'This is a Hive Time-Machine issue — the bucket should be partitioned by year/month/day/hour so Auto Loader only has to list a small subset of the bucket on each trigger instead of the whole thing.', isCorrect: false },
-      { id: 'd', text: 'This is expected and unavoidable — Auto Loader has a hard architectural requirement to fully re-list every file in a source bucket on every single trigger, regardless of configuration, so the only fix is to split the bucket into multiple smaller buckets.', isCorrect: false },
+      { id: 'a', text: 'Network bandwidth is the limit, so a larger cluster with more throughput fixes it, because listing speed does not depend on the number of files.', isCorrect: false },
+      { id: 'b', text: 'The bucket is not partitioned by hour; partitioning it by year, month, day and hour lets Auto Loader list a small part of it.', isCorrect: false },
+      { id: 'c', text: "Listing is slow once a bucket holds millions of files; turn on file notification (cloudFiles.useNotifications) so new files are announced.", isCorrect: true },
+      { id: 'd', text: 'Auto Loader must re-list every file in a bucket on every trigger, whatever its settings, so the only fix is to split the bucket in several.', isCorrect: false },
     ],
     explanation:
-      "This is the named anti-pattern from the research: directory listing mode does a full API-level bucket scan on every trigger, which becomes prohibitively slow past roughly a million files. File notification mode avoids the scan entirely by having cloud storage push new-file events instead.",
+      'In directory listing mode Auto Loader finds new files by listing the input path through the cloud storage API, and that listing grows with the number of files. File notification mode (cloudFiles.useNotifications) has the storage account report new files as they arrive, so no listing of the bucket is needed. Databricks also offers managed file events on Unity Catalog external locations for the same purpose.',
     tags: ['directory-listing-trap'],
     concepts: ['ing-directory-listing-trap'],
   },
@@ -535,15 +608,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A clickstream JSON landing bucket accumulates roughly 500,000 new small event files a day and has never had an old-file cleanup process. After 8 months, Auto Loader (directory listing mode) triggers are taking 40+ minutes just to discover what changed. What structural fix addresses this, beyond just switching trigger mode?',
+      'A clickstream JSON bucket gets about 500,000 small files a day and has never been cleaned. After 8 months Auto Loader (directory listing) takes over 40 minutes just to find the new files. What fixes this, beyond only changing the file discovery mode?',
     options: [
-      { id: 'a', text: 'Switch Auto Loader to file notification mode (`cloudFiles.useNotifications=true`) so new files are discovered via cloud storage events instead of a full bucket listing, and pair it with a landing zone lifecycle policy so the bucket doesn\'t keep accumulating files Auto Loader has already processed and no longer needs to see.', isCorrect: true },
-      { id: 'b', text: "Increase the trigger interval to run less often, e.g. once a day instead of every few minutes — running directory listing mode less frequently reduces its per-trigger listing cost proportionally, resolving the slowdown without any configuration change.", isCorrect: false },
-      { id: 'c', text: 'Nothing structural is needed — once the bucket exceeds roughly 1 million files, Auto Loader automatically switches from directory listing mode to file notification mode internally, so the slowdown will resolve itself over the next few months.', isCorrect: false },
-      { id: 'd', text: 'Merge all 500,000 daily files into a single large JSON file at the source, before they land in the bucket — Auto Loader\'s listing cost is driven entirely by total bytes in the bucket, not file count, so consolidating files has no effect on listing speed.', isCorrect: false },
+      { id: 'a', text: "Use file notification so new files are announced, and add a lifecycle policy so the bucket stops filling with files already processed.", isCorrect: true },
+      { id: 'b', text: 'Run the stream less often, such as once a day, which cuts the listing cost in proportion without any configuration change.', isCorrect: false },
+      { id: 'c', text: "Do nothing: once a bucket passes about a million files, Auto Loader switches itself to file notification mode, so the slowdown will fade.", isCorrect: false },
+      { id: 'd', text: 'Merge the daily files into one large JSON file at the source, though listing cost depends on bytes, so the change would not help.', isCorrect: false },
     ],
     explanation:
-      "File notification mode fixes the per-trigger listing cost, but it doesn't address why the bucket keeps growing - pairing it with a landing zone lifecycle policy (already-ingested files aging out) keeps the bucket from silently becoming a multi-million-file liability again.",
+      'File notification mode removes the cost of listing. It does not stop the bucket growing without limit, so pair it with a lifecycle policy that ages out files already ingested. Running less often makes each listing bigger, not cheaper, and Auto Loader never changes its discovery mode by itself.',
     tags: ['directory-listing-trap'],
     concepts: ['ing-directory-listing-trap'],
   },
@@ -554,20 +627,20 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A team migrating an IoT telemetry pipeline to Databricks defaults every new Auto Loader stream to directory listing mode \"because it's simpler to set up and doesn't need extra cloud permissions.\" One telemetry bucket has 4 million files. What's the risk, and when is directory listing mode actually the right call?",
+      "A team migrating an IoT pipeline starts every new Auto Loader stream in directory listing mode, \"because it is simpler and needs no extra cloud permissions\". One telemetry bucket has 4 million files. What is the risk, and when is directory listing the right choice?",
     options: [
-      { id: 'a', text: 'The risk is the Directory Listing Ingestion Trap on the 4-million-file bucket specifically — the fix isn\'t to abandon directory listing mode everywhere, just on buckets past roughly 1 million files, where it should switch to file notification mode; smaller buckets can keep the simpler directory listing setup without hitting the same slowdown.', isCorrect: true },
-      { id: 'b', text: "There's no real risk — directory listing mode's per-trigger cost is fixed regardless of bucket file count, so defaulting to it everywhere for setup simplicity is a reasonable, low-risk engineering tradeoff at any scale.", isCorrect: false },
-      { id: 'c', text: "File notification mode requires no additional cloud permissions beyond directory listing mode, so there's never a legitimate reason to default to directory listing mode on any bucket, regardless of file count.", isCorrect: false },
-      { id: 'd', text: 'The risk only applies to JSON sources — since telemetry data typically lands as JSON, this bucket would hit the trap even at a much smaller file count than a Parquet-based bucket would, making file count irrelevant to the actual threshold.', isCorrect: false },
+      { id: 'a', text: "There is no risk, since listing costs the same whatever the number of files, so using it everywhere for simplicity is fine at any scale.", isCorrect: false },
+      { id: 'b', text: "File notification needs no extra permissions, so there is never a reason to use directory listing on any bucket, whatever its size.", isCorrect: false },
+      { id: 'c', text: "The 4-million-file bucket will list slowly, so move that stream to file notification; small buckets can keep the simpler listing.", isCorrect: true },
+      { id: 'd', text: 'The risk applies only to JSON sources, so telemetry would hit it at a much lower file count than a Parquet bucket.', isCorrect: false },
     ],
     explanation:
-      "Directory listing mode's simplicity is a legitimate reason to default to it on smaller buckets - the trap only bites once a bucket's file count gets large enough (roughly past a million files) that a full listing scan becomes slow on every trigger, which is exactly the threshold to switch to file notification mode instead.",
+      'Directory listing is simple and fine for a modest number of files. It slows down as the bucket grows into the millions, so switch those streams to file notification, accepting the extra cloud permissions it needs to create its event subscription. The file format makes no difference to listing.',
     tags: ['directory-listing-trap'],
     concepts: ['ing-directory-listing-trap'],
   },
 
-  // Batch vs streaming decision (x3, complex)
+  // Batch or streaming in harder settings (x3)
   {
     id: 'ing-mcq-a10',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -575,15 +648,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A payments platform needs to detect duplicate/fraudulent charges within 2 minutes of authorization, sourcing from a Kafka topic that also feeds a nightly marketing-analytics job reading from the same topic's compacted log via a scheduled batch pull. Should both consumers use the same ingestion mode?",
+      "A payments platform must detect duplicate charges within 2 minutes, reading a Kafka topic. A nightly marketing job reads the same topic's log with a scheduled batch pull. Should both consumers use the same ingestion mode?",
     options: [
-      { id: 'a', text: 'No — the fraud pipeline needs continuous streaming to hit its 2-minute SLA against the push-based Kafka source, while the marketing job can run scheduled batch (Trigger.AvailableNow) since its SLA is next-day; the same Kafka topic can be read by both a continuous stream and a periodic batch job independently.', isCorrect: true },
-      { id: 'b', text: "Yes — since both consumers read from the same underlying Kafka topic, they must use the same ingestion mode, or Kafka's consumer group protocol will silently drop messages for whichever consumer is running the other mode.", isCorrect: false },
-      { id: 'c', text: "No, but for the opposite reason — the marketing job should use continuous streaming since it's reading from Kafka, and the fraud job should use scheduled batch since fraud detection doesn't actually require freshness, only accuracy.", isCorrect: false },
-      { id: 'd', text: "Yes — Kafka topics can only be consumed by one job at a time regardless of ingestion mode, so the marketing job and fraud job would need to be merged into a single pipeline with one shared SLA.", isCorrect: false },
+      { id: 'a', text: "Yes, because Kafka's consumer group protocol silently drops messages for whichever consumer runs in the other mode, so both must match.", isCorrect: false },
+      { id: 'b', text: "No: fraud needs a continuous stream for its 2-minute target, and marketing can run in batch, since a topic has independent consumers.", isCorrect: true },
+      { id: 'c', text: 'No, but the other way round: marketing streams because it reads Kafka, and fraud runs in batch since it needs accuracy and not freshness.', isCorrect: false },
+      { id: 'd', text: 'Yes, because a Kafka topic can be read by only one job at a time, so the two would have to merge into one pipeline.', isCorrect: false },
     ],
     explanation:
-      "Ingestion mode is a per-consumer SLA decision, not a property of the source. The same Kafka topic can feed a continuous stream for the tight-SLA fraud use case and a separate scheduled batch pull for the loose-SLA marketing use case - Kafka supports multiple independent consumers reading the same topic at different cadences.",
+      'The mode is a per-consumer choice based on that consumer\'s freshness target, not a property of the source. Kafka lets many consumers read the same topic independently at their own pace, so one can stream continuously while another pulls in batch.',
     tags: ['batch-vs-streaming'],
     concepts: ['ing-batch-vs-streaming'],
   },
@@ -594,15 +667,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A logistics company runs a continuous streaming job ingesting GPS pings for live delivery-tracking, at a steady cost of a small always-on cluster. An engineer proposes switching it to Trigger.AvailableNow running every 2 minutes to save cost. What\'s the actual tradeoff of that switch?',
+      "A logistics company runs a continuous stream that ingests GPS pings for live delivery tracking on a small always-on cluster. An engineer proposes trigger(availableNow=True) every 2 minutes to save cost. What is the real tradeoff?",
     options: [
-      { id: 'a', text: "It trades end-to-end freshness for cost: a 2-minute Trigger.AvailableNow job pays cluster startup/shutdown overhead on every run and delivers pings in up-to-2-minute-old batches instead of near-continuous updates — acceptable if live-tracking's actual UX tolerance is a couple minutes of staleness, not acceptable if it needs to look truly real-time.", isCorrect: true },
-      { id: 'b', text: 'There is no tradeoff — Trigger.AvailableNow running every 2 minutes is functionally identical to continuous streaming in both latency and cost, so the switch is a strict improvement with no downside.', isCorrect: false },
-      { id: 'c', text: "It only affects cost, never latency — Trigger.AvailableNow, regardless of how often it's scheduled, always delivers data with the exact same end-to-end latency as continuous streaming, since both use the same underlying Structured Streaming engine.", isCorrect: false },
-      { id: 'd', text: "It's not a valid comparison — Trigger.AvailableNow can only be used with file-based landing sources, never with a live GPS ping stream, so this switch isn't technically possible regardless of the cost/latency tradeoff.", isCorrect: false },
+      { id: 'a', text: "There is none: availableNow every 2 minutes matches a continuous stream in latency and cost, so the switch is a pure gain with no downside.", isCorrect: false },
+      { id: 'b', text: "It trades freshness for cost: each run pays cluster start-up and data is up to 2 minutes old, which suits tracking only if acceptable.", isCorrect: true },
+      { id: 'c', text: "It changes only cost and never latency, because both modes use the same engine and so deliver data with the same delay end to end.", isCorrect: false },
+      { id: 'd', text: "It is not possible, because availableNow reads only file-based sources and cannot be used with a live stream of GPS pings from devices.", isCorrect: false },
     ],
     explanation:
-      "The switch is a real tradeoff, not a free win: frequent Trigger.AvailableNow runs still pay per-run cluster startup overhead and introduce up-to-the-interval staleness, so whether it's worth the cost savings depends entirely on how tight the live-tracking UX's actual freshness requirement is.",
+      'Frequent availableNow runs still pay for cluster start-up each time and deliver data in batches up to the interval old. Whether the saving is worth it depends on how fresh the tracking page really must be. availableNow works with Kafka and other streaming sources, not only files.',
     tags: ['batch-vs-streaming'],
     concepts: ['ing-batch-vs-streaming'],
   },
@@ -613,20 +686,20 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A retailer\'s inventory-sync pipeline reads from an SFTP drop that arrives at unpredictable times (sometimes 6am, sometimes 11am) but is only needed for that afternoon\'s replenishment run. A junior engineer sets it up as continuous streaming "to be safe." What\'s wrong with that choice, and what fits better?',
+      "A vendor drops an inventory file into a cloud storage folder once a day, at an unpredictable time between 6am and 11am. It is only needed for that afternoon's replenishment run. An engineer sets up a continuous stream \"to be safe\". What is wrong with that, and what fits better?",
     options: [
-      { id: 'a', text: "Continuous streaming here runs a cluster 24/7 to watch for a file that only shows up once a day at an unpredictable time, which is expensive for a loose afternoon SLA; scheduled batch with Trigger.AvailableNow, checked periodically (e.g. hourly), fits better — it clears the backlog once the file lands and shuts down, without needing to guess the exact arrival time.", isCorrect: true },
-      { id: 'b', text: "Nothing is wrong — continuous streaming is always the safest default for any source with unpredictable arrival timing, regardless of how loose the downstream SLA actually is.", isCorrect: false },
-      { id: 'c', text: 'The fix is to move the SFTP drop to Kafka first, then use continuous streaming against the Kafka topic — continuous streaming isn\'t compatible with SFTP as a source at all, regardless of arrival timing.', isCorrect: false },
-      { id: 'd', text: 'The unpredictable arrival time makes this source fundamentally incompatible with any scheduled trigger — a human has to manually kick off the job once the SFTP file is confirmed to have landed, regardless of SLA looseness.', isCorrect: false },
+      { id: 'a', text: "Nothing is wrong: a stream is the safest default for any source whose arrival time is unpredictable, however loose the deadline is.", isCorrect: false },
+      { id: 'b', text: "A stream keeps a cluster running all day for one daily file; run trigger(availableNow=True) hourly to load it once it lands.", isCorrect: true },
+      { id: 'c', text: 'A fixed run at 6am is better, because unpredictable arrival rules out any trigger that is not fixed, and a late file waits a day.', isCorrect: false },
+      { id: 'd', text: 'Only a person can start the job after seeing the file, because no scheduled trigger works when the arrival time is unpredictable.', isCorrect: false },
     ],
     explanation:
-      "Unpredictable arrival timing doesn't force continuous streaming - a periodic Trigger.AvailableNow check (hourly, say) picks up the file whenever it lands without paying for a cluster to sit idle most of the day, which fits the loose afternoon SLA far better than 24/7 streaming.",
+      'Unpredictable arrival does not force a continuous stream. A scheduled availableNow run, say hourly, finds the file when it lands, loads it once and stops, which suits the loose afternoon deadline. A single 6am run would miss a later file, and a manual start is unnecessary.',
     tags: ['batch-vs-streaming'],
     concepts: ['ing-batch-vs-streaming'],
   },
 
-  // Partitioning strategy (x3, complex)
+  // Table layout in harder settings (x3)
   {
     id: 'ing-mcq-a13',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -634,15 +707,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A 3 TB events table is currently `PARTITIONED BY event_date`, and most queries filter by both `event_date` and a high-cardinality `session_id`. Query planners regularly scan far more files than necessary because `session_id` isn\'t part of the physical layout. What migration addresses this without reintroducing a Hive Time-Machine risk?',
+      "A 3 TB events table is partitioned by event_date, and most queries filter on both event_date and a high-cardinality session_id. Planners scan far more files than needed because session_id is not in the layout. What change fixes that without recreating too many tiny directories?",
     options: [
-      { id: 'a', text: "Migrate from `PARTITIONED BY event_date` to Liquid Clustering on `(event_date, session_id)` — Liquid Clustering handles the high-cardinality `session_id` key without the directory-explosion cost that adding it as a second `PARTITIONED BY` level would cause (which would reproduce the Hive Time-Machine at 3 TB scale), while still keeping `event_date` locality for date-range queries.", isCorrect: true },
-      { id: 'b', text: 'Add `session_id` as a second level of `PARTITIONED BY` (`PARTITIONED BY event_date, session_id`) — stacking a second, high-cardinality partition column onto an existing date partition is the standard fix for this exact query pattern.', isCorrect: false },
-      { id: 'c', text: 'Drop `event_date` entirely and switch to `PARTITIONED BY session_id` alone, since session_id is the more selective filter and should take priority as the sole physical partition column.', isCorrect: false },
-      { id: 'd', text: "Leave the physical partitioning as `event_date` only, and add a Bloom filter index on `session_id` instead — Bloom filters, not partition columns, are the correct mechanism for improving high-cardinality-column selectivity within an existing date partition.", isCorrect: false },
+      { id: 'a', text: 'Rebuild it with Liquid Clustering on (event_date, session_id), which handles the high-cardinality key without a directory per session.', isCorrect: true },
+      { id: 'b', text: 'Add session_id as a second PARTITIONED BY column, which is the standard fix for a query that filters on two columns.', isCorrect: false },
+      { id: 'c', text: 'Drop event_date and partition by session_id alone, because the more selective column should be the only partition column.', isCorrect: false },
+      { id: 'd', text: 'Keep the event_date partitions and add a Bloom filter index on session_id, because that is the way to improve selectivity within a partition.', isCorrect: false },
     ],
     explanation:
-      "Adding a high-cardinality column as a second PARTITIONED BY level is exactly how a Hive Time-Machine gets reproduced at scale - the directory count multiplies by session_id's cardinality. Liquid Clustering is designed for precisely this case: clustering on a combination of coarse and high-cardinality keys without a physical directory explosion.",
+      'A second PARTITIONED BY level on session_id would create a directory per session, an enormous number even at 3 TB. Liquid Clustering on (event_date, session_id) keeps data with similar keys together without directories, so the engine can skip files on either filter. A partitioned table has to be rebuilt to adopt clustering.',
     tags: ['partitioning-strategy'],
     concepts: ['ing-partitioning-strategy'],
   },
@@ -653,15 +726,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A 400 GB `ad_spend` table is currently unpartitioned and queried almost exclusively by a coarse `campaign_month` filter, with query planning time growing noticeably as the table grows. Is Liquid Clustering or traditional `PARTITIONED BY` the better fit here, and why?",
+      "A new 400 GB ad_spend table is queried almost only by a coarse campaign_month filter, and planning time is growing with the table. Which layout fits, following current Databricks advice?",
     options: [
-      { id: 'a', text: "Traditional `PARTITIONED BY campaign_month` fits well here: the filter column is low-cardinality, coarse, and matches the table's dominant query pattern, and at 400 GB the table is large enough that partition-pruning on a well-chosen coarse column gives a real planning-time benefit without a small-file risk.", isCorrect: true },
-      { id: 'b', text: 'Liquid Clustering is strictly required here — traditional `PARTITIONED BY` is deprecated and Databricks no longer recommends it for any table, regardless of query pattern or cardinality.', isCorrect: false },
-      { id: 'c', text: "Neither fits — a table queried almost exclusively by one filter column should not be partitioned or clustered at all, since any physical layout tuned for one query pattern will always slow down every other kind of query against the table.", isCorrect: false },
-      { id: 'd', text: 'Liquid Clustering is required specifically because the table exceeds 100 GB — the 1 TB threshold from the traditional `PARTITIONED BY` guideline is a hard cutoff below which Liquid Clustering must always be used instead.', isCorrect: false },
+      { id: 'a', text: 'PARTITIONED BY campaign_month, because a coarse, low-cardinality column that matches the usual filter is exactly the case for partitioning.', isCorrect: false },
+      { id: 'b', text: "Leave it unpartitioned and CLUSTER BY (campaign_month): under 1 TB, partition directories add little and clustering still lets queries skip files.", isCorrect: true },
+      { id: 'c', text: "No layout at all, because a layout tuned to one filter column always slows every other kind of query on the table in the same table.", isCorrect: false },
+      { id: 'd', text: "PARTITIONED BY campaign_month and campaign_id together, since two partition columns prune more files than one, whatever their cardinality or the table size.", isCorrect: false },
     ],
     explanation:
-      "This is the case where traditional PARTITIONED BY is still the right tool: a coarse, low-cardinality column that matches the dominant query pattern, on a table large enough to benefit from partition pruning. Liquid Clustering is the better default for high-cardinality keys or evolving query patterns, not a universal replacement.",
+      'Databricks advises partitioning only for tables over about 1 TB, on a low-cardinality column with at least 1 GB per partition. A 400 GB table is under that, so cluster it on the filter column instead; Liquid Clustering gives the data skipping without directories and can change keys later. Clustering one column does not make other queries slower than no layout.',
     tags: ['partitioning-strategy'],
     concepts: ['ing-partitioning-strategy'],
   },
@@ -672,20 +745,20 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A product_events table was originally clustered by `event_date` via Liquid Clustering. Six months later, the dominant query pattern shifts to filtering by `product_id` instead. What does adapting to that shift require under Liquid Clustering versus traditional `PARTITIONED BY`?",
+      "A product_events table was clustered by event_date with Liquid Clustering. Six months later most queries filter by product_id instead. What does adapting to this need under Liquid Clustering, compared with PARTITIONED BY?",
     options: [
-      { id: 'a', text: "Liquid Clustering can re-cluster dynamically to the new key (`product_id`) without a full data rewrite, as new writes and background optimization gradually reorganize the data; traditional `PARTITIONED BY` would require physically rewriting the table into new partition directories to change the partition column, since the column is baked into the file paths themselves.", isCorrect: true },
-      { id: 'b', text: "Under both Liquid Clustering and traditional `PARTITIONED BY`, changing the clustering/partition key always requires a full rewrite of the table's data files — there's no difference in migration cost between the two approaches.", isCorrect: false },
-      { id: 'c', text: "Neither approach can adapt to a query pattern shift after the table is created — the table would need to be dropped and recreated from source data with the new key regardless of whether it used Liquid Clustering or `PARTITIONED BY`.", isCorrect: false },
-      { id: 'd', text: 'Traditional `PARTITIONED BY` handles this shift more gracefully than Liquid Clustering, since partition columns can be added or removed via a lightweight `ALTER TABLE` metadata-only operation, while Liquid Clustering keys are immutable once set at table creation.', isCorrect: false },
+      { id: 'a', text: "Under both, changing the key means rewriting all the data files, so the two cost the same to adapt to a new query pattern, however it was loaded.", isCorrect: false },
+      { id: 'b', text: "PARTITIONED BY changes with a metadata-only ALTER TABLE, while Liquid Clustering keys cannot be changed once the table exists at all, so it is the more flexible of the two.", isCorrect: false },
+      { id: 'c', text: "Neither can adapt: the table must be dropped and rebuilt from source with the new key, whichever layout it uses and then reloaded in full.", isCorrect: false },
+      { id: 'd', text: "ALTER TABLE ... CLUSTER BY (product_id) changes keys in place; a partition column is part of every file path, so changing it rewrites the table.", isCorrect: true },
     ],
     explanation:
-      "This is exactly Liquid Clustering's advantage over traditional partitioning: because the clustering key isn't baked into physical directory paths, it can adapt to a new dominant query pattern without a full table rewrite - traditional PARTITIONED BY has the partition column physically encoded in file paths, so changing it means rewriting the data.",
+      'Liquid Clustering keys are table metadata, so ALTER TABLE ... CLUSTER BY changes them in place: existing files are not rewritten, and new writes and the next OPTIMIZE cluster by the new keys. A partition column is written into each file\'s directory path, so changing it means rewriting the data.',
     tags: ['partitioning-strategy'],
     concepts: ['ing-partitioning-strategy'],
   },
 
-  // CDC strategy (x3, complex)
+  // Keeping in step with a source in harder settings (x3)
   {
     id: 'ing-mcq-a16',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -693,15 +766,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A company runs Postgres with logical replication already enabled for another use case, and also has a 6 GB `country_codes` lookup table that changes maybe twice a year. Should both tables use the same sync strategy?',
+      'A company runs Postgres with logical replication already enabled for another use, and has a 6 GB country_codes lookup table that changes about twice a year. Should every table in that database use the same sync strategy?',
     options: [
-      { id: 'a', text: "No — even though CDC is available (logical replication is already enabled), the transactional tables should use CDC (e.g. Debezium reading the replication slot) since it has the lowest source impact and best freshness, while the tiny, rarely-changing `country_codes` table is simplest to handle with a full reload, since the write amplification of overwriting 6 GB twice a year is negligible.", isCorrect: true },
-      { id: 'b', text: "Yes — since CDC infrastructure already exists for the transactional tables, every table in the same Postgres instance, including `country_codes`, must also use CDC, because running two different sync strategies against one database is not supported.", isCorrect: false },
-      { id: 'c', text: "No, but for the opposite reason — `country_codes` should use CDC since it's small and cheap to keep continuously in sync, while the larger transactional tables should use full reload since CDC's infrastructure overhead isn't worth it for high-volume tables.", isCorrect: false },
-      { id: 'd', text: 'Yes — full reload should be used for every table regardless of size or change frequency once logical replication is enabled, since CDC and full reload cannot coexist as strategies within a single source database.', isCorrect: false },
+      { id: 'a', text: 'Yes, because once CDC exists for some tables, every table in the same database must use it, as two strategies cannot share one source.', isCorrect: false },
+      { id: 'b', text: "No, but the other way round: country_codes uses CDC because it is small, and the large tables are fully reloaded, since that is the simpler option.", isCorrect: false },
+      { id: 'c', text: 'Yes, because logical replication means every table should be fully reloaded, as CDC and full reload cannot coexist in one database.', isCorrect: false },
+      { id: 'd', text: "No: busy tables use CDC from the replication log, while country_codes is simplest as a full reload, as 6 GB twice a year costs little.", isCorrect: true },
     ],
     explanation:
-      "Sync strategy is chosen per-table based on size, change frequency, and log accessibility - not dictated globally by what's enabled on the source database. A 6 GB table that changes twice a year gets negligible benefit from CDC's complexity; a high-volume transactional table benefits a lot from it, and the two coexist fine against the same source.",
+      'The strategy is chosen per table, by size, how often it changes and whether a log is available, not once for the whole source. CDC pays off on large, busy tables. For a small table that almost never changes, CDC adds complexity for no benefit, and a full reload is fine. The two coexist against one database.',
     tags: ['cdc-strategy'],
     concepts: ['ing-cdc-strategy'],
   },
@@ -712,15 +785,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      'A 2 TB `orders` table currently uses nightly full reload because "it\'s always worked." The source database exposes a fully accessible transaction log and Delta CDF is already used successfully elsewhere in the org. What\'s the case for migrating this table off full reload, and to what?',
+      'A 2 TB orders table is reloaded in full every night because "it has always worked". The source exposes its transaction log, and the organisation already runs CDC successfully elsewhere. What is the case for moving this table, and to what?',
     options: [
-      { id: 'a', text: 'Migrate to CDC (via the accessible transaction log, using the existing Delta CDF pattern) — at 2 TB, nightly full reload has meaningfully high write amplification for what is very likely a small daily change set, and CDC is both available (log-accessible source) and already proven inside the org, making it the strategy that best fits the table\'s actual change profile.', isCorrect: true },
-      { id: 'b', text: 'There isn\'t a strong case to migrate — "it\'s always worked" is sufficient justification to keep full reload indefinitely on any table, regardless of size or whether a lower-cost CDC path is available.', isCorrect: false },
-      { id: 'c', text: "Migrate to batch-diff (snapshot MERGE) instead of CDC, since batch-diff is always the safer intermediate step before adopting full CDC, even when the source's transaction log is already accessible and CDC infrastructure already exists elsewhere in the org.", isCorrect: false },
-      { id: 'd', text: "There's no meaningful difference between full reload and CDC once a table exceeds 1 TB — both approaches converge to the same write amplification and source-system load at that scale, so the migration wouldn't change anything measurable.", isCorrect: false },
+      { id: 'a', text: 'There is none: "it has always worked" is enough reason to keep a full reload on any table, whatever a cheaper path would save.', isCorrect: false },
+      { id: 'b', text: 'Move to snapshot diffing first, since it is always the safer step before CDC, even when the log is accessible and the tooling exists.', isCorrect: false },
+      { id: 'c', text: 'Move to CDC: the log is available and proven here, and a nightly 2 TB rewrite is heavy for what is likely a small daily change set.', isCorrect: true },
+      { id: 'd', text: 'There is no difference above 1 TB, as both strategies reach the same write volume and source load at that size.', isCorrect: false },
     ],
     explanation:
-      "Full reload's justification is 'it's cheap on a small table' - at 2 TB with an accessible log and proven CDC tooling already in the org, the cost of continuing full reload (write amplification on a 2 TB rewrite nightly) outweighs whatever simplicity 'it's always worked' is buying.",
+      'A full reload suits small tables. At 2 TB it rewrites everything every night for a change set that is probably a small fraction of that. With a log available and CDC already proven in the organisation, reading only the changes is cheaper for both the source and the target.',
     tags: ['cdc-strategy'],
     concepts: ['ing-cdc-strategy'],
   },
@@ -731,20 +804,20 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "A SaaS vendor's API only exposes a full-table export endpoint (no changed-since parameter, no webhook, no log access) for a 4 GB `subscription_plans` table. An engineer wants to build CDC tooling against it anyway \"for consistency with the rest of the pipeline.\" What's the right call?",
+      "A SaaS vendor's API only offers a full export of its 4 GB subscription_plans table: no changed-since parameter, no webhook, no log. An engineer wants to build log-based CDC against it \"for consistency\". What is the right call?",
     options: [
-      { id: 'a', text: "Full reload is the right call here — CDC and batch-diff both require some way to detect what changed (a log, a changed-since parameter, or comparable snapshots), and a full-table-export-only API with no such mechanism and a small (4 GB) table doesn't justify building change-detection infrastructure the source can't actually support well.", isCorrect: true },
-      { id: 'b', text: "Batch-diff is the right call — even though the API offers no changed-since parameter, batch-diff is defined as requiring a full export at each interval anyway, so it's functionally identical to what this API already provides and should be used instead of full reload for consistency.", isCorrect: false },
-      { id: 'c', text: "CDC is achievable here by polling the full-table-export endpoint every few seconds and diffing responses in memory to reconstruct a change log, which counts as genuine log-based CDC once implemented.", isCorrect: false },
-      { id: 'd', text: "Consistency with the rest of the pipeline should win regardless of API capability — every source in the pipeline should be forced onto the same sync strategy even if that means building fragile workarounds against a source that doesn't support it.", isCorrect: false },
+      { id: 'a', text: "Reload it in full: there is no log to build CDC on, and at 4 GB the rewrite is cheap, so change detection is not worth building.", isCorrect: true },
+      { id: 'b', text: "Poll the export every few seconds and diff the answers in memory; once built, that counts as genuine log-based CDC on a schedule.", isCorrect: false },
+      { id: 'c', text: "Skip the table, because a source with no changed-since parameter cannot be ingested into Databricks without help from the vendor.", isCorrect: false },
+      { id: 'd', text: 'Build CDC anyway, since every source should use the same strategy even if that needs fragile workarounds against the source.', isCorrect: false },
     ],
     explanation:
-      "'Consistency for its own sake' isn't a reason to build CDC tooling a source can't genuinely support - without log access or a changed-since parameter, there's no real change-detection mechanism to build CDC on top of, and at 4 GB the write amplification of a full reload is a non-issue anyway.",
+      'Log-based CDC needs the source to expose its changes, and this API does not. For a small table the simplest correct choice is a full reload, whose write cost is negligible at 4 GB. Diffing polled exports is a snapshot comparison, not a change log, and forcing consistency across sources is not a reason to build fragile tooling.',
     tags: ['cdc-strategy'],
     concepts: ['ing-cdc-strategy'],
   },
 
-  // Discrimination
+  // Telling two failures apart
   {
     id: 'ing-mcq-disc1',
     type: QuestionType.MULTIPLE_CHOICE,
@@ -752,15 +825,15 @@ print(rows_processed(15_000, "cdc"))`,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     question:
-      "Both the Hive Time-Machine and the Directory Listing Ingestion Trap present as \"too many small files causing slowness,\" but they're different failure modes. What's the concrete difference between the two, in terms of WHERE and WHEN the cost is paid?",
+      'A table partitioned far too finely and an Auto Loader stream over a bucket of millions of files both look like "too many small files, so everything is slow". What is the concrete difference in where the cost is paid?',
     options: [
-      { id: 'a', text: "The Hive Time-Machine is a write-time/layout problem: an over-fine partition grain physically creates too many tiny files in the table itself, which then makes every future query slow. The Directory Listing Ingestion Trap is a read-time/discovery problem: Auto Loader re-scans an entire landing bucket via cloud storage list APIs on every trigger, which gets slow purely because of file count in the source bucket, independent of how the destination Delta table is laid out.", isCorrect: true },
-      { id: 'b', text: 'There\'s no real difference — both names describe the exact same root cause (too many files in one location), just discovered in two different contexts (a Delta table\'s partitions versus a cloud storage bucket) and given two different names for historical reasons.', isCorrect: false },
-      { id: 'c', text: 'The Hive Time-Machine only happens with Liquid Clustering, and the Directory Listing Ingestion Trap only happens with traditional `PARTITIONED BY` — the distinguishing factor is which partitioning mechanism the destination table uses, not anything about the source bucket.', isCorrect: false },
-      { id: 'd', text: 'The Hive Time-Machine is a landing-zone issue and the Directory Listing Ingestion Trap is a bronze-table issue — the distinguishing factor is which medallion layer the small-file problem originates in, not the write-time-versus-read-time distinction.', isCorrect: false },
+      { id: 'a', text: "None: both are one problem, too many files in a location, seen in a table's partitions and in a bucket and named twice in the bucket, and the fix is the same for both.", isCorrect: false },
+      { id: 'b', text: 'One happens only with Liquid Clustering and the other only with PARTITIONED BY, so the destination table\'s layout tells them apart.', isCorrect: false },
+      { id: 'c', text: "The over-partitioned table slows every query on it because of its layout; the listing slows each ingestion run that must find new files in the bucket.", isCorrect: true },
+      { id: 'd', text: "One lives in the landing zone and the other in bronze, so the medallion layer where the small files appear tells them apart, not the cost of listing or of layout.", isCorrect: false },
     ],
     explanation:
-      "The practical test: is the slowness caused by how the Delta table's own partition/file layout was chosen (Hive Time-Machine, a write-time decision), or by Auto Loader re-scanning a source bucket's file listing on every trigger regardless of the destination table's layout (Directory Listing Ingestion Trap, a read-time discovery cost)? Fixing one doesn't fix the other.",
+      'The first is a layout problem in the Delta table: an over-fine partition scheme leaves tiny files that every later query must plan around. The second is a discovery problem in the source bucket: Auto Loader lists millions of files to find the new ones, whatever the destination table looks like. Fixing one does not fix the other.',
     tags: ['hive-time-machine', 'directory-listing-trap'],
     concepts: ['ing-hive-time-machine', 'ing-directory-listing-trap'],
   },
@@ -774,37 +847,44 @@ print(rows_processed(15_000, "cdc"))`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
-    language: CodeLanguage.PYTHON,
-    question:
-      "A 20 GB `page_views` table is currently created with `PARTITIONED BY (year, month, day, hour)`, producing tens of thousands of tiny partition files (the Hive Time-Machine). Write the DDL/write logic that instead partitions the table by day only, which matches the table's actual data volume.",
-    starterCode: `# page_views_df has columns: view_id, url, year, month, day, hour, ...
+    language: CodeLanguage.SQL,
+    requires: [
+      'CLUSTER BY',
+      'event_time',
+      'page_views_raw',
+      /CLUSTER\s+BY\s*\(\s*event_time\s*\)/i,
+      /^(?![\s\S]*PARTITIONED\s+BY)/i,
+    ],
+    question: `A 20 GB table page_views used to be written with PARTITIONED BY (year, month, day, hour), which left tens of thousands of tiny files. The raw rows are in the table page_views_raw (view_id, url, event_time).
 
-page_views_df.write \\
-    .format("delta") \\
-    .partitionBy("year", "month", "day", "hour") \\
-    .saveAsTable("page_views")`,
-    solution: `page_views_df.write \\
-    .format("delta") \\
-    .partitionBy("year", "month", "day") \\
-    .saveAsTable("page_views")
-# OR
-page_views_df.write \\
-    .format("delta") \\
-    .partitionBy("day") \\
-    .saveAsTable("page_views")`,
+Write one SQL statement that creates page_views from the rows of page_views_raw, replacing the old table. It must not be partitioned, and queries filter mainly on event_time, so lay it out for that with Liquid Clustering.`,
+    starterCode: `-- Create page_views from page_views_raw, clustered on event_time
+`,
+    solution: `CREATE OR REPLACE TABLE page_views
+CLUSTER BY (event_time)
+AS SELECT * FROM page_views_raw;
+-- OR
+CREATE OR REPLACE TABLE page_views CLUSTER BY (event_time) AS SELECT view_id, url, event_time FROM page_views_raw;
+-- OR
+CREATE OR REPLACE TABLE page_views USING DELTA CLUSTER BY (event_time) AS SELECT * FROM page_views_raw;`,
     testCases: [
       {
         input: '',
         expectedOutput:
-          'page_views_df.write \\\n    .format("delta") \\\n    .partitionBy("year", "month", "day") \\\n    .saveAsTable("page_views")',
+          'CREATE OR REPLACE TABLE page_views\nCLUSTER BY (event_time)\nAS SELECT * FROM page_views_raw;',
         description:
-          'Writes page_views as Delta partitioned down to day granularity only (drops the "hour" level), so the starter\'s four-level partitionBy including "hour" fails.',
+          'Creates page_views as a copy of page_views_raw with Liquid Clustering on event_time and no PARTITIONED BY clause.',
       },
     ],
-    explanation: 'Dropping the hourly partition level brings the partition count back in line with what a 20 GB table needs, fixing the Hive Time-Machine.',
+    explanation:
+      'A 20 GB table is far below the size where partition directories pay off, so the fix is to drop the partitions and cluster on the column queries filter by. CLUSTER BY (event_time) makes no directories, so there are no tiny files from the layout, and the keys can be changed later with ALTER TABLE. CREATE OR REPLACE replaces the old table in one step.',
+    hints: [
+      'CLUSTER BY goes after the table name and before AS SELECT.',
+      'Do not repeat a PARTITIONED BY clause.',
+    ],
     tieredHints: {
-      apiSignature: 'dfWriter.partitionBy(*cols)',
-      skeleton: `page_views_df.write \\\n    .format("____") \\\n    .____("year", "month", "day") \\\n    .____("page_views")`,
+      apiSignature: 'CREATE OR REPLACE TABLE name CLUSTER BY (col) AS SELECT ...',
+      skeleton: `CREATE OR REPLACE TABLE page_views\n____ ____ (event_time)\nAS SELECT * FROM ____;`,
     },
     tags: ['hive-time-machine'],
     concepts: ['ing-hive-time-machine'],
@@ -816,30 +896,34 @@ page_views_df.write \\
     topic: Topic.INGESTION_ARCHITECTURE,
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
-    requires: ['replaceWhere'],
-    question:
-      "A nightly job currently does a naked full `.mode(\"overwrite\")` of a 400 GB `warehouse_inventory` table (partitioned by `warehouse_id`), even though `updated_df` only contains rows for `warehouse_id = 'WH-42'`. Rewrite the write so it only overwrites the `WH-42` partition, leaving every other warehouse's data untouched.",
-    starterCode: `# updated_df: recomputed rows for warehouse_id = 'WH-42' only
+    requires: ['replaceWhere', 'overwrite', 'warehouse_id', 'WH-42'],
+    question: `A nightly job overwrites the whole 400 GB Delta table warehouse_inventory, but updated_df holds recomputed rows for warehouse_id = 'WH-42' only.
 
-updated_df.write \\
-    .format("delta") \\
-    .mode("overwrite") \\
-    .saveAsTable("warehouse_inventory")`,
+Write the PySpark write so that only the rows for warehouse 'WH-42' are replaced by updated_df, and every other warehouse's rows stay as they are.`,
+    starterCode: `# updated_df: recomputed rows for warehouse_id = 'WH-42' only
+`,
     solution: `updated_df.write \\
     .format("delta") \\
     .mode("overwrite") \\
     .option("replaceWhere", "warehouse_id = 'WH-42'") \\
-    .saveAsTable("warehouse_inventory")`,
+    .saveAsTable("warehouse_inventory")
+# OR
+updated_df.write.mode("overwrite").option("replaceWhere", "warehouse_id = 'WH-42'").saveAsTable("warehouse_inventory")`,
     testCases: [
       {
         input: '',
         expectedOutput:
-          'updated_df.write \\\n    .format("delta") \\\n    .mode("overwrite") \\\n    .option("replaceWhere", "warehouse_id = \'WH-42\'") \\\n    .saveAsTable("warehouse_inventory")',
+          'updated_df.write.format("delta").mode("overwrite").option("replaceWhere", "warehouse_id = \'WH-42\'").saveAsTable("warehouse_inventory")',
         description:
-          'Must use mode overwrite with the replaceWhere option, so a naked overwrite with no replaceWhere fails outright. The grader checks that replaceWhere is present but does not itself verify the warehouse_id literal, so an answer that has replaceWhere but names the wrong warehouse (e.g. WH-7) reaches the self-grade panel rather than failing.',
+          'Overwrites in Delta with replaceWhere set to the warehouse_id predicate, so only the WH-42 rows are replaced. A plain overwrite with no replaceWhere fails.',
       },
     ],
-    explanation: 'replaceWhere scopes the overwrite to just the matching partition, avoiding the Naked Overwrites write amplification of rewriting all 400 GB.',
+    explanation:
+      'A plain mode("overwrite") replaces the entire table with updated_df, so every other warehouse would be deleted and 400 GB rewritten. replaceWhere limits the overwrite to rows matching its predicate, so only the WH-42 rows are replaced, in one atomic commit.',
+    hints: [
+      'A DataFrameWriter option set with .option(key, value) can narrow an overwrite.',
+      'The predicate is a SQL condition written as a string.',
+    ],
     tieredHints: {
       apiSignature: 'dfWriter.option(key, value)',
       skeleton: `updated_df.____ \\\n    .____("delta") \\\n    .____("overwrite") \\\n    .____("replaceWhere", "warehouse_id = 'WH-42'") \\\n    .____("warehouse_inventory")`,
@@ -855,19 +939,19 @@ updated_df.write \\
     course: Course.DATABRICKS,
     language: CodeLanguage.PYTHON,
     question:
-      'This snippet switches an Auto Loader stream on a >1M-file bucket from slow directory listing mode to file notification mode. Order the lines so the stream is configured with `cloudFiles.useNotifications` set before the stream is started.',
+      'Order the lines that define an Auto Loader stream over a bucket of millions of JSON files so that it finds new files through file notification instead of listing the bucket. Two lines do not belong.',
     correctOrder: [
-      'reader = spark.readStream.format("cloudFiles")',
-      'reader = reader.option("cloudFiles.format", "json")',
+      'reader = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json")',
       'reader = reader.option("cloudFiles.useNotifications", "true")',
       'stream = reader.load("s3://landing/uploads/")',
     ],
     distractorLines: [
-      'stream = spark.readStream.format("cloudFiles").load("s3://landing/uploads/")',
       'reader = reader.option("cloudFiles.useNotifications", "false")',
+      'stream = spark.readStream.load("s3://landing/uploads/")',
     ],
-    solution: `reader = spark.readStream.format("cloudFiles")\nreader = reader.option("cloudFiles.format", "json")\nreader = reader.option("cloudFiles.useNotifications", "true")\nstream = reader.load("s3://landing/uploads/")`,
-    explanation: 'Setting cloudFiles.useNotifications=true before the stream loads switches Auto Loader from a full bucket listing scan to cloud storage event notifications, avoiding the Directory Listing Ingestion Trap.',
+    solution: `reader = spark.readStream.format("cloudFiles").option("cloudFiles.format", "json")\nreader = reader.option("cloudFiles.useNotifications", "true")\nstream = reader.load("s3://landing/uploads/")`,
+    explanation:
+      'The reader is created first, with the cloudFiles format and the file type; file notification is switched on with cloudFiles.useNotifications set to true; and load starts the stream from the finished reader. Setting it to "false" keeps the directory listing, and a plain readStream without the cloudFiles format is not an Auto Loader stream at all.',
     tags: ['directory-listing-trap'],
     concepts: ['ing-directory-listing-trap'],
   },
