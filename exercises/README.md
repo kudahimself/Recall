@@ -1,6 +1,6 @@
 # Exercises
 
-Small coding exercises to do in your own editor, one per Python topic.
+Small coding exercises to do in your own editor, one per topic: Python for the Backend course, PySpark for Databricks.
 Each one follows a topic's lesson and questions in Recall: the app shows the task and the folder to open, and you tick it done yourself.
 Nothing runs in the browser.
 
@@ -14,9 +14,14 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r exercises/requirements.txt
 ```
 
-`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need.
-Python 3.10 or newer runs them all.
+`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need, and pyspark and delta-spark, which only the Databricks exercises need.
+Python 3.10 or newer runs the Backend ones, and 3.10 to 3.12 is the safe range for the Spark ones.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
+
+## Databricks exercises
+
+The exercises under `exercises/databricks/` run PySpark and Delta Lake locally, so they also need Java 17 or newer.
+See `exercises/databricks/README.md` for the setup and for what differs from a Databricks workspace.
 
 ## Django exercises
 
@@ -51,6 +56,7 @@ exercises/
     <module>.py              the starter you fill in
     test_<module>.py         the pytest tests
   backend/exercise_settings.py  the Django settings every Django exercise shares
+  databricks/spark_setup.py  the local Spark session every Databricks exercise shares
   solutions/<course>/<topic>/  reference solutions, laid over the starter files
   check_exercises.py         checks every exercise (see below)
   requirements.txt           the packages to install, pinned
@@ -67,4 +73,6 @@ python exercises/check_exercises.py
 
 For every exercise it runs the tests on a copy of the starter, where each test must fail, and on a copy with the reference solution laid over it, where each test must pass.
 It works on copies, so your own answers are left alone, and it skips the starter check for an exercise you have already edited.
+Name a course or an exercise to check just that: `python exercises/check_exercises.py databricks` or `databricks/delta_lake_basics`.
+The Databricks exercises are checked together in one Spark session, all starters and then all solutions, because starting Spark is slow.
 The app's `npm test` runs it too (`src/data/exercises/exercises.test.ts`), so an exercise cannot drift from its solution unnoticed.
