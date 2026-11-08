@@ -1963,4 +1963,42 @@ export default function Providers({ children }) {
     tags: ['tanstack-query', 'prefetchQuery', 'HydrationBoundary', 'ssr', 'server-components'],
     concepts: ['next-tanstack-query', 'next-server-vs-client'],
   },
+  {
+    id: 'tanstack-dedupe-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_TANSTACK,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'Shelves renders inside the app\'s QueryClientProvider, and a visitor opens the page for the first time. What does the browser console log? Type each logged line in order, one per line.',
+    code: `"use client";
+import { useQuery } from "@tanstack/react-query";
+
+function Count({ shelf }) {
+  const { data } = useQuery({
+    queryKey: ["books", shelf],
+    queryFn: async () => {
+      console.log("fetch " + shelf);
+      return 3;
+    },
+  });
+  return <p>{shelf}: {data ?? "..."}</p>;
+}
+
+export default function Shelves() {
+  return (
+    <>
+      <Count shelf="poetry" />
+      <Count shelf="poetry" />
+      <Count shelf="crime" />
+    </>
+  );
+}`,
+    expectedOutput: `fetch poetry
+fetch crime`,
+    explanation: 'The queryKey is the cache entry\'s identity. The two poetry counts ask for the same key, ["books", "poetry"], so they share one cache entry, and TanStack Query runs its queryFn once and hands both components the result. ["books", "crime"] is a different key, so it gets its own entry and its own fetch. That is why every value the queryFn uses (here, shelf) belongs in the key: two components asking for the same data share one request, and a different shelf never reads another shelf\'s cache.',
+    hints: ['How many different query keys do the three components use?', 'What does TanStack Query do when two components ask for the same key at the same time?'],
+    tags: ['tanstack-query', 'useQuery', 'queryKey', 'deduplication', 'predict'],
+    concepts: ['next-tanstack-query'],
+  },
 ];

@@ -313,6 +313,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('tanstack-cloze-4'),
   // BEGINNER MC
   q('tanstack-3'),
+  // BEGINNER predict
+  q('tanstack-dedupe-predict-1'),
   // BEGINNER coding
   q('tanstack-1'),
   q('tanstack-7'),
@@ -416,6 +418,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-url-state-cloze-1'),
   q('next-url-state-cloze-2'),
   q('next-url-state-cloze-3'),
+  // BEGINNER predict
+  q('next-url-state-string-predict-1'),
   // INTERMEDIATE MC
   q('next-url-state-3'),
   // INTERMEDIATE coding
@@ -437,6 +441,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-error-handling-parsons-1'),
   q('next-error-handling-cloze-1'),
   q('next-error-handling-cloze-2'),
+  // BEGINNER predict
+  q('next-error-handling-layout-predict-1'),
   // ADVANCED MC
   q('next-error-handling-3'),
   q('next-error-handling-4'),
@@ -466,6 +472,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // INTERMEDIATE faded (Cloze)
   q('next-auth-deep-cloze-5'),
   q('next-auth-deep-cloze-6'),
+  // INTERMEDIATE predict
+  q('next-auth-deep-session-cb-predict-1'),
   // INTERMEDIATE MC
   q('next-auth-deep-3'),
   q('next-auth-deep-4'),
