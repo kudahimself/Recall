@@ -52,11 +52,19 @@ def test_old_version_still_has_its_rows(spark, shelves):
 
 
 def test_timestamp_as_of_reads_the_version_current_then(spark, shelves):
-    history = spark.sql(f"DESCRIBE HISTORY {shelves}").selectExpr(
-        "version", "date_format(timestamp, 'yyyy-MM-dd HH:mm:ss.SSS') AS moment"
-    )
-    moment = {r["version"]: r["moment"] for r in history.collect()}[1]
-    assert total_books_at_time(spark, shelves, moment) == 65
+    # Open-source Delta only resolves a TIMESTAMP AS OF string correctly when the session
+    # timezone matches the machine's own, so this check reads and passes the moment in it.
+    session_zone = spark.conf.get("spark.sql.session.timeZone")
+    machine_zone = spark.sparkContext._jvm.java.util.TimeZone.getDefault().getID()
+    spark.conf.set("spark.sql.session.timeZone", machine_zone)
+    try:
+        history = spark.sql(f"DESCRIBE HISTORY {shelves}").selectExpr(
+            "version", "date_format(timestamp, 'yyyy-MM-dd HH:mm:ss.SSS') AS moment"
+        )
+        moment = {r["version"]: r["moment"] for r in history.collect()}[1]
+        assert total_books_at_time(spark, shelves, moment) == 65
+    finally:
+        spark.conf.set("spark.sql.session.timeZone", session_zone)
 
 
 def test_restore_brings_the_rows_back(spark):
