@@ -95,7 +95,7 @@ describe('per-course distribution smoke', () => {
     { course: Course.BACKEND, pool: buildPool('be', Topic.PY_BASICS, 10) },
     { course: Course.WEB_DEV, pool: buildPool('wd', Topic.HTML_BASICS, 10) },
     { course: Course.DATABRICKS, pool: buildPool('db', Topic.DATABRICKS_BASICS, 10) },
-    { course: Course.DATA_ENGINEERING, pool: buildPool('de', Topic.DE_BATCH_VS_STREAMING, 10) },
+    { course: Course.DATA_ENGINEERING, pool: buildPool('de', Topic.DE_WHAT_IS, 10) },
   ])('$course: 10-card pool, no card dominates', ({ course, pool }) => {
     const progress = seenLongAgo(pool);
     const policy = getSelectionPolicy(course);
@@ -115,9 +115,9 @@ describe('per-course distribution smoke', () => {
     // Even when a ConceptSelectionContext is provided, DE policy should
     // shortcut around the concept-aware bucketing pass and use legacy.
     const pool = [
-      mcq('de-a', Topic.DE_BATCH_VS_STREAMING),
-      mcq('de-b', Topic.DE_BATCH_VS_STREAMING),
-      mcq('de-c', Topic.DE_BATCH_VS_STREAMING),
+      mcq('de-a', Topic.DE_WHAT_IS),
+      mcq('de-b', Topic.DE_WHAT_IS),
+      mcq('de-c', Topic.DE_WHAT_IS),
     ];
     const progress = seenLongAgo(pool);
     const policy = getSelectionPolicy(Course.DATA_ENGINEERING);

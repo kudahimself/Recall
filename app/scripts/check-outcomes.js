@@ -7,7 +7,8 @@
  *
  * Each predict-the-outcome card needs an entry in a checks registry
  * (src/data/dataEngineeringMovingDataChecks.ts, dataEngineeringStorageFilesChecks.ts,
- * dataEngineeringWarehousesLakesChecks.ts, dataEngineeringModelingAnalyticsChecks.ts):
+ * dataEngineeringWarehousesLakesChecks.ts, dataEngineeringModelingAnalyticsChecks.ts,
+ * dataEngineeringStreamingChecks.ts):
  * SQL run on SQLite (sql.js)
  * after the card's `tables` are created, each named by the first word of its
  * title, or Python run on python3 -I. The last result set (rows joined by
@@ -33,11 +34,14 @@ const { WAREHOUSES_LAKES_OUTCOME_CHECKS } = require(path.join(APP, 'src/data/dat
 
 const { MODELING_ANALYTICS_OUTCOME_CHECKS } = require(path.join(APP, 'src/data/dataEngineeringModelingAnalyticsChecks.ts'));
 
+const { STREAMING_OUTCOME_CHECKS } = require(path.join(APP, 'src/data/dataEngineeringStreamingChecks.ts'));
+
 const CHECKS = {
   ...MOVING_DATA_OUTCOME_CHECKS,
   ...STORAGE_FILES_OUTCOME_CHECKS,
   ...WAREHOUSES_LAKES_OUTCOME_CHECKS,
   ...MODELING_ANALYTICS_OUTCOME_CHECKS,
+  ...STREAMING_OUTCOME_CHECKS,
 };
 
 /** The SQL name of a shown table: the first word of its title, e.g. `fact_orders (before)` -> fact_orders. */

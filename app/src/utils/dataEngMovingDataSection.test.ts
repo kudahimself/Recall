@@ -151,9 +151,10 @@ describe('the old topics it absorbed', () => {
     expect(written.questionsAttempted.sort()).toEqual(stored.questionsAttempted.sort());
     expect(written.masteredTopics).toEqual(stored.masteredTopics);
 
-    // A stale mastered key changes nothing about where the learner is.
+    // A stale mastered key changes nothing about where the learner is: the
+    // mastered de_what_is (all of Foundations) opens the step after it, no more.
     const dePool = allQuestions.filter(q => getCourseForTopic(q.topic) === Course.DATA_ENGINEERING);
-    expect(Array.from(SpacedRepetitionSystem.getUnlockedSections(dePool, progress)!.sections)).toEqual([DATA_ENG_PATH_ORDER[0]]);
+    expect(Array.from(SpacedRepetitionSystem.getUnlockedSections(dePool, progress)!.sections)).toEqual(DATA_ENG_PATH_ORDER.slice(0, 2));
     expect(serializeProgress(progress, emptyOrphans())).not.toContain('de-cdc-9');
   });
 });

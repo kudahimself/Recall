@@ -82,6 +82,9 @@ const DATA_ENG_TOPICS = new Set<string>([
   // Modeling for Analytics
   Topic.DE_GRAIN_DOUBLE_COUNTING, Topic.DE_FACTS_DIMS_STAR, Topic.DE_NATURAL_SURROGATE_KEYS,
   Topic.DE_SCD_POINT_IN_TIME, Topic.DE_METRICS_OWNERSHIP,
+  // Streaming
+  Topic.DE_STREAM_LOGS, Topic.DE_EVENT_TIME_WINDOWS, Topic.DE_DELIVERY_GUARANTEES,
+  Topic.DE_STREAM_STATE_JOINS,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -493,8 +496,8 @@ export const DATABRICKS_PATH_ORDER = [
  * Being rewritten section by section as decisions and designs (a lesson per
  * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
  * explain cards in review); Moving Data, Storage & Files, Warehouses, Lakes
- * & Table Formats and Modeling for Analytics are rewritten. The older sections
- * are MCQ-only, built as
+ * & Table Formats, Modeling for Analytics and Streaming are rewritten. The
+ * older sections are MCQ-only, built as
  * many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
@@ -506,7 +509,6 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     weight: 'Step 1',
     topics: {
       'What Is Data Engineering?': ['de_what_is'],
-      'Batch vs Streaming': ['de_batch_vs_streaming'],
     },
   },
   // The second rewritten section. It absorbs the old row vs columnar, file
@@ -568,15 +570,19 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Metrics & Ownership: Semantic Layer & Data Mesh': ['de_metrics_ownership'],
     },
   },
+  // The fifth rewritten section. It absorbs the whole old Streaming section
+  // (what is a stream, event vs processing time, windows, Kafka basics,
+  // delivery guarantees, streaming SQL) and the batch vs streaming topic of
+  // Foundations; their keys stay in DATA_ENG_TOPICS so stored scores still map
+  // to this course. It keeps the old section's name and place, after Modeling
+  // for Analytics, as in the course outline.
   'Streaming': {
     weight: 'Step 6',
     topics: {
-      'What Is a Stream?': ['de_what_is_a_stream'],
-      'Event Time vs Processing Time': ['de_event_vs_processing_time'],
-      'Windows & Watermarks': ['de_windows'],
-      'Kafka Basics': ['de_kafka_basics'],
-      'Delivery Guarantees': ['de_streaming_guarantees'],
-      'Streaming SQL': ['de_streaming_sql'],
+      'Logs, Topics, Partitions & Offsets': ['de_stream_logs'],
+      'Event Time, Windows & Watermarks': ['de_event_time_windows'],
+      'Delivery Guarantees & Exactly-Once': ['de_delivery_guarantees'],
+      'State & Stream Joins': ['de_stream_state_joins'],
     },
   },
   'Distributed Systems & Storage': {
