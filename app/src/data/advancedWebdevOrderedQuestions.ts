@@ -238,13 +238,15 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-auth-5'),
 
   // =====================================================================
-  // 8. DB_DESIGN (11 questions — relocated from former position 23)
+  // 8. DB_DESIGN (12 questions — relocated from former position 23)
   // Schema fundamentals (normalization, relationships, indexes, N+1) land
   // before Prisma so the user has the mental model for writing schemas.
   // =====================================================================
 
   // BEGINNER MC
   q('dp-db-5'),
+  // BEGINNER predict
+  q('dp-db-predict-1'),
   // BEGINNER coding
   q('dp-db-4'),
   // INTERMEDIATE MC
@@ -554,11 +556,13 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('shadcn-form-pattern-mcq-1'),
 
   // =====================================================================
-  // 18. PATTERNS_CREATIONAL (8 questions)
+  // 18. PATTERNS_CREATIONAL (9 questions)
   // =====================================================================
 
   // BEGINNER MC
   q('dp-create-5'),
+  // BEGINNER predict
+  q('dp-create-predict-1'),
   // INTERMEDIATE MC
   q('dp-create-1'),
   q('dp-create-3'),
@@ -571,7 +575,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-create-8'),
 
   // =====================================================================
-  // 19. PATTERNS_STRUCTURAL (9 questions)
+  // 19. PATTERNS_STRUCTURAL (10 questions)
   // =====================================================================
 
   // BEGINNER MC
@@ -582,6 +586,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-struct-5'),
   q('dp-struct-6'),
   q('dp-struct-9'),
+  // INTERMEDIATE predict
+  q('dp-struct-predict-1'),
   // INTERMEDIATE coding
   q('dp-struct-2'),
   // ADVANCED MC
@@ -589,11 +595,13 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-struct-8'),
 
   // =====================================================================
-  // 20. PATTERNS_BEHAVIORAL (8 questions)
+  // 20. PATTERNS_BEHAVIORAL (9 questions)
   // =====================================================================
 
   // BEGINNER MC
   q('dp-behav-2'),
+  // BEGINNER predict
+  q('dp-behav-predict-1'),
   // INTERMEDIATE MC
   q('dp-behav-3'),
   q('dp-behav-5'),
@@ -606,7 +614,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-behav-4'),
 
   // =====================================================================
-  // 21. PATTERNS_ARCHITECTURAL (15 questions — from designPatternQuestions + securityQuestions)
+  // 21. PATTERNS_ARCHITECTURAL (16 questions — from designPatternQuestions + securityQuestions)
   // =====================================================================
 
   // BEGINNER MC
@@ -616,6 +624,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-arch-1'),
   q('dp-arch-9'),
   q('sec-arch-3'),
+  // INTERMEDIATE predict
+  q('dp-arch-predict-1'),
   // INTERMEDIATE coding
   q('dp-arch-5'),
   q('sec-comm-2'),
@@ -630,7 +640,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-arch-1'),
 
   // =====================================================================
-  // 22. API_DESIGN (19 questions — from designPatternQuestions + securityQuestions)
+  // 22. API_DESIGN (20 questions — from designPatternQuestions + securityQuestions)
   // =====================================================================
 
   // BEGINNER MC
@@ -648,6 +658,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-data-1'),
   q('sec-data-2'),
   q('sec-data-4'),
+  // INTERMEDIATE predict
+  q('dp-api-predict-1'),
   // INTERMEDIATE coding
   q('dp-api-4'),
   q('sec-attack-2'),
