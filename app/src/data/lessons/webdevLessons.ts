@@ -13,6 +13,7 @@
  * Section 9, Advanced Next.js Patterns: every topic, Error Handling & Auth
  * Depth as one lesson, as its course topic pairs them.
  * Section 10, Accessibility: its one topic.
+ * Section 11, UI Libraries & Advanced Styling: its one topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -38,6 +39,9 @@
  * and logs after that, each state on its own line. Every example was rendered
  * with React 19 (React Router 7 for the router one) in jsdom, the interactions
  * driven with Testing Library's fireEvent, and the output read off the page.
+ * The shadcn/ui one was rendered that way with class-variance-authority 0.7,
+ * clsx 2.1, tailwind-merge 3.7 and @radix-ui/react-slot 1.5, and its output
+ * is each rendered element's text, tag and class list, in page order.
  *
  * A TypeScript worked example is type-checked in strict mode under
  * check-lessons.js and then runs on node, printing its `output`.
@@ -3688,5 +3692,126 @@ Enter: button "Filters", expanded; live region: "Filters shown"
 Tab 4: checkbox "Poetry", not checked`,
     },
     exercises: ['a11y-wcag-levels-1', 'a11y-visually-hidden-cloze-1', 'a11y-aria-labels-1', 'a11y-tab-order-predict-1', 'a11y-aria-live-coding-1'],
+  },
+
+  // ===== Section 11, UI Libraries & Advanced Styling =====
+  {
+    id: 'next_shadcn/1',
+    topicKeys: [Topic.NEXT_SHADCN],
+    step: 1,
+    title: 'shadcn/ui, Radix & Advanced Tailwind',
+    idea: [
+      lines(
+        "shadcn/ui is not a package you import: `npx shadcn@latest add button` copies the component's source into `components/ui/button.tsx`, and the code is yours to edit.",
+        "Each component pairs a Radix UI primitive, which brings the behaviour (focus, keyboard, ARIA roles) and no styles, with Tailwind classes for the look.",
+      ),
+      lines(
+        "Class lists go through `cn()` from `lib/utils.ts`, which is `twMerge(clsx(inputs))`.",
+        "clsx drops `false`, `null` and `undefined` and keeps an object key whose value is true; tailwind-merge then removes a class that a later class of the same group overrides, so `px-2` after `p-4` stays but `p-4` after `px-2` wins.",
+      ),
+      lines(
+        "`cva(base, { variants, defaultVariants })` from class-variance-authority returns a function: given `{ variant, size }`, it returns the base classes plus the chosen option of each axis, or its default.",
+        "`VariantProps<typeof buttonVariants>` derives the props type from that config, so the two never drift apart.",
+        "`asChild` swaps the element for Radix's `Slot`, which renders nothing of its own and merges its props onto its one child: `<Button asChild><Link href=\"/\">Home</Link></Button>` is one `<a>`.",
+      ),
+      lines(
+        "With Tailwind 4, `globals.css` holds the theme: colours as variables in `:root` and `.dark`, `@theme inline` turning each into utilities such as `bg-primary`, and `@custom-variant dark` making `dark:` follow the `.dark` class that next-themes sets.",
+        "Older projects on Tailwind 3 do this in `tailwind.config.js` with `darkMode: \"class\"`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// components/ui/name.tsx: copied in by the CLI
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps }
+  from "class-variance-authority";
+import { cn } from "@/lib/utils"; // twMerge(clsx(...))
+
+const nameVariants = cva("base classes", {
+  variants: {
+    axis: { option: "classes", other: "classes" },
+  },
+  defaultVariants: { axis: "option" },
+});
+
+type Props = React.ComponentProps<"el">
+  & VariantProps<typeof nameVariants>
+  & { asChild?: boolean };
+
+export function Name(props: Props) {
+  const { asChild, axis, className, ...rest } = props;
+  const Comp = asChild ? Slot : "el";
+  // the caller's className goes last, so it wins
+  const cls = cn(nameVariants({ axis }), className);
+  return <Comp className={cls} {...rest} />;
+}
+
+/* globals.css (Tailwind 4)
+   :root { --token: oklch(...); }
+   .dark { --token: oklch(...); }
+   @theme inline { --color-token: var(--token); }
+     -> bg-token, bg-token/50, text-token
+   @custom-variant dark (&:is(.dark *));          */`,
+    },
+    pitfall: lines(
+      "Joining classes by hand, as in `base + \" \" + className` or a template string, leaves both `px-2` and the caller's `px-4` in the list, and whichever one Tailwind writes later in its CSS wins, not the caller's.",
+      "Pass them through `cn(base, className)` with `className` last, so tailwind-merge drops the base class the caller overrides.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// components/ui/tag.jsx, rendered as <Shelf /> below
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cva } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+
+const tagVariants = cva("rounded-full px-2 text-xs", {
+  variants: {
+    tone: {
+      plain: "bg-muted",
+      sale: "bg-destructive text-white",
+    },
+    size: { sm: "py-0.5", lg: "px-3 py-1 text-sm" },
+  },
+  defaultVariants: { tone: "plain", size: "sm" },
+});
+
+function Tag({
+  tone, size, asChild, className, ...rest
+}) {
+  const Comp = asChild ? Slot : "span";
+  const base = tagVariants({ tone, size });
+  const cls = cn(base, className);
+  return <Comp className={cls} {...rest} />;
+}
+
+export function Shelf() {
+  return (
+    <p>
+      <Tag>Poetry</Tag>
+      <Tag tone="sale" size="lg">20% off</Tag>
+      <Tag asChild className="px-4">
+        <a href="/new">New in</a>
+      </Tag>
+    </p>
+  );
+}`,
+      steps: [
+        "Lines 7-16: `cva` takes the base classes every tag shares and two axes, `tone` and `size`, and `defaultVariants` picks `plain` and `sm` for any axis a caller leaves out.",
+        "Lines 18-25: `Tag` renders a `<span>`, or `Slot` when `asChild` is set, and passes the variant classes and then the caller's `className` through `cn`.",
+        "Line 30: no props, so the defaults apply: the base classes, `bg-muted` and `py-0.5`.",
+        "Line 31: `px-3` comes after the base `px-2` and `text-sm` after `text-xs`, so tailwind-merge drops the base ones; `text-white` is a colour, not a size, so it stays beside `text-sm`.",
+        "Lines 32-34: `Slot` renders no element of its own and puts the classes on the `<a>`, so the page holds one link styled as a tag, and the caller's `px-4` replaces the base `px-2`.",
+      ],
+      output: `Poetry, a <span>:
+  rounded-full px-2 text-xs bg-muted py-0.5
+20% off, a <span>:
+  rounded-full bg-destructive text-white px-3 py-1 text-sm
+New in, one <a href="/new">:
+  rounded-full text-xs bg-muted py-0.5 px-4`,
+    },
+    exercises: ['shadcn-what-is-1', 'shadcn-cn-predict-1', 'shadcn-aschild-mcq-1', 'shadcn-variantprops-coding-1'],
   },
 ];
