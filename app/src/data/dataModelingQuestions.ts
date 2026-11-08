@@ -422,18 +422,18 @@ WHEN NOT MATCHED THEN INSERT (
     topic: Topic.SCD_PATTERNS,
     course: Course.DATABRICKS,
     language: CodeLanguage.SQL,
-    question: `dim_customer (customer_sk, customer_id, customer_name, email, city, effective_from, effective_to, is_current) is an SCD Type 2 dimension. customer_sk is an identity column that fills itself in, effective_from and effective_to are TIMESTAMPs, and each customer's current row has effective_to NULL and is_current true. stg_customer_updates (customer_id, customer_name, email, city) holds today's snapshot, and its tracked columns customer_name, email and city are never NULL.
+    question: `dim_customer (customer_sk, customer_id, customer_name, email, city, valid_from, valid_to, is_current) is an SCD Type 2 dimension. customer_sk is an identity column that fills itself in, valid_from and valid_to are TIMESTAMPs, and each customer's current row has valid_to NULL and is_current true. stg_customer_updates (customer_id, customer_name, email, city) holds today's snapshot, and its tracked columns customer_name, email and city are never NULL.
 
 Write the two statements of the Type 2 load:
-1. A MERGE that closes the current row of each customer whose tracked columns changed, setting effective_to to current_timestamp() and is_current to false.
-2. An INSERT with a column list that adds a current row (effective_from current_timestamp(), effective_to NULL, is_current true) for every staging customer that has no current row, which covers changed and new customers alike.`,
+1. A MERGE that closes the current row of each customer whose tracked columns changed, setting valid_to to current_timestamp() and is_current to false.
+2. An INSERT with a column list that adds a current row (valid_from current_timestamp(), valid_to NULL, is_current true) for every staging customer that has no current row, which covers changed and new customers alike.`,
     requires: [
       /MERGE\s+INTO\s+dim_customer/i,
       /MERGE[\s\S]*is_current[\s\S]*UPDATE\s+SET/i,
       /UPDATE\s+SET[\s\S]*is_current\s*=\s*false/i,
-      /effective_to\s*=\s*current_timestamp/i,
+      /valid_to\s*=\s*current_timestamp/i,
       /<>|!=|DISTINCT\s+FROM|<=>/i,
-      /INSERT\s+INTO\s+dim_customer\s*\(\s*customer_id\b/i,
+      /INSERT\s+INTO\s+dim_customer\s*\((?![^)]*customer_sk)/i,
       /LEFT\s+(OUTER\s+)?JOIN[\s\S]*IS\s+NULL|NOT\s+EXISTS|LEFT\s+ANTI\s+JOIN/i,
     ],
     starterCode: `-- Step 1: close the changed current rows\n-- Step 2: add the new current rows\n`,
@@ -449,11 +449,11 @@ USING stg_customer_updates AS src
   ON tgt.customer_id = src.customer_id AND tgt.is_current = true
   AND (tgt.customer_name <> src.customer_name OR tgt.email <> src.email OR tgt.city <> src.city)
 WHEN MATCHED THEN UPDATE SET
-  tgt.effective_to = current_timestamp(),
+  tgt.valid_to = current_timestamp(),
   tgt.is_current = false;
 
 INSERT INTO dim_customer (customer_id, customer_name, email, city,
-  effective_from, effective_to, is_current)
+  valid_from, valid_to, is_current)
 SELECT src.customer_id, src.customer_name, src.email, src.city,
   current_timestamp(), NULL, true
 FROM stg_customer_updates AS src
@@ -465,10 +465,10 @@ MERGE INTO dim_customer d USING stg_customer_updates s
   ON d.customer_id = s.customer_id AND d.is_current
   AND (d.customer_name <> s.customer_name OR d.email <> s.email OR d.city <> s.city)
 WHEN MATCHED THEN UPDATE
-  SET effective_to = current_timestamp(), is_current = false;
+  SET valid_to = current_timestamp(), is_current = false;
 
 INSERT INTO dim_customer (customer_id, customer_name, email, city,
-  effective_from, effective_to, is_current)
+  valid_from, valid_to, is_current)
 SELECT s.customer_id, s.customer_name, s.email, s.city,
   current_timestamp(), NULL, true
 FROM stg_customer_updates s LEFT JOIN dim_customer d
@@ -480,11 +480,11 @@ USING stg_customer_updates AS src
   ON tgt.customer_id = src.customer_id AND tgt.is_current = true
   AND (tgt.customer_name <> src.customer_name OR tgt.email <> src.email OR tgt.city <> src.city)
 WHEN MATCHED THEN UPDATE SET
-  tgt.effective_to = current_timestamp(),
+  tgt.valid_to = current_timestamp(),
   tgt.is_current = false;
 
 INSERT INTO dim_customer (customer_id, customer_name, email, city,
-  effective_from, effective_to, is_current)
+  valid_from, valid_to, is_current)
 SELECT src.customer_id, src.customer_name, src.email, src.city,
   current_timestamp(), NULL, true
 FROM stg_customer_updates AS src
@@ -498,11 +498,11 @@ USING stg_customer_updates AS src
   ON tgt.customer_id = src.customer_id AND tgt.is_current = true
   AND (tgt.customer_name <> src.customer_name OR tgt.email <> src.email OR tgt.city <> src.city)
 WHEN MATCHED THEN UPDATE SET
-  tgt.effective_to = current_timestamp(),
+  tgt.valid_to = current_timestamp(),
   tgt.is_current = false;
 
 INSERT INTO dim_customer (customer_id, customer_name, email, city,
-  effective_from, effective_to, is_current)
+  valid_from, valid_to, is_current)
 SELECT src.customer_id, src.customer_name, src.email, src.city,
   current_timestamp(), NULL, true
 FROM stg_customer_updates AS src
@@ -520,7 +520,7 @@ WHEN MATCHED THEN UPDATE SET
   ____;
 
 INSERT INTO dim_customer (customer_id, customer_name, email, city,
-  effective_from, effective_to, is_current)
+  valid_from, valid_to, is_current)
 SELECT ____
 FROM stg_customer_updates AS src
 LEFT JOIN dim_customer AS dim
@@ -560,22 +560,22 @@ WHERE ____;`,
     course: Course.DATABRICKS,
     language: CodeLanguage.SQL,
     question:
-      'dim_customer is an SCD Type 2 dimension with the tracked columns customer_name, email and city, plus effective_to and is_current. Put the lines in order to build step 1 of the load: the MERGE that closes the current row of each customer in stg_customer_updates whose tracked columns changed.',
+      'dim_customer is an SCD Type 2 dimension with the tracked columns customer_name, email and city, plus valid_to and is_current. Put the lines in order to build step 1 of the load: the MERGE that closes the current row of each customer in stg_customer_updates whose tracked columns changed.',
     correctOrder: [
       'MERGE INTO dim_customer AS tgt',
       'USING stg_customer_updates AS src',
       '  ON tgt.customer_id = src.customer_id AND tgt.is_current',
       '  AND (tgt.customer_name <> src.customer_name OR tgt.email <> src.email OR tgt.city <> src.city)',
-      'WHEN MATCHED THEN UPDATE SET tgt.effective_to = current_timestamp(), tgt.is_current = false;',
+      'WHEN MATCHED THEN UPDATE SET tgt.valid_to = current_timestamp(), tgt.is_current = false;',
     ],
     distractorLines: [
       '  ON tgt.customer_id = src.customer_id',
       'WHEN NOT MATCHED THEN INSERT *;',
     ],
     solution:
-      'MERGE INTO dim_customer AS tgt\nUSING stg_customer_updates AS src\n  ON tgt.customer_id = src.customer_id AND tgt.is_current\n  AND (tgt.customer_name <> src.customer_name OR tgt.email <> src.email OR tgt.city <> src.city)\nWHEN MATCHED THEN UPDATE SET tgt.effective_to = current_timestamp(), tgt.is_current = false;',
+      'MERGE INTO dim_customer AS tgt\nUSING stg_customer_updates AS src\n  ON tgt.customer_id = src.customer_id AND tgt.is_current\n  AND (tgt.customer_name <> src.customer_name OR tgt.email <> src.email OR tgt.city <> src.city)\nWHEN MATCHED THEN UPDATE SET tgt.valid_to = current_timestamp(), tgt.is_current = false;',
     explanation:
-      'The match has three parts: the same natural key, the current version of the row, and at least one tracked column that differs. The ON line without is_current matches every history row of the customer as well, and closing those again overwrites their effective_to. Without the inequality, step 1 would close rows that did not change. The matched rows are updated, not deleted, so their history stays. A WHEN NOT MATCHED THEN INSERT * cannot add the replacement rows here: a changed customer\'s row was matched, so it never reaches that branch, and the staging table lacks the dimension\'s columns. Step 2, a separate INSERT, adds the new current rows.',
+      'The match has three parts: the same natural key, the current version of the row, and at least one tracked column that differs. The ON line without is_current matches every history row of the customer as well, and closing those again overwrites their valid_to. Without the inequality, step 1 would close rows that did not change. The matched rows are updated, not deleted, so their history stays. A WHEN NOT MATCHED THEN INSERT * cannot add the replacement rows here: a changed customer\'s row was matched, so it never reaches that branch, and the staging table lacks the dimension\'s columns. Step 2, a separate INSERT, adds the new current rows.',
     hints: [
       'Match on the natural key, the current row, and "some tracked column differs".',
       'A matched row is closed by an UPDATE; inserting its new version is a separate step.',
@@ -711,7 +711,7 @@ Replace the load with one MERGE that inserts only the orders whose order_id is n
       /ON\s+[\w.]*order_id\s*=\s*[\w.]*order_id/i,
       /WHEN\s+NOT\s+MATCHED\s+THEN\s+INSERT\s*\(/i,
       /current_timestamp/i,
-      /^(?![\s\S]*WHEN\s+MATCHED\b)/i,
+      /^(?![\s\S]*WHEN\s+MATCHED\s+(AND|THEN))/i,
     ],
     starterCode: `-- Idempotent load of fct_orders\n`,
     testCases: [
