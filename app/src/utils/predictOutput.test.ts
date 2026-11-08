@@ -2,9 +2,11 @@ import { CodeLanguage } from '../types';
 import { questions } from '../data/questions';
 import { QuestionType, PredictOutputQuestion } from '../types';
 import {
+  answersAboutPage,
   outputInstruction,
   outputMatches,
   DEFAULT_OUTPUT_CONVENTION,
+  REACT_RENDERED_OUTPUT_CONVENTION,
   RENDERED_OUTPUT_CONVENTION,
   SQL_MIXED_PRINT_CONVENTION,
   SQL_OUTPUT_CONVENTION,
@@ -87,6 +89,17 @@ describe('predict-output instruction matches what the code outputs', () => {
     expect(outputInstruction('<p>Hi</p>', CodeLanguage.HTML)).toBe(RENDERED_OUTPUT_CONVENTION);
     expect(outputInstruction('.a { width: 10px; }', CodeLanguage.CSS)).toBe(RENDERED_OUTPUT_CONVENTION);
     expect(RENDERED_OUTPUT_CONVENTION).not.toMatch(/prints\b/);
+  });
+
+  it('asks about the page for React code that logs nothing, and about the output when it logs', () => {
+    const shown = 'function Badge({ count }) {\n  return <p>Cart {count && <b>{count}</b>}</p>;\n}';
+    const logged = 'function Label() {\n  console.log(useContext(ThemeContext));\n  return null;\n}';
+    expect(outputInstruction(shown, CodeLanguage.JSX)).toBe(REACT_RENDERED_OUTPUT_CONVENTION);
+    expect(answersAboutPage(shown, CodeLanguage.JSX)).toBe(true);
+    expect(outputInstruction(logged, CodeLanguage.JSX)).toBe(DEFAULT_OUTPUT_CONVENTION);
+    expect(answersAboutPage(logged, CodeLanguage.JSX)).toBe(false);
+    expect(answersAboutPage('console.log(1)', CodeLanguage.JAVASCRIPT)).toBe(false);
+    expect(REACT_RENDERED_OUTPUT_CONVENTION).not.toMatch(/prints\b/);
   });
 });
 

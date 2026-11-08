@@ -211,6 +211,35 @@ function isObjectBrace(code: string, i: number): boolean {
 }
 
 /**
+ * Parentheses around a single JSX element are only layout: `return (\n  <ul>...</ul>\n);`
+ * and `return <ul>...</ul>;` are the same code, as are `x => (<li />)` and
+ * `x => <li />`. A `(` whose contents start with `<` and whose matching `)`
+ * directly follows a `>` is dropped together with that `)`, so the grader
+ * compares the markup, not the wrapping. Anything else in parentheses, such as
+ * a call's arguments or `(a < b)`, keeps them.
+ */
+function stripJsxParens(code: string): string {
+  const drop = new Set<number>();
+  const stack: number[] = [];
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    if (c === '(') stack.push(i);
+    else if (c === ')' && stack.length > 0) {
+      const open = stack.pop() as number;
+      const inner = code.slice(open + 1, i).trim();
+      if (inner.startsWith('<') && inner.endsWith('>') && !/^<[=<]/.test(inner)) {
+        drop.add(open);
+        drop.add(i);
+      }
+    }
+  }
+  if (drop.size === 0) return code;
+  let out = '';
+  for (let i = 0; i < code.length; i++) if (!drop.has(i)) out += code[i];
+  return out;
+}
+
+/**
  * A function's parameter names are the learner's choice: `x => x * x` is the
  * same callback as `n => n * n`, and `(n) => n * 2` the same as `n => n * 2`.
  * Every parameter an arrow function or a `function` declares, and every
@@ -344,6 +373,9 @@ function normalizeCode(code: string, language: CodeLanguage): string {
   let n = stripComments(code, language);
   if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
     n = canonicalizeJsParams(n);
+  }
+  if (language === CodeLanguage.JSX || language === CodeLanguage.TYPESCRIPT) {
+    n = stripJsxParens(n);
   }
 
   // Strip import/from lines (Python `from x import y`, JS `import x from 'y'`).
