@@ -1182,7 +1182,7 @@ const stateJoins: Question[] = [
     answer: '1',
     tempting: [
       { answer: '4', why: '4 is every u1 event. After 10:45 u1 was quiet for 35 minutes, so its entry expired at 11:15 and the count started again.' },
-      { answer: '3', why: '3 expires the entry 30 minutes after the first event, 10:00. The TTL here runs from the last event, and each event resets it.' },
+      { answer: '3', why: '3 is u1\'s count as it stood after the 10:45 event, as if the entry were still there at 11:20. It expired at 11:15, 30 minutes after 10:45, so the 11:20 event finds nothing and starts at 1.' },
     ],
     explanation:
       'u1\'s gaps are 20 and 25 minutes, so its entry survives to 10:45, with a count of 3; it expires at 11:15, and the event at 11:20 starts a new count of 1.\n' +
