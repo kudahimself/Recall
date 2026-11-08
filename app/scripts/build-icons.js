@@ -4,15 +4,16 @@
  * src/brand/recall-mark.svg, in the logo colours --brand (tile) and
  * --on-brand (mark) from src/styles/tokens.css.
  * Nothing else in the repo draws the logo: the header's <Logo /> reads the
- * same mark, and the launcher's Windows shortcut icon wraps icon-192.png.
+ * same mark, and the launcher's Windows shortcut copies recall-elephant.ico.
  *
  * Writes:
  *   public/icon.svg               rounded tile, vector (manifest)
  *   public/favicon.ico            16, 32, 48 (browser tab)
  *   public/apple-touch-icon.png   180, full-bleed square (iOS rounds it)
- *   public/icon-192.png           192, rounded tile (manifest, desktop shortcut)
+ *   public/icon-192.png           192, rounded tile (manifest)
  *   public/icon-512.png           512, rounded tile (manifest)
  *   public/icon-maskable-512.png  512, full-bleed, mark inside the 80% safe circle
+ *   ../launcher/recall-elephant.ico  16, 32, 48, 64, 128, 256 (Windows desktop shortcut)
  *
  * The outputs are committed, so `npm start` and `npm run build` need nothing.
  * Rerun this after changing the mark or the two colours:
@@ -27,6 +28,7 @@ const APP = path.join(__dirname, '..');
 const MARK = path.join(APP, 'src', 'brand', 'recall-mark.svg');
 const TOKENS = path.join(APP, 'src', 'styles', 'tokens.css');
 const PUBLIC = path.join(APP, 'public');
+const LAUNCHER = path.join(APP, '..', 'launcher');
 
 // Mark scale inside a 64 tile, as a share of the 64 box. The tile keeps a
 // margin round the ink; the maskable icon shrinks it to 80% of that so the
@@ -105,20 +107,21 @@ function ico(frames) {
 }
 
 const tile = tileSvg(TILE);
+const icoOf = sizes => ico(sizes.map(size => ({ size, data: png(tile, size) })));
 const outputs = {
-  'icon.svg': tile,
-  'favicon.ico': ico([
-    { size: 16, data: png(tile, 16) },
-    { size: 32, data: png(tile, 32) },
-    { size: 48, data: png(tile, 48) },
-  ]),
-  'apple-touch-icon.png': png(tileSvg(FULL_BLEED), 180),
-  'icon-192.png': png(tile, 192),
-  'icon-512.png': png(tile, 512),
-  'icon-maskable-512.png': png(tileSvg(MASKABLE), 512),
+  [path.join(PUBLIC, 'icon.svg')]: tile,
+  [path.join(PUBLIC, 'favicon.ico')]: icoOf([16, 32, 48]),
+  [path.join(PUBLIC, 'apple-touch-icon.png')]: png(tileSvg(FULL_BLEED), 180),
+  [path.join(PUBLIC, 'icon-192.png')]: png(tile, 192),
+  [path.join(PUBLIC, 'icon-512.png')]: png(tile, 512),
+  [path.join(PUBLIC, 'icon-maskable-512.png')]: png(tileSvg(MASKABLE), 512),
+  // Explorer picks the frame nearest each view size, so the shortcut carries
+  // every size from the small list view up to extra-large icons. The new file
+  // name keeps Explorer's icon cache from showing the old single-size recall.ico.
+  [path.join(LAUNCHER, 'recall-elephant.ico')]: icoOf([16, 32, 48, 64, 128, 256]),
 };
 
-for (const [name, data] of Object.entries(outputs)) {
-  fs.writeFileSync(path.join(PUBLIC, name), data);
-  console.log(`build-icons: wrote public/${name}`);
+for (const [file, data] of Object.entries(outputs)) {
+  fs.writeFileSync(file, data);
+  console.log(`build-icons: wrote ${path.relative(path.join(APP, '..'), file)}`);
 }

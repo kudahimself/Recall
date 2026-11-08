@@ -88,4 +88,18 @@ sleep 3
 check "server: serves the app after the build lands" "$(curl -s "http://127.0.0.1:$PORT/")" "<html>new</html>"
 check "server: started exactly one build" "$(runs)" "1"
 
+# shortcut icon: the committed .ico the installer copies holds every size as a PNG frame of that size
+check "shortcut icon: frames are PNGs at 16-256 px" "$(node -e '
+const b = require("fs").readFileSync(process.argv[1]);
+if (b.readUInt16LE(0) !== 0 || b.readUInt16LE(2) !== 1) throw new Error("not an icon file");
+const out = [];
+for (let i = 0; i < b.readUInt16LE(4); i++) {
+  const e = 6 + 16 * i, at = b.readUInt32LE(e + 12), len = b.readUInt32LE(e + 8);
+  const png = b.subarray(at, at + len);
+  const sig = png.subarray(0, 8).toString("hex") === "89504e470d0a1a0a";
+  const w = png.readUInt32BE(16), h = png.readUInt32BE(20), dir = b[e] || 256;
+  out.push(sig && w === h && w === dir && (b[e + 1] || 256) === dir ? w : "bad");
+}
+console.log(out.join(","));' "$SRC/launcher/recall-elephant.ico")" "16,32,48,64,128,256"
+
 echo; [ "$fails" = 0 ] && echo "all passed" || { echo "$fails failed"; exit 1; }
