@@ -135,7 +135,7 @@ describe('placement leaves existing progress alone', () => {
     return progress;
   }
 
-  // Every step before Systems mastered (Moving Data, Step 3, included).
+  // Every step before Systems mastered (the rewritten sections included).
   const BEFORE = DATA_ENG_PATH_ORDER.length - 1;
 
   it('keeps every earlier step unlocked for a learner who had finished the one before Systems', () => {

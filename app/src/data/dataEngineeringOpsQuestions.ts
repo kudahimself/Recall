@@ -394,22 +394,6 @@ export const dataEngineeringOpsQuestions: Question[] = [
     tags: ['data-quality', 'fail-fast'],
   },
   {
-    id: 'de-dq-8',
-    type: QuestionType.MULTIPLE_CHOICE,
-    difficulty: Difficulty.ADVANCED,
-    topic: Topic.DE_DATA_QUALITY_BASICS,
-    course: Course.DATA_ENGINEERING,
-    question: 'What is "schema drift", and why is it dangerous?',
-    options: [
-      { id: 'a', text: 'A table slowly moves to a different disk over time', isCorrect: false },
-      { id: 'b', text: 'A dashboard gradually changes colour by itself', isCorrect: false },
-      { id: 'c', text: 'A source quietly changes its structure, breaking downstream logic', isCorrect: true },
-      { id: 'd', text: 'Data quality tests randomly turning themselves off', isCorrect: false },
-    ],
-    explanation: 'Schema drift is when an upstream source changes its columns or types without warning — a renamed field, a changed type. Pipelines built on the old shape silently break or produce wrong results. Data contracts and schema checks are defences against it.',
-    tags: ['data-quality', 'schema-drift'],
-  },
-  {
     id: 'de-dq-9',
     type: QuestionType.MULTIPLE_CHOICE,
     difficulty: Difficulty.ADVANCED,

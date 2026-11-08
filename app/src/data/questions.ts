@@ -48,6 +48,7 @@ import { dataEngineeringDistributedQuestions } from './dataEngineeringDistribute
 import { dataEngineeringOpsQuestions } from './dataEngineeringOpsQuestions';
 import { dataEngineeringMovingDataQuestions } from './dataEngineeringMovingDataQuestions';
 import { dataEngineeringStorageFilesQuestions } from './dataEngineeringStorageFilesQuestions';
+import { dataEngineeringWarehousesLakesQuestions } from './dataEngineeringWarehousesLakesQuestions';
 import { dataEngineeringSystemsQuestions } from './dataEngineeringSystemsQuestions';
 import { tsql_select_questions } from './topic_tsql_select';
 import { tsql_filtering_questions } from './topic_tsql_filtering';
@@ -1123,6 +1124,7 @@ export const questions: Question[] = dedupeById([
   // Data Engineering Concepts course
   ...dataEngineeringFoundationsQuestions,
   ...dataEngineeringStorageFilesQuestions,
+  ...dataEngineeringWarehousesLakesQuestions,
   ...dataEngineeringArchitectureQuestions,
   ...dataEngineeringMovingDataQuestions,
   ...dataEngineeringModelingQuestions,

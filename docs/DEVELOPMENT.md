@@ -77,6 +77,7 @@ This file maps every `Topic` to its `Course` and defines:
   It is being rewritten section by section as decisions and designs (a lesson per topic, then predict the outcome, choose and justify, Parsons, spot the flaw, and explain cards in review); the older sections are MCQ-only.
   - `dataEngineeringFoundationsQuestions.ts`
   - `dataEngineeringStorageFilesQuestions.ts` (a rewritten section, Step 2; its predict-the-outcome checks are in `dataEngineeringStorageFilesChecks.ts`)
+  - `dataEngineeringWarehousesLakesQuestions.ts` (a rewritten section, Step 3; its predict-the-outcome checks are in `dataEngineeringWarehousesLakesChecks.ts`)
   - `dataEngineeringArchitectureQuestions.ts`
   - `dataEngineeringMovingDataQuestions.ts` (the first rewritten section; its predict-the-outcome checks are in `dataEngineeringMovingDataChecks.ts`)
   - `dataEngineeringModelingQuestions.ts`
@@ -604,7 +605,7 @@ Nothing to eliminate.
 
 **Grading:** exact after trimming, case-folding, collapsing spaces, dropping a final full stop and the unit (`outcomeMatches`); `8` is not `8.0`.
 
-**Checked by running it:** every predict-the-outcome card needs an entry in a checks registry (`dataEngineeringMovingDataChecks.ts`, `dataEngineeringStorageFilesChecks.ts`): SQLite run on the card's `tables` (each named by the first word of its title), or Python.
+**Checked by running it:** every predict-the-outcome card needs an entry in a checks registry (`dataEngineeringMovingDataChecks.ts`, `dataEngineeringStorageFilesChecks.ts`, `dataEngineeringWarehousesLakesChecks.ts`): SQLite run on the card's `tables` (each named by the first word of its title), or Python.
 `scripts/check-outcomes.js`, run by `npm test` (`data/outcomeChecks.test.ts`), fails a card with no check or whose check gives something other than its `answer`.
 
 #### 7. Choose and Justify (`QuestionType.CHOOSE_JUSTIFY`)
