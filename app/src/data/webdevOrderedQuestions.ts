@@ -6513,6 +6513,26 @@ setTimeout(() => ___(id), 5000);`,
   },
 
   {
+    id: 'js-project-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.JS_PROJECT,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JAVASCRIPT,
+    question: 'What does this code log? Type the two values on one line, separated by a space, as console.log prints them.',
+    code: `const todos = [{ id: 1, done: false }, { id: 2, done: false }];
+const found = todos.find(t => t.id === 2);
+found.done = true;
+const active = todos.filter(t => !t.done);
+console.log(active.length, todos[1].done);`,
+    expectedOutput: '1 true',
+    explanation: 'find() returns the matching object itself, not a copy, so setting found.done changes the todo stored in the array. filter() then keeps only the todo with id 1, so active.length is 1, and todos[1].done reads the same object, now true. This is how a todo app toggles an item in place: find it, then change its field.',
+    hints: ['Does find() hand back a copy of the element or the element itself?'],
+    tags: ['project', 'state', 'find', 'filter', 'references', 'predict'],
+    concepts: ['js-object-mutation'],
+  },
+
+  {
     id: 'js-project-parsons-1',
     type: QuestionType.PARSONS,
     difficulty: Difficulty.BEGINNER,
