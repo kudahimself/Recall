@@ -485,7 +485,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-auth-deep-1'),
 
   // =====================================================================
-  // 16. ACCESSIBILITY (24 questions)
+  // 16. ACCESSIBILITY (25 questions)
   // =====================================================================
 
   // BEGINNER MC
@@ -511,6 +511,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('a11y-roving-tabindex-1'),
   q('a11y-native-first-1'),
   q('a11y-aria-live-mcq-1'),
+  // INTERMEDIATE predict (the Tab order that tabindex and native focusability give)
+  q('a11y-tab-order-predict-1'),
   // INTERMEDIATE coding
   q('a11y-aria-live-coding-1'),
   q('a11y-tabindex-coding-1'),

@@ -1044,6 +1044,41 @@ function CardDetails(props) {
     concepts: ['a11y-tabindex'],
   },
 
+  // -- Predict: the Tab order that tabindex and native focusability give (INTERMEDIATE Predict) --
+
+  {
+    id: 'a11y-tab-order-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.ACCESSIBILITY,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.HTML,
+    question:
+      'The page has just loaded and nothing has focus. The user presses Tab five times. Which element has focus after each press? Type the text of each focused element in order, one per line.',
+    code: `<button>Home</button>
+<a href="/cart">Cart</a>
+<div tabindex="-1">Panel</div>
+<div tabindex="0">Card</div>
+<button tabindex="2">Help</button>
+<button disabled>Pay</button>
+<span onclick="openMenu()">Menu</span>
+<button>Exit</button>`,
+    expectedOutput: `Help
+Home
+Cart
+Card
+Exit`,
+    acceptableOutputs: ['Help, Home, Cart, Card, Exit', 'Help,Home,Cart,Card,Exit'],
+    explanation:
+      'Tab visits every element with a positive tabindex first, in order of value, wherever it sits in the page, so Help comes before everything else. Then it walks the page in document order through the natively focusable elements (a button, a link with an href) and those with tabindex="0": Home, Cart, Card, Exit. tabindex="-1" makes Panel focusable from script with .focus() but skips it on Tab. A disabled button cannot take focus, and a span is not focusable at all, onclick or not, so a keyboard user can never reach Menu; that is why a clickable control should be a <button>. The jump to Help before Home is why a positive tabindex is avoided: it breaks the order the page reads in.',
+    hints: [
+      'Which element jumps the queue, and why?',
+      'Does tabindex="-1", disabled, or an onclick put an element in the Tab order?',
+    ],
+    tags: ['tabindex', 'keyboard', 'focus', 'tab-order', 'accessibility', 'predict'],
+    concepts: ['a11y-tabindex', 'a11y-keyboard-nav'],
+  },
+
   // -- Accessible name computation precedence (ADVANCED MCQ, correct at d) --
 
   {
