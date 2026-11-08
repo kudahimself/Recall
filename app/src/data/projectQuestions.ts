@@ -467,7 +467,7 @@ renderProducts(products);`,
   },
 
   // =====================================================================
-  // CHECKPOINT 4: After Forms + DB (Topic.NEXT_FORMS_VALIDATION) — 3 questions
+  // CHECKPOINT 4: After Forms + DB (Topic.NEXT_FORMS_VALIDATION) - 3 questions
   // =====================================================================
 
   {
@@ -477,62 +477,30 @@ renderProducts(products);`,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: `Build a Complete "Create Post" Feature
+    question: `Build the "create post" feature of a Next.js 15 app in three files. Prisma's Post model has id, title, content and published (a Boolean), and the client is exported as prisma from "@/lib/prisma".
 
-Build the full stack for creating a blog post in Next.js:
-1. **schema.ts** — Zod schema: title (required, min 3 chars), content (required, min 10 chars), published (boolean, defaults to false)
-2. **actions.ts** — Server Action that validates with safeParse, saves with Prisma, revalidates the posts page, returns success/error
-3. **form.tsx** — Client Component with React Hook Form + zodResolver, shows field errors, disables submit while pending
+1. lib/schemas/post.ts
+   - Export postSchema, a Zod object: title at least 3 characters, content at least 10, each with your own message, and published a boolean
+   - Export its inferred type as PostInput
 
-Show all 3 files.`,
-    starterCode: `// ==========================================
-// lib/schemas/post.ts — Zod validation schema
-// ==========================================
-import { z } from 'zod';
+2. app/posts/actions.ts (a Server Action file)
+   - Export createPost(data: PostInput); check data with postSchema.safeParse
+   - If the check fails, return { success: false, message: "Check the fields", errors } with the field errors
+   - Otherwise create the post with prisma.post.create; if that throws, return { success: false, message: "Could not save the post" }
+   - After a successful create, call revalidatePath("/posts") and return { success: true }
 
-// TODO: Export a postSchema with:
-// - title: string, min 3 with custom message
-// - content: string, min 10 with custom message
-// - published: boolean, default false
+3. app/posts/new/page.tsx (a Client Component)
+   - useForm with zodResolver(postSchema) and defaultValues title "", content "" and published false
+   - A title input and a content textarea, each with its error message, and a published checkbox
+   - Show the action's message when it fails; on success go to /posts with router.push
+   - The submit button is disabled while formState.isSubmitting`,
+    starterCode: `// lib/schemas/post.ts
 
-// TODO: Export the inferred type: type PostInput = z.infer<typeof postSchema>
 
-// ==========================================
-// app/posts/actions.ts — Server Action
-// ==========================================
-'use server';
+// app/posts/actions.ts
 
-import { revalidatePath } from 'next/cache';
-import { prisma } from '@/lib/prisma';
-// TODO: Import schema and type
 
-// TODO: Export async function createPost(data: PostInput)
-// - Use postSchema.safeParse(data) to validate
-// - If validation fails, return { success: false, errors: parsed.error.flatten().fieldErrors }
-// - If valid, create post with prisma.post.create({ data: parsed.data })
-// - Call revalidatePath('/posts')
-// - Return { success: true, post }
-// - Wrap in try-catch for DB errors
-
-// ==========================================
-// app/posts/new/page.tsx — Client Component form
-// ==========================================
-'use client';
-
-// TODO: Import useForm from 'react-hook-form'
-// TODO: Import zodResolver from '@hookform/resolvers/zod'
-// TODO: Import schema, type, and action
-
-// TODO: Export CreatePostForm component that:
-// - Uses useForm<PostInput> with zodResolver(postSchema)
-// - Has a submit handler that calls the server action
-// - Renders a form with:
-//   - Title input with error message from formState.errors.title
-//   - Content textarea with error message from formState.errors.content
-//   - Published checkbox
-//   - Submit button disabled while formState.isSubmitting
-// - Shows server-side errors if the action returns errors
-// - Shows success message or redirects on success
+// app/posts/new/page.tsx
 `,
     testCases: [
       {
@@ -551,139 +519,144 @@ import { prisma } from '@/lib/prisma';
         description: 'Form uses React Hook Form with zodResolver',
       },
     ],
-    solution: `// ==========================================
-// lib/schemas/post.ts
-// ==========================================
-import { z } from 'zod';
+    solution: `// lib/schemas/post.ts
+import { z } from "zod";
 
 export const postSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters'),
-  content: z.string().min(10, 'Content must be at least 10 characters'),
-  published: z.boolean().default(false),
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  content: z.string().min(10, "Content must be at least 10 characters"),
+  published: z.boolean(),
 });
 
 export type PostInput = z.infer<typeof postSchema>;
 
-// ==========================================
 // app/posts/actions.ts
-// ==========================================
-'use server';
+"use server";
 
-import { revalidatePath } from 'next/cache';
-import { prisma } from '@/lib/prisma';
-import { postSchema, PostInput } from '@/lib/schemas/post';
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { postSchema, type PostInput } from "@/lib/schemas/post";
 
 export async function createPost(data: PostInput) {
   const parsed = postSchema.safeParse(data);
-
   if (!parsed.success) {
     return {
       success: false as const,
-      errors: parsed.error.flatten().fieldErrors,
+      message: "Check the fields",
+      errors: z.flattenError(parsed.error).fieldErrors,
     };
   }
 
   try {
-    const post = await prisma.post.create({
-      data: parsed.data,
-    });
-
-    revalidatePath('/posts');
-    return { success: true as const, post };
-  } catch (error) {
-    return {
-      success: false as const,
-      errors: { title: ['Failed to create post. Please try again.'] },
-    };
+    await prisma.post.create({ data: parsed.data });
+  } catch {
+    return { success: false as const, message: "Could not save the post" };
   }
+
+  revalidatePath("/posts");
+  return { success: true as const };
 }
 
-// ==========================================
 // app/posts/new/page.tsx
-// ==========================================
-'use client';
+"use client";
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { postSchema, PostInput } from '@/lib/schemas/post';
-import { createPost } from '../actions';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { postSchema, type PostInput } from "@/lib/schemas/post";
+import { createPost } from "../actions";
 
-export default function CreatePostForm() {
+export default function NewPostPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
-
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<PostInput>({
     resolver: zodResolver(postSchema),
-    defaultValues: { published: false },
+    defaultValues: { title: "", content: "", published: false },
   });
 
   async function onSubmit(data: PostInput) {
     setServerError(null);
     const result = await createPost(data);
-
     if (!result.success) {
-      setServerError(result.errors?.title?.[0] || 'Something went wrong');
+      setServerError(result.message);
       return;
     }
-
-    router.push('/posts');
+    router.push("/posts");
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label htmlFor="title">Title</label>
-        <input id="title" {...register('title')} className="w-full border p-2 rounded" />
-        {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <label htmlFor="title">Title</label>
+      <input id="title" {...register("title")} />
+      {errors.title && <p>{errors.title.message}</p>}
 
-      <div>
-        <label htmlFor="content">Content</label>
-        <textarea id="content" {...register('content')} rows={6} className="w-full border p-2 rounded" />
-        {errors.content && <p className="text-red-500 text-sm">{errors.content.message}</p>}
-      </div>
+      <label htmlFor="content">Content</label>
+      <textarea id="content" rows={6} {...register("content")} />
+      {errors.content && <p>{errors.content.message}</p>}
 
-      <div className="flex items-center gap-2">
-        <input id="published" type="checkbox" {...register('published')} />
-        <label htmlFor="published">Publish immediately</label>
-      </div>
+      <label>
+        <input type="checkbox" {...register("published")} /> Published
+      </label>
 
-      {serverError && <p className="text-red-500">{serverError}</p>}
-
-      <button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">
-        {isSubmitting ? 'Creating...' : 'Create Post'}
+      {serverError && <p role="alert">{serverError}</p>}
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Saving..." : "Create post"}
       </button>
     </form>
   );
 }`,
-    explanation: `This demonstrates the modern Next.js full-stack pattern:
+    requires: [
+      /export\s+const\s+postSchema\b/,
+      /title\s*:\s*z\.string\(\)\.min\(\s*3\b/,
+      /content\s*:\s*z\.string\(\)\.min\(\s*10\b/,
+      /published\s*:\s*z\.boolean\(\)\s*[,}]/,
+      /export\s+type\s+PostInput\s*=\s*z\.infer<\s*typeof\s+postSchema\s*>/,
+      /["']use server["']/,
+      /export\s+async\s+function\s+createPost\s*\(/,
+      /postSchema\.safeParse\(/,
+      /\.fieldErrors\b/,
+      /Check the fields/,
+      /prisma\.post\.create\(/,
+      /catch\b/,
+      /Could not save the post/,
+      /revalidatePath\(\s*["'`]\/posts["'`]\s*\)/,
+      /["']use client["']/,
+      /zodResolver\(\s*postSchema\s*\)/,
+      /defaultValues\s*:\s*\{[^}]*published\s*:\s*false/,
+      /register\(\s*["']title["']\s*\)/,
+      /register\(\s*["']content["']\s*\)/,
+      /register\(\s*["']published["']\s*\)/,
+      /errors\.title/,
+      /errors\.content/,
+      /disabled=\{[^}]*isSubmitting/,
+      /router\.push\(\s*["'`]\/posts["'`]\s*\)/,
+    ],
+    explanation: `This is the usual full-stack form in the App Router:
 
-1. **Zod as single source of truth** — The schema defines validation rules once. The same schema is used by the server action (safeParse) AND the client form (zodResolver). No duplicate validation logic. The inferred type PostInput ensures type safety across the boundary.
+1. **One Zod schema for both sides.** postSchema holds the rules once; the form runs it through zodResolver and the Server Action runs it again with safeParse. PostInput, inferred from it, types the form, the action's argument and the submit handler, so they cannot drift apart. published has no \`.default(false)\`: a default makes the schema's input type (published optional) differ from its output type, and \`useForm<PostInput>({ resolver: zodResolver(postSchema) })\` then fails to type-check. The form's defaultValues supply the false instead.
 
-2. **Server Action with safeParse** — \`safeParse\` returns a result object instead of throwing. This lets us return structured errors to the client. \`flatten().fieldErrors\` gives us a { fieldName: string[] } map that's easy to display in the form.
+2. **The server checks again.** A Server Action can be called without the form, so safeParse is the real gate; it never throws, and \`z.flattenError(parsed.error).fieldErrors\` (Zod 4; \`parsed.error.flatten().fieldErrors\` in Zod 3) gives a \`{ field: [messages] }\` map. The database call sits in try/catch so a failed write comes back as a message instead of an error page.
 
-3. **revalidatePath** — After creating a post, we revalidate '/posts' so the posts list page shows the new post immediately. Without this, the cached page would show stale data.
+3. **revalidatePath("/posts").** The posts list is a Server Component that Next.js caches; calling revalidatePath after the write makes the next visit to /posts render the new list.
 
-4. **React Hook Form + zodResolver** — RHF handles form state, validation timing (on blur, on submit), and the isSubmitting state. zodResolver connects Zod validation to RHF's error system. Client-side validation runs before the form even submits, giving instant feedback.
-
-5. **Two layers of validation** — Client-side (zodResolver) gives instant UX feedback. Server-side (safeParse) is the security boundary — never trust the client. Both use the same Zod schema.`,
+4. **React Hook Form.** handleSubmit stops the reload and calls onSubmit only with valid data, so the action normally receives clean values. \`formState.isSubmitting\` is true while the async onSubmit runs, which keeps the button from sending the post twice. The \`as const\` on success makes the result a union TypeScript can narrow, so \`result.message\` type-checks once \`!result.success\`.`,
     hints: [
       'z.infer<typeof schema> extracts the TypeScript type from a Zod schema',
-      'safeParse returns { success: boolean, data?, error? } instead of throwing',
-      'zodResolver connects your Zod schema to React Hook Form\'s validation system',
+      'safeParse returns { success: true, data } or { success: false, error } instead of throwing',
+      'zodResolver connects your Zod schema to React Hook Form\'s validation',
     ],
     tieredHints: {
-      apiSignature: 'z.object(shape): ZodObject; schema.safeParse(data): SafeParseReturnType; zodResolver(schema): Resolver; revalidatePath(path): void',
-      skeleton: '// lib/schemas/post.ts\nexport const postSchema = z.object({\n  title: z.string().min(3, "Title must be at least 3 characters"),\n  content: z.string().min(10, "Content must be at least 10 characters"),\n  published: z.boolean().default(false),\n});\n\n// app/posts/actions.ts\n"use server";\nexport async function createPost(data: PostInput) {\n  const parsed = ____;\n\n  if (!parsed.success) {\n    return {\n      success: false as const,\n      errors: ____,\n    };\n  }\n\n  const post = await prisma.post.create({ data: parsed.data });\n  ____;\n  return { success: true as const, post };\n}\n\n// app/posts/new/page.tsx\n"use client";\nexport default function CreatePostForm() {\n  const { register, handleSubmit } = useForm<PostInput>({\n    resolver: ____,\n    defaultValues: { published: false },\n  });\n  return <form onSubmit={handleSubmit(onSubmit)} />;\n}',
+      apiSignature: 'z.object(shape); schema.safeParse(data); z.flattenError(error).fieldErrors; zodResolver(schema); revalidatePath(path): void',
+      skeleton: '// lib/schemas/post.ts\nexport const postSchema = z.object({\n  title: ____,\n  content: ____,\n  published: ____,\n});\nexport type PostInput = ____;\n\n// app/posts/actions.ts\n"use server";\nexport async function createPost(data: PostInput) {\n  const parsed = ____;\n  if (!parsed.success) {\n    return { success: false as const, message: "Check the fields", errors: ____ };\n  }\n  try {\n    await ____;\n  } catch {\n    return { success: false as const, message: "Could not save the post" };\n  }\n  ____;\n  return { success: true as const };\n}\n\n// app/posts/new/page.tsx\n"use client";\nexport default function NewPostPage() {\n  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<PostInput>({\n    resolver: ____,\n    defaultValues: ____,\n  });\n  // onSubmit: await createPost(data), then show result.message or router.push("/posts")\n  return <form onSubmit={handleSubmit(onSubmit)}>____</form>;\n}',
     },
     tags: ['zod', 'server-actions', 'prisma', 'react-hook-form', 'project'],
-    concepts: ['forms-zod-schema', 'next-server-actions', 'prisma-schema-relations', 'forms-rhf-controller'],
+    concepts: ['forms-zod-schema', 'next-server-actions', 'forms-zod-resolver', 'forms-rhf-controller'],
   },
 
   {
@@ -693,46 +666,20 @@ export default function CreatePostForm() {
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build an Edit Form That Loads Existing Data
+    question: `Build the edit page for a post in a Next.js 15 app, at app/posts/[id]/edit. Post has id (a string), title, content and published. These already exist: prisma from "@/lib/prisma"; postSchema and its PostInput type (title, content, published) from "@/lib/schemas/post"; and updatePost(id: string, data: PostInput) in app/posts/actions.ts, a Server Action that returns { success: boolean }.
 
-Create an edit post page in Next.js that:
-1. **page.tsx** (Server Component) — Fetches the post by ID from Prisma, handles "not found", passes the post as defaultValues to a Client Component form
-2. **EditForm.tsx** (Client Component) — Pre-populated form using React Hook Form with the existing post data, calls an update Server Action on submit
+1. app/posts/[id]/edit/page.tsx (a Server Component)
+   - Await params (a Promise in Next.js 15) and load the post with prisma.post.findUnique
+   - Call notFound() when there is no post, otherwise render <EditForm post={post} />
 
-Show both files. The route is app/posts/[id]/edit/page.tsx.`,
-    starterCode: `// ==========================================
-// app/posts/[id]/edit/page.tsx — Server Component
-// ==========================================
-import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
-import EditForm from './EditForm';
+2. app/posts/[id]/edit/EditForm.tsx (a Client Component)
+   - useForm with zodResolver(postSchema) and defaultValues from the post's title, content and published
+   - On submit call updatePost(post.id, data); on success go to /posts/{id} with router.push, otherwise show "Could not save the post"
+   - The Save button reads "Saving..." while formState.isSubmitting, and is disabled while submitting or while nothing has changed (formState.isDirty)`,
+    starterCode: `// app/posts/[id]/edit/page.tsx
 
-// TODO: Export default async function EditPostPage
-// - Receive { params }: { params: { id: string } }
-// - Fetch the post: prisma.post.findUnique({ where: { id: params.id } })
-// - If post is null, call notFound()
-// - Render <EditForm post={post} />
-// - The Server Component does the data fetching, the Client Component
-//   handles the interactive form
 
-// ==========================================
-// app/posts/[id]/edit/EditForm.tsx — Client Component
-// ==========================================
-'use client';
-
-// TODO: Import useForm, zodResolver, schema, and the update action
-// TODO: Define the Post type (or import it)
-
-// TODO: Create a Props interface: { post: Post }
-
-// TODO: Export EditForm component that:
-// - Receives the post as a prop
-// - Uses useForm with defaultValues from the post prop:
-//   { title: post.title, content: post.content, published: post.published }
-// - Has a submit handler that calls updatePost(post.id, data)
-// - Renders form fields pre-populated with existing data
-// - Shows "Saving..." while submitting
-// - Redirects to /posts/{id} on success
+// app/posts/[id]/edit/EditForm.tsx
 `,
     testCases: [
       {
@@ -751,59 +698,46 @@ import EditForm from './EditForm';
         description: 'Submit handler calls update action with the post ID',
       },
     ],
-    solution: `// ==========================================
-// app/posts/[id]/edit/page.tsx
-// ==========================================
-import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
-import EditForm from './EditForm';
+    solution: `// app/posts/[id]/edit/page.tsx
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import EditForm from "./EditForm";
 
 export default async function EditPostPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const post = await prisma.post.findUnique({
-    where: { id: params.id },
-  });
+  const { id } = await params;
+  const post = await prisma.post.findUnique({ where: { id } });
 
   if (!post) notFound();
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Post</h1>
+    <main>
+      <h1>Edit post</h1>
       <EditForm post={post} />
     </main>
   );
 }
 
-// ==========================================
 // app/posts/[id]/edit/EditForm.tsx
-// ==========================================
-'use client';
+"use client";
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { postSchema, PostInput } from '@/lib/schemas/post';
-import { updatePost } from '../../actions';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { postSchema, type PostInput } from "@/lib/schemas/post";
+import { updatePost } from "../../actions";
 
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  published: boolean;
-}
+type Props = {
+  post: { id: string; title: string; content: string; published: boolean };
+};
 
-interface EditFormProps {
-  post: Post;
-}
-
-export default function EditForm({ post }: EditFormProps) {
+export default function EditForm({ post }: Props) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
-
   const {
     register,
     handleSubmit,
@@ -820,68 +754,71 @@ export default function EditForm({ post }: EditFormProps) {
   async function onSubmit(data: PostInput) {
     setServerError(null);
     const result = await updatePost(post.id, data);
-
     if (!result.success) {
-      setServerError('Failed to update post. Please try again.');
+      setServerError("Could not save the post");
       return;
     }
-
     router.push(\`/posts/\${post.id}\`);
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label htmlFor="title">Title</label>
-        <input id="title" {...register('title')} className="w-full border p-2 rounded" />
-        {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <label htmlFor="title">Title</label>
+      <input id="title" {...register("title")} />
+      {errors.title && <p>{errors.title.message}</p>}
 
-      <div>
-        <label htmlFor="content">Content</label>
-        <textarea id="content" {...register('content')} rows={8} className="w-full border p-2 rounded" />
-        {errors.content && <p className="text-red-500 text-sm">{errors.content.message}</p>}
-      </div>
+      <label htmlFor="content">Content</label>
+      <textarea id="content" rows={8} {...register("content")} />
+      {errors.content && <p>{errors.content.message}</p>}
 
-      <div className="flex items-center gap-2">
-        <input id="published" type="checkbox" {...register('published')} />
-        <label htmlFor="published">Published</label>
-      </div>
+      <label>
+        <input type="checkbox" {...register("published")} /> Published
+      </label>
 
-      {serverError && <p className="text-red-500">{serverError}</p>}
-
-      <button
-        type="submit"
-        disabled={isSubmitting || !isDirty}
-        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {isSubmitting ? 'Saving...' : 'Save Changes'}
+      {serverError && <p role="alert">{serverError}</p>}
+      <button type="submit" disabled={isSubmitting || !isDirty}>
+        {isSubmitting ? "Saving..." : "Save"}
       </button>
     </form>
   );
 }`,
-    explanation: `This pattern separates data fetching from interaction:
+    requires: [
+      /params\s*:\s*Promise</,
+      /await\s+params\b/,
+      /prisma\.post\.findUnique\(/,
+      /notFound\(\)/,
+      /<EditForm\s+post=\{\s*post\s*\}/,
+      /["']use client["']/,
+      /zodResolver\(\s*postSchema\s*\)/,
+      /defaultValues\s*:[\s\S]*?post\.title|defaultValues\s*:\s*post\b/,
+      /updatePost\(\s*post\.id\s*,/,
+      /router\.push\(/,
+      /\/posts\/(\$\{\s*post\.id\s*\}|["'`]\s*\+\s*post\.id)/,
+      /Could not save the post/,
+      /Saving\.\.\./,
+      /disabled=\{[^}]*isSubmitting[^}]*\}|disabled=\{[^}]*isDirty[^}]*\}/,
+      /isDirty/,
+    ],
+    explanation: `This splits the work at the server/client boundary:
 
-1. **Server Component for data fetching** — The page.tsx is a Server Component that fetches the post with Prisma directly (no API route needed). It runs on the server, so database access is secure and fast. The data is passed as props to the Client Component.
+1. **The Server Component loads the data.** page.tsx is an async Server Component that reads the post with Prisma directly, with no API route; the query runs on the server and never reaches the browser. In Next.js 15 \`params\` is a Promise, so the page awaits it before reading id; \`params.id\` read directly is the Next.js 14 form and a type error in 15.
 
-2. **notFound() for missing data** — Calling notFound() renders the nearest not-found.tsx boundary. This is cleaner than conditional rendering and returns a proper 404 status code for SEO.
+2. **notFound() for a missing post.** It stops the render and shows the nearest not-found.tsx (or the default 404 page) with a 404 status, instead of rendering a form for a post that does not exist.
 
-3. **Client Component for interactivity** — EditForm is a Client Component because forms need event handlers, state, and browser APIs. It receives the pre-fetched data as props.
+3. **The Client Component edits it.** EditForm needs event handlers and state, so it is a Client Component, and the post comes in as a prop: the record is there on the first render. That is why \`defaultValues\` can seed the form here; it is read only once, so data fetched in the browser after mount would need the \`values\` option or \`reset(data)\` instead.
 
-4. **defaultValues from server data** — React Hook Form's defaultValues pre-populates the form fields. The isDirty flag tracks whether the user has modified anything, so we can disable the submit button until they actually change something.
-
-5. **Server/Client boundary** — This is the key Next.js pattern: Server Components fetch data, Client Components handle interaction. Data flows down as props across the boundary. This gives you the best of both worlds — secure data access and rich interactivity.`,
+4. **isDirty and isSubmitting.** isDirty is true once any field differs from its default, so Save stays disabled until something changed; isSubmitting is true while the async onSubmit runs, which shows "Saving..." and stops a double submit. The Server Action still re-checks the data with the same schema, since the browser's checks can be skipped.`,
     hints: [
-      'The Server Component fetches data; the Client Component handles the form interaction',
-      'defaultValues in useForm pre-populates fields — the user sees existing data immediately',
+      'The Server Component fetches the data; the Client Component handles the form',
+      'In Next.js 15, params is a Promise: await it first',
       'isDirty tracks whether the user has changed anything from the default values',
     ],
     tieredHints: {
-      apiSignature: 'prisma.model.findUnique({ where }): Promise<Model | null>; useForm({ resolver, defaultValues }): UseFormReturn',
-      skeleton: '// app/posts/[id]/edit/page.tsx\nexport default async function EditPostPage({ params }: { params: { id: string } }) {\n  const post = await ____(____);\n  if (!post) ____;\n  return <EditForm post={post} />;\n}\n\n// app/posts/[id]/edit/EditForm.tsx\n"use client";\nexport default function EditForm({ post }: EditFormProps) {\n  const { register, handleSubmit, formState: { isDirty } } = useForm<PostInput>({\n    resolver: ____,\n    defaultValues: ____,\n  });\n\n  async function onSubmit(data: PostInput) {\n    const result = await updatePost(post.id, data);\n    if (!result.success) return;\n    router.push("/posts/" + post.id);\n  }\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <button type="submit" disabled={____}>Save Changes</button>\n    </form>\n  );\n}',
+      apiSignature: 'prisma.post.findUnique({ where }): Promise<Post | null>; notFound(): never; useForm({ resolver, defaultValues }) returns { formState: { isDirty, isSubmitting } }',
+      skeleton: '// app/posts/[id]/edit/page.tsx\nexport default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {\n  const { id } = ____;\n  const post = await ____;\n  if (!post) ____;\n  return <EditForm post={post} />;\n}\n\n// app/posts/[id]/edit/EditForm.tsx\n"use client";\nexport default function EditForm({ post }: Props) {\n  const { register, handleSubmit, formState: { isSubmitting, isDirty } } = useForm<PostInput>({\n    resolver: ____,\n    defaultValues: ____,\n  });\n\n  async function onSubmit(data: PostInput) {\n    const result = await ____;\n    if (!result.success) return; // show "Could not save the post"\n    router.push(____);\n  }\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <button type="submit" disabled={____}>{____}</button>\n    </form>\n  );\n}',
     },
     tags: ['nextjs', 'forms', 'prisma', 'server-client-boundary', 'project'],
-    concepts: ['web-html-forms-a11y', 'prisma-schema-relations'],
+    concepts: ['next-server-vs-client', 'forms-rhf-controller', 'forms-zod-resolver'],
   },
 
   {
@@ -890,43 +827,43 @@ export default function EditForm({ post }: EditFormProps) {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
-    question: `A user submits a "Create Post" form. The post is created successfully in the database, but when the user navigates to the posts list page, they still see the old data without the new post. After a manual browser refresh, the new post appears. What's the issue and fix?`,
+    question: `In a Next.js 15 app, the /posts page is a Server Component that reads the posts with Prisma and uses no cookies, headers or searchParams, so \`next build\` prerenders it. A "Create Post" form calls a Server Action that saves the post, then runs router.push("/posts"). The new post is in the database, but /posts still shows the old list, even after a full browser reload. What fixes it?`,
     options: [
       {
         id: 'a',
-        text: 'The form is missing e.preventDefault() — the browser is doing a full page navigation before the Server Action completes.',
+        text: 'Call e.preventDefault() in the submit handler, so the browser does not leave the page before the action has finished',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Need to call revalidatePath(\'/posts\') in the Server Action after the database mutation — without it, Next.js serves the cached version of the posts page with stale data.',
+        text: 'Call revalidatePath("/posts") in the Server Action after the create, so Next.js renders the page again with the new post',
         isCorrect: true,
       },
       {
         id: 'c',
-        text: 'The posts page needs to use "force-dynamic" to disable caching entirely, so it always fetches fresh data from the database.',
+        text: 'Call router.refresh() after router.push("/posts"), so the browser fetches the latest version of the page from the server',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'Need to add a timestamp query parameter to the posts page URL (/posts?t=Date.now()) to bust the browser cache.',
+        text: 'Push "/posts?t=" + Date.now() instead, so the new URL gets past the browser\'s HTTP cache and loads a fresh copy',
         isCorrect: false,
       },
     ],
-    explanation: `The issue is that Next.js caches Server Component renders. After a mutation, you need to tell Next.js to invalidate the cache.
+    explanation: `The stale copy is on the server. A page with no dynamic input is rendered once by \`next build\`, and Next.js serves that stored HTML (and its React Server Component payload) to every request until something revalidates it. A full reload therefore still gets the old list.
 
-**revalidatePath('/posts')** tells the Next.js cache that the /posts page is stale. The next time someone visits /posts, it will re-render the Server Component with fresh data from the database.
+**revalidatePath("/posts")** in the Server Action marks that stored page stale, so the next request renders it again and reads the new post. Called from a Server Action, it also clears the browser's copy of the route, so the router.push that follows shows the new list.
 
-**Why NOT force-dynamic?** It works but is a sledgehammer — it disables caching for the ENTIRE page on EVERY request. You'd lose the performance benefits of caching for all visitors, not just after mutations. revalidatePath is surgical — it invalidates only when needed.
+**Why not router.refresh()?** It asks the server for the current route again, but the server answers with the same prerendered page, so nothing changes.
 
-**Why NOT query parameter cache busting?** This is a browser HTTP cache technique. The issue isn't browser caching — it's Next.js's server-side data cache. The cached HTML on the server is stale.
+**Why not a query string?** The page does not read searchParams, so /posts?t=123 is served the same prerendered page. The browser's HTTP cache was never the problem.
 
-**Why NOT e.preventDefault()?** React Hook Form's handleSubmit already prevents default form submission. The form is submitting correctly — the issue is what happens AFTER the mutation succeeds.
+**Why not e.preventDefault()?** React Hook Form's handleSubmit already stops the browser's own submit, and the post was saved; the problem is what /posts shows afterwards.
 
-You can also use \`revalidateTag('posts')\` for more granular control if your fetch calls use \`{ next: { tags: ['posts'] } }\`.`,
+\`export const dynamic = "force-dynamic"\` on the page would also show new posts, by rendering it on every request, but it gives up the cached page for every visitor; revalidating after a write keeps it. With tagged fetches, \`revalidateTag\` does the same for one tag.`,
     hints: [
-      'The post IS created in the database — the issue is what the user sees after creation',
-      'Next.js caches Server Component output — after a mutation, something needs to tell it the cache is stale',
+      'The full reload still shows the old list: where must the stale copy be?',
+      'A page with no dynamic input is rendered at build time and kept until something revalidates it',
     ],
     tags: ['nextjs', 'revalidation', 'caching', 'server-actions', 'project'],
     concepts: ['next-server-actions', 'next-data-fetching'],

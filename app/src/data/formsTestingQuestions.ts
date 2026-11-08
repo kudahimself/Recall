@@ -3,10 +3,10 @@ import { Question, QuestionType, Difficulty, Topic, CodeLanguage, Course } from 
 export const formsTestingQuestions: Question[] = [
 
   // =====================================================================
-  // NEXT_FORMS_VALIDATION (8 questions)
+  // NEXT_FORMS_VALIDATION (22 questions)
   // =====================================================================
 
-  // BEGINNER faded (Parsons + Cloze) — lower-load scaffold before cold coding
+  // BEGINNER faded (Parsons + Cloze) - lower-load scaffold before cold coding
   {
     id: 'next-forms-parsons-1',
     type: QuestionType.PARSONS,
@@ -15,29 +15,29 @@ export const formsTestingQuestions: Question[] = [
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Assemble a Zod schema for a form and export its inferred TypeScript type. Put the email field before the password field.',
+      'Assemble a Zod schema for a sign-in form, with the email field before the password field, then declare the TypeScript type inferred from it as SignInValues.',
     correctOrder: [
       'const schema = z.object({',
       '  email: z.string().email(),',
       '  password: z.string().min(8),',
       '});',
-      'type FormData = z.infer<typeof schema>;',
+      'type SignInValues = z.infer<typeof schema>;',
     ],
     distractorLines: [
       '  email: z.string.email(),',
-      'type FormData = z.infer<schema>;',
+      'type SignInValues = z.infer<schema>;',
     ],
     solution: `const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
-type FormData = z.infer<typeof schema>;`,
+type SignInValues = z.infer<typeof schema>;`,
     explanation:
-      'z.string() is a function call, so validators chain off the result — z.string().email(), not z.string.email(). z.infer needs the `typeof` operator because it derives the type from the schema VALUE, not from a type named "schema". Defining validation once and inferring the type keeps the two in sync.',
+      '`z.string()` is a function call, and its checks chain on the schema it returns: `z.string().email()`, not `z.string.email()`. `schema` is a value, not a type, so `z.infer` needs `typeof schema` to get its type; `z.infer<schema>` does not compile. Writing the rules once and inferring the type keeps the two from drifting apart. The type is not called `FormData`, because that name would hide the browser\'s `FormData` type, the one a Server Action receives. Zod 4 also writes the email check as `z.email()`; `z.string().email()` is the Zod 3 form, deprecated in Zod 4 but still working.',
     hints: [
-      'Validators chain off z.string() — it must be called with ()',
-      'z.infer takes typeof the schema value',
-      'One field per line inside z.object()',
+      'Checks chain on what `z.string()` returns, so it needs its brackets',
+      '`z.infer` takes the type of the schema value: `typeof schema`',
+      'One field per line inside `z.object()`',
     ],
     tags: ['zod', 'schema', 'z-infer', 'parsons'],
     concepts: ['forms-zod-schema'],
@@ -51,7 +51,7 @@ type FormData = z.infer<typeof schema>;`,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Complete the Zod field validators: one checks the string is a valid email address, the other enforces a minimum length.',
+      'Complete the Zod field checks: one checks the string is a valid email address, the other enforces a minimum length.',
     template: `const schema = z.object({
   email: z.string().___("Invalid email"),
   name: z.string().___(2, "Too short"),
@@ -62,10 +62,10 @@ type FormData = z.infer<typeof schema>;`,
   name: z.string().min(2, "Too short"),
 });`,
     explanation:
-      'Each Zod validator takes an optional custom message as its last argument, which surfaces in the error output. .email() validates the address format; .min(n) enforces a minimum length on a string.',
+      'Each Zod check takes an optional custom message as its last argument, and that message is what the form shows for the field. `.email()` checks the address format, and `.min(n)` on a string checks it has at least n characters. Zod 4 also writes the email check as `z.email("Invalid email")`; `z.string().email()` is the Zod 3 form, deprecated in Zod 4 but still working.',
     hints: [
-      'The validator that checks address format',
-      'The validator that enforces a lower bound on length',
+      'The check named after the kind of address it accepts',
+      'The check that sets a lower bound on the length',
     ],
     tags: ['zod', 'validation', 'cloze'],
     concepts: ['forms-zod-schema'],
@@ -101,7 +101,7 @@ type FormData = z.infer<typeof schema>;`,
     concepts: ['forms-rhf-controller', 'forms-zod-resolver'],
   },
 
-  // 1. Coding (JSX): Basic React Hook Form — login form
+  // 1. Coding (JSX): Basic React Hook Form - login form
   {
     id: 'next-forms-1',
     type: QuestionType.CODING,
@@ -109,8 +109,12 @@ type FormData = z.infer<typeof schema>;`,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question:
-      'Create a LoginForm component using React Hook Form. The form has two fields: email (required, must match email pattern) and password (required, minLength 8). Use useForm() to get register, handleSubmit, and formState.errors. Display validation errors below each input. On valid submit, call a prop onSubmit(data).',
+    question: `Create a LoginForm component with React Hook Form and no Zod: the rules go in register() itself. Get register, handleSubmit and formState.errors from useForm().
+
+- email: required, and must match an email pattern (register's pattern rule takes a regular expression and a message)
+- password: required, with a minimum length of 8 (the minLength rule)
+
+Show each field's error message below its input, and on a valid submit call the onSubmit prop with the data.`,
     starterCode: `"use client";
 import { useForm } from "react-hook-form";
 
@@ -171,30 +175,75 @@ function LoginForm({ onSubmit }) {
       <button type="submit">Log In</button>
     </form>
   );
-}`,
-    explanation:
-      'React Hook Form uses uncontrolled inputs via register() for performance — it does not re-render the whole form on every keystroke like controlled inputs would. The register function returns ref, onChange, onBlur, and name props that RHF uses to track the field. handleSubmit only calls your onSubmit if all validations pass. formState.errors is populated with field-specific error objects containing the message you defined in the validation rules.',
-    hints: [
-      'Destructure { register, handleSubmit, formState: { errors } } from useForm()',
-      'Spread {...register("fieldName", validationRules)} on each input',
-      'Wrap onSubmit with handleSubmit: onSubmit={handleSubmit(onSubmit)}',
-    ],
-    tieredHints: {
-      apiSignature: 'function LoginForm({ onSubmit }: { onSubmit: (data: any) => void })',
-      skeleton: `function LoginForm({ onSubmit }) {
+}
+# OR
+"use client";
+import { useForm } from "react-hook-form";
+
+function LoginForm({ onSubmit }) {
   const { register, handleSubmit, formState: { errors } } = useForm();
 
   return (
-    <form onSubmit={____(onSubmit)}>
-      <input {...____("email", { required: "Required" })} />
-      {____.email && <p>{errors.email.message}</p>}
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input
+        type="email"
+        {...register("email", {
+          required: "Email is required",
+          pattern: { value: /\\S+@\\S+\\.\\S+/, message: "Invalid email address" },
+        })}
+      />
+      <p>{errors.email?.message}</p>
+      <input
+        type="password"
+        {...register("password", {
+          required: "Password is required",
+          minLength: { value: 8, message: "Password must be at least 8 characters" },
+        })}
+      />
+      <p>{errors.password?.message}</p>
+      <button type="submit">Log In</button>
+    </form>
+  );
+}
+# OR
+"use client";
+import { useForm } from "react-hook-form";
+
+function LoginForm({ onSubmit }) {
+  const { register, handleSubmit, formState: { errors } } = useForm();
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("email", { required: true, pattern: /^\\S+@\\S+\\.\\S+$/ })} />
+      {errors.email && <span>Enter a valid email address</span>}
+      <input type="password" {...register("password", { required: true, minLength: 8 })} />
+      {errors.password && <span>Password must be at least 8 characters</span>}
       <button type="submit">Log In</button>
     </form>
   );
 }`,
+    requires: [
+      /useForm\(/,
+      /handleSubmit\(/,
+      /register\(\s*["']email["']\s*,\s*\{[\s\S]*?required/,
+      /pattern\s*:/,
+      /register\(\s*["']password["']\s*,\s*\{[\s\S]*?minLength\s*:\s*(\{\s*value\s*:\s*)?8\b/,
+      /errors\.email/,
+      /errors\.password/,
+    ],
+    explanation:
+      'Without a resolver, the rules go in the second argument of `register()`: `required` (true or a message), `pattern: { value: /regex/, message }`, and `minLength: { value: 8, message }` (or just `minLength: 8`). `register()` returns `name`, `ref`, `onChange` and `onBlur`, so the inputs stay uncontrolled and the form does not re-render on every keystroke. `handleSubmit(onSubmit)` stops the page reload, runs the rules and calls `onSubmit` only with valid data. `formState.errors` then holds an entry per failing field, whose `message` is the one you wrote; with `required: true` there is no message to show. The `type="email"` attribute is extra: the browser checks it too, but React Hook Form\'s `pattern` rule is what fills `errors`.',
+    hints: [
+      'Destructure { register, handleSubmit, formState: { errors } } from useForm()',
+      'Spread {...register("fieldName", rules)} on each input',
+      'Wrap onSubmit with handleSubmit: onSubmit={handleSubmit(onSubmit)}',
+    ],
+    tieredHints: {
+      apiSignature: 'register(name, { required, pattern: { value, message }, minLength: { value, message } }); handleSubmit(onValid)',
+      skeleton: 'function LoginForm({ onSubmit }) {\n  const { register, handleSubmit, formState: { errors } } = useForm();\n\n  return (\n    <form onSubmit={____(onSubmit)}>\n      <input {...____("email", { required: "Required", pattern: ____ })} />\n      {____.email && <p>{errors.email.message}</p>}\n      <button type="submit">Log In</button>\n    </form>\n  );\n}',
     },
     tags: ['react-hook-form', 'useForm', 'register', 'validation', 'forms'],
-    concepts: ['forms-rhf-controller', 'forms-zod-schema', 'web-html-forms-a11y'],
+    concepts: ['forms-rhf-controller', 'web-html-forms-a11y'],
   },
 
   // 2. Coding (TypeScript): Zod schema for registration form
@@ -205,12 +254,18 @@ function LoginForm({ onSubmit }) {
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Define a Zod schema for a registration form with these fields: email (must be a valid email), password (minimum 8 characters), confirmPassword (string), and name (minimum 2 characters). Add a .refine() at the schema level to check that password and confirmPassword match. Export the inferred TypeScript type as FormData.',
+    question: `In schema.ts, define and export a Zod schema called registrationSchema for a registration form:
+
+- email: a valid email address
+- password: at least 8 characters
+- confirmPassword: a string
+- name: at least 2 characters
+
+Add a .refine() on the whole object that checks password and confirmPassword match, with the message "Passwords do not match" attached to confirmPassword. Export the inferred TypeScript type as RegistrationValues.`,
     starterCode: `import { z } from "zod";
 
-// TODO: define registrationSchema with .refine()
-// TODO: export type FormData = z.infer<typeof registrationSchema>`,
+// TODO: export registrationSchema, with a .refine() on the object
+// TODO: export type RegistrationValues = the type inferred from it`,
     testCases: [
       {
         input: 'Zod schema with refine',
@@ -232,24 +287,45 @@ export const registrationSchema = z
     path: ["confirmPassword"],
   });
 
-export type FormData = z.infer<typeof registrationSchema>;`,
+export type RegistrationValues = z.infer<typeof registrationSchema>;
+# OR
+import { z } from "zod";
+
+export const registrationSchema = z
+  .object({
+    email: z.email(),
+    password: z.string().min(8),
+    confirmPassword: z.string(),
+    name: z.string().min(2),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type RegistrationValues = z.infer<typeof registrationSchema>;`,
+    requires: [
+      /export\s+const\s+registrationSchema\b/,
+      /email\s*:\s*z\.(string\(\)\.)?email\(/,
+      /password\s*:\s*z\.string\(\)\.min\(\s*8\b/,
+      /confirmPassword\s*:\s*z\.string\(\)/,
+      /name\s*:\s*z\.string\(\)\.min\(\s*2\b/,
+      /\.refine\(/,
+      /\bpassword\s*===?\s*(\w+\.)?confirmPassword\b|\bconfirmPassword\s*===?\s*(\w+\.)?password\b/,
+      /Passwords do not match/,
+      /path\s*:\s*\[\s*["']confirmPassword["']\s*\]/,
+      /export\s+type\s+RegistrationValues\s*=\s*z\.infer<\s*typeof\s+registrationSchema\s*>/,
+    ],
     explanation:
-      'Zod schemas are composable and type-safe. z.object() defines the shape, and each field gets validators chained on z.string(). The .refine() method adds custom validation that runs after all field-level checks pass — it receives the full parsed data object so you can compare fields. The path option tells Zod which field to attach the error to, so the "Passwords do not match" error shows up on confirmPassword, not at the form level. z.infer<typeof schema> extracts the TypeScript type automatically, keeping your types and validation in sync.',
+      '`z.object()` defines the shape, and each field\'s checks chain on its schema. `.refine()` goes on the whole object because it is the only place that can see two fields at once: it receives the object and returns true when it is valid. It runs once every field has the right type, even if a field\'s own check fails, so a short, mismatched password shows both messages. `path: ["confirmPassword"]` attaches "Passwords do not match" to confirmPassword instead of to the form as a whole. `z.infer<typeof registrationSchema>` gives the type, so the type and the rules stay in step; the name RegistrationValues (not FormData) keeps the browser\'s `FormData` type usable in the same files. Zod 4 also writes the email check as `z.email()`; `z.string().email()` is the Zod 3 form, deprecated in Zod 4 but still working, and both are accepted.',
     hints: [
-      'Use z.string().email() for email validation',
-      '.refine() goes on the whole z.object(), not individual fields',
+      'Use z.string().email() (or Zod 4\'s z.email()) for the email field',
+      '.refine() goes on the whole z.object(), not on one field',
       'path: ["confirmPassword"] attaches the error to the right field',
     ],
     tieredHints: {
-      apiSignature: 'const registrationSchema = z.object({ ... }).refine((data) => data.password === data.confirmPassword, { ... })',
-      skeleton: `const registrationSchema = z.object({
-  email: z.string().____(),
-  password: z.string().min(8),
-  confirmPassword: z.string(),
-}).refine((data) => ____.password === ____.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["____"],
-});`,
+      apiSignature: 'z.object({ ... }).refine((data) => boolean, { message, path: [fieldName] }); type T = z.infer<typeof schema>',
+      skeleton: 'export const registrationSchema = z.object({\n  email: z.string().____(),\n  password: z.string().min(8),\n  confirmPassword: z.string(),\n  name: ____,\n}).refine((data) => ____.password === ____.confirmPassword, {\n  message: "Passwords do not match",\n  path: ["____"],\n});\n\nexport type RegistrationValues = ____;',
     },
     tags: ['zod', 'schema', 'refine', 'validation', 'typescript'],
     concepts: ['forms-zod-schema'],
@@ -263,12 +339,11 @@ export type FormData = z.infer<typeof registrationSchema>;`,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question:
-      'Create a RegistrationForm component that connects a Zod schema to React Hook Form. Import the registrationSchema and FormData type (already defined elsewhere). Use zodResolver(registrationSchema) as the resolver in useForm<FormData>(). Render all four fields (name, email, password, confirmPassword) with error messages. On valid submit, call props.onSubmit(data).',
+    question: 'Create a RegistrationForm component that connects a Zod schema to React Hook Form. The starter imports registrationSchema from ./schema (name, email, password and confirmPassword, with a .refine() that the passwords match). Pass zodResolver(registrationSchema) as the resolver to useForm. Render all four fields, each with its error message, and on a valid submit call the onSubmit prop with the data.',
     starterCode: `"use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registrationSchema, FormData } from "./schema";
+import { registrationSchema } from "./schema";
 
 function RegistrationForm({ onSubmit }) {
   // TODO: useForm with zodResolver, render form with errors
@@ -283,14 +358,90 @@ function RegistrationForm({ onSubmit }) {
     solution: `"use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registrationSchema, FormData } from "./schema";
+import { registrationSchema } from "./schema";
 
 function RegistrationForm({ onSubmit }) {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm({
+    resolver: zodResolver(registrationSchema),
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <label htmlFor="name">Name</label>
+        <input id="name" {...register("name")} />
+        {errors.name && <span role="alert">{errors.name.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="email">Email</label>
+        <input id="email" type="email" {...register("email")} />
+        {errors.email && <span role="alert">{errors.email.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="password">Password</label>
+        <input id="password" type="password" {...register("password")} />
+        {errors.password && <span role="alert">{errors.password.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="confirmPassword">Confirm Password</label>
+        <input id="confirmPassword" type="password" {...register("confirmPassword")} />
+        {errors.confirmPassword && (
+          <span role="alert">{errors.confirmPassword.message}</span>
+        )}
+      </div>
+
+      <button type="submit">Register</button>
+    </form>
+  );
+}
+# OR
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registrationSchema } from "./schema";
+
+function RegistrationForm({ onSubmit }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(registrationSchema),
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("name")} />
+      <p>{errors.name?.message}</p>
+      <input type="email" {...register("email")} />
+      <p>{errors.email?.message}</p>
+      <input type="password" {...register("password")} />
+      <p>{errors.password?.message}</p>
+      <input type="password" {...register("confirmPassword")} />
+      <p>{errors.confirmPassword?.message}</p>
+      <button type="submit">Register</button>
+    </form>
+  );
+}
+# OR
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registrationSchema, type RegistrationValues } from "./schema";
+
+function RegistrationForm({ onSubmit }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegistrationValues>({
     resolver: zodResolver(registrationSchema),
   });
 
@@ -326,25 +477,28 @@ function RegistrationForm({ onSubmit }) {
     </form>
   );
 }`,
+    requires: [
+      /useForm(<\s*RegistrationValues\s*>)?\(\s*\{[\s\S]*?resolver\s*:\s*zodResolver\(\s*registrationSchema\s*\)/,
+      /handleSubmit\(/,
+      /register\(\s*["']name["']\s*\)/,
+      /register\(\s*["']email["']\s*\)/,
+      /register\(\s*["']password["']\s*\)/,
+      /register\(\s*["']confirmPassword["']\s*\)/,
+      /errors\.name/,
+      /errors\.email/,
+      /errors\.password/,
+      /errors\.confirmPassword/,
+    ],
     explanation:
-      'zodResolver bridges Zod and React Hook Form by translating Zod validation errors into the format RHF expects. When you pass resolver: zodResolver(schema) to useForm, RHF delegates all validation to Zod instead of using its own built-in rules. This means you no longer pass validation options to register() — the schema is the single source of truth. The generic useForm<FormData> gives you type-safe register() calls (TypeScript will error if you register a field name that does not exist in the schema).',
+      'zodResolver bridges Zod and React Hook Form: with `resolver: zodResolver(registrationSchema)`, React Hook Form hands every check to the schema and fills `formState.errors` from Zod\'s issues, the refine\'s "Passwords do not match" included, under confirmPassword. So `register()` takes no rules here; the schema is the one place they live. In a TypeScript file, `useForm<RegistrationValues>(...)` is optional: the resolver already carries the schema\'s types, so `register("emial")` is a type error either way. After a failed submit, each field is checked again as the user types, so a fixed field\'s message goes away at once.',
     hints: [
-      'Pass resolver: zodResolver(registrationSchema) to useForm options',
-      'No need for validation rules in register() — Zod handles it all',
-      'useForm<FormData> gives you autocomplete on field names',
+      'Pass resolver: zodResolver(registrationSchema) to the useForm options',
+      'No rules in register(): Zod does all the checking',
+      'Each field\'s message is at errors.<field>.message',
     ],
     tieredHints: {
-      apiSignature: 'useForm<FormData>({ resolver: zodResolver(registrationSchema) })',
-      skeleton: `const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-  resolver: ____(registrationSchema),
-});
-
-return (
-  <form onSubmit={____(onSubmit)}>
-    <input {...register("email")} />
-    {____.email && <p>{errors.email.message}</p>}
-  </form>
-);`,
+      apiSignature: 'useForm({ resolver: zodResolver(schema) }) returns { register, handleSubmit, formState: { errors } }',
+      skeleton: 'const { register, handleSubmit, formState: { errors } } = useForm({\n  resolver: ____(registrationSchema),\n});\n\nreturn (\n  <form onSubmit={____(onSubmit)}>\n    <input {...register("email")} />\n    {____.email && <p>{errors.email.message}</p>}\n  </form>\n);',
     },
     tags: ['zodResolver', 'react-hook-form', 'zod', 'forms', 'integration'],
     concepts: ['forms-zod-resolver', 'forms-rhf-controller', 'forms-zod-schema', 'web-html-forms-a11y'],
@@ -357,34 +511,35 @@ return (
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
-    question: 'What does zodResolver do when passed to React Hook Form\'s useForm({ resolver: zodResolver(schema) })?',
+    question:
+      'What does zodResolver do when passed to React Hook Form\'s useForm({ resolver: zodResolver(schema) })?',
     options: [
       {
         id: 'a',
-        text: 'It bridges Zod and React Hook Form — running the schema on submit/blur/change and translating Zod errors into the shape RHF expects in formState.errors',
+        text: 'It connects the two: RHF runs the schema whenever it validates, and Zod\'s issues land in formState.errors',
         isCorrect: true,
       },
       {
         id: 'b',
-        text: 'It converts the Zod schema into HTML5 validation attributes like required and minlength directly on the input elements',
+        text: 'It turns the Zod schema into HTML validation attributes such as required and minlength on each input',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'It replaces useForm\'s internal validation engine with Zod\'s own hooks, so you no longer call register() on your inputs at all',
+        text: 'It replaces React Hook Form\'s field tracking with Zod\'s, so the inputs no longer need register()',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'It only validates once, on final submission — it cannot be wired to run on blur or change events like RHF\'s built-in resolvers',
+        text: 'It checks the values only on the final submit, and cannot run on blur or change as register() rules can',
         isCorrect: false,
       },
     ],
     explanation:
-      'zodResolver is an adapter function from @hookform/resolvers/zod. It takes your Zod schema and returns a resolver function that RHF calls whenever it needs to validate (on submit by default, but also on blur or change if you configure mode). The resolver runs schema.safeParse() on the form values and maps any Zod errors to the { fieldName: { message, type } } format that RHF uses for formState.errors. This lets you keep Zod as your single source of truth for validation while RHF handles the form state management.',
+      '`zodResolver(schema)`, from `@hookform/resolvers/zod`, returns a resolver function that React Hook Form calls every time it validates: on submit by default, on change or blur when `mode` asks for it, and on every change after a failed submit. It parses the form\'s values with the schema and turns each Zod issue into a `{ message, type }` entry under the field\'s name in `formState.errors`; when the values pass, your submit handler gets Zod\'s parsed output. Nothing is added to the HTML, and `register()` still wires every input; you just stop passing rules to it. The schema stays the one place the rules live, and the server can run the same schema again.',
     hints: [
-      'Think about what "resolver" means — it resolves validation from an external library',
-      'RHF needs errors in a specific format, and zodResolver handles that translation',
+      'Think about what a "resolver" resolves: the form\'s values into errors or valid data',
+      'React Hook Form needs errors in its own shape, keyed by field name',
     ],
     tags: ['zodResolver', 'react-hook-form', 'zod', 'validation'],
     concepts: ['forms-zod-resolver', 'forms-rhf-controller', 'forms-zod-schema'],
@@ -397,34 +552,35 @@ return (
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
-    question: 'Why use Zod for form validation instead of relying on HTML5 validation attributes or React Hook Form\'s built-in validate functions?',
+    question:
+      'Why write a form\'s rules as a Zod schema instead of HTML attributes such as required and minLength, or rules passed to register()?',
     options: [
       {
         id: 'a',
-        text: 'Zod is faster at runtime because it compiles schemas to native validation code',
+        text: 'Zod checks run faster, because the schema is compiled into the browser\'s native validation',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Type inference — z.infer<typeof schema> gives you TypeScript types for free, it works on both client and server (Server Actions), and schemas are composable and reusable',
+        text: 'One schema gives the TypeScript type through z.infer and runs again in the Server Action',
         isCorrect: true,
       },
       {
         id: 'c',
-        text: 'Zod is required by Next.js and will not work without it',
+        text: 'Next.js only accepts a Server Action\'s form data after a Zod schema has parsed it',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'HTML5 validation cannot check required fields or email patterns',
+        text: 'HTML attributes and register() rules cannot check required fields or an email format',
         isCorrect: false,
       },
     ],
     explanation:
-      'Zod\'s killer feature is z.infer<typeof schema> — you define your validation once and get the TypeScript type automatically, keeping types and validation in sync. HTML5 validation works client-side only and is easily bypassed. RHF\'s built-in validate works but does not give you types and cannot be reused on the server. Zod schemas can be shared between client forms and Server Actions, ensuring the same validation runs everywhere. Schemas are also composable — you can merge, extend, pick, and omit fields from existing schemas.',
+      '`z.infer<typeof schema>` turns the schema into the form\'s TypeScript type, so the type and the rules cannot drift apart. The same schema can run in the browser through zodResolver and again in the Server Action with `safeParse`, where it matters most, because a browser\'s checks can be skipped. HTML attributes live in the markup and `register()` rules in the component: neither gives you a type, and neither runs on the server. Both can check required fields and an email pattern, so that is not the reason. Zod is a JavaScript library, not compiled into the browser\'s validation, and Next.js does not require it. Schemas also compose: `.extend()`, `.pick()` and `.omit()` build new ones from one base.',
     hints: [
-      'Think about DRY — where else might you validate the same data?',
-      'Consider what happens if your form type and validation rules drift apart',
+      'Where else does the same data need checking, besides the browser?',
+      'What keeps the form\'s TypeScript type and its rules in step?',
     ],
     tags: ['zod', 'validation', 'typescript', 'type-inference'],
     concepts: ['forms-zod-schema'],
@@ -438,13 +594,13 @@ return (
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Write a Next.js Server Action function called createUser that receives FormData from a form submission. Extract email, password, and name from the FormData. Validate them using a Zod schema with safeParse(). If validation fails, return { success: false, errors: parsed.error.flatten().fieldErrors }. If valid, simulate saving to a DB and return { success: true, data: parsed.data }. Remember the "use server" directive.',
-    starterCode: `// Declare the "use server" directive and import z from "zod"
-// Build a Zod userSchema requiring email(), password.min(8), name.min(2)
-// Export async createUser(formData): read email/password/name from formData via .get(),
-// call safeParse; on failure return { success: false, errors: parsed.error.flatten().fieldErrors }
-// on success return { success: true, data: parsed.data }
+    question: `Write a Next.js Server Action createUser(formData: FormData) in app/users/actions.ts, a file that starts with the "use server" directive.
+
+- Read email, password and name from the FormData.
+- Check them with a Zod schema (email a valid email address, password at least 8 characters, name at least 2) using safeParse().
+- If the check fails, return { success: false, errors }, where errors is the map of field errors: z.flattenError(parsed.error).fieldErrors in Zod 4, or the Zod 3 form parsed.error.flatten().fieldErrors, which still works.
+- Otherwise return { success: true, data: parsed.data } (a real app would save the user here).`,
+    starterCode: `// app/users/actions.ts
 `,
     testCases: [
       {
@@ -454,6 +610,36 @@ return (
       },
     ],
     solution: `"use server";
+import { z } from "zod";
+
+const userSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+  name: z.string().min(2),
+});
+
+export async function createUser(formData: FormData) {
+  const rawData = {
+    email: formData.get("email"),
+    password: formData.get("password"),
+    name: formData.get("name"),
+  };
+
+  const parsed = userSchema.safeParse(rawData);
+
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      errors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+
+  // Save to the database here, e.g. await db.user.create({ data: parsed.data });
+
+  return { success: true as const, data: parsed.data };
+}
+# OR
+"use server";
 import { z } from "zod";
 
 const userSchema = z.object({
@@ -478,37 +664,50 @@ export async function createUser(formData: FormData) {
     };
   }
 
-  // Save to database
-  // await db.user.create({ data: parsed.data });
-
   return { success: true as const, data: parsed.data };
-}`,
-    explanation:
-      'Server Actions run on the server, so client-side validation can be bypassed — you must re-validate on the server. safeParse() returns a discriminated union: { success: true, data } or { success: false, error }. Unlike parse(), safeParse() never throws, which is critical in Server Actions where you want to return a structured error response instead of crashing. error.flatten().fieldErrors gives you a { fieldName: string[] } map that is easy to display in the form. The "use server" directive tells Next.js this function runs server-side only.',
-    hints: [
-      'Use formData.get("fieldName") to extract values',
-      'safeParse returns { success, data } or { success, error } — never throws',
-      'error.flatten().fieldErrors gives you { field: ["message"] }',
-    ],
-    tieredHints: {
-      apiSignature: 'async function createUser(formData: FormData): Promise<{ success: boolean; errors?: any; data?: any }>',
-      skeleton: `"use server";
+}
+# OR
+"use server";
+import { z } from "zod";
+
+const userSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+  name: z.string().min(2),
+});
 
 export async function createUser(formData: FormData) {
-  const rawData = {
-    email: formData.get("____"),
-    password: formData.get("password"),
-    name: formData.get("name"),
-  };
+  const parsed = userSchema.safeParse(Object.fromEntries(formData));
 
-  const parsed = userSchema.____(rawData);
-
-  if (!parsed.____) {
-    return { success: false as const, errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) {
+    return { success: false, errors: z.flattenError(parsed.error).fieldErrors };
   }
 
-  return { success: true as const, data: parsed.data };
+  return { success: true, data: parsed.data };
 }`,
+    requires: [
+      /^(\s*\/\/[^\n]*\n)*\s*["']use server["']/,
+      /export\s+async\s+function\s+createUser\s*\(/,
+      /formData\.get\(|Object\.fromEntries\(\s*formData\s*\)/,
+      /email\s*:\s*z\.(string\(\)\.)?email\(/,
+      /password\s*:\s*z\.string\(\)\.min\(\s*8\b/,
+      /name\s*:\s*z\.string\(\)\.min\(\s*2\b/,
+      /\.safeParse\(/,
+      /success\s*:\s*false/,
+      /\.fieldErrors\b/,
+      /success\s*:\s*true/,
+      /data\s*:\s*\w+\.data\b/,
+    ],
+    explanation:
+      'A Server Action is a public endpoint: anyone can post to it without the form, so it checks the data again, whatever the browser checked. `"use server"` at the top of the file marks every export as a Server Action. `formData.get()` returns a string, a File or null, and Zod checks it as it is, so a missing field fails as "expected string" instead of slipping through; `Object.fromEntries(formData)` builds the same object in one go. `safeParse()` never throws: it returns `{ success: true, data }` or `{ success: false, error }`, so the action can send the errors back to the form instead of crashing. `z.flattenError(error).fieldErrors` (Zod 4; `error.flatten().fieldErrors` in Zod 3, deprecated but still working) gives `{ field: ["message"] }`, which the form can show next to each input. Return `parsed.data`, not the raw values: it is the checked, typed result.',
+    hints: [
+      'Use formData.get("fieldName") to read each value',
+      'safeParse returns { success, data } or { success, error } and never throws',
+      'z.flattenError(error).fieldErrors gives you { field: ["message"] }',
+    ],
+    tieredHints: {
+      apiSignature: 'schema.safeParse(value): { success: true, data } | { success: false, error }; z.flattenError(error).fieldErrors',
+      skeleton: '"use server";\nimport { z } from "zod";\n\nconst userSchema = z.object({ ____ });\n\nexport async function createUser(formData: FormData) {\n  const rawData = {\n    email: formData.get("email"),\n    password: ____,\n    name: ____,\n  };\n\n  const parsed = userSchema.____(rawData);\n\n  if (!parsed.____) {\n    return { success: false as const, errors: ____ };\n  }\n\n  return { success: true as const, data: ____ };\n}',
     },
     tags: ['server-actions', 'zod', 'safeParse', 'validation', 'next.js'],
     concepts: ['next-server-actions', 'forms-zod-schema'],
@@ -525,30 +724,30 @@ export async function createUser(formData: FormData) {
     options: [
       {
         id: 'a',
-        text: 'parse() is synchronous and safeParse() is asynchronous',
+        text: 'parse() is synchronous, while safeParse() returns a Promise that you have to await',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'parse() validates only the types while safeParse() also checks refinements',
+        text: 'parse() checks only the types, while safeParse() also runs refinements such as .refine()',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'parse() throws a ZodError on validation failure, while safeParse() never throws — it returns { success: true, data } or { success: false, error } so you can handle errors gracefully',
+        text: 'parse() throws a ZodError on bad data; safeParse() returns { success, data } or { success, error }',
         isCorrect: true,
       },
       {
         id: 'd',
-        text: 'They are identical, safeParse is just an alias for parse',
+        text: 'safeParse() strips keys the schema does not list and parse() keeps them; both throw on bad data',
         isCorrect: false,
       },
     ],
     explanation:
-      'parse() throws a ZodError when validation fails, which is fine in contexts where you want to catch exceptions (like middleware). safeParse() returns a result object instead of throwing — this is preferred in Server Actions and API routes where you want to return structured error responses to the client. Both run the exact same validations (including refinements and transforms). Use safeParse() when you need to gracefully handle invalid data; use parse() when invalid data should be treated as an exceptional case.',
+      '`parse()` returns the parsed data or throws a `ZodError`. `safeParse()` never throws: it returns `{ success: true, data }` or `{ success: false, error }`, so a Server Action can check `success` and return the field errors to the form instead of crashing. Both are synchronous (the Promise versions are `parseAsync()` and `safeParseAsync()`, needed only for async refinements), both run every check, refinements and transforms included, and both drop keys a `z.object()` does not list. Use `parse()` where bad data is a bug that should stop the code, and `safeParse()` where bad input is expected, as with a form.',
     hints: [
-      'Think about try/catch vs result objects',
-      'Which approach is better in a Server Action that needs to return errors?',
+      'Think about try/catch versus a result object',
+      'Which one suits a Server Action that has to send errors back to the form?',
     ],
     tags: ['zod', 'parse', 'safeParse', 'error-handling'],
     concepts: ['forms-zod-schema', 'js-error-handling'],
@@ -565,33 +764,33 @@ export async function createUser(formData: FormData) {
     options: [
       {
         id: 'a',
-        text: 'When you have more than 5 fields in a form and need to optimize rendering',
+        text: 'When a form has many fields and you want it to stop re-rendering on every keystroke',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'When you want to use arrays as select option values',
+        text: 'When a <select> takes its options from an array and the chosen one has to be validated',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'When you need to validate array fields like checkboxes',
+        text: 'When a group of checkboxes sharing one name must submit an array of the ticked values',
         isCorrect: false,
       },
       {
         id: 'd',
-        text: 'When you have dynamic form fields like "add another phone number" — it manages an array of fields with append, remove, and move operations while keeping form state in sync',
+        text: 'When the user can add and remove rows, such as several phone numbers, each with its own inputs',
         isCorrect: true,
       },
     ],
     explanation:
-      'useFieldArray is for dynamic lists of fields where the user can add or remove entries — like multiple phone numbers, addresses, or line items in an invoice. It returns { fields, append, remove, prepend, move, swap } and keeps everything synced with RHF\'s form state. Without it, you would need to manually manage an array in state, handle registration/unregistration of fields, and keep validation in sync — useFieldArray handles all of that automatically.',
+      '`useFieldArray({ control, name: "phones" })` manages a list of rows whose length changes: it returns `fields` (each with a stable `id` for the React `key`) and `append`, `remove`, `insert`, `move` and `swap`, and each row\'s inputs are registered by index, as `phones.0.number`, `phones.1.number` and so on. Zod checks the whole list with `z.array(...)`. The other cases need no extra hook: registered inputs are already uncontrolled, so a long form does not re-render on each keystroke; a `<select>` built from an array is still one registered field; and checkboxes registered under one name already submit an array of the ticked values.',
     hints: [
       'Think about forms where the number of inputs is not fixed',
-      'Consider a form where users can add multiple addresses',
+      'Consider a form where users can add another address',
     ],
     tags: ['react-hook-form', 'useFieldArray', 'dynamic-forms', 'forms'],
-    concepts: ['forms-rhf-controller', 'web-html-forms-a11y'],
+    concepts: ['forms-rhf-controller'],
   },
 
   // 9. Cloze fade: .refine for cross-field checks (fades next-forms-2's cold coding)
@@ -603,7 +802,7 @@ export async function createUser(formData: FormData) {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Complete the schema-level check: the method chained after z.object() that runs custom cross-field validation, and the option that attaches its error to a specific field.',
+      'Complete the schema-level check: the method chained after z.object() that runs a custom check across two fields, and the option that attaches its error to one field.',
     template: `const schema = z.object({
   password: z.string().min(8),
   confirmPassword: z.string(),
@@ -620,10 +819,10 @@ export async function createUser(formData: FormData) {
   path: ["confirmPassword"],
 });`,
     explanation:
-      '.refine() runs after every field-level validator passes, and receives the whole parsed object — this is the only place you can compare two fields against each other. path tells Zod which field the error belongs to, so it surfaces next to confirmPassword instead of as a form-wide error.',
+      '`.refine()` on the object receives the whole object, so it is where one field can be compared with another. It runs once every field has the right type, even when a field\'s own check fails: a 3-letter password that does not match gets both the `.min(8)` message and "Passwords do not match". A missing field (undefined) stops it. `path` names the field the error belongs to, so the message shows next to confirmPassword instead of as an error for the whole form.',
     hints: [
-      'The method for custom validation across multiple fields',
-      'The option that targets which field the error attaches to',
+      'The method for a custom check that can see several fields',
+      'The option that names the field the error is attached to',
     ],
     tags: ['zod', 'refine', 'cross-field', 'cloze'],
     concepts: ['forms-zod-schema'],
@@ -638,7 +837,7 @@ export async function createUser(formData: FormData) {
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
     question:
-      'Complete the schema: FormData.get() always returns a string, so age and birthDate need to be coerced into a number and a Date before Zod validates their type.',
+      'Complete the schema: FormData.get() always returns a string, so age and birthDate need to be coerced into a number and a Date before Zod checks them.',
     template: `const schema = z.object({
   age: z.coerce.___().min(0),
   birthDate: z.coerce.___(),
@@ -649,7 +848,7 @@ export async function createUser(formData: FormData) {
   birthDate: z.coerce.date(),
 });`,
     explanation:
-      'z.coerce.number() runs Number(value) before validating, and z.coerce.date() runs new Date(value) — both convert the raw string FormData always hands you into the type the rest of the schema expects. Without coerce, "25" fails a plain z.number() check because it is a string, not a number.',
+      '`z.coerce.number()` runs `Number(value)` before its checks, and `z.coerce.date()` runs `new Date(value)`, so the strings FormData hands you become the types the rest of the schema expects. Without coerce, "25" fails a plain `z.number()` because it is a string. Watch the empty box: `Number("")` is 0, so an empty age passes `.min(0)` (use `.min(1)` when 0 is not a real answer), while `new Date("")` is an invalid date, which `z.coerce.date()` rejects.',
     hints: [
       'The coercion for a numeric field',
       'The coercion for a date field',
@@ -667,15 +866,15 @@ export async function createUser(formData: FormData) {
     course: Course.WEB_DEV,
     question: 'A Server Action reads formData.get("age") and passes it to a Zod schema with `age: z.number().min(0)`. Validation fails even when the user typed "25". Why, and what fixes it?',
     options: [
-      { id: 'a', text: 'formData.get() always returns a string (or File), never a number, so z.number() correctly rejects it - use z.coerce.number() instead, which runs Number(value) before checking the type', isCorrect: true },
-      { id: 'b', text: 'z.number().min(0) is broken in Zod 3 for any positive input - use z.number().gte(0) instead', isCorrect: false },
-      { id: 'c', text: 'Server Actions serialize all fields as booleans by default, so the schema must use z.boolean() first and cast it manually', isCorrect: false },
-      { id: 'd', text: 'The form input needs type="number" in the HTML - once that is set, Zod will automatically treat the value as a number without any schema change', isCorrect: false },
+      { id: 'a', text: 'formData.get() returns a string (or a File, or null), so z.number() rejects it; z.coerce.number() runs Number(value) first', isCorrect: true },
+      { id: 'b', text: 'The value is a string, so the field should be z.string().min(0), which then keeps the age at 0 or more', isCorrect: false },
+      { id: 'c', text: 'Use safeParseAsync(), since the form data has not finished arriving when the synchronous safeParse() runs', isCorrect: false },
+      { id: 'd', text: 'Give the input type="number", so the browser sends a number and z.number() accepts it without a schema change', isCorrect: false },
     ],
-    explanation: 'The native FormData API always returns strings (or File objects for file inputs) from .get(), regardless of the input\'s HTML type attribute - "25" is a string, not a number, even from a <input type="number">. A plain z.number() schema correctly rejects it as a type mismatch. z.coerce.number() fixes this by running Number(value) first, then validating the result as a number - this is exactly the gap FormData-backed Server Actions need to bridge.',
+    explanation: '`formData.get()` returns a string, a `File` for a file input, or `null` when the field is missing, whatever the input\'s `type` attribute says: `<input type="number">` still sends "25". `z.number()` rejects any string, even one holding digits. `z.coerce.number()` runs `Number(value)` first and then the checks chained after it, so "25" becomes 25 and passes `.min(0)`. `z.string().min(0)` would let it through, but as a string, and `.min()` on a string counts characters, so "-5" and "abc" pass too. The form data has fully arrived by the time the action runs; `safeParseAsync()` is only for async refinements.',
     hints: [
-      'Check what formData.get() actually returns, not what the input\'s HTML type suggests',
-      'z.coerce runs a JS conversion before the type check',
+      'Check what formData.get() actually returns, not what the input\'s type attribute suggests',
+      'z.coerce runs a JavaScript conversion before the checks',
     ],
     tags: ['zod', 'z-coerce', 'formdata', 'server-actions'],
     concepts: ['forms-zod-schema'],
@@ -786,17 +985,17 @@ const editUserSchema = userSchema.pick({ name: true, email: true });`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
-    question: 'You build an EditProfileForm with `useForm()` (no defaultValues) and manually set each input\'s `value` prop from the fetched user record. On first render, React logs a warning about switching an input from uncontrolled to controlled, and typing feels laggy. What is the fix?',
+    question: 'EditProfileForm gets `user` as a prop from its Server Component page, so the record is there on the first render. It calls `useForm()` with no options, and each input gets both `{...register("name")}` and `value={user.name}` (and the same for email). The boxes show the user\'s data, but typing into them changes nothing. What is the fix?',
     options: [
-      { id: 'a', text: 'Switch every input from register() to plain React state (useState) instead, since useForm has no built-in way to handle data that is not already available when the component first mounts', isCorrect: false },
-      { id: 'b', text: 'The warning is unrelated to the form at all - it only means the fetched user record happened to arrive slightly after the component\'s first render, which is normal for any async fetch and requires no fix', isCorrect: false },
-      { id: 'c', text: 'Pass the fetched data as `useForm({ defaultValues: user })` - React Hook Form seeds every registered field from it on mount, so inputs start controlled by RHF from the first render instead of you fighting it with a manual `value` prop', isCorrect: true },
-      { id: 'd', text: 'Add `key={user.id}` to each input so React remounts them fresh on every keystroke, which resets the uncontrolled/controlled mismatch each time the input value changes', isCorrect: false },
+      { id: 'a', text: 'Replace register() with a useState per field, since useForm cannot start from values that already exist', isCorrect: false },
+      { id: 'b', text: 'Add `mode: "onChange"` to useForm, so the form re-renders on each keystroke and the value prop follows it', isCorrect: false },
+      { id: 'c', text: 'Remove the value props and pass `useForm({ defaultValues: user })`, so RHF seeds the inputs itself', isCorrect: true },
+      { id: 'd', text: 'Add `key={user.id}` to each input, so React remounts it and the value prop stops overriding the typing', isCorrect: false },
     ],
-    explanation: 'register() wires inputs as uncontrolled (RHF reads via refs), so manually also passing a `value` prop fights that setup and triggers React\'s uncontrolled-to-controlled warning as data arrives asynchronously. `defaultValues` is RHF\'s built-in way to seed initial values - pass the fetched record once and RHF applies it to every matching registered field on mount, which is exactly why edit forms (unlike blank create forms) need it.',
+    explanation: '`register()` leaves an input uncontrolled: React Hook Form reads it through its ref and does not re-render the form on a keystroke. A `value` prop makes React control the input instead, and since nothing ever changes `user.name`, React puts the old text back after every key. `defaultValues` is React Hook Form\'s way to seed a form: the inputs start with the record\'s values and stay uncontrolled, so typing works and the submit gets the edits. `mode` only sets when validation runs, `key` remounts the input but the fixed `value` still wins, and moving to useState throws away what React Hook Form does for you. `defaultValues` is read on the first render only; when the record is fetched in the browser after the form mounts, pass it as `values: user` (or call `reset(user)` when it arrives), or the boxes stay empty.',
     hints: [
-      'register() already manages the input - a manual value prop competes with it',
-      'RHF has a config option specifically for seeding initial field values',
+      'What does a `value` prop do to an input when nothing ever changes that value?',
+      'useForm has an option for the values a form starts with',
     ],
     tags: ['react-hook-form', 'defaultValues', 'edit-forms', 'controlled-inputs'],
     concepts: ['forms-rhf-controller'],
@@ -811,27 +1010,31 @@ const editUserSchema = userSchema.pick({ name: true, email: true });`,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Complete the form: one call subscribes to a field\'s live value for a character counter, the other clears the whole form back to defaultValues after a successful submit.',
-    template: `const { register, handleSubmit, ___, reset } = useForm();
-const bio = ___("bio");
+      'Complete the form: take out and call the function that subscribes to the bio field\'s live value for a character counter, and call the one that clears the form back to its defaultValues after a successful submit.',
+    template: `const { register, handleSubmit, ___, reset } = useForm({
+  defaultValues: { bio: "" },
+});
+const bio = ___("bio"); // shown as {bio.length}/160
 
 const onSubmit = async (data) => {
   await saveProfile(data);
   ___();
 };`,
     blanks: ['watch', 'watch', 'reset'],
-    solution: `const { register, handleSubmit, watch, reset } = useForm();
-const bio = watch("bio");
+    solution: `const { register, handleSubmit, watch, reset } = useForm({
+  defaultValues: { bio: "" },
+});
+const bio = watch("bio"); // shown as {bio.length}/160
 
 const onSubmit = async (data) => {
   await saveProfile(data);
   reset();
 };`,
     explanation:
-      'watch("fieldName") subscribes the component to that field\'s live value, re-rendering as the user types - perfect for a character counter or a live preview. reset() with no arguments restores the form to its original defaultValues, which is the standard way to clear a form after a successful submit without a manual page reload.',
+      '`watch("bio")` returns the field\'s current value and re-renders the component as the user types, which is what a live counter or preview needs; a registered input alone does not re-render anything. `reset()` with no arguments puts every field back to its `defaultValues`, the usual way to clear a form after a successful submit. The default of "" matters here: with no default, `watch("bio")` gives `undefined` on the first render, and again after `reset()`, so `bio.length` would throw.',
     hints: [
-      'The function that subscribes to a field\'s current value',
-      'The function that clears the form back to its defaults',
+      'The function that subscribes to a field\'s current value (it fills two blanks)',
+      'The function that puts the form back to its defaults',
     ],
     tags: ['react-hook-form', 'watch', 'reset', 'cloze'],
     concepts: ['forms-rhf-controller'],
@@ -845,8 +1048,13 @@ const onSubmit = async (data) => {
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question:
-      'Build a CommentForm component using React Hook Form.\n\nRequirements:\n- Register a single "comment" textarea field\n- Use watch("comment") to show a live character count below the textarea, e.g. "42/280"\n- On valid submit, call an async prop postComment(data), then call reset() to clear the form back to empty\n- Disable the submit button while comment is empty (use watch to check its length)',
+    question: `Build a CommentForm component with React Hook Form and one registered "comment" textarea.
+
+Requirements:
+- Give comment a default value of an empty string
+- Use watch("comment") (or useWatch) to show a live character count below the textarea, as "42/280"
+- Disable the submit button while the comment is empty
+- On submit, await the async prop postComment(data), then call reset() to clear the form`,
     starterCode: `"use client";
 import { useForm } from "react-hook-form";
 
@@ -884,33 +1092,53 @@ function CommentForm({ postComment }) {
       </button>
     </form>
   );
-}`,
-    explanation:
-      'watch("comment") re-renders the component with the field\'s current value on every keystroke, which is exactly what a live character counter needs - register() alone would not expose that value to the render without it. Calling reset() inside onSubmit after the async postComment resolves restores every field to defaultValues (here, an empty string), clearing the textarea without a manual state reset or page reload.',
-    hints: [
-      'watch("fieldName") returns the current value and subscribes to updates',
-      'reset() with no args goes back to defaultValues',
-      'Call reset() after the async submit succeeds, inside onSubmit',
-    ],
-    tieredHints: {
-      apiSignature: 'function CommentForm({ postComment }: { postComment: (data: any) => Promise<void> })',
-      skeleton: `function CommentForm({ postComment }) {
-  const { register, handleSubmit, watch, reset } = useForm({ defaultValues: { comment: "" } });
-  const comment = ____("comment");
+}
+# OR
+"use client";
+import { useForm, useWatch } from "react-hook-form";
 
-  const onSubmit = async (data) => {
+function CommentForm({ postComment }) {
+  const { register, handleSubmit, control, reset } = useForm({
+    defaultValues: { comment: "" },
+  });
+
+  const comment = useWatch({ control, name: "comment" });
+
+  async function onSubmit(data) {
     await postComment(data);
-    ____();
-  };
+    reset();
+  }
 
   return (
-    <form onSubmit={____(onSubmit)}>
-      <textarea {...____("comment")} />
-      <span>{comment.____}/280</span>
-      <button disabled={comment.____ === 0}>Post</button>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <textarea {...register("comment")} />
+      <span>{comment.length}/280</span>
+      <button type="submit" disabled={!comment}>
+        Post
+      </button>
     </form>
   );
 }`,
+    requires: [
+      /defaultValues\s*:\s*\{\s*comment\s*:\s*(""|''|``)/,
+      /register\(\s*["']comment["']\s*\)/,
+      /watch\(\s*["']comment["']\s*\)|useWatch\(/,
+      /\/\s*280/,
+      /disabled=\{/,
+      /handleSubmit\(/,
+      /await\s+postComment\(/,
+      /reset\(/,
+    ],
+    explanation:
+      '`watch("comment")` returns the field\'s current value and re-renders the component on every keystroke, which a live counter needs; a registered textarea alone never re-renders anything. `useWatch({ control, name: "comment" })` does the same and limits the re-render to the component that calls it. The empty-string default matters: without it, the value is `undefined` on the first render, so `comment.length` throws. Calling `reset()` after `await postComment(data)` resolves puts every field back to its `defaultValues`, so the textarea clears and the button is disabled again, with no state of your own and no page reload.',
+    hints: [
+      'watch("fieldName") returns the current value and subscribes to updates',
+      'reset() with no arguments goes back to defaultValues',
+      'Call reset() after the awaited postComment, inside the submit handler',
+    ],
+    tieredHints: {
+      apiSignature: 'useForm({ defaultValues }) returns { register, handleSubmit, watch, reset }; watch(name) returns the live value',
+      skeleton: 'function CommentForm({ postComment }) {\n  const { register, handleSubmit, watch, reset } = useForm({ defaultValues: ____ });\n  const comment = ____;\n\n  const onSubmit = async (data) => {\n    ____;\n    ____;\n  };\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <textarea {...register("comment")} />\n      <span>____/280</span>\n      <button disabled={____}>Post</button>\n    </form>\n  );\n}',
     },
     tags: ['react-hook-form', 'watch', 'reset', 'forms'],
     concepts: ['forms-rhf-controller'],
@@ -958,17 +1186,17 @@ function CommentForm({ postComment }) {
     difficulty: Difficulty.ADVANCED,
     topic: Topic.NEXT_FORMS_VALIDATION,
     course: Course.WEB_DEV,
-    question: 'You wire a UI library\'s `<CustomSelect>` into a form with `{...register("country")}`, the same way you register plain `<input>` elements. It silently fails to update form state when the user picks an option. Why, and what is the fix?',
+    question: 'A UI library\'s `<CustomSelect>` takes `value` and `onValueChange(value)` props and passes no ref to a DOM element. You spread `{...register("country")}` onto it, as on a plain `<input>`. Picking an option shows no error, but the submitted data has no country. Why, and what is the fix?',
     options: [
-      { id: 'a', text: 'CustomSelect must be rewritten from scratch as a native <select> element before it can participate in any React Hook Form project at all - third-party UI-library components can never be wired into RHF, whether through register() or any other API, since RHF only understands elements the browser itself renders natively', isCorrect: false },
-      { id: 'b', text: 'register() only works inside <form> elements whose method attribute is explicitly set to "post" rather than left as the default "get" - switching CustomSelect\'s parent form to method="post" restores the connection between the component and RHF\'s internal field registry', isCorrect: false },
-      { id: 'c', text: 'This is expected behavior, not a bug - React Hook Form only tracks one registered field per form at any given time, and country happens to collide with an earlier field registration that silently wins and swallows every subsequent one', isCorrect: false },
-      { id: 'd', text: 'register() attaches a native DOM ref and listens for the native onChange/onBlur events of an <input> or <select> - CustomSelect is a React component with its own custom props (value/onChange, or something else entirely), so spreading register\'s ref onto it does not hook into anything RHF can observe. Use <Controller name="country" control={control} render={...}> instead, wiring field.value/field.onChange onto CustomSelect\'s own prop names', isCorrect: true },
+      { id: 'a', text: 'Wrap CustomSelect in forwardRef so register\'s ref reaches it; RHF then reads the picked value from the ref', isCorrect: false },
+      { id: 'b', text: 'Set useForm({ mode: "onChange" }), since register only records a value when RHF validates on each change', isCorrect: false },
+      { id: 'c', text: 'Add country to defaultValues, since RHF leaves a field out of the submitted data when it has no default', isCorrect: false },
+      { id: 'd', text: 'register passes an onChange and a ref that CustomSelect never uses; use <Controller> with field.onChange', isCorrect: true },
     ],
-    explanation: 'register() is built around native form elements: it forwards a ref RHF uses to read the DOM value directly, plus native onChange/onBlur handlers. A component like CustomSelect almost never exposes that same contract - it manages its own internal state and calls whatever prop names it defines (which may not even be called onChange). Controller is the escape hatch: it does not rely on native DOM behavior at all, instead handing you a `field` object through its render prop that you manually map onto the custom component\'s actual API.',
+    explanation: '`register("country")` returns `{ name, ref, onChange, onBlur }` for a native element: React Hook Form reads the value from the DOM element through the ref and from the change event. CustomSelect has no `onChange` prop and puts the ref on nothing, so the pick never reaches the form and the submitted data has no country. `<Controller name="country" control={control} render={({ field }) => <CustomSelect value={field.value} onValueChange={field.onChange} />} />` keeps the value in React Hook Form, and `field.onChange` accepts the picked value itself. A ref still reads nothing (in React 19 `ref` is a plain prop, so forwardRef is not even needed to pass one), `mode` only sets when validation runs, and `defaultValues` only seeds the starting value. A component that calls `onChange` with a plain value instead of an event breaks `register` the other way: its handler throws reading `event.target`.',
     hints: [
-      'Think about what register() actually needs from the element it is spread onto',
-      'Controller does not assume any particular native DOM contract',
+      'Think about what register() needs from the element it is spread onto',
+      'Which prop does CustomSelect actually call when the user picks?',
     ],
     tags: ['react-hook-form', 'Controller', 'register', 'ui-library-integration'],
     concepts: ['forms-rhf-controller'],
