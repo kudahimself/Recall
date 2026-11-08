@@ -1482,6 +1482,40 @@ export function cn(...inputs: ____[]) {
     concepts: ['shadcn-radix-primitives'],
   },
 
+  // -- Predict: the class string cn() returns (BEGINNER Predict) --
+
+  {
+    id: 'shadcn-cn-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.NEXT_SHADCN,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question:
+      'cn() is the helper from a shadcn/ui project\'s lib/utils.ts. What does each console.log print? Type each class string exactly as printed, one per line, in order, without quotes.',
+    code: `import { cn } from "@/lib/utils";
+
+const isOpen = true;
+const isDisabled = false;
+
+console.log(cn("px-4 py-2 text-sm", isOpen && "bg-white", isDisabled && "opacity-50"));
+console.log(cn("p-4 text-red-500", "px-2 text-lg"));
+console.log(cn("px-2 text-lg", "p-4"));
+console.log(cn("rounded-md bg-gray-100", { "bg-blue-600": isOpen, "rounded-full": isDisabled }));`,
+    expectedOutput: `px-4 py-2 text-sm bg-white
+p-4 text-red-500 px-2 text-lg
+text-lg p-4
+rounded-md bg-blue-600`,
+    explanation:
+      'cn() is twMerge(clsx(inputs)). clsx goes first: it drops false, null and undefined, and keeps an object key only when its value is true, so the first call loses "opacity-50" and the fourth keeps "bg-blue-600" but not "rounded-full". twMerge then removes any class that a later class of the same Tailwind group overrides, keeping the survivors in their original order. In the second call, "px-2" only refines the horizontal part of "p-4", so both stay, and "text-red-500" (a color) and "text-lg" (a font size) are different groups, so both stay too. In the third, "p-4" comes last and sets every side, so it overrides the earlier "px-2". The fourth drops "bg-gray-100" because the later "bg-blue-600" sets the same background color. Which class wins depends on its place in the cn() call, never on the order Tailwind writes its CSS, which is the reason shadcn components pass a caller\'s className last.',
+    hints: [
+      'clsx runs first and decides which inputs are kept at all',
+      'Two classes conflict only when they set the same CSS property; does px-2 conflict with p-4, and does text-lg conflict with text-red-500?',
+    ],
+    tags: ['shadcn', 'cn', 'clsx', 'tailwind-merge', 'predict'],
+    concepts: ['shadcn-cn-utility'],
+  },
+
   // =====================================================================
   // NEXT_SHADCN — CVA + asChild (7 questions)
   // Closes the doc's flagged gap: every shadcn component is built on
