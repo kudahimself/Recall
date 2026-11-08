@@ -33,7 +33,27 @@ describe('diffLines', () => {
   });
 
   it('compares lines without their SQL comments', () => {
-    expect(comparableLine('SELECT a  -- the key', CodeLanguage.SQL)).toBe('SELECT a');
+    expect(comparableLine('SELECT a  -- the key', CodeLanguage.SQL)).toBe('select a');
+  });
+
+  it('does not mark SQL lines that differ only in keyword case', () => {
+    const solution = 'SELECT name\nFROM users\nWHERE id = 1';
+    const answer = 'select name\nfrom users\nwhere id = 1';
+    const d = diffLines(solution, answer, CodeLanguage.SQL);
+    expect(d.added).toBe(0);
+    expect(d.removed).toBe(0);
+  });
+
+  it('does not mark Python lines that differ only in quote style', () => {
+    const d = diffLines('print("x")', "print('x')", CodeLanguage.PYTHON);
+    expect(d.added).toBe(0);
+    expect(d.removed).toBe(0);
+  });
+
+  it('keeps case differences outside SQL', () => {
+    const d = diffLines('return None', 'return none', CodeLanguage.PYTHON);
+    expect(d.added).toBe(1);
+    expect(d.removed).toBe(1);
   });
 });
 

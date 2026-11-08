@@ -21,14 +21,18 @@ const splitLines = (code: string) => code.split(/\r?\n/);
 /**
  * A line as compared: no comment, no indentation, runs of spaces as one, and
  * no spaces beside brackets and punctuation, so `f( a,b )` matches `f(a, b)`.
+ * Single and double quotes count as the same, and SQL (whose keywords and
+ * names are case-insensitive) is compared in lower case.
  * Blank and comment-only lines come back empty and are never marked.
  */
 export function comparableLine(line: string, language?: CodeLanguage): string {
   const [body] = splitComment(line, language);
-  return body
+  const folded = body
     .trim()
     .replace(/\s+/g, ' ')
-    .replace(/\s*([()[\]{},:;=<>+\-*/])\s*/g, '$1');
+    .replace(/\s*([()[\]{},:;=<>+\-*/])\s*/g, '$1')
+    .replace(/'/g, '"');
+  return language === CodeLanguage.SQL ? folded.toLowerCase() : folded;
 }
 
 /**
