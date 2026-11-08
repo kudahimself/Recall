@@ -7,7 +7,8 @@
  * Celery & Background Tasks, Testing & CI/CD, Production Infrastructure, Python
  * Mastery & Advanced and Real-time & Monitoring: every Backend section.
  * Then Databricks, which run on local PySpark and Delta: Lakehouse Platform,
- * ELT with Spark SQL & Python, Incremental Data Processing and Production Pipelines.
+ * ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines,
+ * Optimization & Advanced and Data Governance.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -1285,6 +1286,58 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Write a nightly job\'s settings as the plain dicts the Jobs API takes, and play its runs out on paper.',
       'Build tasks with `depends_on` and retries, a scheduled job with parameters, name the problems in a task graph, work out which tasks succeed, fail or are skipped as upstream failed, and list what a repair run reruns.',
+    ),
+  },
+  {
+    id: 'spark_optimization',
+    topicKeys: [Topic.SPARK_OPTIMIZATION],
+    title: 'Shops, joins and partitions',
+    folder: 'exercises/databricks/spark_optimization',
+    starter: ['shop_joins.py'],
+    tests: 'test_shop_joins.py',
+    minutes: 25,
+    task: lines(
+      'Speed up a bookshop sales job with the four tools that avoid a shuffle, and read each query\'s plan to check what Spark will do.',
+      'Ask for a broadcast join and name the join strategy in a plan, cache a reused DataFrame and fill the cache, `coalesce` or `repartition` to a partition count, and write a table with `partitionBy` that a filter reads one directory of.',
+    ),
+  },
+  {
+    id: 'advanced_topics',
+    topicKeys: [Topic.ADVANCED_TOPICS],
+    title: 'Your own column functions',
+    folder: 'exercises/databricks/advanced_topics',
+    starter: ['shelf_udfs.py'],
+    tests: 'test_shelf_udfs.py',
+    minutes: 25,
+    task: lines(
+      'Write each kind of user-defined function on library loans, and the built-in version that needs none.',
+      'A Python UDF that keeps NULLs, the same codes from `upper` and `substring`, a pandas UDF on Arrow batches, a UDF registered for SQL, a temporary SQL function, and a share of the largest fee that a pandas UDF would get wrong.',
+    ),
+  },
+  {
+    id: 'data_governance',
+    topicKeys: [Topic.DATA_GOVERNANCE],
+    title: 'Grants for the library',
+    folder: 'exercises/databricks/data_governance',
+    starter: ['library_grants.py'],
+    tests: 'test_library_grants.py',
+    minutes: 25,
+    task: lines(
+      'Write Unity Catalog `GRANT` and `REVOKE` statements and work out what a list of grants allows, in plain Python, since grants exist only on Databricks.',
+      'Build the statements, the three grants a read needs, check reads, writes and table creation with inheritance from catalog and schema, revoke at one level only, and list what a read still lacks.',
+    ),
+  },
+  {
+    id: 'unity_catalog_governance',
+    topicKeys: [Topic.UNITY_CATALOG_GOVERNANCE],
+    title: 'One table, a view per group',
+    folder: 'exercises/databricks/unity_catalog_governance',
+    starter: ['member_policies.py'],
+    tests: 'test_member_policies.py',
+    minutes: 25,
+    task: lines(
+      'Write the Unity Catalog statements that govern a members table, and run its row filter and column mask bodies on local Spark.',
+      'Create an external location and grant on it, write a `RETURNS BOOLEAN` row filter and an email mask with `is_account_group_member`, bind them with `ALTER TABLE`, and find cloud storage keys left in a notebook.',
     ),
   },
 ];

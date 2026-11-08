@@ -14,7 +14,7 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r exercises/requirements.txt
 ```
 
-`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need, and pyspark and delta-spark, which only the Databricks exercises need.
+`requirements.txt` pins pytest, which every exercise uses, and Django, pytest-django, Django REST Framework, drf-spectacular, Celery, redis-py, fakeredis, factory_boy, Faker and Channels (with Daphne), which only the Django exercises (`exercises/backend/dj_*`) need, and pyspark and delta-spark, which only the Databricks exercises need, with pandas and pyarrow for their pandas UDFs.
 Python 3.10 or newer runs the Backend ones, and 3.10 to 3.12 is the safe range for the Spark ones.
 In VS Code, pick the `.venv` interpreter so its test runner finds pytest too.
 
