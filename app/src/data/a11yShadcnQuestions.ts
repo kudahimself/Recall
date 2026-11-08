@@ -3,7 +3,7 @@ import { Question, QuestionType, Difficulty, Topic, CodeLanguage, Course } from 
 export const a11yShadcnQuestions: Question[] = [
 
   // =====================================================================
-  // ACCESSIBILITY (8 questions)
+  // ACCESSIBILITY (9 questions)
   // =====================================================================
 
   // -- Accessible Modal/Dialog (Coding #1) --
@@ -16,12 +16,12 @@ export const a11yShadcnQuestions: Question[] = [
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Create an accessible modal/dialog component. Use role="dialog", aria-modal="true", aria-labelledby pointing to the title, trap focus inside the modal, and close on Escape key. Include a useEffect for the keydown listener and focus trapping.',
+      'Write AccessibleModal({ isOpen, onClose, title, children }), a modal dialog shown only while isOpen is true. While it is open, a screen reader announces it as a modal dialog named by its title, which it shows in an <h2>; focus moves to its first control; Tab and Shift+Tab cycle through its controls and never reach the page behind it; Escape calls onClose; and a Close button inside it calls onClose. When it closes, focus goes back to the element that had it before it opened. onClose keeps the same identity between renders (the parent wraps it in useCallback).',
     starterCode: `import { useEffect, useRef } from "react";\n\nfunction AccessibleModal({ isOpen, onClose, title, children }) {\n`,
     testCases: [
       {
         input: 'accessible modal',
-        expectedOutput: 'role="dialog" aria-modal="true" aria-labelledby with focus trap and Escape handler',
+        expectedOutput: 'a dialog named by its <h2>, with focus moved in, trapped and restored, and Escape calling onClose',
         description: 'Should render an accessible dialog with focus trapping',
       },
     ],
@@ -84,13 +84,12 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        onClick={(e) => e.stopPropagation()}
       >
         <h2 id="modal-title">{title}</h2>
         {children}
@@ -98,53 +97,49 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
       </div>
     </div>
   );
+}
+# OR
+import { useEffect, useRef } from "react";
+
+function AccessibleModal({ isOpen, onClose, title, children }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (isOpen && !dialog.open) dialog.showModal();
+    if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
+
+  return (
+    <dialog ref={dialogRef} aria-labelledby="modal-title" onClose={onClose}>
+      <h2 id="modal-title">{title}</h2>
+      {children}
+      <button onClick={onClose}>Close</button>
+    </dialog>
+  );
 }`,
+    requires: [
+      /role\s*=\s*["']dialog["']|<dialog\b/,
+      /aria-modal\s*=\s*(["']true["']|\{\s*true\s*\})|\.showModal\s*\(/,
+      /aria-labelledby\s*=/,
+      /["']Escape["']|\.showModal\s*\(/,
+      /["']Tab["']|\.showModal\s*\(/,
+      /removeEventListener|\.showModal\s*\(/,
+    ],
     explanation:
-      'Accessible modals require several features: role="dialog" tells assistive tech this is a dialog; aria-modal="true" indicates content behind it is inert; aria-labelledby connects the dialog to its title; focus trapping keeps keyboard users inside the modal (Tab wraps from last to first element); Escape closes the modal; and restoring focus to the previously focused element when the modal closes ensures users don\'t lose their place in the page.',
+      'role="dialog" with aria-modal="true" tells a screen reader this is a modal dialog, and aria-labelledby names it from the <h2>. aria-modal only changes what is announced: it does not stop Tab from leaving, so the effect traps focus itself, wrapping from the last control to the first on Tab and from the first to the last on Shift+Tab, and handles Escape. On open it saves document.activeElement and focuses the first control; the cleanup removes the listener and puts focus back, so the user does not lose their place. The cleanup also runs whenever onClose changes, which is why onClose must be stable. A native <dialog> opened with showModal() does most of this for you: the rest of the page becomes inert, Escape closes it and fires its close event (which calls onClose here), focus moves in, and it returns to the opener when the dialog closes.',
     hints: [
-      'Use role="dialog" and aria-modal="true" on the modal container',
+      'role="dialog" and aria-modal="true" on the modal container',
       'aria-labelledby should reference the id of the title element',
-      'Trap focus by intercepting Tab and Shift+Tab on first/last focusable elements',
-      'Listen for Escape key in a useEffect keydown handler',
+      'Trap focus by intercepting Tab and Shift+Tab on the first and last focusable elements',
+      'Save document.activeElement on open and focus it again in the cleanup',
     ],
     tieredHints: {
       apiSignature: 'function AccessibleModal({ isOpen, onClose, title, children })',
-      skeleton: `function AccessibleModal({ isOpen, onClose, title, children }) {
-  const modalRef = useRef(null);
-  const previousFocusRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === "____") {
-        onClose();
-        return;
-      }
-      if (e.key === "Tab") {
-        const focusable = modalRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (e.shiftKey && document.activeElement === focusable[0]) {
-          e.preventDefault();
-          focusable[focusable.length - 1].____();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div ref={modalRef} role="____" aria-modal="____" aria-labelledby="modal-title">
-        <h2 id="modal-title">{title}</h2>
-        {children}
-      </div>
-    </div>
-  );
-}`,
+      skeleton: "function AccessibleModal({ isOpen, onClose, title, children }) {\n  const modalRef = useRef(null);\n  const previousFocusRef = useRef(null);\n\n  useEffect(() => {\n    if (!isOpen) return;\n    previousFocusRef.current = ____;\n    const handleKeyDown = (e) => {\n      if (e.key === \"____\") {\n        onClose();\n        return;\n      }\n      if (e.key === \"Tab\") {\n        const focusable = modalRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])');\n        if (e.shiftKey && document.activeElement === focusable[0]) {\n          e.preventDefault();\n          focusable[focusable.length - 1].____();\n        }\n        // and the mirror case for Tab on the last element\n      }\n    };\n    document.addEventListener(\"keydown\", handleKeyDown);\n    // focus the first control here\n    return () => {\n      document.removeEventListener(\"keydown\", handleKeyDown);\n      ____;\n    };\n  }, [isOpen, onClose]);\n\n  if (!isOpen) return null;\n  return (\n    <div className=\"modal-overlay\">\n      <div ref={modalRef} role=\"____\" aria-modal=\"____\" aria-labelledby=\"modal-title\">\n        <h2 id=\"modal-title\">{title}</h2>\n        {children}\n        <button onClick={onClose}>Close</button>\n      </div>\n    </div>\n  );\n}",
     },
     tags: ['accessibility', 'modal', 'dialog', 'focus-trap', 'aria', 'react'],
-    concepts: ['a11y-aria-roles'],
+    concepts: ['a11y-aria-roles', 'a11y-keyboard-nav'],
   },
 
   // -- WCAG Conformance Levels (MC #1, questionIndex=1, correct at position b) --
@@ -158,16 +153,15 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
     question:
       'What are the WCAG conformance levels, and which level do most legal requirements target?',
     options: [
-      { id: 'a', text: 'Levels 1, 2, and 3 — most legal requirements mandate Level 3 for maximum coverage', isCorrect: false },
-      { id: 'b', text: 'Levels A (minimum), AA (standard target), and AAA (highest) — most legal requirements mandate AA, which includes criteria like 4.5:1 color contrast ratio, keyboard navigability, and screen reader compatibility', isCorrect: true },
-      { id: 'c', text: 'Levels A and B — Level A covers visual accessibility like contrast and alt text, and Level B covers auditory accessibility like captions and transcripts for media', isCorrect: false },
-      { id: 'd', text: 'There is only one level — a site either passes or fails the full WCAG checklist', isCorrect: false },
+      { id: 'a', text: 'Levels A, AA and AAA, and most laws require AAA, because a site has to meet every success criterion before it counts as accessible', isCorrect: false },
+      { id: 'b', text: 'Levels A (the minimum), AA and AAA (the strictest), and most laws and contracts name AA, the level that adds rules such as 4.5:1 text contrast', isCorrect: true },
+      { id: 'c', text: 'Levels A, AA and AAA, and most laws require only A, because AA and AAA are optional extras for sites that want a better audit score', isCorrect: false },
+      { id: 'd', text: 'Levels 1, 2 and 3, each a separate checklist for one group of users (vision, hearing, motor), and the law requires all three of them', isCorrect: false },
     ],
-    explanation:
-      'WCAG defines three conformance levels: A is the bare minimum (e.g., all images have alt text), AA is the standard target that most laws like the ADA and EU Accessibility Act reference (requiring 4.5:1 contrast for normal text, keyboard navigation, and screen reader support), and AAA is the highest level with stricter criteria (7:1 contrast, sign language for video). AA is the practical target because AAA is often infeasible for all content.',
+    explanation: 'WCAG has three conformance levels, and each includes the ones below it. A is the floor (an image that carries information has a text alternative, everything works from the keyboard), AA adds criteria such as 4.5:1 contrast for normal text and a visible focus indicator, and AAA is the strictest (7:1 contrast, sign language for prerecorded video). Most laws and contracts name AA: the European Accessibility Act through the standard EN 301 549, and the US rules for government websites (Section 508 and the ADA Title II rule). AAA is not required as a whole, because some of its criteria cannot be met for every kind of content. The levels are tiers of strictness, not separate checklists for each disability.',
     hints: [
-      'Think of them as bronze, silver, gold tiers',
-      'Most accessibility lawsuits reference AA compliance',
+      'Think of them as bronze, silver and gold tiers',
+      'Most laws and lawsuits cite the middle tier',
     ],
     tags: ['WCAG', 'conformance', 'accessibility', 'standards'],
     concepts: ['a11y-aria-roles'],
@@ -184,13 +178,12 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
     question:
       'What is the difference between aria-label, aria-labelledby, and aria-describedby?',
     options: [
-      { id: 'a', text: 'They are interchangeable — all three provide the same accessible name to screen readers', isCorrect: false },
-      { id: 'b', text: 'aria-label adds a hover tooltip to the element, aria-labelledby adds a visible subtitle above it, and aria-describedby adds a footer note rendered at the bottom of the page', isCorrect: false },
-      { id: 'c', text: 'aria-label provides an inline text label, aria-labelledby references another element\'s ID as the primary label (overriding visible text for screen readers), and aria-describedby references an element providing supplementary description', isCorrect: true },
-      { id: 'd', text: 'aria-label is for inputs only, aria-labelledby is for buttons only, and aria-describedby is for images only', isCorrect: false },
+      { id: 'a', text: 'They are interchangeable: each sets the accessible name, and when more than one is present the screen reader reads all of them in a row', isCorrect: false },
+      { id: 'b', text: 'aria-label shows a hover tooltip, aria-labelledby prints a visible caption above the element, and aria-describedby adds a note at the foot of the page', isCorrect: false },
+      { id: 'c', text: 'aria-label gives the name as a string, aria-labelledby takes the name from another element\'s text by id (and wins over both), and aria-describedby adds a hint read after the name', isCorrect: true },
+      { id: 'd', text: 'aria-label is for inputs, aria-labelledby is for buttons and aria-describedby is for images, and putting one on any other kind of element has no effect', isCorrect: false },
     ],
-    explanation:
-      'These three attributes serve distinct roles: aria-label sets the accessible name directly as a string (useful when there is no visible label). aria-labelledby points to the ID of another element whose text becomes the accessible name — it overrides any visible text or aria-label for screen readers. aria-describedby points to an element providing extra context (like help text or error messages) that is announced after the label. The priority order for accessible names is: aria-labelledby > aria-label > visible text content.',
+    explanation: 'aria-label sets the accessible name directly from a string, for a control with no visible text such as an icon button. aria-labelledby takes the name from the text of the element or elements whose ids it lists, and it wins over aria-label and over the element\'s own content. aria-describedby also points at other elements by id, but their text becomes the description, which the screen reader reads after the name and role, as for a hint or an error message. None of the three shows anything on screen, and all of them work on any element that can be named. The name is the first one present of aria-labelledby, aria-label, the content or <label>, then title.',
     hints: [
       'Think: label = name it, describedby = explain it',
       'aria-labelledby can reference multiple IDs separated by spaces',
@@ -208,7 +201,7 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
     topic: Topic.ACCESSIBILITY,
     course: Course.WEB_DEV,
     language: CodeLanguage.CSS,
-    question: 'Fill in (1) the property that pushes the element off-screen so sighted users never see it, and (2) the pseudo-class that should reveal it again for keyboard users.',
+    question: 'Fill in (1) the offset property that pushes the element far past the left edge of the page so sighted users never see it, and (2) the pseudo-class that brings it back into view when a keyboard user tabs to it.',
     template: `.visually-hidden {
   position: absolute;
   ___: -9999px;
@@ -221,8 +214,9 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
 }`,
     blanks: ['left', 'focus'],
     solution: '.visually-hidden {\n  position: absolute;\n  left: -9999px;\n}\n\n.visually-hidden:focus {\n  position: fixed;\n  left: 0;\n  top: 0;\n}',
-    explanation: 'Pushing an element far off-screen with a large negative `left` hides it visually without `display: none` (which would also remove it from the accessibility tree and tab order). The `:focus` rule resets `left`/`position` so the element snaps back into view the moment a keyboard user tabs to it — this is the trick behind skip-navigation links and other "visually hidden until focused" patterns.',
+    explanation: 'Pushing an element far off-screen with a large negative `left` hides it visually without `display: none`, which would also remove it from the accessibility tree and the Tab order. The `:focus` rule (or `:focus-visible`, which also matches when a keyboard user tabs to it) resets `left` and `position`, so the element snaps into view the moment it takes focus. This is the classic form for a skip link. For text that should stay hidden for good, such as a live region\'s message, the rule card\'s 1px box with `overflow: hidden` and `clip-path: inset(50%)` is the more common class today; both keep the text for the screen reader.',
     hints: ['Same axis as the offset you would use to hide a sidebar off-canvas.', 'Pseudo-class that matches while an element has keyboard focus.'],
+    blankAlternates: [[], ['focus-visible']],
     tags: ['visually-hidden', 'keyboard', 'focus', 'accessibility', 'cloze'],
     concepts: ['a11y-keyboard-nav'],
   },
@@ -237,77 +231,95 @@ function AccessibleModal({ isOpen, onClose, title, children }) {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Create a skip navigation link — a hidden link at the very top of the page that becomes visible on focus and jumps the user to #main-content. Include the CSS for making the link visually hidden but focusable.',
-    starterCode: `// SkipNav.jsx\nfunction SkipNav() {\n\n}\n\n// styles.css\n`,
+      'Add a skip link to this layout. Write SkipNav, a link reading "Skip to main content" that jumps to the main content, and render it as the first thing in Layout, before the header. Wrap children in a <main> with the id main-content that takes focus when the link is followed but is never a Tab stop itself. The page\'s CSS already has a skip-link class that hides the link until it has focus (Tailwind\'s sr-only focus:not-sr-only, which does the same, is accepted too).',
+    starterCode: `function SkipNav() {
+
+}
+
+function Layout({ children }) {
+  return (
+    <>
+      <header>
+        <nav>{/* site links */}</nav>
+      </header>
+      {children}
+    </>
+  );
+}
+`,
     testCases: [
       {
-        input: 'skip navigation',
-        expectedOutput: 'a link with href="#main-content" that is visually hidden until focused',
-        description: 'Should render a skip-to-content link with proper styling',
+        input: 'Layout with SkipNav',
+        expectedOutput: 'the first Tab stop is a link to #main-content, hidden until focused, and <main id="main-content" tabIndex={-1}> wraps the children',
+        description: 'Should render a skip link first that moves focus to the main content',
       },
     ],
-    solution: `// SkipNav.jsx
-function SkipNav() {
+    solution: `function SkipNav() {
   return (
-    <a href="#main-content" className="skip-nav">
+    <a href="#main-content" className="skip-link">
       Skip to main content
     </a>
   );
 }
 
-// Usage in layout:
-// <body>
-//   <SkipNav />
-//   <header>...</header>
-//   <main id="main-content" tabIndex={-1}>...</main>
-// </body>
-
-// styles.css
-// .skip-nav {
-//   position: absolute;
-//   left: -9999px;
-//   top: auto;
-//   width: 1px;
-//   height: 1px;
-//   overflow: hidden;
-//   z-index: 9999;
-//   padding: 1rem;
-//   background: #000;
-//   color: #fff;
-//   text-decoration: none;
-//   font-size: 1rem;
-// }
-//
-// .skip-nav:focus {
-//   position: fixed;
-//   top: 0;
-//   left: 0;
-//   width: auto;
-//   height: auto;
-//   overflow: visible;
-//   clip: auto;
-// }`,
-    explanation:
-      'Skip navigation links allow keyboard and screen reader users to bypass repetitive navigation menus and jump straight to the main content. The link is positioned off-screen so sighted users don\'t see it, but it appears when a keyboard user tabs to it (via :focus styles). The target element (main) needs tabIndex={-1} so it can receive programmatic focus. This is a WCAG 2.4.1 Level A requirement — one of the most basic accessibility features every site should have.',
-    hints: [
-      'Use position: absolute with left: -9999px to hide it visually',
-      'On :focus, reset position to fixed at top: 0 to make it visible',
-      'The target element needs id="main-content" and tabIndex={-1}',
-    ],
-    tieredHints: {
-      apiSignature: 'function SkipNav()',
-      skeleton: `// SkipNav.jsx
+function Layout({ children }) {
+  return (
+    <>
+      <SkipNav />
+      <header>
+        <nav>{/* site links */}</nav>
+      </header>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
+    </>
+  );
+}
+# OR
 function SkipNav() {
   return (
-    <a href="#____" className="____">
-      ____
+    <a href="#main-content" className="sr-only focus:not-sr-only">
+      Skip to main content
     </a>
   );
 }
 
-// styles.css
-// .skip-nav { position: absolute; left: -9999px; }
-// .skip-nav:____ { position: fixed; left: 0; top: 0; }`,
+function Layout({ children }) {
+  return (
+    <>
+      <SkipNav />
+      <header>
+        <nav>{/* site links */}</nav>
+      </header>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
+    </>
+  );
+}`,
+    requires: [
+      /href\s*=\s*["']#main-content["']/,
+      /id\s*=\s*["']main-content["']/,
+      /tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])/,
+      /skip-link|sr-only/,
+      /<SkipNav\s*\/>[\s\S]*<header/,
+    ],
+    explanation:
+      'A skip link lets keyboard and screen reader users jump past the header and navigation, which they would otherwise Tab through on every page (WCAG 2.4.1, Bypass Blocks, Level A). It only helps if it is the first Tab stop, so SkipNav comes before the header. The class keeps it out of sight until it has focus; display: none would take it out of the Tab order too, so it could never be reached. Following the link scrolls to the element whose id matches the fragment, and tabIndex={-1} lets the browser move focus onto <main>, so the next Tab continues from the content and a screen reader starts reading there, while Tab itself never stops on <main>.',
+    hints: [
+      'The link\'s href is a fragment: # followed by the target\'s id',
+      'tabIndex={-1} lets <main> take focus from the link without becoming a Tab stop',
+      'Render <SkipNav /> before <header> so it is the first Tab stop',
+    ],
+    tieredHints: {
+      apiSignature: 'function SkipNav()  /  function Layout({ children })',
+      skeleton: `function SkipNav() {
+  return <a ____>____</a>;
+}
+
+function Layout({ children }) {
+  // ____ first, then the header, then <main ____> around children
+}`,
     },
     tags: ['skip-nav', 'keyboard', 'navigation', 'accessibility', 'WCAG'],
     concepts: ['a11y-keyboard-nav', 'a11y-aria-roles'],
@@ -324,13 +336,12 @@ function SkipNav() {
     question:
       'Why is focus management particularly important in single-page applications (SPAs)?',
     options: [
-      { id: 'a', text: 'When SPAs navigate between views, the DOM updates but focus stays on the old location — screen reader users get lost because they aren\'t informed of the new content, so you must programmatically move focus to the new page content', isCorrect: true },
-      { id: 'b', text: 'SPAs load faster than traditional sites, so focus management slows them down to give users time to read', isCorrect: false },
-      { id: 'c', text: 'Focus management is only needed for SPAs built with React — other frameworks handle it automatically', isCorrect: false },
-      { id: 'd', text: 'SPAs disable the browser\'s built-in focus handling entirely, so you must write custom JavaScript to re-enable Tab key navigation and restore the default focus ring on every element', isCorrect: false },
+      { id: 'a', text: 'The view changes without a page load, so focus stays on the clicked link (or falls to <body> if it was removed) and nothing is announced; you move focus to the new view\'s heading', isCorrect: true },
+      { id: 'b', text: 'Every URL change resets focus to the top of the document, pushState included, so an SPA only has to update the page title for screen reader users', isCorrect: false },
+      { id: 'c', text: 'Screen readers watch the DOM and read any newly inserted content aloud, so moving focus matters only for sighted keyboard users who follow the focus ring', isCorrect: false },
+      { id: 'd', text: 'Client-side routers switch off the browser\'s Tab navigation while they swap views, so you must turn it back on by calling focus() on each link again', isCorrect: false },
     ],
-    explanation:
-      'In traditional multi-page websites, the browser fully reloads the page on navigation and focus resets to the top of the document. SPAs update the DOM in-place without a page reload, so focus stays wherever it was on the old view. Screen reader users may not realize the page content has changed at all. The fix is to programmatically move focus to the new content (e.g., the h1 of the new "page") and optionally announce the navigation with an aria-live region. Libraries like @reach/router handle this automatically.',
+    explanation: 'A full page load resets focus to the top of the new document, and the screen reader announces the new page. An SPA swaps the content in place: focus stays on the link that was clicked, or falls back to <body> when that link went away with the old view, and a screen reader user hears nothing about the change. The fix is to move focus to the new view yourself, usually to its <h1> given tabIndex={-1}, and optionally to announce the new page title in a polite live region; some routers announce the title for you, so check what yours does. Screen readers do not read new content on their own unless it is in a live region, and nothing switches Tab off.',
     hints: [
       'Think about what happens to focus when the DOM changes without a page reload',
       'Screen readers rely on focus position to know where to start reading',
@@ -350,19 +361,18 @@ function SkipNav() {
     question:
       'What does the prefers-reduced-motion CSS media query do, and why is it important for accessibility?',
     options: [
-      { id: 'a', text: 'It detects slow network connections or a low battery and automatically strips heavy animations and transitions to improve rendering performance on constrained devices', isCorrect: false },
-      { id: 'b', text: 'It detects when a user has requested less animation in their OS settings (often due to vestibular disorders that cause motion sickness) — you use @media (prefers-reduced-motion: reduce) to disable or simplify animations', isCorrect: true },
-      { id: 'c', text: 'It forces all CSS transitions to use ease-in-out timing for smoother motion', isCorrect: false },
-      { id: 'd', text: 'It is a JavaScript API that measures animation frame rates and throttles them on slow devices', isCorrect: false },
+      { id: 'a', text: 'It detects a slow network connection or a low battery and automatically strips heavy animations and transitions to improve performance on constrained devices', isCorrect: false },
+      { id: 'b', text: 'It matches when the user has turned on a "reduce motion" setting in their OS, often because motion makes them dizzy, so @media (prefers-reduced-motion: reduce) can tone animation down', isCorrect: true },
+      { id: 'c', text: 'It makes the browser itself slow down every CSS animation and transition on the page once the user opts in, so the author never has to write any CSS for it', isCorrect: false },
+      { id: 'd', text: 'It is a JavaScript-only setting that frameworks read to skip their animations; a CSS media query cannot see the user\'s motion preference at all', isCorrect: false },
     ],
-    explanation:
-      'prefers-reduced-motion is a CSS media query that reflects the user\'s operating system setting (e.g., "Reduce motion" on macOS/iOS or "Show animations" off on Windows). People with vestibular disorders like vertigo can experience nausea, dizziness, and disorientation from animations. Using @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } } respects their preference. A better approach is to set reduced durations rather than fully removing them, so users still get visual feedback.',
+    explanation: 'prefers-reduced-motion reflects an operating system setting: Reduce motion on macOS and iOS, Animation effects off on Windows, Remove animations on Android. Large movement, zooming and parallax can cause dizziness and nausea for people with vestibular disorders. The browser does nothing with the setting by itself: you write @media (prefers-reduced-motion: reduce) { ... } and remove or shorten the motion inside it, and JavaScript can read the same setting with window.matchMedia("(prefers-reduced-motion: reduce)"). A common reset sets animation-duration and transition-duration to 0.01ms !important, which stops the motion but still fires the animationend and transitionend events that scripts may wait for; swapping a slide for a fade is a gentler option that keeps the visual feedback.',
     hints: [
       'It\'s an OS-level setting, not a browser-only feature',
       'Vestibular disorders affect balance and spatial orientation',
     ],
     tags: ['prefers-reduced-motion', 'animation', 'media-query', 'accessibility'],
-    concepts: ['web-css-responsive', 'a11y-aria-roles'],
+    concepts: ['web-css-responsive'],
   },
 
   // -- Accessible Custom Dropdown (Coding #3) --
@@ -375,12 +385,12 @@ function SkipNav() {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'Create an accessible custom dropdown/select. Use role="listbox" on the options container, role="option" on each item, aria-expanded on the trigger button, and implement keyboard navigation: ArrowUp/Down to move between options, Enter to select, Escape to close.',
+      'Write AccessibleDropdown({ options, value, onChange, label }), a custom select made of a trigger button and a list of options (strings). A screen reader must hear the trigger as a button that opens a listbox, named by the label and the current value ("Select an option" when there is none), with whether it is expanded; the open list as a listbox named by the label, with the chosen option marked selected; and, as the user arrows through the list, the option they are on. Keys: ArrowDown opens the list on its first option and then moves down, ArrowUp moves up, both stop at the ends and never scroll the page; Enter or Space chooses the current option; Escape closes the list. Choosing or closing puts focus back on the trigger, and clicking an option chooses it.',
     starterCode: `import { useState, useRef, useEffect } from "react";\n\nfunction AccessibleDropdown({ options, value, onChange, label }) {\n`,
     testCases: [
       {
         input: 'accessible dropdown',
-        expectedOutput: 'role="listbox" role="option" aria-expanded with keyboard navigation',
+        expectedOutput: 'a button with aria-haspopup and aria-expanded opening a role="listbox" of role="option" items, with the active option announced and ArrowUp/ArrowDown/Enter/Escape handled',
         description: 'Should render a dropdown with proper ARIA roles and keyboard support',
       },
     ],
@@ -397,6 +407,12 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       listRef.current.focus();
     }
   }, [isOpen]);
+
+  const choose = (option) => {
+    onChange(option);
+    setIsOpen(false);
+    buttonRef.current?.focus();
+  };
 
   const handleKeyDown = (e) => {
     switch (e.key) {
@@ -419,9 +435,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       case " ":
         e.preventDefault();
         if (isOpen && activeIndex >= 0) {
-          onChange(options[activeIndex]);
-          setIsOpen(false);
-          buttonRef.current?.focus();
+          choose(options[activeIndex]);
         } else {
           setIsOpen(true);
           setActiveIndex(0);
@@ -439,9 +453,10 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       <label id="dropdown-label">{label}</label>
       <button
         ref={buttonRef}
+        id="dropdown-button"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-labelledby="dropdown-label"
+        aria-labelledby="dropdown-label dropdown-button"
         onClick={() => setIsOpen(!isOpen)}
       >
         {value || "Select an option"}
@@ -452,19 +467,107 @@ function AccessibleDropdown({ options, value, onChange, label }) {
           ref={listRef}
           role="listbox"
           aria-labelledby="dropdown-label"
+          aria-activedescendant={activeIndex >= 0 ? \`option-\${activeIndex}\` : undefined}
           tabIndex={-1}
         >
           {options.map((option, index) => (
             <li
               key={option}
+              id={\`option-\${index}\`}
               role="option"
               aria-selected={option === value}
               className={index === activeIndex ? "active" : ""}
-              onClick={() => {
-                onChange(option);
-                setIsOpen(false);
-                buttonRef.current?.focus();
+              onClick={() => choose(option)}
+            >
+              {option}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+# OR
+import { useState, useRef, useEffect } from "react";
+
+function AccessibleDropdown({ options, value, onChange, label }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const optionRefs = useRef([]);
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && activeIndex >= 0) {
+      optionRefs.current[activeIndex]?.focus();
+    }
+  }, [isOpen, activeIndex]);
+
+  const choose = (option) => {
+    onChange(option);
+    setIsOpen(false);
+    buttonRef.current?.focus();
+  };
+
+  const handleKeyDown = (e) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        if (!isOpen) {
+          setIsOpen(true);
+          setActiveIndex(0);
+        } else {
+          setActiveIndex((prev) =>
+            prev < options.length - 1 ? prev + 1 : prev
+          );
+        }
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        break;
+      case "Enter":
+      case " ":
+        e.preventDefault();
+        if (isOpen && activeIndex >= 0) {
+          choose(options[activeIndex]);
+        } else {
+          setIsOpen(true);
+          setActiveIndex(0);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        buttonRef.current?.focus();
+        break;
+    }
+  };
+
+  return (
+    <div onKeyDown={handleKeyDown}>
+      <label id="dropdown-label">{label}</label>
+      <button
+        ref={buttonRef}
+        id="dropdown-button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-labelledby="dropdown-label dropdown-button"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {value || "Select an option"}
+      </button>
+
+      {isOpen && (
+        <ul role="listbox" aria-labelledby="dropdown-label">
+          {options.map((option, index) => (
+            <li
+              key={option}
+              ref={(el) => {
+                optionRefs.current[index] = el;
               }}
+              role="option"
+              tabIndex={-1}
+              aria-selected={option === value}
+              onClick={() => choose(option)}
             >
               {option}
             </li>
@@ -474,36 +577,29 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     </div>
   );
 }`,
+    requires: [
+      /role\s*=\s*["']listbox["']/,
+      /role\s*=\s*["']option["']/,
+      /aria-expanded\s*=/,
+      /aria-selected\s*=/,
+      /aria-activedescendant\s*=|\.current\[[^\]]+\]\??\.focus\(/,
+      /["']ArrowDown["']/,
+      /["']ArrowUp["']/,
+      /["']Enter["']/,
+      /["']Escape["']/,
+      /preventDefault\(/,
+    ],
     explanation:
-      'Custom dropdowns are one of the hardest components to make accessible because native <select> gives you keyboard navigation and screen reader support for free. When building a custom one, you need: role="listbox" on the container so screen readers know it\'s a selection list; role="option" on each item; aria-expanded on the trigger to announce open/closed state; aria-selected to indicate the current selection; keyboard navigation (ArrowUp/Down, Enter, Escape); and proper focus management. This is why libraries like Radix UI and Headless UI are so valuable — they handle all of this for you.',
+      'A native <select> brings all of this for free, which is why a custom one is hard. The trigger is a <button> with aria-haspopup="listbox" and an aria-expanded bound to isOpen, so it is announced as "Fruit Banana, button, collapsed"; aria-labelledby lists two ids, the label and the button itself, so the name holds both the label and the current value. The list is role="listbox" with role="option" items, and aria-selected marks the chosen one. A CSS highlight alone is invisible to a screen reader, so the option the user is on must be exposed: either focus stays on the listbox and aria-activedescendant names the active option\'s id, or each option takes focus itself (tabIndex={-1} and .focus()). preventDefault stops the arrow keys and Space from scrolling the page, the functional setActiveIndex((prev) => ...) reads the latest index, and choosing or Escape sends focus back to the trigger so the user does not lose their place. Libraries such as Radix UI ship this pattern tested.',
     hints: [
-      'Use role="listbox" on the options container and role="option" on each item',
-      'aria-expanded on the button tells screen readers if the list is open',
-      'Track activeIndex for keyboard navigation with ArrowUp/ArrowDown',
-      'Return focus to the trigger button when closing',
+      'role="listbox" on the list, role="option" and aria-selected on each item',
+      'aria-expanded on the trigger reports whether the list is open',
+      'Expose the active option with aria-activedescendant (or by focusing it); a CSS class is not announced',
+      'Return focus to the trigger when the list closes',
     ],
     tieredHints: {
       apiSignature: 'function AccessibleDropdown({ options, value, onChange, label })',
-      skeleton: `function AccessibleDropdown({ options, value, onChange, label }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div onKeyDown={handleKeyDown}>
-      <button aria-haspopup="____" aria-expanded={____} onClick={() => setIsOpen(!isOpen)}>
-        {value || "Select an option"}
-      </button>
-      {isOpen && (
-        <ul role="____" aria-labelledby="dropdown-label">
-          {options.map((option) => (
-            <li key={option} role="____" aria-selected={option === value}>
-              {option}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}`,
+      skeleton: "function AccessibleDropdown({ options, value, onChange, label }) {\n  const [isOpen, setIsOpen] = useState(false);\n  const [activeIndex, setActiveIndex] = useState(-1);\n\n  // handleKeyDown: ArrowDown, ArrowUp, Enter / Space, Escape\n\n  return (\n    <div onKeyDown={handleKeyDown}>\n      <label id=\"dropdown-label\">{label}</label>\n      <button id=\"dropdown-button\" aria-haspopup=\"____\" aria-expanded={____} aria-labelledby=\"____\" onClick={() => setIsOpen(!isOpen)}>\n        {value || \"Select an option\"}\n      </button>\n      {isOpen && (\n        <ul role=\"____\" aria-labelledby=\"dropdown-label\" ____={____} tabIndex={-1}>\n          {options.map((option, index) => (\n            <li key={option} id={____} role=\"____\" aria-selected={____}>\n              {option}\n            </li>\n          ))}\n        </ul>\n      )}\n    </div>\n  );\n}",
     },
     tags: ['dropdown', 'listbox', 'keyboard', 'aria', 'accessibility', 'react'],
     concepts: ['a11y-keyboard-nav', 'a11y-aria-roles'],
@@ -517,16 +613,14 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     difficulty: Difficulty.BEGINNER,
     topic: Topic.ACCESSIBILITY,
     course: Course.WEB_DEV,
-    question:
-      'What tools can you use to audit a website for accessibility issues, and what percentage of issues can automated tools typically detect?',
+    question: 'Which approach finds a page\'s accessibility problems, and how much of them can automated checkers find on their own?',
     options: [
-      { id: 'a', text: 'ESLint with TypeScript strict mode catches all accessibility issues at compile time', isCorrect: false },
-      { id: 'b', text: 'Chrome DevTools alone is sufficient — its built-in accessibility panel identifies all WCAG violations', isCorrect: false },
-      { id: 'c', text: 'Only manual testing with real users with disabilities is valid — automated tools are unreliable and should never be trusted as part of any serious accessibility process', isCorrect: false },
-      { id: 'd', text: 'axe-core/axe DevTools for automated scanning, Lighthouse for audits, NVDA/VoiceOver for screen reader testing, plus keyboard-only testing — but automated tools only catch about 30% of issues, so manual testing is essential', isCorrect: true },
+      { id: 'a', text: 'Lighthouse alone: an accessibility score of 100 means the page meets WCAG AA, so a manual check is needed only when the score drops', isCorrect: false },
+      { id: 'b', text: 'axe or Lighthouse in CI, which catch about 90% of problems, so manual testing is kept for rare edge cases such as custom video players', isCorrect: false },
+      { id: 'c', text: 'Only testing with disabled users counts, because automated checkers report so many false positives that none of their results can be trusted', isCorrect: false },
+      { id: 'd', text: 'axe and Lighthouse to scan, then a keyboard and a screen reader such as NVDA or VoiceOver, because checkers find only about a third of problems', isCorrect: true },
     ],
-    explanation:
-      'A comprehensive accessibility testing strategy uses multiple tools: axe-core (or the axe DevTools browser extension) scans for programmatically detectable issues like missing alt text, low contrast, and missing ARIA attributes. Lighthouse includes an accessibility audit score. But automated tools can only catch roughly 30% of accessibility issues — things like whether alt text is actually meaningful, whether focus order makes logical sense, or whether a custom widget is truly usable with a keyboard require manual testing. NVDA (Windows) and VoiceOver (macOS) let you test the actual screen reader experience. eslint-plugin-jsx-a11y catches some issues in code, but is no substitute for runtime testing.',
+    explanation: 'Automated checkers such as axe-core (the axe DevTools extension, and the engine behind Lighthouse\'s accessibility audit) find what code can detect: missing alt attributes, low contrast, inputs with no label, invalid ARIA. Studies put that at around a third of the barriers real users hit. They cannot tell whether alt text is meaningful, whether the focus order makes sense or whether a custom widget works from the keyboard, so you also Tab through the page and listen with a screen reader (NVDA on Windows, VoiceOver on macOS and iOS). A Lighthouse score of 100 only means no automated check failed. eslint-plugin-jsx-a11y catches some problems in JSX as you write it. Testing with disabled users is valuable on top of all this, not instead of the checkers, which are reliable for what they do check.',
     hints: [
       'Automated tools are a great start but not sufficient on their own',
       'Screen readers are the gold standard for real-world accessibility testing',
@@ -536,7 +630,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
   },
 
   // =====================================================================
-  // ACCESSIBILITY — INTERMEDIATE RAMP (8 questions)
+  // ACCESSIBILITY - INTERMEDIATE RAMP (8 questions)
   // Bridges beginner MCQs -> the advanced modal/dropdown coding questions.
   // Faded (Parsons + Cloze) scaffolds each primitive those two demand,
   // then two decision MCQs. React renders -> NO predict-output here.
@@ -573,15 +667,14 @@ function AccessibleDropdown({ options, value, onChange, label }) {
   document.addEventListener("keydown", onKey);
   return () => document.removeEventListener("keydown", onKey);
 }, [onClose]);`,
-    explanation:
-      'Escape-to-close is a keyboard event, so you listen for "keydown", not "click". The cleanup function removing the same handler reference prevents listeners stacking up each render. onClose belongs in the dependency array — an empty [] would capture a stale onClose from the first render.',
+    explanation: 'Escape-to-close is a keyboard event, so you listen for "keydown", not "click". The cleanup removes the same handler reference, so a new listener does not stack on the old one each time the effect runs again, and none is left behind when the modal unmounts. onClose belongs in the dependency array: an empty [] would keep the onClose from the first render.',
     hints: [
       'The dismiss key arrives via a "keydown" listener, not "click"',
       'Return a cleanup that removes the exact handler you added',
       'onClose is used inside the effect, so it goes in the deps array',
     ],
     tags: ['accessibility', 'modal', 'keyboard', 'escape', 'useEffect', 'parsons'],
-    concepts: ['a11y-keyboard-nav', 'a11y-aria-roles'],
+    concepts: ['a11y-keyboard-nav'],
   },
 
   // -- Dialog ARIA attributes (INTERMEDIATE Cloze) --
@@ -593,8 +686,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     topic: Topic.ACCESSIBILITY,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question:
-      'Fill in the ARIA attributes that make this dialog accessible: the role that identifies it as a dialog, the attribute that marks the rest of the page inert, and the attribute that names the dialog from its title element.',
+    question: 'Fill in the ARIA attributes that make this dialog accessible: the role that identifies it as a dialog, the value that tells assistive tech the rest of the page is inert while it is open, and the id that names the dialog from its title element.',
     template: `<div
   role="___"
   aria-modal="___"
@@ -610,8 +702,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
 >
   <h2 id="dialog-title">{title}</h2>
 </div>`,
-    explanation:
-      'role="dialog" tells assistive tech this container is a dialog. aria-modal="true" signals that content outside it is inert while it is open. aria-labelledby references the id of the title element ("dialog-title"), so screen readers announce the dialog using its heading text.',
+    explanation: 'role="dialog" tells assistive tech this container is a dialog. aria-modal="true" tells it that content outside the dialog is inert while it is open, so a screen reader keeps its reading inside; it does not stop the mouse or Tab from reaching the page, so a custom modal still traps focus itself. aria-labelledby references the id of the title element ("dialog-title"), so screen readers announce the dialog by its heading text. A native <dialog> opened with showModal() is a modal dialog without the role and aria-modal, and the browser makes the rest of the page inert for real.',
     hints: [
       'The role and the attribute value both describe a "dialog"',
       'aria-modal takes a boolean string',
@@ -665,7 +756,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     correctOrder: [
       '<ul role="listbox" aria-labelledby="dd-label">',
       '  {options.map((opt) => (',
-      '    <li role="option" aria-selected={opt === value}>',
+      '    <li key={opt} role="option" aria-selected={opt === value}>',
       '      {opt}',
       '    </li>',
       '  ))}',
@@ -673,17 +764,10 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     ],
     distractorLines: [
       '<ul role="menu" aria-labelledby="dd-label">',
-      '    <li role="listitem" aria-selected={opt === value}>',
+      '    <li key={opt} role="listitem" aria-selected={opt === value}>',
     ],
-    solution: `<ul role="listbox" aria-labelledby="dd-label">
-  {options.map((opt) => (
-    <li role="option" aria-selected={opt === value}>
-      {opt}
-    </li>
-  ))}
-</ul>`,
-    explanation:
-      'A selection widget uses role="listbox" on the container and role="option" on each item — not role="menu" (which is for action commands) or role="listitem" (a plain list item with no selection semantics). aria-selected on each option tells the screen reader which value is currently chosen.',
+    solution: '<ul role="listbox" aria-labelledby="dd-label">\n  {options.map((opt) => (\n    <li key={opt} role="option" aria-selected={opt === value}>\n      {opt}\n    </li>\n  ))}\n</ul>',
+    explanation: 'A selection widget uses role="listbox" on the container and role="option" on each item, not role="menu" (which is for a list of actions) or role="listitem" (a plain list item with no selection semantics). aria-selected on each option tells the screen reader which value is currently chosen. key={opt} is React\'s usual key for items rendered by map, here the option string itself.',
     hints: [
       'A selectable list is a "listbox", not a "menu"',
       'Each choice is an "option", not a generic "listitem"',
@@ -719,8 +803,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
 >
   {value || "Select an option"}
 </button>`,
-    explanation:
-      'aria-haspopup="listbox" tells assistive tech the button opens a listbox-style popup. aria-expanded={isOpen} must stay bound to the open state so screen readers announce "expanded" or "collapsed" correctly — a hard-coded value would lie about the current state.',
+    explanation: 'aria-haspopup="listbox" tells assistive tech the button opens a listbox-style popup. aria-expanded={isOpen} must stay bound to the open state so screen readers announce "expanded" or "collapsed" correctly; a hard-coded value would lie about the current state.',
     hints: [
       'The popup the button opens is a listbox',
       'aria-expanded should reflect the live open/closed state variable',
@@ -782,11 +865,10 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     options: [
       { id: 'a', text: 'Give every item tabindex="0" so the user can Tab to each one individually, and rely on the browser\'s default focus ring to indicate which item is active inside the widget', isCorrect: false },
       { id: 'b', text: 'Roving tabindex (one item is tabindex="0", the rest tabindex="-1", and you move the 0 as the user arrows) or aria-activedescendant (focus stays on the container, pointing at the active item\'s id)', isCorrect: true },
-      { id: 'c', text: 'Set tabindex="-1" on all items and capture every keystroke at the document level to decide what is focused', isCorrect: false },
-      { id: 'd', text: 'Use autofocus on the first item and disable Tab entirely by calling preventDefault on every key', isCorrect: false },
+      { id: 'c', text: 'Leave every item out of the Tab order and listen for arrow keys on document, moving a CSS highlight between items; the screen reader follows whichever item is highlighted', isCorrect: false },
+      { id: 'd', text: 'Put autofocus on the first item and call preventDefault on Tab inside the widget, so focus stays inside it until the user presses Escape to leave', isCorrect: false },
     ],
-    explanation:
-      'Composite widgets should be ONE Tab stop, with arrow keys moving between items. Two patterns achieve this: roving tabindex keeps exactly one item at tabindex="0" (the others at "-1") and moves that 0 as the user arrows; aria-activedescendant keeps DOM focus on the container while the aria-activedescendant attribute points to the active item\'s id. Giving every item tabindex="0" (option a) forces the user to Tab through all of them, which is the anti-pattern these solve.',
+    explanation: 'A composite widget should be ONE Tab stop, with the arrow keys moving between its items. Two patterns do this: roving tabindex keeps exactly one item at tabindex="0" (the others at "-1") and moves that 0, and focus with it, as the user arrows; aria-activedescendant keeps DOM focus on the container while the attribute points at the active item\'s id, so the screen reader announces that item. Giving every item tabindex="0" forces the user to Tab through all of them, which is the problem both patterns solve. A CSS highlight alone is invisible to a screen reader, and trapping Tab belongs to modal dialogs, not to a widget the user should be able to Tab past.',
     hints: [
       'A composite widget should be a single Tab stop, not one per item',
       'One pattern moves a single tabindex="0"; the other points to an id',
@@ -806,23 +888,22 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     question:
       'You need a select dropdown and a modal dialog. Why do accessibility experts recommend reaching for native HTML (<select>, <dialog>) before building custom React versions?',
     options: [
-      { id: 'a', text: 'Native elements are always faster to render because the browser draws them on the GPU, which reduces the JavaScript bundle and improves the Lighthouse performance score on every device', isCorrect: false },
-      { id: 'b', text: 'Native elements automatically match every design system, so no CSS styling is ever required for them', isCorrect: false },
-      { id: 'c', text: 'Custom React components cannot receive keyboard events at all without a third-party helper library installed', isCorrect: false },
-      { id: 'd', text: 'They provide keyboard support, focus management, and screen reader semantics for free, while a custom widget must re-implement all of that correctly', isCorrect: true },
+      { id: 'a', text: 'Native elements are drawn by the browser on the GPU, so they render faster and raise the Lighthouse performance score, which is what accessibility audits measure', isCorrect: false },
+      { id: 'b', text: 'Native elements are exempt from WCAG, so an accessibility audit skips them, while every custom widget has to be checked and certified separately', isCorrect: false },
+      { id: 'c', text: 'React cannot attach keyboard handlers to a <div>, so a custom select or modal needs a third-party library before it can receive any key events', isCorrect: false },
+      { id: 'd', text: 'They come with keyboard support, focus handling and screen reader roles built in, while a custom widget has to rebuild all of that and get it right', isCorrect: true },
     ],
-    explanation:
-      'Native form controls and <dialog> ship with keyboard interaction, focus handling, and correct screen reader semantics built in. Rebuilding them in React means re-implementing arrow-key navigation, focus trapping, ARIA roles, and Escape handling by hand — and getting any of it wrong breaks the experience for assistive-tech users. Reach for native first; build custom only when the design genuinely cannot be met otherwise (and then lean on tested primitives like Radix).',
+    explanation: '<select> brings the listbox role, the arrow keys, type-ahead and the announced value; <dialog> opened with showModal() makes the rest of the page inert, closes on Escape, and moves focus in and back out. A custom React version has to rebuild each of those by hand, and any gap breaks it for keyboard and screen reader users. Reach for native first; build custom only when the design needs something the native element cannot do, and then lean on a tested primitive library such as Radix UI.',
     hints: [
-      'Think about everything the modal and dropdown coding questions had to implement by hand',
-      'Native elements give you that behavior with zero extra code',
+      'List everything a custom modal or dropdown has to handle by hand',
+      'Native elements give you that behaviour with no extra code',
     ],
     tags: ['accessibility', 'native-html', 'dialog', 'select', 'progressive-enhancement'],
     concepts: ['a11y-aria-roles', 'a11y-keyboard-nav'],
   },
 
   // =====================================================================
-  // ACCESSIBILITY — PERCEPTION-SIDE WCAG CRITERIA (7 questions)
+  // ACCESSIBILITY - PERCEPTION-SIDE WCAG CRITERIA (8 questions)
   // Closes the doc's flagged gap: the existing set is interaction-heavy
   // (modal/dropdown/focus-trap). These cover the perception criteria:
   // contrast, alt-text, heading structure, live regions, tabindex
@@ -843,10 +924,9 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       { id: 'a', text: 'Normal text needs a 4.5:1 contrast ratio against its background; large text (18pt+/24px+, or 14pt+/18.66px+ bold) and UI components/graphical objects need only 3:1', isCorrect: true },
       { id: 'b', text: 'Normal text needs 3:1 contrast and large text needs 4.5:1 - bigger text needs MORE contrast because it covers more of the visual field and draws the eye more strongly', isCorrect: false },
       { id: 'c', text: 'Every element on the page needs a flat 7:1 contrast ratio at Level AA - the 4.5:1 and 3:1 numbers belong to Level A, the lower conformance tier, not AA', isCorrect: false },
-      { id: 'd', text: 'Contrast is computed from font-weight alone - any bold text automatically passes regardless of the actual foreground and background color values chosen', isCorrect: false },
+      { id: 'd', text: 'Only text smaller than 16px needs 4.5:1; anything at the 16px browser default or larger already counts as large text and needs just 3:1', isCorrect: false },
     ],
-    explanation:
-      'WCAG 2.2 Level AA sets 4.5:1 as the minimum contrast ratio for normal-size text against its background. Large text - 18pt+ (24px), or 14pt+ (18.66px) if bold - gets a relaxed 3:1 minimum because bigger glyphs are legible at lower contrast. UI components (button borders, form field outlines) and meaningful graphical objects (icons conveying information) also use the 3:1 threshold. 7:1 is the Level AAA number for normal text, not AA.',
+    explanation: 'WCAG 2.2 Level AA sets 4.5:1 as the minimum contrast ratio for normal-size text against its background. Large text - 18pt (24px) and up, or 14pt (18.66px) and up if bold - gets a relaxed 3:1 minimum because bigger glyphs are legible at lower contrast; 16px body text is normal text, not large. UI components (button borders, form field outlines, focus indicators) and meaningful graphical objects (icons that convey information) also use the 3:1 threshold. 7:1 is the Level AAA number for normal text, and Level A has no contrast ratio at all.',
     hints: [
       'The two numbers to memorize are 4.5:1 and 3:1',
       'Large text gets the relaxed ratio, not the stricter one',
@@ -871,8 +951,7 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       { id: 'c', text: 'The decorative divider needs a descriptive alt so screen reader users know a visual separator exists there; the product photo can safely use alt="" since sighted users can already see it', isCorrect: false },
       { id: 'd', text: 'Both images should use alt="image" as a generic placeholder - screen readers only care whether the attribute is present, not what text it contains', isCorrect: false },
     ],
-    explanation:
-      'Decorative images that add no information get alt="" (present but empty) so assistive tech skips them entirely instead of announcing something meaningless like "divider.png". Informational images - especially ones that are the ONLY way to perceive content, like a product photo - need a description of what they actually show. Omitting alt entirely (option b) makes some screen readers fall back to reading the filename or URL, which is worse than an empty alt.',
+    explanation: 'Decorative images that add no information get alt="" (present but empty) so assistive tech skips them entirely instead of announcing something meaningless like "divider.png". Informational images - especially ones that are the ONLY way to perceive content, like a product photo - need a description of what they actually show. Leaving alt out entirely makes many screen readers fall back to reading the filename or URL, which is worse than an empty alt, and a generic alt="image" tells the listener nothing.',
     hints: [
       'Empty alt="" is a deliberate signal meaning "skip me", not a mistake',
       'Ask: does this image convey information nothing else on the page conveys?',
@@ -894,11 +973,10 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     options: [
       { id: 'a', text: 'Screen readers only read h1 elements aloud - h2 through h6 exist purely for visual CSS styling and carry no meaning to assistive technology', isCorrect: false },
       { id: 'b', text: 'Heading levels control font size only - as long as the text looks like a heading visually, the specific level number chosen makes no difference to any user', isCorrect: false },
-      { id: 'c', text: 'Screen readers let users jump between headings like a table of contents, so a page needs exactly one h1 and must not skip levels (e.g. h2 straight to h4) - the hierarchy should mirror the page\'s actual content outline', isCorrect: true },
+      { id: 'c', text: 'Screen readers let users jump between headings like a table of contents, so a page needs one h1 and no skipped levels (h2 straight to h4), mirroring its outline', isCorrect: true },
       { id: 'd', text: 'Heading levels are assigned automatically by the browser based on an element\'s position in the DOM tree, so authors never need to choose h1 through h6 themselves', isCorrect: false },
     ],
-    explanation:
-      'Screen readers expose a headings list that lets users navigate a page the way a sighted user scans a table of contents - jumping straight to the section they want. This only works if the hierarchy is logical: one h1 per page (the main title), and no skipped levels (an h2 followed directly by an h4 suggests a missing h3, which breaks the outline a screen reader user is relying on to understand the page structure).',
+    explanation: 'Screen readers expose a headings list that lets users navigate a page the way a sighted user scans a table of contents - jumping straight to the section they want. This only works if the hierarchy is logical: one h1 per page (the main title), and no skipped levels (an h2 followed directly by an h4 suggests a missing h3, which breaks the outline a screen reader user is relying on). WCAG itself asks that the headings reflect the page\'s structure; one h1 and no skipped levels are the practice that meets it, and checkers such as axe flag a skipped level. Levels assigned automatically from nesting came from the HTML5 outline algorithm, which no browser ever implemented and the HTML standard dropped in 2022, so the number you write is the level a screen reader announces.',
     hints: [
       'Screen readers expose headings as a jump-to list, similar to a table of contents',
       'Skipping a level (h2 to h4) breaks the outline someone is navigating by',
@@ -920,11 +998,10 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     options: [
       { id: 'a', text: 'aria-live="polite" only works inside a <form> element, while aria-live="assertive" only works inside a <main> element - the value required depends on the surrounding container', isCorrect: false },
       { id: 'b', text: 'aria-live="polite" repeats the announcement three times to make sure it was heard, while aria-live="assertive" announces it only once and then removes the region from the DOM', isCorrect: false },
-      { id: 'c', text: 'aria-live="polite" waits for the screen reader to finish its current announcement before speaking the update (good for result counts); aria-live="assertive" interrupts immediately (good for urgent errors) - role="alert" implies assertive automatically', isCorrect: true },
+      { id: 'c', text: 'aria-live="polite" waits until the screen reader finishes what it is saying, which suits the result count; aria-live="assertive" interrupts at once, which suits the urgent error', isCorrect: true },
       { id: 'd', text: 'aria-live="polite" is for visible text updates and aria-live="assertive" is for updates hidden with display: none - the CSS visibility of the region determines which value to use', isCorrect: false },
     ],
-    explanation:
-      '"polite" queues the announcement politely, waiting for the current speech to finish - the right choice for non-urgent updates like a result count, since it won\'t talk over whatever the user was already doing. "assertive" interrupts immediately, appropriate for time-sensitive information like a form validation error the user needs to hear right now. role="alert" is a shortcut that implies aria-live="assertive" plus aria-atomic="true" without setting them explicitly.',
+    explanation: '"polite" queues the announcement until the current speech finishes - the right choice for a non-urgent update like a result count, since it won\'t talk over whatever the user was already hearing. "assertive" interrupts immediately, for time-sensitive information like a validation error the user needs to hear now. role="alert" is shorthand for aria-live="assertive" with aria-atomic="true", and role="status" for aria-live="polite" with aria-atomic="true". Neither value depends on the surrounding element, and a region hidden with display: none is not announced at all.',
     hints: [
       'One waits its turn; the other interrupts',
       'role="alert" is shorthand for one of these two values',
@@ -943,12 +1020,19 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'A SearchResults component receives a count prop (the number of filtered results). Render a visually-hidden live region that announces "{count} results found" politely whenever count changes, without interrupting whatever the screen reader is currently saying.',
-    starterCode: `function SearchResults({ count, results }) {\n  return (\n    <div>\n      {/* announce the count here */}\n      <ul>{results.map((r) => <li key={r.id}>{r.name}</li>)}</ul>\n    </div>\n  );\n}`,
+      'SearchResults receives count (the number of results after filtering) and results. Add a live region, hidden from sight with the page\'s visually-hidden class, that reads out "{count} results found" each time count changes. It must wait until the screen reader has finished speaking rather than interrupt, and read the whole sentence, not just the number that changed. Render it at all times, so the screen reader is already watching it when the text changes.',
+    starterCode: `function SearchResults({ count, results }) {
+  return (
+    <div>
+      {/* announce the count here */}
+      <ul>{results.map((r) => <li key={r.id}>{r.name}</li>)}</ul>
+    </div>
+  );
+}`,
     testCases: [
       {
         input: 'count = 12',
-        expectedOutput: 'a visually-hidden div with aria-live="polite" containing "12 results found"',
+        expectedOutput: 'a visually hidden polite, atomic live region containing "12 results found"',
         description: 'Should render a polite live region announcing the result count',
       },
     ],
@@ -961,23 +1045,40 @@ function AccessibleDropdown({ options, value, onChange, label }) {
       <ul>{results.map((r) => <li key={r.id}>{r.name}</li>)}</ul>
     </div>
   );
+}
+# OR
+function SearchResults({ count, results }) {
+  return (
+    <div>
+      <div role="status" className="visually-hidden">
+        {count} results found
+      </div>
+      <ul>{results.map((r) => <li key={r.id}>{r.name}</li>)}</ul>
+    </div>
+  );
 }`,
+    requires: [
+      /aria-live\s*=\s*["']polite["']|role\s*=\s*["']status["']/,
+      /aria-atomic\s*=\s*(["']true["']|\{\s*true\s*\})|role\s*=\s*["']status["']|\{\s*`[^`]*\$\{\s*count\s*\}[^`]*`\s*\}/,
+      /visually-hidden|sr-only/,
+      /\{\s*count\s*\}/,
+    ],
     explanation:
-      'aria-live="polite" on the announcing div means updates are queued and spoken once the screen reader finishes its current sentence - correct for a non-urgent count update. aria-atomic="true" tells the screen reader to re-read the whole region\'s text on any change, not just the part that changed (without it, some screen readers might only announce a changed word fragment). The visually-hidden class keeps the text out of the sighted layout while it stays in the accessibility tree - unlike display: none, which would remove it from both.',
+      'aria-live="polite" queues the update until the screen reader finishes its current sentence, which suits a result count; "assertive" and role="alert" interrupt, so keep them for errors. React renders {count} results found as two text nodes, "12" and " results found", and when count changes only the first one changes, so without aria-atomic="true" a screen reader may say just "13"; aria-atomic makes it read the whole region. role="status" is shorthand for both: it implies aria-live="polite" and aria-atomic="true". The region is rendered from the start, because a region inserted together with its text is often not announced at all. The visually-hidden class keeps the text off screen while it stays in the accessibility tree, unlike display: none, which removes it for screen readers too.',
     hints: [
-      'aria-live="polite" is right for a non-urgent count, not "assertive"',
-      'aria-atomic="true" re-reads the whole updated text, not just the changed part',
-      'Use the visually-hidden pattern, not display: none, so it stays announceable',
+      'A non-urgent update waits its turn: polite, not assertive',
+      'Only the changed text node is read unless the region is atomic',
+      'Use the visually-hidden class, not display: none, so it stays announceable',
     ],
     tieredHints: {
       apiSignature: 'function SearchResults({ count, results })',
       skeleton: `function SearchResults({ count, results }) {
   return (
     <div>
-      <div aria-live="____" aria-atomic="____" className="____">
-        {count} results found
+      <div ____="____" ____="____" className="____">
+        ____
       </div>
-      {/* results list unchanged from starterCode */}
+      {/* the results list, unchanged */}
     </div>
   );
 }`,
@@ -996,48 +1097,57 @@ function AccessibleDropdown({ options, value, onChange, label }) {
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
     question:
-      'A CardList renders custom, non-native "card" divs that need to be keyboard-focusable in normal document order, and a hidden CardDetails panel that should only receive focus programmatically (never via Tab). Write the tabindex values for each, and explain in a comment why a positive tabindex value should never be used.',
-    starterCode: `function Card({ title }) {\n  // your code here\n}\n\nfunction CardDetails({ detailsRef, children }) {\n  // your code here\n}`,
+      'Write two components. Card renders a <div> showing title that keyboard users can Tab to at the point where it sits in the page. CardDetails renders a <div> holding children, attached to detailsRef, which script focuses with detailsRef.current.focus() when the details open, but which Tab must never stop on.',
+    starterCode: `function Card({ title }) {
+
+}
+
+function CardDetails({ detailsRef, children }) {
+
+}`,
     testCases: [
       {
         input: 'Card and CardDetails',
-        expectedOutput: 'Card uses tabIndex={0}, CardDetails uses tabIndex={-1}, with a comment explaining positive tabindex is never used',
+        expectedOutput: 'Card uses tabIndex={0}, CardDetails uses ref={detailsRef} and tabIndex={-1}',
         description: 'Should assign the correct tabindex values for natural vs programmatic-only focus',
       },
     ],
     solution: `function Card({ title }) {
-  // tabIndex={0} inserts this div into the natural tab order,
-  // right where it sits in the DOM - the same position a native
-  // focusable element would occupy.
+  // 0: a Tab stop at its place in the document order
   return <div tabIndex={0}>{title}</div>;
 }
 
 function CardDetails({ detailsRef, children }) {
-  // tabIndex={-1} makes this div focusable ONLY via detailsRef.current.focus()
-  // in JavaScript (e.g. after opening it) - it is skipped entirely by Tab.
+  // -1: focusable from script only; Tab skips it
   return <div ref={detailsRef} tabIndex={-1}>{children}</div>;
 }
-
-// A positive tabindex (tabIndex={1}, {2}, ...) is never used because it
-// creates a SECOND tab order that runs before tabIndex={0}/native elements,
-// regardless of where those positive-tabindex elements sit in the DOM.
-// This produces a confusing, hard-to-maintain focus order that no longer
-// matches the visual/document layout.`,
-    explanation:
-      'tabIndex={0} adds an element to the natural tab order at its DOM position - the standard way to make a custom widget keyboard-focusable. tabIndex={-1} removes an element from the Tab sequence entirely while still allowing element.focus() to target it programmatically (used for focus-trap targets, panels opened via JS, and skip-link destinations). A positive tabIndex value creates a separate, DOM-position-independent tab order that overrides the natural one - this is the universally cited anti-pattern, because it decouples keyboard order from visual/DOM order and becomes unmaintainable as the page changes.',
-    hints: [
-      'Natural tab order: tabIndex={0}',
-      'Programmatic-focus-only, skipped by Tab: tabIndex={-1}',
-      'Positive values (1, 2, ...) override natural order - this is why they are avoided',
-    ],
-    tieredHints: {
-      apiSignature: 'function Card({ title })',
-      skeleton: `function Card({ title }) {
-  return <div tabIndex={____}>{title}</div>;
+# OR
+function Card({ title }) {
+  return <div tabIndex="0">{title}</div>;
 }
 
-function CardDetails(props) {
-  return <div ref={____} tabIndex={____}>{____}</div>;
+function CardDetails({ detailsRef, children }) {
+  return <div ref={detailsRef} tabIndex="-1">{children}</div>;
+}`,
+    requires: [
+      /tabIndex\s*=\s*(\{\s*0\s*\}|["']0["'])[^>]*>[^{}]*\{\s*title\s*\}/,
+      /ref\s*=\s*\{\s*detailsRef\s*\}[^>]*tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])|tabIndex\s*=\s*(\{\s*-1\s*\}|["']-1["'])[^>]*ref\s*=\s*\{\s*detailsRef\s*\}/,
+    ],
+    explanation:
+      'tabIndex={0} puts an element that is not focusable by nature into the Tab order at its place in the document, the same place a <button> there would take. tabIndex={-1} makes an element focusable from script, with .focus(), while Tab skips it: right for a panel you move focus into when it opens, a dialog\'s container or a skip link\'s target. A positive value such as tabIndex={1} is never used, because every positive tabindex is visited first, in order of value, before the rest of the page, wherever it sits, so the keyboard order stops matching the order the page reads in and breaks again whenever the page changes. A div that must also act like a button still needs a role and key handlers, which is why a real <button> is the better choice when it does something.',
+    hints: [
+      'Into the Tab order where it sits: tabIndex={0}',
+      'Focusable from script but skipped by Tab: tabIndex={-1}',
+      'Attach detailsRef with ref={...} so script can call .focus() on it',
+    ],
+    tieredHints: {
+      apiSignature: 'function Card({ title })  /  function CardDetails({ detailsRef, children })',
+      skeleton: `function Card({ title }) {
+  return <div ____>{title}</div>;
+}
+
+function CardDetails({ detailsRef, children }) {
+  return <div ____ ____>{children}</div>;
 }`,
     },
     tags: ['tabindex', 'keyboard', 'focus', 'accessibility', 'react'],
@@ -1090,13 +1200,12 @@ Exit`,
     question:
       'A button has aria-labelledby pointing to a heading, an aria-label string, visible text content, and a title attribute - all with different wording. Which one does a screen reader announce as the button\'s accessible name, and why does the order matter?',
     options: [
-      { id: 'a', text: 'The title attribute always wins, since it is the oldest and most universally supported way to label an element across every browser and assistive technology combination', isCorrect: false },
-      { id: 'b', text: 'The browser picks whichever string is alphabetically first among the four candidates, since there is no defined precedence order in the accessible name computation spec', isCorrect: false },
-      { id: 'c', text: 'All four are concatenated together into one long announcement, so a screen reader user hears every candidate string back to back in DOM order', isCorrect: false },
-      { id: 'd', text: 'aria-labelledby wins first, then aria-label, then the visible text content, and title is the last resort - each step is used only when everything higher in the chain is absent, so authoring several at once with different wording just makes the lower ones dead code', isCorrect: true },
+      { id: 'a', text: 'The title attribute, because it is the oldest labelling method, and every browser and screen reader still gives it priority over the newer ARIA attributes', isCorrect: false },
+      { id: 'b', text: 'The visible text content, because WCAG requires the spoken name to match the visible label, so browsers throw away any ARIA name that differs from it', isCorrect: false },
+      { id: 'c', text: 'All four, joined in DOM order, because the browser concatenates every naming source it finds so that the screen reader user hears each one in turn', isCorrect: false },
+      { id: 'd', text: 'aria-labelledby, because the name is the first one present of aria-labelledby, aria-label, the text content and title; title then becomes the description', isCorrect: true },
     ],
-    explanation:
-      'The accessible name computation algorithm has a strict precedence: aria-labelledby (references another element\'s text) overrides everything if present; if absent, aria-label (an explicit string) is used; if that is also absent, the element\'s own visible text content (or an associated <label>) is used; title is the last resort, used only as a fallback and also rendered as a mouse-hover tooltip. Authoring multiple candidates with conflicting text is a common bug - only the highest-precedence one is ever announced, so the others silently do nothing for screen reader users while still showing up in tooltips or visible text.',
+    explanation: 'The accessible name computation takes the first source present: aria-labelledby (the text of the elements it points at), then aria-label, then the element\'s own text content (or an associated <label> for a form control), and title only as the last resort. In Chrome, a button with all four is announced by the heading\'s text, and its title, unused for the name, becomes the accessible description, which some screen readers read after the name. The aria-label string and the visible text are not announced at all. That is a real bug: WCAG 2.5.3 (Label in Name) asks that the name contain the visible text, so a speech-input user who says "click" and the words they see can operate the control. Browsers do not enforce that; the author has to keep the wording in step.',
     hints: [
       'aria-labelledby sits at the top of the precedence chain',
       'title is the fallback of last resort, not a competitor to the others',
