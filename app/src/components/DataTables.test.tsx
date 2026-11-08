@@ -91,7 +91,7 @@ describe('InlineText, the one prose renderer in every course', () => {
     const codes = codesIn(heading);
     expect(codes).toHaveLength(1);
     // eslint-disable-next-line no-template-curly-in-string
-    expect(codes[0].textContent).toContain('greet() { return `Hi, ${this.name}`; }');
+    expect(codes[0].textContent).toContain('greet() { return `Hi, ${this.first}`; }');
     expect(heading.textContent).not.toContain('```');
   });
 

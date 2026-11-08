@@ -20,14 +20,14 @@ You're given the HTML structure for a simple todo app. Write the JavaScript that
 2. Deletes a todo when its delete button is clicked (use event delegation on the list)
 3. Persists todos to localStorage so they survive page refresh
 
-The HTML structure is already provided. You need to implement the three functions and the initialization logic.`,
+The HTML structure is already provided. You need to implement the functions the starter lists and the startup logic.`,
     starterCode: `// Get references to #todo-input, #add-btn, and #todo-list from the DOM.
 // Implement loadTodos()/saveTodos(todos) around localStorage key 'todos' with JSON parse/stringify.
 // createTodoElement(text, index) returns an <li> with the text plus a Delete <button>
 //   carrying a data-index attribute.
 // addTodo() reads trimmed input, appends a todo, saves, re-renders, clears the input.
 // renderTodos() clears the list and appends an element per todo.
-// Wire listeners: add-btn click, input Enter keypress, and event-delegated list click that
+// Wire listeners: add-btn click, input Enter keydown, and event-delegated list click that
 //   reads dataset.index, removes that todo, saves, and re-renders.
 // Call renderTodos() once on startup.
 `,
@@ -90,7 +90,7 @@ function renderTodos() {
 }
 
 addBtn.addEventListener('click', addTodo);
-input.addEventListener('keypress', (e) => {
+input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addTodo();
 });
 
@@ -106,15 +106,16 @@ list.addEventListener('click', (e) => {
 });
 
 renderTodos();`,
+    requires: ['localStorage.getItem', 'localStorage.setItem', 'JSON.parse', 'JSON.stringify', /dataset\.index|getAttribute\(\s*["']data-index["']\s*\)/, /["']Enter["']/],
     explanation: `Key architectural decisions:
 
-1. **Event delegation** — Instead of attaching a click listener to every delete button (which would need re-attaching on every render), we put one listener on the parent <ul>. When a click bubbles up, we check if it came from a button and read its data-index. This is more performant and works automatically for dynamically added elements.
+1. **Event delegation** - Instead of attaching a click listener to every delete button (which would need re-attaching on every render), we put one listener on the parent <ul>. When a click bubbles up, we check if it came from a button and read its data-index. This is more performant and works automatically for dynamically added elements.
 
-2. **localStorage as source of truth** — loadTodos/saveTodos create a simple persistence layer. We always read from localStorage before modifying, which prevents stale state issues.
+2. **localStorage as source of truth** - loadTodos/saveTodos create a simple persistence layer. We always read from localStorage before modifying, which prevents stale state issues.
 
-3. **Re-render pattern** — Rather than surgically updating the DOM, renderTodos() clears and rebuilds the list. For a small todo list this is fine and avoids complex DOM diffing logic. React does this same concept, but with a virtual DOM for performance.`,
+3. **Re-render pattern** - Rather than surgically updating the DOM, renderTodos() clears and rebuilds the list. For a small todo list this is fine and avoids complex DOM diffing logic. React does this same concept, but with a virtual DOM for performance.`,
     hints: [
-      'localStorage.getItem returns null if the key doesn\'t exist — handle that case',
+      'localStorage.getItem returns null if the key doesn\'t exist - handle that case',
       'event.target tells you which element was actually clicked, even inside a delegated listener',
       'Use dataset.index (or getAttribute("data-index")) to identify which todo to delete',
     ],
@@ -237,7 +238,7 @@ function renderProducts(productList) {
   }
   resultsDiv.innerHTML = productList
     .map(p => \`<div class="product">
-      <strong>\${p.name}</strong> — $\${p.price.toFixed(2)}
+      <strong>\${p.name}</strong> - $\${p.price.toFixed(2)}
       <span class="category">\${p.category}</span>
     </div>\`)
     .join('');
@@ -251,18 +252,19 @@ const debouncedSearch = debounce((e) => {
 searchInput.addEventListener('input', debouncedSearch);
 
 renderProducts(products);`,
+    requires: ['clearTimeout', 'setTimeout', '.filter(', 'toLowerCase', 'includes', /addEventListener\(\s*["']input["']/, /\b300\b/],
     explanation: `Key concepts demonstrated:
 
-1. **Debounce pattern** — Without debounce, filtering runs on every keystroke. With debounce, it waits 300ms after the user stops typing. This matters for expensive operations like API calls. The trick is clearTimeout — each new keystroke cancels the previous timer.
+1. **Debounce pattern** - Without debounce, filtering runs on every keystroke. With debounce, it waits 300ms after the user stops typing. This matters for expensive operations like API calls. The trick is clearTimeout - each new keystroke cancels the previous timer.
 
-2. **Array.filter()** — Non-mutating method that returns a new array with elements that pass the test. Combined with toLowerCase().includes() for case-insensitive substring matching.
+2. **Array.filter()** - Non-mutating method that returns a new array with elements that pass the test. Combined with toLowerCase().includes() for case-insensitive substring matching.
 
-3. **Template literals for rendering** — Using map() + join('') to build HTML strings is a common vanilla JS pattern. React replaces this with JSX, but understanding the underlying DOM manipulation helps you appreciate what React does for you.
+3. **Template literals for rendering** - Using map() + join('') to build HTML strings is a common vanilla JS pattern. React replaces this with JSX, but understanding the underlying DOM manipulation helps you appreciate what React does for you.
 
-4. **Separation of concerns** — filter, render, and debounce are independent functions. This makes each piece testable and reusable.`,
+4. **Separation of concerns** - filter, render, and debounce are independent functions. This makes each piece testable and reusable.`,
     hints: [
       'debounce needs a closure variable to hold the timer ID between calls',
-      'clearTimeout cancels a pending setTimeout — call it before setting a new one',
+      'clearTimeout cancels a pending setTimeout - call it before setting a new one',
       'toLowerCase() on both the query and product name ensures case-insensitive matching',
     ],
     tieredHints: {
@@ -283,34 +285,34 @@ renderProducts(products);`,
     options: [
       {
         id: 'a',
-        text: 'Use sequential await: const user = await fetchUser(); const orders = await fetchOrders(); const notifications = await fetchNotifications(); — simple and readable.',
+        text: 'Use sequential await: const user = await fetchUser(); const orders = await fetchOrders(); const notifications = await fetchNotifications(); - simple and readable.',
         isCorrect: false,
       },
       {
         id: 'b',
-        text: 'Use Promise.allSettled([fetchUser(), fetchOrders(), fetchNotifications()]) — it waits for all promises and gives you the result of each, even if some fail.',
+        text: 'Use Promise.allSettled([fetchUser(), fetchOrders(), fetchNotifications()]) - it waits for all promises and gives you the result of each, even if some fail.',
         isCorrect: false,
       },
       {
         id: 'c',
-        text: 'Use Promise.all([fetchUser(), fetchOrders(), fetchNotifications()]) — all three requests run concurrently, and it rejects immediately if any one fails, which matches the "show error if ANY fails" requirement.',
+        text: 'Use Promise.all([fetchUser(), fetchOrders(), fetchNotifications()]) - all three requests run concurrently, and it rejects immediately if any one fails, which matches the "show error if ANY fails" requirement.',
         isCorrect: true,
       },
       {
         id: 'd',
-        text: 'Use Promise.race([fetchUser(), fetchOrders(), fetchNotifications()]) — it resolves as soon as the fastest request completes, which makes the UI feel snappier.',
+        text: 'Use Promise.race([fetchUser(), fetchOrders(), fetchNotifications()]) - it resolves as soon as the fastest request completes, which makes the UI feel snappier.',
         isCorrect: false,
       },
     ],
     explanation: `Promise.all is the right choice here because:
 
-1. **Concurrent execution** — All 3 fetches start simultaneously. If each takes 500ms, total time is ~500ms instead of ~1500ms with sequential await.
+1. **Concurrent execution** - All 3 fetches start simultaneously. If each takes 500ms, total time is ~500ms instead of ~1500ms with sequential await.
 
-2. **Fail-fast behavior** — If any promise rejects, Promise.all immediately rejects. This matches the requirement to "show error if ANY fails."
+2. **Fail-fast behavior** - If any promise rejects, Promise.all immediately rejects. This matches the requirement to "show error if ANY fails."
 
-3. Why NOT sequential await? It works but is unnecessarily slow — the requests don't depend on each other, so there's no reason to wait for one before starting the next.
+3. Why NOT sequential await? It works but is unnecessarily slow - the requests don't depend on each other, so there's no reason to wait for one before starting the next.
 
-4. Why NOT Promise.allSettled? It never rejects — it always resolves with status objects. Useful when you want partial results (show what you can, even if some fail), but the requirement says to show an error if any fail.
+4. Why NOT Promise.allSettled? It never rejects - it always resolves with status objects. Useful when you want partial results (show what you can, even if some fail), but the requirement says to show an error if any fail.
 
 5. Why NOT Promise.race? It resolves with the FIRST settled promise and ignores the rest. You'd only get one result.`,
     hints: [

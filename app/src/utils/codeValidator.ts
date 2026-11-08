@@ -96,8 +96,137 @@ function stripComments(code: string, language: CodeLanguage): string {
   return stripLineComments(n, '#');
 }
 
+const JS_IDENT = /[A-Za-z_$][\w$]*/g;
+
+/** Positions inside a '...' or "..." string literal (template literals count as code). */
+function jsStringMask(code: string): boolean[] {
+  const mask = new Array<boolean>(code.length).fill(false);
+  let quote: string | null = null;
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    if (quote) {
+      mask[i] = true;
+      if (c === '\\') { if (i + 1 < code.length) mask[++i] = true; } else if (c === quote) quote = null;
+    } else if (c === '"' || c === "'") {
+      quote = c;
+      mask[i] = true;
+    }
+  }
+  return mask;
+}
+
+/**
+ * The plain names a parameter list declares (`a, b = 1, ...rest`, TypeScript
+ * annotations allowed), with their offsets inside `list`. A destructured
+ * list (`{ id }`, `[a, b]`) declares nothing here: its names are property
+ * names too, so they are left as written.
+ */
+function jsParamNames(list: string): { name: string; at: number }[] | null {
+  if (/[{}[\]]/.test(list)) return null;
+  const out: { name: string; at: number }[] = [];
+  let depth = 0;
+  let start = 0;
+  const pieces: [string, number][] = [];
+  for (let i = 0; i <= list.length; i++) {
+    const c = list[i];
+    if (c === '(' || c === '<') depth++;
+    else if (c === ')' || c === '>') depth--;
+    if (i === list.length || (c === ',' && depth === 0)) {
+      pieces.push([list.slice(start, i), start]);
+      start = i + 1;
+    }
+  }
+  for (const [piece, offset] of pieces) {
+    if (!piece.trim()) continue;
+    const m = /^(\s*(?:\.\.\.)?\s*)([A-Za-z_$][\w$]*)\s*\??\s*(?::[^=]*)?(?:=[\s\S]*)?$/.exec(piece);
+    if (!m) return null;
+    out.push({ name: m[2], at: offset + m[1].length });
+  }
+  return out;
+}
+
+/**
+ * A function's parameter names are the learner's choice: `x => x * x` is the
+ * same callback as `n => n * n`, and `(n) => n * 2` the same as `n => n * 2`.
+ * Every parameter an arrow function or a `function` declares, and every
+ * `for (let i ...)` / `for (const x of ...)` loop variable, is renamed to a
+ * positional placeholder (`_p0`, `_p1`, ... in declaration order), from its
+ * declaration up to the next parameter that reuses the name, and an arrow's
+ * `{ return expr; }` body becomes the bare `expr` it returns. The reference
+ * goes through the same pass, so only the shape of the code is compared.
+ * Property reads (`item.price`) keep their names.
+ */
+function canonicalizeJsParams(source: string): string {
+  // An anonymous `function (n) { return expr; }` callback is the arrow
+  // `(n) => expr` written longhand.
+  const code = source.replace(/\bfunction\s*\(([^()]*)\)\s*\{\s*return\s+([^{};]*?)\s*;?\s*\}/g, '($1) => $2');
+  const mask = jsStringMask(code);
+  const decls: { name: string; at: number }[] = [];
+  const add = (names: { name: string; at: number }[] | null, base: number) => {
+    if (names) for (const p of names) decls.push({ name: p.name, at: base + p.at });
+  };
+  // Arrow functions: `x =>` or `(a, b) =>`.
+  for (let i = code.indexOf('=>'); i !== -1; i = code.indexOf('=>', i + 2)) {
+    if (mask[i]) continue;
+    let j = i - 1;
+    while (j >= 0 && /\s/.test(code[j])) j--;
+    if (code[j] === ')') {
+      let depth = 0;
+      let k = j;
+      for (; k >= 0; k--) {
+        if (mask[k]) continue;
+        if (code[k] === ')') depth++;
+        else if (code[k] === '(' && --depth === 0) break;
+      }
+      if (k >= 0) add(jsParamNames(code.slice(k + 1, j)), k + 1);
+    } else if (j >= 0 && /[\w$]/.test(code[j])) {
+      let k = j;
+      while (k > 0 && /[\w$]/.test(code[k - 1])) k--;
+      if (code[k - 1] !== '.' && /^[A-Za-z_$]/.test(code[k])) decls.push({ name: code.slice(k, j + 1), at: k });
+    }
+  }
+  // `function name(a, b)` and `function (a, b)`.
+  const fn = /\bfunction\b\s*\*?\s*[\w$]*\s*\(([^()]*)\)/g;
+  for (let m = fn.exec(code); m; m = fn.exec(code)) {
+    if (mask[m.index]) continue;
+    add(jsParamNames(m[1]), m.index + m[0].length - 1 - m[1].length);
+  }
+  // A loop's own variable (`for (let i = 0; ...)`, `for (const item of list)`)
+  // is the learner's choice too.
+  const loopVar = /\bfor\s*\(\s*(?:let|const|var)\s+([A-Za-z_$][\w$]*)/g;
+  for (let m = loopVar.exec(code); m; m = loopVar.exec(code)) {
+    if (!mask[m.index]) decls.push({ name: m[1], at: m.index + m[0].length - m[1].length });
+  }
+  decls.sort((a, b) => a.at - b.at);
+  const placeholder = new Map<number, string>();
+  decls.forEach((d, i) => placeholder.set(d.at, `_p${i}`));
+  let out = '';
+  let last = 0;
+  JS_IDENT.lastIndex = 0;
+  for (let m = JS_IDENT.exec(code); m; m = JS_IDENT.exec(code)) {
+    const at = m.index;
+    if (mask[at] || /[\w$]/.test(code[at - 1] ?? '')) continue;
+    if (code[at - 1] === '.' && code.slice(Math.max(0, at - 3), at) !== '...') continue;
+    let decl: { name: string; at: number } | undefined;
+    for (const d of decls) {
+      if (d.at > at) break;
+      if (d.name === m[0]) decl = d;
+    }
+    if (!decl) continue;
+    out += code.slice(last, at) + placeholder.get(decl.at);
+    last = at + m[0].length;
+  }
+  out += code.slice(last);
+  return out
+    .replace(/\(\s*(_p\d+)\s*\)\s*=>/g, '$1 =>')
+    .replace(/=>\s*\{\s*return\s+([^{};]*?)\s*;?\s*\}/g, '=> $1');
+}
+
 function normalizeCode(code: string, language: CodeLanguage): string {
   let n = stripComments(code, language);
+  if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
+    n = canonicalizeJsParams(n);
+  }
 
   // Strip import/from lines (Python `from x import y`, JS `import x from 'y'`).
   // NEVER for SQL: `from` is a clause keyword there, and this pattern is
