@@ -136,6 +136,7 @@ describe('Web Dev Advanced Next.js Patterns section grading', () => {
     expect(hardFails(q, swap(ref, '"use client";\n', ''))).toBe(true);
     expect(hardFails(q, swap(ref, 'onClick={() => reset()}', 'onClick={reset()}'))).toBe(true);
     expect(hardFails(q, swap(ref, 'onClick={() => reset()}', 'onClick={reset}'))).toBe(false);
+    expect(hardFails(q, swap(ref, 'onClick={() => reset()}', 'onClick={() => { reset(); }}'))).toBe(false);
   });
 
   it('rejects a Server Action that parses and throws, or saves the raw form, in next-error-handling-2', () => {
@@ -143,6 +144,15 @@ describe('Web Dev Advanced Next.js Patterns section grading', () => {
     const ref = branches(q)[0];
     expect(hardFails(q, swap(ref, 'userSchema.safeParse(', 'userSchema.parse('))).toBe(true);
     expect(hardFails(q, swap(ref, 'await saveUser(result.data);', 'await saveUser(Object.fromEntries(formData));'))).toBe(true);
+    expect(hardFails(q, swap(ref, 'await saveUser(result.data);', 'await saveUser(formData);'))).toBe(true);
+  });
+
+  it('accepts any name for the parsed result, destructured data and a typed catch binding in next-error-handling-2', () => {
+    const q = coding('next-error-handling-2');
+    const ref = branches(q)[0];
+    expect(hardFails(q, ref.replace(/\bresult\b/g, 'validation'))).toBe(false);
+    expect(hardFails(q, swap(ref, '    await saveUser(result.data);', '    const { data } = result;\n    await saveUser(data);'))).toBe(false);
+    expect(hardFails(q, swap(ref, '} catch (error) {', '} catch (error: unknown) {'))).toBe(false);
   });
 
   it('rejects a Server Action that turns every save error into data, or swallows the unexpected ones, in next-error-handling-2', () => {
@@ -163,6 +173,15 @@ describe('Web Dev Advanced Next.js Patterns section grading', () => {
       + 'export async function GET(\n  request: NextRequest,\n  { params }: { params: Promise<{ id: string }> }\n) {\n'
       + '  const { id } = await params;\n  const order = await getOrderById(id);\n  return NextResponse.json(order);\n}';
     expect(hardFails(q, noTry)).toBe(true);
+  });
+
+  it('accepts a typed catch binding in next-error-handling-6', () => {
+    const q = coding('next-error-handling-6');
+    for (const ref of branches(q)) {
+      const typed = ref.replace(/catch \((\w+)\)/, 'catch ($1: unknown)');
+      expect(typed).not.toBe(ref);
+      expect(hardFails(q, typed)).toBe(false);
+    }
   });
 
   it('rejects an unawaited auth() in next-auth-deep-2', () => {
