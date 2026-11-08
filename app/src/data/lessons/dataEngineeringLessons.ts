@@ -3,8 +3,8 @@
  *
  * Section Storage & Files (the second rewritten section) comes first on the
  * path, then Warehouses, Lakes & Table Formats (the third), then Moving Data
- * (the first section of the decisions-and-designs rewrite), and then Modeling
- * for Analytics (the fourth): every topic of each. Each rule card teaches the decision rule as its form
+ * (the first section of the decisions-and-designs rewrite), then Modeling
+ * for Analytics (the fourth), and then Streaming (the fifth): every topic of each. Each rule card teaches the decision rule as its form
  * and works one scenario on small tables; the SQL is T-SQL that
  * check-lessons.js runs on sql.js. MERGE is not run there, so the worked
  * examples replace by key with DELETE and INSERT, and the idea names MERGE.
@@ -1547,5 +1547,380 @@ order_month | revenue
 2026-11 | 90`,
     },
     exercises: ['de-metric-1', 'de-metric-2', 'de-metric-3', 'de-metric-4', 'de-metric-5'],
+  },
+  {
+    id: 'de_stream_logs/1',
+    topicKeys: [Topic.DE_STREAM_LOGS],
+    step: 1,
+    title: 'Logs, Topics, Partitions & Offsets',
+    idea: [
+      lines(
+        'A stream is an unbounded sequence of events, and most pipelines keep it in a log: a file that is only appended to and read by position.',
+        'A topic is one such log, split into partitions so that many machines can write and read it at once.',
+        'Each message gets the next offset of its partition, and order holds only within a partition.',
+      ),
+      lines(
+        'The producer picks the partition from the message key, so every message with one key lands in one partition, in the order it was sent.',
+        'Key by what must stay in order or be handled together, such as an account_id; a key shared by a large share of the traffic makes one partition hot.',
+      ),
+      lines(
+        'A consumer group reads a topic by giving each partition to one of its members, so a group can use at most as many members as there are partitions.',
+        'Each group commits its own offsets and reading removes nothing, so other groups read the same messages, and a group replays by moving its offsets back while retention still holds them.',
+        'Stream when something acts on the result within seconds or minutes; when the result is read hourly or daily, a scheduled batch, even a frequent micro-batch, is simpler.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `must stay in order (one account) -> key by it: same key, same partition
+more readers in one group        -> more partitions (members <= partitions)
+another job needs every message  -> its own consumer group, its own offsets
+reprocess a past period          -> reset the group's offsets (in retention)
+acted on in seconds -> stream; read hourly or daily -> batch`,
+    },
+    pitfall: lines(
+      'Expecting order across a topic.',
+      'The messages of one key are in order because they share a partition; key by a unique event id, or let the producer spread messages, and one account\'s events are read by different consumers at different speeds.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'produced',
+          columns: ['seq', 'account_id', 'amount'],
+          rows: [
+            [1, 7, 50],
+            [2, 4, 20],
+            [3, 7, -30],
+            [4, 9, 10],
+            [5, 5, 40],
+            [6, 4, 15],
+            [7, 7, 25],
+            [8, 6, 30],
+          ],
+        },
+        {
+          name: 'committed',
+          columns: ['partition_id', 'next_offset'],
+          rows: [
+            [0, 2],
+            [1, 3],
+            [2, 0],
+          ],
+        },
+      ],
+      code: `-- each message goes to partition account_id % 3, at the next offset there
+SELECT account_id % 3 AS partition_id,
+       ROW_NUMBER() OVER (PARTITION BY account_id % 3 ORDER BY seq) - 1 AS offset_no,
+       seq, account_id, amount
+FROM produced
+ORDER BY partition_id, offset_no;
+
+-- the group's lag: messages at or after its committed offset
+WITH placed AS (
+  SELECT account_id % 3 AS partition_id,
+         ROW_NUMBER() OVER (PARTITION BY account_id % 3 ORDER BY seq) - 1 AS offset_no
+  FROM produced
+)
+SELECT c.partition_id, COUNT(p.offset_no) AS lag
+FROM committed c
+LEFT JOIN placed p ON p.partition_id = c.partition_id AND p.offset_no >= c.next_offset
+GROUP BY c.partition_id
+ORDER BY c.partition_id;`,
+      steps: [
+        'The producer keys each message by account_id, so its partition is account_id % 3 and every message of one account lands in one partition.',
+        'Lines 2-6: inside a partition each message takes the next offset, so account 7\'s three messages are offsets 0, 2 and 4 of partition 1, in the order they were sent.',
+        'Across partitions there is no order: the consumer of partition 0 may handle seq 4 before another consumer has handled seq 1.',
+        'Lines 9-18: the group has committed offsets 2, 3 and 0, so partition 1 still has offsets 3 and 4 to read and partition 2 its one message.',
+        'Lag is per partition, here 0, 2 and 1, and a replay is a committed offset moved back, since the messages are still in the log.',
+      ],
+      output: `partition_id | offset_no | seq | account_id | amount
+0 | 0 | 4 | 9 | 10
+0 | 1 | 8 | 6 | 30
+1 | 0 | 1 | 7 | 50
+1 | 1 | 2 | 4 | 20
+1 | 2 | 3 | 7 | -30
+1 | 3 | 6 | 4 | 15
+1 | 4 | 7 | 7 | 25
+2 | 0 | 5 | 5 | 40
+
+partition_id | lag
+0 | 0
+1 | 2
+2 | 1`,
+    },
+    exercises: ['de-log-1', 'de-log-2', 'de-log-3', 'de-log-4', 'de-log-5'],
+  },
+  {
+    id: 'de_event_time_windows/1',
+    topicKeys: [Topic.DE_EVENT_TIME_WINDOWS],
+    step: 1,
+    title: 'Event Time, Windows & Watermarks',
+    idea: [
+      lines(
+        'Every event has two times: its event time, when it happened, and its processing time, when the pipeline saw it.',
+        'They drift apart whenever events are delayed or reordered: a phone offline for an hour, a slow partition, a retry.',
+        'Windows group events by event time, so each event is counted in the period it belongs to, whenever it arrives.',
+      ),
+      lines(
+        'Tumbling windows tile time with fixed periods that do not overlap, so each event is in one window.',
+        'Hopping (sliding) windows are longer than their step, so each event is in several and their counts add up to more than the events.',
+        'Session windows have no fixed length: a session stays open while the next event comes within the gap.',
+      ),
+      lines(
+        'A stream never says that a period is complete, so the job estimates it with a watermark: the newest event time seen, minus an allowed lateness.',
+        'When the watermark passes a window\'s end, the window is emitted and its state dropped, and a later event for it goes to a late-data output.',
+        'More lateness gives more complete results, later, with more windows held in memory.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `count each event once, fixed periods -> tumbling windows
+a moving figure (last 10 min, every 5) -> hopping (sliding) windows
+activity split by inactivity           -> session windows with a gap
+watermark = newest event time - allowed lateness
+a window closes when the watermark reaches its end; later events -> late output`,
+    },
+    pitfall: lines(
+      'Windowing by arrival time.',
+      'Nothing is ever late that way, so it looks simpler, but an outage or an offline phone moves its events into the hour they were uploaded, and a replay of the same data gives other numbers.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'arrivals',
+          columns: ['event_id', 'event_minute', 'arrival_minute'],
+          rows: [
+            ['e1', 1, 2],
+            ['e2', 3, 4],
+            ['e3', 6, 6],
+            ['e4', 4, 7],
+            ['e5', 8, 9],
+            ['e6', 2, 10],
+            ['e7', 9, 11],
+            ['e8', 12, 13],
+          ],
+        },
+      ],
+      code: `-- 5-minute windows by arrival: when the pipeline saw each event
+SELECT arrival_minute / 5 * 5 AS window_start, COUNT(*) AS events
+FROM arrivals
+GROUP BY arrival_minute / 5 * 5
+ORDER BY window_start;
+
+-- 5-minute windows by event time, closed by a watermark 2 minutes behind
+WITH judged AS (
+  SELECT a.event_minute / 5 * 5 AS window_start,
+         (SELECT MAX(b.event_minute) FROM arrivals b
+          WHERE b.arrival_minute < a.arrival_minute) - 2 AS watermark
+  FROM arrivals a
+)
+SELECT window_start,
+       SUM(CASE WHEN watermark >= window_start + 5 THEN 0 ELSE 1 END) AS counted,
+       SUM(CASE WHEN watermark >= window_start + 5 THEN 1 ELSE 0 END) AS late
+FROM judged
+GROUP BY window_start
+ORDER BY window_start;`,
+      steps: [
+        'Minute 0 is 10:00, so e6 happened at 10:02 and reached the pipeline at 10:10.',
+        'Lines 2-5: grouped by arrival, the first window shows 2 events, although 4 happened in it.',
+        'Lines 8-19: grouped by event time, each event goes to the window it happened in, and the watermark when it arrives is the newest event time before it, minus 2.',
+        'e5 (minute 8) moves the watermark to 6, which closes the window [0, 5); e4 arrived before that and is counted.',
+        'e6 arrives after the window closed, so the window reports 3 and the late output gets 1.',
+      ],
+      output: `window_start | events
+0 | 2
+5 | 3
+10 | 3
+
+window_start | counted | late
+0 | 3 | 1
+5 | 3 | 0
+10 | 1 | 0`,
+    },
+    exercises: ['de-wmark-1', 'de-wmark-2', 'de-wmark-3', 'de-wmark-4', 'de-wmark-5'],
+  },
+  {
+    id: 'de_delivery_guarantees/1',
+    topicKeys: [Topic.DE_DELIVERY_GUARANTEES],
+    step: 1,
+    title: 'Delivery Guarantees & Exactly-Once',
+    idea: [
+      lines(
+        'A consumer does two things for each batch: it writes the results and it commits the batch\'s offsets.',
+        'Commit first, and a crash between the two loses the batch: at-most-once.',
+        'Write first, and a crash replays the batch, so it can be written twice: at-least-once.',
+      ),
+      lines(
+        'Most pipelines choose at-least-once and make the write idempotent, so a repeat changes nothing.',
+        'The sink upserts on the event\'s own id, or records the ids it has applied in the same transaction as the change.',
+        'Repeats come from replays after a crash and from producers that resend after a timeout, and only the event\'s id is the same in both.',
+      ),
+      lines(
+        'Stream engines give exactly-once results by saving their state together with the input offsets in a checkpoint, and committing their output in step with it.',
+        'After a crash they go back to the last checkpoint, where state, read position and output agree.',
+        'That covers the engine\'s state and its transactional sinks, not an email or a payment API: a call that leaves the system needs an idempotency key or a record of what was sent.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `commit offsets, then write -> at-most-once: a crash loses the batch
+write, then commit offsets -> at-least-once: a crash repeats the batch
+at-least-once + a write keyed by the event's id -> exactly-once effect
+state + offsets + output in one checkpoint     -> exactly-once in the engine
+a side effect outside (email, API) -> idempotency key, or record what was sent`,
+    },
+    pitfall: lines(
+      'Deduplicating on the offset.',
+      'It catches a consumer re-reading after a crash, but a producer\'s resend is a new message at a new offset, so the same payment passes twice.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'topic_log',
+          columns: ['offset_no', 'payment_id', 'amount'],
+          rows: [
+            [0, 'p1', 20],
+            [1, 'p2', 35],
+            [2, 'p3', 15],
+            [3, 'p4', 40],
+            [4, 'p3', 15],
+            [5, 'p5', 25],
+          ],
+        },
+        {
+          name: 'deliveries',
+          columns: ['delivery_no', 'offset_no'],
+          rows: [
+            [1, 0],
+            [2, 1],
+            [3, 2],
+            [4, 3],
+            [5, 2],
+            [6, 3],
+            [7, 4],
+            [8, 5],
+          ],
+        },
+      ],
+      code: `-- three sinks fed the same deliveries
+SELECT 'append' AS sink, COUNT(*) AS sink_rows, SUM(l.amount) AS total
+FROM deliveries d JOIN topic_log l ON l.offset_no = d.offset_no
+UNION ALL
+SELECT 'upsert on offset_no', COUNT(*), SUM(amount)
+FROM (SELECT DISTINCT l.offset_no, l.amount
+      FROM deliveries d JOIN topic_log l ON l.offset_no = d.offset_no) AS by_offset
+UNION ALL
+SELECT 'upsert on payment_id', COUNT(*), SUM(amount)
+FROM (SELECT DISTINCT l.payment_id, l.amount
+      FROM deliveries d JOIN topic_log l ON l.offset_no = d.offset_no) AS by_payment
+ORDER BY sink;`,
+      steps: [
+        'The producer timed out on p3 and sent it again, so p3 is at offsets 2 and 4; the true total of p1 to p5 is 135.',
+        'The consumer wrote offsets 2 and 3, crashed before committing, and on restart delivered them again: deliveries 5 and 6.',
+        'Lines 2-3: an append sink keeps all 8 deliveries, 205.',
+        'Lines 5-7: an upsert on the offset absorbs the replay but not the resend, which has its own offset: 6 rows, 150.',
+        'Lines 9-11: an upsert on payment_id absorbs both, because only the payment\'s id is the same in a replay and a resend: 5 rows, 135.',
+      ],
+      output: `sink | sink_rows | total
+append | 8 | 205
+upsert on offset_no | 6 | 150
+upsert on payment_id | 5 | 135`,
+    },
+    exercises: ['de-eos-1', 'de-eos-2', 'de-eos-3', 'de-eos-4', 'de-eos-5'],
+  },
+  {
+    id: 'de_stream_state_joins/1',
+    topicKeys: [Topic.DE_STREAM_STATE_JOINS],
+    step: 1,
+    title: 'State & Stream Joins',
+    idea: [
+      lines(
+        'State is what a streaming job remembers between events: a count per key, the open windows, the ids it has seen, the rows waiting for a join.',
+        'It grows with the number of keys and with how long rows are kept, so every piece of state needs a bound: a window the watermark closes, a join bound, or a TTL that drops a key gone quiet.',
+      ),
+      lines(
+        'A join of two streams cannot see both sides whole, as a batch join does.',
+        'Each row waits in state until its partner arrives, so the join needs a time bound, such as a payment within 30 minutes of its order.',
+        'The bound and the watermark tell the job when a row can no longer match, and only then can it be dropped.',
+      ),
+      lines(
+        'Joining a stream to a table, such as clicks to the product catalog, keeps the table in state from its change stream and looks each event up as it passes.',
+        'That lookup gives the value at processing time; when the value at the event\'s time matters, as with a customer\'s region for revenue, join to the version valid then.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `aggregate per key              -> state per key: bound it by a window or TTL
+stream joined to stream        -> interval join: both sides buffered, time bound
+stream joined to a table       -> table kept in state from its changes, lookup
+value as of the event's time    -> join to the version valid at event time
+drop a buffered row when the watermark passes its time + the bound`,
+    },
+    pitfall: lines(
+      'A stream-stream join with no time bound.',
+      'It works in testing and for weeks in production, then the job runs out of memory, because every row stays in state waiting for a match that might still come.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'orders',
+          columns: ['order_id', 'order_minute'],
+          rows: [
+            ['o1', 0],
+            ['o2', 10],
+            ['o3', 25],
+            ['o4', 40],
+          ],
+        },
+        {
+          name: 'payments',
+          columns: ['payment_id', 'order_id', 'pay_minute'],
+          rows: [
+            ['p1', 'o1', 5],
+            ['p2', 'o2', 50],
+            ['p3', 'o3', 30],
+            ['p4', 'o4', 45],
+            ['p5', 'o9', 20],
+          ],
+        },
+      ],
+      code: `-- the join as a batch runs it: any payment of the order
+SELECT COUNT(*) AS joined_rows
+FROM orders o JOIN payments p ON p.order_id = o.order_id;
+
+-- the stream join, bounded: paid from the order's minute to 30 minutes after
+SELECT o.order_id, p.payment_id, p.pay_minute - o.order_minute AS minutes_to_pay
+FROM orders o
+JOIN payments p ON p.order_id = o.order_id
+ AND p.pay_minute BETWEEN o.order_minute AND o.order_minute + 30
+ORDER BY o.order_id;
+
+-- orders still held in state when the watermark is at minute 50
+SELECT order_id FROM orders
+WHERE order_minute + 30 > 50
+ORDER BY order_id;`,
+      steps: [
+        'Minute 0 is 10:00, and each side arrives over time, so the job keeps every order and payment in state until its match can no longer come.',
+        'Lines 2-3: with no bound, as in a batch, 4 payments find their order, p2 among them, 40 minutes after o2.',
+        'Lines 6-10: the stream join allows 30 minutes, so p2 gets no row, and p5, whose order never came, waits in state until the watermark passes it.',
+        'Lines 13-15: at a watermark of 50, o1 and o2 can no longer be paid within 30 minutes, so they leave state; o3 and o4 stay.',
+        'Without the bound, every order would stay in state forever, waiting for a payment that might still come.',
+      ],
+      output: `joined_rows
+4
+
+order_id | payment_id | minutes_to_pay
+o1 | p1 | 5
+o3 | p3 | 5
+o4 | p4 | 5
+
+order_id
+o3
+o4`,
+    },
+    exercises: ['de-sjoin-1', 'de-sjoin-2', 'de-sjoin-3', 'de-sjoin-4', 'de-sjoin-5'],
   },
 ];

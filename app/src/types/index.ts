@@ -91,6 +91,7 @@ export enum Topic {
   // ── Data Engineering Concepts (tool-agnostic, MCQ-only, beginner→mastery) ──
   // Foundations (small topics, each ramps from a plain beginner intro upward)
   DE_WHAT_IS = 'de_what_is',
+  // Retired into Streaming (no questions; kept so stored progress keeps its course).
   DE_BATCH_VS_STREAMING = 'de_batch_vs_streaming',
   DE_OLTP_VS_OLAP = 'de_oltp_vs_olap',
   DE_ROWS_VS_COLUMNS = 'de_rows_vs_columns',
@@ -117,6 +118,9 @@ export enum Topic {
   DE_SCD = 'de_scd',
   DE_DATA_MESH = 'de_data_mesh',
   // Streaming (small beginner-first topics)
+  // Retired into the rewritten Streaming section (no questions; kept so stored
+  // progress keeps its course): every topic below except DE_CDC, which Moving
+  // Data absorbed.
   DE_WHAT_IS_A_STREAM = 'de_what_is_a_stream',
   DE_EVENT_VS_PROCESSING_TIME = 'de_event_vs_processing_time',
   DE_WINDOWS = 'de_windows',
@@ -172,6 +176,15 @@ export enum Topic {
   DE_NATURAL_SURROGATE_KEYS = 'de_natural_surrogate_keys',
   DE_SCD_POINT_IN_TIME = 'de_scd_point_in_time',
   DE_METRICS_OWNERSHIP = 'de_metrics_ownership',
+  // Streaming - the fifth rewritten section. It absorbs the old
+  // DE_WHAT_IS_A_STREAM, DE_KAFKA_BASICS, DE_BATCH_VS_STREAMING,
+  // DE_EVENT_VS_PROCESSING_TIME, DE_WINDOWS, DE_STREAMING_GUARANTEES and
+  // DE_STREAMING_SQL, which keep no questions and stay here so stored progress
+  // keeps its course.
+  DE_STREAM_LOGS = 'de_stream_logs',
+  DE_EVENT_TIME_WINDOWS = 'de_event_time_windows',
+  DE_DELIVERY_GUARANTEES = 'de_delivery_guarantees',
+  DE_STREAM_STATE_JOINS = 'de_stream_state_joins',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).

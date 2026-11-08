@@ -223,7 +223,7 @@ describe('selectNextQuestion - well-known cards rest until due', () => {
     const wk = ['wk1', 'wk2', 'wk3', 'wk4', 'wk5', 'wk6'].map(id =>
       makeQ(id, Topic.DE_WHAT_IS, Difficulty.BEGINNER));
     const fresh = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'].map(id =>
-      makeQ(id, Topic.DE_BATCH_VS_STREAMING, Difficulty.BEGINNER));
+      makeQ(id, Topic.DE_ROW_VS_COLUMN_LAYOUT, Difficulty.BEGINNER));
     const p = emptyProgress();
     wk.forEach((q, i) => streakOf(p, q.id, 5, 10 + i));
     record(p, 'n1', true, 60_000);
