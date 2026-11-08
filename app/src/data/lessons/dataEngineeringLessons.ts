@@ -1,8 +1,9 @@
 /**
  * Data Engineering lessons, one per topic, in course order.
  *
- * Section Moving Data (the first section of the decisions-and-designs
- * rewrite): every topic. Each rule card teaches the decision rule as its form
+ * Section Storage & Files (the second rewritten section) comes first on the
+ * path and then Moving Data (the first section of the decisions-and-designs
+ * rewrite): every topic of each. Each rule card teaches the decision rule as its form
  * and works one scenario on small tables; the SQL is T-SQL that
  * check-lessons.js runs on sql.js. MERGE is not run there, so the worked
  * examples replace by key with DELETE and INSERT, and the idea names MERGE.
@@ -15,6 +16,305 @@ import { CodeLanguage, Topic, TopicLesson } from '../../types';
 const lines = (...sentences: string[]) => sentences.join('\n');
 
 export const dataEngineeringLessons: TopicLesson[] = [
+  {
+    id: 'de_row_vs_column_layout/1',
+    topicKeys: [Topic.DE_ROW_VS_COLUMN_LAYOUT],
+    step: 1,
+    title: 'Rows vs Columns',
+    idea: [
+      lines(
+        'A table is saved either row by row or column by column.',
+        'A row file keeps one row\'s fields together; a columnar file keeps each column\'s values together, in a chunk of its own.',
+      ),
+      lines(
+        'A query reads whole blocks, so the layout decides which bytes it has to touch.',
+        'Reading a few columns of many rows is cheap in a columnar file, which skips the other columns, and the repeated values of one column compress well.',
+        'Reading or writing one whole row is cheap in a row file, because its fields are side by side.',
+      ),
+      lines(
+        'So ask what the queries touch, not which layout is faster.',
+        'Work it out as bytes: a row file reads every column of each row it scans, a columnar file only the columns the query names.',
+        'A columnar file also pays on writes, since a new row adds a value to every column chunk.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `-- what do the queries touch?
+a few columns of most rows (scans)  -> columnar
+whole rows, one at a time (lookups) -> row
+both on the same data               -> row + columnar copy
+-- bytes a scan reads
+row file       = all columns x rows
+columnar file  = named columns x rows`,
+    },
+    pitfall: lines(
+      '"Columnar is faster" means nothing without the query.',
+      'A lookup of one row, or a SELECT * on a columnar file, touches every column and gets the slow side of it, and a stream of single-row inserts leaves a chunk per column per row.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'trip_columns',
+          columns: ['column_name', 'bytes_per_value', 'in_report'],
+          rows: [
+            ['trip_id', 8, 0],
+            ['city', 12, 1],
+            ['fare_cents', 8, 1],
+            ['pickup_ts', 8, 0],
+            ['rider_note', 100, 0],
+          ],
+        },
+      ],
+      code: `-- Fares by city over 1,000 trips: bytes read per layout.
+SELECT 'row file' AS layout,
+       SUM(bytes_per_value) * 1000 AS bytes_read
+FROM trip_columns
+UNION ALL
+SELECT 'columnar file', SUM(bytes_per_value) * 1000
+FROM trip_columns WHERE in_report = 1
+ORDER BY bytes_read;
+
+-- One whole trip: places read per layout.
+SELECT 'row file' AS layout, 1 AS places_read
+UNION ALL
+SELECT 'columnar file', COUNT(*) FROM trip_columns
+ORDER BY places_read;`,
+      steps: [
+        'Lines 2-4: a row file reads every column of every trip, 136 bytes x 1,000 trips = 136,000 bytes.',
+        'Lines 6-7: a columnar file reads only the two columns the report uses, city and fare_cents: 20 bytes x 1,000 = 20,000 bytes.',
+        'Line 11: fetching one trip from a row file is a single place, because its fields are side by side.',
+        'Line 13: in a columnar file the same trip is spread over one chunk per column, so 5 places are read.',
+        'The report reads about 7 times fewer bytes in the columnar file, while the lookup reads 5 places instead of 1: neither layout wins both.',
+      ],
+      output: `layout | bytes_read
+columnar file | 20000
+row file | 136000
+
+layout | places_read
+row file | 1
+columnar file | 5`,
+    },
+    exercises: ['de-layout-1', 'de-layout-2', 'de-layout-3', 'de-layout-4', 'de-layout-5'],
+  },
+  {
+    id: 'de_file_formats/1',
+    topicKeys: [Topic.DE_FILE_FORMATS],
+    step: 1,
+    title: 'File Formats: CSV, JSON, Avro, Parquet',
+    idea: [
+      lines(
+        'A file format decides how a table\'s values become bytes: text or binary, row by row or column by column, and whether the schema is stored in the file.',
+        'CSV is text, row by row, with no types: any tool opens it, and every tool guesses what each column is.',
+        'JSON lines is text too, one record per line with its field names, so it holds nested and changing records and is easy to append to.',
+      ),
+      lines(
+        'Avro is binary and row-based with its schema in the file, so it appends one record at a time, which is why streams use it.',
+        'Parquet is binary and columnar, with the schema, statistics and row group positions in a footer written when the file is closed: it is built to be scanned, and to be written in batches.',
+      ),
+      lines(
+        'Binary formats also encode their columns: a column with few distinct values becomes a small dictionary plus an index per row, and sorted repeated values become (value, count) runs.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `small files people open  -> CSV
+nested, changing records  -> JSON lines
+a stream of records       -> Avro (schema inside)
+scans of a few columns    -> Parquet (footer)`,
+    },
+    pitfall: lines(
+      'A CSV carries no types, so a reader that infers them turns 02134 into 2134, and a different day can infer differently.',
+      'A Parquet file written one record at a time has no footer until it is closed, so a crash leaves bytes nobody can read.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'csv_cells',
+          columns: ['row_no', 'sku'],
+          rows: [
+            [1, '00415'],
+            [2, '88100'],
+            [3, '00007'],
+            [4, '31220'],
+          ],
+        },
+      ],
+      code: `-- A reader sees digits in every cell and types sku as an integer.
+SELECT row_no, sku AS in_file,
+  CAST(sku AS INT) AS typed_as_integer,
+  CASE WHEN CAST(CAST(sku AS INT) AS VARCHAR(10)) = sku
+       THEN 'same' ELSE 'changed' END AS written_back
+FROM csv_cells
+ORDER BY row_no;`,
+      steps: [
+        'Line 1: the file holds text only; nothing in a CSV says that sku is a code and not a number.',
+        'Line 3: the reader decides that every cell is digits and types the column as an integer, so 00415 becomes 415 and 00007 becomes 7.',
+        'Lines 4-5: written back as text, those two rows no longer match the file, while 88100 and 31220 survive.',
+        'The fix is outside the query: give the reader the schema (sku as text), or store the data in Avro or Parquet, where the schema is inside the file.',
+      ],
+      output: `row_no | in_file | typed_as_integer | written_back
+1 | 00415 | 415 | changed
+2 | 88100 | 88100 | same
+3 | 00007 | 7 | changed
+4 | 31220 | 31220 | same`,
+    },
+    exercises: ['de-format-1', 'de-format-2', 'de-format-3', 'de-format-5', 'de-format-6'],
+  },
+  {
+    id: 'de_data_skipping/1',
+    topicKeys: [Topic.DE_DATA_SKIPPING],
+    step: 1,
+    title: 'Skipping Data: Stats, Row Groups & Pruning',
+    idea: [
+      lines(
+        'A fast query reads less, and a well laid out table lets the engine rule data out before it reads it, at three levels.',
+        'Partition pruning: files sit in folders named by a column (`dt=2026-11-03`), and a filter on that column drops whole folders from their names alone.',
+        'Statistics: each row group records the min and max of every column, and the engine skips a group whose range cannot contain the filter value.',
+        'Column pruning: only the chunks of the columns the query names are read.',
+      ),
+      lines(
+        'Statistics help only when the rows are clustered by the filtered column: in arrival order every group spans the whole range and nothing is skipped.',
+        'So the layout is a decision: a column with few values that most queries filter becomes the partition, and the next filter column becomes the sort order inside the files.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `few values (day, region)  -> partition by it
+many values (user_id)     -> sort by it inside files
+skip a row group when filter < min or > max
+filter the column as written: no CAST around it`,
+    },
+    pitfall: lines(
+      'Partitioning by a column with millions of values writes a tiny file per value.',
+      'Rows in arrival order, or a filter wrapped in a function, leave every min-to-max range wide or unusable, and the query reads everything.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'rg_arrival',
+          columns: ['row_group', 'min_day', 'max_day'],
+          rows: [
+            [1, '2026-11-01', '2026-11-06'],
+            [2, '2026-11-01', '2026-11-05'],
+            [3, '2026-11-02', '2026-11-06'],
+            [4, '2026-11-01', '2026-11-06'],
+            [5, '2026-11-02', '2026-11-06'],
+            [6, '2026-11-01', '2026-11-04'],
+          ],
+        },
+        {
+          name: 'rg_sorted',
+          columns: ['row_group', 'min_day', 'max_day'],
+          rows: [
+            [1, '2026-11-01', '2026-11-01'],
+            [2, '2026-11-01', '2026-11-02'],
+            [3, '2026-11-02', '2026-11-03'],
+            [4, '2026-11-03', '2026-11-04'],
+            [5, '2026-11-04', '2026-11-05'],
+            [6, '2026-11-05', '2026-11-06'],
+          ],
+        },
+      ],
+      code: `-- Filter: sale_day = '2026-11-02'. Row groups read, per layout.
+SELECT 'arrival order' AS layout,
+  SUM(CASE WHEN min_day <= '2026-11-02'
+            AND max_day >= '2026-11-02' THEN 1 ELSE 0 END) AS groups_read,
+  SUM(CASE WHEN min_day <= '2026-11-02'
+            AND max_day >= '2026-11-02' THEN 0 ELSE 1 END) AS groups_skipped
+FROM rg_arrival
+UNION ALL
+SELECT 'sorted by day',
+  SUM(CASE WHEN min_day <= '2026-11-02'
+            AND max_day >= '2026-11-02' THEN 1 ELSE 0 END),
+  SUM(CASE WHEN min_day <= '2026-11-02'
+            AND max_day >= '2026-11-02' THEN 0 ELSE 1 END)
+FROM rg_sorted
+ORDER BY groups_read DESC;`,
+      steps: [
+        'Lines 2-7: in arrival order each row group holds early and late days, so every min-to-max range contains 2026-11-02 and all 6 groups are read.',
+        'Lines 9-14: the same rows sorted by day give narrow ranges, and only groups 2 and 3 can contain 2026-11-02.',
+        'Lines 12-13: the other 4 groups are skipped from their statistics alone, without being read.',
+        'Same data, same query, same engine: the sort order decided how much could be skipped.',
+      ],
+      output: `layout | groups_read | groups_skipped
+arrival order | 6 | 0
+sorted by day | 2 | 4`,
+    },
+    exercises: ['de-skip-1', 'de-skip-2', 'de-skip-3', 'de-skip-4', 'de-skip-5'],
+  },
+  {
+    id: 'de_small_files/1',
+    topicKeys: [Topic.DE_SMALL_FILES],
+    step: 1,
+    title: 'Object Storage & Small Files',
+    idea: [
+      lines(
+        'An object store keeps objects under keys in a bucket, reached over the network.',
+        'It has no real folders (a "folder" is a prefix its keys share), and an object is replaced whole, never edited.',
+      ),
+      lines(
+        'Every file read pays a fixed cost, a request and its metadata, whatever its size.',
+        'So the cost of a scan is the number of files x the per-file overhead, plus the bytes over the throughput.',
+        'Many small files (a stream that writes every minute, a job with many tasks, a partition per user) make the overhead the whole cost; aim for files of roughly 128 MB to 1 GB.',
+      ),
+      lines(
+        'With no rename or in-place edit, a change is made by writing new files and switching the table to them in one commit.',
+        'Compaction does the same: it rewrites many small files into a few large ones.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `scan cost = files x overhead + bytes / throughput
+files of 128 MB - 1 GB   -> overhead is a small share
+many small files appear  -> compact them on a schedule
+change some rows         -> new files, one commit
+never edit in place, delete first, or "rename" a folder`,
+    },
+    pitfall: lines(
+      'Compacting by deleting the small files first, or writing into a folder that readers are scanning, shows them an empty or half-written table.',
+      'Write the merged files first, switch to them in one commit, and delete the old files last.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'lake_files',
+          columns: ['file', 'mb'],
+          rows: [
+            ['part-0000', 1],
+            ['part-0001', 2],
+            ['part-0002', 1],
+            ['part-0003', 1],
+            ['part-0004', 3],
+            ['part-0005', 1],
+            ['part-0006', 2],
+            ['part-0007', 1],
+          ],
+        },
+      ],
+      code: `-- Cost model: 20 ms to open a file plus 1 ms per MB.
+SELECT 'small files' AS layout, COUNT(*) AS files, SUM(mb) AS total_mb,
+       SUM(20 + mb) AS read_ms
+FROM lake_files
+UNION ALL
+SELECT 'compacted', 1, SUM(mb), 20 + SUM(mb)
+FROM lake_files
+ORDER BY read_ms DESC;`,
+      steps: [
+        'Lines 2-4: each of the 8 files pays 20 ms to open plus its MB, so the 12 MB take 8 x 20 + 12 = 172 ms.',
+        'Lines 6-7: compaction rewrites the same 12 MB as one file, which pays the 20 ms once: 32 ms.',
+        'The bytes are identical; the 140 ms difference is the opening of 7 files that no longer exist.',
+        'The rewrite is written beside the old files and switched in by one commit, so a reader never sees a table with files missing.',
+      ],
+      output: `layout | files | total_mb | read_ms
+small files | 8 | 12 | 172
+compacted | 1 | 12 | 32`,
+    },
+    exercises: ['de-small-1', 'de-small-2', 'de-small-3', 'de-small-4', 'de-small-6'],
+  },
   {
     id: 'de_etl_elt_staging/1',
     topicKeys: [Topic.DE_ETL_ELT_STAGING],

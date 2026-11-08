@@ -47,11 +47,11 @@ function emptyProgress(): UserProgress {
 }
 
 describe('section wiring', () => {
-  it('is Step 3, after Architecture & Open Table Formats and before Modeling Concepts', () => {
-    expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(2);
-    expect(DATA_ENG_PATH_ORDER[1]).toBe('Architecture & Open Table Formats');
-    expect(DATA_ENG_PATH_ORDER[3]).toBe('Modeling Concepts');
-    expect(DATA_ENG_SECTIONS[SECTION].weight).toBe('Step 3');
+  it('is Step 4, after Architecture & Open Table Formats and before Modeling Concepts', () => {
+    expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(3);
+    expect(DATA_ENG_PATH_ORDER[2]).toBe('Architecture & Open Table Formats');
+    expect(DATA_ENG_PATH_ORDER[4]).toBe('Modeling Concepts');
+    expect(DATA_ENG_SECTIONS[SECTION].weight).toBe('Step 4');
   });
 
   it('numbers every section by its place on the path', () => {
@@ -69,9 +69,9 @@ describe('section wiring', () => {
     expect(movingData.filter(q => q.course !== Course.DATA_ENGINEERING).map(q => q.id)).toEqual([]);
   });
 
-  it('unlocks for a learner who has mastered the two steps before it', () => {
+  it('unlocks for a learner who has mastered the three steps before it', () => {
     const progress = emptyProgress();
-    progress.masteredTopics = new Set(DATA_ENG_PATH_ORDER.slice(0, 2).flatMap(getTopicKeysForSection));
+    progress.masteredTopics = new Set(DATA_ENG_PATH_ORDER.slice(0, 3).flatMap(getTopicKeysForSection));
     const dePool = allQuestions.filter(q => getCourseForTopic(q.topic) === Course.DATA_ENGINEERING);
     const unlocked = SpacedRepetitionSystem.getUnlockedSections(dePool, progress);
     expect(unlocked!.sections).toContain(SECTION);

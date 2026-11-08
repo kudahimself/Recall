@@ -73,6 +73,9 @@ const DATA_ENG_TOPICS = new Set<string>([
   // Moving Data
   Topic.DE_ETL_ELT_STAGING, Topic.DE_FULL_VS_INCREMENTAL, Topic.DE_IDEMPOTENT_LOADS,
   Topic.DE_CHANGE_DATA_CAPTURE, Topic.DE_DEDUP_LATE_DATA, Topic.DE_BACKFILLS,
+  // Storage & Files
+  Topic.DE_ROW_VS_COLUMN_LAYOUT, Topic.DE_FILE_FORMATS, Topic.DE_DATA_SKIPPING,
+  Topic.DE_SMALL_FILES,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -483,7 +486,7 @@ export const DATABRICKS_PATH_ORDER = [
  * Data Engineering Concepts course — tool-agnostic.
  * Being rewritten section by section as decisions and designs (a lesson per
  * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
- * explain cards in review); Moving Data is the first rewritten section. The
+ * explain cards in review); Moving Data and Storage & Files are rewritten. The
  * older sections are MCQ-only, built as many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
@@ -497,15 +500,24 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'What Is Data Engineering?': ['de_what_is'],
       'Batch vs Streaming': ['de_batch_vs_streaming'],
       'OLTP vs OLAP': ['de_oltp_vs_olap'],
-      'Row vs Columnar Storage': ['de_rows_vs_columns'],
-      'What Is a File Format?': ['de_what_is_a_file_format'],
-      'Parquet Basics': ['de_parquet_basics'],
-      'Object Storage Basics': ['de_object_storage'],
       'Data Lake vs Data Warehouse': ['de_data_lake_warehouse'],
     },
   },
-  'Architecture & Open Table Formats': {
+  // The second rewritten section. It absorbs the old row vs columnar, file
+  // format, Parquet and object storage topics of Foundations, whose keys stay in
+  // DATA_ENG_TOPICS so stored scores still map to this course. It follows
+  // Foundations, whose OLTP vs OLAP topic is the workload these layouts serve.
+  'Storage & Files': {
     weight: 'Step 2',
+    topics: {
+      'Rows vs Columns': ['de_row_vs_column_layout'],
+      'File Formats: CSV, JSON, Avro, Parquet': ['de_file_formats'],
+      'Skipping Data: Stats, Row Groups & Pruning': ['de_data_skipping'],
+      'Object Storage & Small Files': ['de_small_files'],
+    },
+  },
+  'Architecture & Open Table Formats': {
+    weight: 'Step 3',
     topics: {
       'What Is a Lakehouse?': ['de_lakehouse'],
       'Why Put Tables on Files?': ['de_table_formats_intro'],
@@ -515,10 +527,11 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   },
   // The first rewritten section (decisions and designs). It absorbs the old
   // ETL / ELT, CDC and retries topics, whose keys stay in DATA_ENG_TOPICS so
-  // stored scores still map to this course. Placed at Step 3 by owner
-  // decision: a learner past Step 2 meets it before the old later steps.
+  // stored scores still map to this course. Placed at Step 4 by owner
+  // decision, after Storage & Files and Architecture: a learner past them
+  // meets it before the old later steps.
   'Moving Data': {
-    weight: 'Step 3',
+    weight: 'Step 4',
     topics: {
       'ETL, ELT & Staging': ['de_etl_elt_staging'],
       'Full vs Incremental Loads': ['de_full_vs_incremental'],
@@ -529,7 +542,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Modeling Concepts': {
-    weight: 'Step 4',
+    weight: 'Step 5',
     topics: {
       'Why Model Data?': ['de_why_model'],
       'Facts & Dimensions': ['de_tables_facts_dims'],
@@ -540,7 +553,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Streaming': {
-    weight: 'Step 5',
+    weight: 'Step 6',
     topics: {
       'What Is a Stream?': ['de_what_is_a_stream'],
       'Event Time vs Processing Time': ['de_event_vs_processing_time'],
@@ -551,7 +564,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Distributed Systems & Storage': {
-    weight: 'Step 6',
+    weight: 'Step 7',
     topics: {
       'Why Distribute?': ['de_why_distribute'],
       'Partitioning & Sharding': ['de_partitioning'],
@@ -561,7 +574,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
     },
   },
   'Operations, Quality & Modern DE': {
-    weight: 'Step 7',
+    weight: 'Step 8',
     topics: {
       'What Is Orchestration?': ['de_what_is_orchestration'],
       'Airflow, Dagster & Prefect': ['de_airflow_dagster'],
@@ -577,7 +590,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
   // it. Appending disrupts no existing unlock state; the cost is that the
   // hardware layer arrives as a deepening pass over material already seen.
   'Machines, Memory & Disks': {
-    weight: 'Step 8',
+    weight: 'Step 9',
     topics: {
       'The Memory Hierarchy': ['de_memory_hierarchy'],
       'RAM vs Disk': ['de_ram_vs_disk'],
@@ -593,6 +606,7 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
 
 export const DATA_ENG_PATH_ORDER = [
   'Foundations',
+  'Storage & Files',
   'Architecture & Open Table Formats',
   'Moving Data',
   'Modeling Concepts',
