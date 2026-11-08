@@ -80,7 +80,7 @@ export const jsBasicsParsonsQuestions: Question[] = [
     solution:
       'if (score >= 60) {\n  console.log("pass");\n} else {\n  console.log("fail");\n}',
     explanation:
-      'JS conditions go in parentheses and bodies in braces. A single `=` is assignment, not comparison — `if (score = 60)` would assign 60 to score and then test that as truthy. Python-style `if score >= 60:` is a syntax error in JS.',
+      'JS conditions go in parentheses and bodies in braces. A single `=` is assignment, not comparison - `if (score = 60)` would assign 60 to score and then test that as truthy. Python-style `if score >= 60:` is a syntax error in JS.',
     hints: ['Conditions in `(...)`, blocks in `{...}`. Compare with `>=`, not `=`.'],
     tags: ['conditional', 'comparison'],
     concepts: ['js-equality-coercion'],
@@ -101,7 +101,7 @@ export const jsBasicsParsonsQuestions: Question[] = [
     ],
     solution: 'const double = (n) => n * 2;\nconsole.log(double(5));',
     explanation:
-      'Arrow syntax is `(params) => expression` — the fat arrow is `=>`, not `->`. The expression form auto-returns. The `function` keyword and `=>` cannot be combined.',
+      'Arrow syntax is `(params) => expression` - the fat arrow is `=>`, not `->`. The expression form auto-returns. The `function` keyword and `=>` cannot be combined.',
     hints: ['Fat-arrow syntax: `(params) => expression`.'],
     tags: ['arrow', 'functions'],
     concepts: ['js-this-binding'],
@@ -145,14 +145,11 @@ export const jsBasicsParsonsQuestions: Question[] = [
       'const user = { name: "Alice", age: 30 };',
       'console.log(user.name);',
     ],
-    distractorLines: [
-      'const user = { name = "Alice", age = 30 };',
-      'console.log(user["name"]);',
-    ],
+    distractorLines: ['const user = { name = "Alice", age = 30 };', 'console.log(user[name]);'],
     solution:
       'const user = { name: "Alice", age: 30 };\nconsole.log(user.name);',
     explanation:
-      'Object literals use `key: value` (colon, not equals). Both `user.name` and `user["name"]` work for access — the dropped distractor is included to highlight that they\'re equivalent, but the canonical form for static keys is dot notation.',
+      'Object literals use `key: value` (a colon, not equals). `user.name` reads the property called name. `user[name]` without quotes looks up a variable called name and uses its value as the key, so it does not read the "name" property; the bracket form needs the key as a string, `user["name"]`.',
     hints: ['Object properties use `:` between key and value, not `=`.'],
     tags: ['objects', 'literal'],
     concepts: ['js-object-mutation'],
@@ -178,7 +175,7 @@ export const jsBasicsParsonsQuestions: Question[] = [
     solution:
       'const book = { title: "Dune", year: 1965, author: "Herbert" };\nconst { title, year } = book;\nconsole.log(title, year);',
     explanation:
-      'Object destructuring uses `{ }` and matches by key name. Array destructuring uses `[ ]` and matches by position — applying it to an object would not work as intended. The colon-form `{ title: t }` renames the destructured binding to `t`, which the question didn\'t ask for.',
+      'Object destructuring uses `{ }` and matches by key name. Array destructuring uses `[ ]` and matches by position, and an object is not iterable, so `const [title, year] = book` throws a TypeError. The colon form `{ title: t, year: y }` binds the values to t and y, so the next line\'s title and year would not be defined.',
     hints: ['Object destructuring uses `{ }` and matches keys by name.'],
     tags: ['destructuring', 'objects'],
     concepts: ['js-spread-destructuring', 'js-object-mutation'],
@@ -232,7 +229,7 @@ export const jsBasicsParsonsQuestions: Question[] = [
     solution:
       'const button = document.getElementById("save");\nbutton.addEventListener("click", () => {\n  console.log("Saved!");\n});',
     explanation:
-      'getElementById takes the bare id ("save"), NOT a CSS selector ("#save") — that\'s querySelector\'s job. The DOM API uses addEventListener("click", fn), not the camelCase onClick which is a React-only convention.',
+      'getElementById takes the bare id ("save"), NOT a CSS selector ("#save") - that\'s querySelector\'s job. The DOM API uses addEventListener("click", fn), not the camelCase onClick which is a React-only convention.',
     hints: [
       '`getElementById` takes a plain id without "#". The handler is registered via `addEventListener`.',
     ],
@@ -262,8 +259,8 @@ export const jsBasicsParsonsQuestions: Question[] = [
     solution:
       'async function fetchUser() {\n  const response = await fetch("/api/user");\n  const user = await response.json();\n  return user;\n}',
     explanation:
-      'Both fetch() and response.json() return Promises and must be awaited. Skipping `await` yields the Promise object itself, not the resolved value — so `response.json` would be called on a Promise (TypeError) and `user` would be a Promise wrapping the parsed body.',
-    hints: ['Both fetch and .json() are async — each one needs `await`.'],
+      'Both fetch() and response.json() return Promises and must be awaited. Skipping `await` yields the Promise object itself, not the resolved value - so `response.json` would be called on a Promise (TypeError) and `user` would be a Promise wrapping the parsed body.',
+    hints: ['Both fetch and .json() are async - each one needs `await`.'],
     tags: ['async', 'await', 'fetch'],
     concepts: ['js-promises-async'],
   },

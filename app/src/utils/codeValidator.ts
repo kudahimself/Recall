@@ -96,8 +96,255 @@ function stripComments(code: string, language: CodeLanguage): string {
   return stripLineComments(n, '#');
 }
 
+const JS_IDENT = /[A-Za-z_$][\w$]*/g;
+
+/**
+ * Positions inside a '...' or "..." string literal or the text of a `...`
+ * template literal. A template's `${...}` interpolations stay code; only
+ * their `${` and `}` delimiters are masked.
+ */
+function jsStringMask(code: string): boolean[] {
+  const mask = new Array<boolean>(code.length).fill(false);
+  let quote: string | null = null;
+  // One entry per open template (-1) or interpolation (its open-brace depth).
+  const stack: number[] = [];
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    const top = stack.length ? stack[stack.length - 1] : undefined;
+    if (quote) {
+      mask[i] = true;
+      if (c === '\\') { if (i + 1 < code.length) mask[++i] = true; } else if (c === quote) quote = null;
+    } else if (top === -1) {
+      mask[i] = true;
+      if (c === '\\') { if (i + 1 < code.length) mask[++i] = true; }
+      else if (c === '`') stack.pop();
+      else if (c === '$' && code[i + 1] === '{') { mask[++i] = true; stack.push(0); }
+    } else if (c === '"' || c === "'") {
+      quote = c;
+      mask[i] = true;
+    } else if (c === '`') {
+      mask[i] = true;
+      stack.push(-1);
+    } else if (top !== undefined && c === '{') {
+      stack[stack.length - 1]++;
+    } else if (top !== undefined && c === '}') {
+      if (top === 0) { mask[i] = true; stack.pop(); } else stack[stack.length - 1]--;
+    }
+  }
+  return mask;
+}
+
+/**
+ * The plain names a parameter list declares (`a, b = 1, ...rest`, TypeScript
+ * annotations allowed), with their offsets inside `list`. A destructured
+ * list (`{ id }`, `[a, b]`) declares nothing here: its names are property
+ * names too, so they are left as written.
+ */
+function jsParamNames(list: string): { name: string; at: number }[] | null {
+  if (/[{}[\]]/.test(list)) return null;
+  const out: { name: string; at: number }[] = [];
+  let depth = 0;
+  let start = 0;
+  const pieces: [string, number][] = [];
+  for (let i = 0; i <= list.length; i++) {
+    const c = list[i];
+    if (c === '(' || c === '<') depth++;
+    else if (c === ')' || c === '>') depth--;
+    if (i === list.length || (c === ',' && depth === 0)) {
+      pieces.push([list.slice(start, i), start]);
+      start = i + 1;
+    }
+  }
+  for (const [piece, offset] of pieces) {
+    if (!piece.trim()) continue;
+    const m = /^(\s*(?:\.\.\.)?\s*)([A-Za-z_$][\w$]*)\s*\??\s*(?::[^=]*)?(?:=[\s\S]*)?$/.exec(piece);
+    if (!m) return null;
+    out.push({ name: m[2], at: offset + m[1].length });
+  }
+  return out;
+}
+
+/**
+ * For every bracket outside a string: `close[i]` is the index of the bracket
+ * that closes the one opened at `i`, and `opener[i]` is the innermost bracket
+ * still open at `i` (-1 at top level).
+ */
+function jsBrackets(code: string, mask: boolean[]): { close: number[]; opener: number[] } {
+  const close = new Array<number>(code.length).fill(code.length);
+  const opener = new Array<number>(code.length).fill(-1);
+  const stack: number[] = [];
+  for (let i = 0; i < code.length; i++) {
+    opener[i] = stack.length ? stack[stack.length - 1] : -1;
+    if (mask[i]) continue;
+    const c = code[i];
+    if (c === '(' || c === '[' || c === '{') stack.push(i);
+    else if ((c === ')' || c === ']' || c === '}') && stack.length) close[stack.pop() as number] = i;
+  }
+  return { close, opener };
+}
+
+/** The previous non-space position before `i`, or -1. */
+function prevCode(code: string, i: number): number {
+  let p = i - 1;
+  while (p >= 0 && /\s/.test(code[p])) p--;
+  return p;
+}
+
+/** The next non-space position from `i`. */
+function nextCode(code: string, i: number): number {
+  let p = i;
+  while (p < code.length && /\s/.test(code[p])) p++;
+  return p;
+}
+
+/**
+ * Whether the `{` at `i` opens an object literal, rather than a block, a
+ * function body or a JSX `{expression}`.
+ */
+function isObjectBrace(code: string, i: number): boolean {
+  const p = prevCode(code, i);
+  if (p < 0) return false;
+  const c = code[p];
+  if ('(,[:?|&'.includes(c)) return true;
+  if (c === '=') return !(p === i - 1 && /[\w$]/.test(code[p - 1] ?? ''));
+  return /\breturn$/.test(code.slice(0, p + 1));
+}
+
+/**
+ * A function's parameter names are the learner's choice: `x => x * x` is the
+ * same callback as `n => n * n`, and `(n) => n * 2` the same as `n => n * 2`.
+ * Every parameter an arrow function or a `function` declares, and every
+ * `for (let i ...)` / `for (const x of ...)` loop variable, is renamed inside
+ * its own function or loop to a placeholder for its nesting depth and its
+ * position in the parameter list (`_p0_0`, `_p0_1`, `_p1_0`, ...), so code
+ * before it never shifts its placeholder, and an arrow's `{ return expr; }`
+ * body becomes the bare `expr` it returns. The reference goes through the same
+ * pass, so only the shape of the code is compared. Property reads
+ * (`item.price`), object keys and JSX attribute names keep their names, and a
+ * shorthand property `{ name }` keeps its key as `{ name: _p0_0 }`.
+ */
+function canonicalizeJsParams(source: string): string {
+  // An anonymous `function (n) { return expr; }` callback is the arrow
+  // `(n) => expr` written longhand.
+  const code = source.replace(/\bfunction\s*\(([^()]*)\)\s*\{\s*return\s+([^{};]*?)\s*;?\s*\}/g, '($1) => $2');
+  const mask = jsStringMask(code);
+  const { close, opener } = jsBrackets(code, mask);
+  type Scope = { start: number; end: number; names: { name: string; at: number }[]; depth: number };
+  const scopes: Scope[] = [];
+  const add = (names: { name: string; at: number }[] | null, base: number, start: number, end: number) => {
+    if (names?.length) scopes.push({ start, end, names: names.map(p => ({ name: p.name, at: base + p.at })), depth: 0 });
+  };
+  const blockEnd = (i: number) => close[i] + 1;
+  // An expression or statement runs to the first `,` or `;`, or to the
+  // bracket that closes around it.
+  const expressionEnd = (from: number, stopAtComma: boolean) => {
+    let i = from;
+    while (i < code.length) {
+      const c = code[i];
+      if (mask[i]) i++;
+      else if (c === '(' || c === '[' || c === '{') i = close[i] + 1;
+      else if (c === ')' || c === ']' || c === '}' || (stopAtComma && c === ',')) return i;
+      else if (c === ';') return i + 1;
+      else i++;
+    }
+    return i;
+  };
+  const bodyEnd = (from: number, stopAtComma: boolean) => {
+    const b = nextCode(code, from);
+    return code[b] === '{' && !mask[b] ? blockEnd(b) : expressionEnd(b, stopAtComma);
+  };
+  // Arrow functions: `x =>` or `(a, b) =>`.
+  for (let i = code.indexOf('=>'); i !== -1; i = code.indexOf('=>', i + 2)) {
+    if (mask[i]) continue;
+    const j = prevCode(code, i);
+    if (j < 0) continue;
+    if (code[j] === ')') {
+      let depth = 0;
+      let k = j;
+      for (; k >= 0; k--) {
+        if (mask[k]) continue;
+        if (code[k] === ')') depth++;
+        else if (code[k] === '(' && --depth === 0) break;
+      }
+      if (k >= 0) add(jsParamNames(code.slice(k + 1, j)), k + 1, k, bodyEnd(i + 2, true));
+    } else if (/[\w$]/.test(code[j])) {
+      let k = j;
+      while (k > 0 && /[\w$]/.test(code[k - 1])) k--;
+      if (code[k - 1] !== '.' && /^[A-Za-z_$]/.test(code[k])) {
+        add([{ name: code.slice(k, j + 1), at: 0 }], k, k, bodyEnd(i + 2, true));
+      }
+    }
+  }
+  // `function name(a, b) { ... }` and `function (a, b) { ... }`.
+  const fn = /\bfunction\b\s*\*?\s*[\w$]*\s*\(([^()]*)\)/g;
+  for (let m = fn.exec(code); m; m = fn.exec(code)) {
+    if (mask[m.index]) continue;
+    const listEnd = m.index + m[0].length;
+    let b = listEnd;
+    while (b < code.length && (code[b] !== '{' || mask[b])) b++;
+    add(jsParamNames(m[1]), listEnd - 1 - m[1].length, m.index, b < code.length ? blockEnd(b) : code.length);
+  }
+  // A loop's own variable (`for (let i = 0; ...)`, `for (const item of list)`)
+  // is the learner's choice too.
+  const loopVar = /\bfor\s*(\()\s*(?:let|const|var)\s+([A-Za-z_$][\w$]*)/g;
+  for (let m = loopVar.exec(code); m; m = loopVar.exec(code)) {
+    if (mask[m.index]) continue;
+    const paren = m.index + m[0].indexOf('(');
+    add([{ name: m[2], at: 0 }], m.index + m[0].length - m[2].length, m.index, bodyEnd(close[paren] + 1, false));
+  }
+  for (const s of scopes) {
+    s.depth = scopes.filter(o => o !== s && o.start <= s.start && s.end <= o.end && (o.start < s.start || o.end > s.end)).length;
+  }
+  const declAt = new Map<number, string>();
+  for (const s of scopes) s.names.forEach((p, i) => declAt.set(p.at, `_p${s.depth}_${i}`));
+  const placeholderFor = (name: string, at: number): string | undefined => {
+    let best: Scope | undefined;
+    for (const s of scopes) {
+      if (s.start <= at && at < s.end && (!best || s.depth > best.depth) && s.names.some(p => p.name === name)) best = s;
+    }
+    if (!best) return undefined;
+    const names = best.names;
+    let idx = -1;
+    names.forEach((p, i) => { if (p.name === name) idx = i; });
+    return `_p${best.depth}_${idx}`;
+  };
+  let out = '';
+  let last = 0;
+  JS_IDENT.lastIndex = 0;
+  for (let m = JS_IDENT.exec(code); m; m = JS_IDENT.exec(code)) {
+    const at = m.index;
+    const after = at + m[0].length;
+    if (mask[at] || /[\w$]/.test(code[at - 1] ?? '')) continue;
+    if (code[at - 1] === '.' && code.slice(Math.max(0, at - 3), at) !== '...') continue;
+    let replacement = declAt.get(at);
+    if (!replacement) {
+      if (code[after] === '=' && /[{"']/.test(code[after + 1] ?? '')) continue;
+      replacement = placeholderFor(m[0], at);
+      if (!replacement) continue;
+      const brace = opener[at];
+      if (brace >= 0 && code[brace] === '{' && isObjectBrace(code, brace)) {
+        const p = prevCode(code, at);
+        const n = nextCode(code, after);
+        if (!mask[p] && !mask[n] && (code[p] === '{' || code[p] === ',')) {
+          if (code[n] === ':' && code[n + 1] !== ':') continue;
+          if (code[n] === ',' || code[n] === '}') replacement = `${m[0]}: ${replacement}`;
+        }
+      }
+    }
+    out += code.slice(last, at) + replacement;
+    last = after;
+  }
+  out += code.slice(last);
+  return out
+    .replace(/\(\s*(_p\d+_\d+)\s*\)\s*=>/g, '$1 =>')
+    .replace(/=>\s*\{\s*return\s+([^{};]*?)\s*;?\s*\}/g, '=> $1');
+}
+
 function normalizeCode(code: string, language: CodeLanguage): string {
   let n = stripComments(code, language);
+  if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
+    n = canonicalizeJsParams(n);
+  }
 
   // Strip import/from lines (Python `from x import y`, JS `import x from 'y'`).
   // NEVER for SQL: `from` is a clause keyword there, and this pattern is

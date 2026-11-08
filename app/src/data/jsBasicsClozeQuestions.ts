@@ -49,7 +49,7 @@ if (attempts ___ MAX_RETRIES) {
     course: Course.WEB_DEV,
     language: CodeLanguage.JAVASCRIPT,
     question:
-      'Fill in the arrow that connects parameters to body, and the keyword that sends the result back.',
+      'Fill in the keyword that sends the result back from square, and the arrow that connects cube\'s parameter to its body.',
     template: `function square(n) {
   ___ n * n;
 }
@@ -59,7 +59,7 @@ const cube = (n) ___ n * n * n;`,
     solution:
       'function square(n) {\n  return n * n;\n}\n\nconst cube = (n) => n * n * n;',
     explanation:
-      'A `function` body needs an explicit `return` to send a value out — without it the function returns undefined. Arrow functions with a single expression auto-return that expression; the syntax separator is `=>` (fat arrow), not `->`.',
+      'A `function` body needs an explicit `return` to send a value out - without it the function returns undefined. Arrow functions with a single expression auto-return that expression; the syntax separator is `=>` (fat arrow), not `->`.',
     hints: ['One keyword for the function body, one symbol for arrow-function syntax.'],
     tags: ['functions', 'arrow', 'return'],
     concepts: ['js-this-binding'],
@@ -100,7 +100,7 @@ console.log(result);`,
     solution:
       'const nums = [1, 2, 3, 4, 5, 6];\nconst result = nums.filter((n) => n % 2 === 0).map((n) => n * 10);\nconsole.log(result);',
     explanation:
-      '.filter keeps elements where the callback returns truthy. .map transforms each element through the callback. Chaining works because both return new arrays. Order matters for performance — filter first to reduce work for map.',
+      '.filter keeps elements where the callback returns truthy. .map transforms each element through the callback. Chaining works because both return new arrays. Order matters for performance - filter first to reduce work for map.',
     hints: ['One method for "keep matching", one for "transform each".'],
     tags: ['array', 'filter', 'map'],
     concepts: ['js-array-methods'],
@@ -113,7 +113,7 @@ console.log(result);`,
     course: Course.WEB_DEV,
     language: CodeLanguage.JAVASCRIPT,
     question:
-      'Fill in the spread operator that copies an object and the operator that adds a new key while overriding one existing key.',
+      'Fill in the operator that copies the properties of defaults into the new object; the keys written after it override or add to what it copies.',
     template: `const defaults = { theme: "dark", lang: "en" };
 const user = { ___defaults, lang: "fr", fontSize: 14 };
 console.log(user);`,
@@ -121,39 +121,16 @@ console.log(user);`,
     solution:
       'const defaults = { theme: "dark", lang: "en" };\nconst user = { ...defaults, lang: "fr", fontSize: 14 };\nconsole.log(user);',
     explanation:
-      'The spread operator (...) copies the source object\'s properties into the new one. Properties listed AFTER the spread override matching keys from the source — so `lang: "fr"` wins over `lang: "en"`. New keys (fontSize) are simply added.',
+      'The spread operator (...) copies the source object\'s properties into the new one. Properties listed AFTER the spread override matching keys from the source - so `lang: "fr"` wins over `lang: "en"`. New keys (fontSize) are simply added.',
     hints: ['Three dots before the source-object name.'],
     tags: ['spread', 'objects', 'override'],
     concepts: ['js-spread-destructuring', 'js-object-mutation'],
   },
   {
-    id: 'js-basics-cloze-6',
-    type: QuestionType.CLOZE_CODE,
-    difficulty: Difficulty.BEGINNER,
-    topic: Topic.JS_ES6_PLUS,
-    course: Course.WEB_DEV,
-    language: CodeLanguage.JAVASCRIPT,
-    question:
-      'Fill in the brackets used to destructure each side correctly: an OBJECT into named bindings, then an ARRAY into positional bindings.',
-    template: `const user = { name: "Ada", age: 36 };
-const ___ name, age ___ = user;
-
-const colors = ["red", "green", "blue"];
-const ___ first, second ___ = colors;`,
-    blanks: ['{', '}', '[', ']'],
-    solution:
-      'const user = { name: "Ada", age: 36 };\nconst { name, age } = user;\n\nconst colors = ["red", "green", "blue"];\nconst [first, second] = colors;',
-    explanation:
-      'Object destructuring uses `{ }` and matches by key name. Array destructuring uses `[ ]` and matches by position. Mixing them up — `[name, age] = user` — would treat the object as iterable (TypeError) or assign undefined.',
-    hints: ['Objects use one bracket type; arrays use the other.'],
-    tags: ['destructuring', 'objects', 'arrays'],
-    concepts: ['js-spread-destructuring', 'js-object-mutation', 'js-array-methods'],
-  },
-  {
     id: 'js-basics-cloze-7',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.BEGINNER,
-    topic: Topic.JS_VARIABLES_TYPES,
+    topic: Topic.JS_ES6_PLUS,
     course: Course.WEB_DEV,
     language: CodeLanguage.JAVASCRIPT,
     question:
@@ -190,7 +167,7 @@ button.___("click", () => {
     solution:
       'const button = document.getElementById("save");\nbutton.addEventListener("click", () => {\n  console.log("Saved!");\n});',
     explanation:
-      'addEventListener("event", handler) is the standard DOM API for registering listeners. The camelCase onClick is React-only — it does not exist on raw DOM nodes. The lowercase onclick property exists but allows only one handler per event.',
+      'addEventListener("event", handler) is the standard DOM API for registering listeners. The camelCase onClick is React-only - it does not exist on raw DOM nodes. The lowercase onclick property exists but allows only one handler per event.',
     hints: ['The standard DOM method takes the event name and a handler.'],
     tags: ['dom', 'event-listener'],
     concepts: ['js-dom-events'],
@@ -203,7 +180,7 @@ button.___("click", () => {
     course: Course.WEB_DEV,
     language: CodeLanguage.JAVASCRIPT,
     question:
-      'Fill in the keywords that mark the function as a coroutine and pause it until each Promise settles.',
+      'Fill in the keyword that makes the function async (so it returns a Promise), and the keyword that pauses it until each Promise settles.',
     template: `___ function fetchUser() {
   const response = ___ fetch("/api/user");
   const user = ___ response.json();
@@ -234,7 +211,7 @@ console.log(sum);`,
     solution:
       'const nums = [1, 2, 3, 4];\nconst sum = nums.reduce((acc, n) => acc + n, 0);\nconsole.log(sum);',
     explanation:
-      'reduce((accumulator, currentValue) => newAccumulator, initialValue). The initial value (0) seeds the accumulator. Forgetting the initial value means the first element becomes the seed and the callback runs one fewer time — a classic source of "reduce of empty array with no initial value" errors.',
+      'reduce((accumulator, currentValue) => newAccumulator, initialValue). The initial value (0) seeds the accumulator. Forgetting the initial value means the first element becomes the seed and the callback runs one fewer time - a classic source of "reduce of empty array with no initial value" errors.',
     hints: ['Two callback params (accumulator, current item) plus the seed value.'],
     tags: ['array', 'reduce'],
     concepts: ['js-array-methods'],
@@ -276,7 +253,7 @@ title.___ = "Updated";`,
     solution:
       'const title = document.querySelector(".title");\ntitle.textContent = "Updated";',
     explanation:
-      'querySelector takes a CSS selector (".title" with the dot), unlike getElementById which takes a bare id. textContent sets the element\'s text safely; innerHTML would parse the string as HTML — an XSS risk for untrusted input.',
+      'querySelector takes a CSS selector (".title" with the dot), unlike getElementById which takes a bare id. textContent sets the element\'s text safely; innerHTML would parse the string as HTML - an XSS risk for untrusted input.',
     hints: ['CSS-selector lookup, then the safe text-setting property.'],
     tags: ['dom', 'querySelector', 'textContent'],
     concepts: ['js-dom-events'],
