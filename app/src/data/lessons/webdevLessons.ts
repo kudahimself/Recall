@@ -5,6 +5,8 @@
  * Section 2, JavaScript Fundamentals: every topic.
  * Section 3, React: every topic.
  * Section 4, TypeScript: every topic.
+ * Section 5, Next.js: every topic, Middleware & Auth and Optimization &
+ * Deployment as one lesson each, as their course topics pair them.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -29,6 +31,14 @@
  *
  * A TypeScript worked example is type-checked in strict mode under
  * check-lessons.js and then runs on node, printing its `output`.
+ *
+ * A Next.js worked example needs a Next.js project and its server, so it
+ * sets `runs: false` (the "Next.js file" kind): it imports from next or
+ * carries a "use client" / "use server" directive line, and its first-line
+ * comment names the file and the requests or clicks. Its output is what the
+ * page shows or the server answers after them. Every example was built with
+ * Next.js 15.5 (next build, then next start), the requests made with curl and
+ * headless Chromium, and the output read off the responses and the page.
  */
 import { CodeLanguage, Topic, TopicLesson } from '../../types';
 
@@ -2330,5 +2340,543 @@ wrong shape
 not JSON`,
     },
     exercises: ['ts-project-guard-mcq-1', 'ts-project-result-predict-1', 'ts-project-1', 'proj-ts-1', 'proj-ts-2'],
+  },
+  // ===== Section 5, Next.js =====
+  {
+    id: 'next_routing/1',
+    topicKeys: [Topic.NEXT_ROUTING],
+    step: 1,
+    title: 'App Router & Routing',
+    idea: [
+      lines(
+        "In the App Router the folders under `app/` are the URL: each folder is a segment, and a `page.tsx` inside it makes that path a page, so `app/books/page.tsx` serves `/books`.",
+        "A `layout.tsx` wraps every page below it and keeps its state while the reader moves between them; the root `app/layout.tsx` holds `<html>` and `<body>`.",
+        "Other special files sit beside a page: `loading.tsx`, `error.tsx` and `not-found.tsx`.",
+        "A layout or page sets the tab title and `<meta>` tags by exporting a `metadata` object.",
+      ),
+      lines(
+        "A folder in square brackets is a dynamic segment: `app/books/[id]/page.tsx` serves `/books/1` and `/books/abc`, and the page receives `params`.",
+        "In Next.js 15 `params` is a Promise, so the page is `async` and awaits it; every value is a string.",
+        "`[...slug]` catches all the remaining segments as an array, and a folder in parentheses, `(shop)`, groups files under a shared layout without adding a segment.",
+      ),
+      lines(
+        "Link pages with `<Link href>` from `next/link`, which moves without a full reload and prefetches the target.",
+        "From `next/navigation`, `notFound()` and `redirect(\"/login\")` stop a page while it renders, and in a Client Component `useRouter()` and `usePathname()` navigate and read the path.",
+        "Older apps use the Pages Router (`pages/`, `getServerSideProps`), which learners will still meet; new code goes in `app/`.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// app/layout.tsx            wraps every page
+// app/section/page.tsx      serves /section
+// app/section/[id]/page.tsx serves /section/<any id>
+// app/(group)/x/page.tsx    serves /x, no (group)
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>; // [...slug]: string[]
+}) {
+  const { id } = await params;     // a Promise in Next 15
+  const item = await find(id);
+  if (!item) notFound();           // not-found.tsx, 404
+  return <Link href="/section">Back</Link>;
+}`,
+    },
+    pitfall: lines(
+      "Reading `params.id` straight off the props, as Next.js 13 and 14 pages do, is a type error in Next.js 15 and works only through a deprecated fallback that Next.js 16 removes.",
+      "Make the page `async` and write `const { id } = await params` first.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/(shop)/books/[id]/page.tsx: /books/2, then /books/9
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+const titles: Record<string, string> = {
+  "1": "Emma",
+  "2": "Dune",
+};
+
+export default async function BookPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const title = titles[id];
+  if (!title) notFound();
+  return (
+    <main>
+      <h2>{title}</h2>
+      <Link href="/books">All books</Link>
+    </main>
+  );
+}`,
+      steps: [
+        "Line 1: `(shop)` is a route group, so this file serves `/books/2`, not `/shop/books/2`, and `[id]` matches any one segment after `/books`.",
+        "Lines 10-15: `params` is a Promise in Next.js 15, so the page is `async` and awaits it; for `/books/2` it gives `{ id: \"2\" }`, a string.",
+        "Line 17: `/books/9` has no title, so `notFound()` stops rendering and Next.js answers 404 with the nearest `not-found.tsx`, here its built-in page.",
+        "Line 21: `<Link>` renders an `<a href=\"/books\">` that moves to the list without a full reload.",
+      ],
+      output: `/books/2:  Dune, then the link "All books" (href /books)
+/books/9:  404, "404" and "This page could not be found."`,
+    },
+    exercises: ['next-route-cloze-2', 'next-route-3', 'next-route-catchall-predict-1', 'next-route-pathname-cloze-1', 'next-route-catchall-cloze-1'],
+  },
+  {
+    id: 'next_server_components/1',
+    topicKeys: [Topic.NEXT_SERVER_COMPONENTS],
+    step: 1,
+    title: 'Server & Client Components',
+    idea: [
+      lines(
+        "In the App Router every component is a Server Component unless its file says otherwise.",
+        "A Server Component runs only on the server, at build time or per request: it can be `async`, await a database or `fetch` directly and read secrets, and none of its code is sent to the browser.",
+        "It cannot hold state, run effects or handle events, because it never runs in the browser.",
+      ),
+      lines(
+        "`\"use client\"` as the first line of a file makes it a Client Component, and everything it imports joins the browser bundle.",
+        "A Client Component is still rendered to HTML on the server first, then hydrated in the browser, where `useState`, `useEffect`, `onClick` and browser APIs work.",
+      ),
+      lines(
+        "A Server Component can render a Client Component and pass it props, but the props travel from server to browser, so they must be serializable: strings, numbers, booleans, plain objects and arrays, Dates and JSX.",
+        "Keep `\"use client\"` at the leaves: put the interactive part in a small Client Component and pass server-rendered content into it as `children`.",
+        "A Client Component cannot import a Server Component, but it can receive one that way.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// app/page.tsx: a Server Component, the default
+import Panel from "./Panel";
+
+export default async function Page() {
+  const rows = await db.query();   // server only
+  // props must be serializable: no functions
+  return (
+    <Panel label="Show">
+      <Rows rows={rows} />
+    </Panel>
+  );
+}
+
+// app/Panel.tsx: a Client Component
+"use client"; // the first line of the file
+import { useState, type ReactNode } from "react";
+
+type Props = { label: string; children: ReactNode };
+
+export default function Panel({ label, children }: Props) {
+  const [open, setOpen] = useState(false); // client only
+  const toggle = () => setOpen(!open);
+  return (
+    <>
+      <button onClick={toggle}>{label}</button>
+      {open && children}
+    </>
+  );
+}`,
+    },
+    pitfall: lines(
+      "Passing a function prop, such as `onAdd={() => save(id)}`, from a Server Component to a Client Component fails: a function cannot be serialized to the browser.",
+      "Define the handler inside the Client Component, or pass a Server Action, a `\"use server\"` function, which Next.js can call across the boundary.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/shelf/page.tsx; the reader clicks Reserve three times
+import Reserve from "./Reserve";
+
+export default async function ShelfPage() {
+  const book = { title: "Dune", left: 3 }; // from the database
+  return (
+    <section>
+      <h2>{book.title}: {book.left} left</h2>
+      <Reserve left={book.left} />
+    </section>
+  );
+}
+
+// app/shelf/Reserve.tsx
+"use client";
+import { useState } from "react";
+
+export default function Reserve({ left }: { left: number }) {
+  const [held, setHeld] = useState(0);
+  return (
+    <button
+      disabled={held === left}
+      onClick={() => setHeld((h) => h + 1)}
+    >
+      Reserve ({held} of {left})
+    </button>
+  );
+}`,
+      steps: [
+        "Lines 4-5: `ShelfPage` has no directive, so it is a Server Component: it can be `async` and read the database, and none of its code reaches the browser.",
+        "Line 9: it renders the Client Component and passes `left`, a number, which is serializable; a function prop such as `onReserve` could not cross.",
+        "Line 15: `\"use client\"` makes this file a Client Component, so `useState` and `onClick` work; it is rendered on the server as `Reserve (0 of 3)` and then hydrated.",
+        "Lines 22-23: each click changes state in the browser only, and the third disables the button; the heading stays `Dune: 3 left`, because the server rendered it once.",
+      ],
+      output: `at first:        Dune: 3 left, Reserve (0 of 3)
+after 2 clicks:  Dune: 3 left, Reserve (2 of 3)
+after 3 clicks:  Dune: 3 left, Reserve (3 of 3), disabled`,
+    },
+    exercises: ['next-sc-cloze-2', 'next-sc-serializable-mcq-1', 'next-sc-boundary-predict-1', 'next-sc-serializable-cloze-1', 'next-sc-2'],
+  },
+  {
+    id: 'next_data_fetching/1',
+    topicKeys: [Topic.NEXT_DATA_FETCHING],
+    step: 1,
+    title: 'Data Fetching & Caching',
+    idea: [
+      lines(
+        "A Server Component fetches its own data: make it `async`, `await fetch(url)` or a database call, and render the result.",
+        "Next.js then decides when the page renders: a page that reads nothing from the request is static, rendered at build time and served from the cache.",
+        "Reading `cookies()`, `headers()` or `searchParams`, or a `fetch` with `cache: \"no-store\"`, makes it dynamic, rendered on every request.",
+      ),
+      lines(
+        "`fetch(url, { next: { revalidate: 60 } })` (or `export const revalidate = 60` on the page) keeps the result for 60 seconds; after that the next visitor still gets the stale page while Next.js regenerates it in the background (ISR).",
+        "`next: { tags: [\"books\"] }` labels cached data, and `revalidateTag(\"books\")` or `revalidatePath(\"/books\")` from `next/cache`, called in a Server Action after a write, throws it away at once.",
+        "`generateStaticParams` lists the dynamic segment values to prerender at build time.",
+      ),
+      lines(
+        "Awaits one after another form a waterfall; start independent requests together with `Promise.all`.",
+        "Stream what is slow: a `loading.tsx` shows at once while its route segment renders, and `<Suspense fallback>` around a slow async component lets the rest of the page appear first.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `import { Suspense } from "react";
+
+export default async function Page() {
+  // ISR: cached, refreshed after 60 s
+  const a = await fetch(url, { next: { revalidate: 60 } });
+  // cached until revalidateTag("t")
+  const b = await fetch(url, { next: { tags: ["t"] } });
+  // fetched per request: the page is dynamic
+  const c = await fetch(url, { cache: "no-store" });
+  // started together, not one by one
+  const [x, y] = await Promise.all([getX(), getY()]);
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <SlowPart />
+    </Suspense>
+  );
+}
+
+export async function generateStaticParams() {
+  return [{ id: "1" }, { id: "2" }]; // built ahead
+}`,
+    },
+    pitfall: lines(
+      "`revalidate: 60` does not refetch every 60 seconds: the first visitor after the window still gets the stale page, and only the next one sees new data.",
+      "When your own app changes the data, call `revalidatePath` or `revalidateTag` in the Server Action that wrote it instead of waiting for the timer.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/picks/page.tsx: book API 300 ms, reviews API 500 ms
+const API = "https://books.test";
+
+export default async function PicksPage() {
+  const started = Date.now();
+  const [book, reviews] = await Promise.all([
+    fetch(\`\${API}/books/7\`, {
+      next: { revalidate: 3600 },
+    }).then((r) => r.json()),
+    fetch(\`\${API}/books/7/reviews\`, {
+      next: { tags: ["reviews"] },
+    }).then((r) => r.json()),
+  ]);
+  console.log("fetched in", Date.now() - started, "ms");
+  return <p>{book.title}: {reviews.length} reviews</p>;
+}
+
+// app/picks/actions.ts: run after a reader adds a review
+"use server";
+import { revalidateTag } from "next/cache";
+
+export async function reviewPosted() {
+  revalidateTag("reviews");
+}`,
+      steps: [
+        "Lines 6-13: `Promise.all` starts both requests at once, so the server log reads about 500 ms, not the 800 ms of two awaits in a row.",
+        "Line 8: the book is cached for an hour; line 11 tags the reviews so they can be thrown away on demand.",
+        "Lines 14-15: the page reads nothing from the request, so it is static: rendered at `next build`, where the log line appears, and served from the cache.",
+        "Line 23: after a review is added, `revalidateTag(\"reviews\")` expires only the tagged data, so the next visit refetches the reviews and reuses the cached book.",
+      ],
+      output: `server log at build:  fetched in about 500 ms
+every visit:          Dune: 2 reviews
+after reviewPosted:   Dune: 3 reviews (only reviews refetched)`,
+    },
+    exercises: ['next-fetch-cloze-1', 'next-fetch-3', 'next-fetch-isr-predict-1', 'next-parallel-cloze-1', 'next-parallel-1'],
+  },
+  {
+    id: 'next_api_routes/1',
+    topicKeys: [Topic.NEXT_API_ROUTES],
+    step: 1,
+    title: 'API Routes & Server Actions',
+    idea: [
+      lines(
+        "A `route.ts` file makes a URL an HTTP endpoint instead of a page: it exports one async function per method it answers, `GET`, `POST`, `PUT`, `PATCH` or `DELETE`.",
+        "Each receives the `Request` (or `NextRequest`) and returns a `Response`; `NextResponse.json(data, { status })` sends JSON, 200 unless you say otherwise, and a method the file does not export gets 405.",
+        "Read the body with `await request.json()`, the query with `request.nextUrl.searchParams.get(\"q\")`, and a dynamic segment from the second argument's `params`, a Promise in Next.js 15.",
+      ),
+      lines(
+        "A Server Action is an async function marked `\"use server\"`, at the top of its file or of its body, that runs on the server when the page calls it.",
+        "Given to `<form action={fn}>`, it receives the form's `FormData`, works even before JavaScript loads, and ends with `revalidatePath` to show the change or `redirect` to move on.",
+        "In the form, `useActionState` (from `react`) carries the action's returned errors back, and `useFormStatus` (from `react-dom`) reports `pending`.",
+      ),
+      lines(
+        "Use Server Actions for your own forms and mutations, and route handlers for callers outside your React pages: webhooks, mobile apps, other servers.",
+        "Both are public endpoints, so validate the input and check the user inside them.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// app/api/things/route.ts: an HTTP endpoint
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  // null when the query has no q
+  const q = request.nextUrl.searchParams.get("q");
+  return NextResponse.json(await list(q)); // 200
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  if (!body.name) {
+    const error = "name is required";
+    return NextResponse.json({ error }, { status: 400 });
+  }
+  const row = await create(body);
+  return NextResponse.json(row, { status: 201 });
+}
+
+// app/actions.ts: Server Actions, <form action={save}>
+"use server";
+import { revalidatePath } from "next/cache";
+
+export async function save(formData: FormData) {
+  await create({ name: formData.get("name") });
+  revalidatePath("/things"); // re-render with the new row
+}`,
+    },
+    pitfall: lines(
+      "A Server Action that writes but never calls `revalidatePath` (or `revalidateTag`) leaves a cached page showing the old data, even after a reload, so the change looks lost.",
+      "End every mutation with the revalidate call for the pages that show the data, then `redirect` if the user moves on.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/wishlist/page.tsx: db is the app's database client;
+// the reader adds Dune, then clicks Add with the box empty
+import { revalidatePath } from "next/cache";
+import { db } from "@/lib/db";
+
+export default async function WishlistPage() {
+  const titles = await db.wishlist.list();
+  async function add(formData: FormData) {
+    "use server";
+    const title = String(formData.get("title") ?? "").trim();
+    if (!title) return;
+    await db.wishlist.add(title);
+    revalidatePath("/wishlist");
+  }
+  return (
+    <form action={add}>
+      <p>{titles.join(", ")}</p>
+      <input name="title" />
+      <button>Add</button>
+    </form>
+  );
+}`,
+      steps: [
+        "Line 9: `\"use server\"` as the first line of `add` makes it a Server Action; the browser gets a reference to call, never its code.",
+        "Lines 10-11: an empty title is refused on the server, so the second click changes nothing.",
+        "Line 13: the page is static, so `revalidatePath` is what makes Next.js render it again with `Dune`; without it the list would stay `Emma` even after a reload.",
+        "Line 16: `<form action={add}>` posts the form to the action, which receives its `FormData`; React clears the box once the action finishes.",
+      ],
+      output: `at first:             Emma
+after Add with Dune:  Emma, Dune (the box is cleared)
+after Add, empty:     Emma, Dune`,
+    },
+    exercises: ['next-api-status-predict-1', 'next-api-parsons-1', 'next-api-cloze-1', 'next-api-3', 'next-api-2'],
+  },
+  {
+    id: 'next_middleware/1',
+    topicKeys: [Topic.NEXT_MIDDLEWARE, Topic.NEXT_AUTH],
+    step: 1,
+    title: 'Middleware & Auth',
+    idea: [
+      lines(
+        "`middleware.ts`, at the project root beside `app/`, runs before every request its `config.matcher` lists, ahead of the cache and the route.",
+        "It gets a `NextRequest` and returns `NextResponse.next()` to go on, `NextResponse.redirect(url)` to send the browser elsewhere, or `NextResponse.rewrite(url)` to serve another path under the same URL.",
+        "A matcher such as `\"/dashboard/:path*\"` covers `/dashboard` and every path below it.",
+      ),
+      lines(
+        "Middleware runs on every matched request, by default on the lightweight Edge runtime, so keep it to fast checks of cookies and headers, with no database calls.",
+        "It can read `request.cookies` and set cookies and headers on the response it returns.",
+        "Next.js 16 renames the file and its function to `proxy`.",
+      ),
+      lines(
+        "After login, keep the session in a cookie set by the server: `const store = await cookies()` from `next/headers`, then `store.set(\"session\", token, { httpOnly: true, secure: true, sameSite: \"lax\" })`, and `store.delete(\"session\")` to log out.",
+        "The token is often a signed JWT, checked with `jwtVerify` from `jose`; OAuth logins such as Google end the same way, with your server setting this cookie.",
+        "Middleware is the first gate, not the only one: check the session again where data is read or changed, since a Server Action can be called directly.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.TYPESCRIPT,
+      code: `// middleware.ts, beside app/
+import { NextRequest, NextResponse } from "next/server";
+
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get("session")?.value;
+  if (!token) {
+    const login = new URL("/login", request.url);
+    return NextResponse.redirect(login);
+  }
+  const res = NextResponse.next();    // go on to the route
+  res.headers.set("x-name", "value"); // or res.cookies.set
+  return res;
+}
+
+// /area and every path below it
+export const config = { matcher: ["/area/:path*"] };
+
+// in a Server Action or route handler
+const store = await cookies();        // from next/headers
+store.set("session", token, {
+  httpOnly: true, secure: true, sameSite: "lax", path: "/",
+});
+store.delete("session");              // log out`,
+    },
+    pitfall: lines(
+      "Keeping the session token in `localStorage`, or in a cookie without `httpOnly`, lets any script injected into the page read it and send it away.",
+      "Set it from the server as an `httpOnly`, `secure`, `sameSite` cookie: scripts cannot see it, and the browser still sends it with every request.",
+    ),
+    worked: {
+      language: CodeLanguage.TYPESCRIPT,
+      runs: false,
+      code: `// middleware.ts, requests: /account/orders without a session
+// cookie, /account/orders with one, then /books
+import { NextRequest, NextResponse } from "next/server";
+
+export function middleware(req: NextRequest) {
+  if (!req.cookies.has("session")) {
+    const login = new URL("/login", req.url);
+    login.searchParams.set("from", req.nextUrl.pathname);
+    return NextResponse.redirect(login);
+  }
+  return NextResponse.next();
+}
+
+export const config = { matcher: ["/account/:path*"] };`,
+      steps: [
+        "Line 14: the matcher sends `/account` and every path below it through the middleware; `/books` is outside it, so the middleware never runs for that request.",
+        "Lines 6-8: with no `session` cookie it builds the login URL with the page the visitor wanted in `from` (`/` is encoded as `%2F`), so login can send them back.",
+        "Line 9: `NextResponse.redirect` answers 307, a temporary redirect, and the browser follows it to `/login`.",
+        "Line 11: with the cookie, `NextResponse.next()` lets the request reach the orders page; a real app verifies the token here (with `jwtVerify`) and again where the orders are read.",
+      ],
+      output: `/account/orders, no cookie:
+  307, redirect to /login?from=%2Faccount%2Forders
+/account/orders, session cookie:
+  200, the orders page
+/books:
+  200, the middleware does not run`,
+    },
+    exercises: ['next-mw-matcher-predict-1', 'next-mw-parsons-1', 'sec-auth-4', 'next-auth-httponly-predict-1', 'next-auth-session-cookie-1'],
+  },
+  {
+    id: 'next_optimization/1',
+    topicKeys: [Topic.NEXT_OPTIMIZATION, Topic.NEXT_DEPLOYMENT],
+    step: 1,
+    title: 'Optimization & Deployment',
+    idea: [
+      lines(
+        "`<Image>` from `next/image` resizes and converts images, lazy-loads those below the fold and reserves their space so the page does not jump.",
+        "It needs `alt` and either `width` and `height`, or `fill` inside a positioned parent with `sizes`; the image the reader sees first gets `priority`, which preloads it.",
+        "`next/font` downloads a font at build time and serves it from your own site with no layout shift, and `next/dynamic` loads a heavy component only when it renders (`ssr: false`, in a Client Component, for one that needs `window`).",
+      ),
+      lines(
+        "Export `metadata`, or `generateMetadata` when it depends on data, from a layout or page to set the title, description and Open Graph tags.",
+        "A layout's `title: { template: \"%s | Shop\", default: \"Shop\" }` wraps the title of each page below it.",
+      ),
+      lines(
+        "`next build` prerenders the static pages and compiles the rest, and `next start` serves them on any Node host; Vercel runs this for you, and `output: \"standalone\"` in `next.config.ts` makes a small server folder for a Docker image.",
+        "Server code reads `process.env` when it runs (at build time for a static page), but a `NEXT_PUBLIC_` variable is written into the browser bundle at build time, so changing it means a new build.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `import Image from "next/image";
+import { Inter } from "next/font/google";
+import type { Metadata } from "next";
+
+// downloaded at build time, served from your site
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  // a page that sets title: "Page" shows "Page | Site"
+  title: { template: "%s | Site", default: "Site" },
+  description: "What the site is",
+};
+
+export default function Hero() {
+  return (
+    <div className={inter.className}>
+      <Image src="/hero.jpg" alt="what it shows"
+        width={1200} height={600} priority />
+    </div>
+  );
+}
+// process.env.SECRET: server code only
+// process.env.NEXT_PUBLIC_X: in the bundle, fixed at build`,
+    },
+    pitfall: lines(
+      "Prefixing a secret with `NEXT_PUBLIC_` to make it readable in a Client Component publishes it: the value is written into the JavaScript every visitor downloads.",
+      "Read secrets in server code (a Server Component, Server Action or route handler) and pass only the result to the client.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// app/editions/[slug]/page.tsx for /editions/dune;
+// the server was started with SHOP_NAME=Larder
+import Image from "next/image";
+import type { Metadata } from "next";
+
+type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata(
+  { params }: Props,
+): Promise<Metadata> {
+  const { slug } = await params;
+  return { title: \`\${slug} | \${process.env.SHOP_NAME}\` };
+}
+
+export default async function EditionPage({ params }: Props) {
+  const { slug } = await params;
+  return (
+    <Image src={\`/covers/\${slug}.jpg\`} alt={\`Cover of \${slug}\`}
+      width={300} height={450} priority />
+  );
+}`,
+      steps: [
+        "Lines 8-13: `generateMetadata` receives the same `params` as the page and sets the tab title; `SHOP_NAME` has no `NEXT_PUBLIC_` prefix, so it is read on the server when the page renders and never reaches the browser.",
+        "Lines 18-19: `width` and `height` reserve a 300 by 450 box before the image loads, and `alt` describes it.",
+        "Line 18: the `src` the browser gets points at `/_next/image`, which serves the cover resized (`w=640` for a 2x screen, `w=384` for 1x) and compressed.",
+        "Line 19: `priority` adds a preload link in the head and leaves out `loading=\"lazy\"`, because this is the image the reader sees first.",
+      ],
+      output: `tab title:  dune | Larder
+<head>:     <link rel="preload" as="image"> for the cover
+<img>:      alt="Cover of dune" width="300" height="450",
+            no loading="lazy", and the src
+            /_next/image?url=%2Fcovers%2Fdune.jpg&w=640&q=75`,
+    },
+    exercises: ['next-opt-font-mcq-1', 'next-opt-title-template-predict-1', 'next-opt-parsons-1', 'next-deploy-public-cloze-1', 'next-opt-3'],
   },
 ];
