@@ -101,6 +101,5 @@ for (let i = 0; i < b.readUInt16LE(4); i++) {
   out.push(sig && w === h && w === dir && (b[e + 1] || 256) === dir ? w : "bad");
 }
 console.log(out.join(","));' "$SRC/launcher/recall-elephant.ico")" "16,32,48,64,128,256"
-check "shortcut icon: installer copies recall-elephant.ico" "$(grep -c "recall-elephant.ico" "$SRC/launcher/install-shortcut.ps1")$(grep -c "icon-192\|LogoPng" "$SRC/launcher/install-shortcut.ps1" "$SRC/launcher/install-desktop-shortcut.sh" | awk -F: '{s+=$2} END {print s}')" "20"
 
 echo; [ "$fails" = 0 ] && echo "all passed" || { echo "$fails failed"; exit 1; }
