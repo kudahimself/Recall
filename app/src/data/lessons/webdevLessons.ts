@@ -12,6 +12,7 @@
  * Section 8, Testing: its one topic.
  * Section 9, Advanced Next.js Patterns: every topic, Error Handling & Auth
  * Depth as one lesson, as its course topic pairs them.
+ * Section 10, Accessibility: its one topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -21,6 +22,10 @@
  * Chromium at the viewport widths its first-line comment gives, the Tailwind
  * ones with Tailwind 4 and its default theme, and the output was read off
  * the rendered page.
+ * The Accessibility one was rendered the same way, its keys pressed through
+ * the DevTools protocol, and its output is the focused element's role, name
+ * and state as Chromium's accessibility tree gave them, with the live
+ * region's text.
  *
  * A JavaScript worked example runs on node under check-lessons.js and prints
  * its `output`; one that needs the DOM is an HTML page with a `<script>`,
@@ -3579,5 +3584,109 @@ Grace (admin):  500, "Report unavailable (ref 3649392877)" and Retry;
                 with digest '3649392877'`,
     },
     exercises: ['next-error-handling-3', 'next-error-handling-layout-predict-1', 'next-error-handling-cloze-2', 'next-auth-deep-3', 'next-auth-deep-session-cb-predict-1'],
+  },
+
+  // ===== Section 10, Accessibility =====
+  {
+    id: 'accessibility/1',
+    topicKeys: [Topic.ACCESSIBILITY],
+    step: 1,
+    title: 'WCAG, ARIA & Keyboard Navigation',
+    idea: [
+      lines(
+        "WCAG sets testable success criteria at three levels, A, AA and AAA, and AA is the one most laws and contracts name.",
+        "At AA, normal text needs a contrast of 4.5:1 with its background, and large text (24px, or 18.66px bold) and the edges of controls 3:1.",
+        "An image that carries information gets an `alt` describing it, a decorative one `alt=\"\"`, and headings run from one `<h1>` down without skipping a level.",
+        "Checkers such as axe and Lighthouse find about a third of the problems; the rest takes a keyboard and a screen reader (NVDA, VoiceOver).",
+      ),
+      lines(
+        "A screen reader announces a control by its role, its accessible name and its state, as in \"Filters, button, collapsed\".",
+        "Native elements bring all three and the keyboard with them: a `<button>` takes focus and fires `click` on Enter and Space, and a `<label>` names its input.",
+        "ARIA changes only what is announced, never what the element does, so it fills the gaps: `aria-label` names an icon button, `aria-labelledby` takes the name from another element's text, `aria-describedby` adds a hint after it, and `aria-expanded` reports a state your script keeps up to date.",
+        "The name is the first one present of `aria-labelledby`, `aria-label`, the content or `<label>`, and `title`.",
+      ),
+      lines(
+        "Whatever a mouse can do, the keyboard must too: Tab and Shift+Tab move between controls in document order, Enter and Space press them, Escape closes.",
+        "`tabindex=\"0\"` puts a custom element into that order where it sits, `tabindex=\"-1\"` lets script focus it with `.focus()` while Tab skips it, and a positive value jumps it ahead of everything, which is why it is never used.",
+        "Keep a visible focus ring, and honour `prefers-reduced-motion` by cutting animation.",
+      ),
+      lines(
+        "When the page changes without loading, say so: move focus to the new view's heading, into an opened dialog and back to its trigger on close.",
+        "A live region speaks its text when it changes: `aria-live=\"polite\"` waits for the screen reader to finish, `role=\"alert\"` interrupts, so keep that for errors.",
+        "A visually hidden class shrinks text out of sight but leaves it to the screen reader, where `display: none` and `hidden` remove it for everyone.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.HTML,
+      code: `<!-- native first: role, name and keys come free -->
+<button type="button">Text</button>
+<label for="field-id">Name</label> <input id="field-id">
+<img src="file.jpg" alt="what it shows">
+<img src="rule.svg" alt="">          <!-- decoration -->
+
+<!-- ARIA fills the gaps native HTML leaves -->
+<button aria-label="Name"><svg>...</svg></button>
+<input aria-describedby="hint-id">   <!-- hint -->
+<button aria-expanded="false"
+        aria-controls="panel-id">Text</button>
+
+<!-- keyboard -->
+<div tabindex="0">in the Tab order, where it sits</div>
+<div tabindex="-1">focused only by el.focus()</div>
+<!-- never tabindex="1" or above -->
+
+<!-- announce what changed -->
+<p aria-live="polite" class="visually-hidden">status</p>
+<p role="alert">error</p>            <!-- interrupts -->`,
+    },
+    pitfall: lines(
+      "A `<div>` or `<span>` with an `onclick` looks like a button but is not one: it gets no Tab stop, no Enter or Space and no role, so a keyboard or screen reader user cannot use it.",
+      "Use a `<button>`; `role=\"button\"` alone fixes only the announcement, and you would still owe it `tabindex=\"0\"` and a key handler.",
+    ),
+    worked: {
+      language: CodeLanguage.HTML,
+      runs: false,
+      code: `<!-- Tab pressed three times, Enter, then Tab -->
+<style>
+  .sr-only:not(:focus) { position: absolute; width: 1px;
+    height: 1px; overflow: hidden; clip-path: inset(50%); }
+</style>
+<a href="#results" class="sr-only">Skip to results</a>
+<button aria-label="Search the catalogue">
+  <img src="search.svg" alt="">
+</button>
+<span onclick="openHelp()">Help</span>
+<button aria-expanded="false" aria-controls="filters">
+  Filters
+</button>
+<fieldset id="filters" hidden>
+  <label><input type="checkbox"> Poetry</label>
+</fieldset>
+<p aria-live="polite" class="sr-only" id="note"></p>
+<main id="results" tabindex="-1">12 books</main>
+<script>
+  const btn = document.querySelector("[aria-controls=filters]");
+  btn.addEventListener("click", () => {
+    const open = btn.getAttribute("aria-expanded") === "true";
+    btn.setAttribute("aria-expanded", String(!open));
+    document.getElementById("filters").hidden = open;
+    document.getElementById("note").textContent =
+      open ? "Filters hidden" : "Filters shown";
+  });
+</script>`,
+      steps: [
+        "Lines 2-6: the skip link is the first Tab stop; the class shrinks it out of sight until it has focus, then it shows at the top left, and following it moves focus to `<main>`, which `tabindex=\"-1\"` on line 18 lets take focus without becoming a Tab stop.",
+        "Lines 7-9: the button holds only an icon, whose `alt=\"\"` marks it as decoration, so `aria-label` gives the button its name, and the second Tab announces \"Search the catalogue, button\".",
+        "Line 10: a `<span>` with an `onclick` is not focusable, so the third Tab passes over Help to Filters; a keyboard user can never open help, which a `<button>` would fix.",
+        "Lines 11-13 and 21-27: Enter on a native button fires `click`, and the handler flips `aria-expanded`, shows the fieldset and writes the note, which the polite live region on line 17 reads out once the screen reader is quiet.",
+        "Line 15: the `<label>` around the checkbox names it, and now that the fieldset is shown the last Tab lands on it.",
+      ],
+      output: `Tab 1: link "Skip to results", shown at the top left
+Tab 2: button "Search the catalogue"
+Tab 3: button "Filters", collapsed
+Enter: button "Filters", expanded; live region: "Filters shown"
+Tab 4: checkbox "Poetry", not checked`,
+    },
+    exercises: ['a11y-wcag-levels-1', 'a11y-visually-hidden-cloze-1', 'a11y-aria-labels-1', 'a11y-tab-order-predict-1', 'a11y-aria-live-coding-1'],
   },
 ];
