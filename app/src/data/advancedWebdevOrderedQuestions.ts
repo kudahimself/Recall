@@ -669,7 +669,6 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   // TS_PROJECT
   q('proj-ts-1'),
   q('proj-ts-2'),
-  q('proj-ts-3'),
   // NEXT_DEPLOYMENT projects
   q('proj-next-1'),
   q('proj-next-2'),
