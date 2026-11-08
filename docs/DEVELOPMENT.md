@@ -406,7 +406,7 @@ In a cloze, Enter goes to the next blank and checks on the last; in Parsons, up 
 Direction A "Night": dark purple, one brand fill for primary buttons in every course (a course's hue is only a marker).
 Design tokens (colour, type scale on a 16px root, spacing, radii, motion) live in `src/styles/tokens.css` and the few element rules in `src/styles/base.css`; every other stylesheet is a CSS Module beside its component, on tokens only (`app/scripts/check-css-tokens.js` checks every stylesheet).
 Fonts are IBM Plex Sans and Mono, self-hosted through `@fontsource`.
-The logo is the yellow elephant tile (`--brand` / `--on-brand` in `tokens.css`, never a button or text colour); `src/brand/recall-mark.svg` is its one source and `npm run build:icons` (`scripts/build-icons.js`) regenerates every icon in `public/` from it.
+The logo is the yellow elephant tile (`--brand` / `--on-brand` in `tokens.css`, never a button or text colour); `src/brand/recall-mark.svg` is its one source and `npm run build:icons` (`scripts/build-icons.js`) regenerates every icon in `public/` and the desktop shortcut's `launcher/recall-elephant.ico` from it.
 Layouts target a desktop or laptop viewport without page scrolling; below 768px a screen is one column that scrolls, the question card grows with its content, and key hints give way (a phone has no keyboard).
 
 **Monaco Editor config:**

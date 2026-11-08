@@ -76,6 +76,7 @@ A double-click "Recall" icon on the Windows Desktop that starts a production bui
   On first use, export progress from `http://localhost:3000` (dev server) and import it at `http://localhost:4300`.
   Opening Recall in another browser, Firefox profile or address also starts empty.
 - **Install (once, in WSL):** `launcher/install-desktop-shortcut.sh` copies the launcher to `%LOCALAPPDATA%\Recall` and creates `Recall.lnk` on your Desktop.
+  Its icon is `launcher/recall-elephant.ico` (the elephant at 16 to 256 px), which `npm run build:icons` generates with the app's other icons.
 - **Use:** double-click Recall.
   If nothing answers on the port it starts the server hidden and opens a normal Firefox window (default profile).
   The server answers immediately and never waits for a build: it serves the last good `app/build`, or a "Recall is building" page that refreshes itself into the app when no build exists yet (a few minutes, first time only).
