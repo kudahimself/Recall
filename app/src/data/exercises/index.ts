@@ -8,7 +8,8 @@
  * Mastery & Advanced and Real-time & Monitoring: every Backend section.
  * Then Databricks, which run on local PySpark and Delta: Lakehouse Platform,
  * ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines,
- * Optimization & Advanced and Data Governance.
+ * Optimization & Advanced, Data Governance, Data Modeling & Warehousing Design and
+ * Lakehouse Architecture & Engineering Practice: every Databricks section.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -1338,6 +1339,84 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Write the Unity Catalog statements that govern a members table, and run its row filter and column mask bodies on local Spark.',
       'Create an external location and grant on it, write a `RETURNS BOOLEAN` row filter and an email mask with `is_account_group_member`, bind them with `ALTER TABLE`, and find cloud storage keys left in a notebook.',
+    ),
+  },
+  {
+    id: 'data_modeling',
+    topicKeys: [Topic.DATA_MODELING],
+    title: 'A star for the bookshop',
+    folder: 'exercises/databricks/data_modeling',
+    starter: ['book_star.py'],
+    tests: 'test_book_star.py',
+    minutes: 20,
+    task: lines(
+      'Build a star schema for bookshop sales from Spark DataFrames: a dimension and two facts, each at a grain you can name.',
+      'Give each book a surrogate key beside its natural key, keep only keys and measures in the sales fact, sum copies and revenue by genre with a star join, work out an average from its parts, and keep each receipt\'s shipping at the receipt grain.',
+    ),
+  },
+  {
+    id: 'scd_patterns',
+    topicKeys: [Topic.SCD_PATTERNS],
+    title: 'Members who move',
+    folder: 'exercises/databricks/scd_patterns',
+    starter: ['member_versions.py'],
+    tests: 'test_member_versions.py',
+    minutes: 25,
+    task: lines(
+      'Keep a library\'s member dimension as an SCD Type 2 Delta table, so each loan counts under the branch its member had.',
+      'Close changed rows with a `MERGE` and insert new versions in a second step that is safe to rerun, find the version valid on a day, count loans on the surrogate key, and overwrite emails as Type 1.',
+    ),
+  },
+  {
+    id: 'pipeline_design',
+    topicKeys: [Topic.PIPELINE_DESIGN],
+    title: 'Daily loans, run twice',
+    folder: 'exercises/databricks/pipeline_design',
+    starter: ['daily_counts.py'],
+    tests: 'test_daily_counts.py',
+    minutes: 25,
+    task: lines(
+      'Write a daily loans pipeline whose every write leaves the same table however often it is retried, rerun or backfilled.',
+      'Append only new keys with a `MERGE`, replace one day with `REPLACE WHERE`, backfill a range and a trailing window for late rows, add a `CHECK` constraint, and compare a batch with its data contract.',
+    ),
+  },
+  {
+    id: 'gold_layer_design',
+    topicKeys: [Topic.GOLD_LAYER_DESIGN],
+    title: 'Receipts without the fan-out',
+    folder: 'exercises/databricks/gold_layer_design',
+    starter: ['gold_receipts.py'],
+    tests: 'test_gold_receipts.py',
+    minutes: 25,
+    task: lines(
+      'Build a bookshop\'s gold tables from silver, each at a declared grain, and repair them without readers seeing a half-built table.',
+      'Sum daily revenue without the fan-out bug, build One Big Table at the line grain and a weekly rollup beside the daily table, replay only the damaged days, and switch a view to a checked v2.',
+    ),
+  },
+  {
+    id: 'ingestion_architecture',
+    topicKeys: [Topic.INGESTION_ARCHITECTURE],
+    title: 'Loans in step with the source',
+    folder: 'exercises/databricks/ingestion_architecture',
+    starter: ['loan_sync.py'],
+    tests: 'test_loan_sync.py',
+    minutes: 25,
+    task: lines(
+      'Choose how loans are ingested and laid out, and keep a Delta copy in step with the source system.',
+      'Pick a streaming or incremental batch trigger, choose clustering or partitioning, create and recluster a Liquid Clustered table, apply a change log\'s latest change per loan in one `MERGE`, and diff two snapshots when there is no log.',
+    ),
+  },
+  {
+    id: 'orchestration_design',
+    topicKeys: [Topic.ORCHESTRATION_DESIGN],
+    title: 'The gold job and its gates',
+    folder: 'exercises/databricks/orchestration_design',
+    starter: ['gold_runs.py'],
+    tests: 'test_gold_runs.py',
+    minutes: 25,
+    task: lines(
+      'Design a gold job\'s task gates, trigger and backfill as Jobs API settings, and split silver from a quarantine table on local Spark.',
+      'Decide when a task runs from its `run_if`, play a run out to catch the Ghost Sink Failure, trigger on a table update, backfill with a bounded `for_each_task`, and quarantine rows with the rules they broke.',
     ),
   },
 ];
