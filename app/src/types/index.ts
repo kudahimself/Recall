@@ -108,6 +108,8 @@ export enum Topic {
   DE_ICEBERG_DELTA_HUDI = 'de_iceberg_delta_hudi',
   DE_TRANSFORMATION_TOOLS = 'de_transformation_tools',
   // Modeling Concepts (small beginner-first topics)
+  // Retired into Modeling for Analytics (no questions; kept so stored progress
+  // keeps its course): DE_TRANSFORMATION_TOOLS above and every topic below.
   DE_WHY_MODEL = 'de_why_model',
   DE_TABLES_FACTS_DIMS = 'de_tables_facts_dims',
   DE_STAR_SCHEMA = 'de_star_schema',
@@ -161,6 +163,15 @@ export enum Topic {
   DE_TABLE_FORMAT_LOG = 'de_table_format_log',
   DE_UPDATING_FILES = 'de_updating_files',
   DE_SCHEMA_EVOLUTION = 'de_schema_evolution',
+  // Modeling for Analytics - the fourth rewritten section. It absorbs the old
+  // DE_WHY_MODEL, DE_TABLES_FACTS_DIMS, DE_STAR_SCHEMA, DE_KEYS_GRAIN, DE_SCD,
+  // DE_DATA_MESH and DE_TRANSFORMATION_TOOLS, which keep no questions and stay
+  // here so stored progress keeps its course.
+  DE_GRAIN_DOUBLE_COUNTING = 'de_grain_double_counting',
+  DE_FACTS_DIMS_STAR = 'de_facts_dims_star',
+  DE_NATURAL_SURROGATE_KEYS = 'de_natural_surrogate_keys',
+  DE_SCD_POINT_IN_TIME = 'de_scd_point_in_time',
+  DE_METRICS_OWNERSHIP = 'de_metrics_ownership',
   // Machines, Memory & Disks - the hardware/OS layer under everything above.
   // Ordered hardware facts -> OS abstractions built on them -> the two
   // applications (cache locality explains columnar, spill explains Spark).

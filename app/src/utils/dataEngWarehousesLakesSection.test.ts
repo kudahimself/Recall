@@ -48,10 +48,10 @@ function emptyProgress(): UserProgress {
 }
 
 describe('section wiring', () => {
-  it('is Step 3, after Storage & Files and before Architecture & Open Table Formats', () => {
+  it('is Step 3, after Storage & Files and before Moving Data', () => {
     expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(2);
     expect(DATA_ENG_PATH_ORDER[1]).toBe('Storage & Files');
-    expect(DATA_ENG_PATH_ORDER[3]).toBe('Architecture & Open Table Formats');
+    expect(DATA_ENG_PATH_ORDER[3]).toBe('Moving Data');
     expect(DATA_ENG_SECTIONS[SECTION].weight).toBe('Step 3');
   });
 
@@ -76,13 +76,12 @@ describe('section wiring', () => {
     const dePool = allQuestions.filter(q => getCourseForTopic(q.topic) === Course.DATA_ENGINEERING);
     const unlocked = SpacedRepetitionSystem.getUnlockedSections(dePool, progress);
     expect(unlocked!.sections).toContain(SECTION);
-    expect(unlocked!.sections).not.toContain('Architecture & Open Table Formats');
+    expect(unlocked!.sections).not.toContain('Moving Data');
     expect(SpacedRepetitionSystem.getUnlockedTopics(dePool, progress)).toContain(TOPICS[0]);
   });
 
-  it('keeps the Foundations and Architecture topics it did not absorb', () => {
+  it('keeps the Foundations topics it did not absorb', () => {
     expect(getTopicKeysForSection('Foundations')).toEqual([Topic.DE_WHAT_IS, Topic.DE_BATCH_VS_STREAMING]);
-    expect(getTopicKeysForSection('Architecture & Open Table Formats')).toEqual([Topic.DE_TRANSFORMATION_TOOLS]);
     expect(allQuestions.filter(q => q.topic === Topic.DE_DATA_QUALITY_BASICS).length).toBeGreaterThan(0);
   });
 });

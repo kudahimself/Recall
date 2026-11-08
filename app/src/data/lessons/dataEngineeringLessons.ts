@@ -2,9 +2,9 @@
  * Data Engineering lessons, one per topic, in course order.
  *
  * Section Storage & Files (the second rewritten section) comes first on the
- * path, then Warehouses, Lakes & Table Formats (the third), and then Moving
- * Data (the first section of the decisions-and-designs rewrite): every topic
- * of each. Each rule card teaches the decision rule as its form
+ * path, then Warehouses, Lakes & Table Formats (the third), then Moving Data
+ * (the first section of the decisions-and-designs rewrite), and then Modeling
+ * for Analytics (the fourth): every topic of each. Each rule card teaches the decision rule as its form
  * and works one scenario on small tables; the SQL is T-SQL that
  * check-lessons.js runs on sql.js. MERGE is not run there, so the worked
  * examples replace by key with DELETE and INSERT, and the idea names MERGE.
@@ -1108,5 +1108,444 @@ SELECT loan_date, loans FROM daily_loans ORDER BY loan_date;`,
 2026-11-03 | 2`,
     },
     exercises: ['de-backfill-1', 'de-backfill-2', 'de-backfill-3', 'de-backfill-4', 'de-backfill-5'],
+  },
+  {
+    id: 'de_grain_double_counting/1',
+    topicKeys: [Topic.DE_GRAIN_DOUBLE_COUNTING],
+    step: 1,
+    title: 'Grain & Double Counting',
+    idea: [
+      lines(
+        'The grain of a table is what one row stands for: one order, one order line, one customer per day.',
+        'Write it down as one sentence before choosing columns, because it decides the key (the columns that are unique together) and which measures belong.',
+      ),
+      lines(
+        'A measure can be added up only over rows at its own grain.',
+        'A line\'s amount sums over a line table; an order\'s shipping fee does not, because on a line table it is repeated on every line of the order.',
+      ),
+      lines(
+        'Joins are where grains meet.',
+        'A join from a coarser table to a finer one repeats each coarse row once per match (fan-out), so a coarse measure summed after it is counted once per match.',
+        'So bring each table to the grain of the question before joining, and compare row counts before and after each join.',
+      ),
+      lines(
+        'Ratios and distinct counts are non-additive: summing or averaging them over rows gives a wrong number.',
+        'Store their parts (orders and visits, the customer ids) and compute them at the level the report asks for.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `state the grain: "one row per <thing>"; its key is unique
+join to a finer table     -> each coarser row repeats once per match
+sum a measure only at its own grain: aggregate first, then join
+ratios, distinct counts   -> recompute from their parts, never sum them
+check: row count before and after every join`,
+    },
+    pitfall: lines(
+      'Joining orders to their lines and then summing an order-level column, such as the shipping fee or the order total.',
+      'Each order is counted once per line, the total looks plausible, and nothing raises an error.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'orders',
+          columns: ['order_id', 'customer_id', 'shipping'],
+          rows: [
+            [1, 'c1', 5],
+            [2, 'c2', 8],
+            [3, 'c1', 4],
+          ],
+        },
+        {
+          name: 'order_lines',
+          columns: ['order_id', 'line_no', 'amount'],
+          rows: [
+            [1, 1, 20],
+            [1, 2, 30],
+            [2, 1, 15],
+            [3, 1, 10],
+            [3, 2, 5],
+            [3, 3, 25],
+          ],
+        },
+      ],
+      code: `-- Query A: join the orders to their lines, then sum the order's fee
+SELECT COUNT(*) AS joined_rows, SUM(o.shipping) AS shipping
+FROM orders o
+JOIN order_lines l ON l.order_id = o.order_id;
+
+-- Query B: bring the lines to one row per order first, then join
+WITH line_totals AS (
+  SELECT order_id, SUM(amount) AS goods
+  FROM order_lines
+  GROUP BY order_id
+)
+SELECT COUNT(*) AS joined_rows, SUM(o.shipping) AS shipping, SUM(t.goods) AS goods
+FROM orders o
+JOIN line_totals t ON t.order_id = o.order_id;`,
+      steps: [
+        'The grain of `orders` is one row per order, and of `order_lines` one row per order line.',
+        'Lines 2-4: the join returns one row per line, 6 rows, and each carries its order\'s fee, so shipping comes out as 30.',
+        'The fees really charged are 5 + 8 + 4 = 17, one per order.',
+        'Lines 7-11: the lines are summed to one row per order before the join.',
+        'Lines 12-14: both sides are now one row per order, so the join returns 3 rows and both shipping (17) and goods (105) are right.',
+      ],
+      output: `joined_rows | shipping
+6 | 30
+
+joined_rows | shipping | goods
+3 | 17 | 105`,
+    },
+    exercises: ['de-fanout-1', 'de-fanout-2', 'de-fanout-3', 'de-fanout-4', 'de-fanout-5'],
+  },
+  {
+    id: 'de_facts_dims_star/1',
+    topicKeys: [Topic.DE_FACTS_DIMS_STAR],
+    step: 1,
+    title: 'Facts, Dimensions & the Star Schema',
+    idea: [
+      lines(
+        'A fact table records the events of one business process at one grain: each row holds measures to add up and a key for each thing the event involves.',
+        'A dimension table describes those things, one row per product, customer, store or date, with the attributes people filter and group by.',
+      ),
+      lines(
+        'A star schema puts one fact in the middle with a join from it to each dimension.',
+        'Every question then has the same shape: filter and group by dimension attributes, sum the fact\'s measures.',
+        'Dimensions are kept flat, with category and department on the product row, because they are small and read far more than written; splitting them into sub-tables (a snowflake) adds joins to every query.',
+      ),
+      lines(
+        'Two facts that use the same dimensions (conformed dimensions) can be compared: sum each fact on its own by the shared attributes, then join the totals.',
+        'The SQL course\'s Data Modeling in SQL section builds these tables in T-SQL.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `a number you add up across events -> measure, on the fact
+something you filter or group by   -> attribute, on a dimension
+fact row  = one event at the grain: dimension keys + measures
+dimension = one flat row per thing (no sub-tables)
+every fact key finds a dimension row ("unknown" for gaps)`,
+    },
+    pitfall: lines(
+      'A fact key with no dimension row yet, such as a product added today, is dropped by the inner join, so totals by attribute come out lower than the fact\'s total.',
+      'Load dimensions before facts, and point a missing key at an "unknown" member row.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'fact_sales',
+          columns: ['sale_id', 'product_key', 'amount'],
+          rows: [
+            [1, 1, 20],
+            [2, 2, 15],
+            [3, 1, 25],
+            [4, 3, 40],
+            [5, 2, 10],
+            [6, 8, 15],
+          ],
+        },
+        {
+          name: 'dim_product',
+          columns: ['product_key', 'product_name', 'category'],
+          rows: [
+            [-1, 'Unknown', 'Unknown'],
+            [1, 'Kettle', 'Kitchen'],
+            [2, 'Mug', 'Kitchen'],
+            [3, 'Lamp', 'Lighting'],
+          ],
+        },
+      ],
+      code: `-- revenue by category: the fact joined to the product dimension
+SELECT p.category, SUM(f.amount) AS revenue
+FROM fact_sales f
+JOIN dim_product p ON p.product_key = f.product_key
+GROUP BY p.category
+ORDER BY p.category;
+SELECT SUM(amount) AS fact_total FROM fact_sales;
+
+-- the load gives a key with no dimension row the unknown member, -1
+CREATE TABLE fact_sales_loaded (sale_id INT, product_key INT, amount INT);
+INSERT INTO fact_sales_loaded
+SELECT f.sale_id, COALESCE(p.product_key, -1), f.amount
+FROM fact_sales f
+LEFT JOIN dim_product p ON p.product_key = f.product_key;
+SELECT p.category, SUM(f.amount) AS revenue
+FROM fact_sales_loaded f
+JOIN dim_product p ON p.product_key = f.product_key
+GROUP BY p.category
+ORDER BY p.category;`,
+      steps: [
+        'Lines 2-6: the fact has the amounts and a product key, the dimension has the category, so the query joins on the key, groups by category and sums.',
+        'Kitchen is the Kettle and the Mug, 70, and Lighting is the Lamp, 40.',
+        'Line 7: the fact holds 125, because sale 6 is for product 8, which is not in `dim_product` yet and fell out of the inner join.',
+        'Lines 10-14: the load looks each key up with a LEFT JOIN and gives a key it cannot find the unknown member, -1, instead of losing the sale.',
+        'Lines 15-19: the categories now add up to the fact\'s 125, with 15 under Unknown until product 8 arrives.',
+      ],
+      output: `category | revenue
+Kitchen | 70
+Lighting | 40
+
+fact_total
+125
+
+category | revenue
+Kitchen | 70
+Lighting | 40
+Unknown | 15`,
+    },
+    exercises: ['de-dimstar-1', 'de-dimstar-2', 'de-dimstar-3', 'de-dimstar-4', 'de-dimstar-5'],
+  },
+  {
+    id: 'de_natural_surrogate_keys/1',
+    topicKeys: [Topic.DE_NATURAL_SURROGATE_KEYS],
+    step: 1,
+    title: 'Keys: Natural & Surrogate',
+    idea: [
+      lines(
+        'A natural key is the identifier the source uses: an order number, a SKU, a customer id.',
+        'A surrogate key is a number the warehouse gives each dimension row when it is first loaded, with no meaning outside the warehouse.',
+      ),
+      lines(
+        'Natural keys are not under the warehouse\'s control.',
+        'They change (an email), get reused (a SKU), clash across sources (two systems both have customer 7), and once history is kept one customer has several rows.',
+      ),
+      lines(
+        'So each dimension row gets a surrogate key, and the natural key stays on the row as an ordinary column, qualified by its source.',
+        'A fact load looks up each row\'s natural key in the dimension and stores the surrogate key it finds.',
+        'The key is assigned once and never recomputed, so a fact loaded last year still points at the same row.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `the source's identifier (SKU, id) -> natural key, kept as a column
+the dimension row's identity       -> surrogate key, assigned once
+what the fact stores               -> surrogate key, looked up at load
+two sources, each with its own ids -> natural key = (source, id)
+never join on a key that is not unique in the dimension`,
+    },
+    pitfall: lines(
+      'Looking a customer up by the source\'s id alone once two sources share a dimension.',
+      'An id that exists in both systems matches two rows, and each of its facts is loaded twice, once against a customer who never placed it.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'dim_customer',
+          columns: ['customer_key', 'source', 'source_id', 'customer_name'],
+          rows: [
+            [1, 'shop', 1001, 'Ana'],
+            [2, 'shop', 1002, 'Ben'],
+            [3, 'app', 1001, 'Chen'],
+          ],
+        },
+        {
+          name: 'stg_orders',
+          columns: ['order_id', 'source', 'source_customer_id', 'amount'],
+          rows: [
+            [501, 'shop', 1001, 40],
+            [502, 'app', 1001, 25],
+            [503, 'shop', 1002, 30],
+          ],
+        },
+      ],
+      code: `-- lookup on the source's id alone
+SELECT COUNT(*) AS joined_rows, SUM(o.amount) AS revenue
+FROM stg_orders o
+JOIN dim_customer c ON c.source_id = o.source_customer_id;
+
+-- lookup on the full natural key, (source, source_id)
+SELECT o.order_id, c.customer_key, c.customer_name, o.amount
+FROM stg_orders o
+JOIN dim_customer c
+  ON c.source = o.source AND c.source_id = o.source_customer_id
+ORDER BY o.order_id;`,
+      steps: [
+        'The shop and the app each number their customers, so 1001 is Ana in one and Chen in the other.',
+        'Lines 2-4: orders 501 and 502 each match both customers 1001, so 3 orders become 5 rows and 95 of revenue becomes 160.',
+        'Lines 7-11: the lookup uses (source, source_id), which is unique in the dimension, so each order finds one row.',
+        'Each order now carries the `customer_key` that `fact_orders` stores, and the source\'s id stays on the dimension for the next lookup.',
+      ],
+      output: `joined_rows | revenue
+5 | 160
+
+order_id | customer_key | customer_name | amount
+501 | 1 | Ana | 40
+502 | 3 | Chen | 25
+503 | 2 | Ben | 30`,
+    },
+    exercises: ['de-skey-1', 'de-skey-2', 'de-skey-3', 'de-skey-4', 'de-skey-5'],
+  },
+  {
+    id: 'de_scd_point_in_time/1',
+    topicKeys: [Topic.DE_SCD_POINT_IN_TIME],
+    step: 1,
+    title: 'Slowly Changing Dimensions & Point-in-Time Joins',
+    idea: [
+      lines(
+        'Dimension attributes change: a customer moves, a product changes category.',
+        'Type 1 overwrites the value, so every past fact now reports under the new one.',
+        'Type 2 keeps history: it closes the current row with an end date and adds a new row, with a new surrogate key, from the date of the change.',
+      ),
+      lines(
+        'Choose per attribute by asking how a report about the past should read.',
+        'If last year\'s sales should stay under the region they were made in, the region is Type 2; a corrected misspelling, or a value only shown as it is today, is Type 1.',
+      ),
+      lines(
+        'A fact finds its version with a point-in-time join: the version whose interval holds the event\'s date.',
+        'Intervals are half-open, valid_from <= date < valid_to, and the current row ends on a far-future date such as 9999-12-31, so every date is in exactly one version.',
+        'A load does the same lookup to store the version\'s surrogate key; the SQL course\'s Slowly Changing Dimensions topic writes that load in T-SQL.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `past events keep the value true then -> Type 2: close, add version
+a correction, or latest value only   -> Type 1: overwrite in place
+a version holds: valid_from <= date < valid_to (current: 9999-12-31)
+fact to version: natural key AND event date inside the interval
+                 (or the version's surrogate key, stored at load)`,
+    },
+    pitfall: lines(
+      'Joining facts to the current row, or looking up the current row when a late fact is loaded.',
+      'Every past event then reports under today\'s value, and nothing looks wrong until someone compares with last year\'s report.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'dim_customer',
+          columns: ['customer_key', 'customer_id', 'city', 'valid_from', 'valid_to'],
+          rows: [
+            [1, 'C-7', 'Leeds', '2025-01-01', '2026-06-01'],
+            [2, 'C-7', 'York', '2026-06-01', '9999-12-31'],
+            [3, 'C-9', 'Leeds', '2025-03-01', '9999-12-31'],
+          ],
+        },
+        {
+          name: 'fact_sales',
+          columns: ['sale_id', 'customer_id', 'sale_date', 'amount'],
+          rows: [
+            [1, 'C-7', '2026-03-10', 40],
+            [2, 'C-7', '2026-06-01', 25],
+            [3, 'C-7', '2026-09-15', 30],
+            [4, 'C-9', '2026-07-02', 50],
+          ],
+        },
+      ],
+      code: `-- Query A: every sale joined to the customer's current row
+SELECT d.city, SUM(f.amount) AS revenue
+FROM fact_sales f
+JOIN dim_customer d
+  ON d.customer_id = f.customer_id AND d.valid_to = '9999-12-31'
+GROUP BY d.city
+ORDER BY d.city;
+
+-- Query B: each sale joined to the version valid on its date
+SELECT d.city, SUM(f.amount) AS revenue
+FROM fact_sales f
+JOIN dim_customer d
+  ON d.customer_id = f.customer_id
+ AND f.sale_date >= d.valid_from
+ AND f.sale_date < d.valid_to
+GROUP BY d.city
+ORDER BY d.city;`,
+      steps: [
+        'C-7 moved from Leeds to York on 2026-06-01, so its Leeds row ends that day and its York row starts it.',
+        'Lines 2-7: joined to the current row, all three of C-7\'s sales go to York, 95, and Leeds keeps only C-9\'s 50.',
+        'Lines 10-17: each sale finds the version whose interval holds its date.',
+        'Sale 1 (March) is in Leeds, so Leeds has 40 + 50 = 90.',
+        'Sale 2, on the move date itself, is in York only, because the Leeds interval excludes its end; York has 25 + 30 = 55.',
+      ],
+      output: `city | revenue
+Leeds | 50
+York | 95
+
+city | revenue
+Leeds | 90
+York | 55`,
+    },
+    exercises: ['de-history-1', 'de-history-2', 'de-history-3', 'de-history-4', 'de-history-5'],
+  },
+  {
+    id: 'de_metrics_ownership/1',
+    topicKeys: [Topic.DE_METRICS_OWNERSHIP],
+    step: 1,
+    title: 'Metrics & Ownership: Semantic Layer & Data Mesh',
+    idea: [
+      lines(
+        'A metric such as revenue is a definition: which rows, which measure, which date, which exclusions.',
+        'When each dashboard writes its own SQL, the same name ends up with several definitions, and the numbers disagree with no error anywhere.',
+      ),
+      lines(
+        'So define each metric once, as code under version control, with an owner and tests: a model in the transformation tool (dbt or SQLMesh, for example) or a semantic layer.',
+        'Dashboards and notebooks ask for "revenue by month" instead of copying its SQL, so a fix reaches them all at once.',
+        'A change to a definition is reviewed by its owner and compared with the old numbers before it ships.',
+      ),
+      lines(
+        'Ownership has to scale with the company.',
+        'One central data team works while it keeps up; with many domains it becomes a queue, and it does not know each domain\'s data.',
+        'Data mesh gives each domain team ownership of its data as products, on a self-serve platform, under shared standards such as common keys and conformed dimensions.',
+      ),
+    ],
+    form: {
+      language: CodeLanguage.SQL,
+      code: `a number several reports show -> define it once, in code, owned
+a dashboard needs it          -> query the definition, never copy it
+a change to a definition      -> reviewed, tested, compared, announced
+many domains, central queue   -> domains own products, shared standards
+few domains, team keeps up    -> central ownership, named owners`,
+    },
+    pitfall: lines(
+      'Pasting a metric\'s SQL into a dashboard "to match finance".',
+      'From that day it is a second definition: the next change to the shared one does not reach it, and the two numbers drift apart again.',
+    ),
+    worked: {
+      language: CodeLanguage.SQL,
+      tables: [
+        {
+          name: 'orders',
+          columns: ['order_id', 'order_date', 'status', 'amount'],
+          rows: [
+            [1, '2026-10-04', 'paid', 120],
+            [2, '2026-10-12', 'refunded', 40],
+            [3, '2026-10-25', 'paid', 60],
+            [4, '2026-11-02', 'paid', 90],
+            [5, '2026-11-03', 'cancelled', 30],
+          ],
+        },
+      ],
+      code: `-- two dashboards, each with its own SQL for "October revenue"
+SELECT 'finance' AS dashboard, SUM(amount) AS october_revenue
+FROM orders WHERE status = 'paid' AND order_date BETWEEN '2026-10-01' AND '2026-10-31'
+UNION ALL
+SELECT 'sales', SUM(amount)
+FROM orders WHERE order_date BETWEEN '2026-10-01' AND '2026-10-31'
+ORDER BY dashboard;
+GO
+-- one shared definition, owned by finance
+CREATE VIEW revenue AS
+SELECT order_date, amount FROM orders WHERE status = 'paid';
+GO
+SELECT LEFT(order_date, 7) AS order_month, SUM(amount) AS revenue
+FROM revenue
+GROUP BY LEFT(order_date, 7)
+ORDER BY order_month;`,
+      steps: [
+        'Lines 2-7: both dashboards call their number October revenue, but sales counts every order and finance only the paid ones.',
+        'The 40 between them is the refunded order, and neither query raises an error.',
+        'Lines 10-11: the definition is written once, as a view that finance owns.',
+        'Lines 13-16: every dashboard reads the view, so October is 180 everywhere, and November follows the same rule.',
+      ],
+      output: `dashboard | october_revenue
+finance | 180
+sales | 220
+
+order_month | revenue
+2026-10 | 180
+2026-11 | 90`,
+    },
+    exercises: ['de-metric-1', 'de-metric-2', 'de-metric-3', 'de-metric-4', 'de-metric-5'],
   },
 ];
