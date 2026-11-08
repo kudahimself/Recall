@@ -4,7 +4,7 @@
  * every folder has an entry, each Python Fundamentals, Python Advanced, Django,
  * Django Advanced & Deployment, DRF Production Patterns, Celery & Background
  * Tasks, Testing & CI/CD, Production Infrastructure, Python Mastery & Advanced and
- * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform, ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines, Optimization & Advanced, Data Governance, Data Modeling & Warehousing Design and Lakehouse Architecture & Engineering Practice topics and the Data Engineering topics the course outline marks for one, test files and modules have names unique across exercises
+ * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform, ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines, Optimization & Advanced, Data Governance, Data Modeling & Warehousing Design and Lakehouse Architecture & Engineering Practice topics, the Data Engineering topics the course outline marks for one and the Web Dev HTML, CSS & Tailwind and JavaScript Fundamentals topics have one, test files and modules have names unique across exercises
  * so pytest can collect them all from the repo root, and exercises/check_exercises.py passes (each
  * exercise's tests fail on its starter and pass on its reference solution), so
  * an exercise cannot rot.
@@ -13,11 +13,12 @@ import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import { EXERCISES } from './index';
-import { BACKEND_SECTIONS, DATABRICKS_SECTIONS, DATA_ENG_PATH_ORDER, getCourseForTopic, getSectionUnits } from '../../utils/courseConfig';
+import { BACKEND_SECTIONS, DATABRICKS_SECTIONS, DATA_ENG_PATH_ORDER, WEBDEV_SECTIONS, getCourseForTopic, getSectionUnits } from '../../utils/courseConfig';
 
 const REPO = path.join(__dirname, '..', '..', '..', '..');
 const EXERCISES_DIR = path.join(REPO, 'exercises');
 // The Python that runs the exercises' tests; the Databricks ones also need Java 17+ and pyspark, the Data Engineering ones duckdb.
+// The Web Dev ones run on node, with Vitest and jsdom installed by `npm ci` in exercises/web_dev.
 const PYTHON = process.env.EXERCISES_PYTHON ?? 'python3';
 
 jest.setTimeout(300000);
@@ -41,7 +42,8 @@ describe('exercise list', () => {
       expect(fs.existsSync(path.join(dir, f))).toBe(true);
       expect(fs.existsSync(path.join(EXERCISES_DIR, 'solutions', course, e.id, f))).toBe(true);
     }
-    expect(e.tests).toMatch(/^test_\w+\.py$/);
+    // Web Dev exercises are JavaScript, tested with Vitest; the rest are Python, tested with pytest.
+    expect(e.tests).toMatch(course === 'web_dev' ? /^\w+\.test\.js$/ : /^test_\w+\.py$/);
     expect(fs.existsSync(path.join(dir, e.tests))).toBe(true);
     expect(e.minutes).toBeGreaterThanOrEqual(10);
     expect(e.minutes).toBeLessThanOrEqual(30);
@@ -52,7 +54,7 @@ describe('exercise list', () => {
     const folders = fs.readdirSync(EXERCISES_DIR, { withFileTypes: true })
       .filter(d => d.isDirectory() && d.name !== 'solutions' && !d.name.startsWith('.'))
       .flatMap(course => fs.readdirSync(path.join(EXERCISES_DIR, course.name), { withFileTypes: true })
-        .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== '__pycache__')
+        .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== '__pycache__' && d.name !== 'node_modules')
         .map(d => `exercises/${course.name}/${d.name}`));
     expect(folders.sort()).toEqual(Array.from(listed).sort());
   });
@@ -63,9 +65,9 @@ describe('exercise list', () => {
       const dir = path.join(REPO, e.folder);
       const names = fs.readdirSync(dir, { withFileTypes: true })
         .filter(d => d.name !== 'conftest.py' && (
-          (d.isFile() && d.name.endsWith('.py'))
+          (d.isFile() && /\.(py|js)$/.test(d.name))
           || (d.isDirectory() && fs.existsSync(path.join(dir, d.name, '__init__.py')))))
-        .map(d => d.name.replace(/\.py$/, ''));
+        .map(d => d.name.replace(/\.(py|js)$/, ''));
       for (const n of names) owners.set(n, [...(owners.get(n) ?? []), e.id]);
     }
     const shared = Array.from(owners).filter(([, ids]) => ids.length > 1);
@@ -81,6 +83,13 @@ describe('exercise list', () => {
 
   it.each(['Lakehouse Platform', 'ELT with Spark SQL & Python', 'Incremental Data Processing', 'Production Pipelines', 'Optimization & Advanced', 'Data Governance', 'Data Modeling & Warehousing Design', 'Lakehouse Architecture & Engineering Practice'])('has an exercise for every Databricks %s topic, in path order', section => {
     expect(DATABRICKS_SECTIONS[section]).toBeDefined();
+    const units = getSectionUnits(section).map(([, keys]) => keys);
+    const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
+    expect(inSection.map(e => e.topicKeys)).toEqual(units);
+  });
+
+  it.each(['HTML, CSS & Tailwind', 'JavaScript Fundamentals'])('has an exercise for every Web Dev %s topic, in path order', section => {
+    expect(WEBDEV_SECTIONS[section]).toBeDefined();
     const units = getSectionUnits(section).map(([, keys]) => keys);
     const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
     expect(inSection.map(e => e.topicKeys)).toEqual(units);
@@ -137,5 +146,13 @@ test('every Databricks exercise fails on its starter and passes on its reference
 test('every Data Engineering exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
   const out = checkCourses(['data_engineering']);
   const count = EXERCISES.filter(e => e.folder.startsWith('exercises/data_engineering/')).length;
+  expect(out).toMatch(new RegExp(`exercises checked: ${count} pass, 0 fail`));
+});
+
+// One Vitest run checks every Web Dev starter and one every solution (see check_exercises.py).
+test('every Web Dev exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
+  const out = checkCourses(['web_dev']);
+  const count = EXERCISES.filter(e => e.folder.startsWith('exercises/web_dev/')).length;
+  expect(count).toBeGreaterThan(0);
   expect(out).toMatch(new RegExp(`exercises checked: ${count} pass, 0 fail`));
 });

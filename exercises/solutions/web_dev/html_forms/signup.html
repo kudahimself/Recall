@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Join the newsletter - Corner Books</title>
+  </head>
+  <body>
+    <h1>Join the newsletter</h1>
+    <form action="/subscribe" method="post">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="first-name">First name</label>
+      <input type="text" id="first-name" name="first_name" required minlength="2">
+
+      <label for="age">Age</label>
+      <input type="number" id="age" name="age" min="13" max="120">
+
+      <fieldset>
+        <legend>Format</legend>
+        <input type="radio" id="format-paperback" name="format" value="paperback" checked>
+        <label for="format-paperback">Paperback</label>
+        <input type="radio" id="format-ebook" name="format" value="ebook">
+        <label for="format-ebook">Ebook</label>
+        <input type="radio" id="format-audiobook" name="format" value="audiobook">
+        <label for="format-audiobook">Audiobook</label>
+      </fieldset>
+
+      <label for="genre">Favourite genre</label>
+      <select id="genre" name="genre">
+        <option value="fiction">Fiction</option>
+        <option value="history">History</option>
+        <option value="science">Science</option>
+      </select>
+
+      <input type="checkbox" id="events" name="events" value="yes">
+      <label for="events">Tell me about events</label>
+
+      <button type="submit">Sign up</button>
+    </form>
+  </body>
+</html>

@@ -41,6 +41,12 @@ describe('finding an exercise', () => {
     expect(exerciseCommand(e!)).toBe('cd exercises/backend/py_basics && pytest');
   });
 
+  it('runs a Web Dev exercise with npm test', () => {
+    const e = exerciseForTopics(['js_arrays']);
+    expect(e?.folder).toBe('exercises/web_dev/js_arrays');
+    expect(exerciseCommand(e!)).toBe('cd exercises/web_dev/js_arrays && npm test');
+  });
+
   it('gives null for a topic without an exercise yet', () => {
     expect(exerciseForTopics(['tsql_select'])).toBeNull();
     expect(getExercise('nope')).toBeUndefined();

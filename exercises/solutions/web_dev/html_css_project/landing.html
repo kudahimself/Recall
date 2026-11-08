@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Corner Books</title>
+    <!-- Tailwind's build of this page; README.md says how to make it. -->
+    <link rel="stylesheet" href="out.css">
+  </head>
+  <body class="bg-stone-50 text-stone-900">
+    <header class="border-b bg-white">
+      <nav class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+        <a href="/" class="text-xl font-bold">Corner Books</a>
+        <div class="hidden gap-6 md:flex">
+          <a href="/books" class="hover:underline">Books</a>
+          <a href="/events" class="hover:underline">Events</a>
+          <a href="/contact" class="hover:underline">Contact</a>
+        </div>
+        <button type="button" class="rounded border px-3 py-1 md:hidden">Menu</button>
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-5xl px-4">
+      <section class="py-12 text-center">
+        <h1 class="text-3xl font-bold md:text-5xl">Books for every corner of your life</h1>
+        <p class="mt-4 text-stone-600">New, second-hand and rare, on Mill Street since 1987.</p>
+        <a href="/books" class="mt-6 inline-block rounded bg-stone-900 px-5 py-2 text-white transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2">Browse the shelves</a>
+      </section>
+
+      <section class="pb-12">
+        <h2 class="mb-6 text-2xl font-semibold">This week's picks</h2>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <article class="rounded-lg bg-white p-4 shadow">
+            <h3 class="text-lg font-semibold">The Night Circus</h3>
+            <p class="text-sm text-stone-600">A circus that opens only at night.</p>
+            <a href="/books/the-night-circus" class="mt-3 inline-block text-stone-900 underline transition hover:text-stone-600 focus-visible:outline-2">Read more</a>
+          </article>
+          <article class="rounded-lg bg-white p-4 shadow">
+            <h3 class="text-lg font-semibold">Piranesi</h3>
+            <p class="text-sm text-stone-600">A house of endless halls.</p>
+            <a href="/books/piranesi" class="mt-3 inline-block text-stone-900 underline transition hover:text-stone-600 focus-visible:outline-2">Read more</a>
+          </article>
+          <article class="rounded-lg bg-white p-4 shadow">
+            <h3 class="text-lg font-semibold">Emma</h3>
+            <p class="text-sm text-stone-600">A classic, half price this week.</p>
+            <a href="/books/emma" class="mt-3 inline-block text-stone-900 underline transition hover:text-stone-600 focus-visible:outline-2">Read more</a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t py-6 text-center text-sm text-stone-600">
+      <p>Corner Books, 12 Mill Street. Open every day, 9 to 5.</p>
+    </footer>
+  </body>
+</html>

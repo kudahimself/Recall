@@ -1,0 +1,9 @@
+/* Mobile-first catalogue: README.md has the task. */
+
+/* TODO: the phone layout first, with no media query:
+     the container, the heading size, the one-column list of books,
+     the menu button shown and the menu hidden, the books' hover transition */
+
+/* TODO: then the wider layouts, each from its breakpoint up, smallest first */
+
+/* TODO: no animation for a reader who asks for reduced motion */

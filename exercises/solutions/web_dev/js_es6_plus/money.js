@@ -1,0 +1,7 @@
+/** Money: reference solution. */
+
+export default function formatPrice(pence) {
+  const pounds = Math.floor(pence / 100);
+  const rest = String(pence % 100).padStart(2, '0');
+  return `£${pounds}.${rest}`;
+}
