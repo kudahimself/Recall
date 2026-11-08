@@ -357,6 +357,7 @@ Regression suite: `codeValidator.mutants.test.ts` (every reference passes; flipp
    - Normalize quotes
    - Lowercase for SQL
    - HTML: `<!-- -->` comments stripped, class lists and attributes compared as sets (reordered `class` values or attributes still match), `/>` read as `>`
+   - JS/TS/JSX: function parameters and loop variables renamed to positional placeholders within their own scope, `x =>` read as `(x) =>`, and an arrow's `{ return expr; }` read as `expr` (`canonicalizeJsParams`; tests in `codeValidator.jsParams.test.ts`)
 3. **Equivalence rewrites:** `filter`↔`where`, `sort`↔`orderBy`, `col("x")`↔`"x"`, `df["x"]`↔`"x"`, `F.func`→`func`, `INNER JOIN`↔`JOIN`, SQL `a.x = b.y` / `a.x <> b.y` (and `!=`) predicates after `ON`/`WHERE`/`AND`/`OR`/`WHEN`/`HAVING` put in a fixed side order (never `SET` assignments), etc.
 4. **Bracket check:** user code with an unclosed or mismatched `(`, `[` or `{` is a `fail` when the reference itself is balanced (catches truncated answers).
 5. **Match each alternative:** pass if ANY alternative matches, either by:
