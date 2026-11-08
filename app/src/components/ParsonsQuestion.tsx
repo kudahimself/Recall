@@ -24,7 +24,8 @@ import { ParsonsQuestion as ParsonsQ, CodeLanguage, Topic, QuestionType } from '
 import { useShortcut } from '../keyboard/shortcuts';
 import { DataTables } from './DataTables';
 import { Button } from './ui/Button';
-import { CodeBlock, languageLabel, splitComment } from './ui/CodeBlock';
+import { CodeBlock, languageLabel } from './ui/CodeBlock';
+import { splitComment } from '../utils/codeSyntax';
 import { Prose } from './ui/InlineText';
 import { AnswerColumns, QuestionRegion, QuestionShell, seededOrder } from './ui/QuestionShell';
 import { LivePreview } from './visual/LivePreview';

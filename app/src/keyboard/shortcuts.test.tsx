@@ -221,22 +221,26 @@ describe('QuestionShell solution key', () => {
     options: [],
   };
 
-  it('shows a solution with S only after a miss', () => {
+  it('opens the solution with S only after a miss, and closes it with Esc', () => {
+    const solution = { code: 'print("worked")' };
     const { rerender } = render(
-      <QuestionShell question={question} format="Test" graded={false} solution={<p>The worked solution</p>}>
+      <QuestionShell question={question} format="Test" graded={false} solution={solution}>
         <p>answer area</p>
       </QuestionShell>,
     );
     fireEvent.keyDown(window, { key: 's' });
-    expect(screen.queryByText('The worked solution')).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Solution' })).toBeNull();
     rerender(
-      <QuestionShell question={question} format="Test" graded feedback={{ verdict: 'wrong', title: 'Not quite' }} solution={<p>The worked solution</p>}>
+      <QuestionShell question={question} format="Test" graded feedback={{ verdict: 'wrong', title: 'Not quite' }} solution={solution}>
         <p>answer area</p>
       </QuestionShell>,
     );
     expect(screen.getByRole('button', { name: 'Show solution' })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 's' });
-    expect(screen.getByText('The worked solution')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Show solution' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Solution' })).toHaveTextContent('print("worked")');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Solution' })).toBeNull();
+    // It can be opened again.
+    expect(screen.getByRole('button', { name: 'Show solution' })).toBeInTheDocument();
   });
 });

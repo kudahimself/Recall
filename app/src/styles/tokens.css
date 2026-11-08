@@ -54,6 +54,7 @@
   --icon-l: 20px;
   --border-w: 1px;
   --focus-w: 2px;
+  --diff-mark-w: 3px;      /* the bar beside a changed line in a diff */
 
   /* ---- Layout ---- */
   --header-h: 48px;

@@ -1,5 +1,7 @@
 import React from 'react';
 import { CodeLanguage } from '../../types';
+import { highlightLine, splitComment, TokenKind } from '../../utils/codeSyntax';
+import type { LineMark } from '../../utils/lineDiff';
 import styles from './CodeBlock.module.css';
 
 const LANGUAGE_LABEL: Record<CodeLanguage, string> = {
@@ -17,30 +19,21 @@ export function languageLabel(language?: CodeLanguage): string | undefined {
   return language ? LANGUAGE_LABEL[language] ?? language : undefined;
 }
 
-const COMMENT_MARKER: Partial<Record<CodeLanguage, string>> = {
-  [CodeLanguage.PYTHON]: '#',
-  [CodeLanguage.SQL]: '--',
-  [CodeLanguage.JAVASCRIPT]: '//',
-  [CodeLanguage.TYPESCRIPT]: '//',
-  [CodeLanguage.JSX]: '//',
+const TOKEN_CLASS: Record<Exclude<TokenKind, null>, string> = {
+  kw: styles.kw,
+  str: styles.str,
+  num: styles.num,
+  fn: styles.fn,
 };
 
-/** Split a code line into its code and its trailing comment, ignoring markers inside quotes. */
-export function splitComment(line: string, language?: CodeLanguage): [string, string] {
-  const marker = language ? COMMENT_MARKER[language] : undefined;
-  if (!marker) return [line, ''];
-  let quote: string | null = null;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (quote) {
-      if (c === quote) quote = null;
-      continue;
-    }
-    if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
-    if (line.startsWith(marker, i)) return [line.slice(0, i), line.slice(i)];
-  }
-  return [line, ''];
+/** A line's code (no comment) in coloured pieces. */
+function highlighted(text: string, language?: CodeLanguage): React.ReactNode {
+  return highlightLine(text, language).map((t, i) => (
+    t.kind ? <span key={i} className={TOKEN_CLASS[t.kind]}>{t.text}</span> : <React.Fragment key={i}>{t.text}</React.Fragment>
+  ));
 }
+
+const MARK_LABEL: Record<LineMark, string> = { add: 'Added: ', remove: 'Removed: ' };
 
 /** Places in the code where something else goes: each marker becomes `render(index)`, in order. */
 export interface CodeSlots {
@@ -64,6 +57,12 @@ interface CodeBlockProps {
   hideComments?: boolean;
   /** Take the height of its container and scroll inside it. */
   fill?: boolean;
+  /** Colour keywords, strings, numbers and function names (not with `slots`). */
+  highlight?: boolean;
+  /** Long lines wrap at full size instead of scrolling sideways (on a phone they keep their shape and scroll). */
+  wrap?: boolean;
+  /** A diff's marks, one per line: 'add' and 'remove' lines stand out, with + and - beside them. */
+  marks?: ReadonlyArray<LineMark | null | undefined>;
   className?: string;
   'aria-label'?: string;
 }
@@ -73,7 +72,9 @@ interface CodeBlockProps {
  * the solution of a coding question. With `slots` it is a cloze: each blank
  * marker in the code becomes an answer field, in place in its line.
  */
-export function CodeBlock({ code, slots, language, numbered, label, compact, hideComments, fill, className, ...aria }: CodeBlockProps) {
+export function CodeBlock({
+  code, slots, language, numbered, label, compact, hideComments, fill, highlight, wrap, marks, className, ...aria
+}: CodeBlockProps) {
   let slot = 0;
   // Text with its slot markers replaced, counting slots across the whole block.
   const withSlots = (text: string, key: string): React.ReactNode => {
@@ -90,18 +91,28 @@ export function CodeBlock({ code, slots, language, numbered, label, compact, hid
     });
   };
   return (
-    <figure className={[styles.block, compact ? styles.compact : '', fill ? styles.fill : '', className].filter(Boolean).join(' ')} {...aria}>
+    <figure
+      className={[styles.block, compact ? styles.compact : '', fill ? styles.fill : '', wrap ? styles.wrap : '', marks ? styles.marked : '', className].filter(Boolean).join(' ')}
+      {...aria}
+    >
       {label && <figcaption className={styles.label}>{label}</figcaption>}
       <pre className={styles.pre}>
         <code>
           {code.split(/\r?\n/).map((line, i) => {
             const [body, comment] = splitComment(line, language);
             const shown = hideComments ? body.replace(/\s+$/, '') : body;
+            const mark = marks?.[i] ?? undefined;
             return (
-              <span className={[styles.line, slots ? styles.slotLine : ''].filter(Boolean).join(' ')} key={i}>
+              <span
+                className={[styles.line, slots ? styles.slotLine : '', mark ? styles[mark] : ''].filter(Boolean).join(' ')}
+                data-mark={mark}
+                key={i}
+              >
                 {numbered && <span className={styles.ln} aria-hidden="true">{i + 1}</span>}
+                {marks && <span className={styles.sign} aria-hidden="true">{mark === 'add' ? '+' : mark === 'remove' ? '-' : ' '}</span>}
                 <span className={styles.text}>
-                  {withSlots(shown, `b${i}`)}
+                  {mark && <span className="sr-only">{MARK_LABEL[mark]}</span>}
+                  {highlight && !slots ? highlighted(shown, language) : withSlots(shown, `b${i}`)}
                   {comment && !hideComments && <span className={styles.comment}>{withSlots(comment, `c${i}`)}</span>}
                   {!shown && (!comment || hideComments) ? ' ' : null}
                 </span>

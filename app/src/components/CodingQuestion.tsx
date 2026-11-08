@@ -525,10 +525,9 @@ export const CodingQuestion: React.FC<Props> = ({
     }
     : null;
 
+  // Give up ends the visit and opens the solution; after a miss the shell offers it (S) itself.
   const solutionAction: ShellKeyAction | null = phase === 'review-fail'
     ? { label: 'Give up', note: 'and see the solution', onAction: handleGiveUp }
-    : done && !passed && !showSolution
-    ? { label: 'Show solution', onAction: () => setShowSolution(true) }
     : null;
 
   // ---- Beside the editor: hints spent, the live preview, or (once shown) the solution in their place ----
@@ -557,6 +556,8 @@ export const CodingQuestion: React.FC<Props> = ({
       hint={!tiered && showHints && phase === 'editing' ? question.hints : null}
       hintAction={hintAction}
       solutionAction={solutionAction}
+      solution={done && !passed ? { code: question.solution, language: question.language, answer: code } : null}
+      onSolutionOpen={() => setShowSolution(true)}
       feedback={feedback}
     >
       <QuestionRegion grow>
@@ -593,7 +594,7 @@ export const CodingQuestion: React.FC<Props> = ({
               {reference && (
                 <section className={[styles.panel, styles.fillPanel].join(' ')} aria-label={done ? 'Solution' : 'Reference solution'}>
                   <h3 className={styles.panelHead}>{done ? 'Solution' : 'Reference solution'}</h3>
-                  <CodeBlock code={question.solution} language={question.language} numbered fill />
+                  <CodeBlock code={question.solution} language={question.language} numbered highlight fill />
                 </section>
               )}
               {previewActive && !reference && (

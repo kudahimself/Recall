@@ -176,10 +176,6 @@
   overscroll-behavior: contain;
 }
 
-.solution {
-  margin-top: var(--sp-3);
-}
-
 .actions {
   flex: none;
   display: flex;
