@@ -166,3 +166,22 @@ test('a Django worked example, a GitHub Actions workflow, an Nginx config or a D
   expect(r.ownSession.join('\n')).toMatch(/runs: false is only for a Django/);
   expect(r.plain.join('\n')).toMatch(/runs: false is only for a Django/);
 });
+
+test('an HTML or CSS worked example with runs: false is not run, and the kind holds only for those languages', () => {
+  const r = probe(`
+    const { LESSONS } = require('./src/data/lessons/index.ts');
+    const base = LESSONS.find(l => l.id === 'tsql_select/1');
+    const worked = (language, code) => ({ ...base, worked: { ...base.worked, language, tables: undefined, runs: false, code, output: 'Hi' } });
+    const html = worked('html', '<p class="sm:text-center">Hi</p>');
+    const css = worked('css', '.card {\\n  padding: 20px;\\n}');
+    const pythonHtml = worked('python', 'print("<p>Hi</p>")');
+    const textOnly = worked('html', 'Hi');
+    const errors = async l => (await C.checkLesson(l, new Set())).errors;
+    return { html: await errors(html), css: await errors(css), pythonHtml: await errors(pythonHtml), textOnly: await errors(textOnly) };
+  `);
+  expect(r.html.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  expect(r.css.join('\n')).not.toMatch(/does not run|prints something else|runs: false/);
+  // Python that prints markup runs on python3, so it must run.
+  expect(r.pythonHtml.join('\n')).toMatch(/runs: false is only for a Django/);
+  expect(r.textOnly.join('\n')).toMatch(/runs: false is only for a Django/);
+});

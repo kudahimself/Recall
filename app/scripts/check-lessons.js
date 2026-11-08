@@ -21,8 +21,8 @@
  *     would then depend on the engine); an example of a kind that cannot run
  *     here (NON_RUNNABLE_KINDS in src/utils/workedKinds.ts: a Django / DRF
  *     example, a GitHub Actions workflow, an Nginx config, a Databricks
- *     notebook cell) sets `worked.runs: false` and is not run (its output is
- *     verified by hand), and
+ *     notebook cell, an HTML / CSS page) sets `worked.runs: false` and is not
+ *     run (its output is verified by hand), and
  *     `runs: false` on any other example fails;
  *   - the worked example repeats an exercise's solution: the solution (or one
  *     of its `-- OR` / `# OR` forms) appears in it verbatim, or the worked code
@@ -497,7 +497,7 @@ async function checkLesson(lesson, seenIds) {
   } else if (w.output === undefined) {
     err('worked example has no output to check');
   } else if (w.runs === false) {
-    if (w.language !== 'python' || !nonRunnableKind(w.code)) {
+    if (!nonRunnableKind(w.code, w.language)) {
       const kinds = NON_RUNNABLE_KINDS.map(k => k.kind);
       err(`runs: false is only for ${kinds.slice(0, -1).join(', ')} or ${kinds[kinds.length - 1]}`);
     }

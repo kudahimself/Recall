@@ -19,7 +19,7 @@ No question and no ordered bank changes.
 ## Order of work
 
 - One lesson per topic for now; large topics are split into steps (`step` 2..n) later.
-- Courses in this order, each from its first topic: SQL for Data Engineering, then Backend (Python), then Databricks.
+- Courses in this order, each from its first topic: SQL for Data Engineering, then Backend (Python), then Databricks, then Web Dev.
   Data Engineering lessons arrive with each section of its rewrite (Moving Data first).
 - One section per PR: the owner reviews a section at a time.
   Finish the section in path order before the next.
@@ -84,6 +84,7 @@ House rules (check-lessons.js enforces the first two):
   A GitHub Actions workflow cannot run without a runner either: keep `language: CodeLanguage.PYTHON` as the bank's CI/CD questions do, set `runs: false` (allowed only when the code has top-level `on:` and `jobs:` and a job's `runs-on:`), and make `output` the lines its `run` steps print, verified by hand.
   An Nginx config cannot run without a server: keep `language: CodeLanguage.PYTHON` as the bank's Nginx questions do, set `runs: false` (allowed only when the code has a top-level `server {` block with a `listen` directive and a `location ... {` block), and make `output` what Nginx does with requests the first-line comment lists, verified by hand.
   A Databricks notebook cell cannot run without a workspace: keep `language: CodeLanguage.PYTHON`, put SQL in `spark.sql(...)`, set `runs: false` (allowed only when the code calls the notebook's own `spark` or `dbutils` without creating them, or imports `databricks.sdk`), say in a first-line comment what catalog, schema or secret scope it assumes, and make `output` what the cell prints on current Databricks (Unity Catalog, Delta Lake 3+), verified by hand.
+- HTML / CSS (Tailwind included) cannot run without a browser: use `CodeLanguage.HTML` or `CodeLanguage.CSS`, set `runs: false` (allowed only for those languages, when the code holds a paired element or a CSS rule), make `output` what the rendered page shows (the text, or the values the steps name), and confirm it by rendering the example in headless Chromium against current versions (Tailwind 4).
   These kinds live in one list, `NON_RUNNABLE_KINDS` in `app/src/utils/workedKinds.ts`; a new kind is added there, kept as narrow, with a case in `checkLessons.test.ts`.
 - Set `output` to exactly what the code prints (SQL: `col | col` header and rows, a blank line between result sets).
   Run the checker to get it, then read it and confirm every value by hand against the steps.

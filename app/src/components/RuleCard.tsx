@@ -102,7 +102,7 @@ export function RuleCardView({ lesson, byId, context, mode, onStart, onClose }: 
               <p className={styles.checked}>
                 <CheckCircle2 aria-hidden="true" className={styles.checkedIcon} />
                 {worked.runs === false
-                  ? `This example needs ${nonRunnableKind(worked.code)?.needs ?? 'its own setup'} to run, so its output was checked by hand.`
+                  ? `This example needs ${nonRunnableKind(worked.code, worked.language)?.needs ?? 'its own setup'} to run, so its output was checked by hand.`
                   : 'Checked: this example runs and prints exactly this.'}
               </p>
             </>

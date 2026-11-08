@@ -31,6 +31,24 @@ export const webdevOrderedQuestions: Question[] = [
   },
 
   {
+    id: 'html-linebreak-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.HTML_BASICS,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.HTML,
+    question: 'What text does the browser display for this paragraph? Type it as it appears on screen, one displayed line per line.',
+    code: `<p>Roses are red,
+   violets are blue.<br>Sugar is sweet.</p>`,
+    expectedOutput: `Roses are red, violets are blue.
+Sugar is sweet.`,
+    explanation: 'HTML collapses whitespace: the line break and the spaces after "red," in the source become a single space, so the first two phrases share one line. Only the <br> element starts a new line inside the paragraph. To break a line, use <br> (or a new <p> for a new paragraph); pressing Enter in the source never does it.',
+    hints: ['A newline in the source is just whitespace to the browser.', 'Which element in the snippet actually forces a line break?'],
+    tags: ['html', 'whitespace', 'br', 'predict'],
+    concepts: ['web-html-semantics'],
+  },
+
+  {
     id: 'html-parsons-1',
     type: QuestionType.PARSONS,
     difficulty: Difficulty.BEGINNER,
@@ -439,6 +457,27 @@ export const webdevOrderedQuestions: Question[] = [
   // Intermediate Coding
 
   {
+    id: 'html-form-get-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.HTML_FORMS,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.HTML,
+    question: 'The learner clicks Search without changing any field. What path and query string does the browser request? Type it on one line in the form /path?key=value&key=value.',
+    code: `<form action="/search" method="get">
+  <input name="q" value="shoes">
+  <input name="size" value="9">
+  <input value="ignored">
+  <button>Search</button>
+</form>`,
+    expectedOutput: '/search?q=shoes&size=9',
+    explanation: 'A GET form sends its data in the URL: the action path, then ?, then name=value pairs joined by &, in document order. Only controls with a name attribute are submitted, so the third input (no name) is left out, and the button has no name either. A <button> inside a form defaults to type="submit", which is why clicking it submits.',
+    hints: ['method="get" puts the fields in the URL after a ?.', 'What does a field need before its value is sent?'],
+    tags: ['html', 'form', 'method', 'get', 'predict'],
+    concepts: ['web-html-forms-a11y'],
+  },
+
+  {
     id: 'html-form-parsons-1',
     type: QuestionType.PARSONS,
     difficulty: Difficulty.BEGINNER,
@@ -804,6 +843,35 @@ export const webdevOrderedQuestions: Question[] = [
     explanation: 'Semantic elements convey meaning. A screen reader can announce "navigation" for <nav> or "main content" for <main>. Search engines use them to understand content hierarchy. Developers can quickly scan the structure. <div> is meaningless — use it only when no semantic element fits.',
     tags: ['semantic', 'accessibility', 'seo', 'html'],
     concepts: ['web-html-semantics', 'a11y-aria-roles'],
+  },
+
+  {
+    id: 'html-details-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.HTML_SEMANTIC,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.HTML,
+    question: 'Which text is visible when the page first loads, before anything is clicked? Type each visible line in order, one per line, leaving out the disclosure triangles.',
+    code: `<details>
+  <summary>Shipping</summary>
+  <p>Free over 50 pounds.</p>
+</details>
+<details open>
+  <summary>Returns</summary>
+  <p>30 days to return.</p>
+</details>`,
+    expectedOutput: `Shipping
+Returns
+30 days to return.`,
+    acceptableOutputs: [`Shipping
+Returns
+
+30 days to return.`],
+    explanation: 'A <details> element shows only its <summary> until it is opened; the rest of its content stays hidden. The boolean open attribute makes it start expanded, so the second entry shows its paragraph on load while the first shows only "Shipping". Clicking a summary toggles the open attribute.',
+    hints: ['What does <details> show before it is opened?', 'One of the two elements carries a boolean attribute.'],
+    tags: ['html', 'details', 'summary', 'semantic', 'predict'],
+    concepts: ['web-html-semantics'],
   },
 
   {
@@ -1191,6 +1259,27 @@ export const webdevOrderedQuestions: Question[] = [
     ],
     explanation: 'Every element is a box: Content (the actual text/image), Padding (space inside the border), Border (the visible edge), Margin (space outside the border). Use box-sizing: border-box to include padding and border in the element\'s width/height.',
     tags: ['css', 'box-model', 'fundamentals'],
+    concepts: ['web-css-box-model'],
+  },
+
+  {
+    id: 'css-box-width-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.CSS_BASICS,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.CSS,
+    question: 'No other rules apply to .card. How wide is the box on screen, from the outer edge of its left border to the outer edge of its right border? Type the number of pixels only, e.g. 120.',
+    code: `.card {
+  width: 200px;
+  padding: 20px;
+  border: 5px solid black;
+  margin: 10px;
+}`,
+    expectedOutput: '250',
+    explanation: 'By default box-sizing is content-box, so width sets only the content area. Padding and border are added on both sides: 200 + 20 + 20 + 5 + 5 = 250px. Margin sits outside the border and adds space around the box, not to its width. Many projects set box-sizing: border-box so width includes padding and border (then the box would be 200px).',
+    hints: ['With the default box-sizing, what does width measure?', 'Padding and border count on both the left and the right side; margin is outside the border.'],
+    tags: ['css', 'box-model', 'box-sizing', 'predict'],
     concepts: ['web-css-box-model'],
   },
 
@@ -2124,6 +2213,25 @@ tr:___(odd) {
   // INTERMEDIATE
 
   {
+    id: 'css-flex-grow-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.CSS_LAYOUT,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.CSS,
+    question: 'A 600px-wide .row holds one .a and one .b, with no padding, borders or gap. How wide does each item end up? Type the width of .a then .b in pixels, separated by a comma, e.g. 150, 450.',
+    code: `.row { display: flex; width: 600px; }
+.a { width: 100px; flex-grow: 1; }
+.b { width: 100px; flex-grow: 3; }`,
+    expectedOutput: '200, 400',
+    acceptableOutputs: ['200,400'],
+    explanation: 'flex-grow shares out the free space, not the whole row. Both items start at their 100px width, leaving 600 - 200 = 400px free. That space is split 1 : 3, so .a gains 100px and .b gains 300px: 200px and 400px. Splitting the full 600px 1 : 3 (150 and 450) is the common mistake.',
+    hints: ['Start from each item\'s width; how much space is left over?', 'flex-grow divides only that leftover space, in the ratio of the grow values.'],
+    tags: ['css', 'flexbox', 'flex-grow', 'layout', 'predict'],
+    concepts: ['web-css-flexbox'],
+  },
+
+  {
     id: 'css-z-index-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.INTERMEDIATE,
@@ -2430,6 +2538,28 @@ tr:___(odd) {
   },
 
   {
+    id: 'css-resp-order-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.CSS_RESPONSIVE,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.CSS,
+    question: 'The viewport is 1200px wide. What font-size does .title get? Type the value with its unit, e.g. 12px.',
+    code: `.title { font-size: 16px; }
+@media (min-width: 1024px) {
+  .title { font-size: 28px; }
+}
+@media (min-width: 600px) {
+  .title { font-size: 20px; }
+}`,
+    expectedOutput: '20px',
+    explanation: 'At 1200px both media queries match. A media query adds no specificity, so the three .title rules tie and the last one in source order wins: 20px. Mobile-first CSS lists its min-width queries from the smallest breakpoint to the largest so that the widest matching one comes last; here the order is reversed, so the 1024px rule is always overridden.',
+    hints: ['Which of the two queries match at 1200px?', 'When equal selectors both apply, which one wins?'],
+    tags: ['css', 'responsive', 'media-query', 'mobile-first', 'cascade', 'predict'],
+    concepts: ['web-css-responsive'],
+  },
+
+  {
     id: 'css-resp-clamp-cloze-1',
     type: QuestionType.CLOZE_CODE,
     difficulty: Difficulty.INTERMEDIATE,
@@ -2613,6 +2743,25 @@ ___ (min-width: 400px) {
     explanation: 'Unlike Bootstrap (pre-built components), Tailwind provides tiny utility classes. Instead of writing custom CSS, you apply classes: <div class="p-4 bg-white rounded-lg shadow-md">. It purges unused classes in production for tiny file sizes.',
     tags: ['tailwind', 'utility-first', 'fundamentals'],
     concepts: ['web-tailwind-utility'],
+  },
+
+  {
+    id: 'tw-breakpoint-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.BEGINNER,
+    topic: Topic.TAILWIND,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.HTML,
+    question: 'The page uses Tailwind\'s default breakpoints. On a phone with a 400px-wide viewport, how is this paragraph\'s text aligned? Type left or center.',
+    code: `<p class="sm:text-center text-left">
+  Free delivery on every order.
+</p>`,
+    expectedOutput: 'left',
+    acceptableOutputs: ['Left'],
+    explanation: 'Tailwind is mobile-first: an unprefixed class applies at every width, and a prefix such as sm: means "from this breakpoint up" (sm is 40rem, 640px). A 400px viewport is below sm, so sm:text-center does not apply and text-left does. sm: does not mean "on small screens"; to style only below a breakpoint, use a max-* variant such as max-sm:.',
+    hints: ['Does sm: mean "small screens" or "from the sm width up"?', 'The sm breakpoint is 640px.'],
+    tags: ['tailwind', 'responsive', 'breakpoints', 'mobile-first', 'predict'],
+    concepts: ['web-tailwind-utility', 'web-css-responsive'],
   },
 
   {
@@ -2966,6 +3115,48 @@ ___ (min-width: 400px) {
 
   // ===== HTML_CSS_PROJECT =====
   // Advanced Coding
+
+  {
+    id: 'htmlcss-project-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.HTML_CSS_PROJECT,
+    course: Course.WEB_DEV,
+    question: 'A pricing section holds three plan cards. They must stack in one column on phones and sit side by side, three across, from the md breakpoint up. Which classes on the wrapper around the cards do that with Tailwind\'s default breakpoints?',
+    options: [
+      { id: 'a', text: '`grid grid-cols-3 sm:grid-cols-1 gap-6`, so small screens drop to one column', isCorrect: false },
+      { id: 'b', text: '`flex md:flex-row gap-6`, since a flex container stacks its items until a row is set', isCorrect: false },
+      { id: 'c', text: '`grid grid-cols-1 md:grid-cols-3 gap-6`, one column first and three from md up', isCorrect: true },
+      { id: 'd', text: '`grid md:grid-cols-1 grid-cols-3 gap-6`, listing the md rule first so phones read it', isCorrect: false },
+    ],
+    explanation: 'Tailwind is mobile-first: the unprefixed class is the phone layout and md: overrides it from 768px up, so grid-cols-1 md:grid-cols-3 stacks on phones and shows three columns on wider screens. sm:grid-cols-1 means "one column from 640px up", which gives three cramped columns on phones and one on desktops, the reverse of the goal. A flex container is a row by default, so flex md:flex-row never stacks. Class order in the attribute changes nothing; md:grid-cols-1 grid-cols-3 is three columns on phones and one from md up.',
+    tags: ['tailwind', 'responsive', 'grid', 'mobile-first', 'project'],
+    concepts: ['web-tailwind-utility', 'web-css-responsive'],
+  },
+
+  {
+    id: 'htmlcss-project-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.HTML_CSS_PROJECT,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.HTML,
+    question: 'The page uses Tailwind\'s default breakpoints. On a phone with a 500px-wide viewport, which texts in this navbar are visible? Type them left to right, separated by a comma and a space, e.g. One, Two.',
+    code: `<nav class="flex items-center justify-between">
+  <a href="/">Acme</a>
+  <ul class="hidden md:flex gap-6">
+    <li>Pricing</li>
+    <li>Docs</li>
+  </ul>
+  <button class="md:hidden">Menu</button>
+</nav>`,
+    expectedOutput: 'Acme, Menu',
+    acceptableOutputs: ['Acme,Menu'],
+    explanation: 'hidden sets display: none at every width, and md:flex turns the list back on only from 768px up, so at 500px the Pricing and Docs links are gone. md:hidden hides the Menu button only from 768px up, so on the phone it shows. On a desktop the same markup shows Acme, Pricing, Docs and no Menu button: one class pair per element swaps the two navigations at the breakpoint.',
+    hints: ['hidden applies at every width until a prefixed class overrides it.', 'md: starts at 768px; is 500px above or below that?'],
+    tags: ['tailwind', 'responsive', 'navbar', 'hidden', 'project', 'predict'],
+    concepts: ['web-tailwind-utility', 'web-css-responsive'],
+  },
 
   {
     id: 'htmlcss-project-1',

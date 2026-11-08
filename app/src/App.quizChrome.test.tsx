@@ -14,6 +14,14 @@ import { questions } from './data/questions';
 import { Course, Topic } from './types';
 import { getCourseForTopic, getTopicPlace } from './utils/courseConfig';
 
+// The no-column test needs a course whose topics have no rule card: Web Dev,
+// with its lessons left out of this file (every course now opens on lessons).
+jest.mock('./data/lessons', () => {
+  const actual = jest.requireActual('./data/lessons');
+  const config = jest.requireActual('./utils/courseConfig');
+  return { ...actual, LESSONS: actual.LESSONS.filter((l: { topicKeys: string[] }) => config.getCourseForTopic(l.topicKeys[0]) !== 'web_dev') };
+});
+
 const START = /Start today's session/;
 const CHECK = /Check answer/;
 
