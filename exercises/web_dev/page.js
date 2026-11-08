@@ -126,8 +126,10 @@ function featureMatches(part, env) {
   if (part === 'all' || part === 'screen') return true;
   if (part === 'print' || part === '') return false;
   const range = part.match(/^\(\s*(width|height)\s*(>=|<=|>|<|=)\s*([\d.]+[a-z]*)\s*\)$/);
-  if (range) {
-    const [, side, op, size] = range;
+  const reversed = part.match(/^\(\s*([\d.]+[a-z]*)\s*(>=|<=|>|<|=)\s*(width|height)\s*\)$/);
+  if (range || reversed) {
+    const flip = { '>=': '<=', '<=': '>=', '>': '<', '<': '>', '=': '=' };
+    const [side, op, size] = range ? range.slice(1) : [reversed[3], flip[reversed[2]], reversed[1]];
     const actual = env[side];
     const limit = toPx(size);
     return { '>=': actual >= limit, '<=': actual <= limit, '>': actual > limit, '<': actual < limit, '=': actual === limit }[op];
