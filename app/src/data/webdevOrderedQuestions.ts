@@ -8339,7 +8339,34 @@ console.log(next.theme, next.fontSize);`,
   },
 
   // ===== TS_PROJECT =====
-  // Intermediate Predict -> Advanced Coding
+  // Intermediate MCQ -> Intermediate Predict -> Advanced Coding
+
+  {
+    id: 'ts-project-guard-mcq-1',
+    type: QuestionType.MULTIPLE_CHOICE,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.TS_PROJECT,
+    course: Course.WEB_DEV,
+    question: `A wrapper returns a result envelope without checking the response:
+
+\`\`\`typescript
+async function getOrder(url: string): Promise<Result<Order>> {
+  const res = await fetch(url);
+  return { ok: true, data: (await res.json()) as Order };
+}
+\`\`\`
+
+The server answers with a 404 status and a JSON error body, \`{ "message": "not found" }\`. What does the caller get?`,
+    options: [
+      { id: 'a', text: 'A rejected promise: fetch rejects on a 404 status, so the call throws before res.json() ever runs and no result is returned', isCorrect: false },
+      { id: 'b', text: 'A TypeError: the `as Order` assertion checks the parsed body at runtime and throws because the fields an Order needs are missing', isCorrect: false },
+      { id: 'c', text: 'An ok: true result whose data is the error body, still typed as Order: fetch resolves on HTTP errors and `as` checks nothing', isCorrect: true },
+      { id: 'd', text: 'A compile error: TypeScript refuses `as Order` on a parsed body it cannot prove is an Order, so the wrapper never builds at all', isCorrect: false },
+    ],
+    explanation: 'fetch rejects only on a network failure; a 404 is still a response, so it resolves and res.json() parses the error body. res.json() returns any, so `as Order` compiles, and like every assertion it is erased at runtime and checks nothing. The caller gets { ok: true, data: { message: "not found" } } typed as an Order, and the bug surfaces later when it reads data.id. The fix is to check res.ok and return the error variant when it is false, parse the body to unknown, and run a type guard such as isOrder before returning it as data.',
+    tags: ['project', 'fetch', 'type-guard', 'as-assertion', 'result-type', 'typescript'],
+    concepts: ['ts-any-vs-unknown', 'ts-narrowing'],
+  },
 
   {
     id: 'ts-project-result-predict-1',

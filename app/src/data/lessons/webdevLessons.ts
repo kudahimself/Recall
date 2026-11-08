@@ -2217,6 +2217,7 @@ type Some = Exclude<"p" | "q", "p">; // "q"`,
     pitfall: lines(
       "`Partial<T>` lets a key be missing; it does not mean the key is there with the value `undefined`.",
       "So spreading a partial patch over a full object, `{ ...current, ...patch }`, keeps every field the patch leaves out, and you do not need to copy them by hand.",
+      "An explicit `undefined` in the patch, such as `{ price: undefined }`, is still allowed by `Partial` and is copied over the field, while the result is still typed as the full type.",
     ),
     worked: {
       language: CodeLanguage.TYPESCRIPT,
@@ -2328,6 +2329,6 @@ for (const t of ['{"id":7,"copies":2}', '{"id":"7"}', "x=2"]) {
 wrong shape
 not JSON`,
     },
-    exercises: ['ts-project-result-predict-1', 'proj-ts-3', 'ts-project-1'],
+    exercises: ['ts-project-guard-mcq-1', 'ts-project-result-predict-1', 'ts-project-1', 'proj-ts-1', 'proj-ts-2'],
   },
 ];
