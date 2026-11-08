@@ -32,7 +32,8 @@ In VS Code, the Vitest extension finds the same tests.
 The JavaScript exercises import your module and call its functions, as Jest-style tests do (`describe`, `test`, `expect`).
 
 The HTML and CSS exercises load your page with `page.js`, which hands it to jsdom.
-jsdom builds the elements, applies the cascade and answers `getComputedStyle`, so the tests check what an element is and what style it ends up with, not how your file is written.
+jsdom builds the elements, applies the cascade and answers `getComputedStyle`, so the tests check what an element is and what style it ends up with.
+A few also read your file, but only for a technique that the page alone cannot show (a `var()`, a `min-width` query, no `!important`), and their failure message names it.
 It draws nothing, so nothing is measured in pixels on the screen, and it ignores `@media` on its own: `page.js` applies the queries that match the width a test asks for, so a test can load your page at 375px and again at 1280px.
 Leave `page.js`, `package.json` and `vitest.config.js` as they are.
 
