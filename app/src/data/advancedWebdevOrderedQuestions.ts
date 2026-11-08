@@ -333,7 +333,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('tanstack-cloze-3'),
 
   // =====================================================================
-  // 11. NEXT_FORMS_VALIDATION (21 questions)
+  // 11. NEXT_FORMS_VALIDATION (22 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — next-forms-1/2/4/8 are BEGINNER difficulty
@@ -359,6 +359,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-forms-cloze-watch'),
   // INTERMEDIATE MC
   q('next-forms-9'),
+  // INTERMEDIATE predict (what safeParse returns for form strings, with and without z.coerce)
+  q('next-forms-coerce-predict-1'),
   // INTERMEDIATE coding
   q('next-forms-10'),
   // ADVANCED faded (Cloze)

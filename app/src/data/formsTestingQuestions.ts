@@ -681,6 +681,36 @@ export async function createUser(formData: FormData) {
     concepts: ['forms-zod-schema'],
   },
 
+  // Predict: what safeParse returns for form strings, with and without z.coerce
+  {
+    id: 'next-forms-coerce-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_FORMS_VALIDATION,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.TYPESCRIPT,
+    question: 'A form hands its values over as strings, the way `formData.get()` does. `z` is imported from `zod`. What do the two `console.log` calls print? Type the two lines exactly as printed: `true` or `false`, a space, then the failing field names separated by a comma and a space on the first line, and the JSON on the second.',
+    code: `const loan = z.object({
+  copies: z.number(),
+  weeks: z.coerce.number().max(4),
+});
+
+const a = loan.safeParse({ copies: "2", weeks: "6" });
+const b = loan.safeParse({ copies: 2, weeks: "3" });
+
+console.log(a.success, a.error?.issues.map((i) => i.path[0]).join(", "));
+console.log(b.success, JSON.stringify(b.data));`,
+    expectedOutput: `false copies, weeks
+true {"copies":2,"weeks":3}`,
+    explanation: '`safeParse` never throws: it returns `{ success: false, error }` with one issue per failing check, in field order, or `{ success: true, data }`. In `a`, `copies` is the string `"2"`, and a plain `z.number()` rejects any string, even one holding digits. `weeks` is coerced first, `Number("6")` gives 6, and the coerced number still has to pass `.max(4)`, so it fails too. In `b` both fields pass, and `data` holds the parsed values, so `weeks` comes back as the number 3, not the string `"3"`.',
+    hints: [
+      'Does `z.number()` accept a string that holds digits?',
+      '`z.coerce.number()` converts first, then runs every check chained after it on the number',
+    ],
+    tags: ['zod', 'safeparse', 'z-coerce', 'formdata', 'predict'],
+    concepts: ['forms-zod-schema'],
+  },
+
   // 12. Cloze: z.enum + optional fields
   {
     id: 'next-forms-cloze-enum',
