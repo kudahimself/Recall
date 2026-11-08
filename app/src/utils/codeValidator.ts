@@ -325,7 +325,7 @@ function canonicalizeJsParams(source: string): string {
       if (brace >= 0 && code[brace] === '{' && isObjectBrace(code, brace)) {
         const p = prevCode(code, at);
         const n = nextCode(code, after);
-        if (code[p] === '{' || code[p] === ',') {
+        if (!mask[p] && !mask[n] && (code[p] === '{' || code[p] === ',')) {
           if (code[n] === ':' && code[n + 1] !== ':') continue;
           if (code[n] === ',' || code[n] === '}') replacement = `${m[0]}: ${replacement}`;
         }

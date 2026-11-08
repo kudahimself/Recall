@@ -104,4 +104,13 @@ describe('JS parameter names are the learner\'s choice', () => {
     expect(verdict(intro, "const intro = (p) => `It's ${p}`;")).toBe('pass');
     expect(verdict(intro, "const intro = (p) => `It's p`;")).not.toBe('pass');
   });
+
+  it('reads a name alone in an interpolation inside an object literal as code, not a shorthand key', () => {
+    const greet = question('const greet = (name) => ({ label: `${name}` });');
+    expect(verdict(greet, 'const greet = (n) => ({ label: `${n}` });')).toBe('pass');
+    expect(verdict(greet, 'const greet = (n) => ({ label: `${name}` });')).not.toBe('pass');
+    const hi = question('const greet = (name) => ({ label: `Hi ${name}` });');
+    expect(verdict(hi, 'const greet = (n) => ({ label: `Hi ${n}` });')).toBe('pass');
+    expect(verdict(hi, 'const greet = (n) => ({ label: `Hi ${name}` });')).not.toBe('pass');
+  });
 });
