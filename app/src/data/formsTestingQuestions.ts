@@ -2037,6 +2037,44 @@ await user.click(screen.getByRole("button", { name: "Save" }));`,
     concepts: ['testing-user-event', 'testing-rtl-queries'],
   },
 
+  // Predict: what getBy, queryBy and findBy give before and after an async update
+  {
+    id: 'next-testing-queries-predict-1',
+    type: QuestionType.PREDICT_OUTPUT,
+    difficulty: Difficulty.INTERMEDIATE,
+    topic: Topic.NEXT_TESTING,
+    course: Course.WEB_DEV,
+    language: CodeLanguage.JSX,
+    question: 'This runs inside an `async` Jest test with jsdom, and `render` and `screen` come from `@testing-library/react`. `Status` shows "Loading", then "Ready" 100 ms after it mounts. What do the `console.log` calls print? Type the printed lines in order, one per line, exactly as printed.',
+    code: `function Status() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setTimeout(() => setReady(true), 100);
+  }, []);
+  return <p>{ready ? "Ready" : "Loading"}</p>;
+}
+
+render(<Status />);
+console.log(screen.queryByText("Ready"));
+try {
+  screen.getByText("Ready");
+} catch {
+  console.log("getByText threw");
+}
+const p = await screen.findByText("Ready");
+console.log(p.textContent, screen.queryByText("Loading"));`,
+    expectedOutput: `null
+getByText threw
+Ready null`,
+    explanation: 'Right after `render` the paragraph says "Loading", so nothing matches "Ready". `queryByText` returns `null` when nothing matches, while `getByText` throws, which is why `getBy*` cannot check that something is absent. `findByText` returns a promise and retries the query until it matches or 1000 ms pass, so the `await` resumes once the timer has set `ready`. By then the paragraph\'s text is "Ready", and "Loading" is gone, so the last `queryByText` gives `null` again.',
+    hints: [
+      'Which query returns a value for no match, and which one throws?',
+      '`findByText` keeps retrying until the text appears; what does the paragraph say then?',
+    ],
+    tags: ['react-testing-library', 'getBy', 'queryBy', 'findBy', 'async', 'predict'],
+    concepts: ['testing-rtl-queries', 'testing-async'],
+  },
+
   // 20. Cloze: waitFor for async assertions beyond findBy
   {
     id: 'next-testing-cloze-waitfor',
