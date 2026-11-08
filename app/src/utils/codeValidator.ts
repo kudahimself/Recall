@@ -78,6 +78,11 @@ function stripLineComments(code: string, marker: string): string {
  */
 function stripComments(code: string, language: CodeLanguage): string {
   if (language === CodeLanguage.SQL) return stripLineComments(code, '--');
+  // HTML has no line comments (`#` starts a fragment link or a color); its
+  // comments are `<!-- -->`, which a learner often keeps from a comment-only
+  // starter. Left in, the comment glues onto the first tag and costs a correct
+  // answer its match.
+  if (language === CodeLanguage.HTML) return code.replace(/<!--[\s\S]*?-->/g, ' ');
   if (language === CodeLanguage.JAVASCRIPT || language === CodeLanguage.TYPESCRIPT || language === CodeLanguage.JSX) {
     return stripLineComments(code.replace(/\/\*[\s\S]*?\*\//g, ''), '//');
   }
@@ -167,6 +172,18 @@ function normalizeCode(code: string, language: CodeLanguage): string {
   // of a meaningful token (`age>25`) instead of a bare `>` that says nothing
   // about which way the comparison points.
   n = n.replace(/\s*([,:+\-*/=<>!])\s*/g, '$1');
+
+  // HTML attributes are a set, and so is a class attribute's list: neither
+  // order changes the element (`p-6 bg-white` is `bg-white p-6`). Split each
+  // class off the quotes and the tag's closing `>` off its last attribute, or
+  // those stay glued into one token and a correct reordered answer fails. The
+  // slash in `<img ... />` means nothing to an HTML parser, so it is dropped.
+  if (language === CodeLanguage.HTML) {
+    n = n
+      .replace(/\/>/g, '>')
+      .replace(/\bclass="([^"]*)"/g, (_m, value: string) => `class=" ${value.trim()} "`)
+      .replace(/(<[a-z][^<> ]* [^<>]*)>/g, '$1 >');
+  }
 
   // SQL comparisons between two qualified columns are symmetric: a join
   // written `ON c.key = o.key` and one written `ON o.key = c.key` are the same

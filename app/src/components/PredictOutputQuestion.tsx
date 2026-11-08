@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PredictOutputQuestion as PredictQ, QuestionType } from '../types';
-import { outputInstruction, outputMatches } from '../utils/predictOutput';
+import { outputInstruction, outputMatches, rendersInBrowser } from '../utils/predictOutput';
 import { DataTables } from './DataTables';
 import { CodeBlock, languageLabel } from './ui/CodeBlock';
 import { Prose } from './ui/InlineText';
@@ -33,6 +33,8 @@ export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, sho
     onAnswer(outputMatches(typed, [question.expectedOutput, ...(question.acceptableOutputs || [])], question.language));
   };
 
+  // HTML and CSS are rendered, not run: the answer is about the page, not printed output.
+  const rendered = rendersInBrowser(question.language);
   const lines = question.code.split(/\r?\n/);
   const sideBySide = lines.length <= SIDE_BY_SIDE_MAX_LINES && Math.max(...lines.map(l => l.length)) <= SIDE_BY_SIDE_MAX_COLUMNS;
 
@@ -59,21 +61,21 @@ export const PredictOutputQuestion: React.FC<Props> = ({ question, onAnswer, sho
         {!graded ? (
           <TextAnswer
             id={`predict-${question.id}`}
-            label="Your predicted output"
+            label={rendered ? 'Your answer' : 'Your predicted output'}
             value={typed}
             onChange={setTyped}
             multiline
             grow={sideBySide}
             rows={3}
             mono
-            placeholder="Type the output you expect..."
+            placeholder={rendered ? 'Type your answer...' : 'Type the output you expect...'}
           />
         ) : (
           <AnswerCompare
             columns={sideBySide ? 1 : 2}
             items={[
-              { label: 'Your output', value: typed.replace(/\s+$/, ''), tone: right ? 'right' : 'wrong', mono: true },
-              ...(right ? [] : [{ label: 'Expected output', value: question.expectedOutput, tone: 'right' as const, mono: true }]),
+              { label: rendered ? 'Your answer' : 'Your output', value: typed.replace(/\s+$/, ''), tone: right ? 'right' : 'wrong', mono: true },
+              ...(right ? [] : [{ label: rendered ? 'Expected answer' : 'Expected output', value: question.expectedOutput, tone: 'right' as const, mono: true }]),
             ]}
           />
         )}
