@@ -87,6 +87,9 @@ const DATA_ENG_TOPICS = new Set<string>([
   Topic.DE_STREAM_STATE_JOINS,
   // Distributed Data
   Topic.DE_PARTITION_SKEW, Topic.DE_REPLICATION_CONSISTENCY, Topic.DE_STORAGE_ENGINES,
+  // Running Pipelines
+  Topic.DE_ORCHESTRATION_DAGS, Topic.DE_QUALITY_GATES, Topic.DE_PIPELINE_OBSERVABILITY,
+  Topic.DE_ACCESS_GOVERNANCE, Topic.DE_DATA_FOR_AI,
   // Machines, Memory & Disks
   Topic.DE_MEMORY_HIERARCHY, Topic.DE_RAM_VS_DISK, Topic.DE_SEQUENTIAL_VS_RANDOM_IO,
   Topic.DE_PAGE_CACHE, Topic.DE_VIRTUAL_MEMORY, Topic.DE_CPU_CACHE_LOCALITY,
@@ -498,8 +501,8 @@ export const DATABRICKS_PATH_ORDER = [
  * Being rewritten section by section as decisions and designs (a lesson per
  * topic, then predict / choose-and-justify / Parsons / spot-the-flaw cards and
  * explain cards in review); Moving Data, Storage & Files, Warehouses, Lakes
- * & Table Formats, Modeling for Analytics, Streaming and Distributed Data are
- * rewritten. The older sections are MCQ-only, built as
+ * & Table Formats, Modeling for Analytics, Streaming, Distributed Data and
+ * Running Pipelines are rewritten. The older sections are MCQ-only, built as
  * many small topics, each ramping from a TRUE beginner intro (plain
  * "what does this term mean" vocabulary) up through applied "when to use what"
  * choices to mastery-level tradeoffs (distributed-systems internals, streaming
@@ -600,15 +603,21 @@ export const DATA_ENG_SECTIONS: Record<string, { weight: string; topics: Record<
       'Storage Engines: B-Trees, LSM Trees & Bloom Filters': ['de_storage_engines'],
     },
   },
-  'Operations, Quality & Modern DE': {
+  // The seventh rewritten section. It absorbs the whole old Operations,
+  // Quality & Modern DE section (what is orchestration, Airflow / Dagster /
+  // Prefect, data quality, observability and lineage, governance, data
+  // engineering for AI; its retries topic went to Moving Data); their keys
+  // stay in DATA_ENG_TOPICS so stored scores still map to this course. It
+  // takes the old section's place, after Distributed Data, as in the course
+  // outline.
+  'Running Pipelines': {
     weight: 'Step 8',
     topics: {
-      'What Is Orchestration?': ['de_what_is_orchestration'],
-      'Airflow, Dagster & Prefect': ['de_airflow_dagster'],
-      'Data Quality Basics': ['de_data_quality_basics'],
-      'Observability & Lineage': ['de_observability_lineage'],
-      'Governance': ['de_governance'],
-      'Data Engineering for AI': ['de_for_ai'],
+      'Orchestration: DAGs, Dependencies, Sensors & Retries': ['de_orchestration_dags'],
+      'Data Quality: Tests, Contracts & Circuit Breakers': ['de_quality_gates'],
+      'Observability & Lineage': ['de_pipeline_observability'],
+      'Governance & Access': ['de_access_governance'],
+      'Data for AI': ['de_data_for_ai'],
     },
   },
   // Appended LAST when it was written: getUnlockedSections then `break`ed at the
@@ -640,7 +649,7 @@ export const DATA_ENG_PATH_ORDER = [
   'Modeling for Analytics',
   'Streaming',
   'Distributed Data',
-  'Operations, Quality & Modern DE',
+  'Running Pipelines',
   'Machines, Memory & Disks',
 ];
 

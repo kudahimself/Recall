@@ -18,7 +18,7 @@ import { LESSONS } from '../data/lessons';
 
 const SECTION = 'Distributed Data';
 const OLD_SECTION = 'Distributed Systems & Storage';
-const NEXT_SECTION = 'Operations, Quality & Modern DE';
+const NEXT_SECTION = 'Running Pipelines';
 const TOPICS: Topic[] = [
   Topic.DE_PARTITION_SKEW,
   Topic.DE_REPLICATION_CONSISTENCY,
@@ -46,7 +46,7 @@ function emptyProgress(): UserProgress {
 const dePool = allQuestions.filter(q => getCourseForTopic(q.topic) === Course.DATA_ENGINEERING);
 
 describe('section wiring', () => {
-  it('is Step 7, in the old section\'s place after Streaming and before Operations', () => {
+  it('is Step 7, in the old section\'s place after Streaming and before Running Pipelines', () => {
     expect(DATA_ENG_PATH_ORDER.indexOf(SECTION)).toBe(6);
     expect(DATA_ENG_PATH_ORDER[5]).toBe('Streaming');
     expect(DATA_ENG_PATH_ORDER[7]).toBe(NEXT_SECTION);
@@ -80,9 +80,9 @@ describe('section wiring', () => {
     expect(SpacedRepetitionSystem.getUnlockedTopics(dePool, progress)).toContain(TOPICS[0]);
   });
 
-  it('leaves the not-yet-rewritten Operations section in place', () => {
-    expect(getTopicKeysForSection(NEXT_SECTION)).toContain(Topic.DE_WHAT_IS_ORCHESTRATION);
-    expect(dePool.some(q => q.topic === Topic.DE_WHAT_IS_ORCHESTRATION)).toBe(true);
+  it('is followed by the rewritten Running Pipelines section', () => {
+    expect(getTopicKeysForSection(NEXT_SECTION)).toContain(Topic.DE_ORCHESTRATION_DAGS);
+    expect(dePool.some(q => q.topic === Topic.DE_ORCHESTRATION_DAGS)).toBe(true);
   });
 });
 
@@ -192,7 +192,7 @@ describe('a learner who was working through the old Distributed Systems & Storag
     expect(topics.has(TOPICS[1])).toBe(false);
   });
 
-  it('keeps Operations, Quality & Modern DE open if it had already reached it', () => {
+  it('keeps Running Pipelines open if it had already reached it', () => {
     const p = midDistributed();
     answer(p, dePool.find(q => getTopicKeysForSection(NEXT_SECTION).includes(q.topic))!.id);
     const sections = SpacedRepetitionSystem.getUnlockedSections(dePool, p)!.sections;

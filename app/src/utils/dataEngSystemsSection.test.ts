@@ -147,7 +147,7 @@ describe('placement leaves existing progress alone', () => {
 
   it('unlocks the new section only once the step before it is mastered', () => {
     const before = SpacedRepetitionSystem.getUnlockedSections(dePool, masteredThrough(BEFORE - 1));
-    expect(before!.sections).toContain('Operations, Quality & Modern DE');
+    expect(before!.sections).toContain('Running Pipelines');
     expect(before!.sections).not.toContain(SECTION);
   });
 

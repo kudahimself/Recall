@@ -82,7 +82,7 @@ describe('section wiring', () => {
 
   it('keeps the Foundations topic no rewritten section absorbed', () => {
     expect(getTopicKeysForSection('Foundations')).toEqual([Topic.DE_WHAT_IS]);
-    expect(allQuestions.filter(q => q.topic === Topic.DE_DATA_QUALITY_BASICS).length).toBeGreaterThan(0);
+    expect(allQuestions.filter(q => q.topic === Topic.DE_QUALITY_GATES).length).toBeGreaterThan(0);
   });
 });
 
