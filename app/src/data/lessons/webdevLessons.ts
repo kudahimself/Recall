@@ -9,6 +9,7 @@
  * Deployment as one lesson each, as their course topics pair them.
  * Section 6, Prisma & Database: its one topic.
  * Section 7, Forms & Validation (RHF + Zod): its one topic.
+ * Section 8, Testing: its one topic.
  *
  * Prose keeps one sentence per source line (`lines`). An HTML or CSS worked
  * example shows what a browser renders, which no runner here reproduces, so
@@ -44,6 +45,12 @@
  * The React Hook Form + Zod one is a Client Component built that way with
  * react-hook-form 7.91, @hookform/resolvers 7 and Zod 4.6, its boxes filled
  * and its button pressed in headless Chromium.
+ *
+ * The Testing worked example is a Jest test file that holds the component
+ * it tests, so it is the "React component" kind too. It was run with Jest 30
+ * (jsdom), React 19.3, React Testing Library 16.3, user-event 14.6 and
+ * jest-dom 6.9, then again with each line its steps swap, and the output is
+ * those runs' results.
  *
  * A Prisma worked example needs a Prisma project and its database, so it
  * sets `runs: false` (the "Prisma file" kind): it imports from
@@ -3126,5 +3133,115 @@ export default function HoldForm() {
 "3", then Hold:     no messages; logs {"title":"Dune","weeks":3}`,
     },
     exercises: ['next-forms-4', 'next-forms-parsons-1', 'next-forms-cloze-1', 'next-forms-coerce-predict-1', 'next-forms-3'],
+  },
+
+  // ===== Section 8, Testing =====
+  {
+    id: 'next_testing/1',
+    topicKeys: [Topic.NEXT_TESTING],
+    step: 1,
+    title: 'Jest, React Testing Library & Playwright',
+    idea: [
+      lines(
+        "A test file (`*.test.jsx`) holds `test(\"what it checks\", fn)` blocks, grouped with `describe`, and Jest runs each one and reports it as passed or failed.",
+        "`expect(value)` takes a matcher such as `toBe` or `toEqual`, and `@testing-library/jest-dom` adds DOM ones such as `toBeInTheDocument()`.",
+        "`jest.fn()` makes a mock function that records every call for `toHaveBeenCalledWith(...)`, and `jest.spyOn(obj, \"method\")` records calls to a real method until `mockRestore()`; Vitest has the same API under `vi`.",
+      ),
+      lines(
+        "React Testing Library renders a component into jsdom, a page in memory, and `screen` finds what a user would find.",
+        "Prefer `getByRole(\"button\", { name: \"Save\" })`, then `getByLabelText` for a field and `getByText`; `getByTestId` is the last resort, as no user sees a test id.",
+        "`userEvent.setup()` gives a `user` whose `await user.click()` and `await user.type()` fire the whole sequence a browser fires, where `fireEvent.click` fires the click event alone.",
+      ),
+      lines(
+        "`getBy*` returns the one match now, and throws when there is none or more than one.",
+        "`queryBy*` returns `null` when there is none, and `findBy*` returns a promise that retries until a match appears, for 1000 ms by default.",
+        "`waitFor(() => expect(...))` retries any assertion the same way, such as a mock called after a delay.",
+      ),
+      lines(
+        "Mock Service Worker answers the component's real `fetch` with handlers, `http.get(url, () => HttpResponse.json(data))`, which `setupServer` serves under Jest.",
+        "Playwright drives a real browser through whole flows across pages, and its locators wait on their own.",
+        "Most effort goes into integration tests of a component with its children, and a few end-to-end tests cover the flows that matter most.",
+      ),
+    ],
+    form: {
+      language: CodeLanguage.JSX,
+      code: `// thing.test.jsx: Jest runs every *.test.* file
+test("what it does", async () => {
+  const fn = jest.fn();            // records its calls
+  const user = userEvent.setup();  // one user per test
+  render(<Thing onAct={fn} />);    // into jsdom
+
+  // getBy: the one match now, or it throws
+  screen.getByRole("button", { name: "Text" });
+  screen.getByLabelText("Label");  // a field by its label
+  screen.queryByText("Text");      // null when absent
+  await screen.findByText("Text"); // waits for it
+
+  await user.click(el);            // every click event
+  await user.type(box, "text");
+  await waitFor(() => expect(fn).toHaveBeenCalled());
+
+  expect(el).toBeInTheDocument();  // jest-dom matchers
+  expect(screen.queryByText("x")).not.toBeInTheDocument();
+  expect(fn).toHaveBeenCalledWith(arg);
+});
+
+// Playwright: a real browser, a whole flow
+test("flow", async ({ page }) => {
+  await page.goto("/path");
+  await page.getByLabel("Label").fill("text");
+  await page.getByRole("button", { name: "Text" }).click();
+  await expect(page.getByRole("heading")).toBeVisible();
+});`,
+    },
+    pitfall: lines(
+      "`expect(screen.getByText(\"Error\")).not.toBeInTheDocument()` never reaches its matcher: when the text is missing, `getByText` throws, and the test fails for the very reason it meant to pass.",
+      "Check absence with `queryBy*`, and await `findBy*` for anything that appears after a promise, a timer or an effect, since `getBy*` looks only once.",
+    ),
+    worked: {
+      language: CodeLanguage.JSX,
+      runs: false,
+      code: `// Hold.test.jsx: run with npx jest (jsdom, jest-dom set up)
+import { useState } from "react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+function Hold({ title, onHold }) {
+  const [held, setHeld] = useState(false);
+  async function hold() {
+    await onHold(title);
+    setHeld(true);
+  }
+  if (held) return <p>{title} is on hold</p>;
+  return <button onClick={hold}>Hold {title}</button>;
+}
+
+test("holds a book", async () => {
+  const onHold = jest.fn(
+    () => new Promise((r) => setTimeout(r, 50)));
+  const user = userEvent.setup();
+  render(<Hold title="Dune" onHold={onHold} />);
+  const note = screen.queryByText(/on hold/);
+  expect(note).not.toBeInTheDocument();
+  const btn = screen.getByRole("button", { name: "Hold Dune" });
+  await user.click(btn);
+  expect(onHold).toHaveBeenCalledWith("Dune");
+  const done = await screen.findByText("Dune is on hold");
+  expect(done).toBeInTheDocument();
+});`,
+      steps: [
+        "Lines 6-14: the component under test calls `onHold`, waits for it, then swaps its button for a note.",
+        "Lines 17-20: `jest.fn` makes a mock `onHold` that records its calls and takes 50 ms, `userEvent.setup()` starts a user, and `render` puts the component into jsdom.",
+        "Lines 21-22: there is no note yet, so `queryByText` returns `null` and `.not.toBeInTheDocument()` passes; `getByText` on line 21 throws instead, and the test fails.",
+        "Lines 23-25: the button is found by its role and accessible name, as a screen reader finds it, `await user.click` fires the whole click sequence, and the mock was called with `\"Dune\"`.",
+        "Lines 26-27: the note appears only once the 50 ms promise settles, so `findByText` retries until it is there; a plain `getByText` on line 26 still finds only the button and fails.",
+      ],
+      output: `as written:         PASS  ✓ holds a book
+getByText, line 21: FAIL  Unable to find an element
+                          with the text: /on hold/
+getByText, line 26: FAIL  Unable to find an element
+                          with the text: Dune is on hold`,
+    },
+    exercises: ['next-testing-parsons-1', 'next-testing-3', 'next-testing-16', 'next-testing-queries-predict-1', 'next-testing-cloze-waitfor'],
   },
 ];

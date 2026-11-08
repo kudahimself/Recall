@@ -371,7 +371,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-forms-6'),
 
   // =====================================================================
-  // 12. NEXT_TESTING (21 questions)
+  // 12. NEXT_TESTING (22 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze) — next-testing-1/5/8/9 are BEGINNER difficulty
@@ -387,6 +387,8 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('next-testing-10'),
   q('next-testing-14'),
   q('next-testing-16'),
+  // INTERMEDIATE predict (what getBy, queryBy and findBy give before and after an async update)
+  q('next-testing-queries-predict-1'),
   // INTERMEDIATE coding
   q('next-testing-1'),
   q('next-testing-5'),
