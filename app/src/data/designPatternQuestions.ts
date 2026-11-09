@@ -423,7 +423,7 @@ console.log(timedAdd(2, 3));`,
     requires: [
       /performance\.now\(\)/,
       /\bfn\(\s*\.\.\.\w+\s*\)/,
-      /Finished[\s\S]*return\s+[A-Za-z_$]/,
+      /Finished[\s\S]*return\s+[A-Za-z_$]|return\s+[A-Za-z_$][\s\S]*finally\s*\{[\s\S]*Finished/,
     ],
   },
 
@@ -722,7 +722,7 @@ class EventEmitter {
       /\boff\s*\(/,
       /\bemit\s*\(/,
       /\.delete\(\s*(?!event\b)\w+\s*\)|\.filter\s*\(|\.splice\s*\(/,
-      /\(\s*\.\.\.args\s*\)/,
+      /\(\s*\.\.\.args\s*\)|\.apply\(\s*[\w$]+\s*,\s*args\s*\)|\.call\(\s*[\w$]+\s*,\s*\.\.\.args\s*\)/,
     ],
   },
 

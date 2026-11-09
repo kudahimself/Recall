@@ -574,7 +574,7 @@ export async function POST(req: Request) {
     ],
     requires: [
       /new\s+Map\b/,
-      /now\s*-\s*[\w.]+\s*>=?|[\w.]+\s*\+\s*[\w.]+\s*<=?\s*now/,
+      /now\s*-\s*[\w.]+\s*[<>]=?|[<>]=?\s*now\s*-|[\w.]+\s*\+\s*[\w.]+\s*[<>]=?\s*now|now\s*[<>]=?\s*[\w.]+\s*\+|\b(\w+)\s*=\s*now\s*-\s*[\w.]+[\s\S]*(?:\b\1\s*[<>]=?|[<>]=?\s*\1\b)/,
       /Math\.ceil\(/,
       /status:\s*429/,
       /["']Retry-After["']/i,

@@ -95,6 +95,9 @@ describe('Web Dev Design Patterns & Architecture section grading', () => {
     expect(hardFails(q, swap(ref, '    return result;\n  };', '  };'))).toBe(true);
     expect(hardFails(q, swap(ref, 'fn(...args)', 'fn()'))).toBe(true);
     expect(hardFails(q, swap(ref, 'const result = fn(...args);', 'const out = fn(...args);', 'return result;', 'return out;'))).toBe(false);
+    expect(hardFails(q, swap(ref,
+      '    const start = performance.now();\n    const result = fn(...args);\n    const elapsed = performance.now() - start;\n    console.log(`Finished ${name} in ${elapsed.toFixed(1)}ms`);\n    return result;',
+      '    const start = performance.now();\n    try {\n      return fn(...args);\n    } finally {\n      console.log(`Finished ${name} in ${(performance.now() - start).toFixed(1)}ms`);\n    }'))).toBe(false);
   });
 
   it('dp-behav-1 rejects an off() that removes nothing or the whole event, and an emit that drops the arguments', () => {
@@ -103,6 +106,8 @@ describe('Web Dev Design Patterns & Architecture section grading', () => {
     expect(hardFails(q, swap(ref, 'this.listeners.get(event)?.delete(listener);', ''))).toBe(true);
     expect(hardFails(q, swap(ref, 'this.listeners.get(event)?.delete(listener);', 'this.listeners.delete(event);'))).toBe(true);
     expect(hardFails(q, swap(ref, 'listener(...args)', 'listener()'))).toBe(true);
+    expect(hardFails(q, swap(ref, 'listener(...args)', 'listener.apply(null, args)'))).toBe(false);
+    expect(hardFails(q, swap(ref, 'listener(...args)', 'listener.call(this, ...args)'))).toBe(false);
   });
 
   it('dp-arch-5 rejects a class that does not implement UserRepo or keys users by name, and accepts an untyped new Map()', () => {
@@ -174,6 +179,17 @@ describe('Web Dev Design Patterns & Architecture section grading', () => {
     expect(hardFails(q, swap(ref, 'if (!entry || now - entry.windowStart >= WINDOW_MS) {', 'if (!entry) {'))).toBe(true);
     expect(hardFails(q, swap(ref, 'Math.ceil(', 'Math.floor('))).toBe(true);
     expect(hardFails(q, swap(ref, 'if (!entry || now - entry.windowStart >= WINDOW_MS) {', 'if (!entry || entry.windowStart + WINDOW_MS <= now) {'))).toBe(false);
+    expect(hardFails(q, swap(ref,
+      '  if (!entry || now - entry.windowStart >= WINDOW_MS) {\n    hits.set(ip, { count: 1, windowStart: now });\n    return { ok: true };\n  }\n  entry.count++;',
+      '  if (entry && now - entry.windowStart < WINDOW_MS) {\n    entry.count++;\n  } else {\n    hits.set(ip, { count: 1, windowStart: now });\n    return { ok: true };\n  }'))).toBe(false);
+    expect(hardFails(q, swap(ref,
+      '  if (!entry || now - entry.windowStart >= WINDOW_MS) {',
+      '  if (!entry) {\n    hits.set(ip, { count: 1, windowStart: now });\n    return { ok: true };\n  }\n  const elapsed = now - entry.windowStart;\n  if (elapsed >= WINDOW_MS) {',
+      'Math.ceil((entry.windowStart + WINDOW_MS - now) / 1000)', 'Math.ceil((WINDOW_MS - elapsed) / 1000)'))).toBe(false);
+    expect(hardFails(q, swap(ref,
+      '  if (!entry || now - entry.windowStart >= WINDOW_MS) {',
+      '  if (!entry || entry.windowStart + WINDOW_MS <= now) {',
+      'Math.ceil((entry.windowStart + WINDOW_MS - now) / 1000)', 'Math.ceil((WINDOW_MS - (now - entry.windowStart)) / 1000)'))).toBe(false);
   });
 
   it('proj-capstone-1 rejects a cascading assignee, an index led by status and no per-pair unique, and accepts either pair order', () => {
