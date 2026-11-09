@@ -157,8 +157,10 @@ describe('coding grader over the whole question bank', () => {
   it('does not pass a multi-part CSS answer that holds only one part', () => {
     const q = coding.find(c => c.id === 'shadcn-dark-mode-1')!;
     const ref = alternatives(q)[0];
-    const globalsOnly = ref.slice(ref.indexOf('/* globals.css */'), ref.indexOf('/* ThemeToggle'));
-    expect(globalsOnly).toContain('@layer base');
-    expect(passes(q, globalsOnly)).toBe(false);
+    // The colour variables without the @theme block that turns them into
+    // utilities; graded with no requires guard, so the token match decides.
+    const variablesOnly = ref.slice(0, ref.indexOf('@theme inline'));
+    expect(variablesOnly).toContain('.dark {');
+    expect(passes({ ...q, requires: undefined }, variablesOnly)).toBe(false);
   });
 });

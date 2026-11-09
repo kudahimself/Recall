@@ -525,7 +525,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('a11y-accessible-name-mcq-1'),
 
   // =====================================================================
-  // 17. NEXT_SHADCN (16 questions)
+  // 17. NEXT_SHADCN (17 questions)
   // =====================================================================
 
   // BEGINNER faded (Parsons + Cloze)

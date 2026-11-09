@@ -1218,7 +1218,7 @@ Exit`,
   // NEXT_SHADCN (10 questions)
   // =====================================================================
 
-  // BEGINNER faded (Parsons + Cloze) — lower-load scaffold before cold coding
+  // BEGINNER faded (Parsons + Cloze) - lower-load scaffold before cold coding
 
   {
     id: 'shadcn-parsons-1',
@@ -1227,8 +1227,7 @@ Exit`,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Assemble the cn() utility used throughout shadcn/ui. It imports clsx and tailwind-merge, then merges class names. Arrange the lines in this order: clsx import, tailwind-merge import, function signature, return, closing brace.',
+    question: 'Assemble lib/utils.ts, the cn() helper every shadcn/ui component uses to combine class names. Either import may come first, and two of the lines do not belong.',
     correctOrder: [
       'import { clsx, type ClassValue } from "clsx";',
       'import { twMerge } from "tailwind-merge";',
@@ -1236,24 +1235,20 @@ Exit`,
       '  return twMerge(clsx(inputs));',
       '}',
     ],
-    distractorLines: [
-      'import { twMerge } from "clsx";',
-      '  return clsx(twMerge(inputs));',
-    ],
+    distractorLines: ['import { twMerge } from "clsx";', '  return clsx(twMerge(inputs));'],
     solution: `import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }`,
-    explanation:
-      'twMerge comes from tailwind-merge, not clsx. The nesting order matters: clsx runs first to resolve conditionals into one class string, then twMerge dedupes conflicting Tailwind utilities (e.g. "p-2 p-4" → "p-4"). Reversing them (clsx(twMerge(...))) would feed clsx already-merged output and lose the conflict resolution.',
+    explanation: 'cn() is twMerge(clsx(inputs)). clsx goes inside: it turns strings, arrays and objects such as { "bg-blue-600": isOpen } into one class string and drops false, null and undefined. twMerge goes outside and removes a class that a later class of the same group overrides, so twMerge("p-2 p-4") returns "p-4". The reversed clsx(twMerge(inputs)) does not type-check, because twMerge takes only strings, arrays of strings and falsy values, not every ClassValue. Run anyway, it still merges the strings but silently drops object inputs: cn("bg-gray-100", { "bg-blue-600": true }) would return "bg-gray-100". twMerge is imported from tailwind-merge; clsx has no twMerge export.',
     hints: [
       'twMerge is imported from "tailwind-merge"',
-      'clsx resolves conditionals first; twMerge dedupes the result',
+      'clsx resolves conditionals first; twMerge cleans up the string clsx returns',
       'The outer call is twMerge wrapping clsx',
     ],
     tags: ['shadcn', 'cn', 'clsx', 'tailwind-merge', 'parsons'],
-    concepts: ['shadcn-cn-utility', 'shadcn-radix-primitives'],
+    concepts: ['shadcn-cn-utility'],
   },
 
   {
@@ -1263,8 +1258,7 @@ export function cn(...inputs: ClassValue[]) {
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Complete the body of cn(): the inner call resolves conditional class names, the outer call dedupes conflicting Tailwind utilities.',
+    question: 'Complete the body of cn(): the inner call turns the conditional class inputs into one string, and the outer call removes any Tailwind class that a later class overrides.',
     template: `export function cn(...inputs: ClassValue[]) {
   return ___(___(inputs));
 }`,
@@ -1272,8 +1266,7 @@ export function cn(...inputs: ClassValue[]) {
     solution: `export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }`,
-    explanation:
-      'clsx (inner) turns the inputs — strings, conditionals, arrays — into a single space-separated class string. twMerge (outer) then resolves Tailwind conflicts so the last utility in a group wins. The order is essential: dedupe AFTER conditionals are resolved.',
+    explanation: 'clsx (inner) turns the inputs, which may be strings, conditionals, arrays or objects, into one space-separated class string. twMerge (outer) then removes a class that a later class of the same Tailwind group overrides, so the last one wins. The order matters: twMerge reads only strings, so it has to run on what clsx returns.',
     hints: [
       'The outer call resolves Tailwind class conflicts',
       'The inner call handles conditional class names',
@@ -1289,27 +1282,27 @@ export function cn(...inputs: ClassValue[]) {
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Complete the code: import the type that clsx accepts for its inputs, and call the shadcn helper that merges a component\'s base classes with an incoming className prop.',
-    template: `import { clsx, type ___ } from "clsx";
+    question: 'Two files of a shadcn/ui project. Fill in the type clsx exports for one class input, and the helper a component calls to merge its base classes with the className prop it receives.',
+    template: `// lib/utils.ts (its imports)
+import { clsx, type ___ } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-// In a component:
+// components/card.tsx, which imports the helper from "@/lib/utils"
 <div className={___("rounded-lg p-4", className)} />`,
     blanks: ['ClassValue', 'cn'],
-    solution: `import { clsx, type ClassValue } from "clsx";
+    solution: `// lib/utils.ts (its imports)
+import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-// In a component:
+// components/card.tsx, which imports the helper from "@/lib/utils"
 <div className={cn("rounded-lg p-4", className)} />`,
-    explanation:
-      'ClassValue is the union type clsx accepts (string, number, array, object, etc.), so cn(...inputs: ClassValue[]) stays fully typed. Wrapping base styles and the consumer\'s className in cn() lets callers override defaults without class conflicts winning unpredictably.',
+    explanation: 'ClassValue is clsx\'s type for one input: a string, number, bigint, boolean, null or undefined, an array of those, or an object whose keys are class names and whose values decide whether each one is kept. Typing the helper as cn(...inputs: ClassValue[]) lets it take everything clsx takes. The component passes its base classes first and className last, so a caller\'s className="p-2" replaces the base p-4 instead of sitting beside it.',
     hints: [
       'The clsx type covering any acceptable class input',
       'The shadcn helper that merges class names',
     ],
     tags: ['shadcn', 'cn', 'ClassValue', 'cloze'],
-    concepts: ['shadcn-cn-utility', 'shadcn-radix-primitives'],
+    concepts: ['shadcn-cn-utility'],
   },
 
   // -- What is shadcn/ui (MC #1, questionIndex=8, correct at position a) --
@@ -1320,16 +1313,14 @@ import { twMerge } from "tailwind-merge";
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
-    question:
-      'What is shadcn/ui, and how does it differ from traditional component libraries like Material UI or Chakra UI?',
+    question: 'What is shadcn/ui, and how does it differ from traditional component libraries like Material UI or Chakra UI?',
     options: [
-      { id: 'a', text: 'shadcn/ui copies component source code directly into your project so you own and fully customize it — unlike Material UI or Chakra which are npm dependencies with limited customization. It\'s built on Radix UI primitives + Tailwind CSS.', isCorrect: true },
-      { id: 'b', text: 'shadcn/ui is a CSS-only library with no JavaScript — it provides pre-styled class names you apply to plain HTML elements', isCorrect: false },
-      { id: 'c', text: 'shadcn/ui is a paid premium component library with better performance than free alternatives like Chakra', isCorrect: false },
-      { id: 'd', text: 'shadcn/ui is a Figma plugin that generates React components from design files', isCorrect: false },
+      { id: 'a', text: 'Components whose source the CLI copies into your project, built on Radix UI and Tailwind, so you edit them as your own code; MUI and Chakra are packages you import', isCorrect: true },
+      { id: 'b', text: 'An npm package, @shadcn/ui, that you import components from and theme with a provider at the root of the app, like Chakra, but styled with Tailwind', isCorrect: false },
+      { id: 'c', text: 'A CSS-only library like Bootstrap: it ships pre-styled class names you put on plain HTML elements, so there is no React code to install or edit', isCorrect: false },
+      { id: 'd', text: 'Radix UI\'s own styled theme: the CLI installs the Radix packages preset with shadcn\'s look, and you restyle them through theme props, not files', isCorrect: false },
     ],
-    explanation:
-      'The key insight of shadcn/ui is its distribution model: instead of installing a package you can\'t easily modify (like `npm install @chakra-ui/react`), you run `npx shadcn-ui add button` and it copies the full component source code into your project\'s components/ui/ directory. This means you own the code, can read it, modify it, and understand exactly what\'s happening. Under the hood, components use Radix UI (for accessibility and behavior) and Tailwind CSS (for styling). You get best-of-both-worlds: accessible components you can fully customize.',
+    explanation: 'shadcn/ui is a way of distributing components, not a dependency. `npx shadcn@latest add button` (the CLI was called shadcn-ui before 2024) writes the component\'s source to components/ui/button.tsx; from then on it is a file in your project that you read and edit, and nothing in node_modules changes it. Most components wrap a Radix UI primitive, which brings the behaviour (focus, keyboard, ARIA) and no styles, and add Tailwind classes for the look. MUI and Chakra work the other way round: you `npm install` them, import their components, change them through theme objects and props, and upgrades arrive with new package versions. With shadcn an upgrade is yours to make: you add the component again and merge the changes you want.',
     hints: [
       'Think about the difference between installing a package vs. copying source code',
       'Consider which approach gives you more control',
@@ -1347,14 +1338,19 @@ import { twMerge } from "tailwind-merge";
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Create the cn() utility function used throughout shadcn/ui projects. It combines clsx (for conditional class names) with tailwind-merge (for resolving Tailwind class conflicts). Explain why tailwind-merge is necessary — what happens with conflicting classes like "p-2 p-4" without it?',
-    starterCode: `// Import clsx (with the ClassValue type) and twMerge\n// Export cn(...inputs: ClassValue[]) returning twMerge(clsx(inputs))\n`,
+    question: 'Write lib/utils.ts: export a function cn that takes any number of class inputs (typed with clsx\'s ClassValue), resolves the conditional ones with clsx and then the Tailwind conflicts with tailwind-merge\'s twMerge, so that cn("p-2", "p-4") returns "p-4".',
+    starterCode: `// lib/utils.ts
+`,
     testCases: [
       {
         input: 'cn("p-2", "p-4")',
-        expectedOutput: '"p-4" (tailwind-merge resolves the conflict)',
-        description: 'Should merge conflicting Tailwind classes correctly',
+        expectedOutput: '"p-4"',
+        description: 'A later class of the same group replaces the earlier one',
+      },
+      {
+        input: 'cn("px-4", false && "hidden", { "bg-white": true })',
+        expectedOutput: '"px-4 bg-white"',
+        description: 'Falsy inputs are dropped and object keys kept when true',
       },
     ],
     solution: `import { clsx, type ClassValue } from "clsx";
@@ -1363,38 +1359,33 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+# OR
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-// Why this exists:
-// clsx("p-2", condition && "p-4") → "p-2 p-4" (BOTH classes applied!)
-// CSS specificity means both padding rules exist — the result is unpredictable.
-//
-// twMerge("p-2 p-4") → "p-4" (intelligently resolves the conflict)
-// tailwind-merge understands Tailwind's utility structure and removes
-// the overridden class, keeping only the last one.
-//
-// Together: cn("p-2", condition && "p-4")
-//   1. clsx resolves conditionals → "p-2 p-4"
-//   2. twMerge deduplicates → "p-4"
-//
-// Usage in components:
-// <div className={cn("rounded-lg p-4", className)} />
-// Allows consumers to override default styles without conflicts.`,
-    explanation:
-      'The cn() function solves a real problem in Tailwind component libraries: when you merge className props, conflicting utilities like "p-2 p-4" both end up in the class list. Since Tailwind utilities have equal CSS specificity, which one wins depends on the order they appear in the generated CSS file — not the order in your className string. tailwind-merge understands Tailwind\'s class structure and intelligently removes the overridden class. clsx handles the conditional logic (falsy values, arrays, objects). Together they make component className merging reliable.',
+export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));`,
+    requires: [
+      /from\s*["']clsx["']/,
+      /import\s*\{[^}]*\btwMerge\b[^}]*\}\s*from\s*["']tailwind-merge["']/,
+      /\.\.\.\s*inputs\s*:\s*ClassValue\s*\[\s*\]/,
+      /twMerge\(\s*clsx\(/,
+      /export\s+(function\s+cn\b|const\s+cn\s*=)/,
+    ],
+    explanation: 'When a component joins its base classes with a caller\'s className, conflicting utilities such as "p-2 p-4" both end up in the class list. Tailwind utilities have equal specificity, so which one wins depends on where each rule sits in the generated CSS, not on their order in the className string. twMerge knows Tailwind\'s groups and removes the class a later one overrides, so the class passed last wins. clsx runs first because twMerge reads only strings: clsx turns conditionals, arrays and objects into one string and drops false, null and undefined. clsx(inputs) and clsx(...inputs) give the same result, since clsx flattens arrays.',
     hints: [
-      'clsx handles conditional classes: clsx("a", false && "b") → "a"',
-      'twMerge handles Tailwind conflicts: twMerge("p-2 p-4") → "p-4"',
-      'The function is just: twMerge(clsx(inputs))',
+      'clsx handles conditional classes: clsx("a", false && "b") returns "a"',
+      'twMerge handles Tailwind conflicts: twMerge("p-2 p-4") returns "p-4"',
+      'clsx goes inside, twMerge outside',
     ],
     tieredHints: {
-      apiSignature: 'function cn(...inputs: ClassValue[])',
+      apiSignature: 'function cn(...inputs: ClassValue[]): string',
       skeleton: `// imports: clsx (with the ClassValue type) and twMerge from tailwind-merge
 export function cn(...inputs: ____[]) {
   return ____(____(inputs));
 }`,
     },
     tags: ['cn', 'clsx', 'tailwind-merge', 'utility', 'shadcn'],
-    concepts: ['shadcn-cn-utility', 'shadcn-radix-primitives'],
+    concepts: ['shadcn-cn-utility'],
   },
 
   // -- Radix UI Primitives (MC #2, questionIndex=10, correct at position c) --
@@ -1405,16 +1396,14 @@ export function cn(...inputs: ____[]) {
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
-    question:
-      'What are Radix UI primitives, and why does shadcn/ui build on top of them?',
+    question: 'What are Radix UI primitives, and why does shadcn/ui build on top of them?',
     options: [
-      { id: 'a', text: 'Radix UI is a CSS framework similar to Tailwind — shadcn uses it instead of writing custom CSS', isCorrect: false },
-      { id: 'b', text: 'Radix UI is a state management library that replaces React Context — shadcn uses it for data flow', isCorrect: false },
-      { id: 'c', text: 'Radix UI provides unstyled, accessible component primitives that handle ARIA attributes, keyboard navigation, and focus management — shadcn adds Tailwind styling on top, giving you accessibility for free', isCorrect: true },
-      { id: 'd', text: 'Radix UI is a server-side rendering framework — shadcn uses it to pre-render components on the server', isCorrect: false },
+      { id: 'a', text: 'Styled components that shadcn re-skins: each Radix part ships its own look, and the Tailwind classes shadcn adds override it with stronger selectors', isCorrect: false },
+      { id: 'b', text: 'React hooks that only add ARIA attributes; shadcn still writes the keyboard handling, focus trapping and outside-click logic for each component', isCorrect: false },
+      { id: 'c', text: 'Unstyled components that bring the behaviour, such as ARIA roles, keyboard support and focus management, so shadcn only adds the Tailwind look', isCorrect: true },
+      { id: 'd', text: 'Thin wrappers around native elements such as <select> and <dialog>, so the browser supplies the behaviour and shadcn styles those elements', isCorrect: false },
     ],
-    explanation:
-      'Radix UI provides the behavioral layer of components — the parts that are hardest to get right: proper ARIA roles and attributes, keyboard navigation (Arrow keys, Enter, Escape), focus management, and screen reader announcements. These primitives are completely unstyled (no CSS opinions), so shadcn layers Tailwind CSS on top for the visual design. This separation means you get fully accessible components (dialogs, dropdowns, tabs, tooltips) without having to implement the complex accessibility logic yourself. The alternative — building a custom dropdown with proper listbox roles, keyboard navigation, and focus trapping from scratch — takes hundreds of lines and is easy to get wrong.',
+    explanation: 'Radix UI Primitives are headless. A Dialog, DropdownMenu or Tabs comes with the behaviour that is hardest to get right (the ARIA roles and states, arrow-key and Escape handling, focus moved in, trapped and given back, dismissal on an outside click) and no CSS at all. shadcn/ui puts Tailwind classes on those parts and copies the result into your project. Radix builds each control from its own elements with ARIA rather than styling a native <select> or <dialog>, which is what lets it be styled freely. (Radix Themes is a separate, styled library; shadcn does not use it.) The behaviour comes for free, but not all of accessibility: labels, alt text and colour contrast are still yours.',
     hints: [
       'Think about what\'s hardest about building a custom dropdown or modal',
       'Radix handles behavior; Tailwind handles styling',
@@ -1432,98 +1421,93 @@ export function cn(...inputs: ____[]) {
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.CSS,
-    question:
-      'Configure Tailwind for dark mode using the "class" strategy. Show: (1) the Tailwind config setting, (2) CSS variables for light/dark theme colors in globals.css, and (3) a ThemeToggle component using next-themes that switches between light and dark mode.',
-    starterCode: `/* tailwind.config.js */\n\n/* globals.css */\n\n/* ThemeToggle component */\n`,
+    question: 'A Next.js project uses Tailwind 4, and next-themes puts a "dark" class on <html> in dark mode. Write app/globals.css so that:\n\n1. Tailwind is imported.\n2. The dark: variant applies inside an element with the dark class, instead of following the operating system setting.\n3. Two colour variables are set in :root and overridden in .dark: --background is oklch(1 0 0) in light mode and oklch(0.145 0 0) in dark mode, and --foreground is oklch(0.145 0 0) in light mode and oklch(0.985 0 0) in dark mode.\n4. They become the utilities bg-background and text-foreground, which use the variable\'s value wherever it is overridden, even in a .dark section further down the page.',
+    starterCode: `/* app/globals.css (Tailwind 4) */
+`,
     testCases: [
       {
-        input: 'dark mode config',
-        expectedOutput: 'darkMode: "class" with CSS variables and next-themes toggle',
-        description: 'Should configure class-based dark mode with theme toggle',
+        input: '<html class="dark"><body class="bg-background text-foreground dark:underline">',
+        expectedOutput: 'background oklch(0.145 0 0), text oklch(0.985 0 0), underlined',
+        description: 'dark: and the colours follow the .dark class',
+      },
+      {
+        input: '<section class="dark"><div class="bg-background"> on a light page',
+        expectedOutput: 'background oklch(0.145 0 0) inside the section, oklch(1 0 0) outside it',
+        description: 'The utilities read the variable where they are used',
       },
     ],
-    solution: `/* tailwind.config.js */
-/* module.exports = {
-  darkMode: "class",
-  content: ["./src/**/*.{js,ts,jsx,tsx}"],
-  theme: {
-    extend: {
-      colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: "hsl(var(--primary))",
-        muted: "hsl(var(--muted))",
-      },
-    },
-  },
-}; */
+    solution: `@import "tailwindcss";
 
-/* globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@custom-variant dark (&:is(.dark *));
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --primary: 222 47% 31%;
-    --muted: 210 40% 96%;
-  }
-
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --primary: 210 40% 80%;
-    --muted: 217 33% 17%;
-  }
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
 }
 
-/* ThemeToggle component (React/JSX): */
-/* import { useTheme } from "next-themes";
- *
- * function ThemeToggle() {
- *   const { theme, setTheme } = useTheme();
- *
- *   return (
- *     <button
- *       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
- *       className="rounded-md p-2 bg-muted text-foreground"
- *     >
- *       {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
- *     </button>
- *   );
- * } */`,
-    explanation:
-      'Tailwind\'s class-based dark mode works by adding a "dark" class to the <html> element. When darkMode: "class" is set, any utility prefixed with dark: only applies when that class is present (e.g., dark:bg-gray-900). Using CSS variables (custom properties) for colors means you define them once in :root for light mode and override in .dark for dark mode — then reference them in Tailwind config with hsl(var(--color)). The next-themes library handles persisting the preference to localStorage, syncing with system preference, and preventing the flash of wrong theme on page load by injecting a blocking script.',
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+# OR
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}`,
+    requires: [
+      /@import\s+["']tailwindcss["']/,
+      /@custom-variant\s+dark\s*\(\s*&:(is|where)\(\s*(\.dark\s*,\s*)?\.dark\s+\*\s*\)\s*\)/,
+      /:root\s*\{[^}]*--background\s*:\s*oklch\(\s*1\s+0\s+0\s*\)/,
+      /\.dark\s*\{[^}]*--background\s*:\s*oklch\(\s*0\.145\s+0\s+0\s*\)/,
+      /\.dark\s*\{[^}]*--foreground\s*:\s*oklch\(\s*0\.985\s+0\s+0\s*\)/,
+      /@theme\s+inline\s*\{(?=[^}]*--color-background\s*:\s*var\(\s*--background\s*\))(?=[^}]*--color-foreground\s*:\s*var\(\s*--foreground\s*\))/,
+    ],
+    explanation: 'Tailwind 4 keeps the theme in CSS; there is no darkMode setting in a config file. @import "tailwindcss" loads the framework. Out of the box, dark: means @media (prefers-color-scheme: dark), so it follows the operating system. @custom-variant dark (&:is(.dark *)) redefines it to match any element inside .dark, the class next-themes sets on <html>; Tailwind\'s docs write it as &:where(.dark, .dark *), which also matches the .dark element itself and adds no specificity. The colours are plain CSS variables, set in :root and overridden in .dark. @theme turns each --color-NAME into bg-NAME, text-NAME, border-NAME and the rest, and inline makes the utility use var(--background) directly, so bg-background shows whichever value applies where it is used. Without inline the utility reads --color-background, which is worked out once on <html>: it still switches when next-themes sets the class on <html>, but a .dark section further down stays light. Tailwind 3 did this with darkMode: "class" and colours such as "hsl(var(--background))" in tailwind.config.js, which is why older shadcn themes store bare HSL numbers.',
     hints: [
-      'Set darkMode: "class" in tailwind.config.js',
-      'Define CSS variables in :root (light) and .dark (dark)',
-      'next-themes provides useTheme() hook with theme and setTheme',
+      'Tailwind 4 configures dark mode in CSS: there is no darkMode setting to change',
+      '@custom-variant redefines what dark: matches',
+      'Each --color-NAME inside @theme inline becomes bg-NAME, text-NAME and the rest',
     ],
     tieredHints: {
-      apiSignature: 'darkMode: "class"',
-      skeleton: `/* tailwind.config.js */
-/* module.exports = {
-  darkMode: "____",
-  content: ["./src/**/*.{js,ts,jsx,tsx}"],
-  theme: { extend: { colors: { background: "hsl(var(--background))" } } },
-}; */
+      apiSignature: '@custom-variant NAME (SELECTOR);  @theme inline { --color-NAME: VALUE; }',
+      skeleton: `@import "____";
 
-/* globals.css */
-@layer base {
-  :root { --background: 0 0% 100%; }
-  .____ { --background: 222 47% 11%; }
+@custom-variant dark (____);
+
+:root {
+  --background: ____;
+  --foreground: ____;
 }
 
-/* ThemeToggle.jsx */
-/* const { theme, setTheme } = useTheme();
- * <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
- *   {theme === "____" ? "Light" : "Dark"}
- * </button> */`,
+.____ {
+  /* the dark values */
+}
+
+@theme ____ {
+  /* one --color- entry per variable */
+}`,
     },
-    tags: ['dark-mode', 'tailwind', 'next-themes', 'css-variables', 'shadcn'],
-    concepts: ['web-tailwind-utility', 'shadcn-radix-primitives'],
+    tags: ['dark-mode', 'tailwind', 'tailwind-4', 'next-themes', 'css-variables', 'shadcn'],
+    concepts: ['web-tailwind-utility'],
   },
 
   // Dark mode with next-themes, the React side (moved from the Next.js deployment projects)
@@ -1573,16 +1557,14 @@ export function cn(...inputs: ____[]) {
     difficulty: Difficulty.BEGINNER,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
-    question:
-      'What is the recommended approach for customizing shadcn/ui components?',
+    question: 'What is the recommended approach for customizing shadcn/ui components?',
     options: [
-      { id: 'a', text: 'Edit the source code directly in components/ui/ — that\'s the whole point of shadcn\'s copy-paste model. Override CSS variables in globals.css for theme-wide color changes. Extend the design system rather than fighting it.', isCorrect: true },
-      { id: 'b', text: 'Never modify the generated files — create wrapper components and use !important overrides in a separate CSS file', isCorrect: false },
-      { id: 'c', text: 'Fork the shadcn GitHub repository and publish your own modified version to npm', isCorrect: false },
-      { id: 'd', text: 'Use the shadcn CLI\'s --customize flag to pass configuration options that modify the component before it\'s generated', isCorrect: false },
+      { id: 'a', text: 'Edit the copied file in components/ui (its cva variants, classes and props) for one component, and the CSS variables in globals.css for all of them', isCorrect: true },
+      { id: 'b', text: 'Leave components/ui untouched so later shadcn releases can update it, and restyle each component from outside with className and !important', isCorrect: false },
+      { id: 'c', text: 'Pass a theme object to a provider at the app root, which shadcn merges into every component\'s default styles, the way MUI\'s createTheme works', isCorrect: false },
+      { id: 'd', text: 'Edit the component\'s code inside node_modules/shadcn, then save the change with patch-package so that it survives the next npm install', isCorrect: false },
     ],
-    explanation:
-      'The entire philosophy of shadcn/ui is that you own the code. When you run `npx shadcn-ui add button`, the Button component source code is copied into your project\'s components/ui/button.tsx. You\'re expected to open that file and modify it to match your design needs — change the variants, adjust the styles, add new props. For theme-wide changes (colors, border radius, fonts), modify the CSS variables in globals.css. This is fundamentally different from traditional libraries where you fight against the library\'s opinions with CSS overrides and wrapper components. The tradeoff is that you\'re responsible for maintaining the component code yourself.',
+    explanation: 'You own the code. After `npx shadcn@latest add button`, components/ui/button.tsx is a file in your project, and nothing in node_modules or a build step changes it, so editing it loses nothing. To add a variant, change the classes in its cva() call; to add a prop, edit the function. For changes across every component, such as the brand colour or the corner radius, change the variables in globals.css (:root and .dark), which the components read through utilities such as bg-primary. Restyling from outside with !important fights your own code, and there is no theme provider to configure. The cost of owning the code is that upgrades are yours too: running add again asks before it overwrites a file, and you merge the changes you want.',
     hints: [
       'Think about what makes shadcn different from npm-installed libraries',
       'The components live in YOUR project, not in node_modules',
@@ -1619,14 +1601,14 @@ rounded-md bg-blue-600`,
       'cn() is twMerge(clsx(inputs)). clsx goes first: it drops false, null and undefined, and keeps an object key only when its value is true, so the first call loses "opacity-50" and the fourth keeps "bg-blue-600" but not "rounded-full". twMerge then removes any class that a later class of the same Tailwind group overrides, keeping the survivors in their original order. In the second call, "px-2" only refines the horizontal part of "p-4", so both stay, and "text-red-500" (a color) and "text-lg" (a font size) are different groups, so both stay too. In the third, "p-4" comes last and sets every side, so it overrides the earlier "px-2". The fourth drops "bg-gray-100" because the later "bg-blue-600" sets the same background color. Which class wins depends on its place in the cn() call, never on the order Tailwind writes its CSS, which is the reason shadcn components pass a caller\'s className last.',
     hints: [
       'clsx runs first and decides which inputs are kept at all',
-      'Two classes conflict only when they set the same CSS property; does px-2 conflict with p-4, and does text-lg conflict with text-red-500?',
+      'A later class removes an earlier one only when it covers everything the earlier one sets: p-4 covers px-2, but px-2 covers only part of p-4. And does text-lg set the same thing as text-red-500?',
     ],
     tags: ['shadcn', 'cn', 'clsx', 'tailwind-merge', 'predict'],
     concepts: ['shadcn-cn-utility'],
   },
 
   // =====================================================================
-  // NEXT_SHADCN — CVA + asChild (7 questions)
+  // NEXT_SHADCN - CVA + asChild (7 questions)
   // Closes the doc's flagged gap: every shadcn component is built on
   // class-variance-authority, and asChild/Slot is the composition
   // pattern used throughout - neither had any coverage yet.
@@ -1641,14 +1623,13 @@ rounded-md bg-blue-600`,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Complete this cva() call: the first argument is the base classes every variant shares, and the second argument object holds the variant option groups plus the fallback variants used when none are passed.',
+    question: 'Complete this cva() call. The first argument holds the base classes every button gets. Fill in the key that holds the groups of options, and the key that names the option used when a caller passes none.',
     template: `import { cva } from "class-variance-authority";
 
 const buttonVariants = cva(
-  "___",
+  "inline-flex items-center justify-center rounded-md font-medium",
   {
-    variants: {
+    ___: {
       variant: {
         default: "bg-primary text-primary-foreground",
         outline: "border border-input bg-background",
@@ -1658,8 +1639,10 @@ const buttonVariants = cva(
       variant: "default",
     },
   }
-);`,
-    blanks: ['inline-flex items-center justify-center rounded-md font-medium', 'defaultVariants'],
+);
+
+buttonVariants({ variant: "outline" });`,
+    blanks: ['variants', 'defaultVariants'],
     solution: `import { cva } from "class-variance-authority";
 
 const buttonVariants = cva(
@@ -1675,13 +1658,11 @@ const buttonVariants = cva(
       variant: "default",
     },
   }
-);`,
-    explanation:
-      'cva() takes the classes shared by every variant as its first argument (base layout/shape classes that never change), and a config object as its second: variants groups each option axis (variant, size, ...) with its class strings, and defaultVariants supplies the fallback used when a caller does not pass that prop at all.',
-    hints: [
-      'The first argument is a plain string of always-applied classes',
-      'The property naming the fallback options is defaultVariants',
-    ],
+);
+
+buttonVariants({ variant: "outline" });`,
+    explanation: 'cva(base, config) returns a function. config.variants holds one object per axis (here only variant) that maps each option name to its classes, and config.defaultVariants names the option used for an axis the caller leaves out. So buttonVariants() returns the base classes plus "bg-primary text-primary-foreground", and buttonVariants({ variant: "outline" }) returns the base classes plus the outline ones. cva only joins strings and does not resolve conflicts, which is why shadcn passes its result through cn().',
+    hints: ['One key holds every axis and its options', 'The other key names the fallback for each axis'],
     tags: ['cva', 'class-variance-authority', 'variants', 'cloze', 'shadcn'],
     concepts: ['shadcn-cva'],
   },
@@ -1695,14 +1676,20 @@ const buttonVariants = cva(
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Using cva from class-variance-authority, build buttonVariants with a variant axis ("default" | "destructive") and a size axis ("default" | "sm"), defaulting to variant "default" and size "default". Base classes: "inline-flex items-center justify-center rounded-md".',
-    starterCode: `import { cva } from "class-variance-authority";\n\nexport const buttonVariants = cva(\n`,
+    question: 'Using cva from class-variance-authority, export buttonVariants with:\n\n- the base classes "inline-flex items-center justify-center rounded-md"\n- a variant axis: default is "bg-primary text-primary-foreground", destructive is "bg-destructive text-white"\n- a size axis: default is "h-9 px-4 py-2", sm is "h-8 px-3"\n- variant default and size default when a caller passes neither',
+    starterCode: `import { cva } from "class-variance-authority";
+
+`,
     testCases: [
       {
         input: 'buttonVariants({ variant: "destructive", size: "sm" })',
-        expectedOutput: 'a class string combining the base classes with the destructive and sm variant classes',
-        description: 'Should return the correct combined class string for the given variant/size',
+        expectedOutput: '"inline-flex items-center justify-center rounded-md bg-destructive text-white h-8 px-3"',
+        description: 'The chosen option of each axis follows the base classes',
+      },
+      {
+        input: 'buttonVariants()',
+        expectedOutput: '"inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-9 px-4 py-2"',
+        description: 'With no props, the default of each axis applies',
       },
     ],
     solution: `import { cva } from "class-variance-authority";
@@ -1712,12 +1699,12 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        default: "bg-primary text-primary-foreground",
+        destructive: "bg-destructive text-white",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
+        default: "h-9 px-4 py-2",
+        sm: "h-8 px-3",
       },
     },
     defaultVariants: {
@@ -1725,26 +1712,29 @@ export const buttonVariants = cva(
       size: "default",
     },
   }
-);
-
-// buttonVariants({ variant: "destructive", size: "sm" })
-//   -> "inline-flex items-center justify-center rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9 px-3"`,
-    explanation:
-      'cva() generates a function that takes an options object matching the variants config and returns the base classes plus whichever variant classes were selected (or the defaultVariants classes for any option left unspecified). This is the pattern every shadcn/ui component (Button, Badge, Alert) is built on: one cva() call defines every visual permutation as a single typed function call instead of manual string concatenation or a lookup object.',
+);`,
+    requires: [
+      /export\s+const\s+buttonVariants\s*=\s*cva\(/,
+      /\bvariants\s*:\s*\{/,
+      /\bdestructive\s*:/,
+      /\bsize\s*:\s*\{/,
+      /\bsm\s*:/,
+      /defaultVariants\s*:\s*\{(?=[^}]*\bvariant\s*:\s*["'`]default["'`])(?=[^}]*\bsize\s*:\s*["'`]default["'`])/,
+    ],
+    explanation: 'cva() returns a function that takes one option per axis and returns the base classes followed by the classes of each chosen option, using defaultVariants for any axis left out. So buttonVariants({ variant: "destructive", size: "sm" }) is the base classes plus "bg-destructive text-white h-8 px-3". Every shadcn/ui component with looks to choose from (Button, Badge, Alert) is built this way: one cva() call lists every option, and the caller picks them by name instead of joining strings or keeping a lookup object. The classes here are shortened from shadcn\'s Button; the current one also uses text-white on destructive, since the destructive-foreground colour was dropped in its Tailwind 4 theme.',
     hints: [
       'variants groups each axis (variant, size) with its named class strings',
       'defaultVariants supplies the classes used when a caller omits that prop',
       'The generated function returns the base classes plus the resolved variant classes',
     ],
     tieredHints: {
-      apiSignature: 'const buttonVariants = cva(base, options)',
-      skeleton: `import { cva } from "class-variance-authority";
-
-export const buttonVariants = cva("inline-flex items-center justify-center rounded-md", {
+      apiSignature: 'cva(base: string, config: { variants, defaultVariants })',
+      skeleton: `export const buttonVariants = cva("____", {
   variants: {
-    variant: { default: "____", destructive: "____" },
+    variant: { /* default, destructive */ },
+    ____: { /* default, sm */ },
   },
-  defaultVariants: { variant: "____" },
+  ____: { /* one entry per axis */ },
 });`,
     },
     tags: ['cva', 'class-variance-authority', 'variants', 'shadcn'],
@@ -1759,16 +1749,14 @@ export const buttonVariants = cva("inline-flex items-center justify-center round
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
-    question:
-      'A shadcn Button component accepts an asChild prop. What does asChild do, and what problem does it solve when you want a Next.js <Link> to look exactly like a Button?',
+    question: 'A shadcn Button takes an asChild prop. What does <Button asChild><Link href="/about">About</Link></Button> render, and why?',
     options: [
-      { id: 'a', text: 'asChild renders the Button\'s own <button> element as usual, then nests the Link inside it - producing a <button><a>...</a></button> structure so the Link still receives the Button\'s styling', isCorrect: false },
-      { id: 'b', text: 'asChild uses Radix\'s Slot component to merge the Button\'s props (className, onClick, ARIA attributes) onto its single child instead of rendering its own DOM element - so <Button asChild><Link href="/about">About</Link></Button> renders one real <a>, styled like a button, with no wrapper element', isCorrect: true },
-      { id: 'c', text: 'asChild is a CSS-only prop that copies the parent element\'s computed styles onto whichever child is passed, without touching props, event handlers, or ARIA attributes at all', isCorrect: false },
-      { id: 'd', text: 'asChild tells React to skip hydration for that component entirely, rendering it as static server HTML with no client-side interactivity attached', isCorrect: false },
+      { id: 'a', text: 'The Button\'s own <button> with the Link inside it, <button><a>About</a></button>, so the link sits in a box that carries the button\'s classes', isCorrect: false },
+      { id: 'b', text: 'One <a> with the button\'s classes: Button renders Radix\'s Slot, which has no element of its own and merges its props onto its one child', isCorrect: true },
+      { id: 'c', text: 'One <a> with only the Link\'s own props: Slot swaps in the child as it is, so the button\'s classes are lost unless you copy them onto the Link', isCorrect: false },
+      { id: 'd', text: 'An <a> inside a <span> that carries the button\'s classes, so the link looks like a button while the <a> keeps its own semantics and props', isCorrect: false },
     ],
-    explanation:
-      'Slot (from @radix-ui/react-slot) is a component that, instead of rendering its own DOM node, clones its single child and merges the parent\'s props onto it - className gets combined, event handlers get chained, ARIA attributes pass through. Button\'s asChild prop swaps its rendered element from "button" to Slot when true, so <Button asChild><Link href="/about">About</Link></Button> produces exactly one <a> tag carrying the button\'s classes, with no extra wrapping <button> or <div> polluting the DOM - important both semantically (a link should be an <a>, not a button wrapping an <a>) and for CSS layout (no extra box in the tree).',
+    explanation: 'With asChild, Button renders Slot in place of "button" (Slot from @radix-ui/react-slot, or Slot.Root from the radix-ui package that current shadcn imports). Slot renders no element of its own: it clones its single child and merges its props onto it. className values are joined, style objects merged, event handlers chained so both run, and for any other prop the child\'s own value wins. Link renders an <a>, so the page holds one <a href="/about"> with the button\'s classes. A <button> around the link would be invalid HTML (no interactive content inside a button) and give two tab stops; Slot adds no wrapper at all.',
     hints: [
       'Nesting a real <button> around a real <a> would be invalid, non-semantic HTML',
       'Slot merges props onto its child rather than rendering a wrapper element',
@@ -1785,46 +1773,92 @@ export const buttonVariants = cva("inline-flex items-center justify-center round
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
-    language: CodeLanguage.TYPESCRIPT,
-    question:
-      'Add asChild support to this Button component using Radix\'s Slot, then use it to render a Next.js Link that looks like a Button, without wrapping the Link in an extra <button> element.',
-    starterCode: `import { Link } from "next/link";\nimport { cn } from "@/lib/utils";\nimport { buttonVariants } from "./button-variants";\n\nfunction Button({ asChild, className, variant, size, ...props }) {\n  // your code here\n}\n\n// Render a Link styled as a Button, with no wrapper element\n`,
-    testCases: [
-      {
-        input: '<Button asChild><Link href="/about">About</Link></Button>',
-        expectedOutput: 'renders a single <a> element with the Button\'s classes, no wrapping <button>',
-        description: 'Should compose Button styling onto the Link with no extra DOM element',
-      },
-    ],
-    solution: `import { Slot } from "@radix-ui/react-slot";
-import { Link } from "next/link";
+    language: CodeLanguage.JSX,
+    question: 'Finish this Button so that asChild works as it does in shadcn/ui: with asChild it renders Radix\'s Slot, otherwise a <button>, and either way it passes on every other prop and the classes from buttonVariants({ variant, size }) merged with className, the caller\'s className last. Then finish AboutLink: a Next.js Link to /about with the text About, styled as an outline Button, rendered as a single <a> with no <button> around it.',
+    starterCode: `import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "./button-variants";
 
-function Button({ asChild, className, variant, size, ...props }) {
+function Button({ asChild = false, className, variant, size, ...props }) {
+  // your code here
+}
+
+export function AboutLink() {
+  // your code here
+}
+`,
+    testCases: [
+      {
+        input: '<AboutLink />',
+        expectedOutput: '<a href="/about" class="...outline button classes...">About</a>',
+        description: 'One <a> with the button classes, no wrapping <button>',
+      },
+      {
+        input: '<Button variant="outline">Save</Button>',
+        expectedOutput: '<button class="...outline button classes...">Save</button>',
+        description: 'Without asChild, Button renders a <button>',
+      },
+    ],
+    solution: `import { Slot } from "@radix-ui/react-slot";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "./button-variants";
+
+function Button({ asChild = false, className, variant, size, ...props }) {
   const Comp = asChild ? Slot : "button";
   return <Comp className={cn(buttonVariants({ variant, size }), className)} {...props} />;
 }
 
-// Render a Link styled as a Button, with no wrapper element:
-// <Button asChild variant="outline">
-//   <Link href="/about">About</Link>
-// </Button>
-// -> renders a single <a href="/about" class="...button classes..."> element`,
-    explanation:
-      'Comp switches from the literal string "button" to Slot when asChild is true. Slot does not render its own element - it clones the single child it receives (the Link) and merges the incoming className and props onto it. The result is one <a> tag carrying the button\'s Tailwind classes, exactly matching how the button would look, with the semantics of a real link and no wrapper element in the DOM.',
+export function AboutLink() {
+  return (
+    <Button asChild variant="outline">
+      <Link href="/about">About</Link>
+    </Button>
+  );
+}
+# OR
+import { Slot } from "radix-ui";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "./button-variants";
+
+function Button({ asChild = false, className, variant, size, ...props }) {
+  const Comp = asChild ? Slot.Root : "button";
+  return <Comp className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+}
+
+export function AboutLink() {
+  return (
+    <Button asChild variant="outline">
+      <Link href="/about">About</Link>
+    </Button>
+  );
+}`,
+    requires: [
+      /import\s*\{\s*Slot\s*\}\s*from\s*["'](@radix-ui\/react-slot|radix-ui)["']/,
+      /asChild\s*\?\s*Slot(\.Root)?\s*:\s*["']button["']|if\s*\(\s*asChild\s*\)/,
+      /cn\(\s*buttonVariants\(\s*\{[^}]*\}\s*\)\s*,\s*className\s*\)|cn\(\s*buttonVariants\(\s*\{[^}]*\bclassName\b[^}]*\}\s*\)\s*\)/,
+      /\{\s*\.\.\.props\s*\}/,
+      /import\s+Link\s+from\s*["']next\/link["']/,
+      /<Button\b(?=[^>]*\basChild\b)(?=[^>]*\bvariant=["']outline["'])[^>]*>\s*<Link\b[^>]*\bhref=["']\/about["'][^>]*>\s*About\s*<\/Link>/,
+    ],
+    explanation: 'Comp is Slot when asChild is true and the string "button" otherwise, so the same JSX renders either. Slot renders no element of its own: it clones its single child, the Link, and merges the props onto it, joining className and chaining event handlers. Link renders an <a>, so AboutLink produces one <a href="/about"> carrying the outline button\'s classes, with a link\'s semantics and no wrapper. cn(buttonVariants({ variant, size }), className) puts the caller\'s className last so tailwind-merge lets it win; current shadcn writes cn(buttonVariants({ variant, size, className })), which works the same because cva adds className after the variant classes. next/link has a default export, so it is imported as import Link from "next/link".',
     hints: [
       'Comp is a ternary: asChild ? Slot : "button"',
       'Slot comes from @radix-ui/react-slot',
       'Slot merges props onto its child instead of rendering its own element',
     ],
     tieredHints: {
-      apiSignature: 'function Button({ asChild, className, variant, size, ...props })',
+      apiSignature: 'const Comp = asChild ? Slot : "button";  <Button asChild><Link href="..." /></Button>',
       skeleton: `import { Slot } from "@radix-ui/react-slot";
 
-function Button({ asChild, className, variant, size, ...props }) {
-  const Comp = asChild ? ____ : "____";
-  return <Comp className={cn(buttonVariants({ variant, size }), className)} {...____} />;
+function Button({ asChild = false, className, variant, size, ...props }) {
+  const Comp = ____;
+  return <Comp className={____} {...____} />;
+}
+
+export function AboutLink() {
+  return <Button ____>____</Button>;
 }`,
     },
     tags: ['asChild', 'radix-slot', 'composition', 'shadcn', 'next-link'],
@@ -1840,64 +1874,75 @@ function Button({ asChild, className, variant, size, ...props }) {
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.CSS,
-    question:
-      'Add a new "brand" color to the theme: define --brand as HSL channel values (no hsl() wrapper) in :root and .dark with different lightness for each mode, then map it into Tailwind config as a usable color under theme.extend.colors.',
-    starterCode: `/* globals.css */\n@layer base {\n  :root {\n    --background: 0 0% 100%;\n  }\n  .dark {\n    --background: 222 47% 11%;\n  }\n}\n\n/* tailwind.config.js */\n`,
+    question: 'This app/globals.css is a Tailwind 4 shadcn/ui theme. Add a brand colour the same way the background is set up, as a --brand variable: oklch(0.55 0.22 290) in light mode and oklch(0.7 0.18 290) in dark mode. The classes bg-brand, text-brand and bg-brand/50 should then work and follow the theme.',
+    starterCode: `@import "tailwindcss";
+
+:root {
+  --background: oklch(1 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+}
+`,
     testCases: [
       {
-        input: 'bg-brand utility class',
-        expectedOutput: '--brand defined as raw HSL channels in :root and .dark, mapped via hsl(var(--brand)) in tailwind.config.js',
-        description: 'Should define and wire up a theme-aware brand color using CSS variables',
+        input: '<div class="bg-brand"> on a light page, then inside .dark',
+        expectedOutput: 'oklch(0.55 0.22 290), then oklch(0.7 0.18 290)',
+        description: 'One class follows the theme',
+      },
+      {
+        input: '<div class="bg-brand/50">',
+        expectedOutput: 'color-mix(in oklab, var(--brand) 50%, transparent)',
+        description: 'The opacity modifier works on the variable',
       },
     ],
-    solution: `/* globals.css */
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --brand: 262 83% 58%;
-  }
-  .dark {
-    --background: 222 47% 11%;
-    --brand: 262 83% 70%;
-  }
+    solution: `@import "tailwindcss";
+
+:root {
+  --background: oklch(1 0 0);
+  --brand: oklch(0.55 0.22 290);
 }
 
-/* tailwind.config.js */
-/* module.exports = {
-  darkMode: "class",
-  theme: {
-    extend: {
-      colors: {
-        background: "hsl(var(--background))",
-        brand: "hsl(var(--brand))",
-      },
-    },
-  },
-}; */
+.dark {
+  --background: oklch(0.145 0 0);
+  --brand: oklch(0.7 0.18 290);
+}
 
-// Usage: className="bg-brand text-white" now resolves to the light-mode
-// --brand value normally, and the .dark override automatically once the
-// "dark" class is present on <html>.`,
-    explanation:
-      'shadcn\'s theming convention stores each color as raw HSL channel values ("262 83% 58%", no hsl() wrapper) so Tailwind can wrap it with hsl(var(--brand)) and still apply opacity modifiers like bg-brand/50. Defining the same variable name in both :root and .dark with different lightness values means one Tailwind class (bg-brand) automatically resolves to the right shade for whichever mode is active - no dark: prefix needed on every usage, because the swap happens at the CSS variable level, not the class level.',
+@theme inline {
+  --color-background: var(--background);
+  --color-brand: var(--brand);
+}`,
+    requires: [
+      /:root\s*\{[^}]*--brand\s*:\s*oklch\(\s*0\.55\s+0\.22\s+290\s*\)/,
+      /\.dark\s*\{[^}]*--brand\s*:\s*oklch\(\s*0\.7\s+0\.18\s+290\s*\)/,
+      /@theme\s+inline\s*\{[^}]*--color-brand\s*:\s*var\(\s*--brand\s*\)/,
+    ],
+    explanation: 'Each --color-NAME in @theme becomes a family of utilities: bg-brand, text-brand, border-brand, ring-brand and the rest. Its value is a variable that :root sets and .dark overrides, so one class changes with the theme and no dark:bg- class is needed anywhere; inline makes the utility use var(--brand) itself, so it also follows a .dark section further down the page. In Tailwind 4 the opacity modifier works on any colour: bg-brand/50 compiles to color-mix(in oklab, var(--brand) 50%, transparent), so the whole oklch() value is stored. Tailwind 3 could not mix a variable that way, which is why older shadcn themes stored bare HSL numbers such as 262 83% 58% and wrapped them as hsl(var(--brand)) in tailwind.config.js.',
     hints: [
-      'Store the value as raw HSL channels, not wrapped in hsl(...)',
-      'Same variable name in :root and .dark, different lightness',
-      'Tailwind config wraps it as hsl(var(--brand)) so opacity modifiers still work',
+      'Add --brand next to --background in both :root and .dark',
+      'A colour utility comes from a --color- entry in @theme inline',
+      'Tailwind 4 mixes the opacity in itself, so store the full oklch() value',
     ],
     tieredHints: {
-      apiSignature: 'var(--brand)',
-      skeleton: `// globals.css
-// @layer base { :root { --brand: light-value } .dark { --brand: dark-value } }
-:root {
+      apiSignature: '@theme inline { --color-NAME: var(--NAME); }',
+      skeleton: `:root {
   --brand: ____;
 }
-.dark {
+
+____ {
   --brand: ____;
 }
-// tailwind.config.js colors.brand maps to hsl(var(____))`,
+
+@theme ____ {
+  ____
+}`,
     },
-    tags: ['theming', 'css-variables', 'dark-mode', 'tailwind', 'shadcn'],
+    tags: ['theming', 'css-variables', 'dark-mode', 'tailwind', 'tailwind-4', 'shadcn'],
     concepts: ['web-tailwind-utility'],
   },
 
@@ -1910,37 +1955,76 @@ function Button({ asChild, className, variant, size, ...props }) {
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question:
-      'buttonVariants is already defined elsewhere via cva() with a "variant" and a "size" axis, and VariantProps, ButtonHTMLAttributes, and buttonVariants are already imported. Type ButtonProps so it accepts every native <button> attribute PLUS whichever variant/size options buttonVariants defines - without manually re-declaring "variant" and "size" as separate props that could drift out of sync with the cva() config.',
-    starterCode: `interface ButtonProps {\n  // your code here\n}`,
+    question: 'buttonVariants is defined elsewhere with cva(), with a variant axis and a size axis, and the imports below are done. Declare ButtonProps so that it accepts every native <button> attribute plus the variant and size options of buttonVariants, with those options derived from buttonVariants itself rather than typed out again.',
+    starterCode: `import type { ButtonHTMLAttributes } from "react";
+import { type VariantProps } from "class-variance-authority";
+import { buttonVariants } from "./button-variants";
+
+`,
     testCases: [
       {
-        input: '<Button variant="outline" size="sm" onClick={fn} />',
-        expectedOutput: 'ButtonProps accepts variant, size, onClick, and every other native button attribute, all fully typed',
-        description: 'Should type ButtonProps by extending both native attributes and VariantProps',
+        input: 'const p: ButtonProps = { variant: "outline", size: "sm", onClick, disabled: true, type: "submit" }',
+        expectedOutput: 'type-checks',
+        description: 'Native attributes and the cva options are both accepted',
+      },
+      {
+        input: 'const p: ButtonProps = { variant: "huge" }',
+        expectedOutput: 'a type error: "huge" is not an option of buttonVariants',
+        description: 'Only the options defined in buttonVariants are allowed',
       },
     ],
-    solution: `import { type VariantProps } from "class-variance-authority";
-import { ButtonHTMLAttributes } from "react";
+    solution: `import type { ButtonHTMLAttributes } from "react";
+import { type VariantProps } from "class-variance-authority";
 import { buttonVariants } from "./button-variants";
 
 interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}`,
-    explanation:
-      'VariantProps<typeof buttonVariants> extracts a props type with one property per variants axis (variant, size), typed as a union of that axis\'s option keys. Extending both ButtonHTMLAttributes<HTMLButtonElement> and VariantProps<typeof buttonVariants> gives ButtonProps every native button attribute (onClick, disabled, type, ...) plus variant/size typed directly from the cva() config - so the two can never drift apart the way manually re-declared variant?: "default" | "outline" props could if someone added a variant to cva() but forgot to update the interface.',
+    VariantProps<typeof buttonVariants> {}
+# OR
+import type { ButtonHTMLAttributes } from "react";
+import { type VariantProps } from "class-variance-authority";
+import { buttonVariants } from "./button-variants";
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants>;
+# OR
+import type { ButtonHTMLAttributes } from "react";
+import { type VariantProps } from "class-variance-authority";
+import { buttonVariants } from "./button-variants";
+import type { ComponentProps } from "react";
+
+type ButtonProps = ComponentProps<"button"> & VariantProps<typeof buttonVariants>;
+# OR
+import type { ButtonHTMLAttributes } from "react";
+import { type VariantProps } from "class-variance-authority";
+import { buttonVariants } from "./button-variants";
+
+interface ButtonProps
+  extends VariantProps<typeof buttonVariants>,
+    ButtonHTMLAttributes<HTMLButtonElement> {}
+# OR
+import type { ButtonHTMLAttributes } from "react";
+import { type VariantProps } from "class-variance-authority";
+import { buttonVariants } from "./button-variants";
+
+type ButtonProps = VariantProps<typeof buttonVariants> &
+  ButtonHTMLAttributes<HTMLButtonElement>;`,
+    requires: [
+      /VariantProps<\s*typeof\s+buttonVariants\s*>/,
+      /ButtonHTMLAttributes<\s*HTMLButtonElement\s*>|ComponentProps<\s*["']button["']\s*>/,
+      /(interface|type)\s+ButtonProps\b/,
+    ],
+    explanation: 'VariantProps<typeof buttonVariants> reads the cva() config and produces one optional prop per axis, typed as that axis\'s option names: variant?: "default" | "outline" | null, and the same for size (null means "no classes for this axis", not the default). typeof is needed because buttonVariants is a value, and VariantProps takes a type. ButtonHTMLAttributes<HTMLButtonElement> adds every native button attribute, such as onClick, disabled and type; the plainer HTMLAttributes would leave out disabled and type. An interface that extends both, or a type that intersects them with &, gives the same props. Current shadcn writes React.ComponentProps<"button">, which in React 19 also includes ref. Because the options come from the cva() config, adding a variant there updates the props too, where a hand-written variant?: "default" | "outline" would drift.',
     hints: [
       'VariantProps<typeof buttonVariants> derives variant/size types from the cva config itself',
-      'Extend BOTH ButtonHTMLAttributes<HTMLButtonElement> and VariantProps<typeof buttonVariants>',
+      'Combine the native button attributes with VariantProps<typeof buttonVariants>',
       'This avoids hand-typing variant/size unions that could drift from the cva() source of truth',
     ],
     tieredHints: {
-      apiSignature: 'interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}',
-      skeleton: `import { type VariantProps } from "class-variance-authority";
-
-interface ButtonProps
+      apiSignature: 'VariantProps<typeof cvaFunction>  ButtonHTMLAttributes<HTMLButtonElement>',
+      skeleton: `interface ButtonProps
   extends ButtonHTMLAttributes<____>,
-    ____<typeof ____> {}`,
+    ____<____ ____> {}`,
     },
     tags: ['VariantProps', 'cva', 'typescript', 'shadcn'],
     concepts: ['shadcn-cva'],
@@ -1954,21 +2038,19 @@ interface ButtonProps
     difficulty: Difficulty.ADVANCED,
     topic: Topic.NEXT_SHADCN,
     course: Course.WEB_DEV,
-    question:
-      'shadcn\'s <Form>, <FormField>, <FormItem>, <FormLabel>, and <FormMessage> components wrap a form built with react-hook-form. What is actually happening underneath FormField, and what does it give you for free?',
+    question: 'shadcn/ui\'s form.tsx (Form, FormField, FormItem, FormLabel, FormControl and FormMessage) wraps react-hook-form; newer shadcn docs build forms with its Field components instead. What does FormField do underneath, and what do the Form* components wire up for you?',
     options: [
-      { id: 'a', text: 'FormField is a plain wrapper <div> with no logic of its own - all the validation and error handling still has to be written by hand inside every individual field, identically to a bare react-hook-form setup', isCorrect: false },
-      { id: 'b', text: 'FormField replaces react-hook-form entirely with its own internal state management, so react-hook-form\'s useForm, register, and handleSubmit are never used once the shadcn Form components are adopted', isCorrect: false },
-      { id: 'c', text: 'FormField is a server-only component that validates form data on the server before the page even renders, so no client-side validation logic runs in the browser at all', isCorrect: false },
-      { id: 'd', text: 'FormField renders react-hook-form\'s Controller under the hood, and the surrounding Form* components wire up the generated ids so FormLabel, the field input, and FormMessage are automatically connected via aria-describedby and htmlFor - giving you an accessible, wired-up field without writing that boilerplate by hand', isCorrect: true },
+      { id: 'a', text: 'FormField is a styled <div> with no logic: you still register each input with register() and write its id, htmlFor and aria-describedby by hand', isCorrect: false },
+      { id: 'b', text: 'FormField replaces react-hook-form with its own state, so useForm, register and handleSubmit are no longer used once the Form components are in', isCorrect: false },
+      { id: 'c', text: 'FormField sends each value to a Server Action and validates it there, so the schema never runs in the browser and errors come back on the next render', isCorrect: false },
+      { id: 'd', text: 'FormField renders RHF\'s Controller; FormItem makes an id with useId, and FormLabel, FormControl and FormMessage use it for htmlFor, id and aria-describedby', isCorrect: true },
     ],
-    explanation:
-      'Under shadcn\'s Form pattern, <FormField> renders react-hook-form\'s <Controller> to bridge a controlled component into RHF\'s registration system, while a React context (FormFieldContext/FormItemContext) generates and shares a unique id across FormLabel (htmlFor), the input (id, aria-describedby, aria-invalid), and FormMessage (the id aria-describedby points to). The payoff is that every field gets correct label association and error announcement automatically, instead of an author hand-wiring htmlFor/id/aria-describedby on every field in every form.',
+    explanation: 'In form.tsx, Form is react-hook-form\'s FormProvider, and FormField puts the field\'s name in a context and renders <Controller {...props} />, so RHF still owns the value, the validation and the errors. FormItem creates an id with React.useId() and shares it through a second context. FormLabel sets htmlFor to that id. FormControl is a Radix Slot that puts the id, aria-invalid and aria-describedby (the description\'s id, plus the message\'s id when there is an error) on the input you pass it, and FormMessage renders the error under the id that aria-describedby points to. Each field gets its label and its error announced without hand-written ids. shadcn\'s newer docs use RHF\'s Controller with the Field components, where you set htmlFor, id and aria-invalid on each field yourself.',
     hints: [
       'react-hook-form is still doing the actual form state management underneath',
       'The wiring being automated is the label/input/error-message ARIA relationship',
     ],
     tags: ['shadcn', 'form', 'react-hook-form', 'Controller', 'accessibility'],
-    concepts: ['shadcn-form-pattern', 'a11y-aria-roles'],
+    concepts: ['shadcn-form-pattern', 'a11y-form-labels'],
   },
 ];
