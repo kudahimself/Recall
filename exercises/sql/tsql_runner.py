@@ -161,7 +161,7 @@ def check_tsql(sql):
             raise AssertionError("In T-SQL, ADD takes no COLUMN keyword: ALTER TABLE t ADD col type")
         if word == "MODIFY":
             raise AssertionError("MODIFY is not T-SQL: change a column's type with ALTER TABLE t ALTER COLUMN col newtype")
-        if word == "OR" and after is not None and after.text.upper() == "REPLACE":
+        if word == "OR" and i > 0 and tokens[i - 1].text.upper() == "CREATE" and after is not None and after.text.upper() == "REPLACE":
             raise AssertionError("T-SQL has CREATE OR ALTER, not CREATE OR REPLACE")
         if word == "AUTOINCREMENT" or word == "AUTO_INCREMENT" or word == "SERIAL":
             raise AssertionError(f"{tok.text} is not T-SQL: a T-SQL key that numbers itself is INT IDENTITY(1, 1)")
