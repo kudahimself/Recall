@@ -39,8 +39,12 @@ delta-spark==4.0.1
 # pyspark 4.0 needs pandas 2.0+ and pyarrow 11+; both releases have wheels for Python 3.10 to 3.12.
 pandas==2.3.3
 pyarrow==21.0.0
-# duckdb is for the Data Engineering exercises (exercises/data_engineering/*) that run SQL:
+# duckdb is for the Data Engineering exercises (exercises/data_engineering/*) that run SQL
+# and for the SQL exercises (exercises/sql/*):
 # each test opens an in-process DuckDB database in memory (and writes Parquet to a temporary folder
 # for the data skipping one), so there is no server to start. The others need only the standard library.
 # duckdb 1.5.6 has wheels for Python 3.10 to 3.14.
 duckdb==1.5.6
+# sqlglot is for the SQL exercises (exercises/sql/*): it reads the learner's T-SQL with its T-SQL dialect
+# and writes it as DuckDB SQL, so the tests run T-SQL with no SQL Server. Pure Python, for Python 3.9+.
+sqlglot==30.24.0

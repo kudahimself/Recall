@@ -47,8 +47,14 @@ describe('finding an exercise', () => {
     expect(exerciseCommand(e!)).toBe('cd exercises/web_dev/js_arrays && npm test');
   });
 
+  it('runs a SQL exercise, T-SQL in a .sql file, with pytest', () => {
+    const e = exerciseForTopics(['tsql_select']);
+    expect(e?.starter).toEqual(['shelf_picks.sql']);
+    expect(exerciseCommand(e!)).toBe('cd exercises/sql/tsql_select && pytest');
+  });
+
   it('gives null for a topic without an exercise yet', () => {
-    expect(exerciseForTopics(['tsql_select'])).toBeNull();
+    expect(exerciseForTopics(['tsql_windows'])).toBeNull();
     expect(getExercise('nope')).toBeUndefined();
   });
 });
