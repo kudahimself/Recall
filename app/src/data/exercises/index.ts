@@ -18,6 +18,8 @@
  * page jsdom builds): HTML, CSS & Tailwind and JavaScript Fundamentals, then
  * React (components rendered with React Testing Library) and TypeScript (types
  * checked by the compiler in the tests).
+ * Then SQL for Data Engineering, in T-SQL that the tests read with sqlglot and run
+ * on DuckDB: Querying Foundations and DDL & Constraints.
  *
  * exercises.test.ts keeps it in step with the folders (title, starter, tests)
  * and runs exercises/check_exercises.py, so every exercise's tests fail on its
@@ -1984,6 +1986,175 @@ export const EXERCISES: TopicExercise[] = [
     task: lines(
       'Load orders from outside into a typed result envelope that is true at runtime.',
       'A generic `Result<T>` union and `Guard<T>`, guards for an order and for an array of anything, `parseJson` and `fetchJson` that return every failure as an error, including a response that is not ok, and never cast with `as`.',
+    ),
+  },
+  {
+    id: 'tsql_select',
+    topicKeys: [Topic.TSQL_SELECT],
+    title: 'Shelf picks',
+    folder: 'exercises/sql/tsql_select',
+    starter: ['shelf_picks.sql'],
+    tests: 'test_shelf_picks.py',
+    minutes: 15,
+    task: lines(
+      'Pick lists for the front shelf from a table of books in T-SQL.',
+      'The three longest SciFi books with `TOP` and an `ORDER BY`, every genre once with `DISTINCT`, the second page of titles with `OFFSET ... FETCH`, and recent short books newest first.',
+    ),
+  },
+  {
+    id: 'tsql_filtering',
+    topicKeys: [Topic.TSQL_FILTERING],
+    title: 'Members to chase',
+    folder: 'exercises/sql/tsql_filtering',
+    starter: ['member_filters.sql'],
+    tests: 'test_member_filters.py',
+    minutes: 20,
+    task: lines(
+      'Sort out members\' fines when some members never gave a city.',
+      'Keep the NULL cities that `<>` drops, find them with `IS NULL`, filter with `IN`, `BETWEEN` and `LIKE`, and give each member a town with `COALESCE` and a standing with `CASE`.',
+    ),
+  },
+  {
+    id: 'tsql_string_functions',
+    topicKeys: [Topic.TSQL_STRING_FUNCTIONS],
+    title: 'Author handles',
+    folder: 'exercises/sql/tsql_string_functions',
+    starter: ['author_handles.sql'],
+    tests: 'test_author_handles.py',
+    minutes: 20,
+    task: lines(
+      'Tidy author handles and stock codes that came from a sign-up form.',
+      'Split each handle at its `@` with `CHARINDEX`, `LEFT` and `SUBSTRING`, build labels with `CONCAT` that survive a NULL pen name, clean codes with `TRIM`, `REPLACE` and `UPPER`, and cut out first names.',
+    ),
+  },
+  {
+    id: 'tsql_date_functions',
+    topicKeys: [Topic.TSQL_DATE_FUNCTIONS],
+    title: 'Due dates',
+    folder: 'exercises/sql/tsql_date_functions',
+    starter: ['loan_dates.sql'],
+    tests: 'test_loan_dates.py',
+    minutes: 20,
+    task: lines(
+      'Work out loan lengths, due dates and late returns from a table of loans.',
+      'Count days with `DATEDIFF`, move dates with `DATEADD`, find month ends with `EOMONTH`, pull out the year, month and quarter, and list the loans still out on a fixed day.',
+    ),
+  },
+  {
+    id: 'tsql_joins',
+    topicKeys: [Topic.TSQL_JOINS],
+    title: 'Who has what',
+    folder: 'exercises/sql/tsql_joins',
+    starter: ['member_loans.sql'],
+    tests: 'test_member_loans.py',
+    minutes: 20,
+    task: lines(
+      'Answer who borrowed what by joining members, loans and books.',
+      'One row per loan with an inner join, every member with their 2026 loans by putting the year in a `LEFT JOIN`\'s `ON`, and the members and books with no loans at all.',
+    ),
+  },
+  {
+    id: 'tsql_aggregation',
+    topicKeys: [Topic.TSQL_AGGREGATION],
+    title: 'Loans by genre',
+    folder: 'exercises/sql/tsql_aggregation',
+    starter: ['genre_totals.sql'],
+    tests: 'test_genre_totals.py',
+    minutes: 20,
+    task: lines(
+      'Sum up the library\'s loans by genre and by member.',
+      'Count loans and distinct titles per genre with `GROUP BY`, total the whole table in one row, keep busy members with `HAVING`, and filter rows with `WHERE` before testing a group\'s sum.',
+    ),
+  },
+  {
+    id: 'tsql_subqueries_cte',
+    topicKeys: [Topic.TSQL_SUBQUERIES_CTE],
+    title: 'Questions inside questions',
+    folder: 'exercises/sql/tsql_subqueries_cte',
+    starter: ['member_subqueries.sql'],
+    tests: 'test_member_subqueries.py',
+    minutes: 25,
+    task: lines(
+      'Answer questions that need another answer first.',
+      'Compare books with the average in a subquery, find long loaners with `EXISTS`, list unborrowed books with `NOT EXISTS` where `NOT IN` meets a NULL, and keep every member tied for the most loans with a CTE.',
+    ),
+  },
+  {
+    id: 'tsql_set_ops',
+    topicKeys: [Topic.TSQL_SET_OPS],
+    title: 'Shelf and wishlist',
+    folder: 'exercises/sql/tsql_set_ops',
+    starter: ['shelf_lists.sql'],
+    tests: 'test_shelf_lists.py',
+    minutes: 15,
+    task: lines(
+      'Combine the shelf, the wishlist and the donations with set operators.',
+      'Keep duplicates with `UNION ALL`, list every title once with `UNION`, find titles on both lists with `INTERSECT` and on one only with `EXCEPT`, and line up a table whose title comes second.',
+    ),
+  },
+  {
+    id: 'tsql_dml',
+    topicKeys: [Topic.TSQL_DML],
+    title: 'Copies in and out',
+    folder: 'exercises/sql/tsql_dml',
+    starter: ['copy_changes.sql'],
+    tests: 'test_copy_changes.py',
+    minutes: 15,
+    task: lines(
+      'Change the library\'s copies with `INSERT`, `UPDATE` and `DELETE`.',
+      'Add copies with a column left to its default, add a loan to two titles, mark worn copies down from their own price, and remove only the worn copies never lent, leaving every other row alone.',
+    ),
+  },
+  {
+    id: 'tsql_ddl_tables',
+    topicKeys: [Topic.TSQL_DDL_TABLES],
+    title: 'Rooms and shelves',
+    folder: 'exercises/sql/tsql_ddl_tables',
+    starter: ['room_tables.sql'],
+    tests: 'test_room_tables.py',
+    minutes: 20,
+    task: lines(
+      'Create a table of rooms and change it as the plans change.',
+      '`CREATE TABLE` in `dbo`, `ADD` a nullable column with no `COLUMN` keyword, widen a column with `ALTER COLUMN`, `DROP COLUMN`, fill a temp table with `SELECT ... INTO`, and `DROP TABLE`.',
+    ),
+  },
+  {
+    id: 'tsql_types',
+    topicKeys: [Topic.TSQL_TYPES],
+    title: 'Fines, typed',
+    folder: 'exercises/sql/tsql_types',
+    starter: ['fine_types.sql'],
+    tests: 'test_fine_types.py',
+    minutes: 20,
+    task: lines(
+      'Give a table of fines the types that fit what each column holds.',
+      '`BIGINT` past 2.1 billion, `NVARCHAR` for any alphabet, `DECIMAL(6, 2)` for exact money, `DATE`, `DATETIME2` and `BIT`; then turn a `FLOAT` price into a `DECIMAL` so it adds up exactly.',
+    ),
+  },
+  {
+    id: 'tsql_constraints',
+    topicKeys: [Topic.TSQL_CONSTRAINTS],
+    title: 'Rules for copies',
+    folder: 'exercises/sql/tsql_constraints',
+    starter: ['copy_rules.sql'],
+    tests: 'test_copy_rules.py',
+    minutes: 20,
+    task: lines(
+      'Put the rules in the tables so bad rows are refused.',
+      'A `PRIMARY KEY`, `NOT NULL` and `UNIQUE` columns, a `DEFAULT`, a named `FOREIGN KEY` with `ON DELETE CASCADE`, and named `CHECK`s, with `NOT NULL` so a NULL price cannot slip past its check.',
+    ),
+  },
+  {
+    id: 'tsql_views',
+    topicKeys: [Topic.TSQL_VIEWS],
+    title: 'Lines and views',
+    folder: 'exercises/sql/tsql_views',
+    starter: ['order_views.sql'],
+    tests: 'test_order_views.py',
+    minutes: 20,
+    task: lines(
+      'Move repeated arithmetic into computed columns and repeated joins into views.',
+      'A computed `LineTotal` and a `PERSISTED` one, a view of the big lines queried after a `GO`, and a view that names each loan\'s member and book, which shows rows added after it was created.',
     ),
   },
 ];

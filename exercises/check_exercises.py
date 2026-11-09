@@ -8,7 +8,8 @@ For each exercise folder, exercises/<course>/<topic>/, this script:
    over the starter files, and runs the tests, where every test must pass.
 
 Each copy keeps the <course>/<topic> layout and takes the course folder's shared
-modules along (such as exercises/backend/exercise_settings.py, the Django settings).
+modules along (such as exercises/backend/exercise_settings.py, the Django settings,
+or exercises/sql/tsql_runner.py, which runs a SQL exercise's T-SQL on DuckDB).
 
 Working on copies means the learner's own edits are never changed.
 A starter the learner has already edited (it differs from git's committed copy)
@@ -100,7 +101,7 @@ def check(folder):
         return [f"no reference solution at {solution.relative_to(ROOT.parent)}"]
     if not list(folder.glob("test_*.py")):
         return ["no test_*.py file"]
-    solution_files = [p for p in solution.rglob("*.py") if "__pycache__" not in p.parts]
+    solution_files = [p for p in (*solution.rglob("*.py"), *solution.rglob("*.sql")) if "__pycache__" not in p.parts]
     for path in solution_files:
         # A solution may add Django migrations, which the learner makes with makemigrations.
         if "migrations" in path.parts:

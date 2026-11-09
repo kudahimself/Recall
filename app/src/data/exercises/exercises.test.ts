@@ -4,7 +4,7 @@
  * every folder has an entry, each Python Fundamentals, Python Advanced, Django,
  * Django Advanced & Deployment, DRF Production Patterns, Celery & Background
  * Tasks, Testing & CI/CD, Production Infrastructure, Python Mastery & Advanced and
- * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform, ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines, Optimization & Advanced, Data Governance, Data Modeling & Warehousing Design and Lakehouse Architecture & Engineering Practice topics, the Data Engineering topics the course outline marks for one and the Web Dev HTML, CSS & Tailwind, JavaScript Fundamentals, React and TypeScript topics have one, test files and modules have names unique across exercises
+ * Real-time & Monitoring topic has one, as do the Databricks Lakehouse Platform, ELT with Spark SQL & Python, Incremental Data Processing, Production Pipelines, Optimization & Advanced, Data Governance, Data Modeling & Warehousing Design and Lakehouse Architecture & Engineering Practice topics, the Data Engineering topics the course outline marks for one, the Web Dev HTML, CSS & Tailwind, JavaScript Fundamentals, React and TypeScript topics and the SQL for Data Engineering Querying Foundations and DDL & Constraints topics have one, test files and modules have names unique across exercises
  * so pytest can collect them all from the repo root, and exercises/check_exercises.py passes (each
  * exercise's tests fail on its starter and pass on its reference solution), so
  * an exercise cannot rot.
@@ -13,11 +13,11 @@ import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import { EXERCISES } from './index';
-import { BACKEND_SECTIONS, DATABRICKS_SECTIONS, DATA_ENG_PATH_ORDER, WEBDEV_SECTIONS, getCourseForTopic, getSectionUnits } from '../../utils/courseConfig';
+import { BACKEND_SECTIONS, DATABRICKS_SECTIONS, DATA_ENG_PATH_ORDER, SQL_SECTIONS, WEBDEV_SECTIONS, getCourseForTopic, getSectionUnits } from '../../utils/courseConfig';
 
 const REPO = path.join(__dirname, '..', '..', '..', '..');
 const EXERCISES_DIR = path.join(REPO, 'exercises');
-// The Python that runs the exercises' tests; the Databricks ones also need Java 17+ and pyspark, the Data Engineering ones duckdb.
+// The Python that runs the exercises' tests; the Databricks ones also need Java 17+ and pyspark, the Data Engineering ones duckdb, the SQL ones duckdb and sqlglot.
 // The Web Dev ones run on node, with Vitest, jsdom, React and TypeScript installed by `npm ci` in exercises/web_dev.
 const PYTHON = process.env.EXERCISES_PYTHON ?? 'python3';
 
@@ -95,6 +95,13 @@ describe('exercise list', () => {
     expect(inSection.map(e => e.topicKeys)).toEqual(units);
   });
 
+  it.each(['Querying Foundations', 'DDL & Constraints'])('has an exercise for every SQL %s topic, in path order', section => {
+    expect(SQL_SECTIONS[section]).toBeDefined();
+    const units = getSectionUnits(section).map(([, keys]) => keys);
+    const inSection = EXERCISES.filter(e => units.some(keys => keys.includes(e.topicKeys[0])));
+    expect(inSection.map(e => e.topicKeys)).toEqual(units);
+  });
+
   // Data Engineering gives an exercise only to the topics its decisions-and-designs
   // outline marks for one (where writing the load or plan teaches more than a card).
   it('has an exercise for every marked Data Engineering topic, in path order', () => {
@@ -146,6 +153,14 @@ test('every Databricks exercise fails on its starter and passes on its reference
 test('every Data Engineering exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
   const out = checkCourses(['data_engineering']);
   const count = EXERCISES.filter(e => e.folder.startsWith('exercises/data_engineering/')).length;
+  expect(out).toMatch(new RegExp(`exercises checked: ${count} pass, 0 fail`));
+});
+
+// The SQL exercises' T-SQL is read by sqlglot and run on an in-memory DuckDB (exercises/sql/tsql_runner.py).
+test('every SQL exercise fails on its starter and passes on its reference solution (check_exercises.py)', () => {
+  const out = checkCourses(['sql']);
+  const count = EXERCISES.filter(e => e.folder.startsWith('exercises/sql/')).length;
+  expect(count).toBeGreaterThan(0);
   expect(out).toMatch(new RegExp(`exercises checked: ${count} pass, 0 fail`));
 });
 
