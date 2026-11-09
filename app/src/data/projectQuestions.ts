@@ -1293,28 +1293,28 @@ export default function InfiniteFeed() {
   },
 
   // =====================================================================
-  // CHECKPOINT 6: Capstone (Topic.PATTERNS_ARCHITECTURAL) — 3 questions
+  // CHECKPOINT 6: Capstone (Topic.PATTERNS_ARCHITECTURAL, and Topic.DB_DESIGN for proj-capstone-1) - 3 questions
   // =====================================================================
 
   {
     id: 'proj-capstone-1',
     type: QuestionType.CODING,
     difficulty: Difficulty.ADVANCED,
-    topic: Topic.PATTERNS_ARCHITECTURAL,
+    topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: `Design a Data Model for a Multi-User Task Management App
+    question: `Write the Prisma schema for a task tracker, a simplified Linear or Jira, on PostgreSQL. The starter has the generator and datasource; add:
+- three enums: TaskStatus (BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED), TaskPriority (URGENT, HIGH, MEDIUM, LOW, NONE) and WorkspaceRole (OWNER, ADMIN, MEMBER, VIEWER)
+- User: id, a unique email, fullName, an optional avatarUrl
+- Workspace: id, title, a unique slug, an optional description
+- WorkspaceMember: the junction model between User and Workspace, with a role (default MEMBER) and joinedAt; a user can join a workspace only once
+- Project: id, title, an optional description, and a key such as "PROJ" that is unique within its workspace; it belongs to a workspace
+- Task: id, title, an optional description, a taskNumber that is unique within its project, status (default BACKLOG), priority (default NONE) and an optional dueDate; it belongs to a project, has a required reporter and an optional assignee, both Users, through relations named "TaskReporter" and "TaskAssignee"
+- Comment: id, content, an author (a User) and the task it is on
+- createdAt and updatedAt on every model except WorkspaceMember
 
-Create a Prisma schema for a task management app (like a simplified Linear/Jira). Design models for:
-- **User** — name, email, avatar, membership in workspaces
-- **Workspace** — name, slug, created by user, has many projects
-- **Project** — name, description, belongs to workspace, has many tasks
-- **Task** — title, description, status (enum), priority (enum), assignee, reporter, project, comments, due date
-- **Comment** — content, author, task, timestamps
-
-Include proper relations, indexes for common queries, enums for status/priority, and explain your architectural decisions.`,
+Deletes: removing a workspace removes its members and projects, a project its tasks, and a task its comments. Removing a user removes their memberships and comments and unassigns their tasks, but a user who reported tasks cannot be removed. Add indexes for listing a project's tasks by status and for finding the tasks assigned to a user.`,
     starterCode: `// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -1323,67 +1323,14 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// TODO: Define enum TaskStatus (BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED)
-
-// TODO: Define enum TaskPriority (URGENT, HIGH, MEDIUM, LOW, NONE)
-
-// TODO: Define enum WorkspaceRole (OWNER, ADMIN, MEMBER, VIEWER)
-
-// TODO: Define User model
-// - id, email (unique), name, avatarUrl (optional)
-// - Relation to workspaces (many-to-many via WorkspaceMember)
-// - Relation to assigned tasks, reported tasks, comments
-// - createdAt, updatedAt
-
-// TODO: Define Workspace model
-// - id, name, slug (unique), description (optional)
-// - Relation to members (via WorkspaceMember), projects
-// - createdAt, updatedAt
-
-// TODO: Define WorkspaceMember (join table for User-Workspace)
-// - userId, workspaceId, role (WorkspaceRole)
-// - Compound unique on [userId, workspaceId]
-// - joinedAt timestamp
-
-// TODO: Define Project model
-// - id, name, description, key (e.g., "PROJ" for task numbering)
-// - Belongs to workspace
-// - Has many tasks
-// - createdAt, updatedAt
-
-// TODO: Define Task model
-// - id, title, description (optional), taskNumber (auto-increment per project)
-// - status (TaskStatus, default BACKLOG), priority (TaskPriority, default NONE)
-// - assigneeId (optional), reporterId
-// - projectId, dueDate (optional)
-// - Has many comments
-// - Indexes on: [projectId, status], [assigneeId], [reporterId]
-// - createdAt, updatedAt
-
-// TODO: Define Comment model
-// - id, content, authorId, taskId
-// - createdAt, updatedAt
 `,
     testCases: [
-      {
-        input: 'Enums defined',
-        expectedOutput: 'enum TaskStatus|BACKLOG|IN_PROGRESS|enum TaskPriority|URGENT',
-        description: 'Defines TaskStatus and TaskPriority enums',
-      },
-      {
-        input: 'Relations',
-        expectedOutput: 'relation.*fields.*references|@relation',
-        description: 'Models have proper Prisma relations defined',
-      },
-      {
-        input: 'Indexes',
-        expectedOutput: '@@index|@@unique|@unique',
-        description: 'Includes indexes for common query patterns',
-      },
+      { input: 'enums', expectedOutput: 'TaskStatus, TaskPriority and WorkspaceRole with the listed values', description: 'The three enums are defined' },
+      { input: 'WorkspaceMember', expectedOutput: 'role, joinedAt, two Cascade relations, @@unique([userId, workspaceId])', description: 'The junction model carries the role and allows one membership per pair' },
+      { input: 'Task relations', expectedOutput: '@relation("TaskReporter" ... onDelete: Restrict) and @relation("TaskAssignee" ... onDelete: SetNull)', description: 'Two named relations to User with the right delete rules' },
+      { input: 'Task constraints', expectedOutput: '@@unique([projectId, taskNumber]), @@index([projectId, status]), @@index([assigneeId])', description: 'Per-project numbering and the two query indexes' },
     ],
     solution: `// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -1420,142 +1367,270 @@ enum WorkspaceRole {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  name      String
+  fullName  String
   avatarUrl String?
-
-  memberships    WorkspaceMember[]
-  assignedTasks  Task[]    @relation("TaskAssignee")
-  reportedTasks  Task[]    @relation("TaskReporter")
-  comments       Comment[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("users")
+  memberships   WorkspaceMember[]
+  assignedTasks Task[]            @relation("TaskAssignee")
+  reportedTasks Task[]            @relation("TaskReporter")
+  comments      Comment[]
 }
 
 model Workspace {
-  id          String  @id @default(cuid())
-  name        String
-  slug        String  @unique
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
   description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   members  WorkspaceMember[]
   projects Project[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("workspaces")
 }
 
 model WorkspaceMember {
   id          String        @id @default(cuid())
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
   userId      String
   workspaceId String
-  role        WorkspaceRole @default(MEMBER)
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  joinedAt DateTime @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
-  @@index([workspaceId])
-  @@map("workspace_members")
 }
 
 model Project {
-  id          String @id @default(cuid())
-  name        String
+  id          String    @id @default(cuid())
+  title       String
   description String?
-  key         String // e.g., "PROJ" for task numbering like PROJ-123
-
+  key         String
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  tasks Task[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  tasks       Task[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([workspaceId, key])
-  @@index([workspaceId])
-  @@map("projects")
 }
 
 model Task {
   id          String       @id @default(cuid())
   title       String
   description String?
-  taskNumber  Int          // Sequential within project (PROJ-1, PROJ-2, ...)
+  taskNumber  Int
   status      TaskStatus   @default(BACKLOG)
   priority    TaskPriority @default(NONE)
   dueDate     DateTime?
-
-  projectId  String
-  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  assigneeId String?
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-
-  reporterId String
-  reporter   User    @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: Restrict)
-
-  comments Comment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User         @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  assigneeId  String?
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  comments    Comment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@unique([projectId, taskNumber])
   @@index([projectId, status])
   @@index([assigneeId])
-  @@index([reporterId])
-  @@index([status])
-  @@index([dueDate])
-  @@map("tasks")
 }
 
 model Comment {
-  id      String @id @default(cuid())
-  content String
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+# OR
 
-  taskId String
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  fullName  String
+  avatarUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([taskId])
-  @@map("comments")
+  memberships   WorkspaceMember[]
+  assignedTasks Task[]            @relation("TaskAssignee")
+  reportedTasks Task[]            @relation("TaskReporter")
+  comments      Comment[]
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members  WorkspaceMember[]
+  projects Project[]
+}
+
+model WorkspaceMember {
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+  userId      String
+  workspaceId String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  key         String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([workspaceId, key])
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  taskNumber  Int
+  status      TaskStatus   @default(BACKLOG)
+  priority    TaskPriority @default(NONE)
+  dueDate     DateTime?
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User         @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  assigneeId  String?
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  comments    Comment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([projectId, taskNumber])
+  @@index([projectId, status])
+  @@index([assigneeId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }`,
-    explanation: `Architectural decisions explained:
-
-1. **Many-to-many via explicit join table (WorkspaceMember)** — Instead of Prisma's implicit many-to-many, we use an explicit WorkspaceMember model because we need to store the role. This is common in real apps — join tables almost always end up needing extra fields.
-
-2. **Two User relations on Task (Assignee/Reporter)** — Tasks have both who reported it and who's working on it. Named relations (@relation("TaskAssignee")) disambiguate multiple relations to the same model.
-
-3. **onDelete strategies** — Cascade for workspace->projects (delete workspace deletes everything). SetNull for task assignee (unassigning when user is removed). Restrict for task reporter (can't delete a user who reported tasks — handle this in app logic first).
-
-4. **Composite indexes** — @@index([projectId, status]) optimizes the most common query: "show me all TODO tasks in project X." Without this index, the database would scan every task in the project. @@unique([projectId, taskNumber]) ensures task numbers are unique within a project.
-
-5. **CUID for IDs** — CUIDs are collision-resistant, sortable by creation time, and don't leak information (unlike sequential integers that reveal how many records exist).
-
-6. **@@map for table names** — Maps PascalCase model names to snake_case table names, following PostgreSQL conventions.`,
+    explanation: `The decisions in this schema, each from the db_design rule card:
+1. WorkspaceMember is an explicit junction model rather than Prisma's implicit many-to-many, because the pair carries data of its own (the role and joinedAt), and @@unique([userId, workspaceId]) (or a composite @@id on the pair) allows one membership per user per workspace.
+2. Task has two relations to the same model, so each needs a name: "TaskReporter" and "TaskAssignee" tell Prisma which User field pairs with which Task field.
+3. The delete rules follow ownership. Cascade where the child cannot exist without its parent (members, projects, tasks, comments). SetNull for the assignee, which is why assigneeId is optional: removing a user unassigns their tasks. Restrict for the reporter, so the history of who filed a task is never lost; the app must reassign or archive those tasks first.
+4. @@unique([projectId, taskNumber]) and @@unique([workspaceId, key]) make PROJ-123 style numbers unique per project and keys unique per workspace without making them global. Prisma cannot auto-increment per project, so the app assigns taskNumber, ideally inside a transaction.
+5. @@index([projectId, status]) serves the board query, a project's tasks filtered by status, because the index leads with projectId; it also serves a filter on projectId alone. @@index([assigneeId]) serves "my tasks". PostgreSQL does not index foreign keys on its own, so in a real app also index the other foreign keys you filter or join on (reporterId, taskId on Comment).
+6. cuid() ids can be generated without a central counter and do not reveal how many rows exist, unlike sequential integers in URLs.`,
     hints: [
-      'Use an explicit join table (WorkspaceMember) instead of implicit many-to-many when you need extra fields like role',
-      'Named relations like @relation("TaskAssignee") disambiguate when a model has multiple relations to the same target',
-      'Composite indexes should match your most common WHERE clause combinations',
+      'Use an explicit junction model when the pair needs extra fields such as a role',
+      'Two relations to the same model need names, such as @relation("TaskAssignee")',
+      'An index serves filters on its leading columns: put projectId first',
     ],
     tieredHints: {
-      apiSignature: 'model ModelName { field Type @relation(fields: [f], references: [r], onDelete: Strategy); @@unique([f1, f2]); @@index([f1, f2]); }',
-      skeleton: 'model WorkspaceMember {\n  id          String        @id @default(cuid())\n  userId      String\n  workspaceId String\n  role        WorkspaceRole @default(MEMBER)\n\n  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)\n\n  ____\n}\n\nmodel Task {\n  id         String @id @default(cuid())\n  projectId  String\n  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)\n\n  assigneeId String?\n  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)\n\n  reporterId String\n  reporter   User    @relation(____, fields: [reporterId], references: [id], onDelete: Restrict)\n\n  ____\n  ____\n}',
+      apiSignature: 'field Type @relation("Name", fields: [fk], references: [id], onDelete: Cascade | SetNull | Restrict); @@unique([a, b]); @@index([a, b])',
+      skeleton: `model WorkspaceMember {
+  id          String        @id @default(cuid())
+  role        WorkspaceRole @default(____)
+  joinedAt    DateTime      @default(now())
+  userId      String
+  workspaceId String
+  user        User          @relation(fields: [userId], references: [id], onDelete: ____)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: ____)
+
+  @@____([userId, workspaceId])
+}
+
+model Task {
+  // ...
+  reporterId String
+  reporter   User  @relation(____, fields: [reporterId], references: [id], onDelete: ____)
+  assigneeId String____
+  assignee   User? @relation(____, fields: [assigneeId], references: [id], onDelete: ____)
+
+  @@unique([____, ____])
+  @@index([____, ____])
+  @@index([____])
+}`,
     },
-    tags: ['prisma', 'database-design', 'schema', 'relations', 'project'],
-    concepts: ['prisma-schema-relations', 'db-normalization'],
+    tags: [
+      'prisma',
+      'database-design',
+      'schema',
+      'relations',
+      'indexes',
+      'project',
+    ],
+    concepts: [
+      'prisma-schema-relations',
+      'db-normalization',
+      'db-indexing',
+    ],
+    requires: [
+      /enum\s+TaskStatus\s*\{/,
+      /model\s+WorkspaceMember\s*\{/,
+      /@@(unique|id)\(\[\s*(userId\s*,\s*workspaceId|workspaceId\s*,\s*userId)\s*\]\)/,
+      /@relation\(\s*"TaskAssignee"[^)]*onDelete:\s*SetNull/,
+      /@relation\(\s*"TaskReporter"[^)]*onDelete:\s*Restrict/,
+      /@@unique\(\[\s*projectId\s*,\s*taskNumber\s*\]\)/,
+      /@@index\(\[\s*projectId\s*,\s*status\s*\]\)/,
+      /@@index\(\[\s*assigneeId\s*\]\)/,
+    ],
   },
 
   {
@@ -1565,85 +1640,106 @@ model Comment {
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
     language: CodeLanguage.JSX,
-    question: `Build a Protected Dashboard Layout
+    question: `Build a protected dashboard in the App Router. Write three files in one answer, each starting with its path comment:
+1. app/dashboard/layout.tsx: an async Server Component that reads the session with await auth() and calls redirect("/login") when there is none. Otherwise it renders a sidebar with the user's name and email, a nav of Link elements built from a navItems array (Overview at /dashboard, Projects at /dashboard/projects, Settings at /dashboard/settings) and a "Sign out" button in a form whose action is an inline Server Action that calls signOut({ redirectTo: "/login" }); beside the sidebar, a <main> renders children.
+2. app/dashboard/loading.tsx: a skeleton for the main area that uses Tailwind's animate-pulse.
+3. app/dashboard/error.tsx: a Client Component that logs the error in an effect, shows the heading "Something went wrong" and a "Try again" button that calls reset().
 
-Create a Next.js layout that:
-1. **layout.tsx** — Checks authentication with auth(), redirects to /login if not authenticated, renders a sidebar with user info and navigation, renders children in the main area
-2. **loading.tsx** — Shows a skeleton layout while the dashboard loads
-3. **error.tsx** — Client Component error boundary that shows a friendly error with a retry button
+auth and signOut come from "@/auth" (Auth.js v5).`,
+    starterCode: `// app/dashboard/layout.tsx
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth, signOut } from "@/auth";
 
-The auth() function is from your auth library (e.g., NextAuth) and returns a session with user info or null.`,
-    starterCode: `// ==========================================
-// app/dashboard/layout.tsx — Protected layout
-// ==========================================
-import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
-import Link from 'next/link';
+// app/dashboard/loading.tsx
 
-// TODO: Define navigation items array
-// [{ href: '/dashboard', label: 'Overview', icon: '📊' }, ...]
-
-// TODO: Export default async function DashboardLayout
-// - Accept { children }: { children: React.ReactNode }
-// - Call auth() to get the session
-// - If no session, redirect('/login')
-// - Render a two-column layout:
-//   - Sidebar with:
-//     - App name/logo
-//     - User info (name, email, avatar)
-//     - Navigation links using the nav items array
-//     - Sign out button at the bottom
-//   - Main content area that renders {children}
-
-// ==========================================
-// app/dashboard/loading.tsx — Loading skeleton
-// ==========================================
-// TODO: Export a skeleton that matches the layout structure
-// - Sidebar placeholder with animated pulse
-// - Main content area with card placeholders
-
-// ==========================================
-// app/dashboard/error.tsx — Error boundary
-// ==========================================
-'use client';
-
-// TODO: Export default function DashboardError
-// - Receive { error, reset }: { error: Error; reset: () => void }
-// - Log the error for debugging
-// - Render a user-friendly error message
-// - Include a "Try again" button that calls reset()
-// - Include a "Go home" link as fallback
+// app/dashboard/error.tsx
 `,
     testCases: [
-      {
-        input: 'Auth check and redirect',
-        expectedOutput: 'auth\\(\\).*redirect.*login|session.*redirect',
-        description: 'Checks authentication and redirects to login if not authenticated',
-      },
-      {
-        input: 'Error boundary with reset',
-        expectedOutput: 'use client.*error.*reset|reset\\(\\).*try again',
-        description: 'Error boundary is a Client Component with reset functionality',
-      },
-      {
-        input: 'Layout structure',
-        expectedOutput: 'children|sidebar|nav|user.*name|user.*email',
-        description: 'Layout renders sidebar with user info and children in main area',
-      },
+      { input: 'layout.tsx with no session', expectedOutput: 'redirect("/login")', description: 'The layout checks the session on the server and redirects' },
+      { input: 'layout.tsx with a session', expectedOutput: 'sidebar with name, email, three nav links and a sign-out Server Action; <main>{children}</main>', description: 'The layout renders the sidebar and the page' },
+      { input: 'loading.tsx and error.tsx', expectedOutput: 'an animate-pulse skeleton; "use client" error boundary whose button calls reset()', description: 'The loading and error boundaries of the segment' },
     ],
-    solution: `// ==========================================
-// app/dashboard/layout.tsx
-// ==========================================
-import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
-import Link from 'next/link';
+    solution: `// app/dashboard/layout.tsx
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth, signOut } from "@/auth";
 
 const navItems = [
-  { href: '/dashboard', label: 'Overview', icon: '📊' },
-  { href: '/dashboard/projects', label: 'Projects', icon: '📁' },
-  { href: '/dashboard/tasks', label: 'Tasks', icon: '✅' },
-  { href: '/dashboard/team', label: 'Team', icon: '👥' },
-  { href: '/dashboard/settings', label: 'Settings', icon: '⚙️' },
+  { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/projects", label: "Projects" },
+  { href: "/dashboard/settings", label: "Settings" },
+];
+
+export default async function DashboardLayout({ children }) {
+  const session = await auth();
+  if (!session) redirect("/login");
+
+  return (
+    <div className="flex h-screen">
+      <aside className="w-64 p-4">
+        <p>{session.user.name}</p>
+        <p>{session.user.email}</p>
+        <nav>
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href}>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <form
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+        >
+          <button type="submit">Sign out</button>
+        </form>
+      </aside>
+      <main className="flex-1 p-6">{children}</main>
+    </div>
+  );
+}
+
+// app/dashboard/loading.tsx
+export default function DashboardLoading() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-8 w-1/3 rounded bg-muted" />
+      <div className="h-32 rounded bg-muted" />
+    </div>
+  );
+}
+
+// app/dashboard/error.tsx
+"use client";
+
+import { useEffect } from "react";
+
+export default function DashboardError({ error, reset }) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div>
+      <h2>Something went wrong</h2>
+      <button onClick={() => reset()}>Try again</button>
+    </div>
+  );
+}
+
+# OR
+
+// app/dashboard/layout.tsx
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth, signOut } from "@/auth";
+
+const navItems = [
+  { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/projects", label: "Projects" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 export default async function DashboardLayout({
@@ -1652,113 +1748,48 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-
-  if (!session) {
-    redirect('/login');
-  }
-
-  const { user } = session;
+  if (!session) redirect("/login");
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col">
-        {/* Logo */}
-        <div className="p-4 border-b border-gray-700">
-          <h1 className="text-xl font-bold">TaskFlow</h1>
-        </div>
-
-        {/* User info */}
-        <div className="p-4 border-b border-gray-700">
-          <div className="flex items-center gap-3">
-            {user.image && (
-              <img
-                src={user.image}
-                alt={user.name || ''}
-                className="w-8 h-8 rounded-full"
-              />
-            )}
-            <div>
-              <p className="font-medium text-sm">{user.name}</p>
-              <p className="text-gray-400 text-xs">{user.email}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-2">
+      <aside className="w-64 p-4">
+        <p>{session.user.name}</p>
+        <p>{session.user.email}</p>
+        <nav>
           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg
-                         text-gray-300 hover:bg-gray-800 hover:text-white
-                         transition-colors"
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
+            <Link key={item.href} href={item.href}>
+              {item.label}
             </Link>
           ))}
         </nav>
-
-        {/* Sign out */}
-        <div className="p-4 border-t border-gray-700">
-          <form action="/api/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="w-full text-left text-gray-400 hover:text-white
-                         transition-colors text-sm"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
+        <form
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+        >
+          <button type="submit">Sign out</button>
+        </form>
       </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-        {children}
-      </main>
+      <main className="flex-1 p-6">{children}</main>
     </div>
   );
 }
 
-// ==========================================
 // app/dashboard/loading.tsx
-// ==========================================
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6 animate-pulse">
-      {/* Header skeleton */}
-      <div className="h-8 bg-gray-200 rounded w-1/4" />
-
-      {/* Stats cards skeleton */}
-      <div className="grid grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2" />
-            <div className="h-8 bg-gray-200 rounded w-3/4" />
-          </div>
-        ))}
-      </div>
-
-      {/* Content skeleton */}
-      <div className="bg-white rounded-lg p-6 shadow-sm">
-        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-4 bg-gray-200 rounded w-full mb-3" />
-        ))}
-      </div>
+    <div className="space-y-4 animate-pulse">
+      <div className="h-8 w-1/3 rounded bg-muted" />
+      <div className="h-32 rounded bg-muted" />
     </div>
   );
 }
 
-// ==========================================
 // app/dashboard/error.tsx
-// ==========================================
-'use client';
+"use client";
 
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 export default function DashboardError({
   error,
@@ -1768,57 +1799,71 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Dashboard error:', error);
+    console.error(error);
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">
-        Something went wrong
-      </h2>
-      <p className="text-gray-600 mb-6 max-w-md">
-        We encountered an unexpected error loading the dashboard.
-        Please try again or contact support if the problem persists.
-      </p>
-      <div className="flex gap-3">
-        <button
-          onClick={() => reset()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg
-                     hover:bg-blue-700 transition-colors"
-        >
-          Try again
-        </button>
-        <a
-          href="/"
-          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg
-                     hover:bg-gray-300 transition-colors"
-        >
-          Go home
-        </a>
-      </div>
+    <div>
+      <h2>Something went wrong</h2>
+      <button onClick={() => reset()}>Try again</button>
     </div>
   );
 }`,
-    explanation: `This layout establishes three critical patterns:
-
-1. **Server-side auth guard** — auth() runs on the server in the layout. If the user isn't authenticated, redirect() sends them to /login before any dashboard content renders. This is more secure than client-side checks because the protected content never reaches the browser. The layout wraps ALL dashboard routes, so every child page is automatically protected.
-
-2. **Layout persistence** — In Next.js, layouts don't re-render when navigating between child routes. The sidebar stays mounted and interactive while only the main content area (children) swaps out. This gives SPA-like navigation performance with server-side security.
-
-3. **Error boundary with reset** — error.tsx must be a Client Component (it uses React's error boundary under the hood). The reset() function re-renders the segment that threw, giving users a retry mechanism without a full page reload. The error.digest provides a server-side error ID for debugging without exposing details to users.
-
-4. **Loading skeleton matching layout** — loading.tsx shows a skeleton that matches the actual content structure. This prevents layout shift when the real content loads in. The skeleton is inside the layout, so the sidebar is already visible — only the content area shows the loading state.`,
+    explanation: `This puts together four App Router files from earlier sections.
+1. The layout is a Server Component, so await auth() runs on the server and redirect("/login") happens before any dashboard markup is sent, which is safer than a check in the browser. redirect() works by throwing, so do not call it inside a try block that would catch it.
+2. A layout wraps every page under /dashboard and is not re-rendered when the user moves between those pages: the sidebar stays mounted and only children changes. The flip side, which the Next.js docs warn about, is that the layout's check does not run again on each client-side navigation, so pages and the functions that load sensitive data should check the session too; the layout check is a convenient first gate, not the only one.
+3. Sign-out is a Server Action: the inline async function marked "use server" runs on the server when the form is submitted and calls Auth.js's signOut, which clears the session cookie and redirects. That needs no client JavaScript and no hand-made POST to /api/auth/signout (which Auth.js protects with a CSRF token).
+4. loading.tsx is shown inside the layout while the page streams in, so the sidebar is already visible and only the main area pulses. error.tsx must be a Client Component, because it is a React error boundary; reset() renders the segment again without a full page reload, and in production error.digest is the id to look up in the server logs.`,
     hints: [
-      'auth() is async and runs on the server — await it before checking the session',
-      'redirect() must be called outside of try-catch blocks in Server Components',
-      'error.tsx must be a Client Component — add "use client" at the top',
+      'auth() is async and runs on the server: await it before checking the session',
+      'The sign-out form\'s action is an async function marked "use server"',
+      'error.tsx must be a Client Component, with "use client" at the top',
     ],
     tieredHints: {
-      apiSignature: 'auth(): Promise<Session | null>; redirect(url: string): never; ErrorBoundary({ error, reset }: { error: Error; reset: () => void })',
-      skeleton: '// app/dashboard/layout.tsx\nexport default async function DashboardLayout({ children }: { children: React.ReactNode }) {\n  const session = await ____();\n\n  if (!____) {\n    ____("/login");\n  }\n\n  return (\n    <div className="flex h-screen">\n      <aside>{session.user.name}</aside>\n      <main>{children}</main>\n    </div>\n  );\n}\n\n// app/dashboard/error.tsx\n"use client";\nexport default function DashboardError({ error, reset }: { error: Error; reset: () => void }) {\n  return (\n    <div>\n      <button onClick={() => ____}>Try again</button>\n    </div>\n  );\n}',
+      apiSignature: 'auth(): Promise<Session | null>; redirect(path): never; signOut({ redirectTo }); error.tsx receives { error, reset }',
+      skeleton: `// app/dashboard/layout.tsx
+export default async function DashboardLayout({ children }) {
+  const session = await ____();
+  if (!session) ____("/login");
+
+  return (
+    <div className="flex">
+      <aside>
+        {/* name, email, nav links */}
+        <form
+          action={async () => {
+            "____";
+            await ____({ redirectTo: "/login" });
+          }}
+        >
+          <button type="submit">Sign out</button>
+        </form>
+      </aside>
+      <main>{____}</main>
+    </div>
+  );
+}
+
+// app/dashboard/error.tsx
+"____";
+export default function DashboardError({ error, reset }) {
+  return <button onClick={() => ____}>Try again</button>;
+}`,
     },
     tags: ['nextjs', 'authentication', 'layout', 'error-boundary', 'project'],
-    concepts: ['web-security-auth-tokens', 'next-error-boundary'],
+    concepts: [
+      'web-security-auth-tokens',
+      'next-error-boundary',
+    ],
+    requires: [
+      /await\s+auth\(\)/,
+      /redirect\(\s*["']\/login["']\s*\)/,
+      /<main[^>]*>\s*\{\s*children\s*\}/,
+      /["']use server["'][\s\S]*signOut\(/,
+      /animate-pulse/,
+      /["']use client["']/,
+      /onClick=\{\s*(\(\)\s*=>\s*reset\(\)|reset)\s*\}/,
+    ],
   },
 
   {
@@ -1827,43 +1872,17 @@ export default function DashboardError({
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `You're starting a new SaaS product — a project management tool. Your team has 3 developers, and you need to launch an MVP in 2 months. A senior engineer suggests starting with microservices: separate services for auth, projects, tasks, notifications, and billing. What's your response?`,
+    question: `Your team of 8 built a shop as a modular monolith: catalogue, orders, billing and image processing (resizing every uploaded product photo) are separate modules in one Next.js app with one database. Which of these is a sound reason to extract one module into its own service?`,
     options: [
-      {
-        id: 'a',
-        text: 'Agree — microservices are industry best practice. Separate services mean each developer can work independently and deploy without affecting others.',
-        isCorrect: false,
-      },
-      {
-        id: 'b',
-        text: 'Start with a modular monolith. 3 developers can\'t maintain 5+ services, their deployment pipelines, inter-service communication, distributed tracing, and data consistency. Build one well-structured app, deploy one thing, and extract services later ONLY when you hit a specific scaling bottleneck.',
-        isCorrect: true,
-      },
-      {
-        id: 'c',
-        text: 'Compromise — start with 2 services: one for the core app and one for auth/billing. This gives separation of concerns without too many services.',
-        isCorrect: false,
-      },
-      {
-        id: 'd',
-        text: 'Use a serverless architecture with individual Lambda functions for each API endpoint. This scales automatically and you only pay for what you use.',
-        isCorrect: false,
-      },
+      { id: 'a', text: 'The code base has passed 100,000 lines, and a repository that size is a sign the app should now be split up', isCorrect: false },
+      { id: 'b', text: 'Image processing needs far more CPU than the rest at upload peaks, and must scale and deploy on its own schedule', isCorrect: true },
+      { id: 'c', text: 'Microservices are how large companies build, so extracting modules early prepares the app for future growth', isCorrect: false },
+      { id: 'd', text: 'Orders and billing call each other\'s functions constantly, so making one a service would force a cleaner boundary', isCorrect: false },
     ],
-    explanation: `Always start with a monolith. This is one of the most important architectural lessons:
-
-**Why a monolith for a 3-person team?**
-- **Operational overhead** — Each microservice needs: its own repo (or monorepo config), CI/CD pipeline, deployment, monitoring, logging, health checks, and scaling config. With 5 services, you're maintaining 5x the infrastructure before writing any business logic.
-- **Distributed systems are HARD** — Inter-service communication (REST? gRPC? message queues?), handling partial failures, distributed transactions, data consistency across services, service discovery... these are complex problems that don't exist in a monolith.
-- **Developer velocity** — In a monolith, a feature that touches auth + tasks + notifications is one PR. In microservices, it's 3 coordinated PRs across 3 repos with careful API versioning.
-- **You don't know your boundaries yet** — The whole point of microservices is to scale SPECIFIC parts independently. You don't know which parts will need independent scaling until you have real users and real traffic patterns.
-
-**The right approach:** Build a modular monolith — well-organized code with clear module boundaries (auth/, projects/, tasks/, billing/). When (IF) you hit a scaling bottleneck, you can extract that specific module into a service. Most startups never reach that point.
-
-**The #1 architecture mistake** is premature microservices. Companies like Segment, Istio, and countless others have publicly shared their painful migrations BACK to monoliths after starting with microservices too early.`,
+    explanation: `A module earns its own service when it has a real need the monolith cannot meet: different scaling (image resizing needs bursts of CPU that the rest of the app does not, so it can run on its own machines or a job queue), a different deploy or release cycle, a separate team that should own it end to end, or a different reliability or security boundary. Size alone is not a reason; a large, well-structured monolith is fine, and the module boundaries already keep it organised. "Big companies do it" is not a reason either, since each service adds a deploy pipeline, monitoring, network failures and data that can no longer be changed in one transaction. Modules that call each other constantly are the worst candidates: splitting them turns cheap function calls into slow, failure-prone network calls that still have to stay in step. Extract along a boundary that is already quiet.`,
     hints: [
-      'Think about the ratio of infrastructure work to feature work for a 3-person team',
-      'Consider what you DON\'T know yet about your traffic patterns at launch',
+      'What does a separate service give you that a module in one app cannot?',
+      'What happens to two chatty modules when every call between them crosses the network?',
     ],
     tags: ['architecture', 'monolith', 'microservices', 'startup', 'project'],
     concepts: ['pattern-architectural'],

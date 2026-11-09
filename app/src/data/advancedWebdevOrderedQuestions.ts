@@ -238,7 +238,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-auth-5'),
 
   // =====================================================================
-  // 8. DB_DESIGN (12 questions — relocated from former position 23)
+  // 8. DB_DESIGN (12 questions - relocated from former position 23; proj-capstone-1 sits in the projects block)
   // Schema fundamentals (normalization, relationships, indexes, N+1) land
   // before Prisma so the user has the mental model for writing schemas.
   // =====================================================================
@@ -614,7 +614,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('dp-behav-4'),
 
   // =====================================================================
-  // 21. PATTERNS_ARCHITECTURAL (16 questions — from designPatternQuestions + securityQuestions)
+  // 21. PATTERNS_ARCHITECTURAL (16 questions - from designPatternQuestions + securityQuestions)
   // =====================================================================
 
   // BEGINNER MC
@@ -640,7 +640,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('sec-arch-1'),
 
   // =====================================================================
-  // 22. API_DESIGN (20 questions — from designPatternQuestions + securityQuestions)
+  // 22. API_DESIGN (20 questions - from designPatternQuestions + securityQuestions)
   // =====================================================================
 
   // BEGINNER MC
@@ -709,7 +709,7 @@ export const advancedWebdevOrderedQuestions: Question[] = [
   q('proj-url-1'),
   q('proj-url-2'),
   q('proj-url-3'),
-  // PATTERNS_ARCHITECTURAL capstone projects
+  // Design Patterns & Architecture capstones (proj-capstone-1 is DB_DESIGN, the other two PATTERNS_ARCHITECTURAL)
   q('proj-capstone-1'),
   q('proj-capstone-2'),
   q('proj-capstone-3'),
