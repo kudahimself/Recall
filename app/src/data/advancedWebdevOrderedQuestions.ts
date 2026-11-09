@@ -1,4 +1,4 @@
-import { Question, QuestionType, Difficulty, Topic, CodeLanguage, Course } from '../types';
+import { Question } from '../types';
 
 // Import all source question arrays
 import { nextjsQuestions } from './nextjsQuestions';
